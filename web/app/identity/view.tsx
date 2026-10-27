@@ -111,7 +111,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
           <div className="bx">
             <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginBottom: 16 }}>LOGO</p>
             <KeyholeLogo className="h-16" tone="ink" />
-            <div style={{ marginTop: 18, background: "#1F4B4F", borderRadius: 18, padding: 18 }}><KeyholeLogo className="h-12" tone="light" /></div>
+            <div style={{ marginTop: 18, background: "#1F4B4F", borderRadius: 18, padding: 18, color: "#F6F1E7" }}><KeyholeLogo className="h-12" tone="light" /></div>
           </div>
           <div className="bx">
             <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginBottom: 16 }}>{t("ident.type")}</p>

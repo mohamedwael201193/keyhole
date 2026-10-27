@@ -45,7 +45,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
         </div>
         <div className="stage-slot">
           <div className="stage">
-            <svg className="ring" viewBox="0 0 400 400" aria-hidden="true">
+            <svg className="kh-ring" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
               <defs><path id="ringpath" d="M200,200 m-150,0 a150,150 0 1,1 300,0 a150,150 0 1,1 -300,0" /></defs>
               <text textLength={locale === "en" ? 930 : undefined} lengthAdjust="spacing">
                 <textPath href="#ringpath">{t("land.ring")}</textPath>

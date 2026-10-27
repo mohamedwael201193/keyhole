@@ -1,13 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const RATIO = 640.83 / 158.6; // lockup.svg viewBox
-const MARK_FRAC = 0.197; // share of the lockup width taken by the mark
-
 /**
- * Brand lockup (mark + KEYHOLE wordmark). Rebrand by replacing public/brand/{lockup,mark-animated}.svg.
- * On the first load of a session the animated mark plays and the wordmark fades in beside it,
- * so the full lockup always reads, never the mark alone.
+ * Coloured medallion plus a wordmark. The mark is never filtered.
+ * Ink or light comes from the surrounding text colour (ecru nav, teal nav, footer).
+ * On the first load of a session the animated mark plays beside the wordmark.
  */
 export function KeyholeLogo({ className = "h-9", tone = "ink" }: { className?: string; tone?: "ink" | "light" }) {
   const [intro, setIntro] = useState(false);
@@ -17,14 +14,10 @@ export function KeyholeLogo({ className = "h-9", tone = "ink" }: { className?: s
     const t = setTimeout(() => setIntro(false), 2600); return () => clearTimeout(t);
   }, []);
   return (
-    <span className={`kh-logo relative inline-flex items-center ${className}`} role="img" aria-label="KEYHOLE" data-tone={tone} style={{ aspectRatio: String(RATIO) }}>
+    <span className={`kh-logo ${className}`} role="img" aria-label="KEYHOLE" data-tone={tone}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/lockup.svg" alt="" aria-hidden="true" width={641} height={159} decoding="sync"
-        className="h-full w-full select-none" style={intro ? { clipPath: `inset(0 0 0 ${MARK_FRAC * 100}%)`, animation: "rise .8s ease-out .9s both" } : undefined} />
-      {intro && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src="/brand/mark-animated.svg" alt="" aria-hidden="true" className="absolute inset-y-0 start-0 h-full w-auto" style={{ maxWidth: `${MARK_FRAC * 100}%`, objectFit: "contain", objectPosition: "left center" }} />
-      )}
+      <img src={intro ? "/brand/mark-animated.svg" : "/brand/mark.svg"} alt="" aria-hidden="true" width={512} height={620} decoding="sync" />
+      <span className="kh-word">KEYHOLE</span>
     </span>
   );
 }
