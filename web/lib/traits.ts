@@ -6,8 +6,8 @@ export type Finish = (typeof FINISHES)[number];
 
 export const FINISH_COLOR: Record<Finish, string> = {
   Bronze: "#8A5A3C",
-  Silver: "#6E7A80",
-  Gold: "#9A7420",
+  Silver: "#6C787D",
+  Gold: "#946F1F",
   Legendary: "#7A1F4F",
 };
 

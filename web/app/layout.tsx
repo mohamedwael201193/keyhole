@@ -7,7 +7,7 @@ import { Footer } from "@/components/Footer";
 
 const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["600", "700"], style: ["normal", "italic"], variable: "--font-cormorant", display: "swap" });
 const sans = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"], variable: "--font-manrope", display: "swap" });
-const mono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm", display: "swap", preload: false });
+const mono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm", display: "swap" });
 const arabic = Noto_Sans_Arabic({ subsets: ["arabic"], weight: ["500", "600", "700"], variable: "--font-arabic", display: "swap", preload: false });
 const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["600", "700"], variable: "--font-naskh", display: "swap", preload: false });
 

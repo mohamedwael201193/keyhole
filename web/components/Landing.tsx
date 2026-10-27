@@ -64,7 +64,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
         <div className="beats">
           <p className="eb" style={{ marginBottom: 10 }}>{t("land.moves")}</p>
           {(["I", "II", "III"] as const).map((n, i) => (
-            <div className="beat" key={n}><i>{n}</i><div><h3>{t(`land.b${i + 1}t`)}</h3><p>{t(`land.b${i + 1}d`)}</p></div></div>
+            <div className="beat" key={n}><i>{n}</i><div><h2>{t(`land.b${i + 1}t`)}</h2><p>{t(`land.b${i + 1}d`)}</p></div></div>
           ))}
         </div>
       </section>
