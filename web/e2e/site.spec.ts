@@ -109,3 +109,10 @@ test("hero: no orbit logo is ever covered by the vault card", async ({ page }) =
     await page.waitForTimeout(4000);
   }
 });
+
+for (const p of ["/vault", "/mint"]) {
+  test(`${p}: how-it-works strip is numbered 01/02/03 in order`, async ({ page }) => {
+    await page.goto(p);
+    await expect(page.getByTestId("step-num")).toHaveText(["01", "02", "03"]);
+  });
+}
