@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Cormorant_Garamond, DM_Mono, Manrope, Noto_Naskh_Arabic, Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 
-const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], variable: "--font-instrument", display: "swap", preload: false });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-jb", display: "optional", preload: false });
+const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["600", "700"], style: ["normal", "italic"], variable: "--font-cormorant", display: "swap" });
+const sans = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"], variable: "--font-manrope", display: "swap" });
+const mono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm", display: "swap", preload: false });
+const arabic = Noto_Sans_Arabic({ subsets: ["arabic"], weight: ["500", "600", "700"], variable: "--font-arabic", display: "swap", preload: false });
+const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["600", "700"], variable: "--font-naskh", display: "swap", preload: false });
 
 export const metadata: Metadata = {
   title: "KEYHOLE — the NFT is the viewing key",
@@ -15,12 +18,12 @@ export const metadata: Metadata = {
   openGraph: { title: "KEYHOLE", description: "Nothing on the chain. Everything in the key.", images: [{ url: "/og.png", width: 1200, height: 630 }] },
   icons: { icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }], apple: "/apple-icon.png" },
 };
-export const viewport: Viewport = { themeColor: "#050706", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#ECE6DA", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" dir="ltr" className={`${serif.variable} ${mono.variable}`}>
-      <body className="min-h-dvh">
+    <html lang="en" dir="ltr" className={`${serif.variable} ${sans.variable} ${mono.variable} ${arabic.variable} ${naskh.variable}`}>
+      <body>
         <Providers>
           <Nav />
           <main id="main">{children}</main>

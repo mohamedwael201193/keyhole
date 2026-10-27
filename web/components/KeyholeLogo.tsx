@@ -9,7 +9,7 @@ const MARK_FRAC = 0.197; // share of the lockup width taken by the mark
  * On the first load of a session the animated mark plays and the wordmark fades in beside it,
  * so the full lockup always reads, never the mark alone.
  */
-export function KeyholeLogo({ className = "h-8 sm:h-10" }: { className?: string }) {
+export function KeyholeLogo({ className = "h-9", tone = "ink" }: { className?: string; tone?: "ink" | "light" }) {
   const [intro, setIntro] = useState(false);
   useEffect(() => {
     if (sessionStorage.getItem("kh_intro") || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -17,7 +17,7 @@ export function KeyholeLogo({ className = "h-8 sm:h-10" }: { className?: string 
     const t = setTimeout(() => setIntro(false), 2600); return () => clearTimeout(t);
   }, []);
   return (
-    <span className={`relative inline-flex items-center ${className}`} role="img" aria-label="KEYHOLE" style={{ aspectRatio: String(RATIO) }}>
+    <span className={`kh-logo relative inline-flex items-center ${className}`} role="img" aria-label="KEYHOLE" data-tone={tone} style={{ aspectRatio: String(RATIO) }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/brand/lockup.svg" alt="" aria-hidden="true" width={641} height={159} decoding="sync"
         className="h-full w-full select-none" style={intro ? { clipPath: `inset(0 0 0 ${MARK_FRAC * 100}%)`, animation: "rise .8s ease-out .9s both" } : undefined} />

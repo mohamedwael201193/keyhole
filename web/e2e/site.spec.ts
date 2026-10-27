@@ -95,18 +95,15 @@ test("navbar: connect stays on one line and the full lockup is shown", async ({ 
   await expect(page.getByText(/CC0/)).toHaveCount(0);
 });
 
-test("hero: no orbit logo is ever covered by the vault card", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 1280, "card is desktop-only");
+test("hero: orbit logos stay clear of the key", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 1280, "orbit is desktop");
   await page.goto("/");
-  await page.waitForTimeout(7000);
-  const card = (await page.locator(".vaultcard").boundingBox())!;
-  for (let k = 0; k < 3; k++) {
-    for (const n of ["NEAR", "USDC", "ETH", "SOL", "ARB", "BTC", "ZEC", "Base"]) {
-      const b = (await page.getByAltText(n, { exact: true }).boundingBox())!;
-      const overlap = b.x < card.x + card.width && b.x + b.width > card.x && b.y < card.y + card.height && b.y + b.height > card.y;
-      expect(overlap, `${n} overlaps the card`).toBe(false);
-    }
-    await page.waitForTimeout(4000);
+  await page.waitForTimeout(1500);
+  const key = (await page.locator(".hkey").boundingBox())!;
+  for (const n of ["NEAR", "USDC", "ETH", "SOL", "ARB", "BTC", "ZEC", "Base"]) {
+    const b = (await page.getByAltText(n, { exact: true }).boundingBox())!;
+    const overlap = b.x < key.x + key.width && b.x + b.width > key.x && b.y < key.y + key.height && b.y + b.height > key.y;
+    expect(overlap, `${n} overlaps the key`).toBe(false);
   }
 });
 

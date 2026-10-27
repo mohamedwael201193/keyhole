@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { keyState, shortAccount, tierName } from "@/lib/near";
+import { CAPS, bitCipherBits, finishOf, keyIdentity, nep177, traitSeed, toHex } from "@/lib/traits";
 import { toBaseUnits } from "@/lib/assets";
 import { WORKER_ERROR_CODES } from "@/lib/errors";
 import { errorText, translate } from "@/lib/i18n";
@@ -14,6 +15,37 @@ describe("key state from chain data", () => {
   it("expired when expires_at passed", () => expect(keyState(tok("a", "100"), 1, "a", 200)).toBe("expired"));
   it("unlocked only for the holder", () => { expect(keyState(tok("a"), 1, "a")).toBe("unlocked"); expect(keyState(tok("a"), 1, "b")).toBe("locked"); expect(keyState(tok("a"), 1, null)).toBe("locked"); });
   it("tier names", () => expect([1, 2, 3, null].map(tierName)).toEqual(["Bronze", "Silver", "Gold", "—"]));
+});
+describe("key traits", () => {
+  it("seeds sha256(contract_id + token_id)", () => {
+    expect(toHex(traitSeed("keyhole-devmo.near", "1"))).toBe("d3d69e48c9d76f66473f833611c0db336cf6d66fe5f0e97010db53792bf9ea1e");
+  });
+  it("draws the token id in binary", () => {
+    expect(bitCipherBits("1")).toBe("00000001");
+    expect(bitCipherBits("10")).toBe("00001010");
+    expect(bitCipherBits("k857b6b68facc0f94")).toBe("10010100");
+  });
+  it("is deterministic and stays inside the finish", () => {
+    const a = keyIdentity("k857b6b68facc0f94", 1);
+    expect(keyIdentity("k857b6b68facc0f94", 1)).toEqual(a);
+    expect(["Bronze"]).toContain(a.finish);
+    expect([3, 5, 8]).toContain(a.art);
+    expect(a.perTx).toBe(1);
+    expect(a.daily).toBe(5);
+  });
+  it("legendary is a rare Gold-cap finish, not a new limit", () => {
+    const rare = new Uint8Array(32); rare[1] = 0;
+    const plain = new Uint8Array(32); plain[1] = 1;
+    expect(finishOf(3, rare)).toBe("Legendary");
+    expect(finishOf(3, plain)).toBe("Gold");
+    expect(finishOf(1, rare)).toBe("Bronze");
+    expect(CAPS.Legendary).toEqual(CAPS.Gold);
+    const leg = keyIdentity("1", 3, "rare-contract");
+    expect(leg.perTx).toBe(100);
+    expect(leg.daily).toBe(500);
+    expect(nep177("1", 1).extra.traits.bit_cipher).toBe("00000001");
+    expect(nep177("1", 1).extra.seed).toBe("sha256(contract ‖ token_id)");
+  });
 });
 describe("formatting", () => {
   it("truncates 64-hex implicit accounts in the middle", () => expect(shortAccount("a".repeat(64))).toBe("aaaaaa…aaaaaa"));

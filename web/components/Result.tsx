@@ -13,9 +13,9 @@ export function ErrorBox({ code, vars, retryAfter }: { code: string; vars?: Reco
   if (OFFLINE_CODES.includes(code)) return <OfflineState />;
   const [msg, fix] = errorText(locale, code, { ...vars, s });
   return (
-    <div role="alert" className="rounded border border-red-500/40 bg-red-950/30 p-4" data-testid="error" data-code={code}>
-      <p className="font-medium text-red-200">{msg}</p><p className="mt-1 text-sm text-red-200/80">{fix}</p>
-      <p className="mt-2 font-mono text-[11px] text-red-300/60">code: {code}</p>
+    <div role="alert" className="errbox" data-testid="error" data-code={code}>
+      <p>{msg}</p><p className="note">{fix}</p>
+      <p className="mono" style={{ fontSize: 12, marginTop: 8 }}>code: {code}</p>
     </div>
   );
 }
@@ -24,10 +24,10 @@ export function Attested({ r }: { r: WorkerResult }) {
   const { t } = useI18n();
   if (!r.call_id) return null;
   return (
-    <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-zinc-400" data-testid="attested">
+    <p className="mono" style={{ marginTop: 12, fontSize: 12, color: "var(--mu)", display: "flex", flexWrap: "wrap", gap: "8px 16px" }} data-testid="attested">
       <span>{t("result.call")}: {r.call_id.slice(0, 8)}</span>
-      {r.attestation_url && <a className="text-signal hover:underline" href={r.attestation_url} target="_blank" rel="noreferrer">{t("result.attestation")} ↗</a>}
-      <a className="text-signal hover:underline" href={`/verify?call=${r.call_id}`}>verify</a>
+      {r.attestation_url && <a style={{ color: "var(--teal)" }} href={r.attestation_url} target="_blank" rel="noreferrer">{t("result.attestation")} ↗</a>}
+      <a style={{ color: "var(--teal)" }} href={`/verify?call=${r.call_id}`}>verify</a>
       {r.time_ms != null && <span>{t("result.time")}: {r.time_ms} ms</span>}
     </p>
   );
