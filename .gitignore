@@ -1,4 +1,4 @@
 target/
-*.wasm
+node_modules/
 .env*
-.secrets/
+*.secret*
