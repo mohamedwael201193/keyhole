@@ -178,3 +178,25 @@ fn account_ids() {
     for bad in ["A.near", "a", ".a", "a..b", "a/b", "h/x"] { assert!(!is_valid_account_id(bad), "{}", bad); }
     assert_eq!(token_id_for("alice.near").len(), 17);
 }
+
+#[test]
+fn tx_encoding_matches_near_api_js() {
+    // reference bytes produced by near-api-js transactions.createTransaction(...).encode()
+    let want = "0a000000616c6963652e6e6561720007070707070707070707070707070707070707070707070707070707070707077b00000000000000090000006b6579732e6e65617209090909090909090909090909090909090909090909090909090909090909090200000002080000006e66745f6d696e74070000007b2261223a317d00e057eb481b0000000040b2bac9e0191e020000000000000305000000000000000000000000000000";
+    let got = encode_tx("alice.near", &[7; 32], 123, "keys.near", &[9; 32], &[
+        Action::FunctionCall { method: "nft_mint", args: br#"{"a":1}"#, gas: 30_000_000_000_000, deposit: 10_000_000_000_000_000_000_000 },
+        Action::Transfer { deposit: 5 },
+    ]);
+    assert_eq!(hex::encode(got), want);
+}
+
+#[test]
+fn signed_tx_verifies() {
+    use ed25519_dalek::Verifier;
+    let tx = encode_tx("a.near", &sk(3).verifying_key().to_bytes(), 1, "b.near", &[0; 32], &[Action::Transfer { deposit: 1 }]);
+    let s = sign_tx(&[3; 32], &tx);
+    assert_eq!(&s[..tx.len()], &tx[..]);
+    assert_eq!(s[tx.len()], 0);
+    let sig = ed25519_dalek::Signature::from_bytes(s[tx.len() + 1..].try_into().unwrap());
+    sk(3).verifying_key().verify(&Sha256::digest(&tx), &sig).unwrap();
+}

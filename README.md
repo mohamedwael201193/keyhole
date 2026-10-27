@@ -17,8 +17,8 @@ Nothing to install. Signing a message costs no gas.
 | piece | where |
 |---|---|
 | Keys NFT contract (NEP-171/177/181/199) | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) |
-| TEE worker (OutLayer project) | `keyhole-devmo.near/keyhole-probe`, build `fc4ae4ac…2fab` |
-| TEE-held minter | [`4a1bb5b8…8a8d`](https://nearblocks.io/address/4a1bb5b836ee697c9012fa79246f74d936fbd000481f9d9086fee45057948a8d) (key generated inside the enclave) |
+| TEE worker (OutLayer project) | `keyhole-devmo.near/keyhole`, build `f13efe92…119c` (reproducible) |
+| TEE-held minter | [`015a0259…c443`](https://nearblocks.io/address/015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443) (key generated inside the enclave) |
 
 ## Safety by design
 

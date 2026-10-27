@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# verify.sh <call_id> [--rebuild]
+# Checks a KEYHOLE TEE call: attestation (TDX quote, wasm hash) == FastFS bytes [== your own rebuild].
+set -euo pipefail
+CALL="${1:?usage: ./verify.sh <call_id> [--rebuild]}"
+API="${OUTLAYER_API:-https://api.outlayer.ai}"
+need(){ command -v "$1" >/dev/null || { echo "missing $1"; exit 2; }; }
+need curl; need jq; need sha256sum
+A=$(curl -fsS "$API/attestations/by-call/$CALL")
+H=$(jq -r '.executed_wasm_sha256' <<<"$A"); R=$(jq -r '.wasm_hash' <<<"$A"); P=$(jq -r '.project_id' <<<"$A")
+Q=$(jq -r '.tdx_quote | length' <<<"$A")
+echo "call      $CALL"; echo "project   $P"; echo "attested  $H"
+fail=0; ok(){ echo "OK   $1"; }; bad(){ echo "FAIL $1"; fail=1; }
+[ "$Q" -gt 100 ] && ok "TDX quote present ($Q chars)" || bad "no TDX quote"
+[ "$H" = "$R" ] && ok "registered wasm_hash == executed" || bad "wasm_hash $R != executed $H"
+URL="${FASTFS_BASE:-https://main.fastfs.io}/${P%%/*}/outlayer.near/$H.wasm"
+F=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)
+[ "$F" = "$H" ] && ok "FastFS $URL sha256 matches" || bad "FastFS sha256 $F"
+if [ "${2:-}" = "--rebuild" ]; then
+  B=$("$(dirname "$0")/tee/worker/build.sh")
+  [ "$B" = "$H" ] && ok "local reproducible build matches ($B)" || bad "local build $B differs (deployed version may be another commit)"
+fi
+exit $fail

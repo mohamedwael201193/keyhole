@@ -216,5 +216,50 @@ pub fn token_id_for(account: &str) -> String {
     format!("k{}", &hex::encode(h)[..16])
 }
 
+pub enum Action<'a> {
+    FunctionCall { method: &'a str, args: &'a [u8], gas: u64, deposit: u128 },
+    Transfer { deposit: u128 },
+}
+
+/// Borsh-encoded NEAR Transaction (V0): signer, ed25519 pk, nonce, receiver, block hash, actions.
+pub fn encode_tx(signer: &str, pk: &[u8; 32], nonce: u64, receiver: &str, block_hash: &[u8; 32], actions: &[Action]) -> Vec<u8> {
+    let mut v = Vec::new();
+    borsh_string(&mut v, signer);
+    v.push(0);
+    v.extend_from_slice(pk);
+    v.extend_from_slice(&nonce.to_le_bytes());
+    borsh_string(&mut v, receiver);
+    v.extend_from_slice(block_hash);
+    v.extend_from_slice(&(actions.len() as u32).to_le_bytes());
+    for a in actions {
+        match a {
+            Action::FunctionCall { method, args, gas, deposit } => {
+                v.push(2);
+                borsh_string(&mut v, method);
+                v.extend_from_slice(&(args.len() as u32).to_le_bytes());
+                v.extend_from_slice(args);
+                v.extend_from_slice(&gas.to_le_bytes());
+                v.extend_from_slice(&deposit.to_le_bytes());
+            }
+            Action::Transfer { deposit } => {
+                v.push(3);
+                v.extend_from_slice(&deposit.to_le_bytes());
+            }
+        }
+    }
+    v
+}
+
+/// SignedTransaction = tx || ed25519 signature over sha256(tx).
+pub fn sign_tx(sk: &[u8; 32], tx: &[u8]) -> Vec<u8> {
+    use ed25519_dalek::Signer;
+    let k = ed25519_dalek::SigningKey::from_bytes(sk);
+    let sig = k.sign(&Sha256::digest(tx));
+    let mut v = tx.to_vec();
+    v.push(0);
+    v.extend_from_slice(&sig.to_bytes());
+    v
+}
+
 #[cfg(test)]
 mod tests;
