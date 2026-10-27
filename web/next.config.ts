@@ -13,6 +13,12 @@ const csp = [
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  async redirects() {
+    return [
+      { source: "/ar", destination: "/", permanent: true },
+      { source: "/ar/:path*", destination: "/:path*", permanent: true },
+    ];
+  },
   async headers() {
     return [{ source: "/(.*)", headers: [
       { key: "Content-Security-Policy", value: csp },

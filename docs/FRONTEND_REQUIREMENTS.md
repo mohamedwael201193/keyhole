@@ -17,10 +17,10 @@ The web app must work for any NEAR user worldwide. These come from the worker/co
 - Map every worker `error.code` to a short human message plus a fix (e.g. `expired` → "Your clock may be off; sign again"; `over_cap_per_tx` → show the cap and the tier upgrade path; `rate_limited` → countdown).
 - Never show raw upstream text as the primary message.
 
-## i18n
-- All strings in message catalogs (e.g. next-intl). English is the default. Plan Arabic (RTL), Spanish, Chinese, Portuguese, Turkish, Russian, Hindi, Indonesian, Vietnamese, Korean.
-- RTL layout support (logical CSS properties).
-- Locale-aware number, currency (USD caps shown as USD) and date formats; times in the user's local zone and the "UTC day" for daily caps explained.
+## Copy
+- The site is English only. Strings live in `web/messages/en.json`. There is no language switcher and no RTL layout.
+- `/ar` and `/ar/...` redirect to the English path. English pages stay at `/`, `/vault`, `/mint`, and the rest, with no `/en` prefix.
+- Numbers and USD amounts use English formatting. Times show in the viewer's local zone, and the daily cap resets at UTC midnight.
 
 ## Mobile and access
 - Mobile-first, works at 360 px width, touch targets ≥ 44 px.

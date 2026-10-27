@@ -9,8 +9,8 @@
   --brass: #7D5A1E;
   --brassL: #B8893E;
   --ln: #1A2A2C24;
-  --serif: var(--font-cormorant), var(--font-naskh), "Noto Naskh Arabic", Georgia, serif;
-  --sans: var(--font-manrope), var(--font-arabic), "Noto Sans Arabic", sans-serif;
+  --serif: var(--font-cormorant), Georgia, serif;
+  --sans: var(--font-manrope), sans-serif;
   --mono: var(--font-dm), ui-monospace, monospace;
 }
 * { box-sizing: border-box; }
@@ -40,16 +40,13 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .kh-logo.h-12 { --kh: 3rem; }
 .kh-logo.h-16 { --kh: 4rem; }
 .kh-logo img { height: 100%; width: auto; flex: none; filter: none; }
-.kh-word { font-family: var(--serif); font-weight: 700; font-size: calc(var(--kh, 2.25rem) * .65); line-height: 1; letter-spacing: .18em; color: inherit; white-space: nowrap; }
+.kh-word { font-family: var(--font-cormorant), "Cormorant Garamond", var(--serif); font-weight: 700; font-size: calc(var(--kh, 2.25rem) * .65); line-height: 1; letter-spacing: .18em; color: inherit; white-space: nowrap; }
 .links { display: flex; gap: 34px; font-weight: 600; font-size: 16px; font-family: var(--sans); }
 .links a { color: var(--ink); text-decoration: none; padding: 8px 0; }
 .links a.on { color: var(--teal); border-bottom: 2px solid var(--teal); }
 .nav-tools { justify-self: end; display: flex; align-items: center; gap: 10px; }
 .cw { background: var(--teal); color: #F6F1E7; height: 44px; padding: 0 22px; border-radius: 999px; font-weight: 700; font-size: 15px; border: 0; cursor: pointer; display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; }
 .cw:disabled { opacity: .55; cursor: wait; }
-.lang { height: 40px; border-radius: 999px; border: 1px solid var(--ln); background: transparent url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.2 6 6.2 11 1.2' fill='none' stroke='%231A2A2C' stroke-width='1.4' stroke-linecap='round'/></svg>") no-repeat right 10px center; padding: 0 28px 0 12px; font: 500 13px var(--mono); color: var(--ink); appearance: none; -webkit-appearance: none; color-scheme: light; }
-.lang option { color: var(--ink); background: #F6F1E7; }
-.nav.dark .lang { color: #F1EBDF; border-color: #F1EBDF66; background-color: transparent; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.2 6 6.2 11 1.2' fill='none' stroke='%23F1EBDF' stroke-width='1.4' stroke-linecap='round'/></svg>"); }
 .music { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--ln); background: transparent; color: #4A5556; display: grid; place-items: center; cursor: pointer; }
 .music[aria-pressed="true"] { color: var(--teal); }
 .nav.dark .music { border-color: #F1EBDF66; background: transparent; color: #F1EBDF; }

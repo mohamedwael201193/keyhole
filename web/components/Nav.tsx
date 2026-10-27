@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { KeyholeLogo } from "./KeyholeLogo";
 import { MusicToggle } from "./MusicToggle";
-import { useI18n, LOCALES, type Locale } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { shortAccount } from "@/lib/near";
 
@@ -17,7 +17,7 @@ const LINKS = [
 ] as const;
 
 export function Nav() {
-  const { t, locale, setLocale } = useI18n();
+  const { t } = useI18n();
   const { accountId, connect, disconnect } = useWallet();
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -50,7 +50,6 @@ export function Nav() {
           ))}
         </div>
         <div className="nav-tools">
-          <span className="desk"><LangSelect id="lang" locale={locale} setLocale={setLocale} /></span>
           <span className="desk"><MusicToggle /></span>
           {accountId
             ? <button className="cw" onClick={() => void disconnect()} title={t("nav.disconnect")}>{shortAccount(accountId, 4)}</button>
@@ -63,18 +62,9 @@ export function Nav() {
       {open && (
         <ul id="mnav" className="mnav">
           {LINKS.map(([href, key]) => <li key={key}><Link onClick={() => setOpen(false)} href={href}>{t(`nav.${key}`)}</Link></li>)}
-          <li style={{ display: "flex", gap: 8, alignItems: "center" }}><LangSelect id="lang-m" locale={locale} setLocale={setLocale} /><MusicToggle /></li>
+          <li><MusicToggle /></li>
         </ul>
       )}
     </>
   );
-}
-
-function LangSelect({ id, locale, setLocale }: { id: string; locale: Locale; setLocale: (l: Locale) => void }) {
-  return (<>
-    <label className="sr-only" htmlFor={id}>Language</label>
-    <select id={id} className="lang" value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
-      {Object.entries(LOCALES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-    </select>
-  </>);
 }

@@ -68,9 +68,10 @@ The rule lives in [`lib/near.ts`](lib/near.ts) and is unit-tested.
   - WalletConnect turns on when `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is set.
   - Redirect wallets resume the signed request after they return.
   - The wallet bundle loads only when you click Connect, or when you have connected before.
-- **Languages:** English by default, plus Arabic with full RTL layout.
-  - Message catalogs are in `messages/*.json`.
-  - Each worker and gateway error code maps to a short message and a fix in both languages, and a test checks this against the worker source.
+- **Language:** English only. Copy lives in `messages/en.json`.
+  - There is no language switcher and no RTL layout.
+  - `/ar` and `/ar/...` redirect to the same English path.
+  - Each worker and gateway error code maps to a short English message and a fix, and a test checks this against the worker source.
 - **Access:**
   - Works on mobile from 360 px.
   - Touch targets are at least 44 px.

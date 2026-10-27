@@ -53,13 +53,18 @@ test("gateway: fund-moving ops and junk are refused", async ({ request }) => {
   expect((await request.post("/api/worker", { data: "x".repeat(9000), headers: { "content-type": "application/json" } })).status()).toBe(413);
 });
 
-test("Arabic switches to RTL", async ({ page }) => {
+test("English pages have no language switcher, and old /ar paths redirect", async ({ page }) => {
   await page.goto("/");
-  const mobile = (page.viewportSize()?.width ?? 1000) < 640;
-  if (mobile) await page.getByRole("button", { name: "Menu" }).click();
-  await page.locator(mobile ? "#lang-m" : "#lang").selectOption("ar");
-  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-  await expect(page.locator("h1")).toContainText("المفتاح");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+  await expect(page.locator(".lang")).toHaveCount(0);
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+  const res = await page.goto("/ar/vault?x=1");
+  expect(res?.status()).toBeLessThan(400);
+  const url = new URL(page.url());
+  expect(url.pathname).toBe("/vault");
+  expect(url.search).toBe("?x=1");
+  await expect(page.locator("h1").first()).toBeVisible();
 });
 
 test("vault shows a premium empty or offline state; connect opens the wallet selector", async ({ page }) => {

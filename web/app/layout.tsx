@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, DM_Mono, Manrope, Noto_Naskh_Arabic, Noto_Sans_Arabic } from "next/font/google";
+import { Cormorant_Garamond, DM_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
@@ -8,9 +8,6 @@ import { Footer } from "@/components/Footer";
 const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["600", "700"], style: ["normal", "italic"], variable: "--font-cormorant", display: "swap" });
 const sans = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"], variable: "--font-manrope", display: "swap" });
 const mono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm", display: "swap" });
-const arabic = Noto_Sans_Arabic({ subsets: ["arabic"], weight: ["500", "600", "700"], variable: "--font-arabic", display: "swap", preload: false });
-const naskh = Noto_Naskh_Arabic({ subsets: ["arabic"], weight: ["600", "700"], variable: "--font-naskh", display: "swap", preload: false });
-
 export const metadata: Metadata = {
   title: "KEYHOLE — the NFT is the viewing key",
   description: "An NFT that is the viewing key to a confidential trading account inside an attested TEE on NEAR. Hold the key, read the book. Sell it, and the view moves.",
@@ -22,7 +19,7 @@ export const viewport: Viewport = { themeColor: "#ECE6DA", width: "device-width"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" dir="ltr" className={`${serif.variable} ${sans.variable} ${mono.variable} ${arabic.variable} ${naskh.variable}`}>
+    <html lang="en" dir="ltr" className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
       <body>
         <Providers>
           <Nav />

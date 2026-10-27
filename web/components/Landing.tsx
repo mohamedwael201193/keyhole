@@ -23,7 +23,7 @@ const TIERS: { name: Finish; art: number; daily: string }[] = [
 ];
 
 export function Landing({ supply, hash, config }: { supply: number | null; hash: string; config: Config | null }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const tr = (name: string) => { const v = t(`traits.${name}`); return v.startsWith("traits.") ? name : v; };
   return (
     <>
@@ -47,7 +47,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <div className="stage">
             <svg className="kh-ring" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
               <defs><path id="ringpath" d="M200,200 m-150,0 a150,150 0 1,1 300,0 a150,150 0 1,1 -300,0" /></defs>
-              <text textLength={locale === "en" ? 930 : undefined} lengthAdjust="spacing">
+              <text textLength={930} lengthAdjust="spacing">
                 <textPath href="#ringpath">{t("land.ring")}</textPath>
               </text>
             </svg>

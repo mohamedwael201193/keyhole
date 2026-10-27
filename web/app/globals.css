@@ -7,9 +7,9 @@
   --color-plate: #f6f1e7;
   --color-line: #1a2a2c24;
   --color-mute: #4a5556;
-  --font-serif: var(--font-cormorant), "Noto Naskh Arabic", Georgia, serif;
+  --font-serif: var(--font-cormorant), Georgia, serif;
   --font-mono: var(--font-dm), ui-monospace, monospace;
-  --font-sans: var(--font-manrope), var(--font-arabic), "Noto Sans Arabic", sans-serif;
+  --font-sans: var(--font-manrope), sans-serif;
 }
 
 :focus { outline: none; }

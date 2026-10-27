@@ -26,7 +26,7 @@ type Bal = { token?: string; symbol?: string; amount?: string; balance?: string;
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
 
 export function VaultView({ initialOnline }: { initialOnline: boolean }) {
-  const { t, fmtUsd, locale } = useI18n();
+  const { t, fmtUsd } = useI18n();
   const { accountId, connect } = useWallet();
   const online = useHealth(initialOnline);
   const status = useSigned("status");
@@ -128,7 +128,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
               <div className="c">
                 <p className="lb">{t("vault.total")}</p>
-                <p className="big">{total == null ? "—" : <>${Math.floor(total).toLocaleString(locale)}<small>.{total.toFixed(2).split(".")[1]}</small></>}</p>
+                <p className="big">{total == null ? "—" : <>${Math.floor(total).toLocaleString("en")}<small>.{total.toFixed(2).split(".")[1]}</small></>}</p>
                 <p className="note">{balances ? t("vault.balanceReal") : t("vault.sealedBook")}</p>
                 <div className="hero-actions" style={{ marginTop: 16 }}>
                   <button className="btn b1" disabled={balance.busy} onClick={() => void balance.run({})} data-testid="balance-btn">{balance.busy ? "…" : t("vault.balance")}</button>

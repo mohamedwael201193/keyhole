@@ -6,7 +6,6 @@ import { WORKER_ERROR_CODES } from "@/lib/errors";
 import { errorText, translate } from "@/lib/i18n";
 import { staticChecks, CALL_ID, fastfsUrl } from "@/lib/verify";
 import en from "@/messages/en.json";
-import ar from "@/messages/ar.json";
 import { readFileSync } from "node:fs";
 
 const tok = (owner: string, exp: string | null = null) => ({ owner_id: owner, metadata: { title: null, description: null, issued_at: null, expires_at: exp } });
@@ -55,19 +54,13 @@ describe("formatting", () => {
 describe("error catalog", () => {
   const src = readFileSync(__dirname + "/../../tee/worker/src/main.rs", "utf8") + readFileSync(__dirname + "/../../tee/worker/src/lib.rs", "utf8");
   const workerCodes = [...new Set([...src.matchAll(/err\("([a-z_]+)"/g)].map((m) => m[1]))];
-  it("every worker error code has a plain message + fix in English and Arabic", () => {
+  it("every worker error code has a plain English message and a fix", () => {
     for (const c of [...workerCodes, ...WORKER_ERROR_CODES]) {
       expect((en.errors as Record<string, string[]>)[c], c).toHaveLength(2);
-      expect((ar.errors as Record<string, string[]>)[c], "ar " + c).toHaveLength(2);
     }
   });
-  it("Arabic covers every non-error key", () => {
-    const keys = (o: object, p = ""): string[] => Object.entries(o).flatMap(([k, v]) => (typeof v === "object" && !Array.isArray(v) ? keys(v, p + k + ".") : [p + k]));
-    const missing = keys(en).filter((k) => !k.startsWith("errors.") && translate("ar", k) === translate("en", k) && !/badge|cta2|s3/.test(k));
-    expect(missing).toEqual([]);
-    expect(Object.keys(ar).length).toBeGreaterThan(5);
-  });
-  it("interpolates vars", () => expect(errorText("en", "over_cap_per_tx", { cap: "$1.00" })[0]).toContain("$1.00"));
+  it("resolves catalog keys", () => expect(translate("nav.home")).toBe("Home"));
+  it("interpolates vars", () => expect(errorText("over_cap_per_tx", { cap: "$1.00" })[0]).toContain("$1.00"));
 });
 describe("verify", () => {
   const h = "a".repeat(64);

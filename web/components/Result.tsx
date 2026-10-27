@@ -7,11 +7,10 @@ import { OFFLINE_CODES } from "@/lib/useHealth";
 import type { WorkerResult } from "@/lib/worker";
 
 export function ErrorBox({ code, vars, retryAfter }: { code: string; vars?: Record<string, string | number>; retryAfter?: number }) {
-  const { locale } = useI18n();
   const [s, setS] = useState(retryAfter || 0);
   useEffect(() => { if (!s) return; const i = setInterval(() => setS((x) => Math.max(0, x - 1)), 1000); return () => clearInterval(i); }, [s]);
   if (OFFLINE_CODES.includes(code)) return <OfflineState />;
-  const [msg, fix] = errorText(locale, code, { ...vars, s });
+  const [msg, fix] = errorText(code, { ...vars, s });
   return (
     <div role="alert" className="errbox" data-testid="error" data-code={code}>
       <p>{msg}</p><p className="note">{fix}</p>
