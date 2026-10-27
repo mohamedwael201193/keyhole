@@ -1,0 +1,75 @@
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: contracts/keys } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show && rustup component add clippy
+      - run: cargo test --locked
+      # deployed code is frozen; this one style lint is allowed so CI checks the exact deployed source
+      - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
+      - name: deployed wasm matches on-chain code_hash
+        working-directory: .
+        run: ./judge/1-contract.sh
+  worker:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: tee/worker } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show && rustup component add clippy
+      - run: cargo test --locked
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - name: reproducible wasm == deployed sha256
+        run: |
+          got=$(./build.sh)
+          want=$(cat DEPLOYED_SHA256)
+          echo "built $got"; echo "deployed $want"
+          test "$got" = "$want"
+      - name: deployed bytes on FastFS match
+        run: test "$(curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$(cat DEPLOYED_SHA256).wasm | sha256sum | cut -d' ' -f1)" = "$(cat DEPLOYED_SHA256)"
+  cli:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: cli } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npx tsc -p . --noEmit
+      - run: npm test
+  judge-kit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./judge/2-attestations.sh
+      - run: ./verify.sh "$(jq -r '.[0].call_id' judge/evidence.json)"
+  hygiene:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: no secrets or keys committed
+        run: |
+          ! git grep -nE 'wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|eyJhbGci[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE' -- . ':!cli/package-lock.json'
+  web:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: e2e against the local production build (reads mainnet live)
+        run: |
+          npx next start -p 3100 & npx -y wait-on http://localhost:3100
+          npx playwright test --grep-invert "funded payment key"

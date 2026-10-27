@@ -1,0 +1,23 @@
+{
+  "name": "keyhole-cli",
+  "version": "0.1.0",
+  "description": "KEYHOLE CLI and MCP server: mint a key, check status, quote and trade privately, verify TEE attestations.",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "keyhole": "dist/cli.js", "keyhole-mcp": "dist/mcp.js" },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "node --test --import tsx test/*.test.ts",
+    "keyhole": "tsx src/cli.ts",
+    "mcp": "tsx src/mcp.ts"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0",
+    "bs58": "^6.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": { "tsx": "^4.20.0", "typescript": "^5.9.0", "@types/node": "^20.0.0" }
+}

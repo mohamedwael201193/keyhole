@@ -1,0 +1,303 @@
+package outlayer:wallet@0.1.0;
+
+/// Wallet API for OutLayer — Fireblocks-style custody for AI agents
+///
+/// Allows WASI modules to interact with the wallet system when
+/// the execution request includes an X-Wallet-Id header.
+///
+/// All functions return (result, error) tuples:
+/// - On success: (json_result, "")
+/// - On error: ("", error_string)
+///
+/// ## Handling the error — every call, not just the ones you expect to fail
+///
+/// A wallet call reaches the network, a policy engine and a chain. It fails for
+/// reasons that have nothing to do with your code, and ignoring the second half
+/// of the tuple means acting on an empty result as if it were an answer.
+///
+/// The error string leads with a MACHINE CODE, then a human message, then any
+/// field that changes what to do next:
+///
+///     "<code>: <message>[ key=value]..."
+///
+/// Route on the code. Codes worth knowing:
+///
+/// - `wallet_busy` — a wallet runs one money operation at a time so spending
+///   limits are counted correctly. Clears by itself; carries
+///   `in_flight_request_id=<id>`, which you can poll instead of retrying blind.
+/// - `policy_denied` — the owner's policy refused it. Retrying changes nothing.
+/// - `wallet_frozen` — the owner stopped the wallet.
+/// - `agent_connect_denied` — the Agent Connect pre-flight refused before
+///   signing, so no gas was spent. Carries `terminal=true|false`: `true` means
+///   retrying is pointless and the owner must act.
+/// - `insufficient_balance` — not enough on the account this operation spends.
+///
+/// A body that is not one of ours comes back verbatim rather than dressed up
+/// in a code that was invented for it.
+///
+/// ```rust
+/// let (result, error) = wallet::transfer("near", to, amount, token);
+/// if !error.is_empty() {
+///     let code = error.split(':').next().unwrap_or("");
+///     match code {
+///         // Worth waiting for: something else holds the wallet right now.
+///         "wallet_busy" => return retry_later(&error),
+///         // The owner has to act. Say so and stop.
+///         "policy_denied" | "wallet_frozen" => return tell_the_owner(&error),
+///         "agent_connect_denied" if error.contains("terminal=true") => {
+///             return tell_the_owner(&error)
+///         }
+///         _ => return Err(error),
+///     }
+/// }
+/// let parsed: serde_json::Value = serde_json::from_str(&result)?;
+/// ```
+///
+/// Never treat an empty `result` as success. On every error path above the
+/// result is the empty string, and parsing it yields nothing useful.
+///
+/// ## Chain-specific vs Cross-chain operations
+///
+/// **Chain-specific** (dispatched by `chain` param, currently only "near"):
+///   transfer, get-balance, call (NEAR only, no chain param)
+///
+/// **Cross-chain via NEAR Intents protocol**:
+///   withdraw, intents-deposit, swap
+interface api {
+    /// Get wallet public key identifier
+    ///
+    /// Returns the wallet_id (e.g. "ed25519:abc..." or "secp256k1:abc...")
+    /// that was passed via X-Wallet-Id header.
+    ///
+    /// Returns ("", "wallet not available") if no wallet_id in execution context.
+    get-id: func() -> tuple<string, string>;
+
+    /// Get derived address for a given chain
+    ///
+    /// chain: "near", "ethereum", "solana", etc.
+    ///
+    /// Returns (address_json, error):
+    /// - address_json: {"address": "...", "public_key": "..."}
+    /// - error: empty on success
+    get-address: func(chain: string) -> tuple<string, string>;
+
+    /// ## EVM keys of a connector: sub-keys
+    ///
+    /// A connector holds balances under addresses of its own: one per `label`
+    /// (`[a-z0-9][a-z0-9_-]{0,31}`, e.g. "trading", "bridge"). Each label is a
+    /// distinct secp256k1 key of the SAME wallet — the owner's policy governs
+    /// it like the wallet's own key — under the keystore path
+    /// `connector.{connector_id}.{label}`. The worker builds that path only for
+    /// a connector published under the connectors namespace whose verified
+    /// manifest names `connector_id` equal to its own project name, so a guest
+    /// can never name another connector's keys — not by mistake, and not by
+    /// embedding somebody else's id.
+    ///
+    /// Every EVM key a guest can sign with is a sub-key. The empty label is the
+    /// sub-key `default`, not the wallet's own key: `wallet:{id}:evm` — the
+    /// address `get-address` returns for an EVM chain — is never signable from
+    /// inside a module, only through the HTTPS wallet API by the holder of the
+    /// wallet's credential. A project outside the connectors namespace has no
+    /// sub-keys and so no EVM signing at all: every label, the empty one
+    /// included, answers `sub_key_unavailable`.
+    ///
+    /// Error codes of this family: `invalid_label`, `sub_key_unavailable`,
+    /// `invalid_typed_data`, plus the coordinator's (`policy_denied`, …).
+
+    /// Address of a sub-key (the empty label is `default`).
+    ///
+    /// chain: an EVM chain name ("base", "hyperevm", …); a non-EVM chain is
+    /// refused — sub-keys are EVM keys.
+    ///
+    /// Returns (address_json, error):
+    /// - address_json: {"address": "0x…", "public_key": "secp256k1:…", "sub_path": "connector.…"}
+    get-sub-key-address: func(chain: string, label: string) -> tuple<string, string>;
+
+    /// Sign EIP-712 typed data with one of the connector's sub-keys.
+    ///
+    /// typed-data: the full `eth_signTypedData_v4` object as a JSON string
+    ///   (`{domain, types, primaryType, message}`); the digest is computed by the
+    ///   keystore, never supplied by the guest.
+    /// label: sub-key label; empty is `default`.
+    ///
+    /// Gated by the wallet's `evm_sign` capability.
+    /// Returns (result_json, error):
+    /// - result_json: {"signature": "0x…" (65 bytes r‖s‖v, v ∈ {27,28}), "chain": …, "sub_path": …}
+    evm-sign-typed-data: func(chain: string, typed-data: string, label: string) -> tuple<string, string>;
+
+    /// Sign an EIP-191 personal_sign message with one of the connector's sub-keys.
+    ///
+    /// encoding: "utf8" (or empty) signs the UTF-8 bytes of `message`; "hex"
+    ///   signs the decoded bytes — the form for a pre-hashed digest such as an
+    ///   ERC-4337 userOpHash.
+    /// label: sub-key label; empty is `default`.
+    ///
+    /// Gated by the wallet's `evm_sign` capability.
+    evm-sign-message: func(chain: string, message: string, encoding: string, label: string) -> tuple<string, string>;
+
+    /// Sign a serialized unsigned EVM transaction with one of the connector's sub-keys.
+    ///
+    /// unsigned-tx: `0x`-hex of the serialized unsigned transaction (viem
+    ///   `serializeTransaction(tx)`; `0x05‖rlp(…)` for an EIP-7702 authorization
+    ///   preimage). The keystore keccak256-hashes and signs; the guest assembles
+    ///   the signed transaction and broadcasts it itself.
+    /// label: sub-key label; empty is `default`.
+    ///
+    /// Gated by the wallet's `evm_sign.raw_tx` sub-capability (default OFF).
+    evm-sign-transaction: func(chain: string, unsigned-tx: string, label: string) -> tuple<string, string>;
+
+    /// Withdraw funds via NEAR Intents protocol (cross-chain)
+    ///
+    /// chain: target chain (e.g. "near", "ethereum", "bitcoin")
+    /// to: recipient address on that chain
+    /// amount: amount in minimal token units (e.g. yoctoNEAR)
+    /// token: token identifier (empty = native, "nep141:usdt.tether-token.near", etc.)
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"request_id": "uuid", "status": "processing"}
+    /// - error: empty on success, or "policy_denied: ..." / "wallet_frozen" / etc.
+    withdraw: func(chain: string, to: string, amount: string, token: string) -> tuple<string, string>;
+
+    /// Dry-run withdraw (policy check without execution)
+    ///
+    /// Same parameters as withdraw.
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"would_succeed": true/false, "reason": "...", "estimated_fee": "..."}
+    /// - error: empty on success
+    withdraw-dry-run: func(chain: string, to: string, amount: string, token: string) -> tuple<string, string>;
+
+    /// Get request status
+    ///
+    /// request-id: UUID of a previous withdraw/deposit/swap request
+    ///
+    /// Returns (status_json, error):
+    /// - status_json: {"request_id": "...", "status": "processing"|"success"|"failed", ...}
+    /// - error: empty on success
+    get-request-status: func(request-id: string) -> tuple<string, string>;
+
+    /// List available tokens
+    ///
+    /// Returns (tokens_json, error):
+    /// - tokens_json: {"tokens": [{"id": "...", "symbol": "...", "chains": ["near", ...]}]}
+    /// - error: empty on success
+    list-tokens: func() -> tuple<string, string>;
+
+    /// Transfer native tokens or FT on a specific chain
+    ///
+    /// chain: "near" (more chains coming — "ethereum", "bitcoin", "solana", etc.)
+    /// to: recipient address on that chain (e.g. "bob.near" for NEAR)
+    /// amount: amount in minimal units (yoctoNEAR for NEAR, wei for ETH, etc.)
+    ///
+    /// Currently only "near" chain is supported. Other chains will be added.
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"request_id": "uuid", "status": "success"|"failed", "tx_hash": "..."}
+    /// - error: empty on success, or "policy_denied: ..." / "wallet_frozen" / etc.
+    transfer: func(chain: string, to: string, amount: string) -> tuple<string, string>;
+
+    /// Get balance on a specific chain
+    ///
+    /// chain: "near" (more chains coming — "ethereum", "bitcoin", "solana", etc.)
+    /// token: token identifier on that chain (empty string or "near" for native token,
+    ///        or FT contract account_id like "usdt.tether-token.near" for NEAR chain)
+    ///
+    /// Currently only "near" chain is supported. Other chains will be added.
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"balance": "...", "token": "near"|"<token_account>", "account_id": "..."}
+    /// - error: empty on success
+    get-balance: func(chain: string, token: string) -> tuple<string, string>;
+
+    /// Deposit tokens into NEAR Intents balance (prerequisite for withdraw)
+    ///
+    /// Calls ft_transfer_call on the token contract to deposit into intents.near.
+    /// Auto-handles storage deposit if needed.
+    ///
+    /// token: FT contract account_id (e.g. "wrap.near", "usdt.tether-token.near")
+    /// amount: amount in minimal token units
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"request_id": "uuid", "status": "success"|"failed", "tx_hash": "..."}
+    /// - error: empty on success
+    intents-deposit: func(token: string, amount: string) -> tuple<string, string>;
+
+    /// Balance held in NEAR Intents (intents.near) — what `swap`, `withdraw`
+    /// and a cross-chain `deposit-intent` draw from and land in. Distinct from
+    /// `get-balance`, which reads the wallet's NEAR account.
+    ///
+    /// token: the asset, required — intents balances are per asset. A NEAR
+    ///   contract id ("wrap.near", "usdc…") or a defuse asset id
+    ///   ("nep141:wrap.near").
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"balance": "...", "token": "...", "source": "intents", ...}
+    /// - error: empty on success
+    get-intents-balance: func(token: string) -> tuple<string, string>;
+
+    /// A deposit address for bringing funds from another chain INTO the
+    /// wallet's intents balance (1Click). Send the source tokens to
+    /// `deposit_address` before `expires_at`; the bridged amount lands in
+    /// intents and shows in `get-intents-balance`.
+    ///
+    /// chain: the source chain ("ethereum", "base", "arbitrum", "solana", …)
+    /// token: the source token symbol on that chain; empty = "USDC"
+    /// amount: in the source token's minimal units
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"intent_id": "...", "deposit_address": "...", "amount": "...",
+    ///                 "amount_out": "...", "min_amount_out": "...", "expires_at": "...",
+    ///                 "estimated_time_secs": N}
+    /// - error: empty on success
+    deposit-intent: func(chain: string, token: string, amount: string) -> tuple<string, string>;
+
+    /// ## Confidential intents
+    ///
+    /// The wallet's shielded balance (NEAR Intents confidential pool). The same
+    /// policy governs it; what it adds is that a movement out of it does not
+    /// name the wallet's NEAR account on chain. Mainnet only.
+
+    /// Balance held in the confidential pool, per asset (or all assets when
+    /// `token` is empty).
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"balance": "...", "token": "...", "account_id": "..."} for one asset,
+    ///                {"balances": [...], "account_id": "..."} for all
+    get-confidential-balance: func(token: string) -> tuple<string, string>;
+
+    /// Withdraw from the confidential balance to an address on another chain.
+    ///
+    /// chain: destination chain ("base", "ethereum", …); "near" is refused —
+    ///   that is an unshield, not a withdrawal
+    /// to: recipient address on that chain (required)
+    /// amount: minimal units of `token`
+    /// token: defuse asset id ("nep141:…"); empty = the pool's native asset
+    ///
+    /// Policy-gated like `withdraw`. Returns (result_json, error):
+    /// - result_json: {"request_id": "uuid", "status": "processing"|"success", ...}
+    confidential-withdraw: func(chain: string, to: string, amount: string, token: string) -> tuple<string, string>;
+
+    /// A 1Click deposit address that lands funds from another chain in the
+    /// CONFIDENTIAL balance instead of the plain intents balance. Same
+    /// parameters and answer as `deposit-intent`.
+    confidential-deposit-intent: func(chain: string, token: string, amount: string) -> tuple<string, string>;
+
+    /// Swap tokens via NEAR Intents protocol
+    ///
+    /// Full atomic flow: quote → deposit to intents → token_diff → settle → withdraw.
+    ///
+    /// token-in: defuse asset identifier (e.g. "nep141:wrap.near")
+    /// token-out: defuse asset identifier (e.g. "nep141:usdt.tether-token.near")
+    /// amount-in: amount in minimal token units
+    /// min-amount-out: minimum acceptable output (slippage protection, empty = no limit)
+    ///
+    /// Returns (result_json, error):
+    /// - result_json: {"request_id": "uuid", "status": "success"|"processing",
+    ///                 "amount_out": "...", "intent_hash": "..."}
+    /// - error: empty on success
+    swap: func(token-in: string, token-out: string, amount-in: string, min-amount-out: string) -> tuple<string, string>;
+}
+
+world wallet-host {
+    import api;
+}

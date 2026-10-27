@@ -1,0 +1,456 @@
+[
+ {
+  "name": "info",
+  "call_id": "cefbc64e-6c08-4bfe-a165-1667d9f5f25b",
+  "output": {
+   "global_mints_per_day": 25,
+   "global_per_minute": 120,
+   "keys_contract": "keyhole-devmo.near",
+   "limits": {
+    "1": {
+     "daily_usd_micro": 5000000,
+     "per_minute_calls": 6,
+     "per_tx_usd_micro": 1000000
+    },
+    "2": {
+     "daily_usd_micro": 50000000,
+     "per_minute_calls": 12,
+     "per_tx_usd_micro": 10000000
+    },
+    "3": {
+     "daily_usd_micro": 500000000,
+     "per_minute_calls": 30,
+     "per_tx_usd_micro": 100000000
+    }
+   },
+   "minter_account": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+   "nep413_recipient": "keyhole",
+   "ok": true,
+   "op": "info",
+   "ops": [
+    "info",
+    "status",
+    "quote",
+    "mint",
+    "account",
+    "balance",
+    "swap",
+    "copy",
+    "withdraw",
+    "history",
+    "sweep_minter"
+   ],
+   "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes",
+   "version": "keyhole-worker/0.2.0"
+  }
+ },
+ {
+  "name": "status",
+  "call_id": "c96f3729-c266-4fec-a0df-73770915ab7a",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "limits": {
+    "daily_usd_micro": 5000000,
+    "per_minute_calls": 6,
+    "per_tx_usd_micro": 1000000
+   },
+   "ok": true,
+   "op": "status",
+   "spent_today_usd_micro": 10000,
+   "tier": 1
+  }
+ },
+ {
+  "name": "quote_dry",
+  "call_id": "a62c9d76-81b2-47e8-865d-c2d1714d507e",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "limits": {
+    "daily_usd_micro": 5000000,
+    "per_minute_calls": 6,
+    "per_tx_usd_micro": 1000000
+   },
+   "ok": true,
+   "op": "quote",
+   "policy": "passed",
+   "quote": {
+    "amountIn": "20000",
+    "amountInFormatted": "0.02",
+    "amountInUsd": "0.019990960000",
+    "amountOut": "4308922457113415424497",
+    "amountOutFormatted": "0.004308922457113415424497",
+    "amountOutUsd": "0.019990960000",
+    "minAmountIn": "20000",
+    "minAmountOut": "4265833232542281270252",
+    "refundFee": "0",
+    "timeEstimate": 12,
+    "withdrawFee": "0"
+   },
+   "spent_today_usd_micro": 10000,
+   "tier": 1,
+   "usd_micro": 19990
+  }
+ },
+ {
+  "name": "quote_execute_deposit_address",
+  "call_id": "a1bf58e8-d3ba-4a77-ae86-9e31fe5b8523",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "deposit_address": "55c0d718a3b1dc5005b5fdca40a9a75f79fbea4e3ceaf757add1d002e9450c05",
+   "limits": {
+    "daily_usd_micro": 5000000,
+    "per_minute_calls": 6,
+    "per_tx_usd_micro": 1000000
+   },
+   "ok": true,
+   "op": "quote",
+   "policy": "passed",
+   "quote": {
+    "amountIn": "20000",
+    "amountInFormatted": "0.02",
+    "amountInUsd": "0.019990960000",
+    "amountOut": "4308922457113415424497",
+    "amountOutFormatted": "0.004308922457113415424497",
+    "amountOutUsd": "0.019990960000",
+    "deadline": "2026-10-30T19:29:59.000Z",
+    "depositAddress": "55c0d718a3b1dc5005b5fdca40a9a75f79fbea4e3ceaf757add1d002e9450c05",
+    "minAmountIn": "20000",
+    "minAmountOut": "4265833232542281270252",
+    "refundFee": "0",
+    "timeEstimate": 12,
+    "timeWhenInactive": "2026-10-30T19:29:59.000Z",
+    "withdrawFee": "0"
+   },
+   "spent_today_usd_micro": 29990,
+   "tier": 1,
+   "usd_micro": 19990
+  }
+ },
+ {
+  "name": "quote_advanced",
+  "call_id": "44c12951-5cda-48b1-beba-0632e70dc98d",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "limits": {
+    "daily_usd_micro": 5000000,
+    "per_minute_calls": 6,
+    "per_tx_usd_micro": 1000000
+   },
+   "ok": true,
+   "op": "quote",
+   "policy": "passed",
+   "quote": {
+    "amountIn": "20000",
+    "amountInFormatted": "0.02",
+    "amountInUsd": "0.019990960000",
+    "amountOut": "4308922457113415424497",
+    "amountOutFormatted": "0.004308922457113415424497",
+    "amountOutUsd": "0.019990960000",
+    "minAmountIn": "20000",
+    "minAmountOut": "4265833232542281270252",
+    "refundFee": "0",
+    "timeEstimate": 12,
+    "withdrawFee": "0"
+   },
+   "spent_today_usd_micro": 29990,
+   "tier": 1,
+   "usd_micro": 19990
+  }
+ },
+ {
+  "name": "account_crosschain_deposit_address_base",
+  "call_id": "a523a6ea-56ca-466d-99c3-7f7d4dccd3ad",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "confidential_id": "2c2c4942d27e6d7e0db20bbd1897e8bae01d3511716cf3e197b14a7478fd21ca",
+   "deposit": {
+    "amount": "1000000",
+    "deposit_address": "0xD9250678Cf99ee7A761e88bF29b0311934A9332d",
+    "expires_at": "2026-10-30T19:00:12.717Z",
+    "hint": "Send 1000000 of nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near on base to the deposit_address; funds will settle into your confidential balance."
+   },
+   "fund": "send a confidential transfer to confidential_id, or ask for a cross-chain deposit address with params {chain, token, amount}",
+   "ok": true,
+   "op": "account"
+  }
+ },
+ {
+  "name": "balance_before",
+  "call_id": "9374b0ac-dcdf-4416-b162-2ebc8c13483d",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "balances": [
+    {
+     "balance": "20000",
+     "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"
+    },
+    {
+     "balance": "2163123975702494577005",
+     "token": "nep141:wrap.near"
+    }
+   ],
+   "confidential_id": "2c2c4942d27e6d7e0db20bbd1897e8bae01d3511716cf3e197b14a7478fd21ca",
+   "ok": true,
+   "op": "balance"
+  }
+ },
+ {
+  "name": "swap_0.005_usdc",
+  "call_id": "09d58c09-c1e9-48b6-bebb-485f5ae79539",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "amount_out": "1077247611400966459647",
+   "intent_hash": "Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so",
+   "ok": true,
+   "op": "swap",
+   "request_id": "475fa0eb-e8a7-4cbf-8044-eaeb51270c0f",
+   "status": "success",
+   "usd_in_micro": 5000
+  }
+ },
+ {
+  "name": "overcap_swap_2usdc",
+  "call_id": "a02613a2-d503-45e2-83b8-ef71927c2533",
+  "output": {
+   "error": {
+    "code": "over_cap_per_tx",
+    "message": "amount $2.00 exceeds your per-trade cap $1.00"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "replay_first",
+  "call_id": "85582544-8e08-4c9f-b3f0-ecad128201ab",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "limits": {
+    "daily_usd_micro": 5000000,
+    "per_minute_calls": 6,
+    "per_tx_usd_micro": 1000000
+   },
+   "ok": true,
+   "op": "status",
+   "spent_today_usd_micro": 39990,
+   "tier": 1
+  }
+ },
+ {
+  "name": "replay_second_refused",
+  "call_id": "ac289f04-0df8-4161-9123-e872ab3b75ab",
+  "output": {
+   "error": {
+    "code": "replay",
+    "message": "this signed request was already used; sign a new one"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "wrong_recipient_refused",
+  "call_id": "b9c8cb4f-e3aa-480f-bb47-70fc30a96d67",
+  "output": {
+   "error": {
+    "code": "wrong_recipient",
+    "message": "signature was made for 'some-other-app', expected 'keyhole'"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "tampered_refused",
+  "call_id": "942b4cff-23c9-4e4d-8ebc-79bfa01cd029",
+  "output": {
+   "error": {
+    "code": "bad_signature",
+    "message": "signature does not match message"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "op_mismatch_refused",
+  "call_id": "7a703e8f-2678-4978-b6ce-4d291828141d",
+  "output": {
+   "error": {
+    "code": "op_mismatch",
+    "message": "signed op 'status' but called 'balance'"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "stale_refused",
+  "call_id": "e7ac0627-be6d-41e9-95d0-71dcc59aed43",
+  "output": {
+   "error": {
+    "code": "expired",
+    "message": "request timestamp is more than 5 minutes from chain time; sign a new request"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "no_auth_refused",
+  "call_id": "750defed-2267-45b1-8a8c-74b528aa30ee",
+  "output": {
+   "error": {
+    "code": "no_auth",
+    "message": "missing `auth`: sign the request with your NEAR wallet (NEP-413 signMessage)"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "mint_again_refused",
+  "call_id": "a516a457-0be8-4805-acb1-4f3a9ad30ad3",
+  "output": {
+   "error": {
+    "code": "already_holder",
+    "message": "this account already holds a KEYHOLE key"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "history",
+  "call_id": "f0cf9778-1874-4c0b-b1a5-091218f9fcc6",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "entries": [
+    {
+     "amount_in": "10000",
+     "amount_out": "2163123975702494577005",
+     "kind": "swap",
+     "source": null,
+     "status": "success",
+     "token_in": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+     "token_out": "nep141:wrap.near",
+     "ts_ms": 1793124708729,
+     "usd_in_micro": 10000
+    },
+    {
+     "amount_in": "5000",
+     "amount_out": "1077247611400966459647",
+     "kind": "swap",
+     "source": null,
+     "status": "success",
+     "token_in": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+     "token_out": "nep141:wrap.near",
+     "ts_ms": 1793125822447,
+     "usd_in_micro": 5000
+    },
+    {
+     "amount_in": "5000",
+     "amount_out": "1078062826038209813729",
+     "kind": "copy",
+     "source": "leader-demo",
+     "status": "success",
+     "token_in": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+     "token_out": "nep141:wrap.near",
+     "ts_ms": 1793125869113,
+     "usd_in_micro": 5000
+    }
+   ],
+   "ok": true,
+   "op": "history"
+  }
+ },
+ {
+  "name": "balance_after_trades",
+  "call_id": "d892ac43-b786-4d5b-909a-764b6c92f6fd",
+  "output": {
+   "error": {
+    "code": "rate_limited",
+    "message": "max 6 requests per minute for your key tier"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "balance_final",
+  "call_id": "1a88f79f-49dd-45fb-bcae-96b746f38423",
+  "output": {
+   "error": {
+    "code": "rate_limited",
+    "message": "max 6 requests per minute for your key tier"
+   },
+   "ok": false
+  }
+ },
+ {
+  "name": "balance",
+  "call_id": "6b992a3c-5909-4a75-a694-dd08918e33da",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "balances": [
+    {
+     "balance": "10000",
+     "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"
+    },
+    {
+     "balance": "4318434413141670850381",
+     "token": "nep141:wrap.near"
+    }
+   ],
+   "confidential_id": "2c2c4942d27e6d7e0db20bbd1897e8bae01d3511716cf3e197b14a7478fd21ca",
+   "ok": true,
+   "op": "balance"
+  }
+ },
+ {
+  "name": "withdraw_wnear",
+  "call_id": "afc0f232-7d93-4a0e-8768-f62f245c537e",
+  "output": {
+   "ok": true,
+   "op": "withdraw",
+   "request_id": "633af674-5fe3-43f3-9072-78264fcde619",
+   "status": "success"
+  }
+ },
+ {
+  "name": "withdraw_usdc",
+  "call_id": "a39fffd9-201b-4af2-927f-94a90d54cbf5",
+  "output": {
+   "ok": true,
+   "op": "withdraw",
+   "request_id": "4330a163-c9e2-4127-afa4-225834439df6",
+   "status": "success"
+  }
+ },
+ {
+  "name": "balance_final",
+  "call_id": "3ef04098-f287-4527-a8f2-52511beaa9e3",
+  "output": {
+   "account": "keyhole-devmo.near",
+   "balances": [],
+   "confidential_id": "2c2c4942d27e6d7e0db20bbd1897e8bae01d3511716cf3e197b14a7478fd21ca",
+   "ok": true,
+   "op": "balance"
+  }
+ },
+ {
+  "name": "tee_mint_new_user",
+  "call_id": "73382e85-ac94-4fc7-8cf5-5845e2c97cc4",
+  "output": {
+   "account": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+   "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+   "ok": true,
+   "op": "mint",
+   "tier": 1,
+   "token_id": "k5f4750858f328940",
+   "tx": "DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF"
+  }
+ },
+ {
+  "name": "overcap_swap_first",
+  "call_id": "458541cb-ae80-4cae-9f3f-711e413e8b33",
+  "output": {
+   "error": {
+    "code": "over_cap_per_tx",
+    "message": "amount $2.00 exceeds your per-trade cap $1.00"
+   },
+   "ok": false
+  }
+ }
+]
