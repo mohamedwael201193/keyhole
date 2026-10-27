@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { PageHead } from "@/components/PageHead";
+import { Backdrop } from "@/components/Backdrop";
 import { useI18n } from "@/lib/i18n";
 import { attestation, WORKER_PUBLISH_TX } from "@/lib/config";
 import { CALLS } from "@/lib/evidence";
@@ -24,13 +25,27 @@ export function VerifyView({ initial }: { initial: string | null }) {
   useEffect(() => { if (initial) void go(initial); }, [initial, go]);
   const ok = !!ck && ck.quote && ck.registered && ck.fastfs === true;
   return (
-    <div className="mx-auto max-w-5xl px-4 py-16">
+    <div className="relative isolate"><Backdrop /><div className="relative z-10 mx-auto max-w-5xl px-4 py-16">
       <PageHead eyebrow="Intel TDX · OutLayer" title={t("verify.title")} sub={t("verify.sub")} />
       <form className="flex flex-col gap-3 sm:flex-row" onSubmit={(e) => { e.preventDefault(); void go(id); }}>
         <label htmlFor="cid" className="sr-only">call id</label>
         <input id="cid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder={t("verify.placeholder")} spellCheck={false} />
         <button className="btn btn-signal shrink-0" disabled={busy} data-testid="verify-btn">{busy ? "…" : t("verify.go")}</button>
       </form>
+      {!a && (
+        <section className="mt-8" aria-labelledby="checks-h">
+          <h2 id="checks-h" className="label mb-3">{t("empty.verifyTitle")}</h2>
+          <ol className="grid gap-px overflow-hidden rounded border border-line bg-line sm:grid-cols-3">
+            {[1, 2, 3].map((n) => (
+              <li key={n} className="relative bg-plate p-5">
+                <span className="font-mono text-xs text-signal">0{n}</span>
+                <p className="mt-2 font-serif text-2xl">{t(`empty.c${n}`)}</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-400">{t(`empty.c${n}d`)}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       {err && <p role="alert" className="mt-4 text-red-300" data-testid="verify-error">{err === "bad_params" ? "Not a call id (uuid)." : "Could not fetch the attestation."}</p>}
       {a && ck && (
         <section className={`plate mt-8 p-6 ${ok ? "border-signal/60" : ck.fastfs === null ? "" : "border-red-500/60"}`} data-testid="verdict" data-match={ok}>
@@ -58,6 +73,6 @@ curl -s https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$H.wasm | sha256
         <h3 className="label mt-8">{t("verify.examples")}</h3>
         <ul className="mt-3 flex flex-wrap gap-2">{CALLS.map((x) => <li key={x.id}><button className="btn btn-ghost font-mono text-xs" onClick={() => { setId(x.id); void go(x.id); }}>{x.label}</button></li>)}</ul>
       </section>
-    </div>
+    </div></div>
   );
 }

@@ -58,8 +58,9 @@ export function Hero({ supply }: { supply: number | null }) {
       {/* Stage */}
       <div ref={stage} onPointerMove={onMove} onPointerLeave={() => setM({ x: 0, y: 0 })} className="relative isolate min-h-[560px] overflow-hidden">
         {field && <ShaderField />}
-        <div className="absolute inset-0 grid place-items-center">
-          <div className="relative aspect-square w-[min(88vw,620px)]">
+        <div className="absolute inset-0 grid place-items-center xl:pe-[300px]">
+          {/* On xl the ring is sized to leave a lane for the vault card, so no orbit mark is ever covered. */}
+          <div className="relative aspect-square w-[min(88vw,620px)] xl:w-[min(calc(100vw-560px-380px),calc(100dvh-10rem),600px)]">
             {/* orbit ring (moves less = farther) */}
             <div className="depth absolute inset-0" style={{ transform: `translate3d(${m.x * -14}px, ${m.y * -14}px, 0)` }}>
               <div className="orbit absolute inset-0">
@@ -85,14 +86,14 @@ export function Hero({ supply }: { supply: number | null }) {
             <div className="depth absolute inset-[16%]" style={{ transform: `translate3d(${m.x * 26}px, ${m.y * 26}px, 0) rotateX(${m.y * -6}deg) rotateY(${m.x * 8}deg)` }}>
               <div className="halo absolute inset-[28%] rounded-full bg-signal/25 blur-3xl" />
               <div className="relic aperture relative h-full w-full">
-                <Image src="/art/key-live.webp" alt="The KEYHOLE relic: a keyed disc with a glowing aperture" fill priority fetchPriority="high" sizes="(max-width: 1024px) 70vw, 440px" className="object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,.8)]" />
+                <Image src="/art/key-live.webp" alt="The KEYHOLE relic: a keyed disc with a glowing aperture" fill loading="lazy" fetchPriority="low" sizes="(max-width: 1024px) 60vw, 440px" className="object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,.8)]" />
               </div>
             </div>
           </div>
         </div>
         {/* beam to the vault card */}
-        <div className="pointer-events-none absolute end-[min(4vw,40px)] top-[74%] z-10 hidden -translate-y-1/2 items-center xl:flex">
-          <div className="beam h-[3px] w-[110px] bg-gradient-to-r from-transparent via-signal to-signal shadow-[0_0_18px_#00ec97]" />
+        <div className="pointer-events-none absolute end-6 top-1/2 z-10 hidden -translate-y-1/2 items-center xl:flex">
+          <div className="beam h-[3px] w-[56px] bg-gradient-to-r from-transparent via-signal to-signal shadow-[0_0_18px_#00ec97]" />
           <div className="vaultcard plate w-[230px] p-4 shadow-[0_0_40px_-10px_rgba(0,236,151,.5)]" style={{ borderColor: "rgba(0,236,151,.5)" }}>
             <p className="eyebrow">{t("hero.vault")}</p>
             <p className="mt-2 font-serif text-2xl">{t("hero.vaultSub")}</p>

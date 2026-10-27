@@ -9,7 +9,8 @@
   "disconnect": "Disconnect",
   "badge": "Attested · Intel TDX",
   "menu": "Menu",
-  "skip": "Skip to content"
+  "skip": "Skip to content",
+  "connectShort": "Connect"
  },
  "hero": {
   "eyebrow": "Confidential by default · Sell the view",
@@ -299,5 +300,24 @@
    "The service's TEE compute balance is empty.",
    "We're topping it up; try again soon. Your keys and funds are unaffected."
   ]
+ },
+ "offline": {
+  "title": "The enclave is resting",
+  "body": "KEYHOLE's TEE compute is temporarily offline while it's topped up. Your keys, account and funds are safe on-chain, and nothing you sign is sent until it's back.",
+  "verify": "Verify past TEE calls",
+  "keys": "See every key"
+ },
+ "empty": {
+  "vaultTitle": "Your vault is sealed",
+  "vaultBody": "Connect any NEAR wallet. Reading your vault costs one gas-free signature that only the enclave can check.",
+  "mintTitle": "One signature, one key",
+  "mintBody": "Connect, sign once, and the TEE-held minter mints your viewing key. No gas, no sign-up.",
+  "verifyTitle": "Three checks, all in your browser",
+  "c1": "TDX quote",
+  "c1d": "Intel TDX hardware quote is present in the attestation.",
+  "c2": "Code identity",
+  "c2d": "The registered wasm hash equals the hash that actually executed.",
+  "c3": "Bytes on-chain",
+  "c3d": "Your browser downloads the wasm from FastFS and hashes it itself."
  }
 }

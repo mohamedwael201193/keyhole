@@ -5,8 +5,8 @@ import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 
-const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], variable: "--font-instrument", display: "swap" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-jb", display: "optional" });
+const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], variable: "--font-instrument", display: "swap", preload: false });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-jb", display: "optional", preload: false });
 
 export const metadata: Metadata = {
   title: "KEYHOLE — the NFT is the viewing key",

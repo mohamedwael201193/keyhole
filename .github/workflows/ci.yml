@@ -72,4 +72,4 @@ jobs:
       - name: e2e against the local production build (reads mainnet live)
         run: |
           npx next start -p 3100 & npx -y wait-on http://localhost:3100
-          npx playwright test --grep-invert gateway
+          npx playwright test --grep-invert "funded payment key"
