@@ -1,0 +1,1 @@
+{"call_id":"a28106f0-8eff-49e6-8998-57d99d2e9298","status":"completed","output":{"error":{"code":"over_cap_per_tx","message":"amount $1.99 exceeds your per-trade cap $1.00"},"ok":false},"attestation_url":"https://api.outlayer.ai/attestations/by-call/a28106f0-8eff-49e6-8998-57d99d2e9298","time_ms":3068}

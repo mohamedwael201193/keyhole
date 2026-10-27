@@ -1,0 +1,10 @@
+{
+  "account": "keyhole-devmo.near",
+  "amount_out": "1078062826038209813729",
+  "intent_hash": "Gagspu7rB2SVH1AWxyq9Hx36HvKXxZuMkiLRSLnma5bY",
+  "ok": true,
+  "op": "copy",
+  "request_id": "6ef53a84-30bc-4b3f-a3ef-e5537274393e",
+  "status": "success",
+  "usd_in_micro": 5000
+}
