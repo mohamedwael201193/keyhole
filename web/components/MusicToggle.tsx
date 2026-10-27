@@ -17,7 +17,7 @@ export function MusicToggle() {
   return (
     <button type="button" onClick={toggle} aria-pressed={on} aria-label={on ? t("music.on") : t("music.off")} title={on ? t("music.on") : t("music.off")}
       className="music">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={on ? "#1F4B4F" : "#4A5556"} strokeWidth="1.6" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
         <path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2">{on && <animate attributeName="opacity" values="1;.4;1" dur="1.6s" repeatCount="indefinite" />}</path>
       </svg>
     </button>
