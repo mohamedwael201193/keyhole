@@ -33,6 +33,7 @@ Nothing to install. Signing a message costs no gas.
 - `contracts/keys/`: keys NFT contract (Rust, near-sdk)
 - `tee/worker/`: OutLayer TEE worker (Rust, wasm32-wasip2). See its README for the ops, checks and error codes.
 - `scripts/sign-and-call.js`: sign a NEP-413 request with a local key and call the worker
+- `web/`: the website, live at https://keyhole-seven.vercel.app (Next.js, wallet selector, TEE gateway). See [web/README.md](web/README.md)
 - `docs/FRONTEND_REQUIREMENTS.md`: requirements for the web app
 
 ## License

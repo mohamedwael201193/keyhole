@@ -1,0 +1,57 @@
+@import "tailwindcss";
+@theme {
+  --color-signal: #00ec97;
+  --color-ink: #050706;
+  --color-plate: #0b0e0d;
+  --color-line: #1d2422;
+  --color-mute: #8a9590;
+  --font-serif: var(--font-instrument), Georgia, serif;
+  --font-mono: var(--font-mono-jb), ui-monospace, monospace;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Arabic", sans-serif;
+}
+html { background: var(--color-ink); color: #e9efec; color-scheme: dark; }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 2px solid var(--color-signal); outline-offset: 3px; border-radius: 4px; }
+.kh-field { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(60% 60% at 65% 50%, rgba(0,236,151,.07), transparent 70%); }
+.kh-field canvas { width: 100% !important; height: 100% !important; display: block; }
+.plate { background: var(--color-plate); border: 1px solid var(--color-line); border-radius: 4px; position: relative; z-index: 2; }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--color-signal); }
+.label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--color-mute); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; padding: 0 1.1rem; border-radius: 4px; font-size: 14px; font-weight: 500; transition: transform .15s, background .15s, box-shadow .2s; }
+.btn:active { transform: translateY(1px); }
+.btn-signal { background: var(--color-signal); color: #02130c; box-shadow: 0 0 0 0 rgba(0,236,151,.0); }
+.btn-signal:hover { box-shadow: 0 0 28px -4px rgba(0,236,151,.55); }
+.btn-ghost { border: 1px solid #3a4441; color: #e9efec; background: #0b0e0d; }
+.btn-ghost:hover { border-color: var(--color-signal); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.input { min-height: 44px; width: 100%; background: #070a09; border: 1px solid var(--color-line); border-radius: 4px; padding: 0 .8rem; font-family: var(--font-mono); font-size: 14px; }
+.input:focus { border-color: var(--color-signal); outline: none; }
+.shimmer { background: linear-gradient(90deg, #e9efec 0%, #fff 40%, #00ec97 50%, #fff 60%, #e9efec 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 6s linear infinite; }
+@keyframes shimmer { to { background-position: -250% 0; } }
+
+/* ---------- hero timeline: one clock, 9s ---------- */
+.hero-line { opacity: .01; transform: translateY(18px); animation: rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes rise { to { opacity: 1; transform: none; } }
+.relic { animation: turn 2.4s cubic-bezier(.2,.8,.2,1) 1.1s both; transform-origin: 50% 50%; }
+@keyframes turn { from { transform: rotate(-28deg) scale(.92); opacity: .01; filter: brightness(.3) blur(6px); } 60% { opacity: 1; } to { transform: none; opacity: 1; filter: none; } }
+.aperture { animation: aperture 2.8s ease-out 1.6s both; }
+@keyframes aperture { from { clip-path: circle(0% at 50% 46%); } to { clip-path: circle(75% at 50% 46%); } }
+.halo { animation: halo 3s ease-out 2.6s both, pulse 4s ease-in-out 5.6s infinite; }
+@keyframes halo { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes pulse { 50% { opacity: .55; } }
+.beam { transform-origin: left center; animation: beam 1.2s cubic-bezier(.6,0,.2,1) 4s both; }
+@keyframes beam { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+.vaultcard { animation: rise .8s ease-out 4.9s both; opacity: 0; transform: translateY(10px); }
+.orbit { animation: spin 90s linear 6.4s infinite; }
+.orbit-in { animation: orbitin 1.6s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes orbitin { from { opacity: 0; transform: scale(1.5); } to { opacity: 1; transform: none; } }
+.counter { animation: spin 90s linear 6.4s infinite reverse; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.depth { transition: transform .6s cubic-bezier(.2,.7,.2,1); will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition: none !important; }
+  .hero-line, .vaultcard { opacity: 1; transform: none; }
+  .shimmer { animation: none; color: #e9efec; background: none; }
+}

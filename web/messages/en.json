@@ -1,0 +1,303 @@
+{
+ "nav": {
+  "atlas": "Atlas",
+  "vault": "Vault",
+  "mint": "Mint",
+  "gallery": "Keys",
+  "verify": "Verify",
+  "connect": "Connect wallet",
+  "disconnect": "Disconnect",
+  "badge": "Attested · Intel TDX",
+  "menu": "Menu",
+  "skip": "Skip to content"
+ },
+ "hero": {
+  "eyebrow": "Confidential by default · Sell the view",
+  "l1": "Nothing on",
+  "l2": "the chain.",
+  "l3": "Everything",
+  "l4": "in the key.",
+  "kicker": "Every chain. One keyhole.",
+  "body": "The NFT is the viewing key. The account trades inside an attested enclave. Hold the key, read the book. Sell it, and the view moves.",
+  "cta": "Enter the vault",
+  "cta2": "Verify the enclave",
+  "s1": "Keys minted on mainnet",
+  "s2": "Per-trade cap, Bronze",
+  "s3": "Worker code hash",
+  "vault": "Vault open",
+  "vaultSub": "Per-trade cap enforced in TEE",
+  "live": "live from mainnet"
+ },
+ "how": {
+  "title": "Three steps. One signature.",
+  "s1": "Connect",
+  "s1d": "Any NEAR wallet. Named or implicit account. No sign-up, no email, no KYC.",
+  "s2": "Mint your key",
+  "s2d": "One gas-free NEP-413 signature. The TEE-held minter pays and mints the NFT to you.",
+  "s3": "Open the account",
+  "s3d": "Signed requests run inside Intel TDX. Caps are checked there, with an attestation for every call.",
+  "gasfree": "Signing a message costs no gas and moves no funds."
+ },
+ "proof": {
+  "title": "Proof, not promises",
+  "sub": "Every claim on this page links to a mainnet transaction or a TEE attestation.",
+  "contract": "Keys contract",
+  "minter": "TEE minter",
+  "wasm": "Worker wasm sha256",
+  "supply": "Keys minted",
+  "beats": "Heartbeats",
+  "royalty": "Royalty"
+ },
+ "atlas": {
+  "title": "The atlas",
+  "sub": "Every mark is a real mainnet transaction. Anything without a trail says so.",
+  "real": "On-chain",
+  "planned": "No trail yet",
+  "planned_d": "Supported by the routing network; no KEYHOLE transaction recorded yet.",
+  "open": "Open on NearBlocks",
+  "att": "Attestation"
+ },
+ "vault": {
+  "title": "Your vault",
+  "sub": "Signed reads and confidential quotes, executed inside the TEE.",
+  "need": "Connect a wallet to open your vault.",
+  "status": "Read my limits",
+  "tier": "Tier",
+  "perTx": "Per trade",
+  "daily": "Per UTC day",
+  "spent": "Spent today",
+  "perMin": "Calls per minute",
+  "utc": "Daily caps reset at 00:00 UTC ({time} your time).",
+  "quote": "Confidential quote",
+  "from": "From",
+  "to": "To",
+  "amount": "Amount",
+  "get": "Get attested quote",
+  "out": "You would receive",
+  "usd": "USD value",
+  "policy": "Policy",
+  "dry": "Dry quote: no deposit address, no funds move.",
+  "nokey": "You don't hold a key yet.",
+  "mintFirst": "Mint your key",
+  "account": "Your confidential account",
+  "accountD": "One private wallet per key holder, created and held inside the TEE. Balances are read with your signature; nothing is published on-chain.",
+  "open": "Open my account",
+  "balance": "Read balance",
+  "history": "History",
+  "empty": "Nothing yet"
+ },
+ "mint": {
+  "title": "Mint your key",
+  "sub": "One signature. The minter lives inside the TEE and pays the storage.",
+  "limits": "Limits by tier",
+  "tier1": "Bronze",
+  "tier2": "Silver",
+  "tier3": "Gold",
+  "reserved": "reserved",
+  "sign": "Sign and mint",
+  "done": "Your key is minted.",
+  "view": "View transaction",
+  "one": "One key per account."
+ },
+ "gallery": {
+  "title": "Every key on mainnet",
+  "sub": "Rendered live from contract state: locked for everyone, unlocked only for the holder.",
+  "empty": "No keys yet.",
+  "owner": "Holder",
+  "states": "Four states. One key.",
+  "locked": "Locked",
+  "locked_d": "The aperture is shut. The account can already be trading.",
+  "unlocked": "Unlocked",
+  "unlocked_d": "The key is turned. Only the holder sees the book.",
+  "expired": "Expired",
+  "expired_d": "The key is out. The view does not follow the old hand.",
+  "legendary": "Legendary",
+  "legendary_d": "Reserved. No Gold key exists yet."
+ },
+ "verify": {
+  "title": "Verify the enclave",
+  "sub": "Paste a call id. Your browser fetches the Intel TDX attestation from OutLayer, downloads the exact wasm from on-chain FastFS storage and hashes it locally. No trust in this site required.",
+  "placeholder": "call id, e.g. e099f957-…",
+  "go": "Verify",
+  "match": "Code hash matches the published worker",
+  "nomatch": "Code hash does NOT match the published worker",
+  "fields": "Attestation fields",
+  "published": "Published hash",
+  "executed": "Executed hash",
+  "examples": "Recent real calls",
+  "how": "Reproduce it yourself",
+  "script": "Or run the script in the repo:"
+ },
+ "result": {
+  "attestation": "Attestation",
+  "call": "Call",
+  "time": "TEE time"
+ },
+ "music": {
+  "on": "Sound on",
+  "off": "Sound off"
+ },
+ "footer": {
+  "built": "Built on NEAR",
+  "repo": "Source",
+  "license": "Music: generated, CC0"
+ },
+ "errors": {
+  "account_mismatch": [
+   "The signed account doesn't match.",
+   "Reconnect the same account and sign again."
+  ],
+  "already_holder": [
+   "This account already holds a key.",
+   "Open your vault instead."
+  ],
+  "already_minted": [
+   "This account already minted a key.",
+   "Open your vault instead."
+  ],
+  "bad_account": [
+   "That account id isn't valid.",
+   "Check the spelling or reconnect."
+  ],
+  "bad_message": [
+   "The signed message was malformed.",
+   "Sign again from this page."
+  ],
+  "bad_nonce": [
+   "The request nonce was invalid.",
+   "Sign again; a fresh nonce is used each time."
+  ],
+  "bad_params": [
+   "Some details were missing or invalid.",
+   "Check the amount and assets."
+  ],
+  "bad_public_key": [
+   "Your wallet sent an unsupported key.",
+   "Use an ed25519 full-access key wallet."
+  ],
+  "bad_signature": [
+   "The signature didn't verify.",
+   "Sign again with a full-access key."
+  ],
+  "config": [
+   "The service is being configured.",
+   "Try again in a minute."
+  ],
+  "expired": [
+   "The signature is older than 5 minutes.",
+   "Your clock may be off; sign again."
+  ],
+  "key_not_owned": [
+   "That key isn't on this account on-chain.",
+   "Use the account that owns the key."
+  ],
+  "mint_failed": [
+   "The mint transaction failed.",
+   "Nothing was charged to you. Try again."
+  ],
+  "no_auth": [
+   "This action needs a signature.",
+   "Connect a wallet and sign."
+  ],
+  "no_key": [
+   "You don't hold a key yet.",
+   "Mint your key first."
+  ],
+  "op_mismatch": [
+   "The signed action doesn't match the request.",
+   "Sign again from this page."
+  ],
+  "over_cap_daily": [
+   "That goes over today's cap ({cap}).",
+   "Wait for the UTC reset or upgrade your tier."
+  ],
+  "over_cap_per_tx": [
+   "That trade is over your per-trade cap ({cap}).",
+   "Lower the amount or upgrade your tier."
+  ],
+  "replay": [
+   "This signature was already used.",
+   "Each request needs a fresh signature; sign again."
+  ],
+  "rng": [
+   "The enclave couldn't get randomness.",
+   "Try again."
+  ],
+  "rpc": [
+   "NEAR RPC didn't answer.",
+   "Try again in a moment."
+  ],
+  "storage": [
+   "The enclave store is busy.",
+   "Try again in a moment."
+  ],
+  "unknown_op": [
+   "Unknown action.",
+   "Reload the page."
+  ],
+  "upstream": [
+   "The routing network didn't return a price.",
+   "Try a different pair or amount."
+  ],
+  "rate_limited": [
+   "Too many requests.",
+   "Try again in {s}s."
+  ],
+  "too_large": [
+   "Request too large.",
+   "Reload the page and retry."
+  ],
+  "bad_op": [
+   "That action isn't allowed.",
+   "Reload the page."
+  ],
+  "gateway": [
+   "The gateway is unavailable.",
+   "Try again shortly."
+  ],
+  "network": [
+   "Network error.",
+   "Check your connection and retry."
+  ],
+  "wallet_no_sign_message": [
+   "This wallet can't sign messages (NEP-413).",
+   "Use MyNearWallet, Meteor, HERE, Intear or Sender."
+  ],
+  "wallet_rejected": [
+   "You declined the signature.",
+   "Nothing happened. Sign when ready."
+  ],
+  "unknown": [
+   "Something went wrong.",
+   "Try again."
+  ],
+  "wrong_recipient": [
+   "The signature was made for a different app.",
+   "Sign again from this page (recipient \"keyhole\")."
+  ],
+  "empty": [
+   "Nothing to move.",
+   "Your balance is empty for that token."
+  ],
+  "policy_denied": [
+   "The enclave policy refused this action.",
+   "Lower the amount or check your tier limits."
+  ],
+  "signer": [
+   "The enclave signer is unavailable.",
+   "Try again in a minute."
+  ],
+  "still_minter": [
+   "This enclave is still the active minter.",
+   "No action needed."
+  ],
+  "tx_failed": [
+   "The transaction failed on-chain.",
+   "Nothing moved; try again."
+  ],
+  "service_unfunded": [
+   "The service's TEE compute balance is empty.",
+   "We're topping it up; try again soon. Your keys and funds are unaffected."
+  ]
+ }
+}
