@@ -1,6 +1,6 @@
 # Spending policy
 
-The tier caps are a policy inside the TEE worker. They are not a second contract. `limits_for_tier` in [`tee/worker/src/lib.rs`](../tee/worker/src/lib.rs) returns the numbers, and `enforce_caps` refuses the call before a swap is sent.
+The tier caps are a policy inside the TEE worker. They are not a second contract. `limits_for_tier` in [`tee/worker/src/lib.rs`](../tee/worker/src/lib.rs) returns the numbers, and `enforce_caps` refuses the call before a swap or a withdraw is sent. On both ops the enclave also checks the NEP-413 signature, the nonce and the per-minute rate limit. The website's withdraw form sets the destination to the connected account.
 
 | On-chain tier | Per trade | Per UTC day | Calls / minute |
 |---|---|---|---|

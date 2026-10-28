@@ -117,7 +117,7 @@
   "signTrade": "Sign & trade",
   "same": "Pick two different tokens.",
   "stepWithdraw": "3 · Withdraw",
-  "withdrawLead": "Sends to {account}. That address is what you sign. The enclave withdraws it from your confidential account after it checks the signature, the nonce and your caps.",
+  "withdrawLead": "Sends to {account}, the account you connected. The enclave checks the signature, the nonce, your tier caps and the rate limit, then withdraws from your confidential account.",
   "withdrawBtn": "Sign & withdraw",
   "activity": "Recent confidential activity",
   "checking": "Checking the attestation…",

@@ -551,7 +551,7 @@ html.no-motion .foil-card .bw { display: none; }
   min-width: 0;
   line-height: 1.45;
 }
-.finish-lock { display: flex; align-items: center; gap: 5px; margin: 8px 2px 0; font: 600 12px var(--mono); letter-spacing: .02em; color: #5C4316; white-space: nowrap; }
+.finish-lock { display: inline-flex; align-items: center; gap: 6px; margin: 10px 2px 0; padding: 6px 10px; width: fit-content; max-width: 100%; font: 700 14px/1.2 var(--mono); letter-spacing: .03em; color: #3A2E14; background: #F3E6C8; border: 1px solid #C4A46A; border-radius: 999px; white-space: nowrap; }
 .tc.is-mint .foil-card { box-shadow: 0 0 0 2px var(--c1), 0 18px 40px -22px rgba(26, 42, 44, .45); }
 .foil-card .bw {
   position: absolute;

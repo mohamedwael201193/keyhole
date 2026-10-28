@@ -13,6 +13,7 @@ import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { useHealth } from "@/lib/useHealth";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
+import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
 import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
 import { attestation, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
@@ -189,7 +190,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                     </div>
                     <label htmlFor="fund-amt">{t("vault.amount")} ({ASSETS[fundAsset].symbol})</label>
                     <input id="fund-amt" inputMode="decimal" className="input" value={fundAmt} onChange={(e) => setFundAmt(e.target.value)} aria-invalid={!fundUnits} />
-                    <button className="btn b1" type="button" disabled={!fundUnits || account.busy} data-testid="fund-btn" onClick={() => { if (fundUnits && accountId) void account.run({ chain: "near", token: ASSETS[fundAsset].symbol, amount: fundUnits }); }}>{account.busy ? "…" : t("vault.fundBtn")}</button>
+                    <button className="btn b1" type="button" disabled={!fundUnits || account.busy} data-testid="fund-btn" onClick={() => { if (fundUnits && accountId) void account.run(fundParams(fundAsset, fundUnits)); }}>{account.busy ? "…" : t("vault.fundBtn")}</button>
                   </div>
                   {account.res?.output?.ok && typeof account.res.output.deposit?.deposit_address === "string" && (
                     <div data-testid="deposit" style={{ marginTop: 14 }}>
@@ -236,7 +237,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                       <dt>{t("vault.policy")}</dt><dd>{String(q.policy)}</dd>
                     </dl>
                   )}
-                  <button className="btn b1" style={{ marginTop: 12 }} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; void swap.run({ token_in: ASSETS[from].id, token_out: ASSETS[toKey].id, amount_in: units, ...(quoted.minOut ? { min_amount_out: quoted.minOut } : {}) }); }}>{swap.busy ? "…" : t("vault.signTrade")}</button>
+                  <button className="btn b1" style={{ marginTop: 12 }} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? "…" : t("vault.signTrade")}</button>
                   {quote.res?.error && <ErrorBox code={quote.res.error.code} retryAfter={quote.res.error.retry_after} vars={{ cap: capFrom(quote.res.error.message) }} />}
                   {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} vars={{ cap: capFrom(swap.res.error.message) }} />}
                   {swap.res?.output?.ok && <p className="note" data-testid="trade-out">{t("vault.out")}: {String(swap.res.output.amount_out ?? "")}</p>}
@@ -256,7 +257,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                     </div>
                     <label htmlFor="w-amt">{t("vault.amount")} ({ASSETS[wAsset].symbol})</label>
                     <input id="w-amt" inputMode="decimal" className="input" value={wAmt} onChange={(e) => setWAmt(e.target.value)} aria-invalid={!wUnits} />
-                    <button className="btn b1" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) void withdraw.run({ chain: "near", to: accountId, token: ASSETS[wAsset].id, amount: wUnits }); }}>{withdraw.busy ? "…" : t("vault.withdrawBtn")}</button>
+                    <button className="btn b1" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); }}>{withdraw.busy ? "…" : t("vault.withdrawBtn")}</button>
                   </div>
                   {withdraw.res?.error && <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />}
                   {withdraw.res && <Attested r={withdraw.res} />}
