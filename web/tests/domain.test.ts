@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { keyState, shortAccount, tierName } from "@/lib/near";
-import { CAPS, bitCipherBits, finishOf, foilHue, keyIdentity, nep177, serialOf, traitSeed, toHex } from "@/lib/traits";
+import { guillocheOf } from "@/components/Engraving";
+import { CAPS, bitCipherBits, finishOf, keyIdentity, nep177, serialOf, traitSeed, toHex } from "@/lib/traits";
 import { toBaseUnits } from "@/lib/assets";
 import { WORKER_ERROR_CODES } from "@/lib/errors";
 import { errorText, translate } from "@/lib/i18n";
@@ -30,8 +31,7 @@ describe("key traits", () => {
     expect(a.art).toBe(b.art);
     expect(a.bits).not.toBe(b.bits);
     expect(serialOf(a.seedHex)).not.toBe(serialOf(b.seedHex));
-    expect(foilHue(a.seedHex)).not.toBe(foilHue(b.seedHex));
-    expect(Math.abs(foilHue(a.seedHex))).toBeLessThanOrEqual(12);
+    expect(guillocheOf(a.seedHex)).not.toEqual(guillocheOf(b.seedHex));
     const c = keyIdentity("k5f4750858f328940", 1);
     const d = keyIdentity("k857b6b68facc0f94", 1);
     expect(c.art).toBe(d.art);

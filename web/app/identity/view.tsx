@@ -3,13 +3,13 @@ import { Cipher } from "@/components/Cipher";
 import { Icon, KeyArt } from "@/components/Art";
 import { KeyholeLogo } from "@/components/KeyholeLogo";
 import { traitLabel } from "@/components/KeyCard";
-import { Engraving } from "@/components/Engraving";
+import { Guilloche, Hallmark } from "@/components/Engraving";
 import { FoilCard } from "@/components/FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT } from "@/lib/config";
 import type { Token } from "@/lib/near";
 import { formatTradePrice } from "@/lib/price";
-import { CAPS, CATALOG, foilHue, nep177, serialOf, traitSeed, toHex } from "@/lib/traits";
+import { CAPS, CATALOG, nep177, serialOf, traitSeed, toHex } from "@/lib/traits";
 
 const CARDS = [CATALOG[2], CATALOG[3], CATALOG[1], CATALOG[0]];
 
@@ -31,15 +31,16 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
             const seed = toHex(traitSeed(KEYS_CONTRACT, String(k.n)));
             return (
             <article className="specimen" key={k.n}>
-              <FoilCard finish={k.finish} hue={foilHue(seed)}>
+              <FoilCard finish={k.finish}>
                 <div className="top">
                   <span className="tier">{t(`finish.${k.finish}`)}</span>
                   <span className="oo">{t("land.oneOfOne")}</span>
                 </div>
                 <div className="art">
+                  <Guilloche seed={seed} />
                   <KeyArt n={k.n} alt="" width={430} height={1080} />
-                  <Engraving bits={bits(k.n)} serial={serialOf(seed)} />
                 </div>
+                <Hallmark bits={bits(k.n)} serial={serialOf(seed)} />
                 <h3>{t("land.keyN", { n: k.n })}</h3>
                 <div className="meta">
                   <span>{t("land.cipherN", { n: k.n })}</span>

@@ -6,7 +6,7 @@ import { HowStrip } from "@/components/HowStrip";
 import { EmptyState } from "@/components/EmptyState";
 import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
-import { Engraving } from "@/components/Engraving";
+import { Guilloche, Hallmark } from "@/components/Engraving";
 import { FoilCard } from "@/components/FoilCard";
 import { Medal } from "@/components/Medal";
 import { useI18n } from "@/lib/i18n";
@@ -17,7 +17,7 @@ import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
 import { attestation, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
-import { CAPS, foilHue, keyIdentity, serialOf, type Finish } from "@/lib/traits";
+import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 
 const LOGO: Record<string, [string, string]> = {
@@ -110,15 +110,16 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
               {idn && held ? (
                 <>
                   <div className="vault-key">
-                    <FoilCard finish={idn.finish} hue={foilHue(idn.seedHex)}>
+                    <FoilCard finish={idn.finish}>
                       <div className="top">
                         <span className="tier">{t(`finish.${idn.finish}`)}</span>
                         <span className="oo">{t("land.oneOfOne")}</span>
                       </div>
                       <div className="art">
+                        <Guilloche seed={idn.seedHex} />
                         <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
-                        <Engraving bits={idn.bits} serial={serialOf(idn.seedHex)} />
                       </div>
+                      <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />
                       <h3 style={{ overflowWrap: "anywhere" }}>{t("gallery.key", { id: held.token.token_id })}</h3>
                       <div className="meta"><span>{KEYS_CONTRACT}</span></div>
                     </FoilCard>

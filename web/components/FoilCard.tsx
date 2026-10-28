@@ -17,7 +17,6 @@ type Tag = "div" | "article";
  */
 export function FoilCard({
   finish,
-  hue = 0,
   as,
   className,
   children,
@@ -25,8 +24,6 @@ export function FoilCard({
   ...rest
 }: {
   finish: Finish;
-  /** Degrees of sheen shift from the token hash. 0 leaves the tier metal as drawn. */
-  hue?: number;
   as?: Tag;
   className?: string;
   children: ReactNode;
@@ -38,7 +35,7 @@ export function FoilCard({
       className={`foil-card card${finish === "Legendary" ? " is-leg" : ""} ${className ?? ""}`.trim()}
       data-finish={finish}
       data-t={finish === "Legendary" ? "leg" : finish.toLowerCase()}
-      style={{ ...style, ["--c1" as string]: METAL[finish].c1, ["--c2" as string]: METAL[finish].c2, ["--foil-hue" as string]: `${hue}deg` }}
+      style={{ ...style, ["--c1" as string]: METAL[finish].c1, ["--c2" as string]: METAL[finish].c2 }}
       {...rest}
     >
       <span className="grain" aria-hidden="true" />
