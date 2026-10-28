@@ -436,10 +436,12 @@ html.no-motion .foil-tilt { transform: none; }
 .foil-tilt {
   position: relative;
   border-radius: inherit;
-  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transform: none;
   transition: transform .45s ease;
-  transform-style: preserve-3d;
   height: 100%;
+}
+.foil-card:hover .foil-tilt {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
 }
 .foil-grain, .foil-sheen, .foil-glare, .foil-rim, .foil-beam { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
 .foil-grain {
@@ -461,6 +463,12 @@ html.no-motion .foil-tilt { transform: none; }
 }
 @keyframes foil-sheen { from { background-position: 130% 0; } to { background-position: -40% 0; } }
 .foil-body { position: relative; z-index: 3; border-radius: inherit; }
+.foil-card img {
+  position: relative;
+  z-index: 2;
+  object-fit: contain;
+  max-width: 100%;
+}
 .foil-glare {
   z-index: 5;
   opacity: 0;
@@ -470,37 +478,31 @@ html.no-motion .foil-tilt { transform: none; }
 }
 .foil-card:hover .foil-glare { opacity: 1; }
 .foil-rim {
-  z-index: 6;
-  padding: 4px;
+  z-index: 5;
   background: conic-gradient(from var(--beam-a), #E9B44C, #A8432C, #7A1F4F, #1F4B4F, #7D9C8E, #E9B44C);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
+  clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 5px 5px, 5px calc(100% - 5px), calc(100% - 5px) calc(100% - 5px), calc(100% - 5px) 5px, 5px 5px);
   animation: foil-spin 5s linear infinite;
 }
 @keyframes foil-spin { to { --beam-a: 360deg; } }
 .foil-beam {
-  z-index: 7;
-  border: var(--bwid) solid transparent;
-  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
+  z-index: 6;
+  background: none;
+  border: 0;
 }
 .foil-beam i {
   display: block;
   position: absolute;
-  width: var(--bl);
-  aspect-ratio: 1;
-  border-radius: 0;
-  background: linear-gradient(to left, #fff 0%, #fff 18%, var(--c2) 42%, var(--c1) 78%, transparent);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--c2) 42%, var(--c1) 68%, transparent 74%);
   offset-path: rect(0 auto auto 0 round var(--br));
   offset-anchor: 50% 50%;
   animation: foil-run var(--bd) linear infinite;
-  filter: drop-shadow(0 0 6px var(--c2)) drop-shadow(0 0 2px #fff);
+  filter: drop-shadow(0 0 5px var(--c2));
   pointer-events: none;
 }
+.foil-card.is-leg .foil-beam i { width: 46px; height: 46px; }
 .foil-beam i + i { animation-delay: calc(var(--bd) / -2); opacity: .72; }
 .foil-card.is-leg { --bwid: 7px; --bl: 320px; }
 .foil-rim { padding: 5px; }
@@ -513,7 +515,74 @@ html.no-motion .foil-tilt { transform: none; }
 .foil-card.reveal, .foil-card.nft-art { --br: 36px; }
 .foil-card.nft-art { --br: 22px; }
 .foil-card.nc { --br: 30px; padding: 0; background: #F6F1E7; }
-.foil-card.reveal .foil-tilt, .foil-card.nft-art .foil-tilt { position: absolute; inset: 0; height: auto; }
-.foil-card.reveal .foil-body, .foil-card.nft-art .foil-body { height: 100%; display: grid; place-items: center; }
+.foil-card.reveal .foil-tilt, .foil-card.nft-art .foil-tilt { position: absolute; inset: 0; }
+.foil-card.reveal .foil-body { height: 100%; display: grid; place-items: center; }
+.foil-card.nft-art .foil-body {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 58px 16px 18px;
+}
+.foil-card.nft-art img { align-self: flex-end; }
+.foil-card.nft-art img {
+  height: 250px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.nft-art .tier, .nft-art .att { z-index: 4; }
 .foil-card.nc .in { background: transparent; outline: 1px solid color-mix(in srgb, var(--c1) 45%, transparent); outline-offset: -10px; }
-.foil-card.nc .art { background: radial-gradient(circle at 50% 38%, #2C6A6F, #1F4B4F 60%, #16393C); }
+.foil-card.nc .art {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, #2C6A6F, #1F4B4F 60%, #16393C);
+}
+.foil-card.nc .art img {
+  grid-area: 1 / 1;
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  z-index: 1;
+  height: 228px;
+  width: auto;
+  max-width: 72%;
+  object-fit: contain;
+}
+.foil-card.nc .art-badges {
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: stretch;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 10px 0;
+  min-width: 0;
+}
+.foil-card.nc .art-badges .tier,
+.foil-card.nc .art-badges .att {
+  position: static;
+  max-width: none;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.foil-card.nc .art-badges .tier { flex-shrink: 0; }
+.foil-card.nc .art-badges .att {
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  font-size: 9px;
+  letter-spacing: 0;
+  line-height: 1.2;
+  padding: 4px 6px;
+  white-space: nowrap;
+  background: #F6F1E7;
+  color: var(--ink);
+  border-radius: 999px;
+}
+.gk h3 { line-height: 1.05; }
+.gk h3 .tid { display: block; margin-top: 2px; font: 500 13px var(--mono); letter-spacing: 0; white-space: nowrap; color: var(--ink); }

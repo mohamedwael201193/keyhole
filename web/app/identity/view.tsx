@@ -30,8 +30,10 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
             <FoilCard finish={k.finish} className="nc" key={k.n} style={{ ["--f1" as string]: FRAMES[k.n][0], ["--f2" as string]: FRAMES[k.n][1] }}>
               <div className="in">
                 <div className="art">
-                  <span className="tier" style={{ background: FINISH_COLOR[k.finish] }}>{t(`finish.${k.finish}`)}</span>
-                  <span className="att">{t("land.attested")}</span>
+                  <div className="art-badges">
+                    <span className="tier" style={{ background: FINISH_COLOR[k.finish] }}>{t(`finish.${k.finish}`)}</span>
+                    <span className="att">{t("land.attested")}</span>
+                  </div>
                   <KeyArt n={k.n} alt="" width={430} height={1080} />
                 </div>
                 <h3>{t("land.keyN", { n: k.n })}</h3>

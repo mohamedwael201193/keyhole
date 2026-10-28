@@ -1,12 +1,11 @@
-/** Alpha-preserving AVIF/WebP. The img keeps the class GSAP and CSS target. */
+/**
+ * WebP, not AVIF. Inside a masked or transformed card, Chromium paints the
+ * AVIF source as an empty box while the decoded bitmap is fine. WebP draws.
+ */
 export function KeyArt({ n, alt, className, priority, width, height }: { n: number; alt: string; className?: string; priority?: boolean; width: number; height: number }) {
   const base = `/heirloom/keys/k${String(n).padStart(2, "0")}`;
   return (
-    <picture>
-      <source srcSet={`${base}.avif`} type="image/avif" />
-      <source srcSet={`${base}.webp`} type="image/webp" />
-      <img className={className} src={`${base}.webp`} alt={alt} width={width} height={height} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" />
-    </picture>
+    <img className={className} src={`${base}.webp`} alt={alt} width={width} height={height} loading="eager" fetchPriority={priority ? "high" : "auto"} decoding="sync" />
   );
 }
 
