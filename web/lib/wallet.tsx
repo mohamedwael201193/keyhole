@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { WalletSelector, WalletModuleFactory } from "@near-wallet-selector/core";
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
-import { buildMessage, freshNonce, toB64, type Op, type SignedAuth } from "./nep413";
+import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { NEP413_RECIPIENT } from "./config";
 
 export class SignError extends Error { constructor(public code: string) { super(code); } }
@@ -31,6 +31,9 @@ async function init(): Promise<{ selector: WalletSelector; modal: WalletSelector
     mnw.setupMyNearWallet(), meteor.setupMeteorWallet(), here.setupHereWallet(), intear.setupIntearWallet(),
     sender.setupSender(), nightly.setupNightly(), ledger.setupLedger(),
   ];
+  const { ethereumWalletModule } = await import("./ethereumWallets");
+  const eth = await ethereumWalletModule();
+  if (eth) modules.push(eth);
   const wc = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
   if (wc) {
     const { setupWalletConnect } = await import("@near-wallet-selector/wallet-connect");
@@ -77,7 +80,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [ensure]);
 
-  const connect = useCallback(() => { void ensure().then(() => ref.current!.modal.show()); }, [ensure]);
+  const connect = useCallback(() => {
+    return ensure().then(() => {
+      const modal = ref.current?.modal;
+      if (!modal) return;
+      // The selector modal mounts on show(). A show() in the same task as the
+      // first createRoot can be dropped, so the header's first click opens it twice.
+      const retitle = () => {
+        document.querySelectorAll("#near-wallet-selector-modal .nws-modal-title").forEach((el) => {
+          if (el.textContent !== "Connect your wallet") el.textContent = "Connect your wallet";
+        });
+      };
+      modal.show();
+      requestAnimationFrame(() => { modal.show(); retitle(); });
+      const obs = new MutationObserver(retitle);
+      obs.observe(document.body, { childList: true, subtree: true });
+      window.setTimeout(() => obs.disconnect(), 2000);
+    });
+  }, [ensure]);
   const disconnect = useCallback(async () => {
     await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); setAccountId(null);
   }, [ensure]);
@@ -87,6 +107,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const sel = ref.current!.selector;
     const acc = sel.store.getState().accounts.find((a) => a.active)?.accountId;
     if (!acc) throw new SignError("no_auth");
+    if (sel.store.getState().selectedWalletId === "ethereum-wallets") return signEip191(op, acc, params);
     const wallet = await sel.wallet();
     if (typeof wallet.signMessage !== "function") throw new SignError("wallet_no_sign_message");
     const message = buildMessage(op, acc, params);
@@ -108,4 +129,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return <Ctx.Provider value={{ accountId, ready, connect, disconnect, sign, pending, clearPending: () => setPending(null) }}>{children}</Ctx.Provider>;
 }
+/** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
+async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
+  if (!EIP191_ENCLAVE_LIVE) throw new SignError("metamask_next_enclave");
+  const account = accountId.toLowerCase();
+  const nonce = toB64(freshNonce());
+  const message = intentMessage(op, account, params, nonce, NEP413_RECIPIENT, Date.now());
+  const eth = (window as Window & { ethereum?: { request: (a: { method: string; params: unknown[] }) => Promise<unknown> } }).ethereum;
+  if (!eth?.request) throw new SignError("wallet_no_sign_message");
+  let signature: unknown;
+  try {
+    signature = await eth.request({ method: "personal_sign", params: [utf8ToHex(message), account] });
+  } catch {
+    throw new SignError("wallet_rejected");
+  }
+  if (typeof signature !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new SignError("wallet_rejected");
+  return { account_id: account, address: account, scheme: "eip191", public_key: "", signature, nonce, message, recipient: NEP413_RECIPIENT };
+}
+
 export function useWallet() { const c = useContext(Ctx); if (!c) throw new Error("WalletProvider missing"); return c; }

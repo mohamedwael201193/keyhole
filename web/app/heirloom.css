@@ -46,7 +46,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .links a.on { color: var(--teal); border-bottom: 2px solid var(--teal); }
 .nav-tools { justify-self: end; display: flex; align-items: center; gap: 10px; }
 .cw { background: var(--teal); color: #F6F1E7; height: 44px; padding: 0 22px; border-radius: 999px; font-weight: 700; font-size: 15px; border: 0; cursor: pointer; display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; }
-.cw .short { display: none; }
+#near-wallet-selector-modal .nws-modal-wrapper { font-family: var(--sans); }
 .cw:disabled { opacity: .55; cursor: wait; }
 .music { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--ln); background: transparent; color: #4A5556; display: grid; place-items: center; cursor: pointer; }
 .music[aria-pressed="true"] { color: var(--teal); }
@@ -420,8 +420,6 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
   .brand { min-width: 0; }
   .nav-tools { gap: 6px; min-width: 0; }
   .cw { padding: 0 12px; font-size: 14px; }
-  .cw .long { display: none; }
-  .cw .short { display: inline; }
   .mint > .foil-card { position: static; }
   .nav.open + .mnav, .mnav { display: flex; flex-direction: column; gap: 4px; padding: 8px 16px 16px; background: #ECE6DA; border-bottom: 1px solid var(--ln); }
   .mnav a, .mnav button { min-height: 44px; display: flex; align-items: center; text-decoration: none; font-weight: 600; }
@@ -434,6 +432,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
   .nav { padding: 10px 10px; }
   .kh-logo.h-9 { --kh: 2rem; }
   .kh-word { letter-spacing: .08em; }
+  .cw { padding: 0 10px; font-size: 13px; }
   .eb { font-size: 12px; letter-spacing: .12em; color: #5C4316; }
   .foil-card .meta, .foil-card .oo { font-size: 12px; color: #243032; }
   .foil-card .tier { font-size: 12px; }
@@ -635,3 +634,135 @@ html.no-motion .foil-card .bw { display: none; }
 .foil-card.is-leg .bw i { width: 220px; }
 .below-card { display: flex; flex-direction: column; gap: 8px; }
 .below-card .att { align-self: flex-start; }
+.note-box { margin-top: 14px; border: 1px solid var(--brassL); background: var(--sf); color: var(--teal); border-radius: 18px; padding: 16px; }
+.note-box p { margin: 0; }
+.note-box .note { margin-top: 6px; color: var(--ink); }
+
+/* Wallet selector: cream panel, teal type, gold hairline. Beats the injected modal sheet. */
+#near-wallet-selector-modal .nws-modal-wrapper,
+#near-wallet-selector-modal .nws-modal-wrapper.dark-theme {
+  --backdrop-bg: #1A2A2C55;
+  --heading-color: #1F4B4F;
+  --text-color: #1A2A2C;
+  --content-bg: #F6F1E7;
+  --wallet-option-bg-hover: #1F4B4F18;
+  --selected-wallet-bg: #1F4B4F;
+  --option-wallet-bg-color: #ECE6DA;
+  --option-single-wallet-bg-color: #ECE6DA;
+  --bottom-section: #F6F1E7;
+  --close-button-bg-color: #ECE6DA;
+  --close-button-fill-icon-color: #1F4B4F;
+  --mobile-text: #1A2A2C;
+  --sidebar-border-color: #B8893E55;
+  font-family: var(--sans);
+  color: #1F4B4F;
+}
+#near-wallet-selector-modal .nws-modal-wrapper .nws-modal-background {
+  background: #F6F1E7;
+  border: 1px solid #B8893E;
+  color: #1F4B4F;
+  box-shadow: 0 28px 70px -28px #1A2A2C88;
+}
+#near-wallet-selector-modal .nws-modal-wrapper .nws-modal {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+#near-wallet-selector-modal .nws-modal-wrapper .modal-left { width: 44%; }
+#near-wallet-selector-modal .nws-modal-wrapper .modal-right { width: 56%; }
+#near-wallet-selector-modal .nws-modal-wrapper .options-list {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: 1fr;
+}
+#near-wallet-selector-modal .single-wallet.sidebar { width: 100%; }
+#near-wallet-selector-modal .single-wallet.sidebar .content .title {
+  font-size: 14px;
+  line-height: 1.3;
+  display: block;
+  white-space: nowrap;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+#near-wallet-selector-modal .nws-modal-title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+  color: #1F4B4F;
+}
+#near-wallet-selector-modal .single-wallet,
+#near-wallet-selector-modal .single-wallet.sidebar {
+  background: #ECE6DA;
+  border: 1px solid #1A2A2C22;
+  border-radius: 16px;
+  color: #1F4B4F;
+  height: auto;
+  min-height: 56px;
+  overflow: visible;
+}
+#near-wallet-selector-modal .single-wallet .content {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+#near-wallet-selector-modal .single-wallet .content .name,
+#near-wallet-selector-modal .single-wallet .content .title {
+  white-space: normal;
+  line-height: 1.25;
+}
+#near-wallet-selector-modal .single-wallet.sidebar:hover,
+#near-wallet-selector-modal .single-wallet:hover {
+  background: #1F4B4F14;
+  border-color: #1F4B4F;
+}
+#near-wallet-selector-modal .single-wallet .content .name,
+#near-wallet-selector-modal .single-wallet .content .title,
+#near-wallet-selector-modal .single-wallet .content .description,
+#near-wallet-selector-modal .nws-modal-body,
+#near-wallet-selector-modal .modal-right,
+#near-wallet-selector-modal .modal-right p {
+  color: #1A2A2C;
+}
+#near-wallet-selector-modal .modal-right a { color: #1F4B4F; }
+#near-wallet-selector-modal .single-wallet.selected-wallet .content .name,
+#near-wallet-selector-modal .single-wallet.selected-wallet .content .title { color: #F6F1E7; }
+@media (max-width: 700px) {
+  #near-wallet-selector-modal .nws-modal-wrapper .modal-right { display: none; }
+  #near-wallet-selector-modal .nws-modal-wrapper.open .nws-modal-background {
+    animation: none;
+    opacity: 1;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    max-height: 88vh;
+    overflow: auto;
+    border-radius: 28px 28px 0 0;
+    border-bottom: 0;
+  }
+  #near-wallet-selector-modal .nws-modal-wrapper .nws-modal {
+    display: block;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  #near-wallet-selector-modal .nws-modal-wrapper .modal-left {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  #near-wallet-selector-modal .nws-modal-wrapper .options-list {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    grid-template-columns: 1fr;
+  }
+  #near-wallet-selector-modal .nws-modal-title { font-size: 24px; }
+}

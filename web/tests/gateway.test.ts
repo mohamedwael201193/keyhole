@@ -28,6 +28,12 @@ describe("gateway body checks", () => {
   it("rejects bad JSON", () => expect(checkBody("{")).toMatchObject({ code: "bad_params" }));
   it("rejects > 8 KB", () => expect(checkBody("x".repeat(MAX_BODY + 1))).toMatchObject({ status: 413, code: "too_large" }));
   it("accepts a well-formed signed request", () => expect(checkBody(JSON.stringify({ op: "quote", auth: auth("quote") }))).toMatchObject({ ok: true }));
+  it("accepts eip191 auth when the signed op matches", () => {
+    const message = JSON.stringify({ op: "status", account_id: "0xabc", ts_ms: 1, params: {}, nonce: "n", recipient: "keyhole" });
+    const body = { scheme: "eip191", account_id: "0xabc", address: "0xabc", signature: "0x11", nonce: "n", recipient: "keyhole", message };
+    expect(checkBody(JSON.stringify({ op: "status", auth: body }))).toMatchObject({ ok: true, op: "status" });
+    expect(checkBody(JSON.stringify({ op: "mint", auth: body }))).toMatchObject({ code: "op_mismatch" });
+  });
 });
 describe("rate limiter", () => {
   it("limits per key and resets after the window", () => {

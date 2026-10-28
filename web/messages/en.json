@@ -358,7 +358,11 @@
   ],
   "wallet_no_sign_message": [
    "This wallet can't sign messages (NEP-413).",
-   "Use MyNearWallet, Meteor, HERE, Intear or Sender."
+   "Use MyNearWallet, Meteor, HERE, Intear, Sender or Nightly."
+  ],
+  "metamask_next_enclave": [
+   "Vault actions with MetaMask arrive with the next enclave version.",
+   "You can connect now. Mint, trade, and withdraw open once that version is live."
   ],
   "wallet_rejected": [
    "You declined the signature.",

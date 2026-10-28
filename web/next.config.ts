@@ -13,6 +13,9 @@ const csp = [
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/@near-wallet-selector/modal-ui/styles.css"],
+  },
   async redirects() {
     return [
       { source: "/ar", destination: "/", permanent: true },
