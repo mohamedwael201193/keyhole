@@ -1,0 +1,204 @@
+[
+  {
+    "f": "01_info.json",
+    "call_id": "cefbc64e-6c08-4bfe-a165-1667d9f5f25b",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "02_status.json",
+    "call_id": "c96f3729-c266-4fec-a0df-73770915ab7a",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "03_quote_dry.json",
+    "call_id": "a62c9d76-81b2-47e8-865d-c2d1714d507e",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "04_quote_execute_deposit_address.json",
+    "call_id": "a1bf58e8-d3ba-4a77-ae86-9e31fe5b8523",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "05_quote_advanced.json",
+    "call_id": "44c12951-5cda-48b1-beba-0632e70dc98d",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "06_account_crosschain_deposit_address_base.json",
+    "call_id": "a523a6ea-56ca-466d-99c3-7f7d4dccd3ad",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "07_balance_before.json",
+    "call_id": "9374b0ac-dcdf-4416-b162-2ebc8c13483d",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "08_swap_0.005_usdc.json",
+    "call_id": "09d58c09-c1e9-48b6-bebb-485f5ae79539",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "09_mcp_tools_list.json",
+    "call_id": null
+  },
+  {
+    "f": "10_mcp_copy_preview.json",
+    "call_id": null
+  },
+  {
+    "f": "11_mcp_copy_bad_code.json",
+    "call_id": null
+  },
+  {
+    "f": "12_mcp_copy_confirmed.json",
+    "call_id": null
+  },
+  {
+    "f": "13_mcp_quote_buy.json",
+    "call_id": null
+  },
+  {
+    "f": "14_mcp_explain_pnl.json",
+    "call_id": null
+  },
+  {
+    "f": "15_overcap_swap_2usdc.json",
+    "call_id": "a02613a2-d503-45e2-83b8-ef71927c2533",
+    "ok": false,
+    "code": "over_cap_per_tx",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "16_replay_first.json",
+    "call_id": "85582544-8e08-4c9f-b3f0-ecad128201ab",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "17_replay_second_refused.json",
+    "call_id": "ac289f04-0df8-4161-9123-e872ab3b75ab",
+    "ok": false,
+    "code": "replay",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "18_wrong_recipient_refused.json",
+    "call_id": "b9c8cb4f-e3aa-480f-bb47-70fc30a96d67",
+    "ok": false,
+    "code": "wrong_recipient",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "19_tampered_refused.json",
+    "call_id": "942b4cff-23c9-4e4d-8ebc-79bfa01cd029",
+    "ok": false,
+    "code": "bad_signature",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "20_op_mismatch_refused.json",
+    "call_id": "7a703e8f-2678-4978-b6ce-4d291828141d",
+    "ok": false,
+    "code": "op_mismatch",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "21_stale_refused.json",
+    "call_id": "e7ac0627-be6d-41e9-95d0-71dcc59aed43",
+    "ok": false,
+    "code": "expired",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "22_no_auth_refused.json",
+    "call_id": "750defed-2267-45b1-8a8c-74b528aa30ee",
+    "ok": false,
+    "code": "no_auth",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "23_mint_again_refused.json",
+    "call_id": "a516a457-0be8-4805-acb1-4f3a9ad30ad3",
+    "ok": false,
+    "code": "already_holder",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "24_history.json",
+    "call_id": "f0cf9778-1874-4c0b-b1a5-091218f9fcc6",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "25_balance_after_trades.json",
+    "call_id": "d892ac43-b786-4d5b-909a-764b6c92f6fd",
+    "ok": false,
+    "code": "rate_limited",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "26_balance_final.json",
+    "call_id": "1a88f79f-49dd-45fb-bcae-96b746f38423",
+    "ok": false,
+    "code": "rate_limited",
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "27_balance.json",
+    "call_id": "6b992a3c-5909-4a75-a694-dd08918e33da",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "28_withdraw_wnear.json",
+    "call_id": "afc0f232-7d93-4a0e-8768-f62f245c537e",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "29_withdraw_usdc.json",
+    "call_id": "a39fffd9-201b-4af2-927f-94a90d54cbf5",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  },
+  {
+    "f": "30_balance_final.json",
+    "call_id": "3ef04098-f287-4527-a8f2-52511beaa9e3",
+    "ok": true,
+    "attested": "f13efe926132",
+    "verified": true
+  }
+]

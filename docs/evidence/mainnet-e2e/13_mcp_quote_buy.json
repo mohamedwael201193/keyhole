@@ -1,0 +1,27 @@
+{
+  "account": "keyhole-devmo.near",
+  "limits": {
+    "daily_usd_micro": 5000000,
+    "per_minute_calls": 6,
+    "per_tx_usd_micro": 1000000
+  },
+  "ok": true,
+  "op": "quote",
+  "policy": "passed",
+  "quote": {
+    "amountIn": "10000",
+    "amountInFormatted": "0.01",
+    "amountInUsd": "0.009995610000",
+    "amountOut": "2157507903069774989181",
+    "amountOutFormatted": "0.002157507903069774989181",
+    "amountOutUsd": "0.009989261591",
+    "minAmountIn": "10000",
+    "minAmountOut": "2135932824039077239289",
+    "refundFee": "0",
+    "timeEstimate": 12,
+    "withdrawFee": "0"
+  },
+  "spent_today_usd_micro": 39990,
+  "tier": 1,
+  "usd_micro": 9995
+}

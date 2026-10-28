@@ -1,0 +1,11 @@
+{
+  "call_id": "ac289f04-0df8-4161-9123-e872ab3b75ab",
+  "output": {
+    "error": {
+      "code": "replay",
+      "message": "this signed request was already used; sign a new one"
+    },
+    "ok": false
+  },
+  "attestation_url": "/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab"
+}

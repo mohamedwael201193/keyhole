@@ -1,0 +1,20 @@
+{
+  "call_id": "6b992a3c-5909-4a75-a694-dd08918e33da",
+  "output": {
+    "account": "keyhole-devmo.near",
+    "balances": [
+      {
+        "balance": "10000",
+        "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"
+      },
+      {
+        "balance": "4318434413141670850381",
+        "token": "nep141:wrap.near"
+      }
+    ],
+    "confidential_id": "2c2c4942d27e6d7e0db20bbd1897e8bae01d3511716cf3e197b14a7478fd21ca",
+    "ok": true,
+    "op": "balance"
+  },
+  "attestation_url": "/attestations/by-call/6b992a3c-5909-4a75-a694-dd08918e33da"
+}

@@ -1,0 +1,11 @@
+{
+  "call_id": "d892ac43-b786-4d5b-909a-764b6c92f6fd",
+  "output": {
+    "error": {
+      "code": "rate_limited",
+      "message": "max 6 requests per minute for your key tier"
+    },
+    "ok": false
+  },
+  "attestation_url": "/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd"
+}

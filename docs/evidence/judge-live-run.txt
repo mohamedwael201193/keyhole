@@ -1,0 +1,3 @@
+OK   first use              got=ok               call=d3c285ae-54a2-442f-a9ee-e9d9af02e4c6 attested=f13efe926132 verified=true
+OK   replay (same request)  got=replay           call=b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563 attested=f13efe926132 verified=true
+OK   over-cap quote ($2)    got=over_cap_per_tx  call=9b37dfee-47bf-4482-a445-0623a49d3f11 attested=f13efe926132 verified=true
