@@ -32,8 +32,8 @@ Everything below runs on **NEAR mainnet**. Every claim links to a transaction, a
 
 ## Contents
 1. [The idea](#1-the-idea)
-2. [Why it matters](#2-why-it-matters)
-3. [Tracks](#3-tracks-and-how-keyhole-meets-each)
+2. [Judge steps](#2-judge-steps)
+3. [Track hints](#3-track-hints)
 4. [Architecture](#4-architecture)
 5. [The keys contract](#5-the-keys-nft-contract)
 6. [The TEE worker](#6-the-tee-worker)
@@ -82,30 +82,49 @@ flowchart LR
   G --> V{"/verify · verify.sh<br/>TDX quote · wasm hash · FastFS bytes"}
 ```
 
-## 2. Why it matters
+## 2. Judge steps
 
-- **Private trading with public accountability.**
-  - The positions stay sealed.
-  - The rules are public: the caps, the refusal codes and the exact code that ran (by hash) are all verifiable.
-  - A 2 USDC swap against the $1 Bronze cap was refused with `over_cap_per_tx` in an attested mainnet call ([`a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533)).
-- **An NFT with a job.**
-  - The token is a capability, not a picture. Holding it opens an account, and transferring it moves that access.
-  - Its tier sets hard caps that are enforced in hardware.
-- **Agent-native.**
-  - The CLI and MCP server let any AI assistant use the account with the same signed-request rules.
-  - Trades that copy a strategy (`copy`) require a two-step confirmation code ([steps 10–12](#10-mainnet-end-to-end-30-steps)).
-- **Works for anyone, anywhere.**
-  - Any NEAR account (named or implicit) can use it.
-  - There is no sign-up, email or KYC field, and the mint is free (the enclave-held minter pays storage).
+Do the step. The result on the right is what a correct tree produces. Commands are read-only except where a test binary runs locally.
 
-## 3. Tracks and how KEYHOLE meets each
+| Do | See |
+|---|---|
+| Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). Supply on the home page matches `nft_total_supply` |
+| Open [https://keyhole-seven.vercel.app/verify?call=b8daeed3-b745-432c-98f8-0af674f0da51](https://keyhole-seven.vercel.app/verify?call=b8daeed3-b745-432c-98f8-0af674f0da51) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, and the verdict element has `data-match="true"` |
+| `./judge/1-contract.sh` | On-chain code hash equals sha256 `d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
+| `./verify.sh b8daeed3-b745-432c-98f8-0af674f0da51` | `OK` for a TDX quote, `executed_wasm_sha256` equal to `wasm_hash`, and the FastFS bytes hashing to the same value |
+| `cargo test --locked --manifest-path tee/worker/Cargo.toml over_cap` | `over_cap_per_tx_refused` and `over_cap_daily_refused_and_rolled_back` pass. A $1.000001 trade on tier 1 returns `over_cap_per_tx` and does not change the daily counter |
+| Read [`docs/evidence/mainnet-e2e/SUMMARY.json`](docs/evidence/mainnet-e2e/SUMMARY.json) and one refusal file, for example [`15_overcap_swap_2usdc.json`](docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json) | 30 recorded steps. The 2 USDC swap against the $1 Bronze cap is an attested refusal, call [`a02613a2-d503-45e2-83b8-ef71927c2533`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533) |
 
-| Track | What KEYHOLE delivers | Proof |
+## 3. Track hints
+
+Hints named for the tracks this repository is built for. Each row is a shipped behavior.
+
+| Track | Hint | Where it is | Proof |
+|---|---|---|---|
+| `nfts` | NEP-171 | `nft_transfer`, `nft_mint` event | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs), [mint #0](https://nearblocks.io/txns/UYHismxe3a2Xb5YvbVHuGhsHWf7ERrx5oCrxREePBFR) |
+| `nfts` | NEP-177 | `nft_metadata` / `nft_token` metadata | [`NonFungibleTokenMetadataProvider`](contracts/keys/src/lib.rs) |
+| `nfts` | NEP-181 | `nft_tokens`, `nft_tokens_for_owner`, `nft_total_supply` | same file, enumeration impl |
+| `nfts` | NEP-199 | `nft_payout`, `nft_transfer_payout`, 500 bps | [`nft_payout`](contracts/keys/src/lib.rs), [`config`](https://nearblocks.io/address/keyhole-devmo.near) via [`judge/1-contract.sh`](judge/1-contract.sh) |
+| `nfts` | dynamic metadata | `beat()` emits `nft_metadata_update` | [beat tx](https://nearblocks.io/txns/2ShJpaoicEm49L9rcsJjXoubuzoF3SvbQFZASUQBi5dq) |
+| `privacy` | TEE | Worker runs in an OutLayer Intel TDX enclave. Each call returns a TDX quote | [`tee/worker`](tee/worker), [attestation `a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533) |
+| `privacy` | private compute | Balances, the trade log, and the custody API key stay in enclave storage. The gateway does not log bodies | [`tee/worker/src/main.rs`](tee/worker/src/main.rs) `history`, [`web/app/api/worker/route.ts`](web/app/api/worker/route.ts) |
+| `security` | TEE attestation | `executed_wasm_sha256` must equal the wasm registered for the project and the FastFS bytes | [`verify.sh`](verify.sh), [`web/lib/verify.ts`](web/lib/verify.ts) |
+| `security` | spending limits / policy | Tier 1/2/3 caps in `limits_for_tier`, enforced before a swap | [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs), [`over_cap_per_tx_refused`](tee/worker/src/tests.rs) |
+| `security` | NEP-413 signed intents | ed25519 strict verify, recipient `keyhole`, full-access key, 5-minute freshness | [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs) |
+| `security` | nonce replay protection | `(account, nonce)` stored with `set_if_absent` | [`16_replay_first.json`](docs/evidence/mainnet-e2e/16_replay_first.json), [`17_replay_second_refused.json`](docs/evidence/mainnet-e2e/17_replay_second_refused.json) |
+| `security` | rate limits | Per holder per minute (6/12/30) and 120/minute global | [`rate_limit_per_holder`](tee/worker/src/tests.rs), [`docs/evidence/mainnet-e2e/`](docs/evidence/mainnet-e2e/) |
+
+## 3b. Spec to shipped
+
+Source sentence, [status 2106269343881519444](https://x.com/ilblackdragon/status/2106269343881519444), the private-trading idea only. A clause with no shipped row is omitted. Nothing below adds behavior the repository does not contain.
+
+| Quoted line | What this repository ships | Proof |
 |---|---|---|
-| **NFTs (primary)** | The NFT is a live capability. Ownership gates a confidential account and the on-chain tier (1–3) sets enforced caps. NEP-171/177/181 with NEP-199 payouts and 500 bps royalty. `beat()` emits NEP-171 `nft_metadata_update`. A card shows chain state (`locked`, `unlocked`, or `expired`) and a metal finish. Legendary is not a fourth cap: it is a rare finish on a Gold-cap key | [contract](contracts/keys/src/lib.rs), [finish rule](web/lib/traits.ts), [mint #0](https://nearblocks.io/txns/UYHismxe3a2Xb5YvbVHuGhsHWf7ERrx5oCrxREePBFR), [beat](https://nearblocks.io/txns/2ShJpaoicEm49L9rcsJjXoubuzoF3SvbQFZASUQBi5dq), [TEE-signed mint](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF), [gallery](https://keyhole-seven.vercel.app/gallery) |
-| **Privacy** | Per-holder confidential custody wallet created inside the TEE. Its API key is sealed in encrypted storage. Confidential 1Click swaps, a private log readable only with the holder's signature, and a site gateway that never logs bodies or amounts | steps [6–8, 24, 27–30](#10-mainnet-end-to-end-30-steps), [gateway code](web/app/api/worker/route.ts) |
-| **DeFi** | Real confidential swaps on mainnet (0.01 USDC and 0.005 USDC → wNEAR), a confirmed copy-trade, quotes in basic and advanced confidentiality, cross-chain deposit addresses, withdraws back to the owner's account, and a plain-language P&L | steps [3–8, 12–14, 28–29](#10-mainnet-end-to-end-30-steps) |
-| **Security** | Every policy is enforced in attested code: NEP-413 with strict ed25519, recipient binding, full-access-key check, 5-minute freshness, atomic replay store, per-tier per-trade and per-day caps priced by the solver, per-holder and global rate limits, and a minter key generated in the enclave | steps [15–23, 25–26](#10-mainnet-end-to-end-30-steps), [worker tests](tee/worker/src/tests.rs) |
+| "Private trading" | `swap` runs a confidential NEAR Intents swap inside the worker. The fill is not written to the NEAR account of the holder | [step 8](docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json), [`swap`](tee/worker/src/main.rs) |
+| "you sell your viewing keys" | The token is the viewing right. `nft_transfer` / `nft_transfer_payout` moves it. The next call re-reads `holder_tier` | [`nft_transfer_payout`](contracts/keys/src/lib.rs), [TEE-signed mint](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) |
+| "for people to follow/copy trade" | `copy` is a two-step tool: preview, then a one-time confirmation code, then the swap | [steps 10–12](docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json), [`cli/src/mcp.ts`](cli/src/mcp.ts) |
+| "NEAR Intents confidential trading is all private" | Quotes and swaps set `confidentiality` to `basic` or `advanced`. `history` and `balance` require the holder's NEP-413 signature | [step 5](docs/evidence/mainnet-e2e/05_quote_advanced.json), [step 24](docs/evidence/mainnet-e2e/24_history.json) |
+| "sell \"keys\" for only select people to see" | The worker answers the account that holds the NFT at call time. Anyone else is refused `no_key` | [`holder_tier`](tee/worker/src/main.rs), [step 6 in the worker README](tee/worker/README.md) |
 
 ## 4. Architecture
 
