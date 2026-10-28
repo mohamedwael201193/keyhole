@@ -358,7 +358,7 @@
   ],
   "wallet_no_sign_message": [
    "This wallet can't sign messages (NEP-413).",
-   "Use MyNearWallet, Meteor, HERE, Intear or Sender."
+   "MetaMask can connect, but vault and trades need a NEAR wallet that signs messages: MyNearWallet, Meteor, HERE, Intear, Sender or Nightly."
   ],
   "wallet_rejected": [
    "You declined the signature.",

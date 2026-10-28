@@ -69,6 +69,25 @@ test("English only: no language switcher, and /ar redirects home", async ({ page
   await expect(page.locator("h1").first()).toBeVisible();
 });
 
+test("header Connect wallet opens the selector on the first click", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const btn = page.getByTestId("connect");
+  await expect(btn).toHaveText("Connect wallet");
+  await btn.click();
+  const modal = page.locator("#near-wallet-selector-modal .nws-modal-wrapper.open");
+  await expect(modal).toBeVisible({ timeout: 20_000 });
+  const box = await modal.boundingBox();
+  const vp = page.viewportSize();
+  expect(box).toBeTruthy();
+  expect(vp).toBeTruthy();
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(vp!.height + 1);
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(vp!.width + 1);
+  await expect(modal.getByText(/Ethereum/).first()).toBeVisible();
+  await expect(modal.getByText(/MyNearWallet|Meteor/).first()).toBeVisible();
+});
+
 test("vault shows a premium empty or offline state; connect opens the wallet selector", async ({ page }) => {
   await page.goto("/vault");
   await expect(page.getByTestId("vault-empty").or(page.getByTestId("offline"))).toBeVisible({ timeout: 30_000 });

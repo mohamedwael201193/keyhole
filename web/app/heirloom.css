@@ -46,7 +46,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .links a.on { color: var(--teal); border-bottom: 2px solid var(--teal); }
 .nav-tools { justify-self: end; display: flex; align-items: center; gap: 10px; }
 .cw { background: var(--teal); color: #F6F1E7; height: 44px; padding: 0 22px; border-radius: 999px; font-weight: 700; font-size: 15px; border: 0; cursor: pointer; display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; }
-.cw .short { display: none; }
+#near-wallet-selector-modal .nws-modal-wrapper { font-family: var(--sans); }
 .cw:disabled { opacity: .55; cursor: wait; }
 .music { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--ln); background: transparent; color: #4A5556; display: grid; place-items: center; cursor: pointer; }
 .music[aria-pressed="true"] { color: var(--teal); }
@@ -418,8 +418,6 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
   .brand { min-width: 0; }
   .nav-tools { gap: 6px; min-width: 0; }
   .cw { padding: 0 12px; font-size: 14px; }
-  .cw .long { display: none; }
-  .cw .short { display: inline; }
   .mint > .foil-card { position: static; }
   .nav.open + .mnav, .mnav { display: flex; flex-direction: column; gap: 4px; padding: 8px 16px 16px; background: #ECE6DA; border-bottom: 1px solid var(--ln); }
   .mnav a, .mnav button { min-height: 44px; display: flex; align-items: center; text-decoration: none; font-weight: 600; }
@@ -432,6 +430,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
   .nav { padding: 10px 10px; }
   .kh-logo.h-9 { --kh: 2rem; }
   .kh-word { letter-spacing: .08em; }
+  .cw { padding: 0 10px; font-size: 13px; }
   .eb { font-size: 12px; letter-spacing: .12em; color: #5C4316; }
   .foil-card .meta, .foil-card .oo { font-size: 12px; color: #243032; }
   .foil-card .tier { font-size: 12px; }

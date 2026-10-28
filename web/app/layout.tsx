@@ -1,9 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Cormorant_Garamond, DM_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+
+/** Official modal stylesheet, minus the Google Fonts @import (blocked by style-src). */
+const walletModalCss = readFileSync(join(process.cwd(), "node_modules/@near-wallet-selector/modal-ui/styles.css"), "utf8")
+  .replace(/@import\s+url\([^)]*\)\s*;?/g, "");
 
 const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["600", "700"], style: ["normal", "italic"], variable: "--font-cormorant", display: "swap" });
 const sans = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"], variable: "--font-manrope", display: "swap" });
@@ -21,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" dir="ltr" className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
       <body>
+        <style id="nws-modal-styles" dangerouslySetInnerHTML={{ __html: walletModalCss }} />
         <Providers>
           <Nav />
           <main id="main">{children}</main>
