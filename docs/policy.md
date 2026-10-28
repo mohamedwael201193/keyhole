@@ -20,4 +20,10 @@ Related tests in the same file: `over_cap_daily_refused_and_rolled_back`, `rate_
 
 ## Live proof
 
-Not recorded in this change. When the worker payment balance is funded, put the attested call here: call id, `executed_wasm_sha256`, and the attestation URL for an `over_cap_per_tx` refusal. Until that call exists, the local test above is the check.
+Recorded 2026-10-28, after the worker payment balance was funded. `./verify.sh` on each call printed `executed == published build f13efe92` (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`).
+
+| Call | Result | Attestation |
+|---|---|---|
+| `info` | worker info | [`d03f935f`](https://api.outlayer.ai/attestations/by-call/d03f935f-dfc4-4548-8109-b9aabb5560fc) |
+| `status` | Bronze, tier 1. Caps are $1 per trade and $5 per day | [`7d42db8d`](https://api.outlayer.ai/attestations/by-call/7d42db8d-d786-457f-b505-a96359f82393) |
+| quote of 2 USDC | refused `over_cap_per_tx`: amount $1.99 exceeds the per-trade cap $1.00. No funds moved | [`c23f7bbf`](https://api.outlayer.ai/attestations/by-call/c23f7bbf-c37c-4327-8edd-e773d3a8324f) |

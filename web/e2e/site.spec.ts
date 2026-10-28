@@ -53,17 +53,15 @@ test("gateway: fund-moving ops and junk are refused", async ({ request }) => {
   expect((await request.post("/api/worker", { data: "x".repeat(9000), headers: { "content-type": "application/json" } })).status()).toBe(413);
 });
 
-test("English pages have no language switcher, and old /ar paths redirect", async ({ page }) => {
+test("English only: no language switcher, and /ar redirects home", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page.locator(".lang")).toHaveCount(0);
   await expect(page.getByRole("combobox")).toHaveCount(0);
-  const res = await page.goto("/ar/vault?x=1");
+  const res = await page.goto("/ar");
   expect(res?.status()).toBeLessThan(400);
-  const url = new URL(page.url());
-  expect(url.pathname).toBe("/vault");
-  expect(url.search).toBe("?x=1");
+  expect(new URL(page.url()).pathname).toBe("/");
   await expect(page.locator("h1").first()).toBeVisible();
 });
 
@@ -100,15 +98,13 @@ test("navbar: connect stays on one line and the full lockup is shown", async ({ 
   await expect(page.getByText(/CC0/)).toHaveCount(0);
 });
 
-test("hero: orbit logos stay clear of the key", async ({ page }) => {
-  test.skip((page.viewportSize()?.width ?? 0) < 1280, "orbit is desktop");
+test("hero: official token logos are visible in the gold-dust hero", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 1280, "desktop hero");
   await page.goto("/");
-  await page.waitForTimeout(1500);
-  const key = (await page.locator(".hkey").boundingBox())!;
+  const hero = page.locator(".hero");
+  await expect(hero.locator(".hkey")).toBeVisible();
   for (const n of ["NEAR", "USDC", "ETH", "SOL", "ARB", "BTC", "ZEC", "Base"]) {
-    const b = (await page.getByAltText(n, { exact: true }).boundingBox())!;
-    const overlap = b.x < key.x + key.width && b.x + b.width > key.x && b.y < key.y + key.height && b.y + b.height > key.y;
-    expect(overlap, `${n} overlaps the key`).toBe(false);
+    await expect(hero.getByAltText(n, { exact: true })).toBeVisible({ timeout: 10_000 });
   }
 });
 
