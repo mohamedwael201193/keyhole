@@ -5,6 +5,7 @@ import { FoilCard } from "./FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT } from "@/lib/config";
 import { keyState, type Token } from "@/lib/near";
+import { formatTradePrice } from "@/lib/price";
 import { CAPS, keyIdentity } from "@/lib/traits";
 
 export function traitLabel(t: (k: string) => string, name: string) {
@@ -38,7 +39,7 @@ export function KeyCard({ token, tier, viewer }: { token: Token; tier: number | 
         <h3 className={token.token_id.length > 12 ? "long" : undefined} title={full}>{title}</h3>
         <div className="meta">
           <span>{t("land.cipherN", { n: shortTokenId(token.token_id) })}</span>
-          <span>${`$${CAPS[id.finish].perTx} / trade`}</span>
+          <span>{formatTradePrice(CAPS[id.finish].perTx)}</span>
         </div>
       </FoilCard>
       <p className="att">{t("land.attested")}</p>

@@ -11,6 +11,7 @@ import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { useHealth } from "@/lib/useHealth";
 import { tx } from "@/lib/config";
+import { formatTradePrice } from "@/lib/price";
 import { CAPS, keyIdentity } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 
@@ -84,7 +85,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                       </div>
                       <div className="art"><KeyArt n={x.art} alt={t(`finish.${x.k}`)} width={430} height={1080} /></div>
                       <h3>{t(`finish.${x.k}`)}</h3>
-                      <div className="meta"><span>{`$${CAPS[x.k].perTx} / trade`}</span></div>
+                      <div className="meta"><span>{formatTradePrice(CAPS[x.k].perTx)}</span></div>
                     </FoilCard>
                     <p className="below">{x.k === "Legendary" ? t("land.legDaily") : t("mint.perMin", { n: CAPS[x.k].perMin })}</p>
                   </div>

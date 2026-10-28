@@ -7,7 +7,8 @@ import { FoilCard } from "@/components/FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT } from "@/lib/config";
 import type { Token } from "@/lib/near";
-import { CATALOG, nep177 } from "@/lib/traits";
+import { formatTradePrice } from "@/lib/price";
+import { CAPS, CATALOG, nep177 } from "@/lib/traits";
 
 const CARDS = [CATALOG[2], CATALOG[3], CATALOG[1], CATALOG[0]];
 
@@ -36,7 +37,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
                 <h3>{t("land.keyN", { n: k.n })}</h3>
                 <div className="meta">
                   <span>{t("land.cipherN", { n: k.n })}</span>
-                  <span>{k.finish === "Bronze" ? "$1 / trade" : k.finish === "Silver" ? "$10 / trade" : "$100 / trade"}</span>
+                  <span>{formatTradePrice(CAPS[k.finish].perTx)}</span>
                 </div>
               </FoilCard>
               <p className="att">{t("land.attested")}</p>

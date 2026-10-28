@@ -8,6 +8,7 @@ import { HeroDust } from "./HeroDust";
 import { CHAINS, Medal } from "./Medal";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
+import { formatTradePrice } from "@/lib/price";
 import { CAPS, CATALOG, type Finish } from "@/lib/traits";
 import { TXS } from "@/lib/evidence";
 import type { Config } from "@/lib/near";
@@ -162,7 +163,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
                   <h3>{t("land.keyN", { n: tier.art })}</h3>
                   <div className="meta">
                     <span>{t("land.cipherN", { n: tier.art })}</span>
-                    <span>{`$${CAPS[tier.name].perTx} / trade`}</span>
+                    <span>{formatTradePrice(CAPS[tier.name].perTx)}</span>
                   </div>
                 </FoilCard>
                 <p className="below">{tier.name === "Legendary" ? t("land.legDaily") : t("land.tierDaily", { n: CAPS[tier.name].daily })}</p>
@@ -189,7 +190,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
                   <h3>{t("land.keyN", { n: k.n })}</h3>
                   <div className="meta">
                     <span>{t("land.cipherN", { n: k.n })}</span>
-                    <span>{`$${CAPS[k.finish].perTx} / trade`}</span>
+                    <span>{formatTradePrice(CAPS[k.finish].perTx)}</span>
                   </div>
                 </FoilCard>
                 <dl>
