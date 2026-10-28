@@ -58,6 +58,8 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 
 .eb { font: 500 13px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--brass); }
 .sec { padding: 130px 56px; position: relative; }
+/* The slide-in, the scaled pictures, and the tilted marks paint past the section while they settle. Clip the section, not the page, so a shadow that stays inside the padding is kept. */
+.sec.priv, .sec.encl, .sec.ag, .sec.chains, .sec.gal { overflow-x: clip; }
 .wrap { max-width: 1328px; margin: 0 auto; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 16px 28px; border-radius: 999px; font-weight: 700; font-size: 16px; text-decoration: none; border: 0; cursor: pointer; line-height: 1; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
