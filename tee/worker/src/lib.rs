@@ -250,6 +250,39 @@ pub fn encode_tx(signer: &str, pk: &[u8; 32], nonce: u64, receiver: &str, block_
     v
 }
 
+/// Withdraw may pay only the account that signed the NEP-413 request.
+pub fn assert_withdraw_to(signer: &str, to: &str) -> Result<(), Error> {
+    if to != signer {
+        return Err(err("bad_params", "params.to must be the account that signed this request"));
+    }
+    Ok(())
+}
+
+/// Bronze pictures, same order as `POOLS.Bronze` in `web/lib/traits.ts`.
+const BRONZE_ART: [u8; 3] = [3, 5, 8];
+
+/// Base64 sha256 of `web/public/heirloom/keys/k01.webp` … `k10.webp` (NEP-177 `media_hash`).
+const ART_MEDIA_HASH: [&str; 10] = [
+    "9HSWMftzPmAPsHnX52j2CxUHKywOQxlTq0q+eaI5bYQ=",
+    "a1sYMw3PPb+2OqyflFv+eDb20wa3ki3/+3MBAic5TnM=",
+    "B54eqfNqqSN7SQwrj92CZIE0I8wuzKAPeoFTGEKEOcc=",
+    "osCIIvNp8wELBdLaygJ8AEmJ/VXzK2dlZ5zMFOCcPIg=",
+    "anYO1n9BD73N0+2k3SJF/NK3hBda0WVx1Xqzg1hwetw=",
+    "pqmT7QdN6gLnZLiaYTFomKGRMjQbDCASMyDB+2CUnR8=",
+    "DD6iCLxdUHUBxrxvKlfcw4yXgVFQyLsIc/G7NQtLNPg=",
+    "wkprKA5JUUtPRrxG0EkmaTnfHFgW1Zv469wlZN4eyJg=",
+    "7ZgN2xk3ZYqi70SDV4Geg+Seebq8lhBN4NKsnR1cxkg=",
+    "QRajTrZBIkgUZctGgq7zMP68X9/Tr88VQF7EpuD0kKA=",
+];
+
+/// Key art for a tier-1 mint. Picture is `pool[sha256(contract_id + token_id)[0] % 3]`.
+pub fn bronze_media(contract_id: &str, token_id: &str) -> (String, &'static str) {
+    let digest = Sha256::digest(format!("{contract_id}{token_id}").as_bytes());
+    let art = BRONZE_ART[(digest[0] as usize) % BRONZE_ART.len()];
+    let url = format!("https://keyhole-seven.vercel.app/heirloom/keys/k{art:02}.webp");
+    (url, ART_MEDIA_HASH[(art as usize) - 1])
+}
+
 /// SignedTransaction = tx || ed25519 signature over sha256(tx).
 pub fn sign_tx(sk: &[u8; 32], tx: &[u8]) -> Vec<u8> {
     use ed25519_dalek::Signer;

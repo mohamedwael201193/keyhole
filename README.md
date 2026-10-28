@@ -14,6 +14,31 @@
 
 Everything below runs on **NEAR mainnet**. Every claim links to a transaction, an attestation, a file or a test. Author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
 
+## Hackathon window
+
+Development started 2026-10-27, inside the window that opened 2026-10-19 (Q-001). The live rules also list the event start as 2026-11-01 and the submission deadline as 2026-11-14.
+
+## Built with
+
+Direct dependencies from this repository's `package.json` and `Cargo.toml` files. AI coding assistants were used (Q-005).
+
+| Piece | File | Libraries and frameworks |
+|---|---|---|
+| Keys contract | [`contracts/keys/Cargo.toml`](contracts/keys/Cargo.toml) | Rust, near-sdk ~5.17, near-contract-standards ~5.17 |
+| TEE worker | [`tee/worker/Cargo.toml`](tee/worker/Cargo.toml) | Rust, serde, serde_json, ed25519-dalek, sha2, bs58, base64, hex, wit-bindgen, wasi-http-client, getrandom |
+| CLI and MCP | [`cli/package.json`](cli/package.json) | TypeScript, `@modelcontextprotocol/sdk`, `@noble/curves`, `@noble/hashes`, bs58, zod |
+| Website | [`web/package.json`](web/package.json) | Next.js, React, Tailwind CSS, `@near-wallet-selector/core` and its wallet modules, `@noble/curves`, `@noble/hashes`, bs58, gsap, motion, ogl |
+
+## Try it
+
+On [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app):
+
+- Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) - see the home page, the line "Nothing on the chain. Everything in the key.", the key supply, and the published worker hash.
+- Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) - see one card for each token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near).
+- Open [https://keyhole-seven.vercel.app/vault](https://keyhole-seven.vercel.app/vault) - see the vault before a wallet is connected.
+- Open [https://keyhole-seven.vercel.app/mint](https://keyhole-seven.vercel.app/mint) - see the Bronze mint page and the cap table.
+- Open [https://keyhole-seven.vercel.app/verify?call=cefbc64e-6c08-4bfe-a165-1667d9f5f25b](https://keyhole-seven.vercel.app/verify?call=cefbc64e-6c08-4bfe-a165-1667d9f5f25b) - see the browser check that call against the published wasm. The verdict element has `data-match="true"`.
+
 ## At a glance
 
 | | |
@@ -21,16 +46,19 @@ Everything below runs on **NEAR mainnet**. Every claim links to a transaction, a
 | Keys NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 core, NEP-177 metadata, NEP-181 enumeration, NEP-199 payouts, tiers 1–3. Deployed wasm 195,389 bytes, sha256 `d985104e…817b`, on-chain code hash `Fe79rQUH…tqxYA` ([`judge/1-contract.sh`](judge/1-contract.sh)) |
 | TEE worker | Rust, `wasm32-wasip2`, running in an OutLayer Intel TDX enclave. Project `keyhole-devmo.near/keyhole`, build **`f13efe92…119c`** (568,139 bytes), published with [`add_version`](https://nearblocks.io/txns/22KDVU1sNKQhjoYbN8h1JqyQbcNxHRNednT6sz4nogxS) |
 | Mint authority | `nft_mint` is callable only by the minter, the implicit account [`015a0259…c443`](https://nearblocks.io/address/015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443). Its key was generated inside the enclave and never leaves it ([set_minter tx](https://nearblocks.io/txns/7QFqM5GiUgZuWJEpRUKvARn1LKyy91NVWFZmzNQscQDp)) |
-| Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. Local build, a second clean copy and GitHub CI all give the same `f13efe92` ([`tee/worker/build.sh`](tee/worker/build.sh), [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256)) |
+| Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. The published enclave and [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) are `f13efe92`. This source also refuses a withdraw `to` that is not the signer, and writes `media` on mint. A build of this source does not equal `f13efe92` until that enclave is replaced |
 | Mainnet E2E | **30 recorded steps**. **24 TEE calls**, each attested to `f13efe926132` and re-verified, plus 6 MCP steps ([table](#10-mainnet-end-to-end-30-steps)) |
 | Refusals proven on mainnet | `over_cap_per_tx`, `replay`, `wrong_recipient`, `bad_signature`, `op_mismatch`, `expired`, `no_auth`, `already_holder`, `rate_limited`. Each one is an attested call |
-| Tests | contract **15**, worker **18**, CLI **6**, web unit **44**, web e2e **40** (20 checks × desktop + mobile) |
+| Tests | contract **15**, worker **21**, CLI **6**, web unit **44**, web e2e **40** (20 checks × desktop + mobile) |
 | CI | 6 jobs (contract, worker with reproducible-build check, cli, judge-kit, hygiene, web), all green ([run 40572408070](https://github.com/mohamedwael201193/keyhole/actions/runs/40572408070)) |
 | Website | [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app). Mobile Lighthouse: performance 98–100, LCP 1.5–2.3 s. Desktop: 100 on every page. Accessibility, best practices and SEO: 100 ([lighthouse.json](docs/evidence/lighthouse.json)) |
 
 ---
 
 ## Contents
+- [Hackathon window](#hackathon-window)
+- [Built with](#built-with)
+- [Try it](#try-it)
 1. [The idea](#1-the-idea)
 2. [Judge steps](#2-judge-steps)
 3. [Track hints](#3-track-hints)
@@ -211,11 +239,11 @@ The worker is a WASI program (`wasm32-wasip2`) that runs inside an OutLayer Inte
 | `info` | none | version, keys contract, NEP-413 recipient, TEE minter, limits per tier |
 | `status` | NEP-413 | tier, limits, today's spend |
 | `quote` | NEP-413 + key | confidential 1Click quote checked against caps. `execute: true` returns a real deposit address and counts toward the daily cap |
-| `mint` | NEP-413 | one free Bronze key per account, within a global daily quota |
+| `mint` | NEP-413 | one free Bronze key per account, within a global daily quota. This source also sets `media` and `media_hash`. The published enclave does not |
 | `account` | NEP-413 + key | the holder's own confidential custody wallet, created inside the TEE. It can optionally return a cross-chain deposit address |
 | `balance` | NEP-413 + key | confidential balances |
 | `swap` / `copy` | NEP-413 + key | confidential swap within caps, logged privately |
-| `withdraw` | NEP-413 + key | funds out of the confidential account, within caps |
+| `withdraw` | NEP-413 + key | funds out of the confidential account, within caps. This source refuses any `to` other than the NEP-413 signer. The published enclave does not |
 | `history` | NEP-413 + key | private log (last 100 entries) |
 | `sweep_minter` | none | moves a retired minter's NEAR to the current minter ([sweep tx](https://nearblocks.io/txns/5Z7TktfcgeFrzRnz8NSpFSbTw77R5779d3PRsrEBPbYA), 0.0286 NEAR) |
 
@@ -254,8 +282,8 @@ Global limits: 120 requests per minute and 25 free mints per day.
 
 ```bash
 cd tee/worker && ./build.sh      # rustc 1.99.1 (rust-toolchain.toml), cargo --locked, --remap-path-prefix, SOURCE_DATE_EPOCH=0
-# → f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c
-cat DEPLOYED_SHA256              # same value; CI fails if they differ
+cat DEPLOYED_SHA256              # published enclave: f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c
+# A build of this source prints a different hash. CI's worker job fails until the enclave is replaced and this file is updated.
 ```
 
 ## 7. CLI, MCP and the website gateway
@@ -531,6 +559,8 @@ docs/evidence/    public mainnet evidence (E2E JSON, site gateway calls, Lightho
 **Commits:** [`6063b69`](https://github.com/mohamedwael201193/keyhole/commit/6063b69) keys contract · [`063318f`](https://github.com/mohamedwael201193/keyhole/commit/063318f) TEE worker · [`321b827`](https://github.com/mohamedwael201193/keyhole/commit/321b827) CLI, MCP, judge kit, reproducible build · [`0dc39e2`](https://github.com/mohamedwael201193/keyhole/commit/0dc39e2) website · [`a9d65df`](https://github.com/mohamedwael201193/keyhole/commit/a9d65df) site polish · [`7584d9b`](https://github.com/mohamedwael201193/keyhole/commit/7584d9b) step numbering and current minter.
 
 **Author and deployer:** devmo ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
+
+**License:** [MIT](LICENSE). Copyright DEVMO.
 
 **Credits:** the ambient music was generated for this project and is released under CC0. Chain marks are the official logos of their projects, shown only to name the supported assets.
 

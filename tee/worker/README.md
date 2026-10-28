@@ -9,11 +9,11 @@ A WASI (wasm32-wasip2) program that runs inside an OutLayer Intel TDX enclave. E
 | `info` | none | version, keys contract, NEP-413 recipient, TEE minter account, limits per tier |
 | `status` | NEP-413 | your tier, limits and today's spend |
 | `quote` | NEP-413 + key | private (confidential) swap quote via NEAR Intents 1Click, checked against your caps first. `execute: true` returns a real deposit address and counts toward your daily cap |
-| `mint` | NEP-413 | mints one Bronze key to your account (one per account, global daily quota) |
+| `mint` | NEP-413 | mints one Bronze key to your account (one per account, global daily quota). Metadata includes `media` (the key art URL on keyhole-seven.vercel.app) and `media_hash` (base64 sha256 of that file) |
 | `account` | NEP-413 + key | your own confidential account (an OutLayer custody wallet created inside the TEE for you; its API key never leaves the enclave). Optional `{chain, token, amount}` returns a cross-chain deposit address |
 | `balance` | NEP-413 + key | confidential balances |
 | `swap` / `copy` | NEP-413 + key | confidential swap `{token_in, token_out, amount_in, min_amount_out?}` within caps, logged privately |
-| `withdraw` | NEP-413 + key | `{chain, to, token, amount}` out of the confidential account, within caps |
+| `withdraw` | NEP-413 + key | `{chain, to, token, amount}` out of the confidential account, within caps. `to` must be the NEP-413 signer; any other account is `bad_params` and nothing is sent |
 | `history` | NEP-413 + key | your private log (last 100) |
 | `sweep_minter` | none | if this enclave is no longer the contract's minter, sends its NEAR to the current minter |
 
@@ -57,7 +57,7 @@ Every failure is `{"ok": false, "error": {"code", "message"}}`. Codes: `no_auth,
 
 ```
 cargo test        # unit tests: NEP-413, replay, caps, rate limits, tx encoding
-./build.sh        # reproducible build (pinned toolchain, path remapping); prints sha256 == DEPLOYED_SHA256
+./build.sh        # reproducible build (pinned toolchain, path remapping); prints the sha256. DEPLOYED_SHA256 is the published enclave, which this source no longer matches
 ```
 
 Config (OutLayer project env/secrets): `KEYS_CONTRACT` (default `keyhole-devmo.near`), `NEP413_RECIPIENT` (default `keyhole`), `ONECLICK_JWT` (secret).

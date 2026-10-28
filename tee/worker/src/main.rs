@@ -214,10 +214,12 @@ mod host {
         // token id is derived from the account, so a concurrent second mint panics on-chain.
         let (mid, msk) = minter()?;
         let tid = token_id_for(&c.account);
+        let (media, media_hash) = bronze_media(&keys_contract(), &tid);
         let args = json!({"token_id": tid, "receiver_id": c.account, "tier": 1,
-            "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1}});
+            "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1, "media": media, "media_hash": media_hash}});
         let a = args.to_string();
-        let r = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_mint", args: a.as_bytes(), gas: 30_000_000_000_000, deposit: 9_000_000_000_000_000_000_000 }]);
+        // 0.012 NEAR covers the longer metadata (media URL + hash). Excess is refunded.
+        let r = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_mint", args: a.as_bytes(), gas: 30_000_000_000_000, deposit: 12_000_000_000_000_000_000_000 }]);
         if let Err(e) = r {
             let _ = Host.incr(&format!("g/mints/{}", day), -1);
             return Err(err("mint_failed", e.message));
@@ -357,6 +359,7 @@ mod host {
         let lim = limits_for_tier(c.tier.unwrap()).ok_or_else(|| err("no_key", "unknown tier"))?;
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
+        assert_withdraw_to(&c.account, &to)?;
         let amt = digits(p, "amount")?;
         let (key, id) = holder_wallet(&c.account)?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;

@@ -216,3 +216,45 @@ fn signed_tx_verifies() {
     let sig = ed25519_dalek::Signature::from_bytes(s[tx.len() + 1..].try_into().unwrap());
     sk(3).verifying_key().verify(&Sha256::digest(&tx), &sig).unwrap();
 }
+
+#[test]
+fn withdraw_refuses_any_destination_but_the_signer() {
+    assert!(assert_withdraw_to("alice.near", "alice.near").is_ok());
+    let other = assert_withdraw_to("alice.near", "bob.near").unwrap_err();
+    assert_eq!(other.code, "bad_params");
+    assert!(other.message.contains("signed this request"));
+    assert!(assert_withdraw_to("alice.near", "alice.near ").is_err());
+    assert!(assert_withdraw_to("alice.near", "").is_err());
+}
+
+fn art_file_hash(n: u8) -> String {
+    let path = format!("{}/../../web/public/heirloom/keys/k{n:02}.webp", env!("CARGO_MANIFEST_DIR"));
+    B64.encode(Sha256::digest(std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"))))
+}
+
+#[test]
+fn mint_media_matches_the_site_picture_and_file_hash() {
+    // Same pictures as web/lib/traits.ts for these token ids (tier 1).
+    let cases = [
+        ("0", "k08.webp"),
+        ("k0642e7964b2fb515", "k08.webp"),
+        ("k5f4750858f328940", "k03.webp"),
+        ("k857b6b68facc0f94", "k03.webp"),
+    ];
+    for (id, file) in cases {
+        let (url, hash) = bronze_media("keyhole-devmo.near", id);
+        assert_eq!(url, format!("https://keyhole-seven.vercel.app/heirloom/keys/{file}"));
+        let n = file[1..3].parse::<u8>().unwrap();
+        assert_eq!(hash, art_file_hash(n));
+    }
+    let mut saw_five = false;
+    for i in 0..400u32 {
+        let (url, hash) = bronze_media("keyhole-devmo.near", &format!("probe{i}"));
+        if url.ends_with("k05.webp") {
+            assert_eq!(hash, art_file_hash(5));
+            saw_five = true;
+            break;
+        }
+    }
+    assert!(saw_five, "bronze pool never selected picture 5");
+}
