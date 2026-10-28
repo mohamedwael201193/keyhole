@@ -53,7 +53,7 @@ export function Nav() {
           <span className="desk"><MusicToggle /></span>
           {accountId
             ? <button className="cw" onClick={() => void disconnect()} title={t("nav.disconnect")}>{shortAccount(accountId, 4)}</button>
-            : <button className="cw" onClick={connect} data-testid="connect">{t("nav.connect")}</button>}
+            : <button className="cw" onClick={connect} data-testid="connect"><span className="long">{t("nav.connect")}</span><span className="short">{t("nav.connectShort")}</span></button>}
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
