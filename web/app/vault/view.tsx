@@ -8,6 +8,7 @@ import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
 import { FoilCard } from "@/components/FoilCard";
 import { Medal } from "@/components/Medal";
+import { TokenPick } from "@/components/TokenPick";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
@@ -47,6 +48,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
   const [wAsset, setWAsset] = useState<AssetKey>("usdc");
   const [wAmt, setWAmt] = useState("0.05");
   const [quoted, setQuoted] = useState<{ key: string; minOut?: string } | null>(null);
+  const [step, setStep] = useState<1 | 2 | 3>(2);
   const [held, setHeld] = useState<{ token: Token; tier: number | null } | null>(null);
   const units = toBaseUnits(amount, ASSETS[from].decimals);
   const fundUnits = toBaseUnits(fundAmt, ASSETS[fundAsset].decimals);
@@ -153,10 +155,14 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                 </EmptyState>
               )}
               <p className="lb" style={{ marginTop: 26 }}>{t("vault.limitsLabel", { tier: t(`finish.${finish}`) })}</p>
-              <div className="bar"><span>{t("vault.perTx")}</span><span>{q?.ok ? `${fmtUsd(q.usd_micro)} / ${fmtUsd(perCap)}` : `— / ${fmtUsd(perCap)}`}</span></div>
-              <div className="tr"><i style={{ width: q?.ok ? `${Math.min(100, (q.usd_micro / perCap) * 100)}%` : "0%" }} /></div>
-              <div className="bar"><span>{t("vault.today")}</span><span>{spent == null ? `— / ${fmtUsd(dayCap)}` : `${fmtUsd(spent)} / ${fmtUsd(dayCap)}`}</span></div>
-              <div className="tr"><i style={{ width: spent == null ? "0%" : `${Math.min(100, (spent / dayCap) * 100)}%` }} /></div>
+              {s?.ok ? (
+                <>
+                  <div className="bar"><span>{t("vault.perTx")}</span><span>{t("vault.ofCap", { used: fmtUsd(q?.ok ? q.usd_micro : 0), cap: fmtUsd(perCap) })}</span></div>
+                  <div className="tr"><i style={{ width: `${Math.min(100, ((q?.ok ? q.usd_micro : 0) / perCap) * 100)}%` }} /></div>
+                  <div className="bar"><span>{t("vault.today")}</span><span>{t("vault.ofCap", { used: fmtUsd(spent ?? 0), cap: fmtUsd(dayCap) })}</span></div>
+                  <div className="tr"><i style={{ width: `${Math.min(100, ((spent ?? 0) / dayCap) * 100)}%` }} /></div>
+                </>
+              ) : <p className="note">{t("vault.limitsUnread")}</p>}
               <button className="btn b2" style={{ marginTop: 16 }} disabled={status.busy} onClick={() => void status.run({})} data-testid="status-btn">{status.busy ? "…" : t("vault.status")}</button>
               <p className="note">{t("vault.utc", { time: utcReset })} · {tierName(tierNum === 3 ? 3 : tierNum === 2 ? 2 : tierNum === 1 ? 1 : null)}</p>
               {status.res?.error && <ErrorBox code={status.res.error.code} retryAfter={status.res.error.retry_after} vars={{ cap: capFrom(status.res.error.message) }} />}
@@ -176,18 +182,17 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                 {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
                 {balance.res && <Attested r={balance.res} />}
               </div>
+              <div className="stepper" role="tablist">
+                {([1, 2, 3] as const).map((n) => (
+                  <button key={n} type="button" role="tab" aria-selected={step === n} className={step === n ? "on" : ""} onClick={() => setStep(n)}>{t(n === 1 ? "vault.stepFund" : n === 2 ? "vault.stepTrade" : "vault.stepWithdraw")}</button>
+                ))}
+              </div>
               <div className="flow">
-                <section className="flow-step">
-                  <p className="n">{t("vault.stepFund")}</p>
+                {step === 1 && <section className="flow-step">
                   <p className="note">{t("vault.fundLead")}</p>
                   <div className="field">
                     <label htmlFor="fund-asset">{t("vault.from")}</label>
-                    <div className="pair">
-                      <Medal id={ASSETS[fundAsset].logo} name={ASSETS[fundAsset].symbol} labeled={false} />
-                      <select id="fund-asset" className="input" value={fundAsset} onChange={(e) => setFundAsset(e.target.value as AssetKey)}>
-                        {Object.entries(ASSETS).map(([k, a]) => <option key={k} value={k}>{a.symbol}</option>)}
-                      </select>
-                    </div>
+                    <TokenPick id="fund-asset" value={fundAsset} onChange={setFundAsset} />
                     <label htmlFor="fund-amt">{t("vault.amount")} ({ASSETS[fundAsset].symbol})</label>
                     <input id="fund-amt" inputMode="decimal" className="input" value={fundAmt} onChange={(e) => setFundAmt(e.target.value)} aria-invalid={!fundUnits} />
                     <button className="btn b1" type="button" disabled={!fundUnits || account.busy} data-testid="fund-btn" onClick={() => { if (fundUnits && accountId) void account.run(fundParams(fundAsset, fundUnits)); }}>{account.busy ? "…" : t("vault.fundBtn")}</button>
@@ -203,65 +208,61 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                   {account.res?.output?.ok && <p className="note" style={{ marginTop: 10 }}>{t("vault.sendTo")}: {String(account.res.output.confidential_id)}</p>}
                   {account.res?.error && <ErrorBox code={account.res.error.code} retryAfter={account.res.error.retry_after} />}
                   {account.res && <Attested r={account.res} />}
-                </section>
-                <section className="flow-step">
-                  <p className="n">{t("vault.stepTrade")}</p>
+                </section>}
+                {step === 2 && <section className="flow-step">
                   <p className="note">{t("vault.tradeLead")}</p>
                   <p className="note" data-testid="caps">{t("vault.capsLine", { finish: t(`finish.${finish}`), tx: fmtUsd(perCap), day: fmtUsd(dayCap) })}</p>
                   <form onSubmit={(e) => { e.preventDefault(); if (!units || !accountId || from === toKey) return; quoteKey.current = tradeKey; void quote.run({ origin_asset: ASSETS[from].id, destination_asset: ASSETS[toKey].id, amount: units, refund_to: accountId, recipient: accountId, refund_type: "INTENTS", recipient_type: "INTENTS", deposit_type: "INTENTS", confidentiality: "basic", execute: false }); }}>
-                    <div className="field">
-                      <label htmlFor="from">{t("vault.from")}</label>
-                      <div className="pair">
-                        <Medal id={ASSETS[from].logo} name={ASSETS[from].symbol} labeled={false} />
-                        <select id="from" className="input" value={from} onChange={(e) => setFrom(e.target.value as AssetKey)}>
-                          {Object.entries(ASSETS).map(([k, a]) => <option key={k} value={k}>{a.symbol}</option>)}
-                        </select>
+                    <div className="swap">
+                      <div className="swap-row">
+                        <div>
+                          <label htmlFor="from">{t("vault.from")}</label>
+                          <TokenPick id="from" value={from} onChange={setFrom} />
+                        </div>
+                        <input id="amt" className="swap-amt" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-invalid={!units} aria-label={t("vault.amount")} />
                       </div>
-                      <label htmlFor="to">{t("vault.to")}</label>
-                      <div className="pair">
-                        <Medal id={ASSETS[toKey].logo} name={ASSETS[toKey].symbol} labeled={false} />
-                        <select id="to" className="input" value={toKey} onChange={(e) => setToKey(e.target.value as AssetKey)}>
-                          {Object.entries(ASSETS).map(([k, a]) => <option key={k} value={k}>{a.symbol}</option>)}
-                        </select>
+                      <button type="button" className="swap-flip" aria-label={t("vault.flip")} onClick={() => { const next = from; setFrom(toKey); setToKey(next); }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8h14M14 4l4 4-4 4" /><path d="M21 16H7M10 12l-4 4 4 4" /></svg>
+                      </button>
+                      <div className="swap-row">
+                        <div>
+                          <label htmlFor="to">{t("vault.to")}</label>
+                          <TokenPick id="to" value={toKey} onChange={setToKey} />
+                        </div>
+                        <p className="swap-amt out">{q?.ok && quoted?.key === tradeKey ? Number(q.quote?.amountOutFormatted).toPrecision(4) : "—"}</p>
                       </div>
-                      <label htmlFor="amt">{t("vault.amount")} ({ASSETS[from].symbol})</label>
-                      <input id="amt" inputMode="decimal" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} aria-invalid={!units} />
-                      {from === toKey && <p className="note">{t("vault.same")}</p>}
-                      <button className="btn b1" disabled={!units || from === toKey || quote.busy} data-testid="quote-btn">{quote.busy ? "…" : t("vault.get")}</button>
                     </div>
+                    {from === toKey && <p className="note">{t("vault.same")}</p>}
+                    <button className="btn b2" style={{ marginTop: 14 }} disabled={!units || from === toKey || quote.busy} data-testid="quote-btn">{quote.busy ? "…" : t("vault.get")}</button>
                   </form>
                   {q?.ok && quoted?.key === tradeKey && (
-                    <dl className="kv" style={{ marginTop: 16 }} data-testid="quote">
-                      <dt>{t("vault.out")}</dt><dd>{Number(q.quote?.amountOutFormatted).toPrecision(6)} {ASSETS[toKey].symbol}</dd>
-                      <dt>{t("vault.usd")}</dt><dd>{fmtUsd(q.usd_micro)}</dd>
-                      <dt>{t("vault.policy")}</dt><dd>{String(q.policy)}</dd>
-                    </dl>
+                    <div className="receipt" data-testid="quote">
+                      <div className="row"><span>{t("vault.give")}</span><span>{amount} {ASSETS[from].symbol}</span></div>
+                      <div className="row"><span>{t("vault.youGet")}</span><span>{Number(q.quote?.amountOutFormatted).toPrecision(6)} {ASSETS[toKey].symbol}</span></div>
+                      <div className="row"><span>{t("vault.price")}</span><span>{fmtUsd(q.usd_micro)}</span></div>
+                      <div className="row"><span>{t("vault.capUsed")}</span><span>{t("vault.ofCap", { used: fmtUsd(q.usd_micro), cap: fmtUsd(perCap) })}</span></div>
+                      <div className="tr"><i style={{ width: `${Math.min(100, (q.usd_micro / perCap) * 100)}%` }} /></div>
+                    </div>
                   )}
-                  <button className="btn b1" style={{ marginTop: 12 }} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? "…" : t("vault.signTrade")}</button>
+                  <button className="btn b1" style={{ marginTop: 14 }} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? "…" : t("vault.signTrade")}</button>
                   {quote.res?.error && <ErrorBox code={quote.res.error.code} retryAfter={quote.res.error.retry_after} vars={{ cap: capFrom(quote.res.error.message) }} />}
                   {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} vars={{ cap: capFrom(swap.res.error.message) }} />}
                   {swap.res?.output?.ok && <p className="note" data-testid="trade-out">{t("vault.out")}: {String(swap.res.output.amount_out ?? "")}</p>}
                   {quote.res && <Attested r={quote.res} />}
                   {swap.res && <Attested r={swap.res} />}
-                </section>
-                <section className="flow-step">
-                  <p className="n">{t("vault.stepWithdraw")}</p>
+                </section>}
+                {step === 3 && <section className="flow-step">
                   <p className="note">{t("vault.withdrawLead", { account: accountId })}</p>
                   <div className="field">
                     <label htmlFor="w-asset">{t("vault.from")}</label>
-                    <div className="pair">
-                      <Medal id={ASSETS[wAsset].logo} name={ASSETS[wAsset].symbol} labeled={false} />
-                      <select id="w-asset" className="input" value={wAsset} onChange={(e) => setWAsset(e.target.value as AssetKey)}>
-                        {Object.entries(ASSETS).map(([k, a]) => <option key={k} value={k}>{a.symbol}</option>)}
-                      </select>
-                    </div>
+                    <TokenPick id="w-asset" value={wAsset} onChange={setWAsset} />
                     <label htmlFor="w-amt">{t("vault.amount")} ({ASSETS[wAsset].symbol})</label>
                     <input id="w-amt" inputMode="decimal" className="input" value={wAmt} onChange={(e) => setWAmt(e.target.value)} aria-invalid={!wUnits} />
                     <button className="btn b1" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); }}>{withdraw.busy ? "…" : t("vault.withdrawBtn")}</button>
                   </div>
                   {withdraw.res?.error && <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />}
                   {withdraw.res && <Attested r={withdraw.res} />}
-                </section>
+                </section>}
               </div>
               <div className="c">
                 <p className="lb">{t("vault.activity")}</p>
