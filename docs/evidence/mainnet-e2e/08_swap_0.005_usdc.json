@@ -1,0 +1,14 @@
+{
+  "call_id": "09d58c09-c1e9-48b6-bebb-485f5ae79539",
+  "output": {
+    "account": "keyhole-devmo.near",
+    "amount_out": "1077247611400966459647",
+    "intent_hash": "Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so",
+    "ok": true,
+    "op": "swap",
+    "request_id": "475fa0eb-e8a7-4cbf-8044-eaeb51270c0f",
+    "status": "success",
+    "usd_in_micro": 5000
+  },
+  "attestation_url": "/attestations/by-call/09d58c09-c1e9-48b6-bebb-485f5ae79539"
+}

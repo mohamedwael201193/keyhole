@@ -1,0 +1,17 @@
+{
+  "call_id": "a523a6ea-56ca-466d-99c3-7f7d4dccd3ad",
+  "output": {
+    "account": "keyhole-devmo.near",
+    "confidential_id": "2c2c4942d27e6d7e0db20bbd1897e8bae01d3511716cf3e197b14a7478fd21ca",
+    "deposit": {
+      "amount": "1000000",
+      "deposit_address": "0xD9250678Cf99ee7A761e88bF29b0311934A9332d",
+      "expires_at": "2026-10-30T19:00:12.717Z",
+      "hint": "Send 1000000 of nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near on base to the deposit_address; funds will settle into your confidential balance."
+    },
+    "fund": "send a confidential transfer to confidential_id, or ask for a cross-chain deposit address with params {chain, token, amount}",
+    "ok": true,
+    "op": "account"
+  },
+  "attestation_url": "/attestations/by-call/a523a6ea-56ca-466d-99c3-7f7d4dccd3ad"
+}

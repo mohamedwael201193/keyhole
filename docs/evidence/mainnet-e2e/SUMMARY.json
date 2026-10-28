@@ -1,0 +1,230 @@
+[
+  {
+    "step": 1,
+    "name": "info",
+    "t": "2026-10-27T18:29:47.864Z",
+    "call_id": "cefbc64e-6c08-4bfe-a165-1667d9f5f25b",
+    "ok": true,
+    "file": "01_info.json",
+    "verify": true
+  },
+  {
+    "step": 2,
+    "name": "status",
+    "t": "2026-10-27T18:29:51.885Z",
+    "call_id": "c96f3729-c266-4fec-a0df-73770915ab7a",
+    "ok": true,
+    "file": "02_status.json",
+    "verify": true
+  },
+  {
+    "step": 3,
+    "name": "quote_dry",
+    "t": "2026-10-27T18:29:55.318Z",
+    "call_id": "a62c9d76-81b2-47e8-865d-c2d1714d507e",
+    "ok": true,
+    "file": "03_quote_dry.json",
+    "verify": true
+  },
+  {
+    "step": 4,
+    "name": "quote_execute_deposit_address",
+    "t": "2026-10-27T18:29:59.799Z",
+    "call_id": "a1bf58e8-d3ba-4a77-ae86-9e31fe5b8523",
+    "ok": true,
+    "file": "04_quote_execute_deposit_address.json",
+    "verify": true
+  },
+  {
+    "step": 5,
+    "name": "quote_advanced",
+    "t": "2026-10-27T18:30:05.331Z",
+    "call_id": "44c12951-5cda-48b1-beba-0632e70dc98d",
+    "ok": true,
+    "file": "05_quote_advanced.json",
+    "verify": true
+  },
+  {
+    "step": 6,
+    "name": "account_crosschain_deposit_address_base",
+    "t": "2026-10-27T18:30:09.310Z",
+    "call_id": "a523a6ea-56ca-466d-99c3-7f7d4dccd3ad",
+    "ok": true,
+    "file": "06_account_crosschain_deposit_address_base.json",
+    "verify": true
+  },
+  {
+    "step": 7,
+    "name": "balance_before",
+    "t": "2026-10-27T18:30:19.346Z",
+    "call_id": "9374b0ac-dcdf-4416-b162-2ebc8c13483d",
+    "ok": true,
+    "file": "07_balance_before.json",
+    "verify": true
+  },
+  {
+    "step": 8,
+    "name": "swap_0.005_usdc",
+    "t": "2026-10-27T18:30:23.231Z",
+    "call_id": "09d58c09-c1e9-48b6-bebb-485f5ae79539",
+    "ok": true,
+    "file": "08_swap_0.005_usdc.json",
+    "verify": true
+  },
+  {
+    "step": 9,
+    "name": "mcp_tools_list",
+    "t": "2026-10-27T18:31:05.842Z",
+    "file": "09_mcp_tools_list.json"
+  },
+  {
+    "step": 10,
+    "name": "mcp_copy_preview",
+    "t": "2026-10-27T18:31:05.848Z",
+    "file": "10_mcp_copy_preview.json"
+  },
+  {
+    "step": 11,
+    "name": "mcp_copy_bad_code",
+    "t": "2026-10-27T18:31:09.810Z",
+    "file": "11_mcp_copy_bad_code.json"
+  },
+  {
+    "step": 12,
+    "name": "mcp_copy_confirmed",
+    "t": "2026-10-27T18:31:09.812Z",
+    "ok": true,
+    "file": "12_mcp_copy_confirmed.json"
+  },
+  {
+    "step": 13,
+    "name": "mcp_quote_buy",
+    "t": "2026-10-27T18:31:52.164Z",
+    "ok": true,
+    "file": "13_mcp_quote_buy.json"
+  },
+  {
+    "step": 14,
+    "name": "mcp_explain_pnl",
+    "t": "2026-10-27T18:31:56.899Z",
+    "file": "14_mcp_explain_pnl.json"
+  },
+  {
+    "step": 15,
+    "name": "overcap_swap_2usdc",
+    "t": "2026-10-27T18:32:04.182Z",
+    "call_id": "a02613a2-d503-45e2-83b8-ef71927c2533",
+    "ok": false,
+    "code": "over_cap_per_tx",
+    "file": "15_overcap_swap_2usdc.json",
+    "verify": true
+  },
+  {
+    "step": 16,
+    "name": "replay_first",
+    "t": "2026-10-27T18:32:07.754Z",
+    "call_id": "85582544-8e08-4c9f-b3f0-ecad128201ab",
+    "ok": true,
+    "file": "16_replay_first.json",
+    "verify": true
+  },
+  {
+    "step": 17,
+    "name": "replay_second_refused",
+    "t": "2026-10-27T18:32:11.730Z",
+    "call_id": "ac289f04-0df8-4161-9123-e872ab3b75ab",
+    "ok": false,
+    "code": "replay",
+    "file": "17_replay_second_refused.json",
+    "verify": true
+  },
+  {
+    "step": 18,
+    "name": "wrong_recipient_refused",
+    "t": "2026-10-27T18:32:15.267Z",
+    "call_id": "b9c8cb4f-e3aa-480f-bb47-70fc30a96d67",
+    "ok": false,
+    "code": "wrong_recipient",
+    "file": "18_wrong_recipient_refused.json",
+    "verify": true
+  },
+  {
+    "step": 19,
+    "name": "tampered_refused",
+    "t": "2026-10-27T18:32:16.977Z",
+    "call_id": "942b4cff-23c9-4e4d-8ebc-79bfa01cd029",
+    "ok": false,
+    "code": "bad_signature",
+    "file": "19_tampered_refused.json",
+    "verify": true
+  },
+  {
+    "step": 20,
+    "name": "op_mismatch_refused",
+    "t": "2026-10-27T18:32:18.643Z",
+    "call_id": "7a703e8f-2678-4978-b6ce-4d291828141d",
+    "ok": false,
+    "code": "op_mismatch",
+    "file": "20_op_mismatch_refused.json",
+    "verify": true
+  },
+  {
+    "step": 21,
+    "name": "stale_refused",
+    "t": "2026-10-27T18:32:20.246Z",
+    "call_id": "e7ac0627-be6d-41e9-95d0-71dcc59aed43",
+    "ok": false,
+    "code": "expired",
+    "file": "21_stale_refused.json",
+    "verify": true
+  },
+  {
+    "step": 22,
+    "name": "no_auth_refused",
+    "t": "2026-10-27T18:32:22.163Z",
+    "call_id": "750defed-2267-45b1-8a8c-74b528aa30ee",
+    "ok": false,
+    "code": "no_auth",
+    "file": "22_no_auth_refused.json",
+    "verify": true
+  },
+  {
+    "step": 23,
+    "name": "mint_again_refused",
+    "t": "2026-10-27T18:32:23.768Z",
+    "call_id": "a516a457-0be8-4805-acb1-4f3a9ad30ad3",
+    "ok": false,
+    "code": "already_holder",
+    "file": "23_mint_again_refused.json",
+    "verify": true
+  },
+  {
+    "step": 24,
+    "name": "history",
+    "t": "2026-10-27T18:32:27.323Z",
+    "call_id": "f0cf9778-1874-4c0b-b1a5-091218f9fcc6",
+    "ok": true,
+    "file": "24_history.json",
+    "verify": true
+  },
+  {
+    "step": 25,
+    "name": "balance_after_trades",
+    "t": "2026-10-27T18:32:30.774Z",
+    "call_id": "d892ac43-b786-4d5b-909a-764b6c92f6fd",
+    "ok": false,
+    "code": "rate_limited",
+    "file": "25_balance_after_trades.json",
+    "verify": true
+  },
+  {
+    "step": 26,
+    "name": "balance_final",
+    "t": "2026-10-27T18:32:34.675Z",
+    "call_id": "1a88f79f-49dd-45fb-bcae-96b746f38423",
+    "ok": false,
+    "code": "rate_limited",
+    "file": "26_balance_final.json",
+    "verify": true
+  }
+]

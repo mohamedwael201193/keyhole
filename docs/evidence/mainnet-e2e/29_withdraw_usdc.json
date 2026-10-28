@@ -1,0 +1,10 @@
+{
+  "call_id": "a39fffd9-201b-4af2-927f-94a90d54cbf5",
+  "output": {
+    "ok": true,
+    "op": "withdraw",
+    "request_id": "4330a163-c9e2-4127-afa4-225834439df6",
+    "status": "success"
+  },
+  "attestation_url": "/attestations/by-call/a39fffd9-201b-4af2-927f-94a90d54cbf5"
+}

@@ -1,0 +1,11 @@
+{
+  "call_id": "750defed-2267-45b1-8a8c-74b528aa30ee",
+  "output": {
+    "error": {
+      "code": "no_auth",
+      "message": "missing `auth`: sign the request with your NEAR wallet (NEP-413 signMessage)"
+    },
+    "ok": false
+  },
+  "attestation_url": "/attestations/by-call/750defed-2267-45b1-8a8c-74b528aa30ee"
+}
