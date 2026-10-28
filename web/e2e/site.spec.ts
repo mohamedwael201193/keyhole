@@ -114,6 +114,36 @@ test("navbar: full lockup shown and every page fits the viewport", async ({ page
   await expect(page.getByText(/CC0/)).toHaveCount(0);
 });
 
+test("home scroll stays inside the viewport", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "this test sets 1280 and 390 itself");
+  for (const [w, h] of [[1280, 800], [390, 844]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.evaluate(() => window.scrollTo(0, 12));
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const worst = await page.evaluate(async () => {
+      const doc = document.documentElement;
+      const max = Math.max(0, doc.scrollHeight - window.innerHeight);
+      const start = performance.now();
+      const duration = 8000;
+      let extra = 0;
+      await new Promise<void>((resolve) => {
+        const frame = (now: number) => {
+          const p = Math.min(1, (now - start) / duration);
+          window.scrollTo(0, max * p);
+          extra = Math.max(extra, doc.scrollWidth - doc.clientWidth);
+          if (p < 1) requestAnimationFrame(frame);
+          else resolve();
+        };
+        requestAnimationFrame(frame);
+      });
+      return extra;
+    });
+    expect(worst, `${w}px home widened while scrolling`).toBeLessThanOrEqual(0);
+  }
+});
+
 test("hero: official token logos are visible in the gold-dust hero", async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 1280, "desktop hero");
   await page.goto("/");
