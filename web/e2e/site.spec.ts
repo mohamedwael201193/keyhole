@@ -88,7 +88,19 @@ test("reduced motion: content is visible immediately", async ({ browser }) => {
   await ctx.close();
 });
 
-test("navbar: connect stays on one line and the full lockup is shown", async ({ page }) => {
+const FIT = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/identity"];
+
+test("navbar: full lockup shown and every page fits the viewport", async ({ page }) => {
+  for (const p of FIT) {
+    await page.goto(p, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".kh-word").first()).toHaveText("KEYHOLE");
+    const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(extra, `${p} scrolls sideways`).toBeLessThanOrEqual(0);
+    const word = (await page.locator(".kh-word").first().boundingBox())!;
+    const vw = page.viewportSize()!.width;
+    expect(word.x, `${p} wordmark starts off screen`).toBeGreaterThanOrEqual(-1);
+    expect(word.x + word.width, `${p} wordmark is cut`).toBeLessThanOrEqual(vw + 1);
+  }
   await page.goto("/vault");
   const box = await page.getByTestId("connect").boundingBox();
   expect(box!.height).toBeLessThanOrEqual(48);

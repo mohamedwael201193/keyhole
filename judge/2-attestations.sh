@@ -8,6 +8,8 @@ while IFS= read -r row; do
   h=$(jq -r .executed_wasm_sha256 <<<"$A"); oh=$(jq -r .output_hash <<<"$A")
   mine=$(printf '%s' "$out" | jq -cS . | tr -d '\n' | sha256sum | cut -d' ' -f1)
   if [ "$mine" = "$oh" ]; then s=OK; else s=FAIL; fail=1; fi
-  printf '%-4s %-36s %-28s wasm %s  %s\n' "$s" "$id" "$name" "${h:0:12}" "$(jq -r '.output.error.code // (if .output.ok then "ok" else "" end)' <<<"$row")"
+  pub=$(tr -d '[:space:]' < tee/worker/DEPLOYED_SHA256)
+  note=""; [ "$h" = "$pub" ] || note="  earlier build, superseded by ${pub:0:8}"
+  printf '%-4s %-36s %-28s wasm %s  %s%s\n' "$s" "$id" "$name" "${h:0:12}" "$(jq -r '.output.error.code // (if .output.ok then "ok" else "" end)' <<<"$row")" "$note"
 done < <(jq -c '.[]' judge/evidence.json)
 exit $fail

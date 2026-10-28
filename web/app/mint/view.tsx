@@ -77,7 +77,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               <p className="lead" style={{ marginTop: 18 }}>{t("mint.sub")}</p>
               <div className="tg" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 22 }}>
                 {SHOWN.map((x) => (
-                  <div className="tc" key={x.k}>
+                  <div className={`tc${x.k === "Bronze" ? " is-mint" : ""}`} key={x.k}>
                     <FoilCard finish={x.k}>
                       <div className="top">
                         <span className="tier">{t(`finish.${x.k}`)}</span>
@@ -87,6 +87,12 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                       <h3>{t(`finish.${x.k}`)}</h3>
                       <div className="meta"><span>{formatTradePrice(CAPS[x.k].perTx)}</span></div>
                     </FoilCard>
+                    {x.k === "Bronze" ? null : (
+                      <p className="finish-lock">
+                        <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+                        {t("mint.finishPreview")}
+                      </p>
+                    )}
                     <p className="below">{x.k === "Legendary" ? t("land.legDaily") : t("mint.perMin", { n: CAPS[x.k].perMin })}</p>
                   </div>
                 ))}

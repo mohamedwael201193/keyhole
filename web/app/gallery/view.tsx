@@ -15,7 +15,7 @@ export function GalleryView({ tokens, tiers }: { tokens: Token[]; tiers: (number
       <p className="lead">{t("gallery.lead")}</p>
       {tokens.length === 0 ? <p className="note">{t("gallery.empty")}</p> : (
         <div className="gg" data-testid="gallery">
-          {tokens.map((tk, i) => <KeyCard key={tk.token_id} token={tk} tier={tiers[i]} viewer={accountId} />)}
+          {tokens.map((tk, i) => <KeyCard key={tk.token_id} token={tk} tier={tiers[i]} viewer={accountId} displayIndex={i + 1} />)}
         </div>
       )}
       <p className="note" style={{ marginTop: 28 }}><Link href="/identity" style={{ color: "var(--teal)" }}>{t("gallery.toIdentity")}</Link></p>
