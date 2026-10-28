@@ -358,6 +358,14 @@ A live judge run with a different account (`a7458a83…`) gave all three expecte
 | replay of the same request | `replay` | [`b6d8ce4e`](https://api.outlayer.ai/attestations/by-call/b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563) |
 | over-cap quote ($2) | `over_cap_per_tx` | [`9b37dfee`](https://api.outlayer.ai/attestations/by-call/9b37dfee-47bf-4482-a445-0623a49d3f11) |
 
+Funded again on 2026-10-28. `./verify.sh` on each call below matched published build `f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`. The same three calls are the live-proof slot in [`docs/policy.md`](docs/policy.md).
+
+| Call | Result | Attestation |
+|---|---|---|
+| `info` | worker info | [`d03f935f`](https://api.outlayer.ai/attestations/by-call/d03f935f-dfc4-4548-8109-b9aabb5560fc) |
+| `status` | Bronze, tier 1. Caps $1 per trade and $5 per day | [`7d42db8d`](https://api.outlayer.ai/attestations/by-call/7d42db8d-d786-457f-b505-a96359f82393) |
+| quote of 2 USDC | `over_cap_per_tx`. Amount $1.99 exceeds the per-trade cap $1.00. No funds moved | [`c23f7bbf`](https://api.outlayer.ai/attestations/by-call/c23f7bbf-c37c-4327-8edd-e773d3a8324f) |
+
 **In the browser.** Open [`https://keyhole-seven.vercel.app/verify`](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539).
 
 - Your browser fetches the attestation, downloads the wasm from FastFS and hashes it with `crypto.subtle`.
@@ -432,7 +440,7 @@ These 30 steps were run with a real named wallet (`keyhole-devmo.near`) through 
 | Worker unit | 18 | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs) | NEP-413 payload and signature, replay, caps, rate limits, transaction encoding against near-api-js |
 | CLI | 6 | [`cli/test/core.test.ts`](cli/test/core.test.ts) | signing, request shape, verification helpers |
 | Web unit | 44 | [`web/tests`](web/tests) | NEP-413 parity with the mainnet reference, gateway allowlist and limits, key-state rules, base-unit math, every worker error code mapped in English, attestation checks |
-| Web e2e (Playwright) | 40 = 20 checks × desktop + mobile | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) | every page renders with no console errors; live supply and official logos; gallery from chain; in-browser verify of a real call; gateway refusals; English-only (`lang=en`, no switcher, `/ar` redirects); reduced motion; wallet modal; navbar; orbit never covered; step numbering |
+| Web e2e (Playwright) | 40 = 20 checks × desktop + mobile | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) | every page renders with no console errors; live supply and official logos; gallery from chain; in-browser verify of a real call; gateway refusals; English-only (`lang=en`, no switcher, `/ar` redirects home); reduced motion; wallet modal; navbar; official token logos visible in the gold-dust hero; step numbering |
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs 6 jobs on every push:
 
