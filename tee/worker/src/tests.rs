@@ -120,6 +120,22 @@ fn freshness_window() {
 }
 
 #[test]
+fn policy_table_refuses_over_cap_locally() {
+    let table = [
+        (1u8, 1_000_000u64, 5_000_000u64, 6i64),
+        (2, 10_000_000, 50_000_000, 12),
+        (3, 100_000_000, 500_000_000, 30),
+    ];
+    for (tier, per_tx, daily, per_min) in table {
+        let l = limits_for_tier(tier).unwrap();
+        assert_eq!((l.per_tx_usd_micro, l.daily_usd_micro, l.per_minute_calls), (per_tx, daily, per_min));
+        let mut st = Mem::default();
+        assert_eq!(enforce_caps(&mut st, "alice.near", &l, per_tx + 1, 0, true).unwrap_err().code, "over_cap_per_tx");
+        assert_eq!(st.incr(&hkey("alice.near", "spent/0"), 0).unwrap(), 0);
+    }
+}
+
+#[test]
 fn over_cap_per_tx_refused() {
     let mut st = Mem::default();
     let l = limits_for_tier(1).unwrap();
