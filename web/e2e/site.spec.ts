@@ -29,8 +29,8 @@ test("gallery renders every on-chain key", async ({ page }) => {
   await expect(page.getByTestId("gallery").locator('[data-state="locked"]').first()).toBeVisible();
 });
 
-test("verify: a real mainnet call passes all three checks, computed in-browser", async ({ page }) => {
-  await page.goto("/verify?call=b8daeed3-b745-432c-98f8-0af674f0da51");
+test("verify: a published-build mainnet call passes in the browser", async ({ page }) => {
+  await page.goto("/verify?call=cefbc64e-6c08-4bfe-a165-1667d9f5f25b");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
 });
 
