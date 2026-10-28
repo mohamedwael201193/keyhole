@@ -176,7 +176,7 @@
   "eyebrow": "Gallery",
   "h1a": "Every key is ",
   "h1b": "one of one.",
-  "lead": "Live from the contract. Each token's traits are sha256(contract id + token id): head, filigree, enamel, gem, shaft, finish and a bit cipher.",
+  "lead": "Each key's base art comes from its tier's collection. The engraved bit cipher is taken from the token id, and the serial from sha256(contract id + token id).",
   "key": "KEYHOLE Key #{id}",
   "yours": "Your key",
   "toIdentity": "NFT identity & metadata →"

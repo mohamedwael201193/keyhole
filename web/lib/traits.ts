@@ -73,6 +73,11 @@ export function bitCipherBits(tokenId: string): string {
   return byte.toString(2).padStart(8, "0");
 }
 
+/** Six hex characters of the token hash, the engraved serial. */
+export function serialOf(seedHex: string): string {
+  return seedHex.slice(0, 6);
+}
+
 /** Legendary is rare: 1 in 8 Gold-cap keys (on-chain tier 3). Caps stay Gold. */
 export function finishOf(tier: number | null, seed: Uint8Array): Finish {
   if (tier === 3 && (seed[1] & 7) === 0) return "Legendary";

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { keyState, shortAccount, tierName } from "@/lib/near";
-import { CAPS, bitCipherBits, finishOf, keyIdentity, nep177, traitSeed, toHex } from "@/lib/traits";
+import { guillocheOf } from "@/components/Engraving";
+import { CAPS, bitCipherBits, finishOf, keyIdentity, nep177, serialOf, traitSeed, toHex } from "@/lib/traits";
 import { toBaseUnits } from "@/lib/assets";
 import { WORKER_ERROR_CODES } from "@/lib/errors";
 import { errorText, translate } from "@/lib/i18n";
@@ -23,6 +24,18 @@ describe("key traits", () => {
     expect(bitCipherBits("1")).toBe("00000001");
     expect(bitCipherBits("10")).toBe("00001010");
     expect(bitCipherBits("k857b6b68facc0f94")).toBe("10010100");
+  });
+  it("keeps same-art keys apart by cipher and serial", () => {
+    const a = keyIdentity("0", 1);
+    const b = keyIdentity("k0642e7964b2fb515", 1);
+    expect(a.art).toBe(b.art);
+    expect(a.bits).not.toBe(b.bits);
+    expect(serialOf(a.seedHex)).not.toBe(serialOf(b.seedHex));
+    expect(guillocheOf(a.seedHex)).not.toEqual(guillocheOf(b.seedHex));
+    const c = keyIdentity("k5f4750858f328940", 1);
+    const d = keyIdentity("k857b6b68facc0f94", 1);
+    expect(c.art).toBe(d.art);
+    expect(c.bits).not.toBe(d.bits);
   });
   it("is deterministic and stays inside the finish", () => {
     const a = keyIdentity("k857b6b68facc0f94", 1);

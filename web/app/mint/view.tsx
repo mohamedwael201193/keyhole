@@ -5,6 +5,7 @@ import { HowStrip } from "@/components/HowStrip";
 import { EmptyState } from "@/components/EmptyState";
 import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
+import { Guilloche, Hallmark } from "@/components/Engraving";
 import { FoilCard } from "@/components/FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
@@ -12,7 +13,7 @@ import { useSigned } from "@/lib/useSigned";
 import { useHealth } from "@/lib/useHealth";
 import { tx } from "@/lib/config";
 import { formatTradePrice } from "@/lib/price";
-import { CAPS, keyIdentity } from "@/lib/traits";
+import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 
 const SHOWN = [
@@ -40,8 +41,10 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
             <span className="oo">{t("land.oneOfOne")}</span>
           </div>
           <div className="art">
+            {idn && <Guilloche seed={idn.seedHex} />}
             <KeyArt n={idn?.art ?? 3} alt={revealed ? t("gallery.key", { id: String(o.token_id) }) : t("finish.Bronze")} width={406} height={1084} priority />
           </div>
+          {idn && <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />}
           <h3>{revealed ? t("gallery.key", { id: String(o.token_id) }) : t("mint.preview")}</h3>
           <div className="meta"><span className={revealed ? undefined : "wrap"}>{revealed ? t("mint.tag", { id: String(o.token_id), finish: t(`finish.${idn!.finish}`) }) : t("mint.bronzeOnly")}</span></div>
         </FoilCard>
