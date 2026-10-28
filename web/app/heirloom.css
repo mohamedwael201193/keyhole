@@ -78,8 +78,9 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 
 /* hero */
 .hero { display: grid; grid-template-columns: 1fr 700px; gap: 20px 30px; align-items: center; padding: 20px 56px 30px; position: relative; overflow: hidden; }
-.hero:before { content: ""; position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px; border-radius: 50%; background: radial-gradient(#F8F3EA, #ECE6DA 66%); }
-.hero > * { position: relative; }
+.hero:before { content: ""; position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px; border-radius: 50%; background: radial-gradient(#F8F3EA, #ECE6DA 66%); z-index: 0; pointer-events: none; }
+.hero-dust { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.hero > *:not(.hero-dust) { position: relative; z-index: 1; }
 .hero h1 { font-size: 74px; line-height: .98; font-weight: 700; }
 .hero h1 em { display: block; }
 .hero .lead { font-size: 19px; margin: 22px 0 30px; color: #33403F; max-width: 540px; }
@@ -410,7 +411,109 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 }
 html.no-motion .hero h1, html.no-motion .hero .lead, html.no-motion .hero .eb, html.no-motion .hero .btn,
 html.no-motion .stats, html.no-motion .hkey, html.no-motion .orbit .m-in, html.no-motion .beat, html.no-motion .kh-ring { animation: none; }
+html.no-motion .foil-sheen, html.no-motion .foil-beam i, html.no-motion .foil-rim { animation: none; }
+html.no-motion .foil-tilt { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition: none !important; }
   .hero-line, .reveal .rays { opacity: 1; transform: none; }
+  .foil-tilt { transform: none; }
 }
+
+/* Holographic key cards: Treatment B foil + Treatment A border beam. */
+@property --beam-a { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.foil-card {
+  --br: 28px;
+  --bwid: 6px;
+  --bl: 280px;
+  --bd: 5.2s;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--br);
+}
+.foil-card.card { border: 2px solid color-mix(in srgb, var(--c1) 72%, #F6F1E7); }
+.foil-card.is-leg.card { border-color: transparent; }
+.foil-tilt {
+  position: relative;
+  border-radius: inherit;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform .45s ease;
+  transform-style: preserve-3d;
+  height: 100%;
+}
+.foil-grain, .foil-sheen, .foil-glare, .foil-rim, .foil-beam { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+.foil-grain {
+  z-index: 0;
+  opacity: .16;
+  background-image: repeating-linear-gradient(45deg, rgba(125, 90, 30, .28) 0 1px, transparent 1px 6px);
+}
+.foil-sheen {
+  z-index: 1;
+  opacity: .7;
+  background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--c2) 70%, transparent) 44%, rgba(255, 255, 255, .92) 50%, color-mix(in srgb, var(--c2) 60%, transparent) 56%, transparent 70%);
+  background-size: 260% 100%;
+  animation: foil-sheen 3.2s ease-in-out infinite;
+}
+.foil-card.is-leg .foil-sheen {
+  opacity: .5;
+  background: linear-gradient(115deg, transparent 25%, rgba(233, 180, 76, .55) 38%, rgba(168, 67, 44, .45) 46%, rgba(31, 75, 79, .45) 54%, rgba(233, 180, 76, .55) 62%, transparent 75%);
+  background-size: 260% 100%;
+}
+@keyframes foil-sheen { from { background-position: 130% 0; } to { background-position: -40% 0; } }
+.foil-body { position: relative; z-index: 3; border-radius: inherit; }
+.foil-glare {
+  z-index: 5;
+  opacity: 0;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 30%), rgba(255, 255, 255, .55), transparent 46%);
+  mix-blend-mode: soft-light;
+  transition: opacity .35s ease;
+}
+.foil-card:hover .foil-glare { opacity: 1; }
+.foil-rim {
+  z-index: 6;
+  padding: 4px;
+  background: conic-gradient(from var(--beam-a), #E9B44C, #A8432C, #7A1F4F, #1F4B4F, #7D9C8E, #E9B44C);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: foil-spin 5s linear infinite;
+}
+@keyframes foil-spin { to { --beam-a: 360deg; } }
+.foil-beam {
+  z-index: 7;
+  border: var(--bwid) solid transparent;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.foil-beam i {
+  display: block;
+  position: absolute;
+  width: var(--bl);
+  aspect-ratio: 1;
+  border-radius: 0;
+  background: linear-gradient(to left, #fff 0%, #fff 18%, var(--c2) 42%, var(--c1) 78%, transparent);
+  offset-path: rect(0 auto auto 0 round var(--br));
+  offset-anchor: 50% 50%;
+  animation: foil-run var(--bd) linear infinite;
+  filter: drop-shadow(0 0 6px var(--c2)) drop-shadow(0 0 2px #fff);
+  pointer-events: none;
+}
+.foil-beam i + i { animation-delay: calc(var(--bd) / -2); opacity: .72; }
+.foil-card.is-leg { --bwid: 7px; --bl: 320px; }
+.foil-rim { padding: 5px; }
+@keyframes foil-run { to { offset-distance: 100%; } }
+
+.foil-card.gk, .foil-card.tc { padding: 0; }
+.foil-card.gk .foil-body { padding: 22px; }
+.foil-card.tc .foil-body { padding: 30px; text-align: center; }
+.foil-card.mint-tier .foil-body { padding: 16px; }
+.foil-card.reveal, .foil-card.nft-art { --br: 36px; }
+.foil-card.nft-art { --br: 22px; }
+.foil-card.nc { --br: 30px; padding: 0; background: #F6F1E7; }
+.foil-card.reveal .foil-tilt, .foil-card.nft-art .foil-tilt { position: absolute; inset: 0; height: auto; }
+.foil-card.reveal .foil-body, .foil-card.nft-art .foil-body { height: 100%; display: grid; place-items: center; }
+.foil-card.nc .in { background: transparent; outline: 1px solid color-mix(in srgb, var(--c1) 45%, transparent); outline-offset: -10px; }
+.foil-card.nc .art { background: radial-gradient(circle at 50% 38%, #2C6A6F, #1F4B4F 60%, #16393C); }

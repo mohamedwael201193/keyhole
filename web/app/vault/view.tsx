@@ -6,6 +6,7 @@ import { HowStrip } from "@/components/HowStrip";
 import { EmptyState } from "@/components/EmptyState";
 import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
+import { FoilCard } from "@/components/FoilCard";
 import { Medal } from "@/components/Medal";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
@@ -93,11 +94,11 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
               <p className="lb">{t("vault.yourKey")}</p>
               {idn && held ? (
                 <>
-                  <div className="nft-art">
+                  <FoilCard finish={idn.finish} className="nft-art">
                     <span className="tier" style={{ background: FINISH_COLOR[idn.finish] }}>{t(`finish.${idn.finish}`)}</span>
                     <span className="att">{t("land.attested")}</span>
                     <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
-                  </div>
+                  </FoilCard>
                   <h2 style={{ fontSize: 36, margin: "18px 0 6px", overflowWrap: "anywhere" }}>{t("gallery.key", { id: held.token.token_id })}</h2>
                   <dl className="kv">
                     <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>

@@ -5,6 +5,7 @@ import { HowStrip } from "@/components/HowStrip";
 import { EmptyState } from "@/components/EmptyState";
 import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
+import { FoilCard } from "@/components/FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
@@ -32,11 +33,11 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
   return (
     <div className="page">
       <div className="mint">
-        <div className="reveal">
+        <FoilCard finish={idn?.finish ?? "Bronze"} className="reveal">
           <div className="rays" />
           <KeyArt n={idn?.art ?? 3} className="k" alt={revealed ? t("gallery.key", { id: String(o.token_id) }) : t("finish.Bronze")} width={406} height={1084} priority />
           <span className="tag">{revealed ? t("mint.tag", { id: String(o.token_id), finish: t(`finish.${idn!.finish}`) }) : t("mint.preview")}</span>
-        </div>
+        </FoilCard>
         <div>
           <p className="eb">{t("mint.step", { n: step })}</p>
           <div className="steps">
@@ -69,11 +70,11 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               <p className="lead" style={{ marginTop: 18 }}>{t("mint.sub")}</p>
               <div className="tg" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 22 }}>
                 {SHOWN.map((x) => (
-                  <div key={x.k} className="card" style={{ padding: 16 }}>
+                  <FoilCard key={x.k} finish={x.k} className="card mint-tier">
                     <span className="tier" style={{ background: FINISH_COLOR[x.k] }}>{t(`finish.${x.k}`)}</span>
                     <p style={{ marginTop: 10, fontFamily: "var(--serif)", fontSize: 28 }}>{fmtUsd(CAPS[x.k].perTx * 1e6)} <small style={{ color: "var(--mu)", fontSize: 14 }}>/ {fmtUsd(CAPS[x.k].daily * 1e6)}</small></p>
                     <p className="note">{x.k === "Legendary" ? t("land.legDaily") : t("mint.perMin", { n: CAPS[x.k].perMin })}</p>
-                  </div>
+                  </FoilCard>
                 ))}
               </div>
               <p className="note">{t("mint.bronzeOnly")}</p>

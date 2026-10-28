@@ -1,6 +1,7 @@
 "use client";
 import { Cipher } from "./Cipher";
 import { KeyArt } from "./Art";
+import { FoilCard } from "./FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT } from "@/lib/config";
 import { keyState, type Token } from "@/lib/near";
@@ -17,7 +18,7 @@ export function KeyCard({ token, tier, viewer }: { token: Token; tier: number | 
   const id = keyIdentity(token.token_id, tier);
   const state = keyState(token, tier, viewer);
   return (
-    <article className="card gk" data-state={state} data-testid="key-nft">
+    <FoilCard as="article" finish={id.finish} className="card gk" data-state={state} data-testid="key-nft">
       <div className="top">
         <span className="tier" style={{ background: FINISH_COLOR[id.finish] }}>{t(`finish.${id.finish}`)}</span>
         <span className="mono" style={{ fontSize: 12, color: "#3E4A4B" }}>{t("land.oneOfOne")}</span>
@@ -33,6 +34,6 @@ export function KeyCard({ token, tier, viewer }: { token: Token; tier: number | 
       </dl>
       <div className="cbar"><span>{t("field.cipher")}</span><Cipher bits={id.bits} /></div>
       <p className="mono" style={{ fontSize: 11, color: "#3E4A4B", marginTop: 8 }}>{KEYS_CONTRACT}</p>
-    </article>
+    </FoilCard>
   );
 }
