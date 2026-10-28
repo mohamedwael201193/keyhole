@@ -8,7 +8,8 @@ import { HeroDust } from "./HeroDust";
 import { CHAINS, Medal } from "./Medal";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
-import { CAPS, CATALOG, FINISH_COLOR, type Finish } from "@/lib/traits";
+import { formatTradePrice } from "@/lib/price";
+import { CAPS, CATALOG, type Finish } from "@/lib/traits";
 import { TXS } from "@/lib/evidence";
 import type { Config } from "@/lib/near";
 
@@ -21,7 +22,7 @@ const TIERS: { name: Finish; art: number; daily: string }[] = [
   { name: "Bronze", art: 3, daily: "tierDaily" },
   { name: "Silver", art: 4, daily: "tierDaily" },
   { name: "Gold", art: 2, daily: "tierDaily" },
-  { name: "Legendary", art: 10, daily: "legDaily" },
+  { name: "Legendary", art: 1, daily: "legDaily" },
 ];
 
 export function Landing({ supply, hash, config }: { supply: number | null; hash: string; config: Config | null }) {
@@ -152,13 +153,21 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <p className="lead">{t("land.tierLead")}</p>
           <div className="tg">
             {TIERS.map((tier) => (
-              <FoilCard finish={tier.name} className={`card tc${tier.name === "Legendary" ? " leg" : ""}`} key={tier.name}>
-                <span className="tier" style={{ background: FINISH_COLOR[tier.name] }}>{t(`finish.${tier.name}`)}</span>
-                <KeyArt n={tier.art} alt={t(`finish.${tier.name}`)} width={433} height={1077} />
-                <h3>{t(`finish.${tier.name}`)}</h3>
-                <p className="cap">${CAPS[tier.name].perTx}<small> {t("land.perTrade")}</small></p>
-                <p>{tier.name === "Legendary" ? t("land.legDaily") : t("land.tierDaily", { n: CAPS[tier.name].daily })}</p>
-              </FoilCard>
+              <div className="tc" key={tier.name}>
+                <FoilCard finish={tier.name}>
+                  <div className="top">
+                    <span className="tier">{t(`finish.${tier.name}`)}</span>
+                    <span className="oo">{t("land.oneOfOne")}</span>
+                  </div>
+                  <div className="art"><KeyArt n={tier.art} alt={t(`finish.${tier.name}`)} width={430} height={1080} /></div>
+                  <h3>{t("land.keyN", { n: tier.art })}</h3>
+                  <div className="meta">
+                    <span>{t("land.cipherN", { n: tier.art })}</span>
+                    <span>{formatTradePrice(CAPS[tier.name].perTx)}</span>
+                  </div>
+                </FoilCard>
+                <p className="below">{tier.name === "Legendary" ? t("land.legDaily") : t("land.tierDaily", { n: CAPS[tier.name].daily })}</p>
+              </div>
             ))}
           </div>
         </div>
@@ -171,10 +180,19 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <p className="lead">{t("land.galLead")} <span className="mono" style={{ fontSize: 14 }}>{t("land.concept")}</span></p>
           <div className="gg">
             {CATALOG.map((k) => (
-              <FoilCard finish={k.finish} className="card gk" key={k.n}>
-                <div className="top"><span className="tier" style={{ background: FINISH_COLOR[k.finish] }}>{t(`finish.${k.finish}`)}</span><span className="mono" style={{ fontSize: 12, color: "#3E4A4B" }}>{t("land.oneOfOne")}</span></div>
-                <KeyArt n={k.n} alt={`${t("land.keyN", { n: k.n })}`} className="k" width={430} height={1080} />
-                <h3>{t("land.keyN", { n: k.n })}</h3>
+              <article className="gk" key={k.n}>
+                <FoilCard finish={k.finish}>
+                  <div className="top">
+                    <span className="tier">{t(`finish.${k.finish}`)}</span>
+                    <span className="oo">{t("land.oneOfOne")}</span>
+                  </div>
+                  <div className="art"><KeyArt n={k.n} alt={t("land.keyN", { n: k.n })} width={430} height={1080} /></div>
+                  <h3>{t("land.keyN", { n: k.n })}</h3>
+                  <div className="meta">
+                    <span>{t("land.cipherN", { n: k.n })}</span>
+                    <span>{formatTradePrice(CAPS[k.finish].perTx)}</span>
+                  </div>
+                </FoilCard>
                 <dl>
                   <dt>{t("field.head")}</dt><dd>{tr(k.head)}</dd>
                   <dt>{t("field.filigree")}</dt><dd>{tr(k.filigree)}</dd>
@@ -183,7 +201,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
                   <dt>{t("field.shaft")}</dt><dd>{tr(k.shaft)}</dd>
                 </dl>
                 <div className="cbar"><span>{t("land.cipherN", { n: k.n })}</span><Cipher bits={k.n.toString(2).padStart(8, "0")} /></div>
-              </FoilCard>
+              </article>
             ))}
           </div>
         </div>
