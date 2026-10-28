@@ -19,7 +19,7 @@ const SHOWN = [
   { k: "Bronze", art: 3 },
   { k: "Silver", art: 4 },
   { k: "Gold", art: 2 },
-  { k: "Legendary", art: 10 },
+  { k: "Legendary", art: 1 },
 ] as const;
 
 export function MintView({ initialOnline }: { initialOnline: boolean }) {
@@ -43,7 +43,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
             <KeyArt n={idn?.art ?? 3} alt={revealed ? t("gallery.key", { id: String(o.token_id) }) : t("finish.Bronze")} width={406} height={1084} priority />
           </div>
           <h3>{revealed ? t("gallery.key", { id: String(o.token_id) }) : t("mint.preview")}</h3>
-          <div className="meta"><span>{revealed ? t("mint.tag", { id: String(o.token_id), finish: t(`finish.${idn!.finish}`) }) : t("mint.bronzeOnly")}</span></div>
+          <div className="meta"><span className={revealed ? undefined : "wrap"}>{revealed ? t("mint.tag", { id: String(o.token_id), finish: t(`finish.${idn!.finish}`) }) : t("mint.bronzeOnly")}</span></div>
         </FoilCard>
         <div>
           <p className="eb">{t("mint.step", { n: step })}</p>
