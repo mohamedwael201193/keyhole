@@ -3,6 +3,8 @@ import Link from "next/link";
 import { HomeMotion } from "./HomeMotion";
 import { Cipher } from "./Cipher";
 import { Icon, KeyArt, Scene } from "./Art";
+import { FoilCard } from "./FoilCard";
+import { HeroDust } from "./HeroDust";
 import { CHAINS, Medal } from "./Medal";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
@@ -29,6 +31,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
     <>
       <HomeMotion />
       <section className="hero" id="s01">
+        <HeroDust />
         <div>
           <p className="eb hero-line">{t("land.eyebrow")}</p>
           <h1 className="hero-line">{t("land.h1a")}<em>{t("land.h1b")}</em></h1>
@@ -149,13 +152,13 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <p className="lead">{t("land.tierLead")}</p>
           <div className="tg">
             {TIERS.map((tier) => (
-              <div className={`card tc${tier.name === "Legendary" ? " leg" : ""}`} key={tier.name}>
+              <FoilCard finish={tier.name} className={`card tc${tier.name === "Legendary" ? " leg" : ""}`} key={tier.name}>
                 <span className="tier" style={{ background: FINISH_COLOR[tier.name] }}>{t(`finish.${tier.name}`)}</span>
                 <KeyArt n={tier.art} alt={t(`finish.${tier.name}`)} width={433} height={1077} />
                 <h3>{t(`finish.${tier.name}`)}</h3>
                 <p className="cap">${CAPS[tier.name].perTx}<small> {t("land.perTrade")}</small></p>
                 <p>{tier.name === "Legendary" ? t("land.legDaily") : t("land.tierDaily", { n: CAPS[tier.name].daily })}</p>
-              </div>
+              </FoilCard>
             ))}
           </div>
         </div>
@@ -168,7 +171,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <p className="lead">{t("land.galLead")} <span className="mono" style={{ fontSize: 14 }}>{t("land.concept")}</span></p>
           <div className="gg">
             {CATALOG.map((k) => (
-              <div className="card gk" key={k.n}>
+              <FoilCard finish={k.finish} className="card gk" key={k.n}>
                 <div className="top"><span className="tier" style={{ background: FINISH_COLOR[k.finish] }}>{t(`finish.${k.finish}`)}</span><span className="mono" style={{ fontSize: 12, color: "#3E4A4B" }}>{t("land.oneOfOne")}</span></div>
                 <KeyArt n={k.n} alt={`${t("land.keyN", { n: k.n })}`} className="k" width={430} height={1080} />
                 <h3>{t("land.keyN", { n: k.n })}</h3>
@@ -180,7 +183,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
                   <dt>{t("field.shaft")}</dt><dd>{tr(k.shaft)}</dd>
                 </dl>
                 <div className="cbar"><span>{t("land.cipherN", { n: k.n })}</span><Cipher bits={k.n.toString(2).padStart(8, "0")} /></div>
-              </div>
+              </FoilCard>
             ))}
           </div>
         </div>

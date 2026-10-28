@@ -3,6 +3,7 @@ import { Cipher } from "@/components/Cipher";
 import { Icon, KeyArt } from "@/components/Art";
 import { KeyholeLogo } from "@/components/KeyholeLogo";
 import { traitLabel } from "@/components/KeyCard";
+import { FoilCard } from "@/components/FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT } from "@/lib/config";
 import type { Token } from "@/lib/near";
@@ -26,11 +27,13 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
         <h2>{t("ident.card")}</h2>
         <div className="cards">
           {CARDS.map((k) => (
-            <div className="nc" key={k.n} style={{ ["--f1" as string]: FRAMES[k.n][0], ["--f2" as string]: FRAMES[k.n][1] }}>
+            <FoilCard finish={k.finish} className="nc" key={k.n} style={{ ["--f1" as string]: FRAMES[k.n][0], ["--f2" as string]: FRAMES[k.n][1] }}>
               <div className="in">
                 <div className="art">
-                  <span className="tier" style={{ background: FINISH_COLOR[k.finish] }}>{t(`finish.${k.finish}`)}</span>
-                  <span className="att">{t("land.attested")}</span>
+                  <div className="art-badges">
+                    <span className="tier" style={{ background: FINISH_COLOR[k.finish] }}>{t(`finish.${k.finish}`)}</span>
+                    <span className="att">{t("land.attested")}</span>
+                  </div>
                   <KeyArt n={k.n} alt="" width={430} height={1080} />
                 </div>
                 <h3>{t("land.keyN", { n: k.n })}</h3>
@@ -44,7 +47,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
                 </dl>
                 <div className="ft2"><KeyholeLogo className="h-7" tone="ink" /><Cipher bits={bits(k.n)} /></div>
               </div>
-            </div>
+            </FoilCard>
           ))}
         </div>
       </div>
