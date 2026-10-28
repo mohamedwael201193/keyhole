@@ -1,11 +1,12 @@
 "use client";
 import { Cipher } from "./Cipher";
 import { KeyArt } from "./Art";
+import { Engraving } from "./Engraving";
 import { FoilCard } from "./FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { keyState, shortAccount, type Token } from "@/lib/near";
 import { formatTradePrice } from "@/lib/price";
-import { CAPS, keyIdentity } from "@/lib/traits";
+import { CAPS, foilHue, keyIdentity, serialOf } from "@/lib/traits";
 
 export function traitLabel(t: (k: string) => string, name: string) {
   const v = t(`traits.${name}`);
@@ -21,13 +22,14 @@ export function KeyCard({ token, tier, viewer, displayIndex }: { token: Token; t
   const title = t("gallery.key", { id: String(displayIndex) });
   return (
     <article className="gk" data-state={state} data-testid="key-nft">
-      <FoilCard finish={id.finish}>
+      <FoilCard finish={id.finish} hue={foilHue(id.seedHex)}>
         <div className="top">
           <span className="tier">{t(`finish.${id.finish}`)}</span>
           <span className="oo">{t("land.oneOfOne")}</span>
         </div>
         <div className="art">
           <KeyArt n={id.art} alt={title} width={430} height={1080} />
+          <Engraving bits={id.bits} serial={serialOf(id.seedHex)} />
         </div>
         <h3 title={token.token_id}>{title}</h3>
         <div className="meta">

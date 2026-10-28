@@ -482,6 +482,7 @@ html.no-motion .foil-card .bw { display: none; }
   background-position: var(--p) 0;
   animation: sheen 3.2s ease-in-out infinite;
   opacity: .75;
+  filter: hue-rotate(var(--foil-hue, 0deg));
 }
 .foil-card.is-leg .foil {
   opacity: .6;
@@ -502,6 +503,18 @@ html.no-motion .foil-card .bw { display: none; }
 }
 .foil-card .oo { font: 12px var(--mono); color: #3E4A4B; }
 .foil-card .art { flex: 1; display: grid; place-items: center; position: relative; z-index: 1; min-height: 0; background: none; }
+.foil-card .art .bit-band {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 18%;
+  width: 32%;
+  height: auto;
+  color: var(--c1);
+  transform: translateX(-50%);
+  pointer-events: none;
+  filter: hue-rotate(var(--foil-hue, 0deg)) drop-shadow(0 1px 0 rgba(255, 255, 255, .45));
+}
 .foil-card .art img {
   height: 76cqh;
   width: auto;

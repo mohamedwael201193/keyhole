@@ -73,6 +73,18 @@ export function bitCipherBits(tokenId: string): string {
   return byte.toString(2).padStart(8, "0");
 }
 
+/** Sheen shift from the token hash. ±12° stays inside the tier metal. */
+export function foilHue(seedHex: string): number {
+  const n = Number.parseInt(seedHex.slice(2, 4), 16);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round((n / 255) * 24 - 12);
+}
+
+/** Six hex characters of the token hash, the engraved serial. */
+export function serialOf(seedHex: string): string {
+  return seedHex.slice(0, 6);
+}
+
 /** Legendary is rare: 1 in 8 Gold-cap keys (on-chain tier 3). Caps stay Gold. */
 export function finishOf(tier: number | null, seed: Uint8Array): Finish {
   if (tier === 3 && (seed[1] & 7) === 0) return "Legendary";
