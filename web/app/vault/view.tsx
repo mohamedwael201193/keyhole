@@ -16,7 +16,7 @@ import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
 import { attestation, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
-import { CAPS, FINISH_COLOR, keyIdentity, type Finish } from "@/lib/traits";
+import { CAPS, keyIdentity, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 
 const LOGO: Record<string, [string, string]> = {
@@ -108,12 +108,18 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
               <p className="lb">{t("vault.yourKey")}</p>
               {idn && held ? (
                 <>
-                  <FoilCard finish={idn.finish} className="nft-art">
-                    <span className="tier" style={{ background: FINISH_COLOR[idn.finish] }}>{t(`finish.${idn.finish}`)}</span>
-                    <span className="att">{t("land.attested")}</span>
-                    <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
-                  </FoilCard>
-                  <h2 style={{ fontSize: 36, margin: "18px 0 6px", overflowWrap: "anywhere" }}>{t("gallery.key", { id: held.token.token_id })}</h2>
+                  <div className="vault-key">
+                    <FoilCard finish={idn.finish}>
+                      <div className="top">
+                        <span className="tier">{t(`finish.${idn.finish}`)}</span>
+                        <span className="oo">{t("land.oneOfOne")}</span>
+                      </div>
+                      <div className="art"><KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} /></div>
+                      <h3 style={{ overflowWrap: "anywhere" }}>{t("gallery.key", { id: held.token.token_id })}</h3>
+                      <div className="meta"><span>{KEYS_CONTRACT}</span></div>
+                    </FoilCard>
+                    <p className="att">{t("land.attested")}</p>
+                  </div>
                   <dl className="kv">
                     <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>
                     <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, idn.filigree)}</dd>

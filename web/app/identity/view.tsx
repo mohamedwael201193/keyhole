@@ -7,10 +7,9 @@ import { FoilCard } from "@/components/FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT } from "@/lib/config";
 import type { Token } from "@/lib/near";
-import { CATALOG, FINISH_COLOR, nep177 } from "@/lib/traits";
+import { CATALOG, nep177 } from "@/lib/traits";
 
 const CARDS = [CATALOG[2], CATALOG[3], CATALOG[1], CATALOG[0]];
-const FRAMES: Record<number, [string, string]> = { 3: ["#8A5A3C", "#C58A5E"], 4: ["#6E7A80", "#D5DCE0"], 2: ["#9A7420", "#E3C06A"], 1: ["#7A1F4F", "#F6D9A8"] };
 
 export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (number | null)[] }) {
   const { t } = useI18n();
@@ -27,27 +26,30 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
         <h2>{t("ident.card")}</h2>
         <div className="cards">
           {CARDS.map((k) => (
-            <FoilCard finish={k.finish} className="nc" key={k.n} style={{ ["--f1" as string]: FRAMES[k.n][0], ["--f2" as string]: FRAMES[k.n][1] }}>
-              <div className="in">
-                <div className="art">
-                  <div className="art-badges">
-                    <span className="tier" style={{ background: FINISH_COLOR[k.finish] }}>{t(`finish.${k.finish}`)}</span>
-                    <span className="att">{t("land.attested")}</span>
-                  </div>
-                  <KeyArt n={k.n} alt="" width={430} height={1080} />
+            <article className="specimen" key={k.n}>
+              <FoilCard finish={k.finish}>
+                <div className="top">
+                  <span className="tier">{t(`finish.${k.finish}`)}</span>
+                  <span className="oo">{t("land.oneOfOne")}</span>
                 </div>
+                <div className="art"><KeyArt n={k.n} alt="" width={430} height={1080} /></div>
                 <h3>{t("land.keyN", { n: k.n })}</h3>
-                <p className="sub">{t(`finish.${k.finish}`)} · {t("land.oneOfOne")} · {KEYS_CONTRACT}</p>
-                <dl>
-                  <dt>{t("field.head")}</dt><dd>{traitLabel(t, k.head)}</dd>
-                  <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, k.filigree)}</dd>
-                  <dt>{t("field.enamel")}</dt><dd>{traitLabel(t, k.enamel)}</dd>
-                  <dt>{t("field.gem")}</dt><dd>{traitLabel(t, k.gem)}</dd>
-                  <dt>{t("field.shaft")}</dt><dd>{traitLabel(t, k.shaft)}</dd>
-                </dl>
-                <div className="ft2"><KeyholeLogo className="h-7" tone="ink" /><Cipher bits={bits(k.n)} /></div>
-              </div>
-            </FoilCard>
+                <div className="meta">
+                  <span>{t("land.cipherN", { n: k.n })}</span>
+                  <span>{k.finish === "Bronze" ? "$1 / trade" : k.finish === "Silver" ? "$10 / trade" : "$100 / trade"}</span>
+                </div>
+              </FoilCard>
+              <p className="att">{t("land.attested")}</p>
+              <p className="mono" style={{ fontSize: 12, color: "var(--mu)" }}>{KEYS_CONTRACT}</p>
+              <dl>
+                <dt>{t("field.head")}</dt><dd>{traitLabel(t, k.head)}</dd>
+                <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, k.filigree)}</dd>
+                <dt>{t("field.enamel")}</dt><dd>{traitLabel(t, k.enamel)}</dd>
+                <dt>{t("field.gem")}</dt><dd>{traitLabel(t, k.gem)}</dd>
+                <dt>{t("field.shaft")}</dt><dd>{traitLabel(t, k.shaft)}</dd>
+              </dl>
+              <div className="ft2"><KeyholeLogo className="h-7" tone="ink" /><Cipher bits={bits(k.n)} /></div>
+            </article>
           ))}
         </div>
       </div>

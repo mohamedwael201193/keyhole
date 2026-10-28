@@ -11,7 +11,7 @@ import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { useHealth } from "@/lib/useHealth";
 import { tx } from "@/lib/config";
-import { CAPS, FINISH_COLOR, keyIdentity } from "@/lib/traits";
+import { CAPS, keyIdentity } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 
 const SHOWN = [
@@ -33,10 +33,16 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
   return (
     <div className="page">
       <div className="mint">
-        <FoilCard finish={idn?.finish ?? "Bronze"} className="reveal">
-          <div className="rays" />
-          <KeyArt n={idn?.art ?? 3} className="k" alt={revealed ? t("gallery.key", { id: String(o.token_id) }) : t("finish.Bronze")} width={406} height={1084} priority />
-          <span className="tag">{revealed ? t("mint.tag", { id: String(o.token_id), finish: t(`finish.${idn!.finish}`) }) : t("mint.preview")}</span>
+        <FoilCard finish={idn?.finish ?? "Bronze"}>
+          <div className="top">
+            <span className="tier">{t(`finish.${idn?.finish ?? "Bronze"}`)}</span>
+            <span className="oo">{t("land.oneOfOne")}</span>
+          </div>
+          <div className="art">
+            <KeyArt n={idn?.art ?? 3} alt={revealed ? t("gallery.key", { id: String(o.token_id) }) : t("finish.Bronze")} width={406} height={1084} priority />
+          </div>
+          <h3>{revealed ? t("gallery.key", { id: String(o.token_id) }) : t("mint.preview")}</h3>
+          <div className="meta"><span>{revealed ? t("mint.tag", { id: String(o.token_id), finish: t(`finish.${idn!.finish}`) }) : t("mint.bronzeOnly")}</span></div>
         </FoilCard>
         <div>
           <p className="eb">{t("mint.step", { n: step })}</p>
@@ -70,11 +76,18 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               <p className="lead" style={{ marginTop: 18 }}>{t("mint.sub")}</p>
               <div className="tg" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 22 }}>
                 {SHOWN.map((x) => (
-                  <FoilCard key={x.k} finish={x.k} className="card mint-tier">
-                    <span className="tier" style={{ background: FINISH_COLOR[x.k] }}>{t(`finish.${x.k}`)}</span>
-                    <p style={{ marginTop: 10, fontFamily: "var(--serif)", fontSize: 28 }}>{fmtUsd(CAPS[x.k].perTx * 1e6)} <small style={{ color: "var(--mu)", fontSize: 14 }}>/ {fmtUsd(CAPS[x.k].daily * 1e6)}</small></p>
-                    <p className="note">{x.k === "Legendary" ? t("land.legDaily") : t("mint.perMin", { n: CAPS[x.k].perMin })}</p>
-                  </FoilCard>
+                  <div className="tc" key={x.k}>
+                    <FoilCard finish={x.k}>
+                      <div className="top">
+                        <span className="tier">{t(`finish.${x.k}`)}</span>
+                        <span className="oo">{t("land.oneOfOne")}</span>
+                      </div>
+                      <div className="art"><KeyArt n={x.art} alt={t(`finish.${x.k}`)} width={430} height={1080} /></div>
+                      <h3>{t(`finish.${x.k}`)}</h3>
+                      <div className="meta"><span>{`$${CAPS[x.k].perTx} / trade`}</span></div>
+                    </FoilCard>
+                    <p className="below">{x.k === "Legendary" ? t("land.legDaily") : t("mint.perMin", { n: CAPS[x.k].perMin })}</p>
+                  </div>
                 ))}
               </div>
               <p className="note">{t("mint.bronzeOnly")}</p>
