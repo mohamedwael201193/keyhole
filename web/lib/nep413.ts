@@ -9,10 +9,31 @@ export const NEP413_TAG = 2147484061; // 2^31 + 413
 export interface SignedAuth {
   account_id: string;
   public_key: string;
-  signature: string; // base64
+  signature: string; // base64 for NEP-413, 0x hex for eip191
   nonce: string; // base64, 32 bytes
   message: string;
   recipient: string;
+  scheme?: "eip191";
+  address?: string;
+}
+
+/**
+ * The published enclave (f13efe92) only verifies NEP-413.
+ * Flip this when the enclave that accepts scheme eip191 is the live build.
+ */
+export const EIP191_ENCLAVE_LIVE: boolean = false;
+
+/** Intent JSON signed by personal_sign. Same fields the worker parses for scheme eip191. */
+export function intentMessage(op: Op, accountId: string, params: Record<string, unknown>, nonceB64: string, recipient: string, ts: number): string {
+  return JSON.stringify({ op, account_id: accountId, ts_ms: ts, params, nonce: nonceB64, recipient });
+}
+
+/** UTF-8 message as 0x hex, the form personal_sign expects. */
+export function utf8ToHex(message: string): string {
+  const bytes = new TextEncoder().encode(message);
+  let hex = "0x";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
 }
 
 /** The exact message the worker re-parses: JSON {op, account_id, ts_ms, params}. */

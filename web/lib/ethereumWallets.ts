@@ -1,5 +1,17 @@
 import type { WalletModuleFactory } from "@near-wallet-selector/core";
 
+const ROW_NAME = "MetaMask / Ethereum wallet";
+
+function asMetaMask(factory: WalletModuleFactory): WalletModuleFactory {
+  return async (options) => {
+    const mod = await factory(options);
+    if (!mod) return null;
+    mod.metadata.name = ROW_NAME;
+    mod.metadata.description = "MetaMask on NEAR. The account is your 0x address.";
+    return mod;
+  };
+}
+
 /** Reown / WalletConnect is optional. An empty value hides that path. */
 export function reownProjectId(env: string | undefined = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID): string | null {
   const id = env?.trim();
@@ -28,7 +40,7 @@ export async function ethereumWalletModule(): Promise<WalletModuleFactory | null
         connectors: [injected({ shimDisconnect: true })],
         transports: { [NEAR_EVM_ID]: http(NEAR_EVM_RPC) },
       });
-      return setupEthereumWallets({ wagmiConfig, chainId: NEAR_EVM_ID });
+      return asMetaMask(setupEthereumWallets({ wagmiConfig, chainId: NEAR_EVM_ID }));
     }
     const { WagmiAdapter } = await import("@reown/appkit-adapter-wagmi");
     const { createAppKit } = await import("@reown/appkit/react");
@@ -60,7 +72,7 @@ export async function ethereumWalletModule(): Promise<WalletModuleFactory | null
       coinbasePreference: "eoaOnly",
       allWallets: "SHOW",
     });
-    return setupEthereumWallets({ wagmiConfig: wagmiAdapter.wagmiConfig, web3Modal, chainId: NEAR_EVM_ID });
+    return asMetaMask(setupEthereumWallets({ wagmiConfig: wagmiAdapter.wagmiConfig, web3Modal, chainId: NEAR_EVM_ID }));
   } catch {
     return null;
   }

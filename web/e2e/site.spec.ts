@@ -84,7 +84,15 @@ test("header Connect wallet opens the selector on the first click", async ({ pag
   expect(box!.y + box!.height).toBeLessThanOrEqual(vp!.height + 1);
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(vp!.width + 1);
-  await expect(modal.getByText(/Ethereum/).first()).toBeVisible();
+  await expect(modal.getByText("Connect your wallet")).toBeVisible();
+  const row = modal.getByText("MetaMask / Ethereum wallet");
+  await row.scrollIntoViewIfNeeded();
+  await expect(row).toBeVisible();
+  const rowBox = await row.boundingBox();
+  expect(rowBox).toBeTruthy();
+  expect(rowBox!.y).toBeGreaterThanOrEqual(0);
+  expect(rowBox!.y + rowBox!.height).toBeLessThanOrEqual((vp?.height ?? 0) + 1);
+  if ((vp?.width ?? 1000) <= 700) await expect(page.locator("#near-wallet-selector-modal .modal-right")).toBeHidden();
   await expect(modal.getByText(/MyNearWallet|Meteor/).first()).toBeVisible();
 });
 

@@ -11,6 +11,13 @@ export function ErrorBox({ code, vars, retryAfter }: { code: string; vars?: Reco
   useEffect(() => { if (!s) return; const i = setInterval(() => setS((x) => Math.max(0, x - 1)), 1000); return () => clearInterval(i); }, [s]);
   if (OFFLINE_CODES.includes(code)) return <OfflineState />;
   const [msg, fix] = errorText(code, { ...vars, s });
+  if (code === "metamask_next_enclave") {
+    return (
+      <div role="status" className="note-box" data-testid="metamask-next">
+        <p>{msg}</p><p className="note">{fix}</p>
+      </div>
+    );
+  }
   return (
     <div role="alert" className="errbox" data-testid="error" data-code={code}>
       <p>{msg}</p><p className="note">{fix}</p>

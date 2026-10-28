@@ -17,8 +17,11 @@ export function checkBody(raw: string): GatewayCheck {
   if (typeof op !== "string" || !(ALLOWED_OPS as readonly string[]).includes(op)) return { ok: false, status: 400, code: "bad_op" };
   if (op !== "info") {
     const a = auth as Record<string, unknown> | undefined;
-    const fields = ["account_id", "public_key", "signature", "nonce", "message", "recipient"];
-    if (!a || typeof a !== "object" || !fields.every((f) => typeof a[f] === "string")) return { ok: false, status: 400, code: "no_auth" };
+    if (!a || typeof a !== "object") return { ok: false, status: 400, code: "no_auth" };
+    const fields = a.scheme === "eip191"
+      ? ["scheme", "account_id", "address", "signature", "nonce", "message", "recipient"]
+      : ["account_id", "public_key", "signature", "nonce", "message", "recipient"];
+    if (!fields.every((f) => typeof a[f] === "string" && (a[f] as string).length > 0)) return { ok: false, status: 400, code: "no_auth" };
     try { if ((JSON.parse(a.message as string) as { op?: string }).op !== op) return { ok: false, status: 400, code: "op_mismatch" }; }
     catch { return { ok: false, status: 400, code: "bad_message" }; }
   }
