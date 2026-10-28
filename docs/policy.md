@@ -1,6 +1,6 @@
 # Spending policy
 
-The tier caps are a policy inside the TEE worker. They are not a second contract. `limits_for_tier` in [`tee/worker/src/lib.rs`](../tee/worker/src/lib.rs) returns the numbers, and `enforce_caps` refuses the call before a swap is sent.
+The tier caps are a policy inside the TEE worker. They are not a second contract. `limits_for_tier` in [`tee/worker/src/lib.rs`](../tee/worker/src/lib.rs) returns the numbers, and `enforce_caps` refuses the call before a swap or a withdraw is sent. On both ops the enclave also checks the NEP-413 signature, the nonce and the per-minute rate limit. The website's withdraw form sets the destination to the connected account.
 
 | On-chain tier | Per trade | Per UTC day | Calls / minute |
 |---|---|---|---|
@@ -20,10 +20,12 @@ Related tests in the same file: `over_cap_daily_refused_and_rolled_back`, `rate_
 
 ## Live proof
 
-Recorded 2026-10-28, after the worker payment balance was funded. `./verify.sh` on each call printed `executed == published build f13efe92` (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`).
+Recorded 2026-10-28, after the worker payment balance was funded. `./verify.sh` on each call printed `executed == published build f13efe92` (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`). The attestation response has no output body, so the result column is the recorded outcome of that call.
 
 | Call | Result | Attestation |
 |---|---|---|
 | `info` | worker info | [`d03f935f`](https://api.outlayer.ai/attestations/by-call/d03f935f-dfc4-4548-8109-b9aabb5560fc) |
 | `status` | Bronze, tier 1. Caps are $1 per trade and $5 per day | [`7d42db8d`](https://api.outlayer.ai/attestations/by-call/7d42db8d-d786-457f-b505-a96359f82393) |
 | quote of 2 USDC | refused `over_cap_per_tx`: amount $1.99 exceeds the per-trade cap $1.00. No funds moved | [`c23f7bbf`](https://api.outlayer.ai/attestations/by-call/c23f7bbf-c37c-4327-8edd-e773d3a8324f) |
+| `swap` 0.01 wNEAR → 0.046955 USDC | recorded fill. Intent `6eDwG5Am8GHwcK5umz9W4zgtLMjPCoFrZ87NpnkP7UuA` | [`7f52f7d8`](https://api.outlayer.ai/attestations/by-call/7f52f7d8-e4f6-4290-97e8-0754b90bcfc8) |
+| over-cap swap | recorded refusal `over_cap_per_tx` | [`fffe6327`](https://api.outlayer.ai/attestations/by-call/fffe6327-2e0c-47c5-9942-bf785c8c152a) |

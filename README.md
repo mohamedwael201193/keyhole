@@ -94,6 +94,7 @@ Do the step. The result on the right is what a correct tree produces. Commands a
 | `./verify.sh cefbc64e-6c08-4bfe-a165-1667d9f5f25b` | The `attested` line is `f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`, the same value as `tee/worker/DEPLOYED_SHA256`. Then `OK` for a TDX quote, `executed_wasm_sha256` equal to `wasm_hash`, and the FastFS bytes hashing to the same value |
 | `cargo test --locked --manifest-path tee/worker/Cargo.toml over_cap` | `over_cap_per_tx_refused` and `over_cap_daily_refused_and_rolled_back` pass. A $1.000001 trade on tier 1 returns `over_cap_per_tx` and does not change the daily counter |
 | Read [`docs/evidence/mainnet-e2e/SUMMARY.json`](docs/evidence/mainnet-e2e/SUMMARY.json) and one refusal file, for example [`15_overcap_swap_2usdc.json`](docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json) | 30 recorded steps. The 2 USDC swap against the $1 Bronze cap is an attested refusal, call [`a02613a2-d503-45e2-83b8-ef71927c2533`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533) |
+| Read [`web/lib/gateway.ts`](web/lib/gateway.ts) and [`web/tests/gateway.test.ts`](web/tests/gateway.test.ts), then open [/vault](https://keyhole-seven.vercel.app/vault) and connect a wallet | `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose message `op` matches. The TEE checks the signature, the nonce, the tier caps and the rate limit. Unsigned and junk auth are `no_auth`. `copy` and `sweep_minter` stay `bad_op`. Bodies over 8 KB are 413. Once connected, the vault shows **1 · Fund**, **2 · Trade** (quote, then Sign & trade, with the caps on the form) and **3 · Withdraw**. Withdraw always names the connected account. Each result has an attestation link and **Verify** |
 
 ## 3. Track hints
 
@@ -280,7 +281,7 @@ npx tsx src/cli.ts verify <call_id>
 
 **Website gateway** ([`web/app/api/worker/route.ts`](web/app/api/worker/route.ts), also mounted at `/api/keyhole`):
 
-- **Allowlist:** `info`, `status`, `quote`, `mint`, `account`, `balance`, `history`. `swap`, `copy` and `withdraw` are features of the CLI and MCP, where the holder's own key signs. `sweep_minter` is for the operator only. All of this is unit-tested in [`web/tests/gateway.test.ts`](web/tests/gateway.test.ts).
+- **Allowlist:** `info`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, `withdraw`. `swap` and `withdraw` are forwarded only when the body carries a NEP-413 `auth` (account, public key, signature, nonce, recipient, and a message whose `op` matches). The TEE checks the signature, the nonce, the tier caps and the per-minute rate limit on both. The vault sets the withdraw destination to the connected account. Unsigned, incomplete and junk auth are refused with `no_auth`. `copy` stays on the CLI and MCP. `sweep_minter` is for the operator only. Both refusals are `bad_op`. All of this is unit-tested in [`web/tests/gateway.test.ts`](web/tests/gateway.test.ts) and [`web/tests/trade.test.ts`](web/tests/trade.test.ts).
 - **Request limits:** bodies over 8 KB are rejected with 413. Each IP gets 20 calls a minute (429 with `retry-after`). The signed `op` must match the requested op.
 - **Secret handling:** the OutLayer payment key is a server-only Vercel secret and never reaches the browser.
 - **Logging:** request bodies, amounts and accounts are never logged.
@@ -358,13 +359,17 @@ A live judge run with a different account (`a7458a83…`) gave all three expecte
 | replay of the same request | `replay` | [`b6d8ce4e`](https://api.outlayer.ai/attestations/by-call/b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563) |
 | over-cap quote ($2) | `over_cap_per_tx` | [`9b37dfee`](https://api.outlayer.ai/attestations/by-call/9b37dfee-47bf-4482-a445-0623a49d3f11) |
 
-Funded again on 2026-10-28. `./verify.sh` on each call below matched published build `f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`. The same three calls are the live-proof slot in [`docs/policy.md`](docs/policy.md).
+Funded again on 2026-10-28. `./verify.sh` on each call below matched published build `f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`. The attestation response has no output body, so the result column is the recorded outcome of that call. The same checks are the live-proof slot in [`docs/policy.md`](docs/policy.md).
 
 | Call | Result | Attestation |
 |---|---|---|
 | `info` | worker info | [`d03f935f`](https://api.outlayer.ai/attestations/by-call/d03f935f-dfc4-4548-8109-b9aabb5560fc) |
 | `status` | Bronze, tier 1. Caps $1 per trade and $5 per day | [`7d42db8d`](https://api.outlayer.ai/attestations/by-call/7d42db8d-d786-457f-b505-a96359f82393) |
 | quote of 2 USDC | `over_cap_per_tx`. Amount $1.99 exceeds the per-trade cap $1.00. No funds moved | [`c23f7bbf`](https://api.outlayer.ai/attestations/by-call/c23f7bbf-c37c-4327-8edd-e773d3a8324f) |
+| `swap` 0.01 wNEAR → 0.046955 USDC | recorded fill. Intent `6eDwG5Am8GHwcK5umz9W4zgtLMjPCoFrZ87NpnkP7UuA`. The attestation JSON has no output body; `./verify.sh` matched the published build | [`7f52f7d8`](https://api.outlayer.ai/attestations/by-call/7f52f7d8-e4f6-4290-97e8-0754b90bcfc8) |
+| replay of a signed swap | recorded refusal `replay` | [`a6b78742`](https://api.outlayer.ai/attestations/by-call/a6b78742-f5ed-436b-845d-da5880f63ea1) |
+| over-cap swap | recorded refusal `over_cap_per_tx` | [`fffe6327`](https://api.outlayer.ai/attestations/by-call/fffe6327-2e0c-47c5-9942-bf785c8c152a) |
+| `mint` | recorded mint. Transaction [`krSpH895juhCnwP91CbXkePWEQvnu39fsnfJHGvmsee`](https://nearblocks.io/txns/krSpH895juhCnwP91CbXkePWEQvnu39fsnfJHGvmsee) | [`9e62569d`](https://api.outlayer.ai/attestations/by-call/9e62569d-9444-4503-8bf2-4c1c266b8316) |
 
 **In the browser.** Open [`https://keyhole-seven.vercel.app/verify`](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539).
 
@@ -461,7 +466,7 @@ All six jobs passed on [run 40572408070](https://github.com/mohamedwael201193/ke
 |---|---|---|
 | `/` | Heirloom home: the line "Nothing on the chain. Everything in the key.", a key with official chain marks in orbit, three moves, tiers, a ten-key gallery, and a proof list | `nft_total_supply`, `config` (`revalidate = 30` in [`web/app/page.tsx`](web/app/page.tsx)) |
 | `/atlas` | Every chain mark with its trail; chains without one are labeled "No trail yet" | NearBlocks txs, OutLayer attestations |
-| `/vault` | The holder's key card, signed limits, a confidential quote, balance, and history | worker `status`, `quote`, `account`, `balance`, `history`, plus `nft_tokens_for_owner` |
+| `/vault` | After connect: the holder's key card and signed limits, then **1 · Fund** (deposit address from `account`), **2 · Trade** (quote, then Sign & trade, caps on the form, over-cap shown as a refusal), **3 · Withdraw** to the connected account. Balance and history stay. Every result has an attestation link and Verify | worker `status`, `account`, `quote`, `swap`, `withdraw`, `balance`, `history`, plus `nft_tokens_for_owner` |
 | `/mint` | Bronze mint in one signature, with the cap table for Bronze, Silver, Gold, and Legendary | worker `mint` |
 | `/gallery` | Every key on the contract. State comes from the chain (`locked`, `unlocked`, `expired`). The finish comes from the tier and the token seed | `nft_tokens`, `nft_tier` |
 | `/verify` | The three attestation checks, computed in your browser | OutLayer and FastFS |
@@ -499,10 +504,10 @@ You need any NEAR wallet. There is no sign-up, no email and no fee to mint.
 
 1. **Connect.** Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and tap **Connect**. Choose your wallet (MyNearWallet, Meteor, HERE, Intear, Sender, Nightly or Ledger).
 2. **Mint your key.** Go to **Mint** and tap **Sign and mint**. Your wallet asks you to sign a message, which costs no gas and moves no money. The key NFT arrives in your account.
-3. **Open your vault.** Go to **Vault** and tap **Read my limits**, then try a **confidential quote** or **Open my account**. Every answer has a **verify** link.
+3. **Open your vault.** Go to **Vault**. **1 · Fund** asks for a deposit address. **2 · Trade** gets a quote, then **Sign & trade**. **3 · Withdraw** sends to the account you connected. The caps sit on the trade form, and an over-cap answer is shown as a refusal. Every answer has an attestation link and **Verify**.
 4. **Check it.** On **Verify**, paste any call id. Your browser confirms that the exact published code produced the answer.
 
-For trading, withdrawing and copy-trading from a terminal or an AI assistant, use the [CLI and MCP server](#7-cli-mcp-and-the-website-gateway).
+Copy-trading stays on the [CLI and MCP server](#7-cli-mcp-and-the-website-gateway). Swap and withdraw work there too, with the same signed request.
 
 ## 15. Roadmap
 

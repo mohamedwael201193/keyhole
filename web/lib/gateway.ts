@@ -1,6 +1,10 @@
 /** Pure validation for the server route; kept separate so it is unit-tested. */
-/** Holder-facing ops only. swap/copy/withdraw (move funds) are CLI-only for now; sweep_minter is operator-only. */
-export const ALLOWED_OPS = ["info", "status", "quote", "mint", "account", "balance", "history"] as const;
+/**
+ * Holder-facing ops. `swap` and `withdraw` are relayed only when `checkBody` finds a
+ * NEP-413 auth object whose signed message names that same op. The TEE still verifies
+ * the signature, the nonce and the caps. `copy` stays on the CLI. `sweep_minter` is operator-only.
+ */
+export const ALLOWED_OPS = ["info", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw"] as const;
 export const MAX_BODY = 8 * 1024;
 export type GatewayCheck = { ok: true; op: string; auth?: unknown } | { ok: false; status: number; code: string };
 

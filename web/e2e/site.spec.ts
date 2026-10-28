@@ -48,8 +48,12 @@ test("gateway: info is real and attested (needs a funded payment key)", async ({
   expect(info.attestation_url).toMatch(/attestations\/by-call\//);
 });
 
-test("gateway: fund-moving ops and junk are refused", async ({ request }) => {
-  for (const op of ["swap", "withdraw", "sweep_minter"]) expect((await (await request.post("/api/worker", { data: { op } })).json()).error.code).toBe("bad_op");
+test("gateway: unsigned trades, junk and oversized bodies are refused", async ({ request }) => {
+  for (const op of ["swap", "withdraw"]) {
+    expect((await (await request.post("/api/worker", { data: { op } })).json()).error.code).toBe("no_auth");
+    expect((await (await request.post("/api/worker", { data: { op, auth: "junk" } })).json()).error.code).toBe("no_auth");
+  }
+  for (const op of ["copy", "sweep_minter"]) expect((await (await request.post("/api/worker", { data: { op } })).json()).error.code).toBe("bad_op");
   expect((await request.post("/api/worker", { data: "x".repeat(9000), headers: { "content-type": "application/json" } })).status()).toBe(413);
 });
 
