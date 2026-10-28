@@ -516,6 +516,14 @@ html.no-motion .foil-card .bw { display: none; }
 .foil-card .meta span { white-space: nowrap; }
 .foil-card .meta span:first-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .foil-card .meta span:last-child { flex: none; }
+.foil-card .meta span.wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.45;
+}
 .foil-card .bw {
   position: absolute;
   inset: -1px;

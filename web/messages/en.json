@@ -135,7 +135,7 @@
   "preview": "Preview · Bronze · the live key is revealed after mint",
   "openVault": "Open your vault →",
   "capsLine": "{finish} tier · caps {tx} per trade / {day} per day",
-  "bronzeOnly": "Minting issues a Bronze key. Silver and Gold are finishes the enclave recognizes; Legendary is the rarest one-of-one finish and keeps Gold caps.",
+  "bronzeOnly": "Minting issues a Bronze key. Silver, Gold and Legendary are finishes the enclave recognizes.",
   "perMin": "{n} per minute"
  },
  "gallery": {
