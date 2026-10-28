@@ -8,7 +8,7 @@ Live: **https://keyhole-seven.vercel.app** (NEAR mainnet only)
 |---|---|---|
 | `/` | Hero, three steps, proof table | `nft_total_supply`, `config` views on `keyhole-devmo.near` (revalidated every 30 s) |
 | `/atlas` | Chain marks, each one with its trail | NearBlocks tx links and OutLayer attestations. Marks without a trail are labeled "No trail yet" |
-| `/vault` | Signed limits, confidential quote, your confidential account, balance, history | TEE worker ops `status`, `quote`, `account`, `balance`, `history` |
+| `/vault` | After connect: fund (deposit address), trade (quote, then Sign & trade), withdraw to the connected account, plus limits, balance and history | TEE worker ops `status`, `account`, `quote`, `swap`, `withdraw`, `balance`, `history` |
 | `/mint` | Tier table and one-signature mint | TEE worker op `mint`. The TEE-held minter signs `nft_mint` |
 | `/gallery` | Every key on mainnet, drawn from contract state | `nft_tokens`, `nft_tier` |
 | `/verify` | Paste a call id to check it | OutLayer attestation plus the FastFS wasm, hashed in your browser |
@@ -21,12 +21,13 @@ Live: **https://keyhole-seven.vercel.app** (NEAR mainnet only)
    - `nonce` = 32 fresh random bytes
    - Source: [`lib/nep413.ts`](lib/nep413.ts).
 2. The browser sends `{op, auth}` to `/api/keyhole`, which is the same handler as `/api/worker`. The route:
-   - allows only `info|status|quote|mint|account|balance|history`;
+   - allows `info|status|quote|mint|account|balance|history|swap|withdraw`;
+   - relays `swap` and `withdraw` only when the body has a NEP-413 `auth` whose message `op` matches. Unsigned and junk auth are `no_auth`. The TEE still verifies the signature, the nonce and the caps;
+   - refuses `copy` and `sweep_minter` with `bad_op`. `copy` stays on the CLI and MCP;
    - rejects bodies over 8 KB;
    - limits each IP to 20 calls per minute;
    - adds the OutLayer payment key from a server-only env secret, then forwards the call;
    - never logs bodies, amounts or accounts.
-   - Fund-moving ops (`swap`, `copy`, `withdraw`) and `sweep_minter` are refused here. They are available from the CLI.
 3. The worker runs in Intel TDX. It verifies:
    - the ed25519 signature and the full-access key on-chain;
    - the 5-minute window;

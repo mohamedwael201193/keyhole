@@ -26,7 +26,7 @@ export function Attested({ r }: { r: WorkerResult }) {
     <p className="mono" style={{ marginTop: 12, fontSize: 12, color: "var(--mu)", display: "flex", flexWrap: "wrap", gap: "8px 16px" }} data-testid="attested">
       <span>{t("result.call")}: {r.call_id.slice(0, 8)}</span>
       {r.attestation_url && <a style={{ color: "var(--teal)" }} href={r.attestation_url} target="_blank" rel="noreferrer">{t("result.attestation")} ↗</a>}
-      <a style={{ color: "var(--teal)" }} href={`/verify?call=${r.call_id}`}>verify</a>
+      <a style={{ color: "var(--teal)" }} href={`/verify?call=${r.call_id}`}>Verify</a>
       {r.time_ms != null && <span>{t("result.time")}: {r.time_ms} ms</span>}
     </p>
   );
