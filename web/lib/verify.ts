@@ -4,11 +4,24 @@ export const FASTFS = "https://main.fastfs.io";
 export const fastfsUrl = (projectId: string, hash: string) => `${FASTFS}/${projectId.split("/")[0]}/outlayer.near/${hash}.wasm`;
 export const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 
-export interface Checks { quote: boolean; registered: boolean; fastfs: boolean | null; fastfsHash?: string; bytes?: number }
-/** Same three checks as verify.sh: TDX quote present, registered == executed, FastFS bytes hash == executed. */
+/** sha256 of tee/worker/DEPLOYED_SHA256. The published build, prefix f13efe92. */
+export const PUBLISHED_WASM_SHA256 = "f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c";
+
+export interface Checks { quote: boolean; registered: boolean; published: boolean; fastfs: boolean | null; fastfsHash?: string; bytes?: number }
+
+/** True when the attestation names the published worker build. */
+export function publishedBuild(hash: string | undefined | null) {
+  return (hash || "").toLowerCase() === PUBLISHED_WASM_SHA256;
+}
+
+/** TDX quote present, registered == executed, executed == the published build. */
 export function staticChecks(a: Pick<Attestation, "executed_wasm_sha256" | "wasm_hash" | "tdx_quote">): Omit<Checks, "fastfs"> {
   const e = (a.executed_wasm_sha256 || "").toLowerCase();
-  return { quote: (a.tdx_quote || "").length > 100, registered: e.length === 64 && e === (a.wasm_hash || "").toLowerCase() };
+  return {
+    quote: (a.tdx_quote || "").length > 100,
+    registered: e.length === 64 && e === (a.wasm_hash || "").toLowerCase(),
+    published: publishedBuild(e),
+  };
 }
 export async function fastfsCheck(a: Attestation): Promise<Pick<Checks, "fastfs" | "fastfsHash" | "bytes">> {
   try {

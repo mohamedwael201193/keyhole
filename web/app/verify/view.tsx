@@ -4,7 +4,7 @@ import { Scene } from "@/components/Art";
 import { useI18n } from "@/lib/i18n";
 import { attestation, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
 import { CALLS } from "@/lib/evidence";
-import { CALL_ID, fastfsCheck, fastfsUrl, staticChecks, type Attestation, type Checks } from "@/lib/verify";
+import { CALL_ID, fastfsCheck, fastfsUrl, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
 
 export function VerifyView({ initial }: { initial: string | null }) {
   const { t } = useI18n();
@@ -30,7 +30,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
     finally { setBusy(false); }
   }, []);
   useEffect(() => { if (initial) void go(initial); }, [initial, go]);
-  const ok = !!ck && ck.quote && ck.registered && ck.fastfs === true;
+  const ok = !!ck && ck.quote && ck.registered && ck.published && ck.fastfs === true;
   const known = !!a && WORKER_WASM_SHA256.includes(a.executed_wasm_sha256.toLowerCase());
   const mark = (pass: boolean | null) => pass == null ? "…" : pass ? "✓" : "✕";
   const dot = (pass: boolean | null) => pass == null ? "wait" : pass ? "" : "bad";
@@ -50,6 +50,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
           <div className="ck"><span className={`ok ${ck ? dot(ck.quote) : "wait"}`}>{ck ? mark(ck.quote) : "·"}</span><div><b>{t("verify.quote")}</b><small>{t("verify.quoteD")}{a ? ` · ${a.tdx_quote.length}` : ""}</small></div><span className="att">{ck?.quote ? t("verify.badgeAtt") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ck ? dot(ck.registered && ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs === null ? null : ck.registered && ck.fastfs === true) : "·"}</span><div><b>{t("verify.hash")}</b><small>{a?.executed_wasm_sha256 || t("verify.hashD")}</small></div><span className="att">{ck?.registered && ck.fastfs ? t("verify.badgeMatch") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ck ? dot(ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs) : "·"}</span><div><b>{t("verify.pub")}</b><small>{known ? <a href={tx(WORKER_PUBLISH_TX)}>{t("verify.tx", { tx: WORKER_PUBLISH_TX })}</a> : a ? <a href={fastfsUrl(a.project_id, a.executed_wasm_sha256)}>wasm</a> : t("verify.pubD")}</small></div><span className="att">{ck?.fastfs ? t("verify.badgeFound") : "—"}</span></div>
+          <div className="ck"><span className={`ok ${ck ? dot(ck.published) : "wait"}`}>{ck ? mark(ck.published) : "·"}</span><div><b>{t("verify.build")}</b><small>{t("verify.buildD", { hash: PUBLISHED_WASM_SHA256.slice(0, 8) })}</small></div><span className="att">{ck?.published ? t("verify.badgeBuild") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ok ? "" : "wait"}`}>{ok ? "✓" : "·"}</span><div><b>{t("verify.signed")}</b><small>{t("verify.signedD")}</small></div><span className="att">{ok ? t("verify.badgeValid") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ok ? "" : "wait"}`}>{ok ? "✓" : "·"}</span><div><b>{t("verify.nonce")}</b><small>{t("verify.nonceD")}</small></div><span className="att">{ok ? t("verify.badgeFresh") : "—"}</span></div>
           {err && <p role="alert" className="note" style={{ color: "var(--coral)" }} data-testid="verify-error">{err === "bad_params" ? t("verify.badId") : t("verify.fetchFail")}</p>}

@@ -107,6 +107,9 @@
   "withdrawD": "To your wallet",
   "cliNote": "Swap, copy and withdraw run from the CLI with the same signed request. The gateway on this site refuses them.",
   "activity": "Recent confidential activity",
+  "checking": "Checking the attestation…",
+  "verified": "Verified",
+  "hiddenLog": "The log stays hidden until the attestation names the published worker.",
   "assets": "Assets · {n}"
  },
  "mint": {
@@ -188,6 +191,9 @@
   "badgeAtt": "✓ Attested",
   "badgeMatch": "✓ Match",
   "badgeFound": "✓ Found",
+  "build": "Published build",
+  "buildD": "executed_wasm_sha256 equals the published worker {hash}",
+  "badgeBuild": "✓ Verified",
   "badgeValid": "✓ Valid",
   "badgeFresh": "✓ Fresh",
   "badId": "That isn't a call id.",

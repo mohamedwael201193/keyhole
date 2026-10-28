@@ -14,7 +14,8 @@ import { useSigned } from "@/lib/useSigned";
 import { useHealth } from "@/lib/useHealth";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
-import { KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { attestation, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
 import { CAPS, FINISH_COLOR, keyIdentity, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 
@@ -65,6 +66,19 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
   const idn = held ? keyIdentity(held.token.token_id, held.tier) : null;
   const balances = (balance.res?.output?.ok ? balance.res.output.balances as Bal[] : null);
   const entries = (history.res?.output?.ok ? history.res.output.entries as Hist[] : null);
+  const [logVerified, setLogVerified] = useState<boolean | null>(null);
+  useEffect(() => {
+    const id = history.res?.call_id;
+    if (!history.res?.output?.ok || !id) { setLogVerified(null); return; }
+    let cancel = false;
+    setLogVerified(null);
+    fetch(attestation(id)).then((r) => { if (!r.ok) throw new Error(); return r.json(); }).then((a: Attestation) => {
+      if (cancel) return;
+      const st = staticChecks(a);
+      setLogVerified(st.quote && st.registered && publishedBuild(a.executed_wasm_sha256));
+    }).catch(() => { if (!cancel) setLogVerified(false); });
+    return () => { cancel = true; };
+  }, [history.res]);
   const usdOf = (b: Bal) => typeof b.usd === "number" ? b.usd : typeof b.usd_micro === "number" ? b.usd_micro / 1e6 : null;
   const total = balances && balances.length && balances.every((b) => usdOf(b) != null) ? balances.reduce((a, b) => a + (usdOf(b) || 0), 0) : null;
 
@@ -184,13 +198,16 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                 {panel && panel !== "quote" && <div><p className="lb">{t(`vault.${panel}`)}</p><p>{t("vault.cliNote")}</p></div>}
                 <p className="lb" style={{ marginTop: 22 }}>{t("vault.activity")}</p>
                 <button className="btn b2" disabled={history.busy} onClick={() => void history.run({})}>{history.busy ? "…" : t("vault.history")}</button>
-                {entries && entries.length === 0 && <p className="note">{t("vault.empty")}</p>}
-                {entries && [...entries].reverse().slice(0, 8).map((e, i) => (
+                {history.res?.output?.ok && logVerified === null && <p className="note">{t("vault.checking")}</p>}
+                {logVerified === false && <p className="note" data-testid="vault-log-hidden">{t("vault.hiddenLog")}</p>}
+                {logVerified === true && <p className="note" data-testid="vault-verified">{t("vault.verified")}</p>}
+                {logVerified === true && entries && entries.length === 0 && <p className="note">{t("vault.empty")}</p>}
+                {logVerified === true && entries && [...entries].reverse().slice(0, 8).map((e, i) => (
                   <div className="av" key={i}>
                     <span className="op">{e.kind || "—"}</span>
                     <span>{e.token_in ? `${e.amount_in ?? ""} ${e.token_in} → ${e.amount_out ?? ""} ${e.token_out ?? ""}` : `${e.amount ?? ""} ${e.token ?? ""}`}</span>
                     <span className="mono" style={{ color: "var(--mu)", fontSize: 13 }}>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</span>
-                    <span className="att">{t("land.attested")}</span>
+                    <span className="att">{t("vault.verified")}</span>
                   </div>
                 ))}
                 {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
