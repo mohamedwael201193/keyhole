@@ -19,7 +19,7 @@ A WASI (wasm32-wasip2) program that runs inside an OutLayer Intel TDX enclave. E
 
 ## How a request is checked (in order)
 
-1. NEP-413 signature: `sha256(borsh(2147484061) ‖ borsh{message, nonce[32], recipient, callbackUrl?})`, ed25519 strict verify.
+1. NEP-413 signature: `sha256(borsh(2147484061) ‖ borsh{message, nonce[32], recipient, callbackUrl?})`, ed25519 strict verify. Or `scheme: "eip191"`: recover `personal_sign` and require the address to equal the lowercase `0x` account id. Replay, caps and rate limits are the same either way. The published enclave is still NEP-413 only.
 2. `recipient` must be `keyhole` (a signature made for another app is refused).
 3. The signed message is JSON `{op, account_id, ts_ms, params}`; `op` and `account_id` must match the call. The worker only acts on signed fields.
 4. The public key must be a full-access key of `account_id` (live RPC check).

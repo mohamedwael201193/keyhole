@@ -30,6 +30,8 @@ fn signed(seed: u8, account: &str, msg: &str, nonce: [u8; 32], recipient: &str) 
         message: msg.into(),
         recipient: recipient.into(),
         callback_url: None,
+        scheme: String::new(),
+        address: String::new(),
     }
 }
 fn msg(acct: &str) -> String { format!(r#"{{"op":"quote","account_id":"{}","ts_ms":1000,"params":{{}}}}"#, acct) }
@@ -230,6 +232,38 @@ fn withdraw_refuses_any_destination_but_the_signer() {
 fn art_file_hash(n: u8) -> String {
     let path = format!("{}/../../web/public/heirloom/keys/k{n:02}.webp", env!("CARGO_MANIFEST_DIR"));
     B64.encode(Sha256::digest(std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"))))
+}
+
+#[test]
+fn eip191_recovers_the_fixed_vector_and_rejects_a_tamper() {
+    // personal_sign over the intent JSON. Key 4c0883a6…2318, address 0x2c7536e3…5c23.
+    // Signature v = 28. Produced with keccak256 of the EIP-191 prefix and secp256k1 (prehash off).
+    let address = "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23";
+    let message = r#"{"op":"status","account_id":"0x2c7536e3605d9c16a7a3d7b1898e529396a65c23","ts_ms":1700000000000,"params":{},"nonce":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","recipient":"keyhole"}"#;
+    let signature = "0xda2cc385817dcb2341a8bef2f0b65524f245f3f730f0ac60ba563983a94cbcb520dfb828255f599428df0cd3af064297f485df1b067339489975274153e22fed1c";
+    let auth = Auth {
+        scheme: "eip191".into(),
+        address: address.into(),
+        account_id: address.into(),
+        signature: signature.into(),
+        nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".into(),
+        message: message.into(),
+        recipient: "keyhole".into(),
+        ..Auth::default()
+    };
+    let (req, nonce) = verify_eip191(&auth, "keyhole").unwrap();
+    assert_eq!(req.op, "status");
+    assert_eq!(req.account_id, address);
+    assert_eq!(req.ts_ms, 1_700_000_000_000);
+    assert_eq!(nonce, [0u8; 32]);
+    assert_eq!(recover_eip191_address(message, signature).unwrap(), address);
+    let mut tampered = auth.clone();
+    tampered.message = message.replace("status", "withdraw");
+    assert_eq!(verify_eip191(&tampered, "keyhole").unwrap_err().code, "bad_signature");
+    let mut other = auth.clone();
+    other.account_id = "0x0000000000000000000000000000000000000001".into();
+    other.address = other.account_id.clone();
+    assert_eq!(verify_eip191(&other, "keyhole").unwrap_err().code, "bad_signature");
 }
 
 #[test]

@@ -49,7 +49,7 @@ On [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app):
 | Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. The published enclave and [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) are `f13efe92`. This source also refuses a withdraw `to` that is not the signer, and writes `media` on mint. A build of this source does not equal `f13efe92` until that enclave is replaced |
 | Mainnet E2E | **30 recorded steps**. **24 TEE calls**, each attested to `f13efe926132` and re-verified, plus 6 MCP steps ([table](#10-mainnet-end-to-end-30-steps)) |
 | Refusals proven on mainnet | `over_cap_per_tx`, `replay`, `wrong_recipient`, `bad_signature`, `op_mismatch`, `expired`, `no_auth`, `already_holder`, `rate_limited`. Each one is an attested call |
-| Tests | contract **15**, worker **21**, CLI **6**, web unit **44**, web e2e **40** (20 checks × desktop + mobile) |
+| Tests | contract **15**, worker **22**, CLI **6**, web unit **44**, web e2e **40** (20 checks × desktop + mobile) |
 | CI | 6 jobs (contract, worker with reproducible-build check, cli, judge-kit, hygiene, web), all green ([run 40572408070](https://github.com/mohamedwael201193/keyhole/actions/runs/40572408070)) |
 | Website | [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app). Mobile Lighthouse: performance 98–100, LCP 1.5–2.3 s. Desktop: 100 on every page. Accessibility, best practices and SEO: 100 ([lighthouse.json](docs/evidence/lighthouse.json)) |
 
@@ -249,7 +249,7 @@ The worker is a WASI program (`wasm32-wasip2`) that runs inside an OutLayer Inte
 
 **Request checks, in order** (each one has a refusal code that was proven on mainnet):
 
-1. **Signature.** NEP-413 payload `sha256(borsh(u32 2147484061) ‖ borsh{message, nonce[32], recipient, callbackUrl: None})`, ed25519 *strict* verification. Tampered message → `bad_signature` ([`942b4cff`](https://api.outlayer.ai/attestations/by-call/942b4cff-23c9-4e4d-8ebc-79bfa01cd029)).
+1. **Signature.** NEP-413 payload `sha256(borsh(u32 2147484061) ‖ borsh{message, nonce[32], recipient, callbackUrl: None})`, ed25519 *strict* verification. Tampered message → `bad_signature` ([`942b4cff`](https://api.outlayer.ai/attestations/by-call/942b4cff-23c9-4e4d-8ebc-79bfa01cd029)). This source also accepts `scheme: "eip191"`: `personal_sign` over the same intent JSON (`op`, `account_id`, `ts_ms`, `params`, `nonce`, `recipient`). The worker recovers the secp256k1 address and requires it to equal the lowercase `0x` account id, then uses the same freshness, tier, rate limit, nonce and caps. The published enclave does not accept `eip191` yet.
 2. **Recipient binding.** `recipient == "keyhole"`. A signature made for another app → `wrong_recipient` ([`b9c8cb4f`](https://api.outlayer.ai/attestations/by-call/b9c8cb4f-e3aa-480f-bb47-70fc30a96d67)).
 3. **Signed intent.** `message` is JSON `{op, account_id, ts_ms, params}`, and the worker acts only on signed fields. Mismatched op → `op_mismatch` ([`7a703e8f`](https://api.outlayer.ai/attestations/by-call/7a703e8f-2678-4978-b6ce-4d291828141d)). Missing auth → `no_auth` ([`750defed`](https://api.outlayer.ai/attestations/by-call/750defed-2267-45b1-8a8c-74b528aa30ee)).
 4. **Key authority.** The public key must be a **full-access** key of `account_id`, checked live over RPC.

@@ -34,6 +34,12 @@ pub struct Auth {
     pub recipient: String,
     #[serde(default)]
     pub callback_url: Option<String>,
+    /// Empty or "nep413" is a NEAR signature. "eip191" is MetaMask personal_sign.
+    #[serde(default)]
+    pub scheme: String,
+    /// Lowercase 0x address. Required when scheme is eip191.
+    #[serde(default)]
+    pub address: String,
 }
 
 /// The JSON the holder signs. The worker only acts on fields inside the signature.
@@ -111,6 +117,98 @@ pub fn verify_nep413(auth: &Auth, expected_recipient: &str) -> Result<(SignedReq
         return Err(err("account_mismatch", "signed account_id differs from the claimed account"));
     }
     Ok((req, nonce))
+}
+
+#[derive(Debug, Deserialize)]
+struct Eip191Body {
+    op: String,
+    account_id: String,
+    ts_ms: u64,
+    #[serde(default)]
+    params: serde_json::Value,
+    nonce: String,
+    recipient: String,
+}
+
+/// EIP-191 personal_sign digest: keccak256("\x19Ethereum Signed Message:\n" || len || message).
+pub fn eip191_digest(message: &str) -> [u8; 32] {
+    use sha3::{Digest, Keccak256};
+    let msg = message.as_bytes();
+    let prefix = format!("\u{19}Ethereum Signed Message:\n{}", msg.len());
+    let mut h = Keccak256::new();
+    h.update(prefix.as_bytes());
+    h.update(msg);
+    h.finalize().into()
+}
+
+fn decode_sig65(signature: &str) -> Result<[u8; 65], Error> {
+    let hexed = signature.strip_prefix("0x").unwrap_or(signature);
+    if hexed.len() != 130 || !hexed.bytes().all(|c| c.is_ascii_hexdigit()) {
+        return Err(err("bad_signature", "eip191 signature must be 65 bytes, 0x hex"));
+    }
+    let raw = hex::decode(hexed).map_err(|_| err("bad_signature", "eip191 signature must be 65 bytes, 0x hex"))?;
+    raw.try_into().map_err(|_| err("bad_signature", "eip191 signature must be 65 bytes, 0x hex"))
+}
+
+/// Recover the lowercase 0x address from a personal_sign signature.
+pub fn recover_eip191_address(message: &str, signature: &str) -> Result<String, Error> {
+    use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
+    use sha3::{Digest, Keccak256};
+    let raw = decode_sig65(signature)?;
+    let v = raw[64];
+    let rec = if v >= 27 { v - 27 } else { v };
+    if rec > 1 { return Err(err("bad_signature", "eip191 recovery id is out of range")); }
+    let sig = Signature::from_slice(&raw[..64]).map_err(|_| err("bad_signature", "eip191 signature is not a valid secp256k1 signature"))?;
+    let recid = RecoveryId::from_byte(rec).ok_or_else(|| err("bad_signature", "eip191 recovery id is out of range"))?;
+    let digest = eip191_digest(message);
+    let vk = VerifyingKey::recover_from_prehash(&digest, &sig, recid)
+        .map_err(|_| err("bad_signature", "eip191 signature does not recover"))?;
+    let point = vk.to_encoded_point(false);
+    let hash = Keccak256::digest(&point.as_bytes()[1..]);
+    Ok(format!("0x{}", hex::encode(&hash[12..])))
+}
+
+fn is_eth_implicit(a: &str) -> bool {
+    let rest = a.strip_prefix("0x").unwrap_or("");
+    rest.len() == 40 && rest.bytes().all(|c| c.is_ascii_hexdigit()) && a.bytes().all(|c| !c.is_ascii_uppercase())
+}
+
+/// personal_sign over the intent JSON. Recovered address must be the account id.
+/// Replay, caps and rate limits stay with the caller, the same as NEP-413.
+pub fn verify_eip191(auth: &Auth, expected_recipient: &str) -> Result<(SignedRequest, [u8; 32]), Error> {
+    if auth.scheme != "eip191" { return Err(err("no_auth", "expected scheme eip191")); }
+    let account = auth.account_id.to_ascii_lowercase();
+    let address = auth.address.to_ascii_lowercase();
+    if !is_eth_implicit(&account) {
+        return Err(err("bad_account", "ethereum account id must be a lowercase 0x address"));
+    }
+    if account != address {
+        return Err(err("account_mismatch", "address differs from the account id"));
+    }
+    if auth.recipient != expected_recipient {
+        return Err(err("wrong_recipient", format!("signature was made for '{}', expected '{}'", auth.recipient, expected_recipient)));
+    }
+    let nonce: [u8; 32] = B64
+        .decode(&auth.nonce)
+        .ok()
+        .and_then(|n| n.try_into().ok())
+        .ok_or_else(|| err("bad_nonce", "nonce must be 32 bytes, base64"))?;
+    let recovered = recover_eip191_address(&auth.message, &auth.signature)?;
+    if recovered != account {
+        return Err(err("bad_signature", "signature does not recover to this account"));
+    }
+    let body: Eip191Body = serde_json::from_str(&auth.message)
+        .map_err(|_| err("bad_message", "signed message must be JSON {op, account_id, ts_ms, params, nonce, recipient}"))?;
+    if body.account_id.to_ascii_lowercase() != account {
+        return Err(err("account_mismatch", "signed account_id differs from the claimed account"));
+    }
+    if body.nonce != auth.nonce {
+        return Err(err("bad_message", "signed nonce differs from auth.nonce"));
+    }
+    if body.recipient != auth.recipient {
+        return Err(err("wrong_recipient", "signed recipient differs from auth.recipient"));
+    }
+    Ok((SignedRequest { op: body.op, account_id: account, ts_ms: body.ts_ms, params: body.params }, nonce))
 }
 
 pub fn check_freshness(ts_ms: u64, chain_now_ms: u64) -> Result<(), Error> {
