@@ -18,7 +18,7 @@ import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
 import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
 import { attestation, intentTx, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
-import { assetRows, isImplicitAccount, totalOf, tradeSummary, withdrawSummary } from "@/lib/amount";
+import { assetRows, isImplicitAccount, totalOf, tradeSummary, withdrawSummary, type PriceBook } from "@/lib/amount";
 import { copyText } from "@/lib/copyText";
 import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
@@ -27,7 +27,7 @@ import { traitLabel } from "@/components/KeyCard";
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
 
-export function VaultView({ initialOnline }: { initialOnline: boolean }) {
+export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline: boolean; initialPrices?: PriceBook }) {
   const { t, fmtUsd } = useI18n();
   const { accountId, connect } = useWallet();
   const online = useHealth(initialOnline);
@@ -52,6 +52,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
   const [keysReady, setKeysReady] = useState(false);
   const [doneTrade, setDoneTrade] = useState<{ give: string; decimals: number; symbol: string } | null>(null);
   const [doneWithdraw, setDoneWithdraw] = useState<{ amount: string; to: string } | null>(null);
+  const [prices, setPrices] = useState(initialPrices);
   const units = toBaseUnits(amount, ASSETS[from].decimals);
   const fundUnits = toBaseUnits(fundAmt, ASSETS[fundAsset].decimals);
   const wUnits = toBaseUnits(wAmt, ASSETS[wAsset].decimals);
@@ -89,7 +90,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
   const spent = s?.ok ? s.spent_today_usd_micro : null;
   const idn = held ? keyIdentity(held.token.token_id, held.tier) : null;
   const balances = (balance.res?.output?.ok ? balance.res.output.balances as Bal[] : null);
-  const rows = balances && accountId ? assetRows(accountId, balances) : balances ? assetRows("", balances) : null;
+  const rows = balances ? assetRows(balances, prices) : null;
   const totalKind = totalOf(rows);
   const entries = (history.res?.output?.ok ? history.res.output.entries as Hist[] : null);
   const [logVerified, setLogVerified] = useState<boolean | null>(null);
@@ -108,6 +109,14 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
     return () => { cancel = true; };
   }, [history.res]);
   const lookingUpKey = !!accountId && (!keysReady || keysFor !== accountId);
+  useEffect(() => {
+    if (!balances) return;
+    let cancel = false;
+    fetch("/api/prices").then((r) => r.ok ? r.json() : null).then((j) => {
+      if (!cancel && j?.prices) setPrices(j.prices);
+    }).catch(() => {});
+    return () => { cancel = true; };
+  }, [balances]);
   const readBalance = balance.run;
   useEffect(() => {
     const out = swap.res?.output;
@@ -202,7 +211,8 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
               <div className="c">
                 <p className="lb">{t("vault.total")}</p>
-                <p className="big" data-testid="vault-total">{totalKind.kind === "unread" ? "—" : totalKind.kind === "empty" ? <>$0<small>.00</small></> : totalKind.kind === "usd" ? <>${Math.floor(totalKind.micro / 1e6).toLocaleString("en")}<small>.{String(Math.floor(totalKind.micro % 1e6)).padStart(6, "0").slice(0, 2)}</small></> : totalKind.text}</p>
+                <p className="big" data-testid="vault-total">{totalKind.kind === "unread" ? "—" : totalKind.kind === "empty" ? <>$0<small>.00</small></> : totalKind.kind === "amounts" ? totalKind.text : <>${Math.floor(totalKind.micro / 1e6).toLocaleString("en")}<small>.{String(Math.floor(totalKind.micro % 1e6)).padStart(6, "0").slice(0, 2)}</small></>}</p>
+                {totalKind.kind === "partial" && <p className="note" data-testid="unpriced">{t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</p>}
                 <p className="note">{balances ? t("vault.balanceReal") : t("vault.sealedBook")}</p>
                 <div className="hero-actions" style={{ marginTop: 16 }}>
                   <button className="btn b1" disabled={balance.busy} onClick={() => void balance.run({})} data-testid="balance-btn">{balance.busy ? "…" : t("vault.balance")}</button>

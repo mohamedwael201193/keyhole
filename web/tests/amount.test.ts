@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assetRows, fromBaseUnits, isImplicitAccount, totalOf, tradeSummary, withdrawSummary } from "@/lib/amount";
+import { assetRows, fromBaseUnits, priceToMicro, totalOf, tradeSummary, valueMicro, withdrawSummary } from "@/lib/amount";
 import { intentTx } from "@/lib/config";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
@@ -15,7 +15,7 @@ describe("token amounts", () => {
   });
 
   it("maps known tokens to symbol, name, logo and amount, and leaves unknown tokens raw", () => {
-    const rows = assetRows("holder.near", [
+    const rows = assetRows([
       { token: USDC, balance: "40000" },
       { token: WNEAR, balance: OUT },
       { token: "nep141:unknown-token.near", balance: "7" },
@@ -27,20 +27,29 @@ describe("token amounts", () => {
     expect(rows[2].symbol.length).toBeLessThan("nep141:unknown-token.near".length);
   });
 
-  it("does not invent a NEAR balance for an implicit account", () => {
-    const id = "0x" + "ab".repeat(20);
-    expect(id).toHaveLength(42);
-    expect(isImplicitAccount(id)).toBe(true);
-    const rows = assetRows(id, [{ token: "near", balance: "1000000000000000000000000" }, { token: USDC, balance: "40000" }]);
-    expect(rows.map((r) => r.symbol)).toEqual(["USDC"]);
+  it("prices a mixed USDC and wNEAR balance from the token list", () => {
+    expect(priceToMicro("4.45")).toBe(4_450_000);
+    expect(priceToMicro(0.999469)).toBe(999469);
+    const prices = {
+      [USDC]: { priceMicro: 1_000_000, decimals: 6, symbol: "USDC" },
+      [WNEAR]: { priceMicro: 2_000_000, decimals: 24, symbol: "wNEAR" },
+    };
+    const wnear = valueMicro(OUT, 24, 2_000_000);
+    expect(wnear).toBeGreaterThan(0);
+    const rows = assetRows([{ token: USDC, balance: "20000" }, { token: WNEAR, balance: OUT }], prices);
+    expect(totalOf(rows)).toEqual({ kind: "usd", micro: 20000 + (wnear as number) });
+  });
+
+  it("names an unpriced holding instead of dropping it from the total", () => {
+    const rows = assetRows([{ token: USDC, balance: "20000" }, { token: WNEAR, balance: OUT }]);
+    expect(rows.find((r) => r.symbol === "wNEAR")?.usdMicro).toBeNull();
+    expect(totalOf(rows)).toEqual({ kind: "partial", micro: 20000, unpriced: ["0.004484 wNEAR"] });
   });
 
   it("shows a dollar total after a read, and $0.00 only when empty", () => {
     expect(totalOf(null)).toEqual({ kind: "unread" });
     expect(totalOf([])).toEqual({ kind: "empty" });
-    const rows = assetRows("holder.near", [{ token: USDC, balance: "40000" }, { token: WNEAR, balance: OUT }]);
-    expect(totalOf(rows)).toEqual({ kind: "usd", micro: 40000 });
-    expect(totalOf(assetRows("holder.near", [{ token: WNEAR, balance: OUT }]))).toEqual({ kind: "amounts", text: "0.004484 wNEAR" });
+    expect(totalOf(assetRows([{ token: WNEAR, balance: OUT }]))).toEqual({ kind: "amounts", text: "0.004484 wNEAR" });
   });
 });
 

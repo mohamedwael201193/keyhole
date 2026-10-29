@@ -140,7 +140,8 @@
   "checking": "Checking the attestation…",
   "verified": "Verified",
   "hiddenLog": "The log stays hidden until the attestation names the published worker.",
-  "assets": "Assets · {n}"
+  "assets": "Assets · {n}",
+  "unpriced": "+ {amounts} unpriced"
  },
  "mint": {
   "title": "Mint your key",
