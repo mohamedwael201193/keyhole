@@ -18,7 +18,7 @@ for (const p of PAGES) {
 
 test("hero shows live supply from mainnet and official logos", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByTestId("supply")).toHaveText(/^\d+$/);
+  await expect(page.getByTestId("supply")).toHaveText(/^\d+$/, { timeout: 15_000 });
   for (const n of ["NEAR", "USDC", "ETH", "SOL", "ARB", "BTC", "ZEC", "Base"]) await expect(page.getByAltText(n, { exact: true })).toHaveCount(1);
 });
 

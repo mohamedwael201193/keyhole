@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { HomeMotion } from "./HomeMotion";
 import { Cipher } from "./Cipher";
 import { Icon, KeyArt, Scene } from "./Art";
@@ -25,6 +26,22 @@ const TIERS: { name: Finish; art: number; daily: string }[] = [
   { name: "Legendary", art: 1, daily: "legDaily" },
 ];
 
+function SupplyStat({ initial }: { initial: number | null }) {
+  const [n, setN] = useState(initial);
+  useEffect(() => {
+    if (initial != null) return;
+    let cancel = false;
+    const tick = () => fetch("/api/supply").then((r) => r.json()).then((j) => {
+      if (!cancel && Number.isInteger(j?.supply)) setN(j.supply);
+    }).catch(() => {});
+    tick();
+    const id = window.setInterval(tick, 3_000);
+    const stop = window.setTimeout(() => window.clearInterval(id), 12_000);
+    return () => { cancel = true; window.clearInterval(id); window.clearTimeout(stop); };
+  }, [initial]);
+  return <dd data-testid="supply" data-count={n ?? undefined}>{n == null ? "—" : n}</dd>;
+}
+
 export function Landing({ supply, hash, config }: { supply: number | null; hash: string; config: Config | null }) {
   const { t } = useI18n();
   const tr = (name: string) => { const v = t(`traits.${name}`); return v.startsWith("traits.") ? name : v; };
@@ -42,7 +59,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
             <Link className="btn b2" href="/verify">{t("land.verify")}</Link>
           </div>
           <dl className="stats">
-            <div><dd data-testid="supply" data-count={supply ?? undefined}>{supply == null ? "—" : supply}</dd><dt>{t("land.s1")}</dt></div>
+            <div><SupplyStat initial={supply} /><dt>{t("land.s1")}</dt></div>
             <div><dd>$<span data-count="1" data-dec="2">1.00</span></dd><dt>{t("land.s2")}</dt></div>
             <div><dd className="h">{hash}</dd><dt>{t("land.s3")}</dt></div>
           </dl>
