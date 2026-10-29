@@ -144,13 +144,13 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
                     </FoilCard>
                     <p className="att">{t("land.attested")}</p>
                   </div>
-                  <dl className="kv">
+                  <dl className="kv" data-testid="vault-traits">
                     <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>
                     <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, idn.filigree)}</dd>
                     <dt>{t("field.enamel")}</dt><dd>{traitLabel(t, idn.enamel)}</dd>
                     <dt>{t("field.gem")}</dt><dd>{traitLabel(t, idn.gem)}</dd>
                     <dt>{t("field.cipher")}</dt><dd><Cipher bits={idn.bits} /></dd>
-                    <dt>{t("proof.contract")}</dt><dd>{KEYS_CONTRACT}</dd>
+                    <dt>{t("proof.contract")}</dt><dd className="mono">{KEYS_CONTRACT}</dd>
                   </dl>
                   <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginTop: 8 }} data-state={keyState(held.token, held.tier, accountId)}>{t(`gallery.${keyState(held.token, held.tier, accountId)}`)}</p>
                 </>
