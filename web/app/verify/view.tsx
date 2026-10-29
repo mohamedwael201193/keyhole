@@ -69,7 +69,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
                 const hash = k === "worker_measurement" || k === "input_hash" || k === "output_hash";
                 return <Fragment key={k}><dt>{k}</dt><dd className={hash || k === "project_id" ? "mono" : undefined} data-kind={hash ? "hash" : undefined}>{String(a[k])}</dd></Fragment>;
               })}
-              <dt>timestamp</dt><dd>{new Date(a.timestamp * 1000).toLocaleString()}</dd>
+              <dt>timestamp</dt><dd>{new Date(a.timestamp * 1000).toLocaleString(undefined, { timeZoneName: "short" })}</dd>
             </dl>
           )}
           {a && <a className="btn b2" style={{ marginTop: 16 }} href={attestation(a.call_id)} target="_blank" rel="noreferrer">JSON ↗</a>}
