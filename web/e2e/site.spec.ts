@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify"];
 const shots = process.env.SHOTS_DIR;
 
@@ -109,6 +109,95 @@ test("header Connect wallet opens the selector on the first click", async ({ pag
   expect(rowBox!.y + rowBox!.height).toBeLessThanOrEqual((vp?.height ?? 0) + 1);
   if ((vp?.width ?? 1000) <= 700) await expect(page.locator("#near-wallet-selector-modal .modal-right")).toBeHidden();
   await expect(modal.getByText(/MyNearWallet|Meteor/).first()).toBeVisible();
+});
+
+test("sealed vault names MetaMask and a gas-free signature", async ({ page }) => {
+  await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
+  await page.goto("/vault");
+  const empty = page.getByTestId("vault-empty");
+  await expect(empty).toBeVisible({ timeout: 30_000 });
+  await expect(empty).toContainText("Connect a NEAR wallet or MetaMask");
+  await expect(empty).toContainText("one gas-free signature that only the enclave can check");
+});
+
+test("a cold health check stays on checking until the retry settles", async ({ page }) => {
+  let hits = 0;
+  await page.route("**/api/health", async (route) => {
+    hits += 1;
+    await new Promise((r) => setTimeout(r, 700));
+    await route.fulfill({ json: { online: false, reason: "gateway" } });
+  });
+  await page.goto("/vault", { waitUntil: "domcontentloaded" });
+  const offline = page.getByTestId("offline");
+  const live = page.getByText("Enclave live", { exact: false });
+  if (await live.isVisible().catch(() => false)) {
+    await page.waitForTimeout(250);
+    await expect(offline).toHaveCount(0);
+    return;
+  }
+  await expect(page.getByTestId("enclave-checking")).toBeVisible();
+  await expect(offline).toHaveCount(0);
+  await expect(offline).toBeVisible({ timeout: 15_000 });
+  expect(hits).toBeGreaterThanOrEqual(2);
+});
+
+async function holdAccount(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("signedAccountId", "holder.keyhole.test");
+    localStorage.setItem("near-wallet-selector:selectedWalletId", JSON.stringify("my-near-wallet"));
+  });
+  await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
+  await page.route("https://rpc.mainnet.near.org/**", async (route) => {
+    let method = "";
+    try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view call */ }
+    const payload = method === "nft_tokens_for_owner"
+      ? [{ token_id: "4", owner_id: "holder.keyhole.test", metadata: { title: "Key", description: null, expires_at: null, issued_at: null } }]
+      : method === "nft_tier" ? 1 : null;
+    if (payload == null) return route.continue();
+    const bytes = [...new TextEncoder().encode(JSON.stringify(payload))];
+    await route.fulfill({ json: { jsonrpc: "2.0", id: "kh", result: { result: bytes } } });
+  });
+}
+
+test("connected account opens a menu instead of disconnecting", async ({ page, context }, info) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await holdAccount(page);
+  if (info.project.name === "desktop") await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/vault");
+  const pill = page.getByTestId("account");
+  await expect(pill).toBeVisible({ timeout: 20_000 });
+  await pill.click();
+  await expect(pill).toBeVisible();
+  const menu = page.getByTestId("account-menu");
+  await expect(menu).toBeVisible();
+  await expect(menu.getByTestId("account-id")).toHaveText("holder.keyhole.test");
+  await menu.getByRole("menuitem", { name: "Copy address" }).click();
+  await expect(menu.getByRole("menuitem", { name: "Copied" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("holder.keyhole.test");
+  await expect(menu.getByRole("menuitem", { name: "View on explorer" })).toHaveAttribute("href", "https://nearblocks.io/address/holder.keyhole.test");
+  await expect(page.getByTestId("vault-account")).toHaveText("holder.keyhole.test");
+  const box = await menu.boundingBox();
+  const vp = page.viewportSize()!;
+  expect(box!.x).toBeGreaterThanOrEqual(-1);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(vp.width + 1);
+});
+
+test("MetaMask connect copy names the side panel and the network switch is cream", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("html[data-kh-tune]");
+  await page.evaluate(() => {
+    const msg = document.createElement("div");
+    msg.className = "connecting-message";
+    msg.innerHTML = "<span>Confirm the connection in the extension window</span>";
+    const modal = document.createElement("div");
+    modal.className = "ethereum-wallet-modal";
+    modal.innerHTML = `<div class="ethereum-wallet-modal-content"><h2>Switch Network</h2><button class="ethereum-wallet-btn ethereum-wallet-btn-sm ethereum-wallet-btn-cancel">Close</button></div>`;
+    document.body.append(msg, modal);
+  });
+  await expect(page.getByText("It may open in the MetaMask side panel or the toolbar icon.")).toBeVisible();
+  await expect(page.getByText("MetaMask will ask to add the NEAR Protocol network — approve it to continue.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close" })).toHaveCSS("color", "rgb(31, 75, 79)");
+  await expect(page.locator(".ethereum-wallet-modal-content")).toHaveCSS("background-color", "rgb(246, 241, 231)");
 });
 
 test("vault shows a premium empty or offline state; connect opens the wallet selector", async ({ page }) => {

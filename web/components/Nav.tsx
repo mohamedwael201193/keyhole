@@ -1,12 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { KeyholeLogo } from "./KeyholeLogo";
 import { MusicToggle } from "./MusicToggle";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { shortAccount } from "@/lib/near";
+import { acct } from "@/lib/config";
+import { copyText } from "@/lib/copyText";
 
 const LINKS = [
   ["/", "home"],
@@ -22,6 +24,9 @@ export function Nav() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const acctRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = document.querySelector("nav.nav");
     if (!el) return;
@@ -38,6 +43,21 @@ export function Nav() {
     addEventListener("resize", tick);
     return () => { removeEventListener("scroll", tick); removeEventListener("resize", tick); };
   }, [path]);
+  useEffect(() => { setMenu(false); }, [path]);
+  useEffect(() => {
+    if (!menu) return;
+    const onPointer = (e: PointerEvent) => { if (!acctRef.current?.contains(e.target as Node)) setMenu(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenu(false); };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onPointer); document.removeEventListener("keydown", onKey); };
+  }, [menu]);
+  const copyAccount = async () => {
+    if (!accountId) return;
+    await copyText(accountId);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
   const current = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
   return (
     <>
@@ -52,7 +72,17 @@ export function Nav() {
         <div className="nav-tools">
           <span className="desk"><MusicToggle /></span>
           {accountId
-            ? <button className="cw" onClick={() => void disconnect()} title={t("nav.disconnect")}>{shortAccount(accountId, 4)}</button>
+            ? <div className="acct" ref={acctRef}>
+                <button type="button" className="cw" aria-expanded={menu} aria-controls="acct-menu" data-testid="account" onClick={() => setMenu((v) => !v)}>{shortAccount(accountId, 4)}</button>
+                {menu && (
+                  <div id="acct-menu" className="acct-menu" role="menu" data-testid="account-menu">
+                    <p className="id" data-testid="account-id">{accountId}</p>
+                    <button type="button" role="menuitem" onClick={() => void copyAccount()}>{copied ? t("nav.copied") : t("nav.copy")}</button>
+                    <a role="menuitem" href={acct(accountId)} target="_blank" rel="noreferrer">{t("nav.explorer")}</a>
+                    <button type="button" role="menuitem" onClick={() => { setMenu(false); void disconnect(); }}>{t("nav.disconnect")}</button>
+                  </div>
+                )}
+              </div>
             : <button type="button" className="cw" onClick={() => void connect()} data-testid="connect">{t("nav.connect")}</button>}
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
