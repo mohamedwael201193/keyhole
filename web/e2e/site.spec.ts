@@ -209,7 +209,7 @@ test("pages stay inside the viewport after content loads", async ({ page }, info
   }
 });
 
-test("kv hashes sit in a left-aligned mono block; vault traits keep the body face", async ({ page }, info) => {
+test("technical lists are left-aligned; vault traits keep the body face", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "desktop alignment");
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -220,8 +220,8 @@ test("kv hashes sit in a left-aligned mono block; vault traits keep the body fac
   await expect(worker).toHaveCSS("text-align", "start");
   await expect(worker).toHaveCSS("font-weight", "500");
   expect((await worker.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).toContain("dm mono");
+  for (const dd of await page.locator(".attc .kv dd").all()) await expect(dd).toHaveCSS("text-align", "start");
   const runtime = page.locator(".attc .kv dd").last();
-  await expect(runtime).toHaveCSS("text-align", "end");
   await expect(runtime).toHaveCSS("font-weight", "600");
   expect((await runtime.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).not.toContain("dm mono");
 
@@ -231,9 +231,10 @@ test("kv hashes sit in a left-aligned mono block; vault traits keep the body fac
   await expect(hash).toBeVisible();
   await expect(hash).toHaveCSS("text-align", "start");
   expect((await hash.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).toContain("dm mono");
+  for (const dd of await page.locator(".ver .kv dd").all()) await expect(dd).toHaveCSS("text-align", "start");
   const stamp = page.locator(".ver .kv dd").last();
-  await expect(stamp).toHaveCSS("text-align", "end");
   await expect(stamp).toHaveCSS("font-weight", "600");
+  await expect(stamp).toHaveText(/(?:AM|PM|a\.m\.|p\.m\.)\s+\S+$|\d{1,2}:\d{2}:\d{2}\s+[A-Za-z]/);
 
   await page.addInitScript(() => {
     localStorage.setItem("signedAccountId", "holder.keyhole.test");
