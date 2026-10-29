@@ -18,7 +18,8 @@ import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
 import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
 import { attestation, intentTx, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
-import { assetRows, isImplicitAccount, totalOf, tradeSummary, withdrawSummary, type PriceBook } from "@/lib/amount";
+import { assetRows, formatUsdMicro, isImplicitAccount, totalOf, tradeSummary, withdrawSummary, type PriceBook } from "@/lib/amount";
+import { OP_CTX, type OpResume } from "@/lib/wallet";
 import { copyText } from "@/lib/copyText";
 import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
@@ -29,7 +30,7 @@ type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: stri
 
 export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline: boolean; initialPrices?: PriceBook }) {
   const { t, fmtUsd } = useI18n();
-  const { accountId, connect } = useWallet();
+  const { accountId, connect, pending } = useWallet();
   const online = useHealth(initialOnline);
   const status = useSigned("status");
   const quote = useSigned("quote");
@@ -109,6 +110,15 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     return () => { cancel = true; };
   }, [history.res]);
   const lookingUpKey = !!accountId && (!keysReady || keysFor !== accountId);
+  useEffect(() => {
+    const ctx = pending?.ctx;
+    if (!ctx) return;
+    if (ctx.op === "swap") { setDoneTrade({ give: ctx.give, decimals: ctx.decimals, symbol: ctx.symbol }); setStep(2); }
+    if (ctx.op === "withdraw") { setDoneWithdraw({ amount: ctx.amount, to: ctx.to }); setStep(3); }
+  }, [pending]);
+  useEffect(() => {
+    if (swap.res || withdraw.res) sessionStorage.removeItem(OP_CTX);
+  }, [swap.res, withdraw.res]);
   useEffect(() => {
     if (!balances) return;
     let cancel = false;
@@ -211,7 +221,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
               <div className="c">
                 <p className="lb">{t("vault.total")}</p>
-                <p className="big" data-testid="vault-total">{totalKind.kind === "unread" ? "—" : totalKind.kind === "empty" ? <>$0<small>.00</small></> : totalKind.kind === "amounts" ? totalKind.text : <>${Math.floor(totalKind.micro / 1e6).toLocaleString("en")}<small>.{String(Math.floor(totalKind.micro % 1e6)).padStart(6, "0").slice(0, 2)}</small></>}</p>
+                <p className="big" data-testid="vault-total">{totalKind.kind === "unread" ? "—" : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : formatUsdMicro(totalKind.micro)}</p>
                 {totalKind.kind === "partial" && <p className="note" data-testid="unpriced">{t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</p>}
                 <p className="note">{balances ? t("vault.balanceReal") : t("vault.sealedBook")}</p>
                 <div className="hero-actions" style={{ marginTop: 16 }}>
@@ -290,7 +300,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                       <div className="tr"><i style={{ width: `${Math.min(100, (q.usd_micro / perCap) * 100)}%` }} /></div>
                     </div>
                   )}
-                  <button className="btn b1" style={{ marginTop: 14 }} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; setDoneTrade({ give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[toKey].decimals, symbol: ASSETS[toKey].symbol }); void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? "…" : t("vault.signTrade")}</button>
+                  <button className="btn b1" style={{ marginTop: 14 }} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; const ctx: OpResume = { op: "swap", give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[toKey].decimals, symbol: ASSETS[toKey].symbol }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneTrade(ctx); void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? "…" : t("vault.signTrade")}</button>
                   {quote.res?.error && <ErrorBox code={quote.res.error.code} retryAfter={quote.res.error.retry_after} vars={{ cap: capFrom(quote.res.error.message) }} />}
                   {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} vars={{ cap: capFrom(swap.res.error.message) }} />}
                   {swap.res?.output?.ok && swap.res.output.op === "swap" && doneTrade && (
@@ -311,7 +321,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                     <TokenPick id="w-asset" value={wAsset} onChange={setWAsset} />
                     <label htmlFor="w-amt">{t("vault.amount")} ({ASSETS[wAsset].symbol})</label>
                     <input id="w-amt" inputMode="decimal" className="input" value={wAmt} onChange={(e) => setWAmt(e.target.value)} aria-invalid={!wUnits} />
-                    <button className="btn b1" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) { setDoneWithdraw({ amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(accountId) }); void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); } }}>{withdraw.busy ? "…" : t("vault.withdrawBtn")}</button>
+                    <button className="btn b1" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) { const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(accountId) }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneWithdraw(ctx); void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); } }}>{withdraw.busy ? "…" : t("vault.withdrawBtn")}</button>
                   </div>
                   {withdraw.res?.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw && (
                     <div className="result-card" data-testid="withdraw-out">
@@ -354,8 +364,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 {rows.map((b) => (
                   <div className={`arow${b.logo ? "" : " plain"}`} key={b.key} data-token={b.symbol}>
                     {b.logo ? <Medal id={b.logo} name={b.symbol} /> : null}
-                    <div><b>{b.symbol}</b>{b.name ? <small>{b.name}</small> : null}</div>
-                    <span className="v">{b.amountLabel}</span>
+                    <div className="who"><b>{b.symbol}</b>{b.name ? <small>{b.name}</small> : null}</div>
+                    <div className="amt"><b>{b.amountLabel}</b>{b.usdMicro != null ? <small>{formatUsdMicro(b.usdMicro)}</small> : null}</div>
                   </div>
                 ))}
               </div>

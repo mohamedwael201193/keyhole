@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import en from "@/messages/en.json";
+import { formatUsdMicro } from "./amount";
 
 type Dict = Record<string, unknown>;
 
@@ -34,7 +35,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const api = useMemo<Api>(() => ({
     t: (k, v) => translate(k, v),
     fmtNum: (n, o) => new Intl.NumberFormat("en", o).format(n),
-    fmtUsd: (micro) => new Intl.NumberFormat("en", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(micro / 1e6),
+    fmtUsd: (micro) => formatUsdMicro(micro),
   }), []);
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

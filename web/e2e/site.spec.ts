@@ -184,6 +184,99 @@ test("connected account opens a menu instead of disconnecting", async ({ page, c
   expect(box!.x + box!.width).toBeLessThanOrEqual(vp.width + 1);
 });
 
+for (const kind of ["swap", "withdraw"] as const) {
+  test(`a redirect return restores the ${kind} card`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await holdAccount(page);
+    await page.route("**/api/worker", async (route) => {
+      const output = kind === "withdraw"
+        ? { ok: true, op: "withdraw", request_id: "b5ea", status: "success" }
+        : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success", usd_in_micro: 20000 };
+      await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
+    });
+    await page.addInitScript(({ nonce, kind }) => {
+      const op = kind;
+      sessionStorage.setItem("kh_pending_sign", JSON.stringify({
+        message: JSON.stringify({ op, account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
+        nonce,
+        ctx: op === "withdraw"
+          ? { op, amount: "0.01 USDC", to: "holder.keyhole.test" }
+          : { op, give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
+      }));
+    }, { nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", kind });
+    await page.goto("/vault#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+    if (kind === "swap") {
+      await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
+      await expect(page.getByTestId("trade-out")).toContainText("success");
+      await expect(page.getByRole("link", { name: /intents explorer/ })).toHaveAttribute("href", "https://explorer.near-intents.org/transactions/4qAnExample");
+    } else {
+      await expect(page.getByTestId("withdraw-out")).toContainText("Withdrawn 0.01 USDC to holder.keyhole.test", { timeout: 20_000 });
+      await expect(page.getByTestId("withdraw-out")).toContainText("b5ea");
+      await expect(page.getByTestId("withdraw-out")).toContainText("success");
+    }
+  });
+}
+
+test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
+  test.skip(info.project.name !== "mobile", "sets 1280 and 390 itself");
+  test.setTimeout(60_000);
+  await holdAccount(page);
+  await page.route("**/api/prices", (route) => route.fulfill({
+    json: {
+      prices: {
+        "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1": { priceMicro: 999_500, decimals: 6, symbol: "USDC" },
+        "nep141:wrap.near": { priceMicro: 4_420_000, decimals: 24, symbol: "wNEAR" },
+      },
+    },
+  }));
+  await page.route("**/api/worker", (route) => route.fulfill({
+    json: {
+      call_id: "c1", status: "ok", attestation_url: null, time_ms: 12,
+      output: {
+        ok: true, op: "balance",
+        balances: [
+          { token: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", amount: "20000" },
+          { token: "nep141:wrap.near", amount: "4484263051703687050358" },
+        ],
+      },
+    },
+  }));
+  await page.addInitScript(() => {
+    sessionStorage.setItem("kh_pending_sign", JSON.stringify({
+      message: JSON.stringify({ op: "balance", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
+      nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    }));
+  });
+  for (const [w, h] of [[1280, 800], [390, 844]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/vault#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+    const list = page.getByTestId("asset-list");
+    await expect(list).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("vault-total")).toHaveText("$0.04", { timeout: 15_000 });
+    await expect(list.getByText("0.02 USDC", { exact: true })).toBeVisible();
+    await expect(list.getByText("0.004484 wNEAR", { exact: true })).toBeVisible();
+    await expect(list.getByText("$0.02")).toHaveCount(2);
+    const metrics = await list.evaluate((el) => {
+      const rows = [...el.querySelectorAll(".arow")];
+      const lines = (sel: string) => [...el.querySelectorAll(sel)].map((b) => ({ text: b.textContent || "", n: b.getClientRects().length }));
+      const listW = Math.round(el.getBoundingClientRect().width);
+      return {
+        listW,
+        rowWidths: rows.map((r) => Math.round(r.getBoundingClientRect().width)),
+        amounts: lines(".amt b"),
+        names: lines(".who small"),
+        extra: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    expect(metrics.extra, `${w} scrolls sideways`).toBeLessThanOrEqual(0);
+    expect(metrics.rowWidths).toEqual([metrics.listW, metrics.listW]);
+    for (const a of metrics.amounts) expect(a.n, `${w} ${a.text}`).toBe(1);
+    for (const n of metrics.names) expect(n.n, `${w} ${n.text}`).toBe(1);
+    await expect(page.getByText("Any NEAR wallet or MetaMask")).toBeVisible();
+    await expect(page.getByText("One gas-free signature (NEAR NEP-413 or MetaMask EIP-191)")).toBeVisible();
+  }
+});
+
 test("MetaMask connect copy names the side panel and the network switch is cream", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.waitForSelector("html[data-kh-tune]");

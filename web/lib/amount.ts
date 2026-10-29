@@ -118,3 +118,11 @@ export function tradeSummary(give: string, amountOut: string, decimals: number, 
 export function withdrawSummary(amount: string, to: string): string {
   return `Withdrawn ${amount} to ${to}`;
 }
+
+/** Dollars from millionths. Two fraction digits, rounded; under one cent, four digits so it is not shown as zero. */
+export function formatUsdMicro(micro: number): string {
+  const usd = micro / 1e6;
+  const abs = Math.abs(usd);
+  const max = abs === 0 || abs >= 0.01 ? 2 : 4;
+  return new Intl.NumberFormat("en", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: max }).format(usd);
+}

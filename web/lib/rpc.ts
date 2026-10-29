@@ -11,11 +11,12 @@ export function isHolderRead(method: string, args: Record<string, unknown>): boo
   return method === "nft_tokens_for_owner" || Object.prototype.hasOwnProperty.call(args, "account_id");
 }
 
-async function callOne<T>(url: string, method: string, args: Record<string, unknown>, contract: string): Promise<T> {
+async function callOne<T>(url: string, method: string, args: Record<string, unknown>, contract: string, share: boolean): Promise<T> {
   const args_base64 = typeof btoa === "function" ? btoa(JSON.stringify(args)) : Buffer.from(JSON.stringify(args)).toString("base64");
   const r = await fetch(url, {
-    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
+    method: "POST", headers: { "content-type": "application/json" },
     signal: AbortSignal.timeout(8_000),
+    ...(share ? { next: { revalidate: 60 } } : { cache: "no-store" as const }),
     body: JSON.stringify({
       jsonrpc: "2.0", id: "kh", method: "query",
       params: { request_type: "call_function", finality: "final", account_id: contract, method_name: method, args_base64 },
@@ -40,7 +41,7 @@ export async function nearView<T>(method: string, args: Record<string, unknown> 
     let last: unknown;
     for (const url of NEAR_RPCS) {
       try {
-        const value = await callOne<T>(url, method, args, contract);
+        const value = await callOne<T>(url, method, args, contract, share);
         if (share) cache.set(key, { at: Date.now(), value });
         return value;
       } catch (e) { last = e; }

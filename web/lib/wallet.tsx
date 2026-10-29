@@ -14,11 +14,15 @@ interface WalletCtx {
   disconnect: () => Promise<void>;
   /** Signs a NEP-413 request for the worker. Redirect wallets resume via `pending` after return. */
   sign: (op: Op, params?: Record<string, unknown>) => Promise<SignedAuth>;
-  pending: SignedAuth | null;
+  pending: (SignedAuth & { ctx?: OpResume | null }) | null;
   clearPending: () => void;
 }
 const Ctx = createContext<WalletCtx | null>(null);
 const PENDING = "kh_pending_sign";
+export const OP_CTX = "kh_op_ctx";
+export type OpResume =
+  | { op: "swap"; give: string; decimals: number; symbol: string }
+  | { op: "withdraw"; amount: string; to: string };
 const CONNECTING = "Confirm the connection in the extension window";
 const CONNECTING_NEXT = "Confirm the connection in the extension window. It may open in the MetaMask side panel or the toolbar icon.";
 const NET_HELP = "MetaMask will ask to add the NEAR Protocol network — approve it to continue.";
@@ -131,7 +135,7 @@ async function init(): Promise<{ selector: WalletSelector; modal: WalletSelector
     modules.push(setupWalletConnect({ projectId: wc, metadata: { name: "KEYHOLE", description: "NFT viewing keys for confidential accounts", url: location.origin, icons: [`${location.origin}/brand/icon-192.png`] } }) as WalletModuleFactory);
   }
   const selector = await setupWalletSelector({ network: "mainnet", modules });
-  const modal = setupModal(selector, { theme: "dark", description: "KEYHOLE only asks for message signatures (NEP-413). No transactions, no gas." });
+  const modal = setupModal(selector, { theme: "dark", description: "KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas." });
   return { selector, modal };
 }
 
@@ -139,7 +143,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const ref = useRef<{ selector: WalletSelector; modal: WalletSelectorModal } | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [pending, setPending] = useState<SignedAuth | null>(null);
+  const [pending, setPending] = useState<(SignedAuth & { ctx?: OpResume | null }) | null>(null);
   const loading = useRef<Promise<void> | null>(null);
 
   const ensure = useCallback(() => {
@@ -166,9 +170,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const h = new URLSearchParams(location.hash.slice(1));
     const saved = sessionStorage.getItem(PENDING);
     if (h.get("signature") && saved) {
-      const s = JSON.parse(saved) as { message: string; nonce: string };
+      const s = JSON.parse(saved) as { message: string; nonce: string; ctx?: OpResume | null };
       setPending({ account_id: h.get("accountId") || "", public_key: h.get("publicKey") || "", signature: h.get("signature") || "",
-        nonce: s.nonce, message: s.message, recipient: NEP413_RECIPIENT });
+        nonce: s.nonce, message: s.message, recipient: NEP413_RECIPIENT, ctx: s.ctx });
       sessionStorage.removeItem(PENDING);
       history.replaceState(null, "", location.pathname + location.search);
     }
@@ -204,7 +208,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const message = buildMessage(op, acc, params);
     const nonceBytes = freshNonce();
     const nonce = toB64(nonceBytes);
-    sessionStorage.setItem(PENDING, JSON.stringify({ message, nonce }));
+    let ctx: OpResume | null = null;
+    try { ctx = JSON.parse(sessionStorage.getItem(OP_CTX) || "null") as OpResume | null; } catch { ctx = null; }
+    sessionStorage.setItem(PENDING, JSON.stringify({ message, nonce, ctx }));
     let res;
     try {
       res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: nonceBytes as unknown as Buffer, callbackUrl: location.href.split("#")[0] });
