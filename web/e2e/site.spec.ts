@@ -186,6 +186,29 @@ test("home scroll stays inside the viewport", async ({ page }, info) => {
   }
 });
 
+test("pages stay inside the viewport after content loads", async ({ page }, info) => {
+  test.setTimeout(120_000);
+  test.skip(info.project.name !== "desktop", "this test sets 1280 and 390 itself");
+  const routes = ["/", "/vault", "/mint", "/verify", "/gallery", "/atlas", "/identity"] as const;
+  for (const [w, h] of [[1280, 800], [390, 844]] as const) {
+    await page.setViewportSize({ width: w, height: h });
+    for (const p of routes) {
+      await page.goto(p, { waitUntil: "domcontentloaded" });
+      if (p === "/verify") {
+        await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+      } else if (p === "/gallery") {
+        await expect(page.getByTestId("key-nft").first()).toBeVisible({ timeout: 30_000 });
+      } else if (p === "/") {
+        await expect(page.getByTestId("supply")).toBeVisible();
+      } else {
+        await expect(page.locator("h1").first()).toBeVisible();
+      }
+      const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(extra, `${p} at ${w}px scrolls sideways`).toBeLessThanOrEqual(0);
+    }
+  }
+});
+
 test("hero: official token logos are visible in the gold-dust hero", async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 1280, "desktop hero");
   await page.goto("/");
