@@ -57,22 +57,26 @@ mod host {
     fn authenticate(input: &Value, op: &str, need_key: bool) -> Result<Ctx, Error> {
         let auth: Auth = serde_json::from_value(input.get("auth").cloned().unwrap_or(Value::Null))
             .map_err(|_| err("no_auth", "missing `auth`: sign the request with your NEAR wallet (NEP-413 signMessage)"))?;
-        let (req, nonce) = verify_nep413(&auth, &recipient())?;
+        let eip191 = auth.scheme == "eip191";
+        let (req, nonce) = if eip191 { verify_eip191(&auth, &recipient())? } else { verify_nep413(&auth, &recipient())? };
         if req.op != op { return Err(err("op_mismatch", format!("signed op '{}' but called '{}'", req.op, op))); }
-        let (ak, e) = rpc::view_access_key(&auth.account_id, &auth.public_key, "final");
-        if !e.is_empty() || !ak.contains("FullAccess") {
-            return Err(err("key_not_owned", "the signing key is not a full-access key of this account"));
+        if !eip191 {
+            let (ak, e) = rpc::view_access_key(&auth.account_id, &auth.public_key, "final");
+            if !e.is_empty() || !ak.contains("FullAccess") {
+                return Err(err("key_not_owned", "the signing key is not a full-access key of this account"));
+            }
         }
+        let account = req.account_id.clone();
         let now_ms = chain_now_ms()?;
         check_freshness(req.ts_ms, now_ms)?;
-        let tier = holder_tier(&auth.account_id)?;
+        let tier = holder_tier(&account)?;
         if need_key && tier.is_none() {
-            return Err(err("no_key", format!("{} does not hold a KEYHOLE key; mint one first (op: mint)", auth.account_id)));
+            return Err(err("no_key", format!("{} does not hold a KEYHOLE key; mint one first (op: mint)", account)));
         }
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
-        rate_limit(&mut Host, &auth.account_id, &lim, now_ms)?;
-        consume_nonce(&mut Host, &auth.account_id, &nonce, now_ms)?;
-        Ok(Ctx { account: auth.account_id, req, now_ms, tier })
+        rate_limit(&mut Host, &account, &lim, now_ms)?;
+        consume_nonce(&mut Host, &account, &nonce, now_ms)?;
+        Ok(Ctx { account, req, now_ms, tier })
     }
 
     /// Minter key is generated inside the TEE on first use and kept in encrypted storage.
@@ -214,10 +218,12 @@ mod host {
         // token id is derived from the account, so a concurrent second mint panics on-chain.
         let (mid, msk) = minter()?;
         let tid = token_id_for(&c.account);
+        let (media, media_hash) = bronze_media(&keys_contract(), &tid);
         let args = json!({"token_id": tid, "receiver_id": c.account, "tier": 1,
-            "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1}});
+            "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1, "media": media, "media_hash": media_hash}});
         let a = args.to_string();
-        let r = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_mint", args: a.as_bytes(), gas: 30_000_000_000_000, deposit: 9_000_000_000_000_000_000_000 }]);
+        // 0.012 NEAR covers the longer metadata (media URL + hash). Excess is refunded.
+        let r = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_mint", args: a.as_bytes(), gas: 30_000_000_000_000, deposit: 12_000_000_000_000_000_000_000 }]);
         if let Err(e) = r {
             let _ = Host.incr(&format!("g/mints/{}", day), -1);
             return Err(err("mint_failed", e.message));
@@ -357,6 +363,7 @@ mod host {
         let lim = limits_for_tier(c.tier.unwrap()).ok_or_else(|| err("no_key", "unknown tier"))?;
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
+        assert_withdraw_to(&c.account, &to)?;
         let amt = digits(p, "amount")?;
         let (key, id) = holder_wallet(&c.account)?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;

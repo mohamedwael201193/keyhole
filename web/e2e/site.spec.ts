@@ -30,7 +30,7 @@ test("gallery renders every on-chain key", async ({ page }) => {
 });
 
 test("verify: a published-build mainnet call passes in the browser", async ({ page }) => {
-  await page.goto("/verify?call=cefbc64e-6c08-4bfe-a165-1667d9f5f25b");
+  await page.goto("/verify?call=9d19bceb-986b-4745-9bf9-91f7dcb62b6e");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
 });
 

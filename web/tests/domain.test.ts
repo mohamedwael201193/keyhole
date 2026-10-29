@@ -5,7 +5,7 @@ import { CAPS, bitCipherBits, finishOf, keyIdentity, nep177, serialOf, traitSeed
 import { toBaseUnits } from "@/lib/assets";
 import { WORKER_ERROR_CODES } from "@/lib/errors";
 import { errorText, translate } from "@/lib/i18n";
-import { staticChecks, CALL_ID, fastfsUrl, PUBLISHED_WASM_SHA256, publishedBuild } from "@/lib/verify";
+import { staticChecks, CALL_ID, fastfsUrl, PREVIOUS_WASM_SHA256, PUBLISHED_WASM_SHA256, publishedBuild } from "@/lib/verify";
 import en from "@/messages/en.json";
 import { readFileSync } from "node:fs";
 
@@ -82,7 +82,8 @@ describe("verify", () => {
     expect(staticChecks({ executed_wasm_sha256: h, wasm_hash: "b".repeat(64), tdx_quote: "" })).toEqual({ quote: false, registered: false, published: false });
     expect(publishedBuild(h)).toBe(false);
     expect(publishedBuild(PUBLISHED_WASM_SHA256)).toBe(true);
-    expect(PUBLISHED_WASM_SHA256.startsWith("f13efe92")).toBe(true);
+    expect(PUBLISHED_WASM_SHA256.startsWith("b3fa1a39")).toBe(true);
+    expect(publishedBuild(PREVIOUS_WASM_SHA256)).toBe(false);
   });
   it("call id is a uuid", () => { expect(CALL_ID.test("e099f957-e3c6-4035-999a-907d9782997e")).toBe(true); expect(CALL_ID.test("../x")).toBe(false); });
   it("FastFS url", () => expect(fastfsUrl("keyhole-devmo.near/keyhole-probe", h)).toBe(`https://main.fastfs.io/keyhole-devmo.near/outlayer.near/${h}.wasm`));

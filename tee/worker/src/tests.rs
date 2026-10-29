@@ -30,6 +30,8 @@ fn signed(seed: u8, account: &str, msg: &str, nonce: [u8; 32], recipient: &str) 
         message: msg.into(),
         recipient: recipient.into(),
         callback_url: None,
+        scheme: String::new(),
+        address: String::new(),
     }
 }
 fn msg(acct: &str) -> String { format!(r#"{{"op":"quote","account_id":"{}","ts_ms":1000,"params":{{}}}}"#, acct) }
@@ -215,4 +217,78 @@ fn signed_tx_verifies() {
     assert_eq!(s[tx.len()], 0);
     let sig = ed25519_dalek::Signature::from_bytes(s[tx.len() + 1..].try_into().unwrap());
     sk(3).verifying_key().verify(&Sha256::digest(&tx), &sig).unwrap();
+}
+
+#[test]
+fn withdraw_refuses_any_destination_but_the_signer() {
+    assert!(assert_withdraw_to("alice.near", "alice.near").is_ok());
+    let other = assert_withdraw_to("alice.near", "bob.near").unwrap_err();
+    assert_eq!(other.code, "bad_params");
+    assert!(other.message.contains("signed this request"));
+    assert!(assert_withdraw_to("alice.near", "alice.near ").is_err());
+    assert!(assert_withdraw_to("alice.near", "").is_err());
+}
+
+fn art_file_hash(n: u8) -> String {
+    let path = format!("{}/../../web/public/heirloom/keys/k{n:02}.webp", env!("CARGO_MANIFEST_DIR"));
+    B64.encode(Sha256::digest(std::fs::read(&path).unwrap_or_else(|e| panic!("{path}: {e}"))))
+}
+
+#[test]
+fn eip191_recovers_the_fixed_vector_and_rejects_a_tamper() {
+    // personal_sign over the intent JSON. Key 4c0883a6…2318, address 0x2c7536e3…5c23.
+    // Signature v = 28. Produced with keccak256 of the EIP-191 prefix and secp256k1 (prehash off).
+    let address = "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23";
+    let message = r#"{"op":"status","account_id":"0x2c7536e3605d9c16a7a3d7b1898e529396a65c23","ts_ms":1700000000000,"params":{},"nonce":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","recipient":"keyhole"}"#;
+    let signature = "0xda2cc385817dcb2341a8bef2f0b65524f245f3f730f0ac60ba563983a94cbcb520dfb828255f599428df0cd3af064297f485df1b067339489975274153e22fed1c";
+    let auth = Auth {
+        scheme: "eip191".into(),
+        address: address.into(),
+        account_id: address.into(),
+        signature: signature.into(),
+        nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".into(),
+        message: message.into(),
+        recipient: "keyhole".into(),
+        ..Auth::default()
+    };
+    let (req, nonce) = verify_eip191(&auth, "keyhole").unwrap();
+    assert_eq!(req.op, "status");
+    assert_eq!(req.account_id, address);
+    assert_eq!(req.ts_ms, 1_700_000_000_000);
+    assert_eq!(nonce, [0u8; 32]);
+    assert_eq!(recover_eip191_address(message, signature).unwrap(), address);
+    let mut tampered = auth.clone();
+    tampered.message = message.replace("status", "withdraw");
+    assert_eq!(verify_eip191(&tampered, "keyhole").unwrap_err().code, "bad_signature");
+    let mut other = auth.clone();
+    other.account_id = "0x0000000000000000000000000000000000000001".into();
+    other.address = other.account_id.clone();
+    assert_eq!(verify_eip191(&other, "keyhole").unwrap_err().code, "bad_signature");
+}
+
+#[test]
+fn mint_media_matches_the_site_picture_and_file_hash() {
+    // Same pictures as web/lib/traits.ts for these token ids (tier 1).
+    let cases = [
+        ("0", "k08.webp"),
+        ("k0642e7964b2fb515", "k08.webp"),
+        ("k5f4750858f328940", "k03.webp"),
+        ("k857b6b68facc0f94", "k03.webp"),
+    ];
+    for (id, file) in cases {
+        let (url, hash) = bronze_media("keyhole-devmo.near", id);
+        assert_eq!(url, format!("https://keyhole-seven.vercel.app/heirloom/keys/{file}"));
+        let n = file[1..3].parse::<u8>().unwrap();
+        assert_eq!(hash, art_file_hash(n));
+    }
+    let mut saw_five = false;
+    for i in 0..400u32 {
+        let (url, hash) = bronze_media("keyhole-devmo.near", &format!("probe{i}"));
+        if url.ends_with("k05.webp") {
+            assert_eq!(hash, art_file_hash(5));
+            saw_five = true;
+            break;
+        }
+    }
+    assert!(saw_five, "bronze pool never selected picture 5");
 }
