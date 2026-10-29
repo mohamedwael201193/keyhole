@@ -3,12 +3,12 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { Scene } from "@/components/Art";
 import { useI18n } from "@/lib/i18n";
 import { attestation, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
-import { CALLS } from "@/lib/evidence";
+import { CALLS, PUBLISHED_INFO_CALL } from "@/lib/evidence";
 import { CALL_ID, fastfsCheck, fastfsUrl, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
 
 export function VerifyView({ initial }: { initial: string | null }) {
   const { t } = useI18n();
-  const [id, setId] = useState(initial || CALLS[3].id);
+  const [id, setId] = useState(initial || PUBLISHED_INFO_CALL);
   const [a, setA] = useState<Attestation | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,7 +29,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
     } catch { setErr("network"); }
     finally { setBusy(false); }
   }, []);
-  useEffect(() => { if (initial) void go(initial); }, [initial, go]);
+  useEffect(() => { void go(initial || PUBLISHED_INFO_CALL); }, [initial, go]);
   const ok = !!ck && ck.quote && ck.registered && ck.published && ck.fastfs === true;
   const known = !!a && WORKER_WASM_SHA256.includes(a.executed_wasm_sha256.toLowerCase());
   const mark = (pass: boolean | null) => pass == null ? "…" : pass ? "✓" : "✕";

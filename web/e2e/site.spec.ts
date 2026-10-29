@@ -34,10 +34,25 @@ test("verify: a published-build mainnet call passes in the browser", async ({ pa
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
 });
 
+test("verify: the default page checks the published b3fa1a39 info call", async ({ page }) => {
+  await page.goto("/verify");
+  await expect(page.locator("#cid")).toHaveValue("9d19bceb-986b-4745-9bf9-91f7dcb62b6e");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
+  await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
+  await expect(page.locator(".ck .ok")).toHaveCount(6);
+  await expect(page.getByText("b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a").first()).toBeVisible();
+  await expect(page.getByText("NEP-413 full-access key, or an EIP-191 MetaMask signature")).toBeVisible();
+  await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
+});
+
 test("verify: rejects a non-uuid", async ({ page }) => {
   await page.goto("/verify");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await page.locator("#cid").fill("../../etc");
-  await page.getByTestId("verify-btn").click();
+  const btn = page.getByTestId("verify-btn");
+  await expect(btn).toBeEnabled();
+  await btn.click({ force: true });
   await expect(page.getByTestId("verify-error")).toBeVisible();
 });
 
