@@ -20,10 +20,17 @@ export function useSigned(op: Op) {
   useEffect(() => {
     if (pending) { try { if (JSON.parse(pending.message).op === op) { clearPending(); void send(pending); } } catch { /* ignore */ } }
   }, [pending, op, send, clearPending]);
-  const run = useCallback(async (params?: Record<string, unknown>) => {
-    setRes(null); setBusy(true);
+  const clear = useCallback(() => { setRes((prev) => (prev?.error ? null : prev)); }, []);
+  const reset = useCallback(() => { setRes(null); }, []);
+  const run = useCallback(async (params?: Record<string, unknown>, opts?: { quiet?: boolean }) => {
+    if (!opts?.quiet) setRes(null);
+    setBusy(true);
     try { const auth = await sign(op, params); await send(auth); }
-    catch (e) { setBusy(false); setRes({ call_id: null, status: null, output: null, attestation_url: null, time_ms: null, error: { code: e instanceof SignError ? e.code : "wallet_rejected" } }); }
+    catch (e) {
+      setBusy(false);
+      if (opts?.quiet) return;
+      setRes({ call_id: null, status: null, output: null, attestation_url: null, time_ms: null, error: { code: e instanceof SignError ? e.code : "wallet_rejected" } });
+    }
   }, [sign, op, send]);
-  return { run, busy, res };
+  return { run, busy, res, clear, reset };
 }

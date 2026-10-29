@@ -110,7 +110,7 @@ test("header Connect wallet opens the selector on the first click", async ({ pag
   expect(rowBox!.y).toBeGreaterThanOrEqual(0);
   expect(rowBox!.y + rowBox!.height).toBeLessThanOrEqual((vp?.height ?? 0) + 1);
   if ((vp?.width ?? 1000) <= 700) await expect(page.locator("#near-wallet-selector-modal .modal-right")).toBeHidden();
-  await expect(modal.getByText(/MyNearWallet|Meteor/).first()).toBeVisible();
+  await expect(modal.getByText("KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas.")).toBeVisible();
 });
 
 test("sealed vault names MetaMask and a gas-free signature", async ({ page }) => {
@@ -209,13 +209,48 @@ for (const kind of ["swap", "withdraw"] as const) {
       await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
       await expect(page.getByTestId("trade-out")).toContainText("success");
       await expect(page.getByRole("link", { name: /intents explorer/ })).toHaveAttribute("href", "https://explorer.near-intents.org/transactions/4qAnExample");
+      await expect(page.getByTestId("error")).toHaveCount(0);
     } else {
       await expect(page.getByTestId("withdraw-out")).toContainText("Withdrawn 0.01 USDC to holder.keyhole.test", { timeout: 20_000 });
       await expect(page.getByTestId("withdraw-out")).toContainText("b5ea");
       await expect(page.getByTestId("withdraw-out")).toContainText("success");
+      await expect(page.getByTestId("error")).toHaveCount(0);
     }
   });
 }
+
+test("a decline is gone after a later trade success", async ({ page }) => {
+  test.setTimeout(60_000);
+  await holdAccount(page);
+  await page.route("**/api/worker", async (route) => {
+    const body = route.request().postDataJSON() as { op?: string } | null;
+    const output = body?.op === "withdraw"
+      ? { ok: true, op: "withdraw", request_id: "b5ea", status: "success" }
+      : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success" };
+    await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
+  });
+  await page.goto("/vault");
+  const balanceCard = page.locator(".c").filter({ has: page.getByTestId("balance-btn") });
+  await expect(page.getByTestId("balance-btn")).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("balance-btn").click();
+  await expect(balanceCard.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
+  await expect(balanceCard.getByText("You declined the signature.")).toBeVisible();
+  await page.getByRole("button", { name: "History" }).click();
+  await expect(balanceCard.getByTestId("error")).toHaveCount(0);
+  const activity = page.locator(".c").filter({ has: page.getByRole("button", { name: "History" }) });
+  await expect(activity.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected");
+  await page.evaluate(() => {
+    sessionStorage.setItem("kh_pending_sign", JSON.stringify({
+      message: JSON.stringify({ op: "swap", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
+      nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      ctx: { op: "swap", give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
+    }));
+  });
+  await page.goto("/vault?back=1#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+  await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
+  await expect(page.getByTestId("trade-out")).toContainText("success");
+  await expect(page.getByTestId("error")).toHaveCount(0);
+});
 
 test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "sets 1280 and 390 itself");
@@ -300,7 +335,7 @@ test("vault shows a premium empty or offline state; connect opens the wallet sel
   await expect(page.getByTestId("vault-empty").or(page.getByTestId("offline"))).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("error")).toHaveCount(0);
   await page.getByTestId("connect").click();
-  await expect(page.getByText(/MyNearWallet|Meteor/).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas.")).toBeVisible({ timeout: 20_000 });
 });
 
 test("music is off by default and toggles", async ({ page }) => {

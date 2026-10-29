@@ -166,7 +166,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Resume a redirect-based signMessage (e.g. MyNearWallet returns the signature in the URL hash).
+    // Resume a redirect-based signMessage (the signature comes back in the URL hash).
     const h = new URLSearchParams(location.hash.slice(1));
     const saved = sessionStorage.getItem(PENDING);
     if (h.get("signature") && saved) {
@@ -219,7 +219,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const m = String((e as Error)?.message || e);
       throw new SignError(/not supported|not implemented|signMessage/i.test(m) ? "wallet_no_sign_message" : "wallet_rejected");
     }
-    if (!res) throw new SignError("wallet_rejected"); // redirect wallets navigate away before this line
+    if (!res) { sessionStorage.removeItem(PENDING); throw new SignError("wallet_rejected"); } // redirect wallets navigate away before this line
     sessionStorage.removeItem(PENDING);
     return { account_id: res.accountId, public_key: res.publicKey, signature: res.signature, nonce, message, recipient: NEP413_RECIPIENT };
   }, [ensure]);
