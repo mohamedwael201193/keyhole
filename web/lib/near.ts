@@ -4,7 +4,7 @@ export interface TokenMetadata { title: string | null; description: string | nul
 export interface Token { token_id: string; owner_id: string; metadata: TokenMetadata | null }
 export interface Config { owner: string; minter: string; treasury: string; royalty_bps: number; beats: string }
 
-export async function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
+async function viewOnce<T>(method: string, args: Record<string, unknown>, contract: string): Promise<T> {
   const args_base64 = typeof btoa === "function" ? btoa(JSON.stringify(args)) : Buffer.from(JSON.stringify(args)).toString("base64");
   const r = await fetch(RPC_URL, {
     method: "POST", headers: { "content-type": "application/json" },
@@ -15,6 +15,12 @@ export async function view<T>(method: string, args: Record<string, unknown> = {}
   const j = await r.json();
   if (j.error || j.result?.error) throw new Error(j.error?.cause?.name || j.result?.error || "rpc");
   return JSON.parse(new TextDecoder().decode(new Uint8Array(j.result.result))) as T;
+}
+
+/** One retry: a cold NEAR RPC miss should not paint a blank supply. */
+export async function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
+  try { return await viewOnce<T>(method, args, contract); }
+  catch { return await viewOnce<T>(method, args, contract); }
 }
 
 export const nftTokens = (from = 0, limit = 50) => view<Token[]>("nft_tokens", { from_index: String(from), limit });
