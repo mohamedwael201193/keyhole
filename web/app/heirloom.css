@@ -151,9 +151,9 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .encl .ph { border-radius: 32px; overflow: hidden; }
 .encl .ph img { width: 100%; height: auto; }
 .attc { padding: 34px; }
-.attc .kv { display: grid; grid-template-columns: 150px 1fr; gap: 14px 20px; margin: 24px 0; font-size: 15px; }
+.attc .kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px 20px; margin: 24px 0; font-size: 15px; min-width: 0; }
 .attc .kv dt { font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mu); padding-top: 3px; }
-.attc .kv dd { font: 500 15px var(--mono); word-break: break-all; }
+.attc .kv dd { font: 500 15px/1.45 var(--mono); min-width: 0; overflow-wrap: anywhere; }
 
 .safe .g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 50px; }
 .safe .card { padding: 30px; }
@@ -222,9 +222,9 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .lb { font: 500 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--mu); margin-bottom: 14px; }
 .vault-key { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .vault-key .att { align-self: flex-start; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; font-size: 15px; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 14px; font-size: 15px; min-width: 0; }
 .kv dt { color: var(--mu); font: 500 12px var(--mono); text-transform: uppercase; padding-top: 3px; }
-.kv dd { text-align: end; font-weight: 600; }
+.kv dd { text-align: end; font: 500 15px/1.45 var(--mono); min-width: 0; overflow-wrap: anywhere; }
 .big { font-size: 96px; line-height: 1; }
 .big small { font-size: .42em; color: var(--mu); font-weight: 700 !important; }
 .up { color: #16603C; font: 600 15px var(--mono); margin-top: 8px; }
@@ -447,6 +447,8 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
   .priv .lab { position: static; max-width: none; margin: 12px; }
   .tt { grid-template-columns: 1fr; }
   .reveal .tag { font-size: 12px; max-width: 90%; white-space: normal; text-align: center; }
+  .kv, .attc .kv { grid-template-columns: minmax(0, 1fr); row-gap: 2px; }
+  .kv dd, .attc .kv dd { text-align: start; margin-bottom: 12px; }
 }
 html.no-motion .hero h1, html.no-motion .hero .lead, html.no-motion .hero .eb, html.no-motion .hero .btn,
 html.no-motion .stats, html.no-motion .hkey, html.no-motion .orbit .m-in, html.no-motion .beat, html.no-motion .kh-ring { animation: none; }
