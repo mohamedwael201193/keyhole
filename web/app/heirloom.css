@@ -729,6 +729,11 @@ html.no-motion .foil-card .bw { display: none; }
   letter-spacing: -.01em;
   color: #1F4B4F;
 }
+#near-wallet-selector-modal .kh-sign-note {
+  margin: 0 24px 14px;
+  font: 500 15px/1.45 var(--sans);
+  color: #1A2A2C;
+}
 #near-wallet-selector-modal .single-wallet,
 #near-wallet-selector-modal .single-wallet.sidebar {
   background: #ECE6DA;
@@ -802,4 +807,5 @@ html.no-motion .foil-card .bw { display: none; }
     grid-template-columns: 1fr;
   }
   #near-wallet-selector-modal .nws-modal-title { font-size: 24px; }
+  #near-wallet-selector-modal .kh-sign-note { margin: 0 16px 12px; font-size: 14px; }
 }

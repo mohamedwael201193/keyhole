@@ -12,7 +12,7 @@ function asMetaMask(factory: WalletModuleFactory): WalletModuleFactory {
   };
 }
 
-/** Reown / WalletConnect is optional. An empty value hides that path. */
+/** An optional project id. An empty value hides that path. */
 export function reownProjectId(env: string | undefined = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID): string | null {
   const id = env?.trim();
   return id ? id : null;
@@ -24,7 +24,7 @@ const NEAR_EVM_RPC = "https://eth-rpc.mainnet.near.org";
 /**
  * Ethereum Wallets module (NEAR Wallet Selector).
  * Injected MetaMask works with no project id.
- * WalletConnect / the Reown modal is added only when NEXT_PUBLIC_REOWN_PROJECT_ID is set.
+ * The extra mobile connector is added only when NEXT_PUBLIC_REOWN_PROJECT_ID is set.
  * The module does not implement NEP-413 signMessage.
  */
 export async function ethereumWalletModule(): Promise<WalletModuleFactory | null> {

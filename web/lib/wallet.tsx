@@ -26,6 +26,7 @@ export type OpResume =
 const CONNECTING = "Confirm the connection in the extension window";
 const CONNECTING_NEXT = "Confirm the connection in the extension window. It may open in the MetaMask side panel or the toolbar icon.";
 const NET_HELP = "MetaMask will ask to add the NEAR Protocol network — approve it to continue.";
+const SIGN_NOTE = "KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas.";
 const ETH_MODAL_CSS = `
 .ethereum-wallet-modal-backdrop {
   position: fixed; inset: 0; background: #1A2A2C55 !important;
@@ -90,6 +91,15 @@ const ETH_MODAL_CSS = `
 function tuneWalletChrome() {
   document.querySelectorAll("#near-wallet-selector-modal .nws-modal-title").forEach((el) => {
     if (el.textContent !== "Connect your wallet") el.textContent = "Connect your wallet";
+  });
+  // The installed modal build accepts `description` and never paints it.
+  document.querySelectorAll("#near-wallet-selector-modal .nws-modal-title-wrapper").forEach((wrap) => {
+    if (wrap.parentElement?.querySelector("[data-kh-sign]")) return;
+    const p = document.createElement("p");
+    p.dataset.khSign = "";
+    p.className = "kh-sign-note";
+    p.textContent = SIGN_NOTE;
+    wrap.insertAdjacentElement("afterend", p);
   });
   document.querySelectorAll(".connecting-message span, .connecting-message").forEach((el) => {
     if (el.childElementCount) return;
@@ -166,7 +176,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Resume a redirect-based signMessage (e.g. MyNearWallet returns the signature in the URL hash).
+    // Resume a redirect-based signMessage (the signature comes back in the URL hash).
     const h = new URLSearchParams(location.hash.slice(1));
     const saved = sessionStorage.getItem(PENDING);
     if (h.get("signature") && saved) {
@@ -219,7 +229,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const m = String((e as Error)?.message || e);
       throw new SignError(/not supported|not implemented|signMessage/i.test(m) ? "wallet_no_sign_message" : "wallet_rejected");
     }
-    if (!res) throw new SignError("wallet_rejected"); // redirect wallets navigate away before this line
+    if (!res) { sessionStorage.removeItem(PENDING); throw new SignError("wallet_rejected"); } // redirect wallets navigate away before this line
     sessionStorage.removeItem(PENDING);
     return { account_id: res.accountId, public_key: res.publicKey, signature: res.signature, nonce, message, recipient: NEP413_RECIPIENT };
   }, [ensure]);

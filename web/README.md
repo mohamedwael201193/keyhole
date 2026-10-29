@@ -65,10 +65,9 @@ The rule lives in [`lib/near.ts`](lib/near.ts) and is unit-tested.
 
 ## Wallets, languages, access
 
-- **Wallets:** NEAR Wallet Selector with MyNearWallet, Meteor, HERE, Intear, Sender, Nightly and Ledger.
-  - WalletConnect turns on when `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is set.
-  - Redirect wallets resume the signed request after they return.
-  - The wallet bundle loads only when you click Connect, or when you have connected before.
+- **Wallets:** a NEAR wallet (NEP-413 `signMessage`) or MetaMask (EIP-191 `personal_sign`). The published enclave checks both.
+  - The wallet bundle loads when you click Connect, or when this browser has connected before.
+  - A redirect wallet resumes the signed request after it returns.
 - **Language:** English only. Copy lives in `messages/en.json`.
   - There is no language switcher and no RTL layout.
   - `/ar` and `/ar/...` redirect to the same English path.
