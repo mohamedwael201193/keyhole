@@ -23,7 +23,9 @@ test("hero shows live supply from mainnet and official logos", async ({ page }) 
 });
 
 test("gallery renders every on-chain key", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto("/gallery");
+  await expect(page.getByTestId("key-nft").first()).toBeVisible({ timeout: 45_000 });
   const n = await page.getByTestId("gallery").getByTestId("key-nft").count();
   expect(n).toBeGreaterThanOrEqual(3);
   await expect(page.getByTestId("gallery").locator('[data-state="locked"]').first()).toBeVisible();
@@ -276,7 +278,7 @@ test("home scroll stays inside the viewport", async ({ page }, info) => {
 });
 
 test("pages stay inside the viewport after content loads", async ({ page }, info) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   test.skip(info.project.name !== "desktop", "this test sets 1280 and 390 itself");
   const routes = ["/", "/vault", "/mint", "/verify", "/gallery", "/atlas", "/identity"] as const;
   for (const [w, h] of [[1280, 800], [390, 844]] as const) {
@@ -286,9 +288,9 @@ test("pages stay inside the viewport after content loads", async ({ page }, info
       if (p === "/verify") {
         await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
       } else if (p === "/gallery") {
-        await expect(page.getByTestId("key-nft").first()).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByTestId("key-nft").first()).toBeVisible({ timeout: 45_000 });
       } else if (p === "/") {
-        await expect(page.getByTestId("supply")).toBeVisible();
+        await expect(page.getByTestId("supply")).toHaveText(/^\d+$/, { timeout: 15_000 });
       } else {
         await expect(page.locator("h1").first()).toBeVisible();
       }

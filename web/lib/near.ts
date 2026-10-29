@@ -1,32 +1,12 @@
-import { KEYS_CONTRACT, RPC_URL } from "./config";
+import { KEYS_CONTRACT } from "./config";
+import { nearView } from "./rpc";
 
 export interface TokenMetadata { title: string | null; description: string | null; expires_at: string | null; issued_at: string | null }
 export interface Token { token_id: string; owner_id: string; metadata: TokenMetadata | null }
 export interface Config { owner: string; minter: string; treasury: string; royalty_bps: number; beats: string }
 
-const RPCS = [RPC_URL, "https://free.rpc.fastnear.com"];
-
-async function viewAt<T>(url: string, method: string, args: Record<string, unknown>, contract: string): Promise<T> {
-  const args_base64 = typeof btoa === "function" ? btoa(JSON.stringify(args)) : Buffer.from(JSON.stringify(args)).toString("base64");
-  const r = await fetch(url, {
-    method: "POST", headers: { "content-type": "application/json" }, cache: "no-store",
-    signal: AbortSignal.timeout(8_000),
-    body: JSON.stringify({ jsonrpc: "2.0", id: "kh", method: "query",
-      params: { request_type: "call_function", finality: "final", account_id: contract, method_name: method, args_base64 } }),
-  });
-  const j = await r.json();
-  if (!r.ok || j.error || j.result?.error) throw new Error(j.error?.cause?.name || j.result?.error || "rpc");
-  return JSON.parse(new TextDecoder().decode(new Uint8Array(j.result.result))) as T;
-}
-
-/** Mainnet first. A cold miss tries the public fallback instead of returning an empty page. */
-export async function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
-  let last: unknown;
-  for (const url of RPCS) {
-    try { return await viewAt<T>(url, method, args, contract); }
-    catch (e) { last = e; }
-  }
-  throw last instanceof Error ? last : new Error("rpc");
+export function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
+  return nearView<T>(method, args, contract);
 }
 
 export const nftTokens = (from = 0, limit = 50) => view<Token[]>("nft_tokens", { from_index: String(from), limit });
