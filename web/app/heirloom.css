@@ -45,6 +45,34 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .links a { color: var(--ink); text-decoration: none; padding: 8px 0; }
 .links a.on { color: var(--teal); border-bottom: 2px solid var(--teal); }
 .nav-tools { justify-self: end; display: flex; align-items: center; gap: 10px; }
+.acct { position: relative; }
+.acct-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
+  width: min(320px, calc(100vw - 24px));
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px; border-radius: 18px;
+  background: #F6F1E7; color: #1F4B4F;
+  border: 1px solid #B8893E;
+  box-shadow: 0 18px 40px -24px #1A2A2C88;
+  text-align: start;
+}
+.acct-menu .id { margin: 0 0 6px; font: 500 13px/1.45 var(--mono); color: #1A2A2C; overflow-wrap: anywhere; }
+.acct-menu button, .acct-menu a {
+  display: flex; align-items: center; min-height: 40px; padding: 0 12px;
+  border-radius: 12px; border: 1px solid transparent;
+  background: transparent; color: #1F4B4F;
+  font: 600 14px var(--sans); text-decoration: none; cursor: pointer; text-align: start;
+}
+.acct-menu button:hover, .acct-menu a:hover { background: #1F4B4F14; }
+.nav.dark .acct-menu, .nav.dark .acct-menu button, .nav.dark .acct-menu a { color: #1F4B4F; }
+.acct-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0 0; max-width: 100%; }
+.acct-line .id { margin: 0; font: 500 14px/1.45 var(--mono); color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
+.acct-line button {
+  min-height: 36px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--ln); background: var(--sf); color: var(--teal);
+  font: 600 13px var(--sans); cursor: pointer;
+}
+.chip.wait i { background: #B8893E; box-shadow: none; }
 .cw { background: var(--teal); color: #F6F1E7; height: 44px; padding: 0 22px; border-radius: 999px; font-weight: 700; font-size: 15px; border: 0; cursor: pointer; display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; }
 #near-wallet-selector-modal .nws-modal-wrapper { font-family: var(--sans); }
 .cw:disabled { opacity: .55; cursor: wait; }

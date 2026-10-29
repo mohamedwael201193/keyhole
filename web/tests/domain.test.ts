@@ -6,6 +6,8 @@ import { toBaseUnits } from "@/lib/assets";
 import { WORKER_ERROR_CODES } from "@/lib/errors";
 import { errorText, translate } from "@/lib/i18n";
 import { staticChecks, CALL_ID, fastfsUrl, PREVIOUS_WASM_SHA256, PUBLISHED_WASM_SHA256, publishedBuild } from "@/lib/verify";
+import { resolveOnline } from "@/lib/useHealth";
+import { freshHealth, OFFLINE_TTL_MS, ONLINE_TTL_MS, shareCheck } from "@/lib/healthGate";
 import en from "@/messages/en.json";
 import { readFileSync } from "node:fs";
 
@@ -57,6 +59,37 @@ describe("key traits", () => {
     expect(leg.daily).toBe(500);
     expect(nep177("1", 1).extra.traits.bit_cipher).toBe("00000001");
     expect(nep177("1", 1).extra.seed).toBe("sha256(contract ‖ token_id)");
+  });
+});
+describe("enclave health", () => {
+  it("retries a cold miss once", async () => {
+    let n = 0;
+    await expect(resolveOnline(async () => { n += 1; return n > 1; })).resolves.toBe(true);
+    expect(n).toBe(2);
+  });
+  it("retries a thrown read once", async () => {
+    let n = 0;
+    await expect(resolveOnline(async () => { n += 1; if (n === 1) throw new Error("cold"); return true; })).resolves.toBe(true);
+  });
+  it("is offline only after the retry misses", async () => {
+    await expect(resolveOnline(async () => false)).resolves.toBe(false);
+  });
+  it("reuses a live result for a minute and a miss for 15 seconds", () => {
+    const now = 1_000_000;
+    const live = { at: now, online: true };
+    const down = { at: now, online: false };
+    expect(freshHealth(live, now + ONLINE_TTL_MS - 1)).toBe(live);
+    expect(freshHealth(live, now + ONLINE_TTL_MS)).toBeNull();
+    expect(freshHealth(down, now + OFFLINE_TTL_MS - 1)).toBe(down);
+    expect(freshHealth(down, now + OFFLINE_TTL_MS)).toBeNull();
+  });
+  it("shares one in-flight check across concurrent callers", async () => {
+    const slot: { current: Promise<number> | null } = { current: null };
+    let n = 0;
+    const run = () => shareCheck(slot, async () => { n += 1; await new Promise((r) => setTimeout(r, 20)); return n; });
+    await expect(Promise.all([run(), run(), run()])).resolves.toEqual([1, 1, 1]);
+    expect(n).toBe(1);
+    await expect(run()).resolves.toBe(2);
   });
 });
 describe("formatting", () => {

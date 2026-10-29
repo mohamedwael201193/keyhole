@@ -18,6 +18,7 @@ import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
 import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
 import { attestation, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { copyText } from "@/lib/copyText";
 import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
@@ -87,6 +88,7 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
   const balances = (balance.res?.output?.ok ? balance.res.output.balances as Bal[] : null);
   const entries = (history.res?.output?.ok ? history.res.output.entries as Hist[] : null);
   const [logVerified, setLogVerified] = useState<boolean | null>(null);
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     const id = history.res?.call_id;
     if (!history.res?.output?.ok || !id) { setLogVerified(null); return; }
@@ -108,8 +110,15 @@ export function VaultView({ initialOnline }: { initialOnline: boolean }) {
         <div>
           <p className="eb">{accountId ? t("vault.eyebrow", { account: shortAccount(accountId) }) : t("vault.eyebrowOff")}</p>
           <h1>{t("vault.title")}</h1>
+          {accountId && (
+            <p className="acct-line">
+              <span className="id" data-testid="vault-account">{accountId}</span>
+              <button type="button" onClick={() => { void copyText(accountId).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1600); }); }}>{copied ? t("nav.copied") : t("nav.copy")}</button>
+            </p>
+          )}
         </div>
-        {online && <span className="chip"><i />{t("vault.live", { hash: WORKER_WASM_SHA256[0].slice(0, 8) })}</span>}
+        {online === true && <span className="chip"><i />{t("vault.live", { hash: WORKER_WASM_SHA256[0].slice(0, 8) })}</span>}
+        {online === null && <span className="chip wait" data-testid="enclave-checking"><i />{t("vault.checking")}</span>}
       </div>
       {online === false ? (
         <div><OfflineState /><HowStrip /></div>

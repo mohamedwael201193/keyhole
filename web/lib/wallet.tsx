@@ -19,6 +19,97 @@ interface WalletCtx {
 }
 const Ctx = createContext<WalletCtx | null>(null);
 const PENDING = "kh_pending_sign";
+const CONNECTING = "Confirm the connection in the extension window";
+const CONNECTING_NEXT = "Confirm the connection in the extension window. It may open in the MetaMask side panel or the toolbar icon.";
+const NET_HELP = "MetaMask will ask to add the NEAR Protocol network — approve it to continue.";
+const ETH_MODAL_CSS = `
+.ethereum-wallet-modal-backdrop {
+  position: fixed; inset: 0; background: #1A2A2C55 !important;
+}
+.ethereum-wallet-modal-wrapper {
+  position: fixed; inset: 0; z-index: 10000; overflow: auto;
+}
+.ethereum-wallet-modal-container {
+  display: flex !important; min-height: 100%; width: 100%;
+  align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+}
+.ethereum-wallet-modal-content {
+  background: #F6F1E7 !important;
+  color: #1F4B4F !important;
+  border: 1px solid #B8893E !important;
+  border-radius: 28px !important;
+  box-shadow: 0 28px 70px -28px #1A2A2C88 !important;
+  font-family: var(--sans);
+  padding: 28px !important;
+  width: min(420px, calc(100vw - 32px));
+  max-width: 420px;
+}
+.ethereum-wallet-modal h2 {
+  font-family: var(--serif) !important;
+  font-weight: 600 !important;
+  font-size: 32px !important;
+  line-height: 1.15 !important;
+  text-align: center !important;
+  color: #1F4B4F !important;
+  margin: 0 0 8px !important;
+}
+.ethereum-wallet-modal .ethereum-wallet-tx-info-text p,
+.ethereum-wallet-modal .ethereum-wallet-tx-info-col dt,
+.ethereum-wallet-modal .ethereum-wallet-tx-info-col dd,
+.ethereum-wallet-modal .kh-net-help {
+  color: #1A2A2C !important;
+}
+.ethereum-wallet-modal .kh-net-help {
+  margin: 8px 0 12px;
+  font: 500 15px/1.45 var(--sans);
+}
+.ethereum-wallet-modal .ethereum-wallet-btn-cancel {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 10px 16px !important;
+  background: #ECE6DA !important;
+  color: #1F4B4F !important;
+  border: 1px solid #1A2A2C33 !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+.ethereum-wallet-modal .ethereum-wallet-btn-cancel:hover {
+  background: #1F4B4F14 !important;
+}
+`;
+
+/** Cream-restyle the stock selector title, the injected connecting line, and the chain-switch dialog. */
+function tuneWalletChrome() {
+  document.querySelectorAll("#near-wallet-selector-modal .nws-modal-title").forEach((el) => {
+    if (el.textContent !== "Connect your wallet") el.textContent = "Connect your wallet";
+  });
+  document.querySelectorAll(".connecting-message span, .connecting-message").forEach((el) => {
+    if (el.childElementCount) return;
+    if (el.textContent?.trim() === CONNECTING) el.textContent = CONNECTING_NEXT;
+  });
+  document.querySelectorAll(".ethereum-wallet-modal").forEach((modal) => {
+    if (modal.querySelector("[data-kh-net]")) return;
+    const h2 = [...modal.querySelectorAll("h2")].find((el) => el.textContent?.trim() === "Switch Network");
+    if (!h2) return;
+    const p = document.createElement("p");
+    p.dataset.khNet = "";
+    p.className = "kh-net-help";
+    p.textContent = NET_HELP;
+    h2.insertAdjacentElement("afterend", p);
+  });
+  if (!document.querySelector(".ethereum-wallet-modal")) return;
+  let style = document.getElementById("kh-eth-modal");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "kh-eth-modal";
+    style.textContent = ETH_MODAL_CSS;
+  }
+  document.head.appendChild(style);
+}
 
 async function init(): Promise<{ selector: WalletSelector; modal: WalletSelectorModal }> {
   const [{ setupWalletSelector }, { setupModal }, mnw, meteor, here, intear, sender, nightly, ledger] = await Promise.all([
@@ -63,6 +154,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    document.documentElement.dataset.khTune = "1";
+    tuneWalletChrome();
+    const obs = new MutationObserver(tuneWalletChrome);
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
     // Resume a redirect-based signMessage (e.g. MyNearWallet returns the signature in the URL hash).
     const h = new URLSearchParams(location.hash.slice(1));
     const saved = sessionStorage.getItem(PENDING);
@@ -86,16 +185,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (!modal) return;
       // The selector modal mounts on show(). A show() in the same task as the
       // first createRoot can be dropped, so the header's first click opens it twice.
-      const retitle = () => {
-        document.querySelectorAll("#near-wallet-selector-modal .nws-modal-title").forEach((el) => {
-          if (el.textContent !== "Connect your wallet") el.textContent = "Connect your wallet";
-        });
-      };
       modal.show();
-      requestAnimationFrame(() => { modal.show(); retitle(); });
-      const obs = new MutationObserver(retitle);
-      obs.observe(document.body, { childList: true, subtree: true });
-      window.setTimeout(() => obs.disconnect(), 2000);
+      requestAnimationFrame(() => { modal.show(); tuneWalletChrome(); });
     });
   }, [ensure]);
   const disconnect = useCallback(async () => {
