@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assetRows, fromBaseUnits, priceToMicro, totalOf, tradeSummary, valueMicro, withdrawSummary } from "@/lib/amount";
+import { assetRows, formatUsdMicro, fromBaseUnits, priceToMicro, totalOf, tradeSummary, valueMicro, withdrawSummary } from "@/lib/amount";
 import { intentTx } from "@/lib/config";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
@@ -50,6 +50,17 @@ describe("token amounts", () => {
     expect(totalOf(null)).toEqual({ kind: "unread" });
     expect(totalOf([])).toEqual({ kind: "empty" });
     expect(totalOf(assetRows([{ token: WNEAR, balance: OUT }]))).toEqual({ kind: "amounts", text: "0.004484 wNEAR" });
+  });
+});
+
+describe("dollar totals", () => {
+  it("rounds 0.02 USDC plus wNEAR to $0.04, not the truncated $0.03", () => {
+    const usdc = Math.round(0.02 * 0.9995 * 1e6);
+    const wnear = Math.round(0.004484 * 4.42 * 1e6);
+    expect(usdc + wnear).toBe(39809);
+    expect(formatUsdMicro(usdc + wnear)).toBe("$0.04");
+    expect(formatUsdMicro(usdc)).toBe("$0.02");
+    expect(formatUsdMicro(wnear)).toBe("$0.02");
   });
 });
 

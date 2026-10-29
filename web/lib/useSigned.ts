@@ -11,7 +11,10 @@ export function useSigned(op: Op) {
   const [res, setRes] = useState<WorkerResult | null>(null);
   const send = useCallback(async (auth: Parameters<typeof callWorker>[1]) => {
     setBusy(true);
-    try { setRes(await callWorker(op, auth)); } catch { setRes({ call_id: null, status: null, output: null, attestation_url: null, time_ms: null, error: { code: "network" } }); }
+    try {
+      const { ctx: _ctx, ...rest } = auth as Parameters<typeof callWorker>[1] & { ctx?: unknown };
+      setRes(await callWorker(op, rest));
+    } catch { setRes({ call_id: null, status: null, output: null, attestation_url: null, time_ms: null, error: { code: "network" } }); }
     finally { setBusy(false); }
   }, [op]);
   useEffect(() => {
