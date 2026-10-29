@@ -111,8 +111,8 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
             <div className="card attc">
               <span className="att">{t("land.attested")}</span>
               <dl className="kv">
-                <dt>{t("land.worker")}</dt><dd>{WORKER_WASM_SHA256[0]}</dd>
-                <dt>{t("land.tx")}</dt><dd><a href={tx(WORKER_PUBLISH_TX)} target="_blank" rel="noreferrer">{WORKER_PUBLISH_TX}</a></dd>
+                <dt>{t("land.worker")}</dt><dd className="mono" data-kind="hash">{WORKER_WASM_SHA256[0]}</dd>
+                <dt>{t("land.tx")}</dt><dd className="mono" data-kind="hash"><a href={tx(WORKER_PUBLISH_TX)} target="_blank" rel="noreferrer">{WORKER_PUBLISH_TX}</a></dd>
                 <dt>{t("land.runtime")}</dt><dd>OutLayer · wasm32-wasip2</dd>
               </dl>
               <Link className="btn b1" href="/verify">{t("land.verifySelf")}</Link>

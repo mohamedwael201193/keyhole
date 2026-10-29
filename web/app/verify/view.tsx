@@ -63,11 +63,12 @@ export function VerifyView({ initial }: { initial: string | null }) {
           </div>
           {a && ck && (
             <dl className="kv" style={{ marginTop: 22 }}>
-              <dt>{t("verify.published")}</dt><dd>{ck.fastfsHash || "…"}</dd>
-              <dt>{t("verify.executed")}</dt><dd>{a.executed_wasm_sha256}</dd>
-              {(["project_id", "worker_measurement", "input_hash", "output_hash", "build_target"] as const).map((k) => (
-                <Fragment key={k}><dt>{k}</dt><dd>{String(a[k])}</dd></Fragment>
-              ))}
+              <dt>{t("verify.published")}</dt><dd className="mono" data-kind="hash">{ck.fastfsHash || "…"}</dd>
+              <dt>{t("verify.executed")}</dt><dd className="mono" data-kind="hash">{a.executed_wasm_sha256}</dd>
+              {(["project_id", "worker_measurement", "input_hash", "output_hash", "build_target"] as const).map((k) => {
+                const hash = k === "worker_measurement" || k === "input_hash" || k === "output_hash";
+                return <Fragment key={k}><dt>{k}</dt><dd className={hash || k === "project_id" ? "mono" : undefined} data-kind={hash ? "hash" : undefined}>{String(a[k])}</dd></Fragment>;
+              })}
               <dt>timestamp</dt><dd>{new Date(a.timestamp * 1000).toLocaleString()}</dd>
             </dl>
           )}

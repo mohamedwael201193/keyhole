@@ -209,6 +209,63 @@ test("pages stay inside the viewport after content loads", async ({ page }, info
   }
 });
 
+test("kv hashes sit in a left-aligned mono block; vault traits keep the body face", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "desktop alignment");
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  await page.goto("/");
+  const worker = page.locator(".attc .kv dd[data-kind=hash]").first();
+  await expect(worker).toBeVisible();
+  await expect(worker).toHaveCSS("text-align", "start");
+  await expect(worker).toHaveCSS("font-weight", "500");
+  expect((await worker.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).toContain("dm mono");
+  const runtime = page.locator(".attc .kv dd").last();
+  await expect(runtime).toHaveCSS("text-align", "end");
+  await expect(runtime).toHaveCSS("font-weight", "600");
+  expect((await runtime.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).not.toContain("dm mono");
+
+  await page.goto("/verify");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  const hash = page.locator(".ver .kv dd[data-kind=hash]").first();
+  await expect(hash).toBeVisible();
+  await expect(hash).toHaveCSS("text-align", "start");
+  expect((await hash.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).toContain("dm mono");
+  const stamp = page.locator(".ver .kv dd").last();
+  await expect(stamp).toHaveCSS("text-align", "end");
+  await expect(stamp).toHaveCSS("font-weight", "600");
+
+  await page.addInitScript(() => {
+    localStorage.setItem("signedAccountId", "holder.keyhole.test");
+    localStorage.setItem("near-wallet-selector:selectedWalletId", JSON.stringify("my-near-wallet"));
+  });
+  await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
+  await page.route("https://rpc.mainnet.near.org/**", async (route) => {
+    let method = "";
+    try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view call */ }
+    const payload = method === "nft_tokens_for_owner"
+      ? [{ token_id: "4", owner_id: "holder.keyhole.test", metadata: { title: "Key", description: null, expires_at: null, issued_at: null } }]
+      : method === "nft_tier" ? 1 : null;
+    if (payload == null) return route.continue();
+    const bytes = [...new TextEncoder().encode(JSON.stringify(payload))];
+    await route.fulfill({ json: { jsonrpc: "2.0", id: "kh", result: { result: bytes } } });
+  });
+  await page.goto("/vault");
+  const kv = page.getByTestId("vault-traits");
+  await expect(kv).toBeVisible({ timeout: 30_000 });
+  const head = kv.locator("dd").nth(0);
+  await expect(head).toHaveCSS("font-weight", "600");
+  await expect(head).toHaveCSS("text-align", "end");
+  expect((await head.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).not.toContain("dm mono");
+  const contract = kv.locator("dd").last();
+  await expect(contract).toHaveText("keyhole-devmo.near");
+  await expect(contract).toHaveCSS("font-weight", "500");
+  await expect(contract).toHaveCSS("text-align", "end");
+  expect((await contract.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).toContain("dm mono");
+  const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(extra, "connected vault scrolls sideways").toBeLessThanOrEqual(0);
+});
+
 test("hero: official token logos are visible in the gold-dust hero", async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 1280, "desktop hero");
   await page.goto("/");
