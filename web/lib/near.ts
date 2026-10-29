@@ -1,20 +1,12 @@
-import { KEYS_CONTRACT, RPC_URL } from "./config";
+import { KEYS_CONTRACT } from "./config";
+import { nearView } from "./rpc";
 
 export interface TokenMetadata { title: string | null; description: string | null; expires_at: string | null; issued_at: string | null }
 export interface Token { token_id: string; owner_id: string; metadata: TokenMetadata | null }
 export interface Config { owner: string; minter: string; treasury: string; royalty_bps: number; beats: string }
 
-export async function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
-  const args_base64 = typeof btoa === "function" ? btoa(JSON.stringify(args)) : Buffer.from(JSON.stringify(args)).toString("base64");
-  const r = await fetch(RPC_URL, {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: "kh", method: "query",
-      params: { request_type: "call_function", finality: "final", account_id: contract, method_name: method, args_base64 } }),
-    next: { revalidate: 15 },
-  } as RequestInit);
-  const j = await r.json();
-  if (j.error || j.result?.error) throw new Error(j.error?.cause?.name || j.result?.error || "rpc");
-  return JSON.parse(new TextDecoder().decode(new Uint8Array(j.result.result))) as T;
+export function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
+  return nearView<T>(method, args, contract);
 }
 
 export const nftTokens = (from = 0, limit = 50) => view<Token[]>("nft_tokens", { from_index: String(from), limit });

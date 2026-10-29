@@ -13,4 +13,7 @@ export const TEE_MINTER = "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870c
 export const NEARBLOCKS = "https://nearblocks.io";
 export const tx = (h: string) => `${NEARBLOCKS}/txns/${h}`;
 export const acct = (a: string) => `${NEARBLOCKS}/address/${a}`;
+/** Public transaction page. The path is /transactions/<id>; an intent hash uses that same path. */
+export const INTENTS_EXPLORER = "https://explorer.near-intents.org";
+export const intentTx = (hash: string) => `${INTENTS_EXPLORER}/transactions/${hash}`;
 export const attestation = (callId: string) => `${OUTLAYER_API}/attestations/by-call/${callId}`;

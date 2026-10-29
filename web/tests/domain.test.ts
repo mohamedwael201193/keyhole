@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { keyState, shortAccount, tierName } from "@/lib/near";
+import { isHolderRead } from "@/lib/rpc";
 import { guillocheOf } from "@/components/Engraving";
 import { CAPS, bitCipherBits, finishOf, keyIdentity, nep177, serialOf, traitSeed, toHex } from "@/lib/traits";
 import { toBaseUnits } from "@/lib/assets";
@@ -90,6 +91,15 @@ describe("enclave health", () => {
     await expect(Promise.all([run(), run(), run()])).resolves.toEqual([1, 1, 1]);
     expect(n).toBe(1);
     await expect(run()).resolves.toBe(2);
+  });
+});
+describe("near reads", () => {
+  it("caches public views and never shares a holder lookup", () => {
+    expect(isHolderRead("nft_tokens", { from_index: "0", limit: 50 })).toBe(false);
+    expect(isHolderRead("nft_total_supply", {})).toBe(false);
+    expect(isHolderRead("nft_tier", { token_id: "1" })).toBe(false);
+    expect(isHolderRead("config", {})).toBe(false);
+    expect(isHolderRead("nft_tokens_for_owner", { account_id: "alice.near", from_index: "0", limit: 10 })).toBe(true);
   });
 });
 describe("formatting", () => {

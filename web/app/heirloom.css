@@ -305,6 +305,10 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .act.p small { color: #D7E0DC; }
 .act.p b { color: #F6F1E7; }
 .arow { display: grid; grid-template-columns: 56px 1fr auto; gap: 16px; align-items: center; padding: 13px 0; border-top: 1px solid var(--ln); }
+.arow.plain { grid-template-columns: 1fr auto; }
+.result-card { margin-top: 14px; padding: 16px 18px; border-radius: 18px; background: #F3EDE2; border: 1px solid var(--ln); }
+.result-card b { display: block; font-size: 18px; }
+.result-card a { color: var(--teal); }
 .arow:first-of-type { border-top: 0; }
 .arow .medal { width: 46px; height: 46px; box-shadow: 0 0 0 3px #F6F1E7, 0 0 0 5px var(--brassL), 0 0 0 6px #8E6A2A; }
 .arow .medal img { width: 26px; height: 26px; }
