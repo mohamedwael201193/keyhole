@@ -369,7 +369,7 @@
   ],
   "wallet_no_sign_message": [
    "This wallet can't sign messages (NEP-413).",
-   "Use MyNearWallet, Meteor, HERE, Intear, Sender or Nightly."
+   "Use a NEAR wallet that can sign messages, or MetaMask."
   ],
   "metamask_next_enclave": [
    "Vault actions with MetaMask arrive with the next enclave version.",

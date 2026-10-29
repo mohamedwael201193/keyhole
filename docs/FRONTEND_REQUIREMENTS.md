@@ -3,8 +3,7 @@
 The web app must work for any NEAR user worldwide. These come from the worker/contract design and must be met by the site build.
 
 ## Wallets
-- Use NEAR Wallet Selector (`@near-wallet-selector/*`) with the major NEAR wallets: MyNearWallet, Meteor, HERE, Intear, Sender, Nightly, Ledger, plus WalletConnect for mobile.
-- Require `signMessage` (NEP-413). If the chosen wallet lacks it, say so clearly and suggest one that has it.
+- Use the NEAR wallet selector. A NEAR wallet must support `signMessage` (NEP-413). MetaMask signs the same intent with EIP-191. If the chosen NEAR wallet cannot sign messages, say so and point the user at one that can, or at MetaMask.
 - Sign: `message = JSON.stringify({op, account_id, ts_ms: Date.now(), params})`, `recipient = "keyhole"`, `nonce = 32 random bytes` (crypto.getRandomValues). Fresh nonce on every request; never reuse.
 - Named and implicit (64-hex) accounts must both display well (truncate the middle of hex ids).
 
@@ -24,7 +23,7 @@ The web app must work for any NEAR user worldwide. These come from the worker/co
 
 ## Mobile and access
 - Mobile-first, works at 360 px width, touch targets ≥ 44 px.
-- Deep links / WalletConnect for mobile wallets.
+- Mobile wallets connect from the same selector.
 - WCAG 2.2 AA: contrast, keyboard navigation, focus rings, `prefers-reduced-motion` turns off heavy animation.
 - Fast: LCP < 2.5 s on 4G, lazy-load 3D/motion, static pages where possible.
 

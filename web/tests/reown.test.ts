@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { reownProjectId } from "@/lib/ethereumWallets";
 
-describe("Reown project id", () => {
-  it("hides WalletConnect when the env value is missing or blank", () => {
+describe("optional project id", () => {
+  it("hides the extra connector when the env value is missing or blank", () => {
     expect(reownProjectId(undefined)).toBeNull();
     expect(reownProjectId("")).toBeNull();
     expect(reownProjectId("   ")).toBeNull();

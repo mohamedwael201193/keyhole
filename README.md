@@ -1,8 +1,7 @@
 <p align="center"><img src="docs/images/emblem.webp" width="220" alt="KEYHOLE emblem"></p>
 
 <h1 align="center">KEYHOLE</h1>
-<p align="center"><b>Nothing on the chain. Everything in the key.</b></p>
-<p align="center">The NFT is the viewing key to a confidential trading account that runs inside an Intel TDX enclave on NEAR. The key holder can read the book. Access follows the token.</p>
+<p align="center">An NFT on NEAR is the viewing key for a trading account inside an Intel TDX enclave. The chain records who holds the key. Balances and trades stay in the enclave until that holder signs a read.</p>
 
 <p align="center">
 <a href="https://keyhole-seven.vercel.app">Live site</a> ·
@@ -12,7 +11,80 @@
 <a href="#10-mainnet-end-to-end-30-steps">30-step mainnet E2E</a>
 </p>
 
-Everything below runs on **NEAR mainnet**. Every claim links to a transaction, an attestation, a file or a test. Author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
+Everything below runs on **NEAR mainnet**. Author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
+
+## What it is
+
+KEYHOLE is three pieces that work together. The contract [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) is the NFT. The worker runs in an OutLayer Intel TDX enclave and is the only minter. The website at [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) asks the holder to sign a message, sends that message to the worker, and shows the worker's answer.
+
+Holding the token is what lets that account read or move the confidential account. The worker calls `holder_tier` on every request. Transfer the NFT and the next call from the old account is refused with `no_key`.
+
+## The problem it solves
+
+A public chain shows balances and trades. Here those stay in the enclave. The holder still has a token they can transfer, and each enclave answer includes an attestation the browser can check against the published worker.
+
+## Try it
+
+Live site: [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app). Do the step. The words after the dash are what the page shows.
+
+1. Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and click **Connect wallet**. Choose a NEAR wallet or MetaMask. A NEAR wallet signs NEP-413. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published worker `b3fa1a39` checks both. — The header shows your account. **Vault** shows "Vault · connected as" and the full account id.
+2. Open [https://keyhole-seven.vercel.app/mint](https://keyhole-seven.vercel.app/mint) and click **Sign and mint**. Approve the signature. There is no transaction and no gas. — The page shows "Your key is revealed." and **Open your vault →**. The line under the card reads "Bronze tier · caps $1.00 per trade / $5.00 per day". One key per account. A second mint is refused.
+3. Open [https://keyhole-seven.vercel.app/vault](https://keyhole-seven.vercel.app/vault). — You see your key, **Tier limits**, and the steps **1 · Fund**, **2 · Trade**, and **3 · Withdraw**. Before a balance signature, the total is "—" and the note says "Balances stay sealed until you sign a read." Without a key, the enclave answers "You don't hold a key yet."
+4. Open **1 · Fund**, enter an amount, and click **Get deposit address**. Approve the signature. — The page shows **Deposit address** and the address. The site does not send the tokens. The note says funds move only when you send them.
+5. Click **Read balance** and approve the signature. — The total becomes a USD amount, or the token amounts if nothing is priced. A held asset with no price stays in the total as "+ … unpriced". **Assets · N** lists one row per asset: symbol, name, the amount on one line, and the USD value under it when a price exists. The note says "Read from the enclave with your signature."
+6. Open **2 · Trade**. The form lists USDC and wNEAR and the line "Bronze · $1.00 per trade · $5.00 per day" (Silver and Gold caps replace this after a higher tier is read). Click **Get attested quote**. — The receipt shows **You give**, **You get**, **Price**, and **Cap**. Click **Sign & trade** and approve. — The result card starts with "Traded", names the amount out, and includes a status and **Verify**.
+7. Open **3 · Withdraw**. — The note names the account you connected. Enter an amount and click **Sign & withdraw**. — The result card starts with "Withdrawn" and names that account. The worker refuses any other destination.
+8. Open the result's **Verify** link, or open [https://keyhole-seven.vercel.app/verify?call=9d19bceb-986b-4745-9bf9-91f7dcb62b6e](https://keyhole-seven.vercel.app/verify?call=9d19bceb-986b-4745-9bf9-91f7dcb62b6e). — The page shows **Intel TDX quote present**, **Worker code hash matches**, **Published on NEAR**, and the result **The enclave is genuine.** The verdict element has `data-match="true"`.
+
+A declined signature shows "You declined the signature." Starting another action clears that message. A redirect wallet that returns with a completed trade or withdraw shows that result card and does not keep the decline.
+
+## Architecture
+
+- **Contract** [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 NFT. `nft_mint` accepts only the enclave-held minter. The worker reads `holder_tier(account_id)` on each call.
+- **OutLayer TEE worker.** Rust wasm in an Intel TDX enclave. The live build sha256 begins `b3fa1a39` (full hash in [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256)). It checks the signature, the nonce, a 5-minute window, the tier caps, and the rate limit. For a NEAR signature it also checks that the public key is a full-access key. It sends confidential quotes and swaps through NEAR Intents.
+- **Website.** Next.js. The browser posts `{op, auth}` to `/api/worker`. The server adds the OutLayer payment key and does not log the body. The browser never holds that key.
+
+## Run it locally
+
+Node 20. Rust stable for the contract (1.86.0 in CI) and rustc 1.99.1 for the worker build that must match `DEPLOYED_SHA256`.
+
+```bash
+cargo test --locked --manifest-path contracts/keys/Cargo.toml
+cargo test --locked --manifest-path tee/worker/Cargo.toml
+cd cli && npm ci && npx tsc -p . --noEmit && npm test
+cd web && npm ci && npm run lint && npm run typecheck && npm test && npm run build
+```
+
+The site in development:
+
+```bash
+cd web && npm run dev
+```
+
+That serves [http://localhost:3000](http://localhost:3000). The browser reads NEAR mainnet. Mint, trade, and withdraw also need the server env `OUTLAYER_PAYMENT_KEY`. Without it, `/api/health` reports the enclave offline.
+
+End-to-end tests use the production build on port 3100:
+
+```bash
+cd web && npx playwright install --with-deps chromium
+npx next start -p 3100 &
+npx playwright test
+```
+
+`./judge/1-contract.sh` reads the live contract. `./verify.sh 9d19bceb-986b-4745-9bf9-91f7dcb62b6e` checks that call's attestation.
+
+## Limitations
+
+- The mint page issues a Bronze key only ($1 per trade, $5 per UTC day, 6 calls per minute). Silver, Gold, and Legendary are shown as finishes. The worker already has tier 2 ($10 / $50, 12 per minute) and tier 3 ($100 / $500, 30 per minute). This site does not mint those tiers.
+- The vault form trades USDC and wNEAR only.
+- A quote from the vault uses confidentiality `basic`. The worker also accepts `advanced`.
+- The website gateway allows `info`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, and `withdraw`. `copy` and `sweep_minter` return `bad_op`. Copy-trading is the CLI, not the vault page.
+- Fund, quote, trade, withdraw, balance, and history each ask for their own signature. The signature is not a transaction. After a trade or withdraw, the page asks for another signature to re-read the balance. Declining that second signature leaves the trade or withdraw card up and does not leave "You declined the signature."
+- Withdraw pays the connected account only.
+- If the enclave is offline or the payment key is missing, Vault and Mint show the offline state and do not send the signature.
+- The site is English only. There is no language switcher.
+- The 30-step mainnet log later in this file was recorded against worker `f13efe92`. The worker serving the site is `b3fa1a39`.
+- Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.
 
 ## Hackathon window
 
@@ -29,15 +101,9 @@ Direct dependencies from this repository's `package.json` and `Cargo.toml` files
 | CLI and MCP | [`cli/package.json`](cli/package.json) | TypeScript, `@modelcontextprotocol/sdk`, `@noble/curves`, `@noble/hashes`, bs58, zod |
 | Website | [`web/package.json`](web/package.json) | Next.js, React, Tailwind CSS, `@near-wallet-selector/core` and its wallet modules, `@noble/curves`, `@noble/hashes`, bs58, gsap, motion, ogl |
 
-## Try it
+## Try it on the live site
 
-On [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app):
-
-- Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) - see the home page, the line "Nothing on the chain. Everything in the key.", the key supply, and the published worker hash.
-- Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) - see one card for each token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near).
-- Open [https://keyhole-seven.vercel.app/vault](https://keyhole-seven.vercel.app/vault) - see the vault before a wallet is connected.
-- Open [https://keyhole-seven.vercel.app/mint](https://keyhole-seven.vercel.app/mint) - see the Bronze mint page and the cap table.
-- Open [https://keyhole-seven.vercel.app/verify?call=9d19bceb-986b-4745-9bf9-91f7dcb62b6e](https://keyhole-seven.vercel.app/verify?call=9d19bceb-986b-4745-9bf9-91f7dcb62b6e) - see the browser check that call against the published wasm `b3fa1a39`. The verdict element has `data-match="true"`.
+The steps, and the words each one should show, are in [Try it](#try-it).
 
 ## At a glance
 
@@ -56,9 +122,14 @@ On [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app):
 ---
 
 ## Contents
+- [What it is](#what-it-is)
+- [The problem it solves](#the-problem-it-solves)
+- [Try it](#try-it)
+- [Architecture](#architecture)
+- [Run it locally](#run-it-locally)
+- [Limitations](#limitations)
 - [Hackathon window](#hackathon-window)
 - [Built with](#built-with)
-- [Try it](#try-it)
 1. [The idea](#1-the-idea)
 2. [Judge steps](#2-judge-steps)
 3. [Track hints](#3-track-hints)
@@ -506,10 +577,7 @@ All six jobs passed on [run 40572408070](https://github.com/mohamedwael201193/ke
 | `/verify` | The three attestation checks, computed in your browser | OutLayer and FastFS |
 | `/identity` | How a key is drawn: specimen cards, wallet and market lockups, the NEP-177 document, and the four finishes | catalog art plus `nep177` for the first live token, or a sample when the contract is empty |
 
-- **Wallets.**
-  - NEAR Wallet Selector with MyNearWallet, Meteor, HERE, Intear, Sender, Nightly and Ledger. The same modal includes MetaMask / Ethereum wallet. WalletConnect for NEAR is behind `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`. The Reown modal for Ethereum wallets is behind `NEXT_PUBLIC_REOWN_PROJECT_ID` and stays out of the modal when that value is unset. MetaMask signs the intent with `personal_sign` (EIP-191). The published enclave `b3fa1a39` verifies that signature.
-  - Redirect wallets resume the signed request after they return.
-  - The wallet bundle loads only when you click Connect.
+- **Wallets.** A NEAR wallet signs a NEP-413 message. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published enclave `b3fa1a39` checks both. The wallet bundle loads when you click **Connect wallet**, or when this browser has connected before. A redirect wallet returns the signature in the URL hash, and the vault renders the trade or withdraw result from that return.
 - **Language.** English only. `html` is `lang="en"` and `dir="ltr"`. There is no language switcher. A request to `/ar` or `/ar/…` redirects to the same path without the prefix, and keeps the query string ([`web/e2e/site.spec.ts`](web/e2e/site.spec.ts)).
   - Copy lives in [`web/messages/en.json`](web/messages/en.json). Every worker and gateway error has a plain English message and a fix.
   - USD amounts and the local time of the UTC daily-cap reset use the browser locale.
@@ -534,14 +602,9 @@ All six jobs passed on [run 40572408070](https://github.com/mohamedwael201193/ke
 
 ## 14. Quickstart for everyone
 
-You need any NEAR wallet. There is no sign-up, no email and no fee to mint.
+Follow [Try it](#try-it) on [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app). Connect a NEAR wallet or MetaMask, mint, fund, read the balance, quote and trade, withdraw, then open **Verify**. Local commands are under [Run it locally](#run-it-locally).
 
-1. **Connect.** Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and tap **Connect wallet**. Choose your wallet (MyNearWallet, Meteor, HERE, Intear, Sender, Nightly, Ledger, or MetaMask). NEAR wallets sign NEP-413. MetaMask signs the same intent with EIP-191, and the published enclave `b3fa1a39` checks that signature.
-2. **Mint your key.** Go to **Mint** and tap **Sign and mint**. Your wallet asks you to sign a message, which costs no gas and moves no money. The key NFT arrives in your account.
-3. **Open your vault.** Go to **Vault**. **1 · Fund** asks for a deposit address. **2 · Trade** gets a quote, then **Sign & trade**. **3 · Withdraw** sends to the account you connected. The caps sit on the trade form, and an over-cap answer is shown as a refusal. Every answer has an attestation link and **Verify**.
-4. **Check it.** On **Verify**, paste any call id. Your browser confirms that the exact published code produced the answer.
-
-Copy-trading stays on the [CLI and MCP server](#7-cli-mcp-and-the-website-gateway). Swap and withdraw work there too, with the same signed request.
+Copy-trading stays on the CLI and MCP server. The website gateway refuses `copy` with `bad_op`. Swap and withdraw on the CLI use the same signed request as the site.
 
 ## 15. Roadmap
 
@@ -566,7 +629,7 @@ docs/evidence/    public mainnet evidence (E2E JSON, site gateway calls, Lightho
 
 **Author and deployer:** devmo ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
 
-**License:** [MIT](LICENSE). Copyright DEVMO.
+**License:** [MIT](LICENSE). Copyright 2026 devmo.
 
 **Credits:** the ambient music was generated for this project and is released under CC0. Chain marks are the official logos of their projects, shown only to name the supported assets.
 
