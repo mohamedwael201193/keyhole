@@ -39,7 +39,7 @@ describe("NEP-413", () => {
     expect(verifyAuth({ ...a, nonce: toB64(freshNonce()) })).toBe(false);
     expect(verifyAuth({ ...a, public_key: "secp256k1:abc" })).toBe(false);
   });
-  it("eip191 intent matches the worker vector and is not live yet", () => {
+  it("eip191 intent matches the worker vector and is sent to the live enclave", () => {
     const address = "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23";
     const nonce = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
     expect(intentMessage("status", address, {}, nonce, "keyhole", 1700000000000)).toBe(
