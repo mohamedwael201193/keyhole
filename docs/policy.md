@@ -20,7 +20,11 @@ Related tests in the same file: `over_cap_daily_refused_and_rolled_back`, `rate_
 
 ## Live proof
 
-Recorded 2026-10-28, after the worker payment balance was funded. `./verify.sh` on each call printed `executed == published build f13efe92` (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`). The attestation response has no output body, so the result column is the recorded outcome of that call.
+The published enclave is `b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a` (620,067 bytes). FastFS upload [`72P1YcuV…`](https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8) (expected prepaid-gas revert). `add_version` [`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU). Live `info` call [`9d19bceb`](https://api.outlayer.ai/attestations/by-call/9d19bceb-986b-4745-9bf9-91f7dcb62b6e), attestation 1189623, `executed_wasm_sha256` `b3fa1a39…`. Deploy cost 0.008012 NEAR.
+
+### Previous version `f13efe92`
+
+Recorded 2026-10-28, after the worker payment balance was funded. `./verify.sh` on each call printed `executed == published build f13efe92` (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`). That build is superseded by `b3fa1a39`. The attestation response has no output body, so the result column is the recorded outcome of that call.
 
 | Call | Result | Attestation |
 |---|---|---|

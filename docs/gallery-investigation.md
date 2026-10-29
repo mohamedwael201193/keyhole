@@ -38,6 +38,8 @@ A larger set of pictures can apply to **later** mints only, behind a new functio
 
 ## B6. Why wallets show no image
 
+The published worker `b3fa1a39` now writes `media` and `media_hash` on new mints. The four tokens that already exist still have `media: null`. The site draws those four from the same `sha256(contract id + token id)` formula. The rest of this section is the state before that deploy.
+
 `nft_token` metadata on all four tokens has `media: null`. Titles are `KEYHOLE Key #0 (test)` for token `0` and `KEYHOLE Key · Bronze` for the other three.
 
 The worker mint writes that metadata in `op_mint` (`tee/worker/src/main.rs`): title, description and `copies: 1`. It does not set `media` or `media_hash`. The contract stores the metadata it is given. `nft_metadata.base_uri` is `None`, and `new` is the only place that writes contract metadata. `beat` emits `nft_metadata_update` and does not write a media field. There is no method that updates a token's metadata.
