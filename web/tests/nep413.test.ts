@@ -46,7 +46,7 @@ describe("NEP-413", () => {
       `{"op":"status","account_id":"${address}","ts_ms":1700000000000,"params":{},"nonce":"${nonce}","recipient":"keyhole"}`,
     );
     expect(utf8ToHex("A")).toBe("0x41");
-    expect(EIP191_ENCLAVE_LIVE).toBe(false);
+    expect(EIP191_ENCLAVE_LIVE).toBe(true);
   });
 });
 

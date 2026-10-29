@@ -473,7 +473,7 @@ All six jobs passed on [run 40572408070](https://github.com/mohamedwael201193/ke
 | `/identity` | How a key is drawn: specimen cards, wallet and market lockups, the NEP-177 document, and the four finishes | catalog art plus `nep177` for the first live token, or a sample when the contract is empty |
 
 - **Wallets.**
-  - NEAR Wallet Selector with MyNearWallet, Meteor, HERE, Intear, Sender, Nightly and Ledger. The same modal includes MetaMask / Ethereum wallet. WalletConnect for NEAR is behind `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`. The Reown modal for Ethereum wallets is behind `NEXT_PUBLIC_REOWN_PROJECT_ID` and stays out of the modal when that value is unset. MetaMask signs the intent with `personal_sign` (EIP-191). The published enclave does not verify that yet, so vault actions show a note that they arrive with the next enclave version.
+  - NEAR Wallet Selector with MyNearWallet, Meteor, HERE, Intear, Sender, Nightly and Ledger. The same modal includes MetaMask / Ethereum wallet. WalletConnect for NEAR is behind `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`. The Reown modal for Ethereum wallets is behind `NEXT_PUBLIC_REOWN_PROJECT_ID` and stays out of the modal when that value is unset. MetaMask signs the intent with `personal_sign` (EIP-191). The published enclave `b3fa1a39` verifies that signature.
   - Redirect wallets resume the signed request after they return.
   - The wallet bundle loads only when you click Connect.
 - **Language.** English only. `html` is `lang="en"` and `dir="ltr"`. There is no language switcher. A request to `/ar` or `/ar/…` redirects to the same path without the prefix, and keeps the query string ([`web/e2e/site.spec.ts`](web/e2e/site.spec.ts)).
@@ -502,7 +502,7 @@ All six jobs passed on [run 40572408070](https://github.com/mohamedwael201193/ke
 
 You need any NEAR wallet. There is no sign-up, no email and no fee to mint.
 
-1. **Connect.** Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and tap **Connect wallet**. Choose your wallet (MyNearWallet, Meteor, HERE, Intear, Sender, Nightly, Ledger, or MetaMask). NEAR wallets sign NEP-413. MetaMask signs the same intent with EIP-191 once the next enclave version is live.
+1. **Connect.** Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and tap **Connect wallet**. Choose your wallet (MyNearWallet, Meteor, HERE, Intear, Sender, Nightly, Ledger, or MetaMask). NEAR wallets sign NEP-413. MetaMask signs the same intent with EIP-191, and the published enclave `b3fa1a39` checks that signature.
 2. **Mint your key.** Go to **Mint** and tap **Sign and mint**. Your wallet asks you to sign a message, which costs no gas and moves no money. The key NFT arrives in your account.
 3. **Open your vault.** Go to **Vault**. **1 · Fund** asks for a deposit address. **2 · Trade** gets a quote, then **Sign & trade**. **3 · Withdraw** sends to the account you connected. The caps sit on the trade form, and an over-cap answer is shown as a refusal. Every answer has an attestation link and **Verify**.
 4. **Check it.** On **Verify**, paste any call id. Your browser confirms that the exact published code produced the answer.

@@ -17,11 +17,8 @@ export interface SignedAuth {
   address?: string;
 }
 
-/**
- * The published enclave (f13efe92) only verifies NEP-413.
- * Flip this when the enclave that accepts scheme eip191 is the live build.
- */
-export const EIP191_ENCLAVE_LIVE: boolean = false;
+/** The published enclave b3fa1a39 verifies scheme eip191. */
+export const EIP191_ENCLAVE_LIVE: boolean = true;
 
 /** Intent JSON signed by personal_sign. Same fields the worker parses for scheme eip191. */
 export function intentMessage(op: Op, accountId: string, params: Record<string, unknown>, nonceB64: string, recipient: string, ts: number): string {
