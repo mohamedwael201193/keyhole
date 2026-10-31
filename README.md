@@ -71,14 +71,14 @@ npx next start -p 3100 &
 npx playwright test
 ```
 
-`./judge/1-contract.sh` reads the live contract. `./verify.sh 9d19bceb-986b-4745-9bf9-91f7dcb62b6e` checks that call's attestation.
+`./judge/1-contract.sh` reads the live contract. `./verify.sh 9d19bceb-986b-4745-9bf9-91f7dcb62b6e` checks that call. It prints the executed wasm hash, the TDX measurement (not the same value), and `tee/worker/DEPLOYED_SHA256`. `./verify.sh <call_id> --rebuild` also compares a local worker build. `node tee/worker/verify-log.mjs --self-test` checks the key-log script.
 
 ## Limitations
 
 - The mint page issues a Bronze key only ($1 per trade, $5 per UTC day, 6 calls per minute). Silver, Gold, and Legendary are shown as finishes. The worker already has tier 2 ($10 / $50, 12 per minute) and tier 3 ($100 / $500, 30 per minute). This site does not mint those tiers.
 - The vault form trades USDC and wNEAR only.
 - A quote from the vault uses confidentiality `basic`. The worker also accepts `advanced`.
-- The website gateway allows `info`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, and `withdraw`. `copy` and `sweep_minter` return `bad_op`. Copy-trading is the CLI, not the vault page.
+- The website gateway allows `info`, `provenance`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, and `withdraw`. `provenance` needs no signature and returns only owner, kind, and event hashes. `copy` and `sweep_minter` return `bad_op`. Copy-trading is the CLI, not the vault page.
 - Fund, quote, trade, withdraw, balance, and history each ask for their own signature. The signature is not a transaction. After a trade or withdraw, the page asks for another signature to re-read the balance. Declining that second signature leaves the trade or withdraw card up and does not leave "You declined the signature."
 - Withdraw pays the connected account only.
 - If the enclave is offline or the payment key is missing, Vault and Mint show the offline state and do not send the signature.

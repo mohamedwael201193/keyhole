@@ -292,3 +292,86 @@ fn mint_media_matches_the_site_picture_and_file_hash() {
     }
     assert!(saw_five, "bronze pool never selected picture 5");
 }
+
+#[test]
+fn transfer_then_old_signature_is_not_owner() {
+    let err = admit_request("alice.near", "bob.near", true, true).unwrap_err();
+    assert_eq!(err.code, "not_owner");
+    // still the owner, but the nonce was already used
+    assert_eq!(admit_request("alice.near", "alice.near", true, false).unwrap_err().code, "replay");
+    // expired is reported before ownership, so a stale request is not mistaken for a transfer
+    assert_eq!(admit_request("alice.near", "bob.near", false, true).unwrap_err().code, "expired");
+    admit_request("bob.near", "bob.near", true, true).unwrap();
+}
+
+#[test]
+fn transfer_while_withdraw_is_pending_does_not_send() {
+    let err = settle_if_owner(false).unwrap_err();
+    assert_eq!(err.code, "not_owner");
+    assert!(err.message.contains("funds stay"));
+    settle_if_owner(true).unwrap();
+}
+
+#[test]
+fn provenance_chain_verifies_and_rejects_a_tampered_owner() {
+    let mut log = Vec::new();
+    append_event(&mut log, "mint", "kabc", "alice.near", 10, "mint");
+    append_event(&mut log, "deposit", "kabc", "alice.near", 20, "deposit");
+    let head = append_event(&mut log, "transfer", "kabc", "bob.near", 30, "transfer");
+    assert_eq!(verify_chain(&log).unwrap(), head);
+    let secret = [7u8; 32];
+    let sig = sign_head(&secret, &head);
+    let public = SigningKey::from_bytes(&secret).verifying_key().to_bytes();
+    assert!(verify_head(&public, &head, &sig));
+    assert!(!verify_head(&public, &head, &("00".repeat(64))));
+    log[1].owner = "carol.near".into();
+    assert_eq!(verify_chain(&log).unwrap_err().code, "bad_log");
+}
+
+#[test]
+fn random_transfer_and_withdraw_never_pays_the_previous_holder() {
+    let mut owner = "A".to_string();
+    let mut used = std::collections::HashSet::new();
+    let mut paid = 0u32;
+    let mut log = Vec::new();
+    let mut state = 0x1234_5678u32;
+    for step in 0..64u32 {
+        state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+        match state % 5 {
+            0 => {
+                owner = if owner == "A" { "B" } else { "A" }.into();
+                append_event(&mut log, "transfer", "k1", &owner, step as u64, "transfer");
+            }
+            _ => {
+                let signer = if state.is_multiple_of(2) { "A" } else { "B" };
+                let fresh = used.insert((signer, step));
+                match admit_request(signer, &owner, true, fresh) {
+                    Ok(()) => {
+                        settle_if_owner(signer == owner).unwrap();
+                        if signer == owner { paid += 1; }
+                        append_event(&mut log, "withdraw", "k1", signer, step as u64, "withdraw");
+                    }
+                    Err(e) => {
+                        assert!(e.code == "not_owner" || e.code == "replay");
+                        if signer != owner { assert_eq!(e.code, "not_owner"); }
+                    }
+                }
+            }
+        }
+    }
+    verify_chain(&log).unwrap();
+    assert!(paid > 0);
+}
+
+#[test]
+fn mint_gas_and_minter_balance() {
+    assert_eq!(MINT_GAS, 20_000_000_000_000);
+    assert!(!minter_can_mint(MINT_DEPOSIT_YOCTO));
+    // 0.014 NEAR is not enough: 20 Tgas is prepaid at 1e9 yocto/gas (0.02 NEAR) on top of the deposit.
+    assert!(!minter_can_mint(MINT_DEPOSIT_YOCTO + 2_000_000_000_000_000_000_000));
+    assert!(minter_can_mint(MINT_DEPOSIT_YOCTO + MINT_FEE_BUFFER_YOCTO));
+    assert!(MINT_FEE_BUFFER_YOCTO >= MINT_GAS as u128 * 1_000_000_000);
+    assert!(owner_is(Some("alice.near"), "alice.near"));
+    assert!(!owner_is(Some("bob.near"), "alice.near"));
+    assert!(!owner_is(None, "alice.near"));
+}

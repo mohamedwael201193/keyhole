@@ -1,7 +1,7 @@
 //! KEYHOLE worker core: pure, host-independent logic (unit-tested natively).
 //! The OutLayer host glue lives in main.rs.
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
-use ed25519_dalek::{Signature, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -348,12 +348,127 @@ pub fn encode_tx(signer: &str, pk: &[u8; 32], nonce: u64, receiver: &str, block_
     v
 }
 
-/// Withdraw may pay only the account that signed the NEP-413 request.
+/// Withdraw may pay only the account that signed the request.
 pub fn assert_withdraw_to(signer: &str, to: &str) -> Result<(), Error> {
     if to != signer {
         return Err(err("bad_params", "params.to must be the account that signed this request"));
     }
     Ok(())
+}
+
+/// Attached gas for `nft_mint`. 20 Tgas. Unused gas is refunded. 10 Tgas is not used:
+/// this mint writes the token, metadata, enumeration, tier, and a log, and a short
+/// attach fails the whole mint.
+pub const MINT_GAS: u64 = 20_000_000_000_000;
+/// Attached deposit for that mint, in yoctoNEAR. Matches the call in `op_mint`.
+pub const MINT_DEPOSIT_YOCTO: u128 = 12_000_000_000_000_000_000_000;
+/// Kept on the minter on top of the deposit. NEAR charges the attached gas up front at the
+/// protocol gas price (20 Tgas x 1e9 yocto = 0.02 NEAR, mostly refunded), and the minter's own
+/// storage (~0.002 NEAR) cannot be spent. A smaller buffer lets the RPC reject the tx with
+/// NotEnoughBalance instead of answering `minter_low_balance`.
+pub const MINT_FEE_BUFFER_YOCTO: u128 = 22_000_000_000_000_000_000_000;
+
+/// True when the minter balance can attach `MINT_DEPOSIT_YOCTO` and still pay the fee.
+pub fn minter_can_mint(balance_yocto: u128) -> bool {
+    balance_yocto >= MINT_DEPOSIT_YOCTO.saturating_add(MINT_FEE_BUFFER_YOCTO)
+}
+
+/// `owner_id` from `nft_token` is exactly the signer.
+pub fn owner_is(owner_id: Option<&str>, account: &str) -> bool {
+    owner_id == Some(account)
+}
+
+/// Admit a signed request. Ownership is checked before the nonce is consumed, so a
+/// signature made by the previous holder is `not_owner`, not `replay`.
+pub fn admit_request(signer: &str, current_owner: &str, time_ok: bool, nonce_fresh: bool) -> Result<(), Error> {
+    if !time_ok {
+        return Err(err("expired", "request timestamp is more than 5 minutes from chain time; sign a new request"));
+    }
+    if signer != current_owner {
+        return Err(err("not_owner", "only the current key holder can authorize this"));
+    }
+    if !nonce_fresh {
+        return Err(err("replay", "this signed request was already used; sign a new one"));
+    }
+    Ok(())
+}
+
+/// Re-read ownership immediately before a swap or withdraw is sent.
+/// A transfer in between aborts the send. Funds stay in the custody account.
+pub fn settle_if_owner(still_owner: bool) -> Result<(), Error> {
+    if still_owner {
+        Ok(())
+    } else {
+        Err(err("not_owner", "the key moved before this request settled; aborted, funds stay in the account"))
+    }
+}
+
+fn zero_hash() -> String { "0".repeat(64) }
+
+/// One row of the per-key log. `detail_hash` commits to the private detail.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProvEvent {
+    pub i: u64,
+    pub prev: String,
+    pub kind: String,
+    pub token_id: String,
+    pub owner: String,
+    pub ts_ms: u64,
+    pub detail_hash: String,
+}
+
+pub fn detail_hash(detail: &str) -> String {
+    hex::encode(Sha256::digest(detail.as_bytes()))
+}
+
+/// Field order is fixed so a verifier in another language recomputes the same bytes.
+pub fn event_canonical(ev: &ProvEvent) -> String {
+    format!(
+        "{{\"detail_hash\":\"{}\",\"i\":{},\"kind\":\"{}\",\"owner\":\"{}\",\"prev\":\"{}\",\"token_id\":\"{}\",\"ts_ms\":{}}}",
+        ev.detail_hash, ev.i, ev.kind, ev.owner, ev.prev, ev.token_id, ev.ts_ms
+    )
+}
+
+pub fn event_hash(ev: &ProvEvent) -> String {
+    hex::encode(Sha256::digest(event_canonical(ev).as_bytes()))
+}
+
+pub fn append_event(log: &mut Vec<ProvEvent>, kind: &str, token_id: &str, owner: &str, ts_ms: u64, detail: &str) -> String {
+    let prev = log.last().map(event_hash).unwrap_or_else(zero_hash);
+    let ev = ProvEvent {
+        i: log.len() as u64,
+        prev,
+        kind: kind.to_string(),
+        token_id: token_id.to_string(),
+        owner: owner.to_string(),
+        ts_ms,
+        detail_hash: detail_hash(detail),
+    };
+    let h = event_hash(&ev);
+    log.push(ev);
+    h
+}
+
+pub fn verify_chain(log: &[ProvEvent]) -> Result<String, Error> {
+    let mut prev = zero_hash();
+    for (i, ev) in log.iter().enumerate() {
+        if ev.i != i as u64 { return Err(err("bad_log", "event index does not match its place in the chain")); }
+        if ev.prev != prev { return Err(err("bad_log", "event prev does not match the previous hash")); }
+        prev = event_hash(ev);
+    }
+    Ok(prev)
+}
+
+pub fn sign_head(secret: &[u8; 32], head_hex: &str) -> String {
+    let signing = SigningKey::from_bytes(secret);
+    hex::encode(signing.sign(head_hex.as_bytes()).to_bytes())
+}
+
+pub fn verify_head(public: &[u8; 32], head_hex: &str, sig_hex: &str) -> bool {
+    let Ok(raw) = hex::decode(sig_hex) else { return false };
+    let Ok(raw) = <[u8; 64]>::try_from(raw) else { return false };
+    let Ok(vk) = VerifyingKey::from_bytes(public) else { return false };
+    vk.verify(head_hex.as_bytes(), &Signature::from_bytes(&raw)).is_ok()
 }
 
 /// Bronze pictures, same order as `POOLS.Bronze` in `web/lib/traits.ts`.

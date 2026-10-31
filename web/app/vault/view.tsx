@@ -24,6 +24,7 @@ import { copyText } from "@/lib/copyText";
 import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
+import { KeyLog } from "@/components/KeyLog";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
@@ -219,6 +220,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                     <dt>{t("proof.contract")}</dt><dd className="mono">{KEYS_CONTRACT}</dd>
                   </dl>
                   <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginTop: 8 }} data-state={keyState(held.token, held.tier, accountId)}>{t(`gallery.${keyState(held.token, held.tier, accountId)}`)}</p>
+                  <KeyLog tokenId={held.token.token_id} />
                 </>
               ) : (
                 <EmptyState title={t("vault.nokey")} body={t("empty.mintBody")}>
@@ -350,6 +352,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                       <b>{withdrawSummary(doneWithdraw.amount, doneWithdraw.to)}</b>
                       <p className="note">{String(withdraw.res.output.status ?? "")}</p>
                       {withdraw.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
+                      <p className="mono" style={{ fontSize: 13 }} data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? "")} · {t("vault.txHash")}: {withdraw.res.output.tx_hash ? String(withdraw.res.output.tx_hash) : "—"} · {t("vault.fee")}: {withdraw.res.output.fee ? String(withdraw.res.output.fee) : "—"}</p>
                       {isImplicitAccount(accountId || "") && <p className="note">{t("vault.storageNote")}</p>}
                     </div>
                   )}
