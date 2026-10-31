@@ -51,6 +51,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const [held, setHeld] = useState<{ token: Token; tier: number | null } | null>(null);
   const [keysFor, setKeysFor] = useState<string | null>(null);
   const [keysReady, setKeysReady] = useState(false);
+  const [keyMiss, setKeyMiss] = useState(false);
   const [doneTrade, setDoneTrade] = useState<{ give: string; decimals: number; symbol: string } | null>(null);
   const [doneWithdraw, setDoneWithdraw] = useState<{ amount: string; to: string } | null>(null);
   const [prices, setPrices] = useState(initialPrices);
@@ -60,17 +61,18 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const tradeKey = `${from}:${toKey}:${units ?? ""}`;
   const utcReset = (() => { const d = new Date(); d.setUTCHours(24, 0, 0, 0); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); })();
   useEffect(() => {
-    if (!accountId) { setHeld(null); setKeysFor(null); setKeysReady(false); return; }
+    if (!accountId) { setHeld(null); setKeysFor(null); setKeysReady(false); setKeyMiss(false); return; }
     let cancel = false;
     setKeysFor(accountId);
     setKeysReady(false);
     setHeld(null);
+    setKeyMiss(false);
     tokensFor(accountId).then(async (toks) => {
       const token = toks[0];
-      if (!token || cancel) { if (!cancel) { setHeld(null); setKeysReady(true); } return; }
+      if (!token || cancel) { if (!cancel) { setHeld(null); setKeyMiss(true); setKeysReady(true); } return; }
       const tier = await nftTier(token.token_id).catch(() => null);
-      if (!cancel) { setHeld({ token, tier }); setKeysReady(true); }
-    }).catch(() => { if (!cancel) { setHeld(null); setKeysReady(true); } });
+      if (!cancel) { setHeld({ token, tier }); setKeyMiss(false); setKeysReady(true); }
+    }).catch(() => { if (!cancel) { setHeld(null); setKeyMiss(false); setKeysReady(true); } });
     return () => { cancel = true; };
   }, [accountId]);
 
@@ -173,6 +175,15 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           <EmptyState title={t("empty.vaultTitle")} body={t("empty.vaultBody")} testid="vault-empty">
             <button className="btn b1" onClick={connect} data-testid="vault-connect">{t("nav.connect")}</button>
             <Link className="btn b2" href="/mint">{t("mint.title")}</Link>
+          </EmptyState>
+          <HowStrip active={1} />
+        </div>
+      ) : lookingUpKey ? (
+        <p className="note" data-testid="key-loading">{t("vault.keyLoading")}</p>
+      ) : keyMiss ? (
+        <div>
+          <EmptyState title={t("vault.holderOnly")} body={t("vault.holderOnlyBody")} testid="holder-only">
+            <Link className="btn b1" href="/mint">{t("vault.mintFirst")}</Link>
           </EmptyState>
           <HowStrip active={1} />
         </div>

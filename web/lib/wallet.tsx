@@ -26,7 +26,7 @@ export type OpResume =
 const CONNECTING = "Confirm the connection in the extension window";
 const CONNECTING_NEXT = "Confirm the connection in the extension window. It may open in the MetaMask side panel or the toolbar icon.";
 const NET_HELP = "MetaMask will ask to add the NEAR Protocol network — approve it to continue.";
-const SIGN_NOTE = "KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas.";
+const SIGN_NOTE = "Connecting and minting ask only for a signature. A deposit is a normal transfer you approve in your wallet.";
 const ETH_MODAL_CSS = `
 .ethereum-wallet-modal-backdrop {
   position: fixed; inset: 0; background: #1A2A2C55 !important;
@@ -145,7 +145,7 @@ async function init(): Promise<{ selector: WalletSelector; modal: WalletSelector
     modules.push(setupWalletConnect({ projectId: wc, metadata: { name: "KEYHOLE", description: "NFT viewing keys for confidential accounts", url: location.origin, icons: [`${location.origin}/brand/icon-192.png`] } }) as WalletModuleFactory);
   }
   const selector = await setupWalletSelector({ network: "mainnet", modules });
-  const modal = setupModal(selector, { theme: "dark", description: "KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas." });
+  const modal = setupModal(selector, { theme: "dark", description: SIGN_NOTE });
   return { selector, modal };
 }
 
