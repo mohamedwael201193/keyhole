@@ -110,7 +110,7 @@ test("header Connect wallet opens the selector on the first click", async ({ pag
   expect(rowBox!.y).toBeGreaterThanOrEqual(0);
   expect(rowBox!.y + rowBox!.height).toBeLessThanOrEqual((vp?.height ?? 0) + 1);
   if ((vp?.width ?? 1000) <= 700) await expect(page.locator("#near-wallet-selector-modal .modal-right")).toBeHidden();
-  await expect(modal.getByText("KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas.")).toBeVisible();
+  await expect(modal.getByText("Connecting and minting ask only for a signature. A deposit is a normal transfer you approve in your wallet.")).toBeVisible();
 });
 
 test("sealed vault names MetaMask and a gas-free signature", async ({ page }) => {
@@ -335,7 +335,29 @@ test("vault shows a premium empty or offline state; connect opens the wallet sel
   await expect(page.getByTestId("vault-empty").or(page.getByTestId("offline"))).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("error")).toHaveCount(0);
   await page.getByTestId("connect").click();
-  await expect(page.getByText("KEYHOLE only asks for message signatures (NEAR NEP-413 or MetaMask EIP-191). No transactions, no gas.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Connecting and minting ask only for a signature. A deposit is a normal transfer you approve in your wallet.")).toBeVisible({ timeout: 20_000 });
+});
+
+test("a connected wallet with no key cannot open the vault", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("signedAccountId", "visitor.keyhole.test");
+    localStorage.setItem("near-wallet-selector:selectedWalletId", JSON.stringify("my-near-wallet"));
+  });
+  await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
+  await page.route("https://rpc.mainnet.near.org/**", async (route) => {
+    let method = "";
+    try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view */ }
+    if (method !== "nft_tokens_for_owner") return route.continue();
+    const bytes = [...new TextEncoder().encode("[]")];
+    await route.fulfill({ json: { jsonrpc: "2.0", id: "kh", result: { result: bytes } } });
+  });
+  await page.goto("/vault");
+  const gate = page.getByTestId("holder-only");
+  await expect(gate).toBeVisible({ timeout: 20_000 });
+  await expect(gate).toContainText("Only the key holder can open this");
+  await expect(page.getByTestId("trade-btn")).toHaveCount(0);
+  await expect(page.getByTestId("balance-btn")).toHaveCount(0);
+  await expect(page.getByTestId("fund-btn")).toHaveCount(0);
 });
 
 test("music is off by default and toggles", async ({ page }) => {
