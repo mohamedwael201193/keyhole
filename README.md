@@ -29,8 +29,8 @@ Live site: [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app).
 
 1. Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and click **Connect wallet**. Choose a NEAR wallet or MetaMask. A NEAR wallet signs NEP-413. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published worker `b3fa1a39` checks both. — The header shows your account. **Vault** shows "Vault · connected as" and the full account id.
 2. Open [https://keyhole-seven.vercel.app/mint](https://keyhole-seven.vercel.app/mint) and click **Sign and mint**. Approve the signature. There is no transaction and no gas. — The page shows "Your key is revealed." and **Open your vault →**. The line under the card reads "Bronze tier · caps $1.00 per trade / $5.00 per day". One key per account. A second mint is refused.
-3. Open [https://keyhole-seven.vercel.app/vault](https://keyhole-seven.vercel.app/vault). — You see your key, **Tier limits**, and the steps **1 · Fund**, **2 · Trade**, and **3 · Withdraw**. Before a balance signature, the total is "—" and the note says "Balances stay sealed until you sign a read." Without a key, the enclave answers "You don't hold a key yet."
-4. Open **1 · Fund**, enter an amount, and click **Get deposit address**. Approve the signature. — The page shows **Deposit address** and the address. The site does not send the tokens. The note says funds move only when you send them.
+3. Open [https://keyhole-seven.vercel.app/vault](https://keyhole-seven.vercel.app/vault) with the wallet that holds the key. — You see your key, **Tier limits**, and the steps **1 · Fund**, **2 · Trade**, and **3 · Withdraw**. Before a balance signature, the total is "—" and the note says "Balances stay sealed until you sign a read." A connected wallet that does not hold a key sees **Only the key holder can open this** and no fund, trade, or withdraw form.
+4. Open **1 · Fund**, enter an amount, and click **Get deposit address**. Approve the signature. That signature is not a transfer. — The page shows **Deposit address** and the address. Sending funds there is a normal transfer you approve in your wallet, and that transfer pays gas. The site does not send it for you.
 5. Click **Read balance** and approve the signature. — The total becomes a USD amount, or the token amounts if nothing is priced. A held asset with no price stays in the total as "+ … unpriced". **Assets · N** lists one row per asset: symbol, name, the amount on one line, and the USD value under it when a price exists. The note says "Read from the enclave with your signature."
 6. Open **2 · Trade**. The form lists USDC and wNEAR and the line "Bronze · $1.00 per trade · $5.00 per day" (Silver and Gold caps replace this after a higher tier is read). Click **Get attested quote**. — The receipt shows **You give**, **You get**, **Price**, and **Cap**. Click **Sign & trade** and approve. — The result card starts with "Traded", names the amount out, and includes a status and **Verify**.
 7. Open **3 · Withdraw**. — The note names the account you connected. Enter an amount and click **Sign & withdraw**. — The result card starts with "Withdrawn" and names that account. The worker refuses any other destination.
@@ -86,6 +86,16 @@ npx playwright test
 - The 30-step mainnet log later in this file was recorded against worker `f13efe92`. The worker serving the site is `b3fa1a39`.
 - Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.
 
+## Invariants
+
+These are properties of the worker source in this repository. The enclave serving the site is build `b3fa1a39`. A property that exists only in source after that build is not live until that wasm is published. The checks are in [`THREAT_MODEL.md`](THREAT_MODEL.md).
+
+- **Who can authorize.** `account`, `balance`, `quote`, `swap`, `withdraw`, and `history` run only after the signature verifies and `holder_tier(account_id)` on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) is not empty. The read is a live view on that call, not a cached tier. A wallet that no longer holds the key gets `no_key`.
+- **Who can be paid.** `assert_withdraw_to` refuses a withdraw whose `to` is not the account that signed the request. The vault also sets `to` to the connected account. Tier caps still apply: Bronze is $1 per trade and $5 per UTC day, so a larger balance cannot all leave in one day.
+- **What is public.** The NEAR account does not store the confidential balances. The worker returns them in the JSON reply to the holder who just signed. That reply is plaintext to the holder. The gateway does not log the body. The website's 60-second RPC cache is for public contract reads only; `nft_tokens_for_owner` is not cached.
+- **Replay and expiry.** Each `(account, nonce)` is stored once. A second use is `replay`. `ts_ms` must be within five minutes of the final block time or the answer is `expired`. The same nonce store is used after a NEP-413 check and after an EIP-191 check.
+- **The page matches the chain.** A connected wallet with no key on the contract sees "Only the key holder can open this" and no fund, trade, or withdraw form. That gate uses `nft_tokens_for_owner`. It is not a substitute for the worker's check.
+
 ## Hackathon window
 
 Development started 2026-10-27, inside the window that opened 2026-10-19 (Q-001). The live rules also list the event start as 2026-11-01 and the submission deadline as 2026-11-14.
@@ -128,6 +138,8 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
 - [Limitations](#limitations)
+- [Invariants](#invariants)
+- [Threat model](THREAT_MODEL.md)
 - [Hackathon window](#hackathon-window)
 - [Built with](#built-with)
 1. [The idea](#1-the-idea)

@@ -96,6 +96,8 @@
   "policy": "Policy",
   "dry": "Dry quote: no deposit address, no funds move.",
   "nokey": "You don't hold a key yet.",
+  "holderOnly": "Only the key holder can open this",
+  "holderOnlyBody": "This wallet does not hold a key on the contract. Fund, trade, withdraw, and the private book stay closed.",
   "mintFirst": "Mint your key",
   "account": "Your confidential account",
   "accountD": "One private wallet per key holder, created and held inside the TEE. Balances are read with your signature; nothing is published on-chain.",
