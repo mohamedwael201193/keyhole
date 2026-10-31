@@ -17,11 +17,11 @@ Everything below runs on **NEAR mainnet**. Author and deployer: **devmo** ([`key
 
 KEYHOLE is three pieces that work together. The contract [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) is the NFT. The worker runs in an OutLayer Intel TDX enclave and is the only minter. The website at [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) asks the holder to sign a message, sends that message to the worker, and shows the worker's answer.
 
-Holding the token is what lets that account read or move the confidential account. The worker calls `holder_tier` on every request. Transfer the NFT and the next call from the old account is refused with `no_key`.
+The confidential account belongs to the token, not to a NEAR account. The enclave keeps one custody wallet per `token_id` and lets only the account that owns that token right now operate it. Ownership is read live (`nft_tokens_for_owner` and `nft_token.owner_id`) on every request and again just before a swap or withdraw is sent. Transfer the NFT and the new owner operates the same balance; the old account's next call is refused with `not_owner`.
 
 ## The problem it solves
 
-A public chain shows balances and trades. Here those stay in the enclave. The holder still has a token they can transfer, and each enclave answer includes an attestation the browser can check against the published worker.
+A public chain shows balances and trades. Here those stay in the enclave. The holder still has a token they can transfer, and the account goes with it, and each enclave answer includes an attestation the browser can check against the published worker.
 
 ## Try it
 
@@ -90,7 +90,8 @@ npx playwright test
 
 These are properties of the worker source in this repository. The enclave serving the site is build `b3fa1a39`. A property that exists only in source after that build is not live until that wasm is published. The checks are in [`THREAT_MODEL.md`](THREAT_MODEL.md).
 
-- **Who can authorize.** `account`, `balance`, `quote`, `swap`, `withdraw`, and `history` run only after the signature verifies and `holder_tier(account_id)` on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) is not empty. The read is a live view on that call, not a cached tier. A wallet that no longer holds the key gets `no_key`.
+- **Who can authorize.** `account`, `balance`, `quote`, `swap`, `withdraw`, `history`, `lock`, and `prove` run only after the signature verifies and the signer owns the key on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) (`nft_token.owner_id`, a live view on that call). A wallet that no longer holds the key gets `not_owner`.
+- **Who owns the money.** The custody wallet is bound to the `token_id`. A transfer moves it to the new owner. Wallets that earlier builds created per NEAR account move to that account's key once, on its first call (`custody_lookup` in [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs)). Caps are per key, so moving a key between your own accounts does not reset the day's spend.
 - **Who can be paid.** `assert_withdraw_to` refuses a withdraw whose `to` is not the account that signed the request. The vault also sets `to` to the connected account. Tier caps still apply: Bronze is $1 per trade and $5 per UTC day, so a larger balance cannot all leave in one day.
 - **What is public.** The NEAR account does not store the confidential balances. The worker returns them in the JSON reply to the holder who just signed. That reply is plaintext to the holder. The gateway does not log the body. The website's 60-second RPC cache is for public contract reads only; `nft_tokens_for_owner` is not cached.
 - **Replay and expiry.** Each `(account, nonce)` is stored once. A second use is `replay`. `ts_ms` must be within five minutes of the final block time or the answer is `expired`. The same nonce store is used after a NEP-413 check and after an EIP-191 check.
@@ -172,9 +173,11 @@ A trading account that nobody can watch, together with a transferable right to w
 - The **key** is an NFT on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near).
   - The enclave answers a request only if the signer holds a key right now.
   - It checks `holder_tier(account_id)` live on mainnet for every call ([`tee/worker/README.md`](tee/worker/README.md), step 6).
-- **Selling the key moves the view.**
-  - Because ownership is re-read for every call, transferring the NFT moves the right to open the account to the new owner.
-  - The old owner is refused (`no_key`) on their next call.
+- **Selling the key moves the account.**
+  - The custody wallet is stored under the `token_id` (`t/<token_id>/wallet` in enclave storage), so whoever owns the token operates its balance.
+  - The old owner is refused (`not_owner`) on their next call, including a signature they made before the transfer.
+  - Before listing, the seller can `lock` the key for 1 to 168 hours: swap and withdraw are refused until the lock ends or the key moves, and the holder cannot lift it early. A buyer can ask the seller for a `prove` statement (enclave-signed "this key's account holds at least X", no exact balance) and check it with `node tee/worker/verify-log.mjs --proof`.
+  - The buyer sees the balance, not the seller's trade rows: `history` returns only the rows the caller wrote.
   - Marketplaces get royalties through NEP-199 (`nft_payout`, `nft_transfer_payout`, 500 bps on-chain, see [`config`](#5-the-keys-nft-contract)).
 - **Every answer comes with proof.**
   - Each reply carries an OutLayer attestation: an Intel TDX quote plus `executed_wasm_sha256`.
@@ -234,10 +237,10 @@ Source sentence, [status 2106269343881519444](https://x.com/ilblackdragon/status
 | Quoted line | What this repository ships | Proof |
 |---|---|---|
 | "Private trading" | `swap` runs a confidential NEAR Intents swap inside the worker. The fill is not written to the NEAR account of the holder | [step 8](docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json), [`swap`](tee/worker/src/main.rs) |
-| "you sell your viewing keys" | The token is the viewing right. `nft_transfer` / `nft_transfer_payout` moves it. The next call re-reads `holder_tier` | [`nft_transfer_payout`](contracts/keys/src/lib.rs), [TEE-signed mint](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) |
+| "you sell your viewing keys" | The token is the account: custody is keyed by `token_id`. `nft_transfer` / `nft_transfer_payout` moves it, and the next call re-reads the owner | [`nft_transfer_payout`](contracts/keys/src/lib.rs), [TEE-signed mint](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) |
 | "for people to follow/copy trade" | `copy` is a two-step tool: preview, then a one-time confirmation code, then the swap | [steps 10–12](docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json), [`cli/src/mcp.ts`](cli/src/mcp.ts) |
 | "NEAR Intents confidential trading is all private" | Quotes and swaps set `confidentiality` to `basic` or `advanced`. `history` and `balance` require the holder's NEP-413 signature | [step 5](docs/evidence/mainnet-e2e/05_quote_advanced.json), [step 24](docs/evidence/mainnet-e2e/24_history.json) |
-| "sell \"keys\" for only select people to see" | The worker answers the account that holds the NFT at call time. Anyone else is refused `no_key` | [`holder_tier`](tee/worker/src/main.rs), [step 6 in the worker README](tee/worker/README.md) |
+| "sell \"keys\" for only select people to see" | The worker answers the account that holds the NFT at call time. Anyone else is refused `not_owner` | [`holder_tier`](tee/worker/src/main.rs), [step 6 in the worker README](tee/worker/README.md) |
 
 ## 4. Architecture
 
@@ -324,11 +327,13 @@ The worker is a WASI program (`wasm32-wasip2`) that runs inside an OutLayer Inte
 | `status` | NEP-413 | tier, limits, today's spend |
 | `quote` | NEP-413 + key | confidential 1Click quote checked against caps. `execute: true` returns a real deposit address and counts toward the daily cap |
 | `mint` | NEP-413 | one free Bronze key per account, within a global daily quota. The enclave writes `media` (the key art URL) and `media_hash` (base64 sha256 of that file) |
-| `account` | NEP-413 + key | the holder's own confidential custody wallet, created inside the TEE. It can optionally return a cross-chain deposit address |
+| `account` | NEP-413 + key | the key's confidential custody wallet (one per `token_id`), created inside the TEE. It can optionally return a cross-chain deposit address |
 | `balance` | NEP-413 + key | confidential balances |
 | `swap` / `copy` | NEP-413 + key | confidential swap within caps, logged privately |
 | `withdraw` | NEP-413 + key | funds out of the confidential account, within caps. The enclave refuses any `to` other than the NEP-413 signer |
-| `history` | NEP-413 + key | private log (last 100 entries) |
+| `history` | NEP-413 + key | the caller's own rows of the key's private log (last 100 entries), plus the key log chain |
+| `lock` | NEP-413 + key | `{hours: 1..168}`: refuse swap and withdraw until then. Cannot be lifted early; ends on transfer |
+| `prove` | NEP-413 + key | `{token, min}`: enclave-signed statement that the key's account holds at least `min`. No exact amount |
 | `sweep_minter` | none | moves a retired minter's NEAR to the current minter ([sweep tx](https://nearblocks.io/txns/5Z7TktfcgeFrzRnz8NSpFSbTw77R5779d3PRsrEBPbYA), 0.0286 NEAR) |
 
 **Request checks, in order** (each one has a refusal code that was proven on mainnet):
@@ -338,7 +343,7 @@ The worker is a WASI program (`wasm32-wasip2`) that runs inside an OutLayer Inte
 3. **Signed intent.** `message` is JSON `{op, account_id, ts_ms, params}`, and the worker acts only on signed fields. Mismatched op → `op_mismatch` ([`7a703e8f`](https://api.outlayer.ai/attestations/by-call/7a703e8f-2678-4978-b6ce-4d291828141d)). Missing auth → `no_auth` ([`750defed`](https://api.outlayer.ai/attestations/by-call/750defed-2267-45b1-8a8c-74b528aa30ee)).
 4. **Key authority.** For a NEP-413 signature, the public key must be a **full-access** key of `account_id`, checked live over RPC. For `eip191`, the recovered `0x` address is the account. There is no ed25519 key lookup.
 5. **Freshness.** `ts_ms` must be within 5 minutes of the latest *final block* time, not the caller's clock. Stale → `expired` ([`e7ac0627`](https://api.outlayer.ai/attestations/by-call/e7ac0627-be6d-41e9-95d0-71dcc59aed43)).
-6. **Key holding.** `holder_tier` is read from the contract on every call. A holder with no key → `no_key`.
+6. **Key holding.** `nft_tokens_for_owner` and `nft_token.owner_id` are read from the contract on every call, before the nonce is used. A signer who does not own the key → `not_owner`. It is read again just before a swap or withdraw is sent.
 7. **Rate limits.** Per holder per minute by tier (6 / 12 / 30), plus 120 per minute globally → `rate_limited` ([`d892ac43`](https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd)).
 8. **Replay.** `(account, nonce)` is written with atomic `set_if_absent`. A second use → `replay` ([`ac289f04`](https://api.outlayer.ai/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab)).
 9. **Caps.** The USD value comes from the solver's quote (`amountInUsd`), never from the caller. Per-trade and per-UTC-day caps apply per holder. Over cap → `over_cap_per_tx` or `over_cap_daily`, and nothing is sent ([`a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533)).
@@ -622,7 +627,7 @@ Copy-trading stays on the CLI and MCP server. The website gateway refuses `copy`
 
 - **Tier upgrades:** Silver and Gold keys with the caps already defined in the worker ($10 / $50 and $100 / $500).
 - **Policy Engine:** OutLayer's Policy Engine on the custody wallets as a second, independent layer of caps.
-- **Marketplace flow:** list a key on any NEP-199 marketplace and hand the view to the buyer at transfer, with key cards refreshed by `beat()`.
+- **Marketplace flow:** a listing page that shows the seller's `lock` and `prove` statement next to a NEP-199 listing, with key cards refreshed by `beat()`.
 - **Status page:** a public page for enclave and routing availability, built on `/api/health`.
 
 ## 16. Repository map, credits, license

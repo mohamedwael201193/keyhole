@@ -16,6 +16,8 @@ A WASI (wasm32-wasip2) program that runs inside an OutLayer Intel TDX enclave. E
 | `withdraw` | NEP-413 + key | `{chain, to, token, amount}` out of the confidential account, within caps. `to` must be the NEP-413 signer; any other account is `bad_params` and nothing is sent |
 | `history` | NEP-413 or EIP-191 + key | private activity log, plus the full per-key provenance rows for the holder |
 | `provenance` | none | public owner chain and event hashes for `token_id`. No amounts. |
+| `lock` | NEP-413 or EIP-191 + key | `{hours: 1..168}` refuse swap and withdraw until then; cannot be lifted early; a transfer ends it |
+| `prove` | NEP-413 or EIP-191 + key | `{token, min}` minter-signed statement that the key's account holds at least `min`; `node verify-log.mjs --proof` checks it |
 | `sweep_minter` | none | if this enclave is no longer the contract's minter, sends its NEAR to the current minter |
 
 ## How a request is checked (in order)
@@ -36,7 +38,7 @@ The per-key log is hash-chained. `provenance` (no user signature) returns owner,
 
 `./verify.sh <call_id>` prints `executed` (wasm sha256), `measurement` (the TDX measurement; a different value), and `deployed` (`DEPLOYED_SHA256`). `--rebuild` also requires the local `build.sh` hash to equal `executed`.
 
-State is per holder (`h/<account>/…` in OutLayer encrypted storage; NEAR account ids cannot contain `/`).
+Custody wallet, trade log, lock and daily spend are per key (`t/<token_id>/…` and caps under `tok:<token_id>`); nonces and rate limits are per signer (`h/<account>/…`). NEAR account ids cannot contain `/` or `:`. A wallet an older build kept under `h/<account>/wallet` moves to that account's key once, on its first call.
 
 ## Default limits
 

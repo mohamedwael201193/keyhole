@@ -509,3 +509,118 @@ pub fn sign_tx(sk: &[u8; 32], tx: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests;
+
+// ---------- custody bound to the key (token_id), not to the NEAR account ----------
+
+/// Enclave storage key for state that belongs to a key: `t/<token_id>/<rest>`.
+pub fn tkey(token: &str, rest: &str) -> String {
+    format!("t/{}/{}", token, rest)
+}
+
+/// Id used for the per-day spend caps of a key. NEAR account ids cannot contain `:`,
+/// so this never collides with a holder's own `h/<account>/…` keys.
+pub fn cap_id(token: &str) -> String {
+    format!("tok:{}", token)
+}
+
+/// Storage with reads, for the custody record and its one-time migration.
+pub trait Kv: Store {
+    fn get(&self, key: &str) -> Vec<u8>;
+    fn set(&mut self, key: &str, val: &[u8]);
+}
+
+/// The custody wallet record of `token`, or `None` when the key has none yet.
+///
+/// One-time migration: builds up to b3fa1a39 kept the wallet under `h/<account>/wallet`.
+/// When the current owner of `token` still has such a legacy wallet, it moves to this
+/// token once. `h/<owner>/migrated` is claimed first with `set_if_absent`, so a legacy
+/// wallet is bound to at most one token even if two calls race. The legacy trade log
+/// is copied with `by` set to that owner, so a later holder does not read its rows.
+pub fn custody_lookup<K: Kv>(kv: &mut K, token: &str, owner: &str) -> Result<Option<Vec<u8>>, Error> {
+    let k = tkey(token, "wallet");
+    let v = kv.get(&k);
+    if !v.is_empty() {
+        return Ok(Some(v));
+    }
+    let legacy = kv.get(&hkey(owner, "wallet"));
+    if legacy.is_empty() {
+        return Ok(None);
+    }
+    let mk = hkey(owner, "migrated");
+    kv.set_if_absent(&mk, token.as_bytes())?;
+    if kv.get(&mk) != token.as_bytes() {
+        return Ok(None);
+    }
+    kv.set_if_absent(&k, &legacy)?;
+    let lk = tkey(token, "log");
+    if kv.get(&lk).is_empty() {
+        let old: Vec<serde_json::Value> = serde_json::from_slice(&kv.get(&hkey(owner, "log"))).unwrap_or_default();
+        let tagged: Vec<serde_json::Value> = old.into_iter().map(|mut e| {
+            if let Some(o) = e.as_object_mut() { o.entry("by").or_insert_with(|| serde_json::json!(owner)); }
+            e
+        }).collect();
+        if !tagged.is_empty() {
+            kv.set(&lk, serde_json::to_string(&tagged).unwrap_or_else(|_| "[]".into()).as_bytes());
+        }
+    }
+    Ok(Some(kv.get(&k)))
+}
+
+/// Trade-log rows the signer may read: only rows that signer wrote.
+pub fn history_for(entries: &[serde_json::Value], signer: &str) -> Vec<serde_json::Value> {
+    entries.iter().filter(|e| e.get("by").and_then(|b| b.as_str()) == Some(signer)).cloned().collect()
+}
+
+/// Longest seller lock, in hours.
+pub const MAX_LOCK_HOURS: u64 = 168;
+
+/// Stored lock value: `<owner>|<until_ms>`.
+pub fn lock_value(owner: &str, until_ms: u64) -> String {
+    format!("{}|{}", owner, until_ms)
+}
+
+/// `Some(until_ms)` while a lock set by `owner` is still running. A lock set by a
+/// previous owner does not bind the new owner, so a transfer clears it.
+pub fn active_lock(raw: &[u8], owner: &str, now_ms: u64) -> Option<u64> {
+    let s = std::str::from_utf8(raw).ok()?;
+    let (who, until) = s.rsplit_once('|')?;
+    let until: u64 = until.parse().ok()?;
+    (who == owner && now_ms < until).then_some(until)
+}
+
+/// Refuse a swap or withdraw while the owner's lock runs. A holder cannot lift a lock
+/// early, so a buyer who checked a `prove` statement knows funds cannot leave before then.
+pub fn assert_unlocked(raw: &[u8], owner: &str, now_ms: u64) -> Result<(), Error> {
+    match active_lock(raw, owner, now_ms) {
+        Some(until) => Err(err("locked", format!("this key is locked for sale until {} (unix ms); swap and withdraw resume then or after a transfer", until))),
+        None => Ok(()),
+    }
+}
+
+/// Amount of `asset` in a custody balance list (`[{token, amount}]` or `[{token, balance}]`).
+pub fn balance_of(balances: &serde_json::Value, asset: &str) -> u128 {
+    balances.as_array().into_iter().flatten()
+        .filter(|b| b.get("token").and_then(|t| t.as_str()) == Some(asset))
+        .filter_map(|b| b.get("amount").or(b.get("balance")))
+        .filter_map(|a| a.as_str().map(|s| s.to_string()).or_else(|| a.as_u64().map(|u| u.to_string())))
+        .filter_map(|s| s.parse::<u128>().ok())
+        .sum()
+}
+
+/// Canonical bytes of a balance proof. Field order is fixed for the verifier script.
+/// It names a threshold and a yes/no answer, never the balance itself.
+#[allow(clippy::too_many_arguments)]
+pub fn proof_canonical(token_id: &str, owner: &str, asset: &str, min: &str, holds: bool, locked_until: u64, log_head: &str, ts_ms: u64) -> String {
+    format!(
+        "{{\"asset\":\"{}\",\"holds_at_least\":{},\"kind\":\"keyhole-balance-proof-v1\",\"locked_until_ms\":{},\"log_head\":\"{}\",\"min\":\"{}\",\"owner\":\"{}\",\"token_id\":\"{}\",\"ts_ms\":{}}}",
+        asset, holds, locked_until, log_head, min, owner, token_id, ts_ms
+    )
+}
+
+/// The token id a new mint would use is taken: `already_minted`, not an on-chain panic.
+pub fn assert_mint_id_free(existing_owner: Option<&str>) -> Result<(), Error> {
+    match existing_owner {
+        Some(_) => Err(err("already_minted", "this account already minted its key and moved it; one mint per account")),
+        None => Ok(()),
+    }
+}
