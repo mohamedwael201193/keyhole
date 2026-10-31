@@ -51,14 +51,17 @@ mod host {
         Ok(view(&keys_contract(), "holder_tier", json!({"account_id": account}))?.as_u64().map(|t| t as u8))
     }
 
-    /// Current owner of one of this account's keys, confirmed with `nft_token.owner_id`.
-    fn holds_key(account: &str) -> Result<bool, Error> {
+    /// The key this account holds now, confirmed with `nft_token.owner_id`. A key received by
+    /// transfer has a token id that was derived from the minting account, not from this one.
+    fn held_token(account: &str) -> Result<Option<String>, Error> {
         let v = view(&keys_contract(), "nft_tokens_for_owner", json!({"account_id": account, "from_index": "0", "limit": 1}))?;
-        let Some(first) = v.as_array().and_then(|a| a.first()) else { return Ok(false); };
-        let Some(tid) = first.get("token_id").and_then(|t| t.as_str()) else { return Ok(false); };
+        let Some(first) = v.as_array().and_then(|a| a.first()) else { return Ok(None); };
+        let Some(tid) = first.get("token_id").and_then(|t| t.as_str()) else { return Ok(None); };
         let tok = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?;
-        Ok(owner_is(tok.get("owner_id").and_then(|t| t.as_str()), account))
+        Ok(owner_is(tok.get("owner_id").and_then(|t| t.as_str()), account).then(|| tid.to_string()))
     }
+
+    fn holds_key(account: &str) -> Result<bool, Error> { Ok(held_token(account)?.is_some()) }
 
     fn yocto_of(v: &Value) -> u128 {
         v.pointer("/amount").or(v.pointer("/result/amount"))
@@ -66,7 +69,12 @@ mod host {
             .and_then(|s| s.parse().ok()).unwrap_or(0)
     }
 
-    struct Ctx { account: String, req: SignedRequest, now_ms: u64, tier: Option<u8> }
+    struct Ctx { account: String, req: SignedRequest, now_ms: u64, tier: Option<u8>, token: Option<String> }
+
+    impl Ctx {
+        /// Token for the per-key log: the key held now, else the id this account would mint.
+        fn token_id(&self) -> String { self.token.clone().unwrap_or_else(|| token_id_for(&self.account)) }
+    }
 
     /// Signature -> key ownership -> freshness -> op binding -> tier -> rate limit -> nonce (replay).
     fn authenticate(input: &Value, op: &str, need_key: bool) -> Result<Ctx, Error> {
@@ -85,13 +93,14 @@ mod host {
         let now_ms = chain_now_ms()?;
         check_freshness(req.ts_ms, now_ms)?;
         let tier = holder_tier(&account)?;
-        if need_key && !holds_key(&account)? {
+        let token = if need_key { held_token(&account)? } else { None };
+        if need_key && token.is_none() {
             return Err(err("not_owner", "only the current key holder can authorize this"));
         }
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         rate_limit(&mut Host, &account, &lim, now_ms)?;
         consume_nonce(&mut Host, &account, &nonce, now_ms)?;
-        Ok(Ctx { account, req, now_ms, tier })
+        Ok(Ctx { account, req, now_ms, tier, token })
     }
 
     /// Minter key is generated inside the TEE on first use and kept in encrypted storage.
@@ -341,7 +350,7 @@ mod host {
             let (st, j) = http("POST", &format!("{}/wallet/v1/confidential/deposit/cross-chain", OL), Some(&key), Some(&body))?;
             if st >= 300 { return Err(err("upstream", format!("deposit address failed ({})", st))); }
             out["deposit"] = json!({"deposit_address": j.get("deposit_address"), "amount": j.get("amount"), "expires_at": j.get("expires_at"), "hint": j.get("hint")});
-            prov_append(&token_id_for(&c.account), "deposit", &c.account, c.now_ms, &body.to_string());
+            prov_append(&c.token_id(), "deposit", &c.account, c.now_ms, &body.to_string());
         }
         Ok(out)
     }
@@ -378,7 +387,7 @@ mod host {
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
         log_push(&c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
             "usd_in_micro": usd, "status": status, "source": p.get("source")}));
-        if status == "success" { prov_append(&token_id_for(&c.account), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}")); }
+        if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}")); }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
             "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
     }
@@ -404,7 +413,7 @@ mod host {
         let status = s(&r, "status").unwrap_or_default();
         if status != "success" { let _ = Host.incr(&day_key, -(usd as i64)); }
         log_push(&c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status}));
-        if status == "success" { prov_append(&token_id_for(&c.account), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
+        if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
         Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "request_id": r.get("request_id"),
@@ -453,7 +462,9 @@ mod host {
         raw.get(..32).and_then(|s| s.try_into().ok()).ok_or_else(|| err("signer", "bad key"))
     }
 
-    fn prov_body(token: &str, include_detail: bool) -> Result<Value, Error> {
+    /// `detail_for`: return the private detail only on rows this account wrote, so a new holder
+    /// never reads a previous holder's deposit or withdraw detail (the hash still chains).
+    fn prov_body(token: &str, detail_for: Option<&str>) -> Result<Value, Error> {
         let rows = load_prov(token);
         let evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
         let head = verify_chain(&evs).unwrap_or_else(|_| "0".repeat(64));
@@ -461,7 +472,7 @@ mod host {
         let sig = sign_head(&minter_secret(&msk)?, &head);
         let events: Vec<Value> = rows.iter().map(|(ev, detail)| {
             let mut row = json!({"i": ev.i, "hash": event_hash(ev), "kind": ev.kind, "owner": ev.owner, "prev": ev.prev, "ts_ms": ev.ts_ms, "detail_hash": ev.detail_hash});
-            if include_detail { row["detail"] = json!(detail); }
+            if detail_for == Some(ev.owner.as_str()) { row["detail"] = json!(detail); }
             row
         }).collect();
         Ok(json!({"token_id": token, "head": head, "sig": sig, "minter": mid, "events": events}))
@@ -474,7 +485,7 @@ mod host {
         if let Some(owner) = tok.get("owner_id").and_then(|v| v.as_str()) {
             if let Ok(now) = chain_now_ms() { prov_sync_owner(&tid, owner, now); }
         }
-        let body = prov_body(&tid, false)?;
+        let body = prov_body(&tid, None)?;
         let mut out = json!({"ok": true, "op": "provenance"});
         if let Value::Object(map) = body { if let Value::Object(o) = &mut out { o.extend(map); } }
         Ok(out)
@@ -484,8 +495,8 @@ mod host {
         let c = authenticate(input, "history", true)?;
         let (v, _) = storage::get(&hkey(&c.account, "log"));
         let a: Vec<Value> = serde_json::from_slice(&v).unwrap_or_default();
-        let tid = token_id_for(&c.account);
-        let chain = prov_body(&tid, true).unwrap_or(json!({}));
+        let tid = c.token_id();
+        let chain = prov_body(&tid, Some(&c.account)).unwrap_or(json!({}));
         Ok(json!({"ok": true, "op": "history", "account": c.account, "entries": a, "log": chain}))
     }
 

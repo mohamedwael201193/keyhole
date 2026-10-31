@@ -367,7 +367,10 @@ fn random_transfer_and_withdraw_never_pays_the_previous_holder() {
 fn mint_gas_and_minter_balance() {
     assert_eq!(MINT_GAS, 20_000_000_000_000);
     assert!(!minter_can_mint(MINT_DEPOSIT_YOCTO));
-    assert!(minter_can_mint(MINT_DEPOSIT_YOCTO + 2_000_000_000_000_000_000_000));
+    // 0.014 NEAR is not enough: 20 Tgas is prepaid at 1e9 yocto/gas (0.02 NEAR) on top of the deposit.
+    assert!(!minter_can_mint(MINT_DEPOSIT_YOCTO + 2_000_000_000_000_000_000_000));
+    assert!(minter_can_mint(MINT_DEPOSIT_YOCTO + MINT_FEE_BUFFER_YOCTO));
+    assert!(MINT_FEE_BUFFER_YOCTO >= MINT_GAS as u128 * 1_000_000_000);
     assert!(owner_is(Some("alice.near"), "alice.near"));
     assert!(!owner_is(Some("bob.near"), "alice.near"));
     assert!(!owner_is(None, "alice.near"));

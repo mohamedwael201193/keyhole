@@ -362,8 +362,11 @@ pub fn assert_withdraw_to(signer: &str, to: &str) -> Result<(), Error> {
 pub const MINT_GAS: u64 = 20_000_000_000_000;
 /// Attached deposit for that mint, in yoctoNEAR. Matches the call in `op_mint`.
 pub const MINT_DEPOSIT_YOCTO: u128 = 12_000_000_000_000_000_000_000;
-/// Kept on the minter for the fee after the deposit is attached.
-const MINT_FEE_BUFFER_YOCTO: u128 = 2_000_000_000_000_000_000_000;
+/// Kept on the minter on top of the deposit. NEAR charges the attached gas up front at the
+/// protocol gas price (20 Tgas x 1e9 yocto = 0.02 NEAR, mostly refunded), and the minter's own
+/// storage (~0.002 NEAR) cannot be spent. A smaller buffer lets the RPC reject the tx with
+/// NotEnoughBalance instead of answering `minter_low_balance`.
+pub const MINT_FEE_BUFFER_YOCTO: u128 = 22_000_000_000_000_000_000_000;
 
 /// True when the minter balance can attach `MINT_DEPOSIT_YOCTO` and still pay the fee.
 pub fn minter_can_mint(balance_yocto: u128) -> bool {
