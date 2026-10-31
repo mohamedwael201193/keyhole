@@ -25,12 +25,19 @@ jobs:
       - run: rustup show && rustup component add clippy
       - run: cargo test --locked
       - run: cargo clippy --locked --all-targets -- -D warnings
-      - name: reproducible wasm == deployed sha256
+      - name: reproducible wasm, compared with the deployed hash
         run: |
           got=$(./build.sh)
-          want=$(cat DEPLOYED_SHA256)
-          echo "built $got"; echo "deployed $want"
-          test "$got" = "$want"
+          want=$(tr -d '[:space:]' < DEPLOYED_SHA256)
+          echo "built    $got"
+          echo "deployed $want"
+          if [ "$got" != "$want" ]; then
+            echo "::warning title=worker source is ahead of the enclave::Redeploy this wasm, then set DEPLOYED_SHA256 to $got. Until then verify.sh --rebuild will not match live attestations."
+          fi
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: key log verifier
+        run: node verify-log.mjs --self-test
       - name: deployed bytes on FastFS match
         run: test "$(curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$(cat DEPLOYED_SHA256).wasm | sha256sum | cut -d' ' -f1)" = "$(cat DEPLOYED_SHA256)"
   cli:

@@ -85,6 +85,11 @@
   "withdrawn": "Withdrawn",
   "intent": "View on the intents explorer",
   "request": "Request",
+  "txHash": "Transaction",
+  "fee": "Fee",
+  "keyLog": "Key log",
+  "keyLogEmpty": "No events for this key yet.",
+  "keyLogOld": "This enclave build does not serve the key log yet.",
   "storageNote": "If this account has not held this token, NEAR registers storage once (about 0.00125 NEAR, about $0.006), taken from the amount.",
   "keyLoading": "Looking up your key…",
   "usd": "USD value",
@@ -303,6 +308,14 @@
    "The mint transaction failed.",
    "Nothing was charged to you. Try again."
   ],
+  "minter_low_balance": [
+   "The minter account is short on NEAR.",
+   "Minting is paused until that account is topped up. Your wallet was not charged."
+  ],
+  "bad_log": [
+   "The key log does not verify.",
+   "Do not trust the rows. Run the verify-log script on the published head."
+  ],
   "no_auth": [
    "This action needs a signature.",
    "Connect a wallet and sign."
@@ -310,6 +323,10 @@
   "no_key": [
    "You don't hold a key yet.",
    "Mint your key first."
+  ],
+  "not_owner": [
+   "Only the current key holder can do this.",
+   "The key moved before this request settled. Nothing was sent."
   ],
   "op_mismatch": [
    "The signed action doesn't match the request.",

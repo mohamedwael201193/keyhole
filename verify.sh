@@ -8,8 +8,12 @@ need(){ command -v "$1" >/dev/null || { echo "missing $1"; exit 2; }; }
 need curl; need jq; need sha256sum
 A=$(curl -fsS "$API/attestations/by-call/$CALL")
 H=$(jq -r '.executed_wasm_sha256' <<<"$A"); R=$(jq -r '.wasm_hash' <<<"$A"); P=$(jq -r '.project_id' <<<"$A")
+M=$(jq -r '.worker_measurement // empty' <<<"$A")
 Q=$(jq -r '.tdx_quote | length' <<<"$A")
-echo "call      $CALL"; echo "project   $P"; echo "attested  $H"
+echo "call         $CALL"; echo "project      $P"; echo "executed     $H"
+echo "measurement  ${M:-none}"
+DEP="$(dirname "$0")/tee/worker/DEPLOYED_SHA256"
+if [ -f "$DEP" ]; then echo "deployed     $(tr -d '[:space:]' < "$DEP")"; fi
 fail=0; ok(){ echo "OK   $1"; }; bad(){ echo "FAIL $1"; fail=1; }
 [ "$Q" -gt 100 ] && ok "TDX quote present ($Q chars)" || bad "no TDX quote"
 [ "$H" = "$R" ] && ok "registered wasm_hash == executed" || bad "wasm_hash $R != executed $H"
@@ -23,6 +27,7 @@ F=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)
 [ "$F" = "$H" ] && ok "FastFS $URL sha256 matches" || bad "FastFS sha256 $F"
 if [ "${2:-}" = "--rebuild" ]; then
   B=$("$(dirname "$0")/tee/worker/build.sh")
-  [ "$B" = "$H" ] && ok "local reproducible build matches ($B)" || bad "local build $B differs (deployed version may be another commit)"
+  [ "$B" = "$H" ] && ok "local reproducible build matches executed wasm ($B)" || bad "local build $B differs from executed $H"
+  echo "note  worker_measurement is the TDX measurement. It is not the wasm sha256."
 fi
 exit $fail

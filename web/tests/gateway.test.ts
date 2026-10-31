@@ -4,7 +4,10 @@ import { createLimiter } from "@/lib/ratelimit";
 const auth = (op: string) => ({ account_id: "a.near", public_key: "ed25519:x", signature: "s", nonce: "n", recipient: "keyhole", message: JSON.stringify({ op, account_id: "a.near", ts_ms: 1, params: {} }) });
 
 describe("gateway body checks", () => {
-  it("allows info without auth", () => expect(checkBody('{"op":"info"}')).toMatchObject({ ok: true, op: "info" }));
+  it("allows info and the public key log without auth", () => {
+    expect(checkBody('{"op":"info"}')).toMatchObject({ ok: true, op: "info" });
+    expect(checkBody('{"op":"provenance","token_id":"kabc"}')).toMatchObject({ ok: true, op: "provenance" });
+  });
   it.each(["copy", "sweep_minter", "", "INFO"])("blocks op %s even with an auth object", (op) => expect(checkBody(JSON.stringify({ op, auth: auth(op || "swap") }))).toMatchObject({ ok: false, code: "bad_op" }));
   it("refuses unsigned or incomplete swap and withdraw", () => {
     for (const op of ["swap", "withdraw"]) {
