@@ -1,5 +1,5 @@
 //! KEYHOLE OutLayer worker (wasm32-wasip2). Reads one JSON request on stdin, prints one JSON reply.
-//! Ops: info | status | quote | mint | account | balance | swap | copy | withdraw | history | sweep_minter.
+//! Ops: info | status | quote | mint | account | balance | swap | copy | withdraw | history | provenance | lock | prove | sweep_minter.
 //! All ops except `info` and `sweep_minter` require a NEP-413 signature by the holder.
 #[cfg(target_arch = "wasm32")]
 mod host {
@@ -29,6 +29,11 @@ mod host {
             if !e.is_empty() { return Err(err("storage", e)); }
             Ok(v)
         }
+    }
+
+    impl Kv for Host {
+        fn get(&self, k: &str) -> Vec<u8> { storage::get(k).0 }
+        fn set(&mut self, k: &str, v: &[u8]) { let _ = storage::set(k, v); }
     }
 
     fn chain_now_ms() -> Result<u64, Error> {
@@ -61,7 +66,11 @@ mod host {
         Ok(owner_is(tok.get("owner_id").and_then(|t| t.as_str()), account).then(|| tid.to_string()))
     }
 
-    fn holds_key(account: &str) -> Result<bool, Error> { Ok(held_token(account)?.is_some()) }
+    /// `nft_token(token_id).owner_id == account`, read live with finality final.
+    fn owns(token: &str, account: &str) -> Result<bool, Error> {
+        let tok = view(&keys_contract(), "nft_token", json!({"token_id": token}))?;
+        Ok(owner_is(tok.get("owner_id").and_then(|t| t.as_str()), account))
+    }
 
     fn yocto_of(v: &Value) -> u128 {
         v.pointer("/amount").or(v.pointer("/result/amount"))
@@ -72,8 +81,11 @@ mod host {
     struct Ctx { account: String, req: SignedRequest, now_ms: u64, tier: Option<u8>, token: Option<String> }
 
     impl Ctx {
-        /// Token for the per-key log: the key held now, else the id this account would mint.
+        /// The key this request acts on: the key held now, else the id this account would mint.
         fn token_id(&self) -> String { self.token.clone().unwrap_or_else(|| token_id_for(&self.account)) }
+        /// The custody wallet bound to that key.
+        fn wallet(&self) -> Result<(String, String), Error> { holder_wallet(&self.token_id(), &self.account) }
+        fn cap(&self) -> String { cap_id(&self.token_id()) }
     }
 
     /// Signature -> key ownership -> freshness -> op binding -> tier -> rate limit -> nonce (replay).
@@ -93,7 +105,10 @@ mod host {
         let now_ms = chain_now_ms()?;
         check_freshness(req.ts_ms, now_ms)?;
         let tier = holder_tier(&account)?;
-        let token = if need_key { held_token(&account)? } else { None };
+        // A holder of several keys names one in the signed params; otherwise the first key held.
+        let token = if !need_key && tier.is_none() { None } else if let Some(t) = s(&req.params, "token_id") {
+            if owns(&t, &account)? { Some(t) } else { None }
+        } else { held_token(&account)? };
         if need_key && token.is_none() {
             return Err(err("not_owner", "only the current key holder can authorize this"));
         }
@@ -208,7 +223,7 @@ mod host {
         let usd = dry.pointer("/quote/amountInUsd").and_then(|v| v.as_str()).and_then(parse_usd_micro)
             .ok_or_else(|| err("upstream", "quote has no USD value; cannot apply caps"))?;
         let execute = p.get("execute").and_then(|v| v.as_bool()).unwrap_or(false);
-        let spent = enforce_caps(&mut Host, &c.account, &lim, usd, c.now_ms, execute)?;
+        let spent = enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, execute)?;
         let mut out = json!({"ok": true, "op": "quote", "account": c.account, "tier": c.tier, "usd_micro": usd,
             "limits": lim, "spent_today_usd_micro": spent, "policy": "passed"});
         if !execute {
@@ -222,14 +237,14 @@ mod host {
                 out["deposit_address"] = real.pointer("/quote/depositAddress").cloned().unwrap_or(Value::Null);
                 Ok(out)
             }
-            Err(e) => { let _ = Host.incr(&hkey(&c.account, &format!("spent/{}", c.now_ms / 86_400_000)), -(usd as i64)); Err(e) }
+            Err(e) => { let _ = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), -(usd as i64)); Err(e) }
         }
     }
 
     fn op_status(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "status", false)?;
         let lim = c.tier.and_then(limits_for_tier);
-        let spent = Host.incr(&hkey(&c.account, &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
+        let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "spent_today_usd_micro": spent}))
     }
 
@@ -246,6 +261,9 @@ mod host {
         let day = c.now_ms / 86_400_000;
         bump_within(&mut Host, &format!("g/mints/{}", day), 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into())?;
         let tid = token_id_for(&c.account);
+        // An account that minted and then moved its key would reuse this id: refuse before sending.
+        let existing = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?;
+        assert_mint_id_free(existing.get("owner_id").and_then(|o| o.as_str()))?;
         let (media, media_hash) = bronze_media(&keys_contract(), &tid);
         let args = json!({"token_id": tid, "receiver_id": c.account, "tier": 1,
             "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1, "media": media, "media_hash": media_hash}});
@@ -276,11 +294,12 @@ mod host {
         Ok((st, serde_json::from_slice(&raw).unwrap_or(json!({"raw": String::from_utf8_lossy(&raw).chars().take(200).collect::<String>()}))))
     }
 
-    /// Returns (api_key, intents_user_id). The api key is created and kept inside the enclave only.
-    fn holder_wallet(account: &str) -> Result<(String, String), Error> {
-        let k = hkey(account, "wallet");
-        let (v, _) = storage::get(&k);
-        if !v.is_empty() {
+    /// Returns (api_key, intents_user_id) of the custody wallet bound to `token`. The api key is
+    /// created and kept inside the enclave only. Whoever owns the token operates this wallet, so
+    /// transferring the NFT transfers the confidential account.
+    fn holder_wallet(token: &str, owner: &str) -> Result<(String, String), Error> {
+        let k = tkey(token, "wallet");
+        if let Some(v) = custody_lookup(&mut Host, token, owner)? {
             let j: Value = serde_json::from_slice(&v).map_err(|_| err("storage", "wallet record corrupt"))?;
             return Ok((s(&j, "api_key").unwrap_or_default(), s(&j, "near_account_id").unwrap_or_default()));
         }
@@ -325,8 +344,9 @@ mod host {
         q.pointer("/quote/amountInUsd").and_then(|v| v.as_str()).and_then(parse_usd_micro).ok_or_else(|| err("upstream", "no USD price for token"))
     }
 
-    fn log_push(account: &str, entry: Value) {
-        let k = hkey(account, "log");
+    fn log_push(token: &str, by: &str, mut entry: Value) {
+        entry["by"] = json!(by);
+        let k = tkey(token, "log");
         let (v, _) = storage::get(&k);
         let mut a: Vec<Value> = serde_json::from_slice(&v).unwrap_or_default();
         a.push(entry);
@@ -342,7 +362,7 @@ mod host {
 
     fn op_account(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "account", true)?;
-        let (key, id) = holder_wallet(&c.account)?;
+        let (key, id) = c.wallet()?;
         let mut out = json!({"ok": true, "op": "account", "account": c.account, "confidential_id": id,
             "fund": "send a confidential transfer to confidential_id, or ask for a cross-chain deposit address with params {chain, token, amount}"});
         if let Some(chain) = s(&c.req.params, "chain") {
@@ -357,7 +377,7 @@ mod host {
 
     fn op_balance(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "balance", true)?;
-        let (key, id) = holder_wallet(&c.account)?;
+        let (key, id) = c.wallet()?;
         let (_, j) = http("GET", &format!("{}/wallet/v1/confidential/balance", OL), Some(&key), None)?;
         Ok(json!({"ok": true, "op": "balance", "account": c.account, "confidential_id": id, "balances": j.get("balances").cloned().unwrap_or(json!([]))}))
     }
@@ -370,11 +390,12 @@ mod host {
         let tout = s(p, "token_out").ok_or_else(|| err("bad_params", "missing params.token_out"))?;
         if tin == tout { return Err(err("bad_params", "token_in and token_out must differ")); }
         let amt = digits(p, "amount_in")?;
-        let (key, id) = holder_wallet(&c.account)?;
+        let (key, id) = c.wallet()?;
         let usd = usd_of(&tin, &amt, &id, c.now_ms)?;
-        enforce_caps(&mut Host, &c.account, &lim, usd, c.now_ms, true)?;
-        let day_key = hkey(&c.account, &format!("spent/{}", c.now_ms / 86_400_000));
-        if let Err(e) = settle_if_owner(holds_key(&c.account)?) {
+        assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
+        enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
+        let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
+        if let Err(e) = settle_if_owner(owns(&c.token_id(), &c.account)?) {
             let _ = Host.incr(&day_key, -(usd as i64));
             return Err(e);
         }
@@ -385,7 +406,7 @@ mod host {
         let status = s(&r, "status").unwrap_or_default();
         if status != "success" { let _ = Host.incr(&day_key, -(usd as i64)); }
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
-        log_push(&c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
+        log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
             "usd_in_micro": usd, "status": status, "source": p.get("source")}));
         if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}")); }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
@@ -400,11 +421,12 @@ mod host {
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
         assert_withdraw_to(&c.account, &to)?;
         let amt = digits(p, "amount")?;
-        let (key, id) = holder_wallet(&c.account)?;
+        let (key, id) = c.wallet()?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
-        enforce_caps(&mut Host, &c.account, &lim, usd, c.now_ms, true)?;
-        let day_key = hkey(&c.account, &format!("spent/{}", c.now_ms / 86_400_000));
-        if let Err(e) = settle_if_owner(holds_key(&c.account)?) {
+        assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
+        enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
+        let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
+        if let Err(e) = settle_if_owner(owns(&c.token_id(), &c.account)?) {
             let _ = Host.incr(&day_key, -(usd as i64));
             return Err(e);
         }
@@ -412,7 +434,7 @@ mod host {
         let r = match r { Ok(r) => r, Err(e) => { let _ = Host.incr(&day_key, -(usd as i64)); return Err(e); } };
         let status = s(&r, "status").unwrap_or_default();
         if status != "success" { let _ = Host.incr(&day_key, -(usd as i64)); }
-        log_push(&c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status}));
+        log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status}));
         if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
@@ -491,10 +513,50 @@ mod host {
         Ok(out)
     }
 
+    /// Seller lock: swap and withdraw are refused for `params.hours` (1..=168). It cannot be lifted
+    /// early by the holder. A transfer ends it, because a lock binds only the owner who set it.
+    fn op_lock(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "lock", true)?;
+        let hours = s(&c.req.params, "hours").and_then(|h| h.parse::<u64>().ok())
+            .or_else(|| c.req.params.get("hours").and_then(|h| h.as_u64()))
+            .filter(|h| (1..=MAX_LOCK_HOURS).contains(h))
+            .ok_or_else(|| err("bad_params", "params.hours must be 1..168"))?;
+        let k = tkey(&c.token_id(), "lock");
+        let cur = active_lock(&Host.get(&k), &c.account, c.now_ms).unwrap_or(0);
+        let until = (c.now_ms + hours * 3_600_000).max(cur);
+        Host.set(&k, lock_value(&c.account, until).as_bytes());
+        prov_append(&c.token_id(), "lock", &c.account, c.now_ms, &format!("lock until {until}"));
+        Ok(json!({"ok": true, "op": "lock", "account": c.account, "token_id": c.token_id(), "locked_until_ms": until}))
+    }
+
+    /// Holder-signed proof that the key's account holds at least `params.min` of `params.token`.
+    /// The statement names the threshold and a yes/no answer, not the balance, and is signed by the
+    /// enclave minter key (same key as the key log). The holder chooses whom to show it to.
+    fn op_prove(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "prove", true)?;
+        let asset = s(&c.req.params, "token").unwrap_or_else(|| USDC.to_string());
+        let min = digits(&c.req.params, "min")?;
+        let min_n: u128 = min.parse().map_err(|_| err("bad_params", "params.min too large"))?;
+        let (key, _) = c.wallet()?;
+        let (st, j) = http("GET", &format!("{}/wallet/v1/confidential/balance", OL), Some(&key), None)?;
+        if st >= 300 { return Err(err("upstream", format!("balance failed ({})", st))); }
+        let holds = balance_of(j.get("balances").unwrap_or(&Value::Null), &asset) >= min_n;
+        let tid = c.token_id();
+        let locked = active_lock(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms).unwrap_or(0);
+        let rows = load_prov(&tid);
+        let evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
+        let head = verify_chain(&evs).unwrap_or_else(|_| "0".repeat(64));
+        let statement = proof_canonical(&tid, &c.account, &asset, &min, holds, locked, &head, c.now_ms);
+        let (mid, msk) = minter()?;
+        let sig = sign_head(&minter_secret(&msk)?, &statement);
+        Ok(json!({"ok": true, "op": "prove", "statement": statement, "sig": sig, "minter": mid, "holds_at_least": holds}))
+    }
+
     fn op_history(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "history", true)?;
-        let (v, _) = storage::get(&hkey(&c.account, "log"));
-        let a: Vec<Value> = serde_json::from_slice(&v).unwrap_or_default();
+        let _ = c.wallet()?; // runs the one-time migration, so a legacy log is found
+        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&c.token_id(), "log"))).unwrap_or_default();
+        let a = history_for(&all, &c.account);
         let tid = c.token_id();
         let chain = prov_body(&tid, Some(&c.account)).unwrap_or(json!({}));
         Ok(json!({"ok": true, "op": "history", "account": c.account, "entries": a, "log": chain}))
@@ -523,7 +585,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","sweep_minter"], "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","sweep_minter"], "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes"}))
     }
 
@@ -535,6 +597,8 @@ mod host {
         let r = match op {
             "info" => op_info(),
             "provenance" => op_provenance(&input),
+            "lock" => op_lock(&input),
+            "prove" => op_prove(&input),
             "status" => op_status(&input),
             "quote" => op_quote(&input),
             "mint" => op_mint(&input),
@@ -545,7 +609,7 @@ mod host {
             "withdraw" => op_withdraw(&input),
             "history" => op_history(&input),
             "sweep_minter" => op_sweep_minter(),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, sweep_minter")),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, sweep_minter")),
         };
         let out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         println!("{}", out);

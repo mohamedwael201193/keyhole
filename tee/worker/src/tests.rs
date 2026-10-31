@@ -375,3 +375,110 @@ fn mint_gas_and_minter_balance() {
     assert!(!owner_is(Some("bob.near"), "alice.near"));
     assert!(!owner_is(None, "alice.near"));
 }
+
+impl Kv for Mem {
+    fn get(&self, k: &str) -> Vec<u8> { self.0.get(k).cloned().unwrap_or_default() }
+    fn set(&mut self, k: &str, v: &[u8]) { self.0.insert(k.into(), v.to_vec()); }
+}
+
+/// Model of the custody API: api_key -> USDC units.
+fn wallet_for(st: &mut Mem, token: &str, owner: &str, ledger: &mut HashMap<String, u128>, n: &mut u32) -> String {
+    let rec = match custody_lookup(st, token, owner).unwrap() {
+        Some(r) => r,
+        None => {
+            *n += 1;
+            let r = format!("wk_{}", n).into_bytes();
+            st.set_if_absent(&tkey(token, "wallet"), &r).unwrap();
+            st.get(&tkey(token, "wallet"))
+        }
+    };
+    let k = String::from_utf8(rec).unwrap();
+    ledger.entry(k.clone()).or_insert(0);
+    k
+}
+
+#[test]
+fn transfer_moves_the_confidential_account_to_the_new_holder() {
+    let mut st = Mem::default();
+    let mut ledger = HashMap::new();
+    let mut n = 0;
+    let t = token_id_for("alice.near");
+    // Alice mints and funds the key's account.
+    let wa = wallet_for(&mut st, &t, "alice.near", &mut ledger, &mut n);
+    *ledger.get_mut(&wa).unwrap() += 100;
+    let mut log = vec![];
+    log.push(serde_json::json!({"kind": "deposit", "amount": "100", "by": "alice.near"}));
+    // nft_transfer alice -> bob. Bob's first call reaches the same wallet and balance.
+    let owner = "bob.near";
+    admit_request("bob.near", owner, true, true).unwrap();
+    let wb = wallet_for(&mut st, &t, "bob.near", &mut ledger, &mut n);
+    assert_eq!(wa, wb);
+    assert_eq!(ledger[&wb], 100);
+    // Bob withdraws 10 to himself.
+    assert_withdraw_to("bob.near", "bob.near").unwrap();
+    settle_if_owner(owner == "bob.near").unwrap();
+    *ledger.get_mut(&wb).unwrap() -= 10;
+    log.push(serde_json::json!({"kind": "withdraw", "amount": "10", "by": "bob.near"}));
+    assert_eq!(ledger[&wb], 90);
+    // Alice: fresh signature is not_owner, so she reaches no wallet.
+    assert_eq!(admit_request("alice.near", owner, true, true).unwrap_err().code, "not_owner");
+    // Bob replays his own signed withdraw: replay.
+    let nonce = [9u8; 32];
+    consume_nonce(&mut st, "bob.near", &nonce, 1).unwrap();
+    assert_eq!(consume_nonce(&mut st, "bob.near", &nonce, 2).unwrap_err().code, "replay");
+    // History privacy: Bob sees only his rows, Alice's deposit row is not returned.
+    let h = history_for(&log, "bob.near");
+    assert_eq!(h.len(), 1);
+    assert_eq!(h[0]["kind"], "withdraw");
+    assert!(history_for(&log, "carol.near").is_empty());
+    assert_eq!(n, 1, "exactly one custody wallet was created");
+}
+
+#[test]
+fn legacy_wallet_migrates_once_to_one_token() {
+    let mut st = Mem::default();
+    st.set(&hkey("alice.near", "wallet"), b"wk_legacy");
+    st.set(&hkey("alice.near", "log"), br#"[{"kind":"swap"}]"#);
+    let t1 = token_id_for("alice.near");
+    assert_eq!(custody_lookup(&mut st, &t1, "alice.near").unwrap().unwrap(), b"wk_legacy");
+    // Idempotent.
+    assert_eq!(custody_lookup(&mut st, &t1, "alice.near").unwrap().unwrap(), b"wk_legacy");
+    // A second key held by the same account does not get the same wallet.
+    assert!(custody_lookup(&mut st, "kother", "alice.near").unwrap().is_none());
+    // The legacy log moved with `by` = the owner at migration, so a buyer cannot read it.
+    let log: Vec<serde_json::Value> = serde_json::from_slice(&st.get(&tkey(&t1, "log"))).unwrap();
+    assert_eq!(log[0]["by"], "alice.near");
+    assert!(history_for(&log, "bob.near").is_empty());
+    // After a transfer the new owner finds the migrated wallet via the token.
+    assert_eq!(custody_lookup(&mut st, &t1, "bob.near").unwrap().unwrap(), b"wk_legacy");
+}
+
+#[test]
+fn seller_lock_binds_only_the_owner_who_set_it() {
+    let v = lock_value("alice.near", 1_000);
+    assert_eq!(assert_unlocked(v.as_bytes(), "alice.near", 999).unwrap_err().code, "locked");
+    assert!(assert_unlocked(v.as_bytes(), "alice.near", 1_000).is_ok());
+    assert!(assert_unlocked(v.as_bytes(), "bob.near", 10).is_ok(), "a transfer ends the lock");
+    assert!(assert_unlocked(b"", "alice.near", 10).is_ok());
+    assert!(active_lock(lock_value("a|b.near", 5).as_bytes(), "a|b.near", 1).is_some());
+}
+
+#[test]
+fn balance_proof_names_a_threshold_and_verifies() {
+    let bals = serde_json::json!([{"token": "nep141:usdc", "amount": "40000"}, {"token": "nep141:usdc", "amount": "5"}, {"token": "x", "amount": "9"}]);
+    assert_eq!(balance_of(&bals, "nep141:usdc"), 40005);
+    assert_eq!(balance_of(&serde_json::json!([{"token":"a","balance": 7}]), "a"), 7);
+    let st = proof_canonical("kabc", "bob.near", "nep141:usdc", "10000", true, 0, &"0".repeat(64), 5);
+    assert!(!st.contains("40005"), "the balance itself is never in the statement");
+    let secret = [3u8; 32];
+    let sig = sign_head(&secret, &st);
+    let public = SigningKey::from_bytes(&secret).verifying_key().to_bytes();
+    assert!(verify_head(&public, &st, &sig));
+    assert!(!verify_head(&public, &st.replace("true", "false"), &sig));
+}
+
+#[test]
+fn re_mint_after_transfer_is_refused_before_sending() {
+    assert_eq!(assert_mint_id_free(Some("bob.near")).unwrap_err().code, "already_minted");
+    assert!(assert_mint_id_free(None).is_ok());
+}
