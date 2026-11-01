@@ -18,7 +18,7 @@ fail=0; ok(){ echo "OK   $1"; }; bad(){ echo "FAIL $1"; fail=1; }
 [ "$Q" -gt 100 ] && ok "TDX quote present ($Q chars)" || bad "no TDX quote"
 [ "$H" = "$R" ] && ok "registered wasm_hash == executed" || bad "wasm_hash $R != executed $H"
 PUB=$(tr -d '[:space:]' < "$(dirname "$0")/tee/worker/DEPLOYED_SHA256")
-PREV="b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c"
+PREV="38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78 b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c"
 if [ "$H" = "$PUB" ]; then ok "executed == published build ${PUB:0:8}"
 elif [[ " $PREV " == *" $H "* ]]; then ok "executed == previous build ${H:0:8}, superseded by ${PUB:0:8}"
 else bad "executed $H != published build $PUB"; fi
