@@ -37,5 +37,19 @@ export const tierName = (t: number | null | undefined) => (t === 1 ? "Bronze" : 
 /** Truncate the middle of 64-hex implicit accounts; keep named accounts whole when short. */
 export function shortAccount(a: string, keep = 6): string {
   if (/^[0-9a-f]{64}$/.test(a)) return `${a.slice(0, keep)}…${a.slice(-keep)}`;
+  if (/^0x[0-9a-fA-F]{40}$/.test(a)) return `${a.slice(0, 2 + keep)}…${a.slice(-keep)}`;
   return a.length > 28 ? `${a.slice(0, 14)}…${a.slice(-10)}` : a;
+}
+
+/** Compact account label for the mobile header pill: at most ~11 characters. */
+export function pillAccount(a: string): string {
+  if (/^[0-9a-f]{64}$/.test(a) || /^0x[0-9a-fA-F]{40}$/.test(a)) return shortAccount(a, 4);
+  const name = a.replace(/\.near$/, "");
+  return name.length > 10 ? `${name.slice(0, 9)}…` : name;
+}
+
+/** Short, readable key id for titles: "k5f4750858f328940" -> "5f47". */
+export function shortKeyId(id: string): string {
+  const core = id.replace(/^k/, "");
+  return core.length > 6 ? core.slice(0, 4) : core;
 }
