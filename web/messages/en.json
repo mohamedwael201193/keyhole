@@ -17,7 +17,8 @@
   "skip": "Skip to content",
   "connectShort": "Connect",
   "home": "Home",
-  "identity": "Identity"
+  "identity": "Identity",
+  "settle": "1Click settlements"
  },
  "hero": {
   "eyebrow": "Confidential by default · The key owns the account",

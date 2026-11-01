@@ -13,6 +13,7 @@ export function Footer() {
       <span style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
         <Link href="/judge" data-testid="footer-judge">{t("nav.judge")}</Link>
         <Link href="/ask" data-testid="footer-ask">{t("nav.ask")}</Link>
+        <Link href="/settle" data-testid="footer-settle">{t("nav.settle")}</Link>
         <Link href="/atlas">{t("nav.atlas")}</Link>
         <Link href="/identity">{t("nav.identity")}</Link>
         <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">{KEYS_CONTRACT}</a>

@@ -586,3 +586,16 @@ test("key history: a real log re-verifies and an edited row fails", async ({ pag
   await expect(page.getByTestId("key-verdict")).toHaveAttribute("data-ok", "false");
   await expect(page.getByTestId("k-chain")).toHaveAttribute("data-pass", "false");
 });
+
+test("settle: dry-run quote and every 1Click status, including REFUNDED and FAILED", async ({ page }) => {
+  await page.route("**/api/oneclick", (route) => route.request().method() === "POST"
+    ? route.fulfill({ json: { ok: true, dry: true, quote: { amountInFormatted: "0.05", amountInUsd: "0.05", amountOutFormatted: "0.049988", amountOutUsd: "0.0499", timeEstimate: 20 } } })
+    : route.fallback());
+  await page.route("**/api/oneclick?depositAddress=*", (route) => route.fulfill({ json: { ok: true, status: route.request().url().includes("8ce897") ? "SUCCESS" : "REFUNDED", details: { depositedAmountFormatted: "0.02", amountOutFormatted: null, refundedAmountFormatted: "0.02", nearTxHashes: [], intentHashes: [] } } }));
+  await page.goto("/settle");
+  await page.getByTestId("dry-btn").click();
+  await expect(page.getByTestId("dry-out")).toContainText("dry run");
+  await expect(page.locator('[data-testid="settlement"] [data-status="SUCCESS"]')).toBeVisible();
+  await expect(page.locator('[data-testid="settlement"] [data-status="REFUNDED"]')).toBeVisible();
+  await expect(page.getByTestId("recorded-failed").locator('[data-status="FAILED"]')).toBeVisible();
+});
