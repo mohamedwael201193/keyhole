@@ -168,6 +168,9 @@ test("connected account opens a menu instead of disconnecting", async ({ page, c
   await page.goto("/vault");
   const pill = page.getByTestId("account");
   await expect(pill).toBeVisible({ timeout: 20_000 });
+  const brand = await page.locator("nav.nav .brand .kh-logo").first().boundingBox();
+  const pb = await pill.boundingBox();
+  expect(brand!.x + brand!.width, "logo overlaps the account pill").toBeLessThanOrEqual(pb!.x);
   await pill.click();
   await expect(pill).toBeVisible();
   const menu = page.getByTestId("account-menu");

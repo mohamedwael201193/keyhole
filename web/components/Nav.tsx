@@ -6,7 +6,7 @@ import { KeyholeLogo } from "./KeyholeLogo";
 import { MusicToggle } from "./MusicToggle";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
-import { shortAccount } from "@/lib/near";
+import { pillAccount, shortAccount } from "@/lib/near";
 import { acct } from "@/lib/config";
 import { copyText } from "@/lib/copyText";
 
@@ -73,7 +73,7 @@ export function Nav() {
           <span className="desk"><MusicToggle /></span>
           {accountId
             ? <div className="acct" ref={acctRef}>
-                <button type="button" className="cw" aria-expanded={menu} aria-controls="acct-menu" data-testid="account" onClick={() => setMenu((v) => !v)}>{shortAccount(accountId, 4)}</button>
+                <button type="button" className="cw" aria-expanded={menu} aria-controls="acct-menu" data-testid="account" onClick={() => setMenu((v) => !v)} title={accountId}><span className="cw-full">{shortAccount(accountId, 4)}</span><span className="cw-short">{pillAccount(accountId)}</span></button>
                 {menu && (
                   <div id="acct-menu" className="acct-menu" role="menu" data-testid="account-menu">
                     <p className="id" data-testid="account-id">{accountId}</p>

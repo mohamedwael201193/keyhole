@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { shortKeyId } from "@/lib/near";
 import { Attested, ErrorBox, OfflineState } from "@/components/Result";
 import { HowStrip } from "@/components/HowStrip";
 import { EmptyState } from "@/components/EmptyState";
@@ -45,8 +46,8 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
             <KeyArt n={idn?.art ?? 3} alt={revealed ? t("gallery.key", { id: String(o.token_id) }) : t("finish.Bronze")} width={406} height={1084} priority />
           </div>
           {idn && <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />}
-          <h3>{revealed ? t("gallery.key", { id: String(o.token_id) }) : t("mint.preview")}</h3>
-          <div className="meta"><span className={revealed ? undefined : "wrap"}>{revealed ? t("mint.tag", { id: String(o.token_id), finish: t(`finish.${idn!.finish}`) }) : t("mint.bronzeOnly")}</span></div>
+          <h3 title={revealed ? String(o.token_id) : undefined}>{revealed ? t("gallery.key", { id: shortKeyId(String(o.token_id)) }) : t("mint.preview")}</h3>
+          <div className="meta"><span className={revealed ? undefined : "wrap"}>{revealed ? t("mint.tag", { id: shortKeyId(String(o.token_id)), finish: t(`finish.${idn!.finish}`) }) : t("mint.bronzeOnly")}</span></div>
         </FoilCard>
         <div>
           <p className="eb">{t("mint.step", { n: step })}</p>

@@ -16,7 +16,7 @@ import { useSigned } from "@/lib/useSigned";
 import { useHealth } from "@/lib/useHealth";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
-import { keyState, nftTier, shortAccount, tierName, tokensFor, type Token } from "@/lib/near";
+import { keyState, nftTier, shortAccount, shortKeyId, tierName, tokensFor, type Token } from "@/lib/near";
 import { attestation, intentTx, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { assetRows, formatUsdMicro, isImplicitAccount, totalOf, tradeSummary, withdrawSummary, type PriceBook } from "@/lib/amount";
 import { OP_CTX, type OpResume } from "@/lib/wallet";
@@ -233,7 +233,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                         <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
                       </div>
                       <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />
-                      <h3 style={{ overflowWrap: "anywhere" }}>{t("gallery.key", { id: held.token.token_id })}</h3>
+                      <h3 title={held.token.token_id} data-testid="key-title">{t("gallery.key", { id: shortKeyId(held.token.token_id) })}</h3>
                     </FoilCard>
                     <dl className="kv" data-testid="vault-traits">
                       <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>

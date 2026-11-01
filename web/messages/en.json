@@ -197,7 +197,7 @@
   "revealedB": "revealed.",
   "forged": "Forged from its traits, minted on NEAR mainnet. No other key looks like this one.",
   "tag": "KEYHOLE Key #{id} · {finish} · 1 of 1",
-  "preview": "Preview · Bronze · the live key is revealed after mint",
+  "preview": "Bronze preview",
   "openVault": "Open your vault →",
   "capsLine": "{finish} tier · caps {tx} per trade / {day} per day",
   "bronzeOnly": "Minting issues a Bronze key. Silver, Gold and Legendary are finishes the enclave recognizes.",
