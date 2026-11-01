@@ -547,7 +547,7 @@ test("verify: an old-build refusal shows the binding, the previous version and t
 });
 
 test("ask: a reply whose quote does not carry this browser's nonce is not marked verified", async ({ page }) => {
-  const fx = JSON.parse(readFileSync(new URL("../tests/fixtures/ai_reply.json", import.meta.url), "utf8"));
+  const fx = JSON.parse(readFileSync(`${process.cwd()}/tests/fixtures/ai_reply.json`, "utf8"));
   await page.route("**/api/ai", (route) => route.fulfill({ json: fx }));
   await page.goto("/ask");
   await page.getByTestId("ask-input").fill("What is a holder limit?");
