@@ -27,3 +27,8 @@
 - Six mainnet attack calls by an "obedient" agent holding key A: payout to attacker.near (bad_params), $2 drain (over_cap_per_tx), cap raise (pending 24 h), replay (replay), edited recipient (bad_signature), old holder (not_owner). docs/evidence/prompt-injection.
 - /ask: pasted context sent a second system message, which the model API rejected (ai_upstream). Context now goes in the user turn inside <shared_context> tags, with a system rule never to follow it. New "Attack test" sample.
 - README: key scoping table (FullAccess / FunctionCall keys read from RPC) and agent guidance.
+
+## 2026-11-01 — TRACK_COVERAGE.md and honest counts
+- TRACK_COVERAGE.md maps every line of the nfts, privacy, defi and security prompts to a feature, proof and status (gaps marked ❌/🟡).
+- 25 new web unit tests (evidence integrity, DCAP edge cases, key-log format, limiter, labels). Totals: 222 distinct tests (contract 15, worker 43, CLI 7, web unit 116, e2e 41 × 2 viewports). 8/10 integrations live.
+- Live /ask answer to the poisoned note recorded in docs/evidence/prompt-injection.
