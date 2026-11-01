@@ -85,3 +85,6 @@
 @media (max-width: 1100px) { .mint .tg { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
 @media (max-width: 700px) { .mint > .foil-card { max-width: 220px; } .mint .tg .foil-card .art { max-height: 150px; } .mint .tg .foil-card .art img { max-height: 140px; } }
 .mint .tg .oo { display: none; }
+.mint > *, .mint .tg > *, .mint .tg .foil-card { min-width: 0; } .mint .steps { flex-wrap: wrap; }
+@media (max-width: 1100px) { .mint { grid-template-columns: minmax(0, 1fr); } .mint > .foil-card { max-width: 260px; margin-inline: auto; } }
+@media (max-width: 700px) { .mint > .foil-card { max-width: 220px; } }
