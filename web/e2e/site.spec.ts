@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge"];
+import { readFileSync } from "node:fs";
+const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge", "/ask"];
 const shots = process.env.SHOTS_DIR;
 
 for (const p of PAGES) {
@@ -551,4 +552,15 @@ test("pnl: a tampered share link fails the signature check", async ({ page }) =>
   await page.goto(`/pnl#${share}`);
   await expect(page.getByTestId("pnl-sig")).toHaveAttribute("data-pass", "false");
   await expect(page.getByTestId("pnl-verdict")).toHaveAttribute("data-ok", "false", { timeout: 15_000 });
+});
+
+test("ask: a reply whose quote does not carry this browser's nonce is not marked verified", async ({ page }) => {
+  const fx = JSON.parse(readFileSync(`${process.cwd()}/tests/fixtures/ai_reply.json`, "utf8"));
+  await page.route("**/api/ai", (route) => route.fulfill({ json: fx }));
+  await page.goto("/ask");
+  await page.getByTestId("ask-input").fill("What is a holder limit?");
+  await page.getByTestId("ask-btn").click();
+  await expect(page.getByTestId("ask-answer")).toContainText("10-minute");
+  await expect(page.getByTestId("ask-verdict")).toHaveAttribute("data-ok", "false");
+  await expect(page.locator('[data-pass="false"]').first()).toBeVisible();
 });

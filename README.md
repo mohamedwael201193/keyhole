@@ -197,6 +197,10 @@ flowchart LR
   G --> V{"/verify · verify.sh<br/>TDX quote · wasm hash · FastFS bytes"}
 ```
 
+### Private assistant (/ask)
+
+[`/ask`](https://keyhole-seven.vercel.app/ask) sends a short question to `Qwen/Qwen3.6-35B-A3B-FP8`, a model NEAR AI Cloud runs in an Intel TDX confidential VM with NVIDIA GPU attestation. The browser makes a 32-byte nonce; the server route requests the model's attestation report with it, sends the completion, and fetches the model's ECDSA signature over `model:sha256(request):sha256(response)`. The browser then checks that the TDX quote's report_data carries its nonce and the signing address, that both hashes match the exact bytes, and that the signature recovers that address. It does not verify the Intel/NVIDIA certificate chains (download the evidence and use NEAR AI's verifier). The route stores and logs nothing; prompts are capped at 400 characters and rate limited.
+
 ## 2. Judge steps
 
 **Fastest path (5 minutes, browser only):** open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). It walks through six checks with real mainnet call ids and tx links: the enclave code equals the repo build, the NFT contract equals the repo wasm, the new holder controls the account and the old one gets `not_owner`, holder limits and the transfer cooldown are enforced in the enclave, and tier caps hold. Every call links to `/verify` and to its raw attestation. Raw files: [`docs/evidence/ownership-and-limits/`](docs/evidence/ownership-and-limits/).

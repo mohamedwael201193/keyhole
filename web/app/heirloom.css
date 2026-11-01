@@ -844,3 +844,37 @@ html.no-motion .foil-card .bw { display: none; }
 .judge h1 { margin-bottom: 14px; }
 .pnl .jsteps h2 span { min-width: 28px; }
 .pnl details { margin-top: 14px; }
+.ask .lede { max-width: 820px; font-size: 18px; line-height: 1.55; }
+.ask .askgrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; margin-top: 26px; align-items: start; }
+.ask .vcard { background: #F6F1E7; border: 1px solid var(--ln); border-radius: 18px; padding: 22px; min-width: 0; }
+.ask .askform { display: grid; gap: 8px; }
+.ask .askform label, .ask .cap { font: 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mu); }
+.ask textarea { font-size: 16px; line-height: 1.5; resize: vertical; min-height: 110px; }
+.ask .askrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ask .answer { margin-top: 18px; border-top: 1px solid var(--ln); padding-top: 14px; }
+.ask .answer p:last-child { font-size: 17px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ask .asknotes { margin: 18px 0 0; padding-left: 18px; color: var(--mu); font-size: 14px; line-height: 1.6; }
+.ask .vhd { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--ln); padding-bottom: 12px; margin-bottom: 12px; }
+.ask .vhd h2 { font-size: 26px; margin: 0; }
+.ask .vbadge { display: inline-flex; align-items: center; gap: 6px; font: 700 12px var(--mono); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ln); white-space: nowrap; }
+.ask .vbadge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.ask .vbadge.ok { color: #1F7A4D; background: #E3F1E8; border-color: #BFDCCB; }
+.ask .vbadge.lock { color: var(--coral); background: #F8E4DF; }
+.ask .vbadge.mute { color: var(--mu); }
+.ask .small { font-size: 12px; color: var(--mu); overflow-wrap: anywhere; }
+.ask .askchecks { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 10px; }
+.ask .askchecks li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: start; }
+.ask .askchecks .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #C8C1B4; color: #fff; font-weight: 800; font-size: 13px; }
+.ask .askchecks li[data-pass="true"] .dot { background: #1F7A4D; }
+.ask .askchecks li[data-pass="false"] .dot { background: var(--coral); }
+.ask .askchecks b { display: block; font-size: 15px; }
+.ask .askchecks small { color: var(--mu); font-size: 13px; line-height: 1.45; }
+.ask .kv dd { overflow-wrap: anywhere; }
+.ask .asknote { color: var(--mu); font-size: 13px; line-height: 1.5; margin-top: 14px; }
+.ask .asknote a { color: var(--teal); text-decoration: underline; }
+@media (max-width: 900px) { .ask .askgrid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .ask .vcard { padding: 16px; } }
+.ask .asksamples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.ask .asksamples .vbtn { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ln); background: #FBF8F2; font-weight: 600; font-size: 13px; cursor: pointer; }
+.ask .askctx { font-size: 13px; color: var(--mu); background: #FBF8F2; border: 1px dashed var(--ln); border-radius: 12px; padding: 10px 12px; overflow-wrap: anywhere; }
+.ask .linkish { background: none; border: 0; color: var(--teal); text-decoration: underline; cursor: pointer; font-size: 13px; }
