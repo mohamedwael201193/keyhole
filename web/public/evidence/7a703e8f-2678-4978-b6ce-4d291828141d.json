@@ -1,0 +1,1 @@
+{"call_id":"7a703e8f-2678-4978-b6ce-4d291828141d","output":{"error":{"code":"op_mismatch","message":"signed op 'status' but called 'balance'"},"ok":false}}

@@ -1,0 +1,1 @@
+{"call_id":"e805f050-d416-4a04-9b12-270adbe02068","status":"completed","output":{"error":{"code":"not_owner","message":"only the current key holder can authorize this"},"ok":false},"compute_cost":"1005","instructions":4133324,"time_ms":1316,"attestation_url":"/attestations/by-call/e805f050-d416-4a04-9b12-270adbe02068"}

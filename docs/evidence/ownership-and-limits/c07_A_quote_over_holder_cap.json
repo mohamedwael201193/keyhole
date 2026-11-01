@@ -1,0 +1,1 @@
+{"call_id":"396bb6dd-ae97-497c-8a09-81e2118d0890","status":"completed","output":{"error":{"code":"over_cap_per_tx","message":"amount $0.00 exceeds your per-trade cap $0.00"},"ok":false},"compute_cost":"1006","instructions":4687946,"time_ms":2008,"attestation_url":"/attestations/by-call/396bb6dd-ae97-497c-8a09-81e2118d0890"}

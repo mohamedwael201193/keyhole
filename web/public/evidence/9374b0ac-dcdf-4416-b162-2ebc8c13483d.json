@@ -1,0 +1,1 @@
+{"call_id":"9374b0ac-dcdf-4416-b162-2ebc8c13483d","output":{"account":"keyhole-devmo.near","balances":[{"balance":"20000","token":"nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"},{"balance":"2163123975702494577005","token":"nep141:wrap.near"}],"confidential_id":"2c2c4942d27e6d7e0db20bbd1897e8bae01d3511716cf3e197b14a7478fd21ca","ok":true,"op":"balance"}}

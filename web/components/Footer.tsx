@@ -11,6 +11,7 @@ export function Footer() {
       <Link href="/" className="brand"><KeyholeLogo className="h-9" tone="light" /></Link>
       <span className="mono">{KEYS_CONTRACT} · NEAR mainnet · Intel TDX via OutLayer</span>
       <span style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <Link href="/judge" data-testid="footer-judge">{t("nav.judge")}</Link>
         <Link href="/atlas">{t("nav.atlas")}</Link>
         <Link href="/identity">{t("nav.identity")}</Link>
         <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">{KEYS_CONTRACT}</a>
