@@ -110,17 +110,22 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <p className="eb">{t("land.privEyebrow")}</p>
           <h2>{t("land.privH")}<em>{t("land.privEm")}</em></h2>
           <p className="lead">{t("land.privLead")}</p>
-          <div className="art">
-            <Scene name="privacy" className="par" alt={t("land.privAlt")} width={1280} height={720} />
-            <div className="lab l1"><p className="eb">{t("land.pubEyebrow")}</p><h3>{t("land.pubH")}</h3><p>{t("land.pubD")}</p></div>
-            <div className="lab l2"><p className="eb">{t("land.sealEyebrow")}</p><h3>{t("land.sealH")}</h3><p>{t("land.sealD")}</p></div>
+          <div className="pv">
+            <article className="pvc rv">
+              <div className="pvart"><Scene name="privacy" className="pvimg l" alt={t("land.privAlt")} width={1280} height={720} /></div>
+              <div className="pvt"><p className="eb">{t("land.pubEyebrow")}</p><h3>{t("land.pubH")}</h3><p>{t("land.pubD")}</p></div>
+            </article>
+            <article className="pvc rv">
+              <div className="pvart"><Scene name="privacy" className="pvimg r" alt="" width={1280} height={720} /></div>
+              <div className="pvt"><p className="eb">{t("land.sealEyebrow")}</p><h3>{t("land.sealH")}</h3><p>{t("land.sealD")}</p></div>
+            </article>
           </div>
         </div>
       </section>
 
       <section className="sec encl" id="s04">
         <div className="wrap g">
-          <div className="ph"><Scene name="enclave" className="par" alt={t("land.enclAlt")} width={1152} height={864} /></div>
+          <div className="ph rv"><Scene name="enclave" className="float" alt={t("land.enclAlt")} width={1152} height={864} /></div>
           <div>
             <p className="eb">{t("land.enclEyebrow")}</p>
             <h2>{t("land.enclH")}<em>{t("land.enclEm")}</em></h2>
