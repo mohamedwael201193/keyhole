@@ -4,9 +4,9 @@ export const FASTFS = "https://main.fastfs.io";
 export const fastfsUrl = (projectId: string, hash: string) => `${FASTFS}/${projectId.split("/")[0]}/outlayer.near/${hash}.wasm`;
 export const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 
-/** sha256 of tee/worker/DEPLOYED_SHA256. The published build, prefix b3fa1a39. f13efe92 is the previous version. */
-export const PUBLISHED_WASM_SHA256 = "b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a";
-export const PREVIOUS_WASM_SHA256 = "f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c";
+/** sha256 of tee/worker/DEPLOYED_SHA256. The published build, prefix 38bd67b9. b3fa1a39 is the previous version. */
+export const PUBLISHED_WASM_SHA256 = "38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78";
+export const PREVIOUS_WASM_SHA256 = "b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a";
 
 export interface Checks { quote: boolean; registered: boolean; published: boolean; fastfs: boolean | null; fastfsHash?: string; bytes?: number }
 

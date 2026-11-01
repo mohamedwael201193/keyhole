@@ -9,11 +9,12 @@ export const TXS = [
   { label: "Mint by the TEE to a fresh account", hash: "FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4" },
 ] as const;
 
-/** Live info call on the published worker b3fa1a39. Default on /verify. */
-export const PUBLISHED_INFO_CALL = "9d19bceb-986b-4745-9bf9-91f7dcb62b6e";
+/** Live info call on the published worker 38bd67b9. Default on /verify. */
+export const PUBLISHED_INFO_CALL = "763812bc-0012-4528-a45d-66a3ce17cae9";
 
 export const CALLS = [
-  { label: "info · published build b3fa1a39", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1189623" },
+  { label: "info · published build 38bd67b9", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1223764" },
+  { label: "info · previous build b3fa1a39", id: "9d19bceb-986b-4745-9bf9-91f7dcb62b6e", outcome: "ok · attestation 1189623" },
   { label: "earlier · status (signed read)", id: "e099f957-e3c6-4035-999a-907d9782997e", outcome: "ok" },
   { label: "earlier · confidential quote 0.05 USDC → wNEAR", id: "b8a83c55-61bb-448f-8196-08dc23a574df", outcome: "policy passed ($0.0499)" },
   { label: "earlier · same signature replayed", id: "cb3e197b-61d0-44cb-8fdf-99114b409b25", outcome: "refused: replay" },

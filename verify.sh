@@ -18,9 +18,9 @@ fail=0; ok(){ echo "OK   $1"; }; bad(){ echo "FAIL $1"; fail=1; }
 [ "$Q" -gt 100 ] && ok "TDX quote present ($Q chars)" || bad "no TDX quote"
 [ "$H" = "$R" ] && ok "registered wasm_hash == executed" || bad "wasm_hash $R != executed $H"
 PUB=$(tr -d '[:space:]' < "$(dirname "$0")/tee/worker/DEPLOYED_SHA256")
-PREV=f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c
+PREV="b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c"
 if [ "$H" = "$PUB" ]; then ok "executed == published build ${PUB:0:8}"
-elif [ "$H" = "$PREV" ]; then ok "executed == previous build ${PREV:0:8}, superseded by ${PUB:0:8}"
+elif [[ " $PREV " == *" $H "* ]]; then ok "executed == previous build ${H:0:8}, superseded by ${PUB:0:8}"
 else bad "executed $H != published build $PUB"; fi
 URL="${FASTFS_BASE:-https://main.fastfs.io}/${P%%/*}/outlayer.near/$H.wasm"
 F=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)

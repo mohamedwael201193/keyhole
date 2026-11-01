@@ -66,7 +66,7 @@ Every failure is `{"ok": false, "error": {"code", "message"}}`. Codes: `no_auth,
 
 ```
 cargo test        # unit tests: NEP-413, replay, caps, rate limits, tx encoding
-./build.sh        # reproducible build (pinned toolchain, path remapping); prints the sha256 in DEPLOYED_SHA256 (b3fa1a39)
+./build.sh        # reproducible build (pinned toolchain, path remapping); prints the sha256 in DEPLOYED_SHA256 (38bd67b9)
 ```
 
 Config (OutLayer project env/secrets): `KEYS_CONTRACT` (default `keyhole-devmo.near`), `NEP413_RECIPIENT` (default `keyhole`), `ONECLICK_JWT` (secret).
