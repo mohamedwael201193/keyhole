@@ -155,7 +155,8 @@
   "setLimits": "Sign and set limits",
   "limitsNow": "In force: {tx} per trade · {day} per day",
   "limitsPending": "Raise to {tx} / {day} applies at {time} UTC",
-  "cooldown": "This key changed hands recently. Withdraw opens at {time} UTC. Trades still work."
+  "cooldown": "This key changed hands recently. Withdraw opens at {time} UTC. Trades still work.",
+  "limitsLabelOwn": "Your limits · {tier} (tier max {tx}/{day})"
  },
  "mint": {
   "title": "Mint your key",

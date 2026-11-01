@@ -96,6 +96,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const usdMicro = (v: string) => (/^\d+(\.\d{1,6})?$/.test(v.trim()) ? Math.round(Number(v) * 1e6) : 0);
   const pendingLim = (lo?.ok ? lo.holder_limits?.pending : s?.ok ? s.holder_limits?.pending : null) as { per_tx_usd_micro: number; daily_usd_micro: number; effective_ms: number } | null | undefined;
   const coolUntil = s?.ok ? (s.withdraw_cooldown_until_ms as number | null) : null;
+  const tierCaps = (lo?.ok ? lo.tier_limits : s?.ok ? s.tier_limits : null) as { per_tx_usd_micro: number; daily_usd_micro: number } | null | undefined;
+  const lowered = !!(caps && tierCaps && (caps.per_tx_usd_micro < tierCaps.per_tx_usd_micro || caps.daily_usd_micro < tierCaps.daily_usd_micro));
   const perCap = caps ? caps.per_tx_usd_micro : CAPS[finish].perTx * 1e6;
   const dayCap = caps ? caps.daily_usd_micro : CAPS[finish].daily * 1e6;
   const spent = s?.ok ? s.spent_today_usd_micro : null;
@@ -234,7 +236,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <Link className="btn b1" href="/mint">{t("vault.mintFirst")}</Link>
                 </EmptyState>
               )}
-              <p className="lb" style={{ marginTop: 26 }}>{t("vault.limitsLabel", { tier: t(`finish.${finish}`) })}</p>
+              <p className="lb" style={{ marginTop: 26 }}><span data-testid="limits-label">{lowered ? t("vault.limitsLabelOwn", { tier: t(`finish.${finish}`), tx: fmtUsd(tierCaps!.per_tx_usd_micro), day: fmtUsd(tierCaps!.daily_usd_micro) }) : t("vault.limitsLabel", { tier: t(`finish.${finish}`) })}</span></p>
               {s?.ok ? (
                 <>
                   <div className="bar"><span>{t("vault.perTx")}</span><span>{t("vault.ofCap", { used: fmtUsd(q?.ok ? q.usd_micro : 0), cap: fmtUsd(perCap) })}</span></div>
@@ -253,8 +255,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <p className="lb">{t("vault.myLimits")}</p>
                   <p className="note">{t("vault.myLimitsNote")}</p>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <label className="note" style={{ flex: "1 1 120px" }}>{t("vault.limPerTx")}<input className="in" inputMode="decimal" value={limTx} onChange={(e) => setLimTx(e.target.value)} data-testid="lim-tx" style={{ width: "100%" }} /></label>
-                    <label className="note" style={{ flex: "1 1 120px" }}>{t("vault.limDay")}<input className="in" inputMode="decimal" value={limDay} onChange={(e) => setLimDay(e.target.value)} data-testid="lim-day" style={{ width: "100%" }} /></label>
+                    <label className="note" style={{ flex: "1 1 120px" }}>{t("vault.limPerTx")}<input className="input" style={{ width: "100%", marginTop: 6 }} inputMode="decimal" value={limTx} onChange={(e) => setLimTx(e.target.value)} data-testid="lim-tx" /></label>
+                    <label className="note" style={{ flex: "1 1 120px" }}>{t("vault.limDay")}<input className="input" style={{ width: "100%", marginTop: 6 }} inputMode="decimal" value={limDay} onChange={(e) => setLimDay(e.target.value)} data-testid="lim-day" /></label>
                   </div>
                   <button className="btn b2" style={{ marginTop: 12 }} type="submit" disabled={limits.busy || !usdMicro(limTx) || !usdMicro(limDay)} data-testid="limits-btn">{limits.busy ? "…" : t("vault.setLimits")}</button>
                   {lo?.ok && <p className="note" data-testid="limits-out">{t("vault.limitsNow", { tx: fmtUsd(lo.limits.per_tx_usd_micro), day: fmtUsd(lo.limits.daily_usd_micro) })}</p>}
