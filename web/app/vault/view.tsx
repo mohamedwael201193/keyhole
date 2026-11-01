@@ -40,6 +40,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const history = useSigned("history");
   const swap = useSigned("swap");
   const withdraw = useSigned("withdraw");
+  const limits = useSigned("limits");
+  const [limTx, setLimTx] = useState("");
+  const [limDay, setLimDay] = useState("");
   const [from, setFrom] = useState<AssetKey>("usdc");
   const [toKey, setToKey] = useState<AssetKey>("wnear");
   const [amount, setAmount] = useState("0.05");
@@ -88,7 +91,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const q = quote.res?.output;
   const tierNum = (s?.ok ? Number(s.tier) : held?.tier) || null;
   const finish: Finish = tierNum === 3 ? "Gold" : tierNum === 2 ? "Silver" : "Bronze";
-  const caps = s?.ok ? s.limits : null;
+  const lo = limits.res?.output;
+  const caps = lo?.ok ? lo.limits : s?.ok ? s.limits : null;
+  const usdMicro = (v: string) => (/^\d+(\.\d{1,6})?$/.test(v.trim()) ? Math.round(Number(v) * 1e6) : 0);
+  const pendingLim = (lo?.ok ? lo.holder_limits?.pending : s?.ok ? s.holder_limits?.pending : null) as { per_tx_usd_micro: number; daily_usd_micro: number; effective_ms: number } | null | undefined;
+  const coolUntil = s?.ok ? (s.withdraw_cooldown_until_ms as number | null) : null;
   const perCap = caps ? caps.per_tx_usd_micro : CAPS[finish].perTx * 1e6;
   const dayCap = caps ? caps.daily_usd_micro : CAPS[finish].daily * 1e6;
   const spent = s?.ok ? s.spent_today_usd_micro : null;
@@ -114,7 +121,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   }, [history.res]);
   const lookingUpKey = !!accountId && (!keysReady || keysFor !== accountId);
   const clearOtherErrors = (keep: { clear: () => void }) => {
-    for (const card of [status, quote, account, balance, history, swap, withdraw]) if (card !== keep) card.clear();
+    for (const card of [status, quote, account, balance, history, swap, withdraw, limits]) if (card !== keep) card.clear();
   };
   const clearStatus = status.clear;
   const clearQuote = quote.clear;
@@ -241,6 +248,22 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               {status.res?.error && <ErrorBox code={status.res.error.code} retryAfter={status.res.error.retry_after} vars={{ cap: capFrom(status.res.error.message) }} />}
               {status.res?.error?.code === "no_key" && <Link className="btn b2" style={{ marginTop: 12 }} href="/mint">{t("vault.mintFirst")}</Link>}
               {status.res && <Attested r={status.res} />}
+              {s?.ok && held && (
+                <form data-testid="limits-form" style={{ marginTop: 18 }} onSubmit={(e) => { e.preventDefault(); const a = usdMicro(limTx), b = usdMicro(limDay); if (!a || !b) return; clearOtherErrors(limits); void limits.run({ per_tx_usd_micro: a, daily_usd_micro: b }); }}>
+                  <p className="lb">{t("vault.myLimits")}</p>
+                  <p className="note">{t("vault.myLimitsNote")}</p>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <label className="note" style={{ flex: "1 1 120px" }}>{t("vault.limPerTx")}<input className="in" inputMode="decimal" value={limTx} onChange={(e) => setLimTx(e.target.value)} data-testid="lim-tx" style={{ width: "100%" }} /></label>
+                    <label className="note" style={{ flex: "1 1 120px" }}>{t("vault.limDay")}<input className="in" inputMode="decimal" value={limDay} onChange={(e) => setLimDay(e.target.value)} data-testid="lim-day" style={{ width: "100%" }} /></label>
+                  </div>
+                  <button className="btn b2" style={{ marginTop: 12 }} type="submit" disabled={limits.busy || !usdMicro(limTx) || !usdMicro(limDay)} data-testid="limits-btn">{limits.busy ? "…" : t("vault.setLimits")}</button>
+                  {lo?.ok && <p className="note" data-testid="limits-out">{t("vault.limitsNow", { tx: fmtUsd(lo.limits.per_tx_usd_micro), day: fmtUsd(lo.limits.daily_usd_micro) })}</p>}
+                  {pendingLim && <p className="note" data-testid="limits-pending">{t("vault.limitsPending", { tx: fmtUsd(pendingLim.per_tx_usd_micro), day: fmtUsd(pendingLim.daily_usd_micro), time: new Date(pendingLim.effective_ms).toISOString().slice(0, 16).replace("T", " ") })}</p>}
+                  {limits.res?.error && <ErrorBox code={limits.res.error.code} retryAfter={limits.res.error.retry_after} />}
+                  {limits.res && <Attested r={limits.res} />}
+                </form>
+              )}
+              {coolUntil ? <p className="note" data-testid="cooldown-note">{t("vault.cooldown", { time: new Date(coolUntil).toISOString().slice(11, 16) })}</p> : null}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
               <div className="c">

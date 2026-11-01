@@ -37,6 +37,8 @@ Proof: `transfer_while_withdraw_is_pending_does_not_send` and `random_transfer_a
 Before a transfer, the seller is the owner and may withdraw. That is not a bug, but a buyer needs a way to know what they are buying:
 
 - `lock` `{hours: 1..168}`: swap and withdraw answer `locked` until the time passes. The holder cannot lift it early. A lock binds only the owner who set it, so a transfer ends it for the buyer.
+- `limits` `{per_tx_usd_micro, daily_usd_micro}`: the holder narrows the tier caps for their key. Both must be above 0, within the tier, and per-trade at or under per-day. A cut applies at once and cancels a pending raise. A raise waits 24 hours (`set_policy`), so a stolen signature cannot lift the caps and drain in one go. Every quote, swap and withdraw uses the narrowed caps (`effective_limits`). Limits bind only the owner who set them; a buyer starts at the tier caps.
+- Transfer cooldown: when the enclave first sees a new owner (a `transfer` row in the key log), withdraw answers `cooldown` for 10 minutes (`assert_no_cooldown`). Swaps inside the account still run. The window starts when the enclave records the transfer, which is the new owner's first signed call or a public `provenance` read, not the block of the transfer.
 - `prove` `{token, min}`: the enclave signs `{token_id, owner, asset, min, holds_at_least, locked_until_ms, log_head, ts_ms}` with the minter key. It states a threshold and yes or no, never the balance. `node tee/worker/verify-log.mjs --proof proof.json` checks the signature against the minter's public key.
 
 A buyer should ask for a fresh `prove` with `locked_until_ms` later than the settlement time. The proof is a statement at `ts_ms`. It is not an escrow; the NEAR transfer and the payment are still separate actions.

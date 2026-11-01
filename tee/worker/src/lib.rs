@@ -624,3 +624,63 @@ pub fn assert_mint_id_free(existing_owner: Option<&str>) -> Result<(), Error> {
         None => Ok(()),
     }
 }
+
+/// A raise of a holder limit waits this long; a cut applies at once.
+pub const RAISE_DELAY_MS: u64 = 86_400_000;
+/// After the enclave first sees a new owner, withdraw waits this long. Swaps inside the account still run.
+pub const TRANSFER_COOLDOWN_MS: u64 = 600_000;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PendingLimits { pub per_tx_usd_micro: u64, pub daily_usd_micro: u64, pub effective_ms: u64 }
+
+/// Limits a holder set on their own key, at or under the tier caps. Bound to the owner who set them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HolderPolicy { pub owner: String, pub per_tx_usd_micro: u64, pub daily_usd_micro: u64, pub pending: Option<PendingLimits> }
+
+/// The stored policy, if `owner` set it. A policy set by a previous owner does not bind the new owner.
+pub fn policy_for(raw: &[u8], owner: &str) -> Option<HolderPolicy> {
+    serde_json::from_slice::<HolderPolicy>(raw).ok().filter(|p| p.owner == owner)
+}
+
+/// Tier caps narrowed by the holder's policy. A pending raise counts once its time has come.
+pub fn effective_limits(tier: Limits, pol: Option<&HolderPolicy>, now_ms: u64) -> Limits {
+    let Some(p) = pol else { return tier; };
+    let (pt, d) = match &p.pending {
+        Some(n) if now_ms >= n.effective_ms => (n.per_tx_usd_micro, n.daily_usd_micro),
+        _ => (p.per_tx_usd_micro, p.daily_usd_micro),
+    };
+    Limits { per_tx_usd_micro: pt.min(tier.per_tx_usd_micro), daily_usd_micro: d.min(tier.daily_usd_micro), per_minute_calls: tier.per_minute_calls }
+}
+
+/// New policy after a holder asks for `per_tx`/`daily`. Each must be > 0 and within the tier,
+/// and per_tx <= daily. A cut (both at or under what is in force) applies now and cancels a
+/// pending raise. Anything higher waits RAISE_DELAY_MS, so a stolen signature cannot lift caps and drain at once.
+pub fn set_policy(tier: Limits, cur: Option<&HolderPolicy>, owner: &str, per_tx: u64, daily: u64, now_ms: u64) -> Result<HolderPolicy, Error> {
+    if per_tx == 0 || daily == 0 || per_tx > daily {
+        return Err(err("bad_params", "limits must be above 0 and per-trade at or under per-day"));
+    }
+    if per_tx > tier.per_tx_usd_micro || daily > tier.daily_usd_micro {
+        return Err(err("bad_params", format!("limits must be within your tier: ${} per trade, ${} per day", fmt_usd(tier.per_tx_usd_micro), fmt_usd(tier.daily_usd_micro))));
+    }
+    let now = effective_limits(tier, cur, now_ms);
+    if per_tx <= now.per_tx_usd_micro && daily <= now.daily_usd_micro {
+        Ok(HolderPolicy { owner: owner.into(), per_tx_usd_micro: per_tx, daily_usd_micro: daily, pending: None })
+    } else {
+        Ok(HolderPolicy { owner: owner.into(), per_tx_usd_micro: now.per_tx_usd_micro, daily_usd_micro: now.daily_usd_micro,
+            pending: Some(PendingLimits { per_tx_usd_micro: per_tx, daily_usd_micro: daily, effective_ms: now_ms + RAISE_DELAY_MS }) })
+    }
+}
+
+/// End of the post-transfer withdraw cooldown for `owner`, if the latest transfer made them owner.
+pub fn cooldown_until(evs: &[ProvEvent], owner: &str) -> Option<u64> {
+    let last = evs.iter().rev().find(|e| e.kind == "transfer")?;
+    (last.owner == owner).then_some(last.ts_ms + TRANSFER_COOLDOWN_MS)
+}
+
+/// Refuse a withdraw during the cooldown that follows a transfer.
+pub fn assert_no_cooldown(evs: &[ProvEvent], owner: &str, now_ms: u64) -> Result<(), Error> {
+    match cooldown_until(evs, owner) {
+        Some(until) if now_ms < until => Err(err("cooldown", format!("this key changed hands recently; withdraw opens at {} (unix ms). Swaps inside the account still work", until))),
+        _ => Ok(()),
+    }
+}

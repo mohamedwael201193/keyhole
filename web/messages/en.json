@@ -108,7 +108,7 @@
   "eyebrow": "Vault · connected as {account}",
   "eyebrowOff": "Vault · connect to open",
   "live": "Enclave live · Intel TDX · {hash}",
-  "checking": "Checking enclave…",
+  "checking": "Checking the attestation…",
   "yourKey": "Your key · one of one",
   "limitsLabel": "Tier limits · {tier}",
   "today": "Today",
@@ -144,11 +144,18 @@
   "withdrawLead": "Sends to {account}, the account you connected. The enclave checks the signature, the nonce, your tier caps and the rate limit, then withdraws from your confidential account.",
   "withdrawBtn": "Sign & withdraw",
   "activity": "Recent confidential activity",
-  "checking": "Checking the attestation…",
   "verified": "Verified",
   "hiddenLog": "The log stays hidden until the attestation names the published worker.",
   "assets": "Assets · {n}",
-  "unpriced": "+ {amounts} unpriced"
+  "unpriced": "+ {amounts} unpriced",
+  "myLimits": "Your limits",
+  "myLimitsNote": "Set caps under your tier. The enclave enforces them on every trade and withdraw. A cut applies at once; a raise waits 24 hours.",
+  "limPerTx": "Per trade (USD)",
+  "limDay": "Per day (USD)",
+  "setLimits": "Sign and set limits",
+  "limitsNow": "In force: {tx} per trade · {day} per day",
+  "limitsPending": "Raise to {tx} / {day} applies at {time} UTC",
+  "cooldown": "This key changed hands recently. Withdraw opens at {time} UTC. Trades still work."
  },
  "mint": {
   "title": "Mint your key",
@@ -433,6 +440,10 @@
   "service_unfunded": [
    "The service's TEE compute balance is empty.",
    "We're topping it up; try again soon. Your keys and funds are unaffected."
+  ],
+  "cooldown": [
+   "This key changed hands recently.",
+   "Withdraw opens 10 minutes after the transfer. Trades inside the account still work."
   ]
  },
  "offline": {
