@@ -4,11 +4,14 @@ import { Scene } from "@/components/Art";
 import { useI18n } from "@/lib/i18n";
 import { attestation, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
 import { CALLS, PUBLISHED_INFO_CALL } from "@/lib/evidence";
+import { b64, verifyQuote, type Dcap } from "@/lib/dcap";
 import { bindingCheck, buildIndex, CALL_ID, evidenceOutput, fastfsCheck, fastfsUrl, outputCheck, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
 
 export function VerifyView({ initial }: { initial: string | null }) {
   const { t } = useI18n();
   const [id, setId] = useState(initial || PUBLISHED_INFO_CALL);
+  const [dcap, setDcap] = useState<Dcap | null>(null);
+  const [bind, setBind] = useState<Record<string, string> | null>(null);
   const [a, setA] = useState<Attestation | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -19,7 +22,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
     setErr(null); setA(null); setCk(null);
     if (/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(cid.trim())) { setErr("tx"); return; }
     if (!CALL_ID.test(cid.trim())) { setErr("bad_params"); return; }
-    setBusy(true);
+    setBusy(true); setDcap(null); setBind(null);
     try {
       const r = await fetch(attestation(cid.trim()));
       if (!r.ok) throw new Error();
@@ -31,11 +34,14 @@ export function VerifyView({ initial }: { initial: string | null }) {
       const [f, binding, ev] = await Promise.all([fastfsCheck(j), bindingCheck(j), evidenceOutput(j.call_id)]);
       const output = ev ? await outputCheck(j, ev, "evidence") : null;
       setCk({ ...st, ...f, binding, output });
+      try { setDcap(verifyQuote(b64(j.tdx_quote), { expectReportData: binding?.expected })); } catch { setDcap(null); }
+      const bo = (ev && typeof ev === "object" ? (ev as { bind?: Record<string, string> }).bind : undefined) ?? null;
+      setBind(bo);
     } catch { setErr("network"); }
     finally { setBusy(false); }
   }, []);
   useEffect(() => { void go(initial || PUBLISHED_INFO_CALL); }, [initial, go]);
-  const ok = !!ck && ck.quote && ck.registered && ck.published && ck.fastfs === true && ck.binding?.match === true && ck.output?.match !== false;
+  const ok = !!ck && ck.quote && ck.registered && ck.published && ck.fastfs === true && ck.binding?.match === true && ck.output?.match !== false && dcap?.ok === true;
   const bi = a ? buildIndex(a.executed_wasm_sha256) : -1;
   const checkPasted = async () => {
     if (!a || !ck) return;
@@ -68,6 +74,12 @@ export function VerifyView({ initial }: { initial: string | null }) {
           <div className="ck"><span className={`ok ${ck ? dot(ck.published) : "wait"}`}>{ck ? mark(ck.published) : "·"}</span><div><b>{t("verify.build")}</b><small data-testid="build-note">{bi > 0 ? t("verify.buildPrev", { hash: a!.executed_wasm_sha256.slice(0, 8), cur: PUBLISHED_WASM_SHA256.slice(0, 8) }) : t("verify.buildD", { hash: PUBLISHED_WASM_SHA256.slice(0, 8) })}</small></div><span className="att">{ck?.published ? (bi > 0 ? t("verify.badgePrev") : t("verify.badgeBuild")) : "—"}</span></div>
           <div className="ck" data-testid="ck-binding"><span className={`ok ${ck ? (ck.fastfs === null && !ck.binding ? "wait" : dot(ck.binding?.match ?? false)) : "wait"}`}>{ck ? (ck.binding ? mark(ck.binding.match) : ck.fastfs === null ? "…" : "✕") : "·"}</span><div><b>{t("verify.bind")}</b><small>{ck?.binding ? t("verify.bindD", { rd: ck.binding.inQuote.slice(0, 16) }) : t("verify.bindWait")}</small></div><span className="att">{ck?.binding?.match ? t("verify.badgeBound") : "—"}</span></div>
           <div className="ck" data-testid="ck-output"><span className={`ok ${ck?.output ? dot(ck.output.match) : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? mark(ck.output.match) : ck && ck.fastfs !== null ? "○" : "·"}</span><div><b>{t("verify.out")}</b><small>{ck?.output ? t(ck.output.match ? "verify.outOk" : "verify.outBad", { verdict: ck.output.verdict, src: t(ck.output.source === "evidence" ? "verify.srcEvidence" : "verify.srcPasted") }) : t("verify.outNone")}</small></div><span className="att" data-testid="output-verdict">{ck?.output?.match ? ck.output.verdict : "—"}</span></div>
+          <details className="dcap" data-testid="dcap" data-ok={dcap ? String(dcap.ok) : "wait"} open={!!dcap && !dcap.ok}>
+            <summary><span className={`ok ${dcap ? dot(dcap.ok) : "wait"}`}>{dcap ? mark(dcap.ok) : "·"}</span><b>{t("verify.dcapH")}</b><small data-testid="dcap-count">{dcap ? t("verify.dcapCount", { n: dcap.checks.filter((c) => c.pass).length, total: dcap.checks.length }) : "…"}</small></summary>
+            {dcap && <ol>{dcap.checks.map((c) => <li key={c.id} data-pass={String(c.pass)}><span>{c.pass ? "✓" : "✕"}</span>{c.label}{c.detail ? <em className="mono"> {c.detail}</em> : null}</li>)}</ol>}
+            {bind && <p className="mono dbind" data-testid="dcap-bind">{t("verify.bindReq", { token: bind.token_id ?? "—", req: (bind.req_sha256 ?? "").slice(0, 16), nonce: (bind.nonce ?? "").slice(0, 12) })}</p>}
+            <p className="note">{t("verify.dcapNote")}</p>
+          </details>
           {err && <p role="alert" className="note" style={{ color: "var(--coral)" }} data-testid="verify-error">{err === "tx" ? <>{t("verify.isTx")} <a href={tx(id.trim())} target="_blank" rel="noreferrer">{t("verify.openTx")}</a></> : err === "bad_params" ? t("verify.badId") : t("verify.fetchFail")}</p>}
           <div className="res">
             <div>

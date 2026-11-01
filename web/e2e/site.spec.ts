@@ -564,3 +564,11 @@ test("ask: a reply whose quote does not carry this browser's nonce is not marked
   await expect(page.getByTestId("ask-verdict")).toHaveAttribute("data-ok", "false");
   await expect(page.locator('[data-pass="false"]').first()).toBeVisible();
 });
+
+test("verify: Intel DCAP passes in the browser and a signed answer shows its key and request binding", async ({ page }) => {
+  await page.goto("/verify?call=dda27438-67e6-4c8a-8f32-888d3ff17760");
+  await expect(page.getByTestId("dcap")).toHaveAttribute("data-ok", "true", { timeout: 30_000 });
+  await expect(page.getByTestId("dcap-count")).toHaveText("19/19 checks passed");
+  await expect(page.getByTestId("dcap-bind")).toContainText("k5f4750858f328940");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
+});

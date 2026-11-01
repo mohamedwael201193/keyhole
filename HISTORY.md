@@ -14,3 +14,7 @@
 - PRs #37 (private AI on NEAR AI Cloud) and #38 (worker batch: signed PnL, request binding, locked_until_ms, sub-cent fix, invariant tests) merged.
 - FastFS upload oGGRn6jW… (expected revert), add_version AJWVEN6F…; live info f4768da8 (attestation 1227292) executed 6367401a.
 - Pointers moved to 6367401a; 67c5cd77 listed as previous.
+
+## 2026-11-01 — Live PnL/status check and Intel DCAP in the browser
+- Test key A (3bde8ce5…, token k5f4750858f328940) on worker 6367401a: status 3e53ce83 shows locked_until_ms (null) and holder limits; pnl dda27438 is signed by the minter and the /pnl page verifies it; quote 4eae763a is refused with "amount $0.0099 exceeds your per-trade cap $0.0020" (sub-cent wording fixed).
+- /verify now parses the TDX quote and runs 19 Intel DCAP checks in the browser (quote signature, QE report binding, Intel QE signer, PCK chain to the pinned Intel SGX Root CA, validity dates, debug off, report_data equal to the attested fields), plus the 6 existing checks. It also shows the key, request hash and nonce a signed answer is bound to. Not checked: Intel CRL and TCB status (need Intel PCS).

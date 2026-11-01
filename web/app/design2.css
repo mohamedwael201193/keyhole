@@ -99,3 +99,14 @@
 .mint > .foil-card h3 { font-size: 20px; }
 @media (max-width: 1100px) { .mint { grid-template-columns: minmax(0, 1fr); } .mint > .foil-card { position: static; max-width: 220px; } }
 @media (max-width: 700px) { .mint > .foil-card { max-width: 200px; } }
+/* verify: DCAP */
+.ver .dcap { border-top: 1px solid var(--ln); margin-top: 6px; padding-top: 12px; }
+.ver .dcap summary { display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; flex-wrap: wrap; }
+.ver .dcap summary::-webkit-details-marker { display: none; }
+.ver .dcap summary small { color: var(--mu); font-size: 13px; }
+.ver .dcap ol { list-style: none; margin: 12px 0 6px; padding: 0; display: grid; gap: 6px; font-size: 13.5px; }
+.ver .dcap li { display: flex; gap: 8px; align-items: baseline; overflow-wrap: anywhere; min-width: 0; }
+.ver .dcap li > span { color: var(--teal); font-weight: 700; }
+.ver .dcap li[data-pass="false"] > span { color: var(--coral); }
+.ver .dcap li em { color: var(--mu); font-style: normal; font-size: 12px; }
+.ver .dcap .dbind { font-size: 12px; background: rgba(31, 75, 79, .06); border-radius: 10px; padding: 8px 10px; overflow-wrap: anywhere; }
