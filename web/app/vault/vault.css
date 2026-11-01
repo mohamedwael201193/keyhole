@@ -1,0 +1,121 @@
+/* Vault design system. Scoped under .vlt so other pages keep their styles. */
+.vlt { --v-line: #1A2A2C2E; --v-field: #1A2A2C47; --v-gap: 20px; --v-r: 22px; --v-h: 48px; }
+.vlt .vhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+.vlt .vhead .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.vlt-grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: var(--v-gap); align-items: start; }
+.vlt-col { display: flex; flex-direction: column; gap: var(--v-gap); min-width: 0; }
+
+.vlt .vcard { background: var(--sf); border: 1px solid var(--v-line); border-radius: var(--v-r); padding: 24px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.vlt .vhd { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; padding-bottom: 14px; border-bottom: 1px solid var(--v-line); }
+.vlt .vhd h2 { margin: 0; font: 700 26px/1.1 var(--serif); letter-spacing: 0; max-width: none; }
+.vlt .vhd .side { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.vlt .vsub { margin: 0; font-size: 15px; line-height: 1.5; color: var(--mu); }
+.vlt .vcap { margin: 0; font: 600 12px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #3B4647; }
+.vlt .note { margin: 0; font-size: 14px; line-height: 1.5; color: var(--mu); }
+.vlt .errbox, .vlt .note-box, .vlt .result-card, .vlt .receipt { margin-top: 0; }
+.vlt [data-testid="attested"] { margin-top: 0 !important; }
+
+/* Buttons: one height, one radius, one primary, one secondary. */
+.vlt .vbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--v-h); padding: 0 22px; border-radius: 999px; font: 700 15px/1 var(--sans); letter-spacing: 0; text-decoration: none; cursor: pointer; white-space: nowrap; border: 1px solid transparent; transition: background .15s, border-color .15s, color .15s; }
+.vlt .vbtn.pri { background: var(--teal); color: #F6F1E7; border-color: var(--teal); }
+.vlt .vbtn.pri:hover:not(:disabled) { background: #183C3F; }
+.vlt .vbtn.sec { background: #fff; color: var(--ink); border-color: var(--v-field); }
+.vlt .vbtn.sec:hover:not(:disabled) { border-color: var(--ink); }
+.vlt .vbtn:disabled { background: #E6E0D4; color: #5F6869; border-color: #D6CFC1; cursor: not-allowed; }
+.vlt .vbtn:focus-visible { outline: 3px solid #B8893E; outline-offset: 2px; }
+.vlt .vbtn.sm { height: 36px; padding: 0 14px; font-size: 13px; }
+.vlt .vbtn.block { width: 100%; }
+.vlt .vact { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+
+/* Badges */
+.vlt .vbadge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font: 600 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; border: 1px solid transparent; }
+.vlt .vbadge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.vlt .vbadge.ok { background: #E3EFE7; color: #16603C; border-color: #16603C33; }
+.vlt .vbadge.lock { background: #F3E8D4; color: #6A4A12; border-color: #7D5A1E40; }
+.vlt .vbadge.cool { background: #F8E7E1; color: #8E3522; border-color: #A8432C40; }
+.vlt .vbadge.pend { background: #E2ECEC; color: var(--teal); border-color: #1F4B4F33; }
+.vlt .vbadge.mute { background: #fff; color: #3B4647; border-color: var(--v-line); }
+
+/* Forms: labelled fields, always bordered, inline units. */
+.vlt .vform { display: flex; flex-direction: column; gap: 16px; margin: 0; }
+.vlt .vrow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.vlt .vfield { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.vlt .vfield > label, .vlt .vfield > .vl { font: 600 13px/1.2 var(--sans); color: var(--ink); }
+.vlt .vbox { display: flex; align-items: center; min-height: var(--v-h); background: #fff; border: 1px solid var(--v-field); border-radius: 14px; padding: 0 14px; gap: 8px; min-width: 0; }
+.vlt .vbox:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px #1F4B4F22; }
+.vlt .vbox[aria-invalid="true"] { border-color: var(--coral); }
+.vlt .vbox input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; height: calc(var(--v-h) - 2px); font: 600 16px var(--mono); color: var(--ink); padding: 0; }
+.vlt .vbox .u { font: 600 13px var(--mono); color: #3B4647; flex: none; }
+.vlt .vbox.ro { background: #F3EDE2; }
+.vlt .vbox.ro span.v { font: 600 15px var(--mono); overflow-wrap: anywhere; min-width: 0; }
+.vlt .vbox.pick { padding: 0 12px; }
+.vlt .vbox .tpick { flex: 1; }
+.vlt .vbox .tpick b { font: 700 16px/1.1 var(--sans); }
+.vlt .vbox .tpick small { font-size: 11px; }
+.vlt .vbox .tpick .medal { width: 30px; height: 30px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--brassL); }
+.vlt .vbox .tpick .medal img { width: 18px; height: 18px; }
+.vlt .vhelp { margin: 0; font-size: 13px; line-height: 1.4; color: var(--mu); }
+.vlt .vhelp.err { color: var(--coral); }
+.vlt .vflip { display: flex; justify-content: center; margin: -4px 0; }
+.vlt .vflip button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--v-field); background: #fff; display: grid; place-items: center; cursor: pointer; color: var(--ink); }
+
+/* Tabs */
+.vlt .vtabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #fff; border: 1px solid var(--v-field); border-radius: 999px; }
+.vlt .vtabs button { height: 40px; border: 0; border-radius: 999px; background: transparent; font: 700 14px var(--sans); color: #3B4647; cursor: pointer; }
+.vlt .vtabs button[aria-selected="true"] { background: var(--teal); color: #F6F1E7; }
+
+/* Meters */
+.vlt .vmeter { display: flex; flex-direction: column; gap: 6px; }
+.vlt .vmeter .top { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; margin: 0; }
+.vlt .vmeter .top span:last-child { font-family: var(--mono); font-weight: 600; }
+.vlt .vmeter .tr { height: 8px; background: #1A2A2C14; border-radius: 99px; overflow: hidden; }
+.vlt .vmeter .tr i { display: block; height: 100%; border-radius: 99px; background: var(--teal); min-width: 0; }
+.vlt .vmeter.warn .tr i { background: var(--brassL); }
+.vlt .vmeter.full .tr i { background: var(--coral); }
+.vlt .vmeter small { font-size: 12px; color: var(--mu); }
+
+/* Balance */
+.vlt .vtotal { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.vlt .vtotal .big { font: 700 64px/1 var(--serif); margin: 0; }
+.vlt .assets { border-top: 1px solid var(--v-line); }
+.vlt .arow { padding: 12px 0; }
+.vlt .vempty { padding: 18px; border: 1px dashed var(--v-field); border-radius: 14px; text-align: center; color: var(--mu); font-size: 14px; }
+
+/* Key card */
+.vlt .vkey { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.vlt .vkey .foil-card { max-width: 260px; margin: 0 auto; width: 100%; }
+.vlt .kv { gap: 8px 14px; font-size: 15px; }
+.vlt .kv dt { font-weight: 600; color: #3B4647; }
+.vlt .vline { height: 1px; background: var(--v-line); margin: 0; border: 0; }
+
+/* Activity */
+.vlt .av { grid-template-columns: 90px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; font-size: 14px; }
+.vlt .av .op { font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--teal); }
+
+@media (max-width: 1100px) { .vlt-grid { grid-template-columns: minmax(0, 1fr); } .vlt .vkey { grid-template-columns: 220px minmax(0, 1fr); align-items: start; } }
+@media (max-width: 700px) {
+  .vlt .vcard { padding: 18px; border-radius: 18px; }
+  .vlt .vrow { grid-template-columns: minmax(0, 1fr); }
+  .vlt .vkey { grid-template-columns: minmax(0, 1fr); }
+  .vlt .vtotal .big { font-size: 48px; }
+  .vlt .vhd h2 { font-size: 22px; }
+  .vlt .av { grid-template-columns: 70px minmax(0, 1fr); }
+  .vlt .av > :nth-child(n+3) { grid-column: 2; }
+}
+.vlt .vhd { flex-wrap: wrap; }
+.vlt .vbadge { max-width: 100%; }
+.vlt .vbadge.mute { white-space: normal; height: auto; min-height: 28px; padding: 6px 12px; line-height: 1.3; }
+.vlt .vbox.ro span.v { flex: 1; word-break: break-all; padding: 10px 0; line-height: 1.35; }
+.page.vlt { overflow-x: clip; }
+.vlt .note-box { font-size: 14px; line-height: 1.5; padding: 12px 14px; border-radius: 14px; }
+@media (max-width: 1100px) {
+  .vlt-grid { display: flex; flex-direction: column; }
+  .vlt-col { display: contents; }
+  .vlt [data-testid="balance-card"] { order: 1; }
+  .vlt [data-testid="move-card"] { order: 2; }
+  .vlt [data-testid="limits-card"] { order: 3; }
+  .vlt [data-testid="activity-card"] { order: 4; }
+  .vlt [data-testid="key-card"] { order: 5; }
+}
+@media (max-width: 700px) { .page.vlt h1 { font-size: 40px; } }

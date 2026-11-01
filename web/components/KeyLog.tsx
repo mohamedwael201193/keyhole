@@ -26,8 +26,8 @@ export function KeyLog({ tokenId }: { tokenId: string }) {
   }
 
   return (
-    <div style={{ marginTop: 16 }} data-testid="key-log">
-      <button type="button" className="btn b2" onClick={() => void load()}>{t("vault.keyLog")}</button>
+    <div data-testid="key-log">
+      <button type="button" className="btn b2 vbtn sec block" onClick={() => void load()}>{t("vault.keyLog")}</button>
       {open && note && <p className="note">{note}</p>}
       {open && rows && rows.length === 0 && !note && <p className="note">{t("vault.keyLogEmpty")}</p>}
       {open && rows && rows.length > 0 && (
