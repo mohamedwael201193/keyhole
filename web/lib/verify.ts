@@ -1,4 +1,5 @@
 import { WORKER_WASM_SHA256 } from "./config";
+import { EVIDENCE_IDS } from "./evidenceIds";
 export interface Attestation { call_id: string; task_id: number; task_type?: string; caller_account_id?: string | null; secrets_ref?: string | null; attached_usd?: string | number | null; executed_wasm_sha256: string; wasm_hash: string; worker_measurement: string; project_id: string; input_hash: string; output_hash: string; timestamp: number; tdx_quote: string; build_target: string }
 export const CALL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const FASTFS = "https://main.fastfs.io";
@@ -102,6 +103,7 @@ export async function outputCheck(a: Attestation, output: unknown, source: Outpu
 
 /** Published worker output for a recorded evidence call, served from /evidence/<id>.json. */
 export async function evidenceOutput(callId: string): Promise<unknown | null> {
+  if (!EVIDENCE_IDS.has(callId)) return null;
   try {
     const r = await fetch(`/evidence/${callId}.json`);
     if (!r.ok) return null;
