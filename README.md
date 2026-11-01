@@ -199,6 +199,9 @@ flowchart LR
 
 ## 2. Judge steps
 
+**Fastest path (5 minutes, browser only):** open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). It walks through six checks with real mainnet call ids and tx links: the enclave code equals the repo build, the NFT contract equals the repo wasm, the new holder controls the account and the old one gets `not_owner`, holder limits and the transfer cooldown are enforced in the enclave, and tier caps hold. Every call links to `/verify` and to its raw attestation. Raw files: [`docs/evidence/ownership-and-limits/`](docs/evidence/ownership-and-limits/).
+
+
 Do the step. The result on the right is what a correct tree produces. Commands are read-only except where a test binary runs locally.
 
 | Do | See |

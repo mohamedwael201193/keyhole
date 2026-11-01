@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify"];
+const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge"];
 const shots = process.env.SHOTS_DIR;
 
 for (const p of PAGES) {
@@ -44,7 +44,7 @@ test("verify: the default page checks the published 67c5cd77 info call", async (
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
   await expect(page.getByText("67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2").first()).toBeVisible();
-  await expect(page.getByText("NEP-413 full-access key, or an EIP-191 MetaMask signature")).toBeVisible();
+  await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
 });
 
@@ -527,3 +527,20 @@ for (const p of ["/vault", "/mint"]) {
     await expect(page.getByTestId("step-num")).toHaveText(["01", "02", "03"]);
   });
 }
+
+test("judge path links every evidence call to /verify and is reachable from the footer", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("footer-judge").click();
+  await expect(page.getByTestId("judge-page")).toBeVisible();
+  const links = page.locator('a[href^="/verify?call="]');
+  expect(await links.count()).toBeGreaterThanOrEqual(12);
+  await expect(page.getByText("refused · not_owner")).toBeVisible();
+  await expect(page.getByText("refused · cooldown")).toBeVisible();
+});
+
+test("verify: an old-build refusal shows the binding, the previous version and the attested output", async ({ page }) => {
+  await page.goto("/verify?call=e805f050-d416-4a04-9b12-270adbe02068");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await expect(page.getByTestId("build-note")).toContainText("previous published version 38bd67b9");
+  await expect(page.getByTestId("output-verdict")).toHaveText("refused · not_owner");
+});

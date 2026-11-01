@@ -817,3 +817,28 @@ html.no-motion .foil-card .bw { display: none; }
 }
 .foil-card .art { overflow: hidden; }
 .foil-card .art img { max-height: 100%; }
+.judge .lede { max-width: 760px; font-size: 18px; line-height: 1.55; }
+.judge .jsteps { list-style: none; padding: 0; margin: 28px 0; display: grid; gap: 18px; }
+.judge .jsteps > li { padding: 22px 24px; }
+.judge h2 { font-size: 26px; display: flex; gap: 12px; align-items: baseline; margin: 0 0 10px; }
+.judge h2 span { font: 700 14px var(--mono); color: var(--teal); border: 1px solid var(--teal); border-radius: 999px; min-width: 28px; height: 28px; display: inline-grid; place-items: center; flex: none; }
+.judge p { margin: 6px 0; line-height: 1.55; overflow-wrap: anywhere; }
+.judge .muted { color: var(--mu); font-size: 14px; }
+.judge .jcalls { display: grid; gap: 8px; margin-top: 12px; }
+.judge .jcall { border: 1px solid var(--ln); border-radius: 12px; padding: 10px 14px; display: grid; gap: 4px; background: #FBF8F2; }
+.judge .jw { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.judge .jw .mono { font-size: 13px; color: var(--teal); }
+.judge .jl { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; }
+.judge .jlimits { padding: 22px 24px; }
+.judge .jlimits ul { margin: 8px 0; padding-left: 20px; line-height: 1.6; }
+@media (max-width: 560px) { .judge h2 { font-size: 21px; } .judge .jsteps > li, .judge .jlimits { padding: 16px; } }
+.ck .ok.opt { background: transparent; color: var(--mu); border: 1px dashed var(--ln); }
+.vpaste { display: grid; gap: 8px; margin-top: 16px; }
+.vpaste label { font: 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mu); }
+.vpaste textarea { font: 13px var(--mono); min-height: 72px; resize: vertical; }
+.vpaste .btn { justify-self: start; }
+.ver .vg > * { min-width: 0; }
+.ck small, .ck b { overflow-wrap: anywhere; }
+.judge .jsteps > li, .judge .jlimits { background: #F6F1E7; border: 1px solid var(--ln); border-radius: 18px; }
+.judge a { color: var(--teal); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.judge h1 { margin-bottom: 14px; }

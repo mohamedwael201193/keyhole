@@ -1,0 +1,1 @@
+{"call_id":"a02613a2-d503-45e2-83b8-ef71927c2533","output":{"error":{"code":"over_cap_per_tx","message":"amount $2.00 exceeds your per-trade cap $1.00"},"ok":false}}
