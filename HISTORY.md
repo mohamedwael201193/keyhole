@@ -18,3 +18,7 @@
 ## 2026-11-01 — Live PnL/status check and Intel DCAP in the browser
 - Test key A (3bde8ce5…, token k5f4750858f328940) on worker 6367401a: status 3e53ce83 shows locked_until_ms (null) and holder limits; pnl dda27438 is signed by the minter and the /pnl page verifies it; quote 4eae763a is refused with "amount $0.0099 exceeds your per-trade cap $0.0020" (sub-cent wording fixed).
 - /verify now parses the TDX quote and runs 19 Intel DCAP checks in the browser (quote signature, QE report binding, Intel QE signer, PCK chain to the pinned Intel SGX Root CA, validity dates, debug off, report_data equal to the attested fields), plus the 6 existing checks. It also shows the key, request hash and nonce a signed answer is bound to. Not checked: Intel CRL and TCB status (need Intel PCS).
+
+## 2026-11-01 — Key history page and a transfer during a payout on mainnet
+- New public page /key?id=… shows holders (from/to, deposits, paid out, trades) and the full event log. It re-checks every hash link, the head, the ed25519 head signature and that the signer is the TEE minter, in the browser. Amounts stay sealed. Linked from the vault key log.
+- Mainnet run (docs/evidence/mid-payout/README.md): B signed a 0.003 USDC withdraw at 06:23:00; the key moved B→A at 06:23:04–06:23:18 (tx 144iK9uj…); the payout finished at 06:23:28 to B. B's next request: not_owner. A sees exactly 0.002 USDC. A withdraw within 10 minutes of a transfer: cooldown.

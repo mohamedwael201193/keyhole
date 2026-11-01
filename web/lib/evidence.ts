@@ -14,6 +14,10 @@ export const PUBLISHED_INFO_CALL = "f4768da8-2e87-4622-8654-d1e67f6cd1f0";
 
 export const CALLS = [
   { label: "info · published build 6367401a", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1227292" },
+  { label: "mid-payout · withdraw paid to the holder who signed it, key moved mid-flight", id: "129161f9-2534-4a3f-9544-44f8da9dd7c2", outcome: "ok · 0.003 USDC to B" },
+  { label: "mid-payout · old holder after the transfer", id: "e72dc176-e6fc-4d89-b348-911f5318b81b", outcome: "refused · not_owner" },
+  { label: "mid-payout · new holder sees the rest (0.002 USDC)", id: "f36d9b54-417a-4b33-9598-c396ae852d4d", outcome: "ok" },
+  { label: "withdraw within 10 min of a transfer", id: "369f522d-4bef-4b17-9071-1de01616eef6", outcome: "refused · cooldown" },
   { label: "pnl · signed by the minter, bound to key and request", id: "dda27438-67e6-4c8a-8f32-888d3ff17760", outcome: "ok" },
   { label: "status · locked_until_ms, holder limits", id: "3e53ce83-4c4c-4769-820d-ba8a446dd335", outcome: "ok" },
   { label: "quote · $0.0099 over a $0.0020 holder cap", id: "4eae763a-5732-4e6b-9907-2b8c6294f170", outcome: "refused · over_cap_per_tx" },

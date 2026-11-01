@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
 type Row = { i?: number; hash?: string; kind?: string; owner?: string };
@@ -29,6 +30,7 @@ export function KeyLog({ tokenId }: { tokenId: string }) {
     <div data-testid="key-log">
       <button type="button" className="btn b2 vbtn sec block" onClick={() => void load()}>{t("vault.keyLog")}</button>
       {open && note && <p className="note">{note}</p>}
+      {open && <p className="note"><Link href={`/key?id=${tokenId}`} data-testid="key-history-link">Open the full key history ↗</Link></p>}
       {open && rows && rows.length === 0 && !note && <p className="note">{t("vault.keyLogEmpty")}</p>}
       {open && rows && rows.length > 0 && (
         <div className="assets">
