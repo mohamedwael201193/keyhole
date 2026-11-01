@@ -1,0 +1,1 @@
+{"call_id":"711795b9-3e77-4a59-98ee-d798cb63ccc2","output":{"bind":{"account":null,"nonce":"SyO7tb4RqYcTj4Q8WuHa77lucWXrHzSy28b74S6G7lc=","req_sha256":"b6c1751aa401f3a6d2a767da56c90773d0efeb85e8138c7ea0af5670f0583159","token_id":null},"error":{"code":"not_owner","message":"only the current key holder can authorize this"},"ok":false}}
