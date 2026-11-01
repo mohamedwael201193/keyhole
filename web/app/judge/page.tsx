@@ -37,7 +37,7 @@ export default function JudgePage() {
         <li className="c">
           <h2><span>1</span>The code in the enclave is the code in the repo</h2>
           <p><b>Do:</b> open <Link href="/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0">/verify for call f4768da8</Link>.</p>
-          <p><b>See:</b> the page fetches the attestation in your browser, downloads the worker from FastFS, hashes it, recomputes the quote&apos;s report_data from the attested fields, and shows five green checks (the sixth, output, is checked for calls whose output we publish, as in steps 3 to 5). <span className="mono">executed_wasm_sha256</span> is <span className="mono">67c5cd77a468…69e65b2</span>, the same value as <span className="mono">tee/worker/DEPLOYED_SHA256</span>. It was published with <a href={tx("86tCjm92yBqKoHt2kz99es1NadZeKf91AfUTx2uaqfmr")} target="_blank" rel="noreferrer">add_version 86tCjm92…</a>.</p>
+          <p><b>See:</b> the page fetches the attestation in your browser, downloads the worker from FastFS, hashes it, recomputes the quote&apos;s report_data from the attested fields, and shows five green checks (the sixth, output, is checked for calls whose output we publish, as in steps 3 to 5). <span className="mono">executed_wasm_sha256</span> is <span className="mono">6367401a78ae…0479693</span>, the same value as <span className="mono">tee/worker/DEPLOYED_SHA256</span>. It was published with <a href={tx("AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx")} target="_blank" rel="noreferrer">add_version AJWVEN6F…</a>.</p>
           <p className="muted"><b>Deeper (2 min with Rust):</b> <span className="mono">./verify.sh f4768da8-2e87-4622-8654-d1e67f6cd1f0 --rebuild</span> rebuilds the worker from source and prints the same hash.</p>
         </li>
 
@@ -59,7 +59,7 @@ export default function JudgePage() {
             { id: "98b27188-a28c-4720-8fec-1d1329e0f281", what: "B locks the key for sale", result: "ok · lock" },
             { id: "075287b5-a100-4fa5-8e96-94a36019c6bc", what: "B tries to withdraw while locked", result: "refused · locked" },
           ]} />
-          <p className="muted">These calls ran on the previous worker build 38bd67b9 (published before 67c5cd77 added holder limits), so /verify marks the build as <b>Previous version</b>. Their outputs are published in the repo and hash to the attested <span className="mono">output_hash</span>.</p>
+          <p className="muted">These calls ran on earlier worker builds (before 6367401a), so /verify marks the build as <b>Previous version</b>. Their outputs are published in the repo and hash to the attested <span className="mono">output_hash</span>.</p>
         </li>
 
         <li className="c">
