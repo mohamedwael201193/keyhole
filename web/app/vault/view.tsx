@@ -215,6 +215,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           <HowStrip active={1} />
         </div>
       ) : (
+        <>
         <div className="vlt-grid">
           <div className="vlt-col">
             <section className="c vcard" data-testid="key-card">
@@ -454,6 +455,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             </section>
           </div>
         </div>
+        <HowStrip active={2} />
+        </>
       )}
     </div>
   );
