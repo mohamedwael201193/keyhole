@@ -543,6 +543,8 @@ test("verify: an old-build refusal shows the binding, the previous version and t
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.getByTestId("build-note")).toContainText("previous published version 38bd67b9");
   await expect(page.getByTestId("output-verdict")).toHaveText("refused · not_owner");
+});
+
 test("ask: a reply whose quote does not carry this browser's nonce is not marked verified", async ({ page }) => {
   const fx = (await import("../tests/fixtures/ai_reply.json")).default;
   await page.route("**/api/ai", (route) => route.fulfill({ json: fx }));
