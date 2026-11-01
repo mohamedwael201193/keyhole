@@ -595,13 +595,17 @@ Previous version `f13efe92`. These 30 steps were run with a real named wallet (`
 
 ## 12. Tests and CI
 
-| Suite | Count | Where | What it covers |
-|---|---|---|---|
-| Contract unit | 15 | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) | mint authority, tiers, payouts and royalty cap, beat batch limits, owner-only setters, init guard |
-| Worker unit | 18 | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs) | NEP-413 payload and signature, replay, caps, rate limits, transaction encoding against near-api-js |
-| CLI | 6 | [`cli/test/core.test.ts`](cli/test/core.test.ts) | signing, request shape, verification helpers |
-| Web unit | 44 | [`web/tests`](web/tests) | NEP-413 parity with the mainnet reference, gateway allowlist and limits, key-state rules, base-unit math, every worker error code mapped in English, attestation checks |
-| Web e2e (Playwright) | 40 = 20 checks × desktop + mobile | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) | every page renders with no console errors; live supply and official logos; gallery from chain; in-browser verify of a real call; gateway refusals; English-only (`lang=en`, no switcher, `/ar` redirects home); reduced motion; wallet modal; navbar; official token logos visible in the gold-dust hero; step numbering |
+**222 distinct test cases** (counted from CI on 2026-11-01; e2e cases run twice, desktop and mobile):
+
+| Suite | Count | Where | What it covers | Reproduce |
+|---|---|---|---|---|
+| Contract unit | 15 | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) | mint authority, tiers, NEP-199 payouts and royalty cap, batch limits, owner-only setters, init guard | `cd contracts/keys && cargo test --locked` |
+| Worker unit | 43 | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs) | NEP-413 payload and signature, replay, caps, rate limits, holder limits, cooldown, lock, transfer during a payout, PnL statement, request binding, sub-cent formatting | `cd tee/worker && cargo test --locked` |
+| CLI | 7 | [`cli/test`](cli/test) | signing, request shape, verification helpers, skill file | `cd cli && npm ci && npm test` |
+| Web unit | 116 | [`web/tests`](web/tests) | Intel DCAP quote verification on a real mainnet quote (and tampered copies), report_data binding, key-log chain and signature, published evidence integrity, NEP-413 parity, gateway allowlist, PnL signatures, NEAR AI attestation checks, every worker error code in English | `cd web && npm ci && npx vitest run` |
+| Web e2e (Playwright) | 41 cases × desktop + mobile = 82 runs (5 skipped by design per run) | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) | every page without console errors, in-browser verify and DCAP of real calls, key history (real and tampered log), private AI panel, PnL tamper, gateway refusals, no sideways scroll at 390 px | `cd web && npx playwright install chromium && npm run build && npx playwright test` |
+
+Mainnet integrations used live (8 of 10 on the common checklist): OutLayer TEE worker, NEAR AI Cloud (TEE model with attestation), NEAR Intents 1Click (quotes and executed swaps), NEAR wallets + MetaMask, NEP-171, NEP-177, NEP-199, NEP-413. Not used: Chain Signatures, Rhea/Ref. The per-track mapping is in [`TRACK_COVERAGE.md`](TRACK_COVERAGE.md).
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs 6 jobs on every push:
 
