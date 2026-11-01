@@ -112,11 +112,11 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <p className="lead">{t("land.privLead")}</p>
           <div className="pv">
             <article className="pvc rv">
-              <div className="pvart"><Scene name="privacy" className="pvimg l" alt={t("land.privAlt")} width={1280} height={720} /></div>
+              <div className="pvart"><img className="pvimg" src="/heirloom/privacy-chain.webp" alt={t("land.privAlt")} width={640} height={480} loading="lazy" decoding="async" /></div>
               <div className="pvt"><p className="eb">{t("land.pubEyebrow")}</p><h3>{t("land.pubH")}</h3><p>{t("land.pubD")}</p></div>
             </article>
             <article className="pvc rv">
-              <div className="pvart"><Scene name="privacy" className="pvimg r" alt="" width={1280} height={720} /></div>
+              <div className="pvart"><img className="pvimg" src="/heirloom/privacy-chest.webp" alt="" width={640} height={480} loading="lazy" decoding="async" /></div>
               <div className="pvt"><p className="eb">{t("land.sealEyebrow")}</p><h3>{t("land.sealH")}</h3><p>{t("land.sealD")}</p></div>
             </article>
           </div>
