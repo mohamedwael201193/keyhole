@@ -842,6 +842,8 @@ html.no-motion .foil-card .bw { display: none; }
 .judge .jsteps > li, .judge .jlimits { background: #F6F1E7; border: 1px solid var(--ln); border-radius: 18px; }
 .judge a { color: var(--teal); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
 .judge h1 { margin-bottom: 14px; }
+.pnl .jsteps h2 span { min-width: 28px; }
+.pnl details { margin-top: 14px; }
 .ask .lede { max-width: 820px; font-size: 18px; line-height: 1.55; }
 .ask .askgrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; margin-top: 26px; align-items: start; }
 .ask .vcard { background: #F6F1E7; border: 1px solid var(--ln); border-radius: 18px; padding: 22px; min-width: 0; }

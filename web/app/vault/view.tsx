@@ -13,6 +13,7 @@ import { TokenPick } from "@/components/TokenPick";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
+import { encodeShare } from "@/lib/pnl";
 import { useHealth } from "@/lib/useHealth";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
@@ -42,6 +43,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const swap = useSigned("swap");
   const withdraw = useSigned("withdraw");
   const limits = useSigned("limits");
+  const pnl = useSigned("pnl");
   const [limTx, setLimTx] = useState("");
   const [limDay, setLimDay] = useState("");
   const [from, setFrom] = useState<AssetKey>("usdc");
@@ -124,7 +126,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   }, [history.res]);
   const lookingUpKey = !!accountId && (!keysReady || keysFor !== accountId);
   const clearOtherErrors = (keep: { clear: () => void }) => {
-    for (const card of [status, quote, account, balance, history, swap, withdraw, limits]) if (card !== keep) card.clear();
+    for (const card of [status, quote, account, balance, history, swap, withdraw, limits, pnl]) if (card !== keep) card.clear();
   };
   const clearStatus = status.clear;
   const clearQuote = quote.clear;
@@ -451,6 +453,16 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 </div>
               )}
               {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
+              <div className="vact" style={{ marginTop: 12 }}>
+                <button className="vbtn sec" disabled={pnl.busy} data-testid="pnl-btn" onClick={() => { clearOtherErrors(pnl); void pnl.run({}); }}>{pnl.busy ? "…" : t("vault.pnlBtn")}</button>
+              </div>
+              <p className="vhelp">{t("vault.pnlHelp")}</p>
+              {pnl.res?.output && (pnl.res.output as { statement?: string }).statement && (() => {
+                const o = pnl.res!.output as { statement: string; sig: string; minter: string };
+                const href = `/pnl#${encodeShare({ statement: o.statement, sig: o.sig, minter: o.minter, call_id: pnl.res!.call_id })}`;
+                return <p className="vhelp" data-testid="pnl-link"><Link href={href}>{t("vault.pnlOpen")}</Link></p>;
+              })()}
+              {pnl.res?.error && <ErrorBox code={pnl.res.error.code} retryAfter={pnl.res.error.retry_after} />}
               {history.res && <Attested r={history.res} />}
             </section>
           </div>
