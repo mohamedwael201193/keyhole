@@ -482,3 +482,46 @@ fn re_mint_after_transfer_is_refused_before_sending() {
     assert_eq!(assert_mint_id_free(Some("bob.near")).unwrap_err().code, "already_minted");
     assert!(assert_mint_id_free(None).is_ok());
 }
+
+fn tier1() -> Limits { limits_for_tier(1).unwrap() }
+
+#[test]
+fn holder_cut_applies_now_and_raise_waits_a_day() {
+    let p = set_policy(tier1(), None, "a.near", 10_000, 50_000, 1_000).unwrap();
+    assert!(p.pending.is_none());
+    let e = effective_limits(tier1(), Some(&p), 1_000);
+    assert_eq!((e.per_tx_usd_micro, e.daily_usd_micro), (10_000, 50_000));
+    let mut st = Mem::default();
+    assert_eq!(enforce_caps(&mut st, "k1", &e, 20_000, 1_000, true).unwrap_err().code, "over_cap_per_tx");
+    let r = set_policy(tier1(), Some(&p), "a.near", 1_000_000, 5_000_000, 2_000).unwrap();
+    assert_eq!(r.pending.as_ref().unwrap().effective_ms, 2_000 + RAISE_DELAY_MS);
+    assert_eq!(effective_limits(tier1(), Some(&r), 2_000 + RAISE_DELAY_MS - 1).per_tx_usd_micro, 10_000);
+    assert_eq!(effective_limits(tier1(), Some(&r), 2_000 + RAISE_DELAY_MS).per_tx_usd_micro, 1_000_000);
+    // a cut while a raise is pending cancels the raise
+    let c = set_policy(tier1(), Some(&r), "a.near", 5_000, 5_000, 3_000).unwrap();
+    assert!(c.pending.is_none());
+    assert_eq!(effective_limits(tier1(), Some(&c), 9 * RAISE_DELAY_MS).per_tx_usd_micro, 5_000);
+}
+
+#[test]
+fn holder_limits_stay_within_the_tier_and_bind_only_their_owner() {
+    assert_eq!(set_policy(tier1(), None, "a", 2_000_000, 5_000_000, 0).unwrap_err().code, "bad_params");
+    assert_eq!(set_policy(tier1(), None, "a", 0, 5_000_000, 0).unwrap_err().code, "bad_params");
+    assert_eq!(set_policy(tier1(), None, "a", 20, 10, 0).unwrap_err().code, "bad_params");
+    let p = set_policy(tier1(), None, "seller.near", 10, 10, 0).unwrap();
+    let raw = serde_json::to_vec(&p).unwrap();
+    assert!(policy_for(&raw, "seller.near").is_some());
+    assert!(policy_for(&raw, "buyer.near").is_none());
+    assert_eq!(effective_limits(tier1(), policy_for(&raw, "buyer.near").as_ref(), 0).per_tx_usd_micro, 1_000_000);
+}
+
+#[test]
+fn withdraw_waits_after_a_transfer_only_for_the_new_owner() {
+    let mut evs = Vec::new();
+    append_event(&mut evs, "mint", "k1", "a", 0, "mint");
+    assert!(assert_no_cooldown(&evs, "a", 1).is_ok());
+    append_event(&mut evs, "transfer", "k1", "b", 1_000, "transfer");
+    assert_eq!(assert_no_cooldown(&evs, "b", 1_000 + TRANSFER_COOLDOWN_MS - 1).unwrap_err().code, "cooldown");
+    assert!(assert_no_cooldown(&evs, "b", 1_000 + TRANSFER_COOLDOWN_MS).is_ok());
+    assert!(assert_no_cooldown(&evs, "a", 1_001).is_ok());
+}

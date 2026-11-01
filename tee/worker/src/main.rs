@@ -199,10 +199,17 @@ mod host {
 
     fn s(p: &Value, k: &str) -> Option<String> { p.get(k).and_then(|v| v.as_str()).map(|v| v.to_string()) }
 
+    /// Tier caps narrowed by the holder's own limits (see `set_policy`).
+    fn limits_now(c: &Ctx) -> Result<Limits, Error> {
+        let tier = limits_for_tier(c.tier.unwrap_or(0)).ok_or_else(|| err("no_key", "unknown tier"))?;
+        let pol = policy_for(&Host.get(&tkey(&c.token_id(), "policy")), &c.account);
+        Ok(effective_limits(tier, pol.as_ref(), c.now_ms))
+    }
+
     fn op_quote(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "quote", true)?;
         let p = &c.req.params;
-        let lim = limits_for_tier(c.tier.unwrap()).ok_or_else(|| err("no_key", "unknown tier"))?;
+        let lim = limits_now(&c)?;
         let conf = s(p, "confidentiality").unwrap_or_else(|| "basic".into());
         if conf != "basic" && conf != "advanced" { return Err(err("bad_params", "confidentiality must be basic or advanced")); }
         let slip = p.get("slippage_bps").and_then(|v| v.as_u64()).unwrap_or(100);
@@ -243,9 +250,17 @@ mod host {
 
     fn op_status(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "status", false)?;
-        let lim = c.tier.and_then(limits_for_tier);
+        let tier_lim = c.tier.and_then(limits_for_tier);
+        let lim = if c.token.is_some() { limits_now(&c).ok().or(tier_lim) } else { tier_lim };
+        let pol = c.token.as_ref().and_then(|t| policy_for(&Host.get(&tkey(t, "policy")), &c.account));
+        let cool = c.token.as_ref().and_then(|t| {
+            prov_sync_owner(t, &c.account, c.now_ms);
+            let evs: Vec<ProvEvent> = load_prov(t).into_iter().map(|(e, _)| e).collect();
+            cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms)
+        });
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
-        Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "spent_today_usd_micro": spent}))
+        Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
+            "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "spent_today_usd_micro": spent}))
     }
 
     fn op_mint(input: &Value) -> Result<Value, Error> {
@@ -385,7 +400,7 @@ mod host {
     fn op_swap(input: &Value, op: &str) -> Result<Value, Error> {
         let c = authenticate(input, op, true)?;
         let p = &c.req.params;
-        let lim = limits_for_tier(c.tier.unwrap()).ok_or_else(|| err("no_key", "unknown tier"))?;
+        let lim = limits_now(&c)?;
         let tin = s(p, "token_in").ok_or_else(|| err("bad_params", "missing params.token_in"))?;
         let tout = s(p, "token_out").ok_or_else(|| err("bad_params", "missing params.token_out"))?;
         if tin == tout { return Err(err("bad_params", "token_in and token_out must differ")); }
@@ -416,10 +431,13 @@ mod host {
     fn op_withdraw(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "withdraw", true)?;
         let p = &c.req.params;
-        let lim = limits_for_tier(c.tier.unwrap()).ok_or_else(|| err("no_key", "unknown tier"))?;
+        let lim = limits_now(&c)?;
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
         assert_withdraw_to(&c.account, &to)?;
+        prov_sync_owner(&c.token_id(), &c.account, c.now_ms);
+        let evs: Vec<ProvEvent> = load_prov(&c.token_id()).into_iter().map(|(e, _)| e).collect();
+        assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         let amt = digits(p, "amount")?;
         let (key, id) = c.wallet()?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
@@ -529,6 +547,25 @@ mod host {
         Ok(json!({"ok": true, "op": "lock", "account": c.account, "token_id": c.token_id(), "locked_until_ms": until}))
     }
 
+    /// Holder limits: `params.per_tx_usd_micro` and `params.daily_usd_micro`, within the tier caps.
+    /// A cut applies at once; a raise waits 24 h (`set_policy`). Enforced on every quote, swap and withdraw.
+    fn op_limits(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "limits", true)?;
+        let tier = limits_for_tier(c.tier.unwrap_or(0)).ok_or_else(|| err("no_key", "unknown tier"))?;
+        let num = |k: &str| -> Result<u64, Error> {
+            c.req.params.get(k).and_then(|v| v.as_u64().or_else(|| v.as_str().and_then(|x| x.parse().ok())))
+                .ok_or_else(|| err("bad_params", format!("missing params.{k} (USD micro)")))
+        };
+        let (pt, d) = (num("per_tx_usd_micro")?, num("daily_usd_micro")?);
+        let k = tkey(&c.token_id(), "policy");
+        let cur = policy_for(&Host.get(&k), &c.account);
+        let pol = set_policy(tier, cur.as_ref(), &c.account, pt, d, c.now_ms)?;
+        Host.set(&k, serde_json::to_string(&pol).unwrap_or_default().as_bytes());
+        prov_append(&c.token_id(), "limits", &c.account, c.now_ms, &format!("limits {pt}/{d} pending={}", pol.pending.is_some()));
+        let eff = effective_limits(tier, Some(&pol), c.now_ms);
+        Ok(json!({"ok": true, "op": "limits", "account": c.account, "token_id": c.token_id(), "holder_limits": pol, "limits": eff, "tier_limits": tier}))
+    }
+
     /// Holder-signed proof that the key's account holds at least `params.min` of `params.token`.
     /// The statement names the threshold and a yes/no answer, not the balance, and is signed by the
     /// enclave minter key (same key as the key log). The holder chooses whom to show it to.
@@ -585,7 +622,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","sweep_minter"], "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","sweep_minter"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes"}))
     }
 
@@ -598,6 +635,7 @@ mod host {
             "info" => op_info(),
             "provenance" => op_provenance(&input),
             "lock" => op_lock(&input),
+            "limits" => op_limits(&input),
             "prove" => op_prove(&input),
             "status" => op_status(&input),
             "quote" => op_quote(&input),
