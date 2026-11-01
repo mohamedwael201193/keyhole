@@ -33,18 +33,18 @@ test("gallery renders every on-chain key", async ({ page }) => {
 });
 
 test("verify: a published-build mainnet call passes in the browser", async ({ page }) => {
-  await page.goto("/verify?call=0f0bf448-1b66-4200-b6de-7cf095aead54");
+  await page.goto("/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
 });
 
-test("verify: the default page checks the published 67c5cd77 info call", async ({ page }) => {
+test("verify: the default page checks the published 6367401a info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("0f0bf448-1b66-4200-b6de-7cf095aead54");
+  await expect(page.locator("#cid")).toHaveValue("f4768da8-2e87-4622-8654-d1e67f6cd1f0");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2").first()).toBeVisible();
+  await expect(page.getByText("6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693").first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
 });

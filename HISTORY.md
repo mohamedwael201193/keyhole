@@ -9,3 +9,8 @@
 - Privacy cards use separate cropped art (glass chain / chest), each centred and unclipped.
 - Guardrail values are one small pill style ("keyhole-bound", "5-min window", "6/12/30 per min").
 - Mint preview card is 230px and no longer repeats the "Minting issues a Bronze key" line.
+
+## 2026-11-01 — Worker 6367401a published
+- PRs #37 (private AI on NEAR AI Cloud) and #38 (worker batch: signed PnL, request binding, locked_until_ms, sub-cent fix, invariant tests) merged.
+- FastFS upload oGGRn6jW… (expected revert), add_version AJWVEN6F…; live info f4768da8 (attestation 1227292) executed 6367401a.
+- Pointers moved to 6367401a; 67c5cd77 listed as previous.

@@ -9,11 +9,12 @@ export const TXS = [
   { label: "Mint by the TEE to a fresh account", hash: "FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4" },
 ] as const;
 
-/** Live info call on the published worker 67c5cd77. Default on /verify. */
-export const PUBLISHED_INFO_CALL = "0f0bf448-1b66-4200-b6de-7cf095aead54";
+/** Live info call on the published worker 6367401a. Default on /verify. */
+export const PUBLISHED_INFO_CALL = "f4768da8-2e87-4622-8654-d1e67f6cd1f0";
 
 export const CALLS = [
-  { label: "info · published build 67c5cd77", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1225814" },
+  { label: "info · published build 6367401a", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1227292" },
+  { label: "info · previous build 67c5cd77", id: "0f0bf448-1b66-4200-b6de-7cf095aead54", outcome: "ok · attestation 1225814" },
   { label: "info · previous build 38bd67b9", id: "763812bc-0012-4528-a45d-66a3ce17cae9", outcome: "ok · attestation 1223764" },
   { label: "info · previous build b3fa1a39", id: "9d19bceb-986b-4745-9bf9-91f7dcb62b6e", outcome: "ok · attestation 1189623" },
   { label: "earlier · status (signed read)", id: "e099f957-e3c6-4035-999a-907d9782997e", outcome: "ok" },
