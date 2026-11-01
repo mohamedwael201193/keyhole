@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge"];
+import { readFileSync } from "node:fs";
+const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge", "/ask"];
 const shots = process.env.SHOTS_DIR;
 
 for (const p of PAGES) {
@@ -543,4 +544,15 @@ test("verify: an old-build refusal shows the binding, the previous version and t
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.getByTestId("build-note")).toContainText("previous published version 38bd67b9");
   await expect(page.getByTestId("output-verdict")).toHaveText("refused · not_owner");
+});
+
+test("ask: a reply whose quote does not carry this browser's nonce is not marked verified", async ({ page }) => {
+  const fx = JSON.parse(readFileSync(`${process.cwd()}/tests/fixtures/ai_reply.json`, "utf8"));
+  await page.route("**/api/ai", (route) => route.fulfill({ json: fx }));
+  await page.goto("/ask");
+  await page.getByTestId("ask-input").fill("What is a holder limit?");
+  await page.getByTestId("ask-btn").click();
+  await expect(page.getByTestId("ask-answer")).toContainText("10-minute");
+  await expect(page.getByTestId("ask-verdict")).toHaveAttribute("data-ok", "false");
+  await expect(page.locator('[data-pass="false"]').first()).toBeVisible();
 });
