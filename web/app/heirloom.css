@@ -842,3 +842,5 @@ html.no-motion .foil-card .bw { display: none; }
 .judge .jsteps > li, .judge .jlimits { background: #F6F1E7; border: 1px solid var(--ln); border-radius: 18px; }
 .judge a { color: var(--teal); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
 .judge h1 { margin-bottom: 14px; }
+.pnl .jsteps h2 span { min-width: 28px; }
+.pnl details { margin-top: 14px; }

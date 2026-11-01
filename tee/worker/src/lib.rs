@@ -291,8 +291,48 @@ pub fn enforce_caps(st: &mut dyn Store, account: &str, lim: &Limits, usd_micro: 
     }
 }
 
+/// Dollars for messages: 2 decimals when cent-exact, else 4 (truncated), or 6 below $0.0001, so a sub-cent cap never reads "$0.00".
 pub fn fmt_usd(micro: u64) -> String {
-    format!("{}.{:02}", micro / 1_000_000, (micro % 1_000_000) / 10_000)
+    let (i, f) = (micro / 1_000_000, micro % 1_000_000);
+    if f % 10_000 == 0 { format!("{}.{:02}", i, f / 10_000) }
+    else if micro >= 100 { format!("{}.{:04}", i, f / 100) }
+    else { format!("{}.{:06}", i, f) }
+}
+
+pub fn sha256_hex(s: &str) -> String {
+    hex::encode(Sha256::digest(s.as_bytes()))
+}
+
+/// Successful swaps (and copies) this holder made: count, total USD paid (micro, priced at trade time),
+/// summed output per token in base units, and the first trade time.
+pub fn pnl_aggregate(entries: &[serde_json::Value]) -> (u64, u64, std::collections::BTreeMap<String, u128>, u64) {
+    let mut outs = std::collections::BTreeMap::new();
+    let (mut n, mut cost, mut since) = (0u64, 0u64, 0u64);
+    for e in entries {
+        let kind = e.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+        if !(kind == "swap" || kind == "copy") || e.get("status").and_then(|v| v.as_str()) != Some("success") { continue; }
+        let Some(tout) = e.get("token_out").and_then(|v| v.as_str()) else { continue };
+        let amt: u128 = e.get("amount_out").and_then(|v| v.as_str().map(|x| x.to_string()).or_else(|| v.as_u64().map(|x| x.to_string())))
+            .and_then(|x| x.parse().ok()).unwrap_or(0);
+        if amt == 0 { continue; }
+        *outs.entry(tout.to_string()).or_insert(0u128) += amt;
+        cost = cost.saturating_add(e.get("usd_in_micro").and_then(|v| v.as_u64()).unwrap_or(0));
+        let ts = e.get("ts_ms").and_then(|v| v.as_u64()).unwrap_or(0);
+        if since == 0 || (ts > 0 && ts < since) { since = ts; }
+        n += 1;
+    }
+    (n, cost, outs, since)
+}
+
+/// Holder-published PnL statement, signed by the enclave minter key. It carries totals only:
+/// no balances, no per-trade amounts, no tokens. Keys sorted, no spaces.
+#[allow(clippy::too_many_arguments)]
+pub fn pnl_canonical(token_id: &str, owner: &str, trades: u64, cost: u64, value_now: u64, since_ms: u64, log_head: &str, ts_ms: u64) -> String {
+    let pnl = value_now as i128 - cost as i128;
+    format!(
+        "{{\"cost_usd_micro\":{},\"kind\":\"keyhole-pnl-v1\",\"log_head\":\"{}\",\"method\":\"mark-to-market of each trade's output vs the USD paid at trade time\",\"owner\":\"{}\",\"pnl_usd_micro\":{},\"since_ms\":{},\"token_id\":\"{}\",\"trades\":{},\"ts_ms\":{},\"value_now_usd_micro\":{}}}",
+        cost, log_head, owner, pnl, since_ms, token_id, trades, ts_ms, value_now
+    )
 }
 /// "0.049974300000" -> 49974 micro-dollars (truncating). Rejects negatives/garbage.
 pub fn parse_usd_micro(s: &str) -> Option<u64> {

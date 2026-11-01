@@ -544,3 +544,11 @@ test("verify: an old-build refusal shows the binding, the previous version and t
   await expect(page.getByTestId("build-note")).toContainText("previous published version 38bd67b9");
   await expect(page.getByTestId("output-verdict")).toHaveText("refused · not_owner");
 });
+
+test("pnl: a tampered share link fails the signature check", async ({ page }) => {
+  const statement = '{"cost_usd_micro":30000,"kind":"keyhole-pnl-v1","log_head":"00","method":"m","owner":"bob.near","pnl_usd_micro":5000,"since_ms":1,"token_id":"kabc","trades":2,"ts_ms":9,"value_now_usd_micro":35000}';
+  const share = Buffer.from(JSON.stringify({ statement, sig: "0".repeat(128), minter: "a".repeat(64), call_id: null })).toString("base64url");
+  await page.goto(`/pnl#${share}`);
+  await expect(page.getByTestId("pnl-sig")).toHaveAttribute("data-pass", "false");
+  await expect(page.getByTestId("pnl-verdict")).toHaveAttribute("data-ok", "false", { timeout: 15_000 });
+});

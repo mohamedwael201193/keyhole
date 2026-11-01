@@ -89,6 +89,11 @@ mod host {
     }
 
     /// Signature -> key ownership -> freshness -> op binding -> tier -> rate limit -> nonce (replay).
+    thread_local! {
+        // Account and key that passed authentication in this call, echoed in `bind`.
+        static BIND: std::cell::RefCell<Option<(String, Option<String>)>> = const { std::cell::RefCell::new(None) };
+    }
+
     fn authenticate(input: &Value, op: &str, need_key: bool) -> Result<Ctx, Error> {
         let auth: Auth = serde_json::from_value(input.get("auth").cloned().unwrap_or(Value::Null))
             .map_err(|_| err("no_auth", "missing `auth`: sign the request with your NEAR wallet (NEP-413 signMessage)"))?;
@@ -115,6 +120,7 @@ mod host {
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         rate_limit(&mut Host, &account, &lim, now_ms)?;
         consume_nonce(&mut Host, &account, &nonce, now_ms)?;
+        BIND.with(|b| *b.borrow_mut() = Some((account.clone(), token.clone())));
         Ok(Ctx { account, req, now_ms, tier, token })
     }
 
@@ -259,8 +265,9 @@ mod host {
             cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms)
         });
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
+        let locked = c.token.as_ref().and_then(|t| active_lock(&Host.get(&tkey(t, "lock")), &c.account, c.now_ms));
         Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
-            "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "spent_today_usd_micro": spent}))
+            "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent}))
     }
 
     fn op_mint(input: &Value) -> Result<Value, Error> {
@@ -589,6 +596,28 @@ mod host {
         Ok(json!({"ok": true, "op": "prove", "statement": statement, "sig": sig, "minter": mid, "holds_at_least": holds}))
     }
 
+    /// Opt-in PnL: the holder signs `pnl` to get a statement they may publish. The enclave reads its own
+    /// trade log for this holder, prices each trade's output now (dry 1Click quotes) and signs totals
+    /// with the minter key. Nothing is published by the enclave; the holder decides.
+    fn op_pnl(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "pnl", true)?;
+        let (_, id) = c.wallet()?;
+        let tid = c.token_id();
+        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let mine = history_for(&all, &c.account);
+        let (trades, cost, outs, since) = pnl_aggregate(&mine);
+        if outs.len() > 6 { return Err(err("bad_params", "too many assets to price in one call")); }
+        let mut value = 0u64;
+        for (tok, amt) in &outs { value = value.saturating_add(usd_of(tok, &amt.to_string(), &id, c.now_ms)?); }
+        let rows = load_prov(&tid);
+        let evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
+        let head = verify_chain(&evs).unwrap_or_else(|_| "0".repeat(64));
+        let statement = pnl_canonical(&tid, &c.account, trades, cost, value, since, &head, c.now_ms);
+        let (mid, msk) = minter()?;
+        let sig = sign_head(&minter_secret(&msk)?, &statement);
+        Ok(json!({"ok": true, "op": "pnl", "statement": statement, "sig": sig, "minter": mid}))
+    }
+
     fn op_history(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "history", true)?;
         let _ = c.wallet()?; // runs the one-time migration, so a legacy log is found
@@ -622,7 +651,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","sweep_minter"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes"}))
     }
 
@@ -646,10 +675,17 @@ mod host {
             "copy" => op_swap(&input, "copy"),
             "withdraw" => op_withdraw(&input),
             "history" => op_history(&input),
+            "pnl" => op_pnl(&input),
             "sweep_minter" => op_sweep_minter(),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, sweep_minter")),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter")),
         };
-        let out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
+        let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
+        // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.
+        if let (Some(m), Some(n)) = (input.pointer("/auth/message").and_then(|v| v.as_str()), input.pointer("/auth/nonce").and_then(|v| v.as_str())) {
+            let who = BIND.with(|b| b.borrow().clone());
+            out["bind"] = json!({"req_sha256": sha256_hex(m), "nonce": n,
+                "account": who.as_ref().map(|w| w.0.clone()), "token_id": who.and_then(|w| w.1)});
+        }
         println!("{}", out);
     }
 }

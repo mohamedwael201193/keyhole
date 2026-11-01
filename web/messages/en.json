@@ -176,6 +176,9 @@
   "dest": "Destination",
   "destHelp": "The enclave pays only the account you connected.",
   "activityHint": "Sign a read to see your recent trades and withdrawals.",
+  "pnlBtn": "Publish signed PnL",
+  "pnlHelp": "Opt-in. The enclave signs totals only (trades, USD paid, outputs worth now). You choose whom to show the link to.",
+  "pnlOpen": "Open your shareable PnL page ↗",
   "lockNote": "This key is locked for sale until {time} UTC. Trades and withdrawals resume then, or after a transfer."
  },
  "mint": {

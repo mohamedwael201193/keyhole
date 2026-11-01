@@ -187,7 +187,7 @@ fn tiers_and_usd_parsing() {
     assert_eq!(parse_usd_micro("12"), Some(12_000_000));
     assert_eq!(parse_usd_micro("-1"), None);
     assert_eq!(parse_usd_micro("1.2x"), None);
-    assert_eq!(fmt_usd(49_974), "0.04");
+    assert_eq!(fmt_usd(49_974), "0.0499");
 }
 
 #[test]
@@ -524,4 +524,162 @@ fn withdraw_waits_after_a_transfer_only_for_the_new_owner() {
     assert_eq!(assert_no_cooldown(&evs, "b", 1_000 + TRANSFER_COOLDOWN_MS - 1).unwrap_err().code, "cooldown");
     assert!(assert_no_cooldown(&evs, "b", 1_000 + TRANSFER_COOLDOWN_MS).is_ok());
     assert!(assert_no_cooldown(&evs, "a", 1_001).is_ok());
+}
+
+#[test]
+fn fmt_usd_keeps_sub_cent_amounts_readable() {
+    assert_eq!(fmt_usd(1_000_000), "1.00");
+    assert_eq!(fmt_usd(20_000), "0.02");
+    assert_eq!(fmt_usd(1_000), "0.0010");
+    assert_eq!(fmt_usd(2_000), "0.0020");
+    assert_eq!(fmt_usd(49_974), "0.0499");
+    assert_eq!(fmt_usd(50), "0.000050");
+    assert_eq!(fmt_usd(0), "0.00");
+}
+
+#[test]
+fn pnl_counts_only_successful_trades_and_signs_totals_only() {
+    let log = serde_json::json!([
+        {"kind":"swap","status":"success","token_out":"nep141:wrap.near","amount_out":"1000","usd_in_micro":20000,"ts_ms":50},
+        {"kind":"swap","status":"success","token_out":"nep141:wrap.near","amount_out":"500","usd_in_micro":10000,"ts_ms":40},
+        {"kind":"swap","status":"failed","token_out":"nep141:wrap.near","amount_out":"999","usd_in_micro":5,"ts_ms":10},
+        {"kind":"withdraw","status":"success","token":"x","amount":"7","usd_micro":3}
+    ]);
+    let (n, cost, outs, since) = pnl_aggregate(log.as_array().unwrap());
+    assert_eq!((n, cost, since), (2, 30000, 40));
+    assert_eq!(outs.get("nep141:wrap.near"), Some(&1500u128));
+    let st = pnl_canonical("kabc", "bob.near", n, cost, 25000, since, &"0".repeat(64), 99);
+    assert!(st.contains("\"pnl_usd_micro\":-5000"));
+    assert!(!st.contains("wrap.near") && !st.contains("1500"), "no assets or amounts in the statement");
+    let v: serde_json::Value = serde_json::from_str(&st).unwrap();
+    assert_eq!(v["kind"], "keyhole-pnl-v1");
+    let secret = [5u8; 32];
+    let sig = sign_head(&secret, &st);
+    let public = SigningKey::from_bytes(&secret).verifying_key().to_bytes();
+    assert!(verify_head(&public, &st, &sig));
+}
+
+// ---------- invariant tests: seeded random sequences, thousands of steps each ----------
+struct Rng(u64);
+impl Rng {
+    fn next(&mut self) -> u64 { self.0 ^= self.0 << 13; self.0 ^= self.0 >> 7; self.0 ^= self.0 << 17; self.0 }
+    fn below(&mut self, n: u64) -> u64 { self.next() % n }
+}
+
+#[test]
+fn invariant_caps_never_exceeded_across_random_trades_and_rollbacks() {
+    for seed in 1..=20u64 {
+        let mut r = Rng(seed * 7919);
+        let mut st = Mem::default();
+        let lim = limits_for_tier(1 + (seed % 3) as u8).unwrap();
+        let mut committed: HashMap<u64, u64> = HashMap::new();
+        for step in 0..2000u64 {
+            let now = step * 3_600_000 / 7; // crosses several UTC days
+            let day = now / 86_400_000;
+            let amt = r.below(lim.per_tx_usd_micro * 2) + 1;
+            match enforce_caps(&mut st, "h", &lim, amt, now, true) {
+                Ok(_) => {
+                    assert!(amt <= lim.per_tx_usd_micro, "per-trade cap");
+                    if r.below(4) == 0 { st.incr(&hkey("h", &format!("spent/{day}")), -(amt as i64)).unwrap(); } // failed trade rolled back
+                    else { *committed.entry(day).or_default() += amt; }
+                }
+                Err(e) => assert!(e.code == "over_cap_per_tx" || e.code == "over_cap_daily"),
+            }
+            assert!(committed.get(&day).copied().unwrap_or(0) <= lim.daily_usd_micro, "daily cap, seed {seed} step {step}");
+            assert_eq!(st.incr(&hkey("h", &format!("spent/{day}")), 0).unwrap() as u64, committed.get(&day).copied().unwrap_or(0), "counter equals committed");
+        }
+    }
+}
+
+#[test]
+fn invariant_each_signed_nonce_is_accepted_at_most_once() {
+    let mut r = Rng(42);
+    let mut st = Mem::default();
+    let mut seen = std::collections::HashSet::new();
+    for i in 0..5000u64 {
+        let mut n = [0u8; 32];
+        n[0] = r.below(64) as u8; // small space forces many repeats
+        n[1] = r.below(16) as u8;
+        let acct = if r.below(2) == 0 { "a.near" } else { "b.near" };
+        let ok = consume_nonce(&mut st, acct, &n, i).is_ok();
+        assert_eq!(ok, seen.insert((acct, n)), "replay accepted or fresh nonce refused at {i}");
+    }
+}
+
+#[test]
+fn invariant_cooldown_binds_only_the_latest_transferee() {
+    let mut r = Rng(9);
+    for _ in 0..500 {
+        let owners = ["a", "b", "c"];
+        let mut evs = vec![];
+        let mut last: Option<(&str, u64)> = None;
+        for i in 0..(1 + r.below(8)) {
+            let o = owners[r.below(3) as usize];
+            let kind = if r.below(3) == 0 { "swap" } else { "transfer" };
+            let ts = i * 1000 + r.below(500);
+            evs.push(ProvEvent { i, prev: String::new(), kind: kind.into(), token_id: "k".into(), owner: o.into(), ts_ms: ts, detail_hash: String::new() });
+            if kind == "transfer" { last = Some((o, ts)); }
+        }
+        for o in owners {
+            let want = last.filter(|(w, _)| *w == o).map(|(_, ts)| ts + TRANSFER_COOLDOWN_MS);
+            assert_eq!(cooldown_until(&evs, o), want);
+        }
+    }
+}
+
+#[test]
+fn invariant_lock_binds_only_its_owner_and_only_until_it_ends() {
+    let mut r = Rng(77);
+    for _ in 0..3000 {
+        let until = r.below(1_000_000);
+        let setter = if r.below(2) == 0 { "seller" } else { "other" };
+        let raw = lock_value(setter, until);
+        let now = r.below(1_200_000);
+        for who in ["seller", "other", "buyer"] {
+            let locked = assert_unlocked(raw.as_bytes(), who, now).is_err();
+            assert_eq!(locked, who == setter && now < until, "who={who} setter={setter} now={now} until={until}");
+        }
+    }
+}
+
+#[test]
+fn invariant_holder_limits_never_exceed_tier_and_raises_wait_a_day() {
+    let mut r = Rng(5);
+    let tier = limits_for_tier(2).unwrap();
+    let mut cur: Option<HolderPolicy> = None;
+    let mut now = 0u64;
+    for _ in 0..3000 {
+        now += r.below(20_000_000);
+        let pt = r.below(tier.per_tx_usd_micro * 2) + 1;
+        let d = pt + r.below(tier.daily_usd_micro * 2);
+        let before = effective_limits(tier, cur.as_ref(), now);
+        if let Ok(p) = set_policy(tier, cur.as_ref(), "h", pt, d, now) {
+            let after = effective_limits(tier, Some(&p), now);
+            assert!(after.per_tx_usd_micro <= tier.per_tx_usd_micro && after.daily_usd_micro <= tier.daily_usd_micro, "above tier");
+            assert!(after.per_tx_usd_micro <= before.per_tx_usd_micro, "instant per-trade raise");
+            assert!(after.daily_usd_micro <= before.daily_usd_micro, "instant daily raise");
+            let later = effective_limits(tier, Some(&p), now + RAISE_DELAY_MS);
+            assert!(later.per_tx_usd_micro <= tier.per_tx_usd_micro);
+            cur = Some(p);
+        }
+        // a different owner is never bound by this policy
+        let raw = serde_json::to_vec(&cur).unwrap_or_default();
+        assert!(policy_for(&raw, "someone-else").is_none());
+    }
+}
+
+#[test]
+fn invariant_transfer_mid_payout_never_settles_for_the_old_holder() {
+    let mut r = Rng(1234);
+    for _ in 0..5000 {
+        let signer = if r.below(2) == 0 { "alice" } else { "bob" };
+        let owner_at_auth = if r.below(2) == 0 { "alice" } else { "bob" };
+        let owner_at_settle = if r.below(3) == 0 { "carol" } else { owner_at_auth };
+        let admitted = admit_request(signer, owner_at_auth, true, true).is_ok();
+        assert_eq!(admitted, signer == owner_at_auth);
+        if admitted {
+            let settled = settle_if_owner(owner_at_settle == signer).is_ok();
+            assert_eq!(settled, owner_at_settle == signer, "paid out after the key moved");
+        }
+    }
 }
