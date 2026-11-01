@@ -3,6 +3,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { AI_MAX_PROMPT, AI_MODEL, allPass, answerOf, checkReply, newNonce, type AiChecks, type AiReply } from "@/lib/ai";
 
+/** Fictional samples so anyone can try it without real data. */
+const SAMPLES: { label: string; prompt: string; context?: string }[] = [
+  { label: "Sample statement: flag anything unusual", prompt: "Categorize this fictional statement and flag anything unusual.", context: "FICTIONAL SAMPLE. Oct 2: Coffee Bar $4.20. Oct 3: Grocer $61.10. Oct 5: Streaming $12.99. Oct 5: Streaming $12.99 (same merchant, same day). Oct 9: Wire to unknown exchange $1,950.00. Oct 12: Rent $1,200.00." },
+  { label: "Sample vault: are my caps sensible?", prompt: "Given this fictional vault, are my holder caps sensible for small test trades?", context: "FICTIONAL SAMPLE. Bronze key. Holder caps $0.50 per trade, $2.00 per day (tier max $1/$5). Balance 3.10 USDC and 0.4 wNEAR. Spent today $0.20." },
+  { label: "What happens to my vault if I sell the key?", prompt: "What happens to my confidential account and limits if I sell my key?" },
+];
+
 const ROWS: [keyof AiChecks, string, string][] = [
   ["nonceInQuote", "Fresh nonce in the TDX quote", "Your browser made this nonce; the quote's report_data ends with it, so the report was produced for this question."],
   ["signerInQuote", "Signing key bound in the quote", "report_data starts with the model's signing address, so that key lives in the attested enclave."],
@@ -15,6 +22,7 @@ const ROWS: [keyof AiChecks, string, string][] = [
 
 export function AskView() {
   const [prompt, setPrompt] = useState("");
+  const [context, setContext] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [reply, setReply] = useState<AiReply | null>(null);
@@ -27,7 +35,7 @@ export function AskView() {
     const n = newNonce();
     setNonce(n);
     try {
-      const r = await fetch("/api/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: q, nonce: n }) });
+      const r = await fetch("/api/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: q, nonce: n, ...(context ? { context } : {}) }) });
       const j = await r.json();
       if (!j.ok) { setErr(j.error?.code === "rate_limited" ? `Too many questions. Try again in ${j.error.retry_after ?? 60} s.` : j.error?.code === "ai_offline" ? "The assistant is offline." : "The model could not answer right now."); return; }
       setReply(j as AiReply);
@@ -53,6 +61,10 @@ export function AskView() {
 
       <div className="askgrid">
         <section className="c vcard">
+          <div className="asksamples">
+            {SAMPLES.map((x) => <button key={x.label} type="button" className="vbtn sec sm" onClick={() => { setPrompt(x.prompt); setContext(x.context || ""); }}>{x.label}</button>)}
+          </div>
+          {context && <p className="askctx" data-testid="ask-context"><b>Attached fictional data:</b> {context} <button type="button" className="linkish" onClick={() => setContext("")}>remove</button></p>}
           <form onSubmit={(e) => { e.preventDefault(); void ask(); }} className="askform">
             <label htmlFor="q">Your question</label>
             <textarea id="q" className="input" rows={4} maxLength={AI_MAX_PROMPT} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="How do holder limits work if I sell my key?" data-testid="ask-input" />

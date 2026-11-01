@@ -872,3 +872,7 @@ html.no-motion .foil-card .bw { display: none; }
 .ask .asknote a { color: var(--teal); text-decoration: underline; }
 @media (max-width: 900px) { .ask .askgrid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .ask .vcard { padding: 16px; } }
+.ask .asksamples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.ask .asksamples .vbtn { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ln); background: #FBF8F2; font-weight: 600; font-size: 13px; cursor: pointer; }
+.ask .askctx { font-size: 13px; color: var(--mu); background: #FBF8F2; border: 1px dashed var(--ln); border-radius: 12px; padding: 10px 12px; overflow-wrap: anywhere; }
+.ask .linkish { background: none; border: 0; color: var(--teal); text-decoration: underline; cursor: pointer; font-size: 13px; }
