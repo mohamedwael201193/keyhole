@@ -20,7 +20,11 @@ Related tests in the same file: `over_cap_daily_refused_and_rolled_back`, `rate_
 
 ## Live proof
 
-The published enclave is `b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a` (620,067 bytes). FastFS upload [`72P1YcuV…`](https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8) (expected prepaid-gas revert). `add_version` [`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU). Live `info` call [`9d19bceb`](https://api.outlayer.ai/attestations/by-call/9d19bceb-986b-4745-9bf9-91f7dcb62b6e), attestation 1189623, `executed_wasm_sha256` `b3fa1a39…`. Deploy cost 0.008012 NEAR.
+The published enclave is `38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78` (651,989 bytes). `add_version` [`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z). Live `info` call [`763812bc`](https://api.outlayer.ai/attestations/by-call/763812bc-0012-4528-a45d-66a3ce17cae9), `executed_wasm_sha256` `38bd67b9…`.
+
+### Previous version `b3fa1a39`
+
+Build `b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a` (620,067 bytes). FastFS upload [`72P1YcuV…`](https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8) (expected prepaid-gas revert). `add_version` [`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU). Live `info` call [`9d19bceb`](https://api.outlayer.ai/attestations/by-call/9d19bceb-986b-4745-9bf9-91f7dcb62b6e), attestation 1189623, `executed_wasm_sha256` `b3fa1a39…`. Deploy cost 0.008012 NEAR.
 
 ### Previous version `f13efe92`
 

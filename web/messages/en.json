@@ -215,7 +215,7 @@
   "eyebrow": "Verify · runs in your browser",
   "h1a": "Don't trust us. ",
   "h1b": "Check the seal.",
-  "lead": "Five checks, done locally against the enclave's attestation and NEAR mainnet. Nothing here asks you to trust this site.",
+  "lead": "Six checks, done locally against the enclave's attestation and NEAR mainnet. Nothing here asks you to trust this site.",
   "report": "Attestation report",
   "quote": "Intel TDX quote present",
   "quoteD": "OutLayer attestation · quote parsed in your browser",
