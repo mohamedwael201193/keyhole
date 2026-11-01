@@ -47,7 +47,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
           </div>
           {idn && <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />}
           <h3 title={revealed ? String(o.token_id) : undefined}>{revealed ? t("gallery.key", { id: shortKeyId(String(o.token_id)) }) : t("mint.preview")}</h3>
-          <div className="meta"><span className={revealed ? undefined : "wrap"}>{revealed ? t("mint.tag", { id: shortKeyId(String(o.token_id)), finish: t(`finish.${idn!.finish}`) }) : t("mint.bronzeOnly")}</span></div>
+          {revealed && <div className="meta"><span>{t("mint.tag", { id: shortKeyId(String(o.token_id)), finish: t(`finish.${idn!.finish}`) })}</span></div>}
         </FoilCard>
         <div>
           <p className="eb">{t("mint.step", { n: step })}</p>
