@@ -14,6 +14,12 @@ export const PUBLISHED_INFO_CALL = "f4768da8-2e87-4622-8654-d1e67f6cd1f0";
 
 export const CALLS = [
   { label: "info · published build 6367401a", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1227292" },
+  { label: "attack · injected agent sends a payout to attacker.near", id: "c1312e2d-8c20-4b3e-ad5b-22dd3102826d", outcome: "refused · bad_params" },
+  { label: "attack · drain $2.00 past the holder cap", id: "afaaf3e1-32ff-42d8-88da-412a0bb61e11", outcome: "refused · over_cap_per_tx" },
+  { label: "attack · raise the caps (waits 24 h)", id: "06cf2630-aed4-410a-9e28-f0799efddeda", outcome: "ok · pending" },
+  { label: "attack · replay a signed request", id: "d8f5f0ee-3c0b-44bc-afed-bc24ad190ed0", outcome: "refused · replay" },
+  { label: "attack · edit the recipient, keep the signature", id: "16b09581-9010-4600-b5c5-58af0216cdc8", outcome: "refused · bad_signature" },
+  { label: "attack · previous holder reads the vault", id: "711795b9-3e77-4a59-98ee-d798cb63ccc2", outcome: "refused · not_owner" },
   { label: "mid-payout · withdraw paid to the holder who signed it, key moved mid-flight", id: "129161f9-2534-4a3f-9544-44f8da9dd7c2", outcome: "ok · 0.003 USDC to B" },
   { label: "mid-payout · old holder after the transfer", id: "e72dc176-e6fc-4d89-b348-911f5318b81b", outcome: "refused · not_owner" },
   { label: "mid-payout · new holder sees the rest (0.002 USDC)", id: "f36d9b54-417a-4b33-9598-c396ae852d4d", outcome: "ok" },

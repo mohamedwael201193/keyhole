@@ -22,3 +22,8 @@
 ## 2026-11-01 — Key history page and a transfer during a payout on mainnet
 - New public page /key?id=… shows holders (from/to, deposits, paid out, trades) and the full event log. It re-checks every hash link, the head, the ed25519 head signature and that the signer is the TEE minter, in the browser. Amounts stay sealed. Linked from the vault key log.
 - Mainnet run (docs/evidence/mid-payout/README.md): B signed a 0.003 USDC withdraw at 06:23:00; the key moved B→A at 06:23:04–06:23:18 (tx 144iK9uj…); the payout finished at 06:23:28 to B. B's next request: not_owner. A sees exactly 0.002 USDC. A withdraw within 10 minutes of a transfer: cooldown.
+
+## 2026-11-01 — Prompt-injection attack log, key scoping, /ask context fix
+- Six mainnet attack calls by an "obedient" agent holding key A: payout to attacker.near (bad_params), $2 drain (over_cap_per_tx), cap raise (pending 24 h), replay (replay), edited recipient (bad_signature), old holder (not_owner). docs/evidence/prompt-injection.
+- /ask: pasted context sent a second system message, which the model API rejected (ai_upstream). Context now goes in the user turn inside <shared_context> tags, with a system rule never to follow it. New "Attack test" sample.
+- README: key scoping table (FullAccess / FunctionCall keys read from RPC) and agent guidance.

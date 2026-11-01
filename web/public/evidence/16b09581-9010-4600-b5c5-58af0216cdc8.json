@@ -1,0 +1,1 @@
+{"call_id":"16b09581-9010-4600-b5c5-58af0216cdc8","output":{"bind":{"account":null,"nonce":"yqqqtJzNSPJAJVKbTyYBqKLPrGmDdLKlvOH1lQguIMo=","req_sha256":"8b1adb3e2e60f7448b0578432032b5e47bf90a7d0bd371e1564576e78c3aee82","token_id":null},"error":{"code":"bad_signature","message":"signature does not match message"},"ok":false}}
