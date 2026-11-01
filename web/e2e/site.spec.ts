@@ -572,3 +572,17 @@ test("verify: Intel DCAP passes in the browser and a signed answer shows its key
   await expect(page.getByTestId("dcap-bind")).toContainText("k5f4750858f328940");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
 });
+
+test("key history: a real log re-verifies and an edited row fails", async ({ page }) => {
+  const body = JSON.parse(readFileSync(`${process.cwd()}/tests/fixtures/keylog_k5f47.json`, "utf8"));
+  await page.route("**/api/worker", (route) => route.fulfill({ json: { call_id: "184b6075-9e95-4dbe-b75f-3d4c9c9afdcd", output: { ok: true, op: "provenance", ...body } } }));
+  await page.goto("/key?id=k5f4750858f328940");
+  await expect(page.getByTestId("key-verdict")).toHaveAttribute("data-ok", "true");
+  expect(await page.getByTestId("holder-row").count()).toBeGreaterThanOrEqual(3);
+  const bad = structuredClone(body); bad.events[1].kind = "deposit";
+  await page.unroute("**/api/worker");
+  await page.route("**/api/worker", (route) => route.fulfill({ json: { output: { ok: true, ...bad } } }));
+  await page.getByTestId("key-load").click();
+  await expect(page.getByTestId("key-verdict")).toHaveAttribute("data-ok", "false");
+  await expect(page.getByTestId("k-chain")).toHaveAttribute("data-pass", "false");
+});
