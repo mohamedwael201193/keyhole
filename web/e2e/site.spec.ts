@@ -32,18 +32,18 @@ test("gallery renders every on-chain key", async ({ page }) => {
 });
 
 test("verify: a published-build mainnet call passes in the browser", async ({ page }) => {
-  await page.goto("/verify?call=763812bc-0012-4528-a45d-66a3ce17cae9");
+  await page.goto("/verify?call=0f0bf448-1b66-4200-b6de-7cf095aead54");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
 });
 
-test("verify: the default page checks the published 38bd67b9 info call", async ({ page }) => {
+test("verify: the default page checks the published 67c5cd77 info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("763812bc-0012-4528-a45d-66a3ce17cae9");
+  await expect(page.locator("#cid")).toHaveValue("0f0bf448-1b66-4200-b6de-7cf095aead54");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78").first()).toBeVisible();
+  await expect(page.getByText("67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2").first()).toBeVisible();
   await expect(page.getByText("NEP-413 full-access key, or an EIP-191 MetaMask signature")).toBeVisible();
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
 });

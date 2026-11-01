@@ -20,7 +20,11 @@ Related tests in the same file: `over_cap_daily_refused_and_rolled_back`, `rate_
 
 ## Live proof
 
-The published enclave is `38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78` (651,989 bytes). `add_version` [`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z). Live `info` call [`763812bc`](https://api.outlayer.ai/attestations/by-call/763812bc-0012-4528-a45d-66a3ce17cae9), `executed_wasm_sha256` `38bd67b9…`.
+The published enclave is `67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2` (668,482 bytes). FastFS upload [`4Wz1EUh1…`](https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk) (expected prepaid-gas revert). `add_version` [`86tCjm92…`](https://nearblocks.io/txns/86tCjm92yBqKoHt2kz99es1NadZeKf91AfUTx2uaqfmr). Live `info` call [`0f0bf448`](https://api.outlayer.ai/attestations/by-call/0f0bf448-1b66-4200-b6de-7cf095aead54), attestation 1225814, `executed_wasm_sha256` `67c5cd77…`. Deploy cost 0.008253 NEAR.
+
+### Previous version `38bd67b9`
+
+Build `38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78` (651,989 bytes). `add_version` [`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z). Live `info` call [`763812bc`](https://api.outlayer.ai/attestations/by-call/763812bc-0012-4528-a45d-66a3ce17cae9), `executed_wasm_sha256` `38bd67b9…`.
 
 ### Previous version `b3fa1a39`
 
