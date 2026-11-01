@@ -247,7 +247,7 @@
   "eyebrow": "Verify · runs in your browser",
   "h1a": "Don't trust us. ",
   "h1b": "Check the seal.",
-  "lead": "Six checks, done locally against the enclave's attestation and NEAR mainnet. Nothing here asks you to trust this site.",
+  "lead": "Six attestation checks plus 19 Intel DCAP checks, done locally against the enclave's attestation and NEAR mainnet. Nothing here asks you to trust this site.",
   "report": "Attestation report",
   "quote": "Intel TDX quote present",
   "quoteD": "OutLayer attestation · quote parsed in your browser",
@@ -287,7 +287,11 @@
   "result": "Result",
   "genuine": "The enclave is genuine.",
   "notYet": "Not verified yet.",
-  "again": "Run again"
+  "again": "Run again",
+  "dcapH": "Intel DCAP, checked in your browser",
+  "dcapCount": "{n}/{total} checks passed",
+  "dcapNote": "Parses the TDX quote, verifies the quote signature, the Quoting Enclave report and the PCK chain up to the pinned Intel SGX Root CA, and checks report_data against the attested fields. Not checked here: Intel's revocation list and TCB status, which need Intel's PCS service.",
+  "bindReq": "Answer bound to key {token}, request sha256 {req}…, nonce {nonce}…"
  },
  "result": {
   "attestation": "Attestation",
