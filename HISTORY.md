@@ -32,3 +32,8 @@
 - TRACK_COVERAGE.md maps every line of the nfts, privacy, defi and security prompts to a feature, proof and status (gaps marked ❌/🟡).
 - 25 new web unit tests (evidence integrity, DCAP edge cases, key-log format, limiter, labels). Totals: 222 distinct tests (contract 15, worker 43, CLI 7, web unit 116, e2e 41 × 2 viewports). 8/10 integrations live.
 - Live /ask answer to the poisoned note recorded in docs/evidence/prompt-injection.
+
+## 2026-11-01 — 1Click settlements page (dry-run, live status, REFUNDED/FAILED)
+- Minimums from dry quotes: Solana USDC → NEAR needs ≥ 0.010001 USDC; NEAR → Solana costs ~0.01 USDC in fees, so ≥ 0.02 USDC.
+- Executed on mainnet from keyhole-devmo.near: 0.03 wNEAR → 0.131355 USDC (deposit BGyVQcr6…, SUCCESS); under-deposit 0.02 of a 0.05 USDC quote (deposit J2UwPe1X…, INCOMPLETE_DEPOSIT, refund due at the quote deadline 2026-11-04 07:30 UTC+2). A first 0.05 USDC deposit attempt failed for low balance (no funds moved).
+- New /settle page: dry-run quotes (server forces dry:true), live status for each executed order with "where the funds are" and explorer links, a clearly labelled recorded FAILED example, and a legend for every status. ONECLICK_API_KEY added as a sensitive Vercel env var.
