@@ -20,7 +20,11 @@ Related tests in the same file: `over_cap_daily_refused_and_rolled_back`, `rate_
 
 ## Live proof
 
-The published enclave is `67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2` (668,482 bytes). FastFS upload [`4Wz1EUh1…`](https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk) (expected prepaid-gas revert). `add_version` [`86tCjm92…`](https://nearblocks.io/txns/86tCjm92yBqKoHt2kz99es1NadZeKf91AfUTx2uaqfmr). Live `info` call [`0f0bf448`](https://api.outlayer.ai/attestations/by-call/0f0bf448-1b66-4200-b6de-7cf095aead54), attestation 1225814, `executed_wasm_sha256` `67c5cd77…`. Deploy cost 0.008253 NEAR.
+The published enclave is `6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693` (680,154 bytes). FastFS upload [`oGGRn6jW…`](https://nearblocks.io/txns/oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF) (expected prepaid-gas revert). `add_version` [`AJWVEN6F…`](https://nearblocks.io/txns/AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx). Live `info` call [`f4768da8`](https://api.outlayer.ai/attestations/by-call/f4768da8-2e87-4622-8654-d1e67f6cd1f0), attestation 1227292. Adds signed PnL, request binding on every signed answer, locked_until_ms in status and the sub-cent amount fix.
+
+### Previous version `67c5cd77`
+
+Build `67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2` (668,482 bytes). FastFS upload [`4Wz1EUh1…`](https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk) (expected prepaid-gas revert). `add_version` [`86tCjm92…`](https://nearblocks.io/txns/86tCjm92yBqKoHt2kz99es1NadZeKf91AfUTx2uaqfmr). Live `info` call [`0f0bf448`](https://api.outlayer.ai/attestations/by-call/0f0bf448-1b66-4200-b6de-7cf095aead54), attestation 1225814, `executed_wasm_sha256` `67c5cd77…`. Deploy cost 0.008253 NEAR.
 
 ### Previous version `38bd67b9`
 
