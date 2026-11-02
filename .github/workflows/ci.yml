@@ -2,11 +2,13 @@ name: ci
 on:
   push:
   pull_request:
+# Runs on the owner's self-hosted runner. Only pushes and same-repo PRs run; fork PRs are skipped and there is no pull_request_target.
 permissions:
   contents: read
 jobs:
   contract:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, keyhole-box]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: contracts/keys } }
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +22,8 @@ jobs:
         working-directory: .
         run: ./judge/1-contract.sh
   worker:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, keyhole-box]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: tee/worker } }
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +48,8 @@ jobs:
       - name: deployed bytes on FastFS match
         run: test "$(curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$(cat DEPLOYED_SHA256).wasm | sha256sum | cut -d' ' -f1)" = "$(cat DEPLOYED_SHA256)"
   cli:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, keyhole-box]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: cli } }
     steps:
       - uses: actions/checkout@v4
@@ -56,20 +60,23 @@ jobs:
       - run: set -o pipefail; npm test 2>&1 | tee /tmp/c.txt
       - run: echo "| cli | $(awk '/^# pass/{print $3}' /tmp/c.txt) |" >> "$GITHUB_STEP_SUMMARY"
   judge-kit:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, keyhole-box]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
       - run: ./judge/2-attestations.sh
       - run: ./verify.sh "$(jq -r '.[0].call_id' judge/evidence.json)"
   hygiene:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, keyhole-box]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
       - name: no secrets or keys committed
         run: |
           ! git grep -nE 'wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|eyJhbGci[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE' -- . ':!cli/package-lock.json'
   web:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, keyhole-box]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: web } }
     steps:
       - uses: actions/checkout@v4
@@ -81,7 +88,8 @@ jobs:
       - run: npx vitest run --reporter=default --reporter=json --outputFile=/tmp/v.json
       - run: echo "| web-unit | $(node -p "require('/tmp/v.json').numPassedTests") |" >> "$GITHUB_STEP_SUMMARY"
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      # system libraries are preinstalled on the runner (its apt mirror is not reachable)
+      - run: npx playwright install chromium
       - name: e2e against the local production build (reads mainnet live)
         run: |
           npx next start -p 3100 & npx -y wait-on http://localhost:3100
