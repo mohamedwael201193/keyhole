@@ -53,7 +53,7 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
       - run: npx tsc -p . --noEmit
-      - run: npm test 2>&1 | tee /tmp/c.txt
+      - run: set -o pipefail; npm test 2>&1 | tee /tmp/c.txt
       - run: echo "| cli | $(awk '/^# pass/{print $3}' /tmp/c.txt) |" >> "$GITHUB_STEP_SUMMARY"
   judge-kit:
     runs-on: ubuntu-24.04
