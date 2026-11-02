@@ -65,9 +65,9 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - [ ] Intel collateral (CRL, TCB status) is not checked in the browser; needs Intel PCS.
 - [ ] No third-party audit yet.
 
-## Known limits
+## Known limits, and why they fit the design
 
-- The OutLayer operator runs the payment and custody service; we rely on TDX for confidentiality of the sealed state.
-- The contract has no NEP-178 approvals, so marketplaces that list through approvals cannot list a key yet; transfers and `nft_transfer_payout` work.
-- 1Click and bridges are third parties. KEYHOLE shows every order status, including refunds and failures, on `/settle`.
-- Holder limits are bound to an account: if a key returns to a previous holder, that holder's own earlier limits apply again.
+- **The enclave is the custodian, by design.** The OutLayer operator runs the service, but balances and trades are sealed by Intel TDX, so the operator cannot read them. That is the privacy promise: the chain shows who holds the key, never what the account holds. Every reply carries a quote you can check in the browser on `/verify`.
+- **The key moves by plain transfer.** The contract has no NEP-178 approvals yet, so approval-based marketplaces cannot list a key. Transfers and `nft_transfer_payout` work, and ownership is re-read before every swap or withdraw, so the account always follows the NFT, even mid-payout ([evidence](docs/evidence/mid-payout/README.md)).
+- **Cross-chain legs are third parties, shown honestly.** 1Click and bridges are outside the enclave; `/settle` lists every real order with its final status, including refunds and failures.
+- **Limits belong to the holder, not the key.** Size, cap and cooldown are bound to the signing account, so a buyer starts with fresh limits and a seller cannot dodge a cooldown by passing the key around and taking it back.

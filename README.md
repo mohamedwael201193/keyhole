@@ -1,6 +1,7 @@
 <p align="center"><img src="docs/images/emblem.webp" width="220" alt="KEYHOLE emblem"></p>
 
 <h1 align="center">KEYHOLE</h1>
+<p align="center"><b>mainnet, TEE-confidential, verifiable NFT trading account</b></p>
 <p align="center">An NFT on NEAR is the viewing key for a trading account inside an Intel TDX enclave. The chain records who holds the key. Balances and trades stay in the enclave until that holder signs a read.</p>
 
 <p align="center">
