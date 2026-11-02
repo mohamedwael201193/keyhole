@@ -48,4 +48,4 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 
 ## Counts (reproduce in README §12)
 
-250 distinct tests: contract 43, worker 43, CLI 7, web unit 116, e2e 41 (×2 viewports). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
+260 passing tests: contract 43, worker 43, CLI 7, web unit 125, e2e 42 (run at 1440 and 390 px). Evidence: [CI run 41474446977](https://github.com/mohamedwael201193/keyhole/actions/runs/41474446977), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
