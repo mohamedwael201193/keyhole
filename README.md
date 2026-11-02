@@ -3,6 +3,8 @@
 <h1 align="center">KEYHOLE</h1>
 <p align="center">An NFT on NEAR is the viewing key for a trading account inside an Intel TDX enclave. The chain records who holds the key. Balances and trades stay in the enclave until that holder signs a read.</p>
 
+<p align="center"><a href="https://github.com/mohamedwael201193/keyhole/actions/workflows/ci.yml"><img src="https://github.com/mohamedwael201193/keyhole/actions/workflows/ci.yml/badge.svg" alt="CI"></a></p>
+
 <p align="center">
 <a href="https://keyhole-seven.vercel.app">Live site</a> ·
 <a href="https://keyhole-seven.vercel.app/verify">Verify a TEE call</a> ·
