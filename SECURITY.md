@@ -62,7 +62,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - [x] Secrets: none in the repo (CI `hygiene` job scans); site keys are server-only Vercel env vars.
 - [x] Reproducible build: pinned toolchain, path remapping, hash checked in CI against FastFS.
 - [x] Attestation: report_data recomputed from the attested fields; DCAP chain to the pinned Intel root.
-- [ ] Intel collateral (CRL, TCB status) is not checked in the browser; needs Intel PCS.
+- [x] Intel collateral checked in the browser: PCK and Root CA CRLs, TCB Info, TDX module and QE identity, signatures to the pinned Intel root ([`web/lib/pcs.ts`](web/lib/pcs.ts)).
 - [ ] No third-party audit yet.
 
 ## Scope notes, and why they fit the design
@@ -71,7 +71,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - **The key moves by plain transfer.** The contract has no NEP-178 approvals yet, so approval-based marketplaces cannot list a key. Transfers and `nft_transfer_payout` work, and ownership is re-read before every swap or withdraw, so the account always follows the NFT, even mid-payout ([evidence](docs/evidence/mid-payout/README.md)).
 - **Cross-chain legs are third parties, shown honestly.** 1Click and bridges are outside the enclave; `/settle` lists every real order with its final status, including refunds and failures.
 - **Limits belong to the holder, not the key.** Size, cap and cooldown are bound to the signing account, so a buyer starts with fresh limits and a seller cannot dodge a cooldown by passing the key around and taking it back.
-- **Browser DCAP scope.** `/verify` runs 19 Intel TDX DCAP checks in the browser (quote structure, signatures, QE binding, certificate chain to the pinned Intel root, validity dates, report_data). It does not fetch Intel's CRLs or TCB info / QE identity collateral, so a revoked or out-of-date platform is not flagged there; `./verify.sh` and OutLayer's own verifier cover that path.
+- **Browser DCAP and Intel PCS scope.** `/verify` runs 19 Intel TDX DCAP checks on the quote (structure, signatures, QE binding, certificate chain to the pinned Intel root, validity dates, report_data) and 12 checks on Intel PCS collateral: the PCK and Root CA revocation lists, the TDX TCB Info for the machine's FMSPC, the TDX module identity and the TD Quoting Enclave identity, each signature verified in the browser against the pinned Intel root, with TCB levels matched by Intel's rules ([`web/lib/pcs.ts`](web/lib/pcs.ts), [tests](web/tests/pcs.test.ts)). Intel sends no CORS headers, so the bytes pass through `/api/pcs`, which forwards only fixed Intel URLs; it cannot change a result without breaking a signature. The status is shown as Intel reports it (UpToDate for the published call; the independent `dcap-qvl` verifier agrees: [`docs/evidence/pcs`](docs/evidence/pcs/dcap-qvl_7882f97a.json)).
 - **NEAR AI replies.** `/ask` checks the nonce and signer in report_data, both hashes and the ECDSA signature; NVIDIA GPU evidence is passed through for NEAR AI's verifier.
 
 - **Tier on a second key.** Limits follow the holder's best tier, so a holder of a Gold and a Bronze key trades both accounts at Gold caps. Only Bronze is minted today ([review R5](docs/evidence/red-review/README.md)).

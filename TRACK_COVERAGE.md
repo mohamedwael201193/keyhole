@@ -23,7 +23,7 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 | Attestation with a fresh nonce, verified per the docs; "Verified" panel listing each check | Browser makes a 32-byte nonce; panel shows 7 checks (nonce and signer in the TDX quote, nonce echo, request and response hashes, model, ECDSA signature) | `web/lib/ai.ts`, `tests/ai.test.ts` | ✅ (the Intel/NVIDIA cert chain of the AI quote is not re-checked in the browser; said on the page) |
 | Keep nothing server-side | No storage, no logging, `no-store` headers; stated in README and code | `web/app/api/ai/route.ts` | ✅ |
 | Fictional sample documents | Sample statement, sample vault, and a poisoned note | /ask sample chips | ✅ |
-| Confidential computation | Every account op runs in an Intel TDX enclave; /verify runs 19 Intel DCAP checks in the browser plus 6 attestation checks | [/verify](https://keyhole-seven.vercel.app/verify), `web/lib/dcap.ts` | ✅ (CRL and TCB status need Intel PCS; not checked, said on the page) |
+| Confidential computation | Every account op runs in an Intel TDX enclave; /verify runs 37 checks in the browser: 6 attestation checks, 19 Intel DCAP checks on the quote, and 12 Intel PCS checks (revocation lists, TCB Info, QE identity; TCB status UpToDate) | [/verify](https://keyhole-seven.vercel.app/verify), `web/lib/dcap.ts` | ✅ (CRL and TCB status need Intel PCS; not checked, said on the page) |
 
 ## Unstoppable DeFi
 

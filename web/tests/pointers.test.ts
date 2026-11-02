@@ -49,6 +49,18 @@ describe("current-build pointers", () => {
     }
   });
 
+  it("README, TRACK_COVERAGE and SECURITY name a superseded build's full hash only where that line, the line above, or the caption of its code block says previous or superseded", () => {
+    for (const f of ["README.md", "TRACK_COVERAGE.md", "SECURITY.md"]) {
+      const lines = readFileSync(`${root}/${f}`, "utf8").split("\n");
+      let caption = "", inFence = false;
+      lines.forEach((line, i) => {
+        if (line.startsWith("```")) { inFence = !inFence; if (inFence) caption = lines.slice(Math.max(0, i - 2), i).join(" "); }
+        const ctx = (inFence ? caption + " " : "") + lines.slice(Math.max(0, i - 2), i + 1).join(" ");
+        for (const h of WORKER_WASM_SHA256.slice(1)) if (line.includes(h)) expect(`${f}:${i + 1} ${/previous|superseded/i.test(ctx)}`).toBe(`${f}:${i + 1} true`);
+      });
+    }
+  });
+
   it("the /judge verify link's text names the same call as its href", () => {
     const src = readFileSync(`${root}/web/app/judge/page.tsx`, "utf8");
     const links = [...src.matchAll(/href="\/verify\?call=([0-9a-f]{8})[^"]*">[^<]*?call ([0-9a-f]{8})/g)];

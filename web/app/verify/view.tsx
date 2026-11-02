@@ -1,16 +1,21 @@
 "use client";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Scene } from "@/components/Art";
 import { useI18n } from "@/lib/i18n";
 import { attestation, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
 import { CALLS, PUBLISHED_INFO_CALL } from "@/lib/evidence";
+import { fetchCollateral, pckInfo, quoteParts, verifyCollateral, type Pcs, type PcsInput } from "@/lib/pcs";
 import { b64, verifyQuote, type Dcap } from "@/lib/dcap";
 import { bindingCheck, buildIndex, localChecks, tamperAttestation, TAMPERS, type Tamper, CALL_ID, evidenceOutput, fastfsCheck, fastfsUrl, outputCheck, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
+
+/** 6 attestation checks, 19 Intel DCAP checks on the quote, 12 Intel PCS collateral checks. */
+export const TOTAL_CHECKS = 37;
 
 export function VerifyView({ initial }: { initial: string | null }) {
   const { t } = useI18n();
   const [id, setId] = useState(initial || PUBLISHED_INFO_CALL);
   const [dcap, setDcap] = useState<Dcap | null>(null);
+  const [coll, setColl] = useState<PcsInput | "err" | null>(null);
   const [bind, setBind] = useState<Record<string, string> | null>(null);
   const [a, setA] = useState<Attestation | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -30,7 +35,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
     try { setDcap(verifyQuote(b64(x.tdx_quote), { expectReportData: c.binding?.expected })); } catch { setDcap(null); }
   };
   const go = useCallback(async (cid: string) => {
-    setErr(null); setA(null); setCk(null); setOrig(null); setTampered(null);
+    setErr(null); setA(null); setCk(null); setOrig(null); setTampered(null); setColl(null);
     if (/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(cid.trim())) { setErr("tx"); return; }
     if (!CALL_ID.test(cid.trim())) { setErr("bad_params"); return; }
     setBusy(true); setDcap(null); setBind(null);
@@ -50,13 +55,18 @@ export function VerifyView({ initial }: { initial: string | null }) {
       try { d = verifyQuote(b64(j.tdx_quote), { expectReportData: binding?.expected }); } catch { d = null; }
       setDcap(d);
       setOrig({ a: j, ck: full, dcap: d });
+      try { setColl(await fetchCollateral(pckInfo(quoteParts(b64(j.tdx_quote)).pck).fmspc)); } catch { setColl("err"); }
       const bo = (ev && typeof ev === "object" ? (ev as { bind?: Record<string, string> }).bind : undefined) ?? null;
       setBind(bo);
     } catch { setErr("network"); }
     finally { setBusy(false); }
   }, []);
   useEffect(() => { void go(initial || PUBLISHED_INFO_CALL); }, [initial, go]);
-  const ok = !!ck && ck.quote && ck.registered && ck.published && ck.fastfs === true && ck.binding?.match === true && ck.output?.match !== false && dcap?.ok === true;
+  const pcs: Pcs | null = useMemo(() => {
+    if (!a || !coll || coll === "err") return null;
+    try { return verifyCollateral(b64(a.tdx_quote), coll); } catch { return null; }
+  }, [a, coll]);
+  const ok = pcs?.ok === true && !!ck && ck.quote && ck.registered && ck.published && ck.fastfs === true && ck.binding?.match === true && ck.output?.match !== false && dcap?.ok === true;
   const bi = a ? buildIndex(a.executed_wasm_sha256) : -1;
   const checkPasted = async () => {
     if (!a || !ck) return;
@@ -71,14 +81,14 @@ export function VerifyView({ initial }: { initial: string | null }) {
   const mark = (pass: boolean | null) => pass == null ? "…" : pass ? "✓" : "✕";
   const dot = (pass: boolean | null) => pass == null ? "wait" : pass ? "" : "bad";
   const six = ck ? [ck.quote, ck.registered, ck.fastfs === true, ck.published, ck.binding?.match === true, ck.output?.match !== false] : null;
-  const tally = six && dcap ? six.filter(Boolean).length + dcap.checks.filter((c) => c.pass).length : null;
+  const tally = six && dcap && pcs ? six.filter(Boolean).length + dcap.checks.filter((c) => c.pass).length + pcs.checks.filter((c) => c.pass).length : null;
   return (
     <div className="page ver">
       <p className="eb">{t("verify.eyebrow")}</p>
       <h1>{t("verify.h1a")}<em>{t("verify.h1b")}</em></h1>
       <p className="lead">{t("verify.lead")}</p>
       <div className="tally" data-testid="tally" data-n={tally ?? ""}>
-        <b className="tn">{tally ?? "·"}<span>/25</span></b>
+        <b className="tn">{tally ?? "·"}<span>/{TOTAL_CHECKS}</span></b>
         <div><b>{tally == null ? t("verify.tallyWait") : t("verify.tallyH", { n: tally })}</b><small>{t("verify.tallyD")}</small></div>
       </div>
       <div className="vg">
@@ -97,9 +107,15 @@ export function VerifyView({ initial }: { initial: string | null }) {
           <div className="ck" data-testid="ck-output"><span className={`ok ${ck?.output ? dot(ck.output.match) : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? mark(ck.output.match) : ck && ck.fastfs !== null ? "○" : "·"}</span><div><b>{t("verify.out")}</b><small>{ck?.output ? t(ck.output.match ? "verify.outOk" : "verify.outBad", { verdict: ck.output.verdict, src: t(ck.output.source === "evidence" ? "verify.srcEvidence" : "verify.srcPasted") }) : t("verify.outNone")}</small></div><span className="att" data-testid="output-verdict">{ck?.output?.match ? ck.output.verdict : "—"}</span></div>
           <details className="dcap" data-testid="dcap" data-ok={dcap ? String(dcap.ok) : "wait"} open={!!dcap && !dcap.ok}>
             <summary><span className={`ok ${dcap ? dot(dcap.ok) : "wait"}`}>{dcap ? mark(dcap.ok) : "·"}</span><b>{t("verify.dcapH")}</b><small data-testid="dcap-count">{dcap ? t("verify.dcapCount", { n: dcap.checks.filter((c) => c.pass).length, total: dcap.checks.length }) : "…"}</small></summary>
-            {dcap && <ol>{dcap.checks.map((c) => <li key={c.id} data-pass={String(c.pass)}><span>{c.pass ? "✓" : "✕"}</span>{c.label}{c.detail ? <em className="mono"> {c.detail}</em> : null}</li>)}</ol>}
+            {dcap && <ol>{dcap.checks.map((c) => <li key={c.id} data-pass={String(c.pass)}><span>{c.pass ? "✓" : "✕"}</span><div>{c.label}{c.detail ? <em className="mono"> {c.detail}</em> : null}</div></li>)}</ol>}
             {bind && <p className="mono dbind" data-testid="dcap-bind">{t("verify.bindReq", { token: bind.token_id ?? "—", req: (bind.req_sha256 ?? "").slice(0, 16), nonce: (bind.nonce ?? "").slice(0, 12) })}</p>}
             <p className="note">{t("verify.dcapNote")}</p>
+          </details>
+          <details className="dcap" data-testid="pcs" data-ok={pcs ? String(pcs.ok) : coll === "err" ? "err" : "wait"} data-tcb={pcs?.tcbStatus ?? ""} open={!!pcs && !pcs.ok}>
+            <summary><span className={`ok ${pcs ? dot(pcs.ok) : coll === "err" ? "bad" : "wait"}`}>{pcs ? mark(pcs.ok) : coll === "err" ? "✕" : "·"}</span><b>{t("verify.pcsH")}</b><small data-testid="pcs-status">{pcs ? t("verify.pcsStatus", { tcb: pcs.tcbStatus, qe: pcs.qeStatus, n: pcs.checks.filter((c) => c.pass).length, total: pcs.checks.length }) : coll === "err" ? t("verify.pcsErr") : "…"}</small></summary>
+            {pcs && <ol>{pcs.checks.map((c) => <li key={c.id} data-pass={String(c.pass)}><span>{c.pass ? "✓" : "✕"}</span><div>{c.label}{c.detail ? <em className="mono"> {c.detail}</em> : null}</div></li>)}</ol>}
+            {pcs && pcs.advisories.length > 0 && <p className="mono dbind" data-testid="pcs-adv">{t("verify.pcsAdv", { ids: pcs.advisories.join(", ") })}</p>}
+            <p className="note">{t("verify.pcsNote")}</p>
           </details>
           {err && <p role="alert" className="note" style={{ color: "var(--coral)" }} data-testid="verify-error">{err === "tx" ? <>{t("verify.isTx")} <a href={tx(id.trim())} target="_blank" rel="noreferrer">{t("verify.openTx")}</a></> : err === "bad_params" ? t("verify.badId") : t("verify.fetchFail")}</p>}
           <div className="res">
