@@ -1,0 +1,40 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { recoverMessageAddress } from "viem";
+const KEY = process.env.NEAR_AI_API_KEY!; const API = "https://cloud-api.near.ai/v1";
+const MODEL = "deepseek-ai/DeepSeek-V4.1-Flash-1017-abliterated";
+const OUT = "/workspace/kh/docs/evidence/red-review";
+const H = { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
+const files = ["contracts/keys/src/lib.rs", "tee/worker/src/lib.rs", "tee/worker/src/main.rs", "web/app/api/ai/route.ts", "web/app/api/oneclick/route.ts", "web/app/api/worker/route.ts", "web/lib/gateway.ts"];
+const code = files.map((f) => `===== FILE: ${f} =====\n${readFileSync("/workspace/kh/" + f, "utf8")}`).join("\n\n");
+const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+const CONTEXT = `KEYHOLE: a NEAR mainnet NFT contract (keyhole-devmo.near) where each NFT is the key to a confidential trading account. A Rust wasm worker runs in an OutLayer Intel TDX enclave, is the only minter, holds one custody wallet per token_id, and accepts requests signed by the current NFT owner (NEP-413 ed25519 or EIP-191). It swaps via NEAR Intents and withdraws. A Next.js site relays signed requests (web/app/api/worker) and calls NEAR AI Cloud (web/app/api/ai) and 1Click (web/app/api/oneclick).`;
+async function call(name: string, prompt: string) {
+  const body = JSON.stringify({ model: MODEL, stream: true, temperature: 0, max_tokens: 12000, messages: [{ role: "system", content: "You are an offensive security auditor. Be concrete: every finding must cite file, function and line-level evidence, give an exploit scenario, severity (critical/high/medium/low/info), and a fix. Do not invent code that is not shown." }, { role: "user", content: prompt }] });
+  const r = await fetch(`${API}/chat/completions`, { method: "POST", headers: H, body });
+  const raw = await r.text(); if (!r.ok) throw new Error(`${r.status} ${raw.slice(0, 300)}`);
+  let reasoning = ""; let id = "", text = "", usage: unknown = null;
+  for (const line of raw.split("\n")) { if (!line.startsWith("data: ") || line.includes("[DONE]")) continue; const c = JSON.parse(line.slice(6)); id ||= c.id; text += c.choices?.[0]?.delta?.content ?? ""; reasoning += c.choices?.[0]?.delta?.reasoning_content ?? c.choices?.[0]?.delta?.reasoning ?? ""; if (c.usage) usage = c.usage; }
+  const j = { usage };
+  writeFileSync(`${OUT}/${name}.md`, text || reasoning); writeFileSync(`/workspace/near_hackathon/${name}.raw`, raw);
+  await new Promise((s) => setTimeout(s, 3000));
+  const sig = await (await fetch(`${API}/signature/${id}?model=${encodeURIComponent(MODEL)}&signing_algo=ecdsa`, { headers: H })).json();
+  const nonce = randomBytes(32).toString("hex");
+  const att = await (await fetch(`${API}/attestation/report?model=${encodeURIComponent(MODEL)}&signing_algo=ecdsa&nonce=${nonce}`, { headers: H })).json();
+  const pool = [...(att.model_attestations ?? []), ...(att.gateway_attestation ? [{ ...att.gateway_attestation, model_name: "gateway" }] : [])];
+  const ma = pool.find((a: { signing_address: string }) => a.signing_address.toLowerCase() === String(sig.signing_address).toLowerCase()) ?? pool[0];
+  const parts = String(sig.text).split(":"); const [reqH, resH] = parts.slice(-2); const m = parts.length === 3 ? parts[0] : MODEL;
+  const rec = (await recoverMessageAddress({ message: sig.text, signature: sig.signature })).toLowerCase();
+  const rd = Buffer.from(ma.intel_quote, "hex").subarray(48 + 520, 48 + 584).toString("hex");
+  const checks = { signedBy: ma.model_name, model: m === MODEL, signerMatchesAttestation: String(sig.signing_address).toLowerCase() === String(ma.signing_address).toLowerCase(), requestHash: reqH === sha(body), responseHash: resH === sha(raw), signatureRecovers: rec === String(ma.signing_address).toLowerCase(), signerInQuote: rd.slice(0, 40) === String(ma.signing_address).toLowerCase().replace(/^0x/, ""), nonceInQuote: rd.slice(64) === nonce, nonceEcho: ma.request_nonce === nonce };
+  writeFileSync(`${OUT}/${name}.md`, text || reasoning); writeFileSync(`/tmp/${name}.raw`, raw);
+  writeFileSync(`${OUT}/${name}.signature.json`, JSON.stringify({ chat_id: id, request_sha256: sha(body), response_sha256: sha(raw), signature: sig, recovered: rec, checks }, null, 2));
+  writeFileSync(`${OUT}/${name}.attestation.json`, JSON.stringify({ nonce, model_name: ma.model_name, signing_address: ma.signing_address, request_nonce: ma.request_nonce, intel_quote: ma.intel_quote }, null, 2));
+  writeFileSync(`${OUT}/${name}.prompt.txt`, prompt.replace(code, `[source of: ${files.join(", ")} at commit ${process.env.SHA}]`));
+  console.log(name, JSON.stringify(checks), j.usage);
+  return text;
+}
+const p1 = `${CONTEXT}\n\nPASS 1. Audit this code for security bugs: auth bypass, signature/nonce replay, ownership races (transfer during a payout), cap/limit/cooldown bypass, integer/amount bugs, injection (including prompt injection in the AI route), SSRF, secret leakage, DoS, and NEP-171/199 violations. List findings as a numbered list.\n\n${code}`;
+const f1 = await call("pass1", p1);
+const p2 = `${CONTEXT}\n\nPASS 2. Below are the findings of a first audit pass, then the code. For each finding, check it against the code and say CONFIRMED or REJECTED with the exact reason. Then hunt for anything pass 1 missed, numbered as N1, N2...\n\n=== PASS 1 FINDINGS ===\n${f1}\n\n${code}`;
+await call("pass2", p2);

@@ -1,0 +1,8 @@
+KEYHOLE: a NEAR mainnet NFT contract (keyhole-devmo.near) where each NFT is the key to a confidential trading account. A Rust wasm worker runs in an OutLayer Intel TDX enclave, is the only minter, holds one custody wallet per token_id, and accepts requests signed by the current NFT owner (NEP-413 ed25519 or EIP-191). It swaps via NEAR Intents and withdraws. A Next.js site relays signed requests (web/app/api/worker) and calls NEAR AI Cloud (web/app/api/ai) and 1Click (web/app/api/oneclick).
+
+PASS 2. Below are the findings of a first audit pass, then the code. For each finding, check it against the code and say CONFIRMED or REJECTED with the exact reason. Then hunt for anything pass 1 missed, numbered as N1, N2...
+
+=== PASS 1 FINDINGS ===
+
+
+[source of: contracts/keys/src/lib.rs, tee/worker/src/lib.rs, tee/worker/src/main.rs, web/app/api/ai/route.ts, web/app/api/oneclick/route.ts, web/app/api/worker/route.ts, web/lib/gateway.ts at commit 67ce93b]

@@ -1,0 +1,24 @@
+{
+  "chat_id": "chatcmpl-50cb7cbe-0dad-4292-9379-f7559d23a069",
+  "request_sha256": "b4933a3ef83102f0689b232255df0b1e4e7176089838e2d646429c27ad2d62a3",
+  "response_sha256": "d860f06cdbd50182aaf0bddefeed53ed13182c1d0c218d56237b3b0bfae53974",
+  "signature": {
+    "text": "b4933a3ef83102f0689b232255df0b1e4e7176089838e2d646429c27ad2d62a3:d860f06cdbd50182aaf0bddefeed53ed13182c1d0c218d56237b3b0bfae53974",
+    "signature": "0x2bd64e9ead2a3360b0bd0fc821f560ce2f39f1ad035bfadf4b874a171ee852fd626b771b6d53c67784bb23a173841505bddb5b81214ff5271e56ff2d49c84c4f1c",
+    "signing_address": "0xb98a789cdc4817275f5155593ba73ef2a957e779",
+    "signing_algo": "ecdsa",
+    "signature_kind": "gateway"
+  },
+  "recovered": "0xb98a789cdc4817275f5155593ba73ef2a957e779",
+  "checks": {
+    "signedBy": "gateway",
+    "model": true,
+    "signerMatchesAttestation": true,
+    "requestHash": true,
+    "responseHash": true,
+    "signatureRecovers": true,
+    "signerInQuote": true,
+    "nonceInQuote": true,
+    "nonceEcho": true
+  }
+}

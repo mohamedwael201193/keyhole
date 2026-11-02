@@ -47,3 +47,14 @@ describe("rate limiter", () => {
     expect(l("ip", 1001).ok).toBe(true);
   });
 });
+
+// RED review R4: the worker's wallet polling must finish before the gateway gives up on the call.
+import { readFileSync as rf } from "node:fs";
+it("worker wallet polling fits inside the gateway timeout", () => {
+  const route = rf(`${__dirname}/../app/api/worker/route.ts`, "utf8");
+  const lib = rf(`${__dirname}/../../tee/worker/src/lib.rs`, "utf8");
+  const gw = Number(/AbortSignal\.timeout\((\d[\d_]*)\)/.exec(route)![1].replace(/_/g, "")) / 1000;
+  const n = Number(/WALLET_POLLS: u32 = (\d+)/.exec(lib)![1]), sec = Number(/WALLET_POLL_SECS: u64 = (\d+)/.exec(lib)![1]);
+  expect(Number(/GATEWAY_TIMEOUT_SECS: u64 = (\d+)/.exec(lib)![1])).toBe(gw);
+  expect(n * sec + 5).toBeLessThan(gw);
+});
