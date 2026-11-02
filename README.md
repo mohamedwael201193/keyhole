@@ -593,6 +593,8 @@ Previous version `f13efe92`. These 30 steps were run with a real named wallet (`
 | `sweep_minter`: the old enclave minter sends 0.0286 NEAR to the new one, signed in the TEE | [`5Z7Tktfc…`](https://nearblocks.io/txns/5Z7TktfcgeFrzRnz8NSpFSbTw77R5779d3PRsrEBPbYA) |
 | Mint signed in-enclave by the current minter (`k5f4750858f328940`) | [`DJxbuaJV…`](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) |
 
+Security summary (STRIDE, invariants and the test for each, audit checklist, known limits): [SECURITY.md](SECURITY.md).
+
 ## 12. Tests and CI
 
 **250 distinct test cases** (counted from CI on 2026-11-02; e2e cases run twice, desktop and mobile):
