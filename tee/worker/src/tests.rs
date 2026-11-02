@@ -683,3 +683,53 @@ fn invariant_transfer_mid_payout_never_settles_for_the_old_holder() {
         }
     }
 }
+
+// ---- RED review R1: cooldown must survive a non-withdraw call by the new holder ----
+fn sold_to_b(first: &str) -> Vec<ProvEvent> {
+    let mut evs = Vec::new();
+    append_event(&mut evs, "mint", "k1", "a", 0, "mint");
+    append_event(&mut evs, "deposit", "k1", "a", 10, "dep");
+    append_synced(&mut evs, first, "k1", "b", 1_000, first);
+    evs
+}
+#[test]
+fn r1_swap_before_withdraw_still_starts_the_cooldown() {
+    let evs = sold_to_b("swap");
+    assert_eq!(evs[2].kind, "transfer");
+    assert_eq!(assert_no_cooldown(&evs, "b", 1_001).unwrap_err().code, "cooldown");
+}
+#[test]
+fn r1_every_write_kind_by_a_new_holder_records_the_transfer_first() {
+    for k in ["swap", "copy", "deposit", "lock", "limits", "withdraw"] {
+        let evs = sold_to_b(k);
+        assert_eq!(evs.iter().map(|e| e.kind.as_str()).collect::<Vec<_>>(), ["mint", "deposit", "transfer", k], "{k}");
+        assert_eq!(cooldown_until(&evs, "b"), Some(1_000 + TRANSFER_COOLDOWN_MS), "{k}");
+        assert!(verify_chain(&evs).is_ok(), "{k}");
+    }
+}
+#[test]
+fn r1_same_holder_writes_add_no_transfer_row() {
+    let mut evs = Vec::new();
+    append_event(&mut evs, "mint", "k1", "a", 0, "mint");
+    assert_eq!(append_synced(&mut evs, "swap", "k1", "a", 5, "s").len(), 1);
+    assert_eq!(evs.len(), 2);
+    assert_eq!(cooldown_until(&evs, "a"), None);
+}
+#[test]
+fn r1_explicit_transfer_and_mint_are_never_doubled() {
+    assert!(!needs_transfer_event(Some("a"), "transfer", "b"));
+    assert!(!needs_transfer_event(Some("a"), "mint", "b"));
+    assert!(!needs_transfer_event(None, "swap", "b"));
+    assert!(needs_transfer_event(Some("a"), "lock", "b"));
+}
+
+// ---- RED review R3 / R4 ----
+#[test]
+fn r3_cap_is_refunded_only_on_a_final_failure() {
+    for st in ["failed", "error", "refunded"] { assert!(cap_refund_on(st), "{st}"); }
+    for st in ["success", "pending", "processing", "needs_review", "", "unknown"] { assert!(!cap_refund_on(st), "{st}"); }
+}
+#[test]
+fn r4_wallet_polling_fits_inside_the_gateway_timeout() {
+    assert!(WALLET_POLLS as u64 * WALLET_POLL_SECS + 5 < GATEWAY_TIMEOUT_SECS);
+}

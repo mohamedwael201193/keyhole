@@ -346,7 +346,7 @@ mod host {
         }
         let Some(id) = s(&j, "request_id") else { return Ok(j) };
         let mut last = j;
-        for _ in 0..30 {
+        for _ in 0..WALLET_POLLS {
             std::thread::sleep(std::time::Duration::from_secs(3));
             if let Ok((_, r)) = http("GET", &format!("{}/wallet/v1/requests/{}", OL, id), Some(key), None) {
                 let stt = s(&r, "status").unwrap_or_default();
@@ -417,7 +417,7 @@ mod host {
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
         let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
-        if let Err(e) = settle_if_owner(owns(&c.token_id(), &c.account)?) {
+        if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
             let _ = Host.incr(&day_key, -(usd as i64));
             return Err(e);
         }
@@ -426,7 +426,7 @@ mod host {
         let r = wallet_op(&key, "/wallet/v1/confidential/swap", body);
         let r = match r { Ok(r) => r, Err(e) => { let _ = Host.incr(&day_key, -(usd as i64)); return Err(e); } };
         let status = s(&r, "status").unwrap_or_default();
-        if status != "success" { let _ = Host.incr(&day_key, -(usd as i64)); }
+        if cap_refund_on(&status) { let _ = Host.incr(&day_key, -(usd as i64)); }
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
             "usd_in_micro": usd, "status": status, "source": p.get("source")}));
@@ -451,14 +451,14 @@ mod host {
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
         let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
-        if let Err(e) = settle_if_owner(owns(&c.token_id(), &c.account)?) {
+        if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
             let _ = Host.incr(&day_key, -(usd as i64));
             return Err(e);
         }
         let r = wallet_op(&key, "/wallet/v1/confidential/withdraw", json!({"chain": chain, "to": to, "amount": amt, "token": token}));
         let r = match r { Ok(r) => r, Err(e) => { let _ = Host.incr(&day_key, -(usd as i64)); return Err(e); } };
         let status = s(&r, "status").unwrap_or_default();
-        if status != "success" { let _ = Host.incr(&day_key, -(usd as i64)); }
+        if cap_refund_on(&status) { let _ = Host.incr(&day_key, -(usd as i64)); }
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status}));
         if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
@@ -494,8 +494,10 @@ mod host {
     fn prov_append(token: &str, kind: &str, owner: &str, ts: u64, detail: &str) {
         let mut rows = load_prov(token);
         let mut evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
-        append_event(&mut evs, kind, token, owner, ts, detail);
-        if let Some(ev) = evs.pop() { rows.push((ev, detail.to_string())); save_prov(token, &rows); }
+        let n = evs.len();
+        let details = append_synced(&mut evs, kind, token, owner, ts, detail);
+        for (ev, d) in evs.drain(n..).zip(details) { rows.push((ev, d)); }
+        save_prov(token, &rows);
     }
 
     fn prov_sync_owner(token: &str, owner: &str, ts: u64) {

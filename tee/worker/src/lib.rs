@@ -712,6 +712,37 @@ pub fn set_policy(tier: Limits, cur: Option<&HolderPolicy>, owner: &str, per_tx:
 }
 
 /// End of the post-transfer withdraw cooldown for `owner`, if the latest transfer made them owner.
+/// True when an event by `owner` would be the first the log sees from a new holder. Every write
+/// path records the change of hands first, so the withdraw cooldown cannot be skipped by doing a
+/// swap, deposit, lock or limits call before the first withdraw (found in the RED review, R1).
+pub fn needs_transfer_event(last_owner: Option<&str>, kind: &str, owner: &str) -> bool {
+    kind != "transfer" && kind != "mint" && matches!(last_owner, Some(o) if o != owner)
+}
+
+/// Appends `kind`, preceded by a `transfer` row when the holder changed since the last row.
+pub fn append_synced(log: &mut Vec<ProvEvent>, kind: &str, token_id: &str, owner: &str, ts_ms: u64, detail: &str) -> Vec<String> {
+    let mut added = Vec::new();
+    if needs_transfer_event(log.last().map(|e| e.owner.as_str()), kind, owner) {
+        append_event(log, "transfer", token_id, owner, ts_ms, "transfer");
+        added.push("transfer".to_string());
+    }
+    append_event(log, kind, token_id, owner, ts_ms, detail);
+    added.push(detail.to_string());
+    added
+}
+
+/// Wallet polls x 3 s stay under the web gateway's 55 s timeout, so a reply is never lost to a
+/// timeout while the swap or withdraw still runs (RED review R4).
+pub const WALLET_POLLS: u32 = 15;
+pub const WALLET_POLL_SECS: u64 = 3;
+pub const GATEWAY_TIMEOUT_SECS: u64 = 55;
+
+/// The day's spend is given back only when the wallet reports a final failure. A send that is still
+/// pending or under review keeps its charge, so it cannot be repeated past the cap (RED review R3).
+pub fn cap_refund_on(status: &str) -> bool {
+    matches!(status, "failed" | "error" | "refunded")
+}
+
 pub fn cooldown_until(evs: &[ProvEvent], owner: &str) -> Option<u64> {
     let last = evs.iter().rev().find(|e| e.kind == "transfer")?;
     (last.owner == owner).then_some(last.ts_ms + TRANSFER_COOLDOWN_MS)

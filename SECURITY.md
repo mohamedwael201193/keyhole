@@ -74,6 +74,13 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - **Browser DCAP scope.** `/verify` runs 19 Intel TDX DCAP checks in the browser (quote structure, signatures, QE binding, certificate chain to the pinned Intel root, validity dates, report_data). It does not fetch Intel's CRLs or TCB info / QE identity collateral, so a revoked or out-of-date platform is not flagged there; `./verify.sh` and OutLayer's own verifier cover that path.
 - **NEAR AI replies.** `/ask` checks the nonce and signer in report_data, both hashes and the ECDSA signature; NVIDIA GPU evidence is passed through for NEAR AI's verifier.
 
+- **Tier on a second key.** Limits follow the holder's best tier, so a holder of a Gold and a Bronze key trades both accounts at Gold caps. Only Bronze is minted today ([review R5](docs/evidence/red-review/README.md)).
+- **Swap at the moment of sale.** A swap the old holder signed can still run if the transfer is not final when the enclave re-reads ownership. The value stays in the account the buyer now holds; withdraws wait out the cooldown ([review R6](docs/evidence/red-review/README.md)).
+
+## Independent review
+
+Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel DCAP quote checked, every finding triaged by hand: [docs/evidence/red-review](docs/evidence/red-review/README.md). Four real findings (R1 to R4) are fixed with regression tests.
+
 ## Product scope
 
 - The mint page issues a Bronze key only ($1 per trade, $5 per UTC day, 6 calls per minute). Silver, Gold, and Legendary are shown as finishes. The worker already has tier 2 ($10 / $50, 12 per minute) and tier 3 ($100 / $500, 30 per minute). This site does not mint those tiers.
