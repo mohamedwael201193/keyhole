@@ -30,7 +30,7 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 | Requirement | KEYHOLE feature | Evidence | Status |
 |---|---|---|---|
 | 1Click API for quotes, deposits, status | Worker quotes, deposits and swaps through 1Click (confidential mode) | README §11, swap call `7f52f7d8` | ✅ |
-| Handle REFUNDED and FAILED, shown in the UI | — | — | ❌ in progress |
+| Handle REFUNDED and FAILED, shown in the UI | /settle shows every 1Click status with where the funds are; a real NO_LIQUIDITY refund reads REFUNDED live | [/settle](https://keyhole-seven.vercel.app/settle), [`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md) | ✅ |
 | Show where funds sit at every step | Vault shows sealed balances and deposit addresses | /vault | 🟡 |
 | History of executed buys with explorer links | Vault history lists trades; intent explorer links | /vault | 🟡 links being added |
 | Dry-run mode with real quotes, no funds | CLI `quote` without `--execute` | `cli/src/cli.ts` | 🟡 web mode in progress |

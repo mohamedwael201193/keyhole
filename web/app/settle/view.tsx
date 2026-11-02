@@ -22,7 +22,7 @@ function Row({ s }: { s: Settlement }) {
   }, [s.depositAddress]);
   const info = st ? statusOf(st.status) : null;
   return (
-    <article className="card srow" data-testid="settlement">
+    <article className="card srow" data-testid="settlement" data-deposit={s.depositAddress}>
       <div className="shead"><b>{s.label}</b>{st ? <Badge status={st.status} /> : <span className="stb wait">{err ? "status unavailable" : "…"}</span>}</div>
       {s.note && <p className="note">{s.note}</p>}
       {info && <p className="where"><span>Where the funds are:</span> {info.where}</p>}

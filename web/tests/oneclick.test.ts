@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dryBody, isAddr, OC_ASSETS, STATUS, statusOf, toUnits } from "@/lib/oneclick";
 import { SETTLEMENTS } from "@/lib/settlements";
+import { QUOTE_PER_MIN, STATUS_PER_MIN } from "@/lib/oneclick";
 const [U, W, SU] = [OC_ASSETS[0].id, OC_ASSETS[1].id, OC_ASSETS[2].id];
 describe("1Click dry-run", () => {
   it("always builds a dry quote", () => expect(dryBody({ origin: SU, dest: U, amount: "50000" })!.dry).toBe(true));
@@ -19,4 +20,8 @@ describe("1Click status", () => {
   it("unknown statuses are not shown as success", () => expect(statusOf("WEIRD").tone).toBe("wait"));
   it("accepts NEAR, EVM and Solana deposit addresses only", () => { expect(isAddr("a".repeat(64))).toBe(true); expect(isAddr("0x" + "a".repeat(40))).toBe(true); expect(isAddr("9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM")).toBe(true); expect(isAddr("../../etc")).toBe(false); });
   it("listed settlements have real-looking deposit addresses and txs", () => { for (const s of SETTLEMENTS) { expect(isAddr(s.depositAddress)).toBe(true); expect(s.depositTx).toMatch(/^[1-9A-HJ-NP-Za-km-z]{43,44}$|^0x[0-9a-f]{64}$|^[1-9A-HJ-NP-Za-km-z]{86,88}$/); if (s.depositTxUrl) expect(s.depositTxUrl).toMatch(/^https:\/\/(basescan\.org\/tx\/0x[0-9a-f]{64}|solscan\.io\/tx\/[1-9A-HJ-NP-Za-km-z]{86,88})$/); } });
+  it("status reads have their own window: /settle can load 3 times a minute without hitting it, and quotes keep the tighter limit", () => {
+    expect(STATUS_PER_MIN).toBeGreaterThanOrEqual(3 * SETTLEMENTS.length);
+    expect(QUOTE_PER_MIN).toBeLessThan(STATUS_PER_MIN);
+  });
 });

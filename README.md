@@ -444,6 +444,7 @@ Gateway calls on mainnet, signed with the website's own [`web/lib/nep413.ts`](we
   - Balances, trade history and spend live in TEE encrypted storage under the holder's key.
   - They are readable only through a signed request from the full-access key of the account that holds the key NFT.
 - **Swaps are confidential.** They use 1Click `confidentiality: basic | advanced` ([`03`](docs/evidence/mainnet-e2e/03_quote_dry.json), [`05`](docs/evidence/mainnet-e2e/05_quote_advanced.json)).
+- **Cross-chain settlement works both ways it can end.** 0.004 SOL on Solana became 0.367068 USDC at `keyhole-devmo.near` ([NEAR `8BQznSfb…`](https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh)), and a 0.001 SOL order with no liquidity came back as a refund ([`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md)). [/settle](https://keyhole-seven.vercel.app/settle) reads both statuses live.
 - **No identity is collected.** The site and CLI ask for no email, no KYC and no region.
 - **The gateway keeps no record.** It does not log bodies, amounts or accounts.
 - **Wallet signing moves nothing.** Wallets sign messages, not transactions, so signing costs no gas and moves no funds.
