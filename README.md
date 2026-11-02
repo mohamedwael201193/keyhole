@@ -74,19 +74,6 @@ npx playwright test
 
 `./judge/1-contract.sh` reads the live contract. `./verify.sh 0f0bf448-1b66-4200-b6de-7cf095aead54` checks that call. It prints the executed wasm hash, the TDX measurement (not the same value), and `tee/worker/DEPLOYED_SHA256`. `./verify.sh <call_id> --rebuild` also compares a local worker build. `node tee/worker/verify-log.mjs --self-test` checks the key-log script.
 
-## Limitations
-
-- The mint page issues a Bronze key only ($1 per trade, $5 per UTC day, 6 calls per minute). Silver, Gold, and Legendary are shown as finishes. The worker already has tier 2 ($10 / $50, 12 per minute) and tier 3 ($100 / $500, 30 per minute). This site does not mint those tiers.
-- The vault form trades USDC and wNEAR only.
-- A quote from the vault uses confidentiality `basic`. The worker also accepts `advanced`.
-- The website gateway allows `info`, `provenance`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, and `withdraw`. `provenance` needs no signature and returns only owner, kind, and event hashes. `copy` and `sweep_minter` return `bad_op`. Copy-trading is the CLI, not the vault page.
-- Fund, quote, trade, withdraw, balance, and history each ask for their own signature. The signature is not a transaction. After a trade or withdraw, the page asks for another signature to re-read the balance. Declining that second signature leaves the trade or withdraw card up and does not leave "You declined the signature."
-- Withdraw pays the connected account only.
-- If the enclave is offline or the payment key is missing, Vault and Mint show the offline state and do not send the signature.
-- The site is English only. There is no language switcher.
-- The 30-step mainnet log later in this file was recorded against worker `f13efe92`. The worker serving the site is `6367401a`.
-- Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.
-
 ## Invariants
 
 These are properties of the worker source in this repository. The enclave serving the site is build `6367401a`, built from this source. A property added to source after that build is not live until a new wasm is published. The checks are in [`THREAT_MODEL.md`](THREAT_MODEL.md).
@@ -140,7 +127,6 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 - [Try it](#try-it)
 - [Architecture](#architecture)
 - [Run it locally](#run-it-locally)
-- [Limitations](#limitations)
 - [Invariants](#invariants)
 - [Threat model](THREAT_MODEL.md)
 - [Hackathon window](#hackathon-window)

@@ -65,9 +65,24 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - [ ] Intel collateral (CRL, TCB status) is not checked in the browser; needs Intel PCS.
 - [ ] No third-party audit yet.
 
-## Known limits, and why they fit the design
+## Scope notes, and why they fit the design
 
 - **The enclave is the custodian, by design.** The OutLayer operator runs the service, but balances and trades are sealed by Intel TDX, so the operator cannot read them. That is the privacy promise: the chain shows who holds the key, never what the account holds. Every reply carries a quote you can check in the browser on `/verify`.
 - **The key moves by plain transfer.** The contract has no NEP-178 approvals yet, so approval-based marketplaces cannot list a key. Transfers and `nft_transfer_payout` work, and ownership is re-read before every swap or withdraw, so the account always follows the NFT, even mid-payout ([evidence](docs/evidence/mid-payout/README.md)).
 - **Cross-chain legs are third parties, shown honestly.** 1Click and bridges are outside the enclave; `/settle` lists every real order with its final status, including refunds and failures.
 - **Limits belong to the holder, not the key.** Size, cap and cooldown are bound to the signing account, so a buyer starts with fresh limits and a seller cannot dodge a cooldown by passing the key around and taking it back.
+- **Browser DCAP scope.** `/verify` runs 19 Intel TDX DCAP checks in the browser (quote structure, signatures, QE binding, certificate chain to the pinned Intel root, validity dates, report_data). It does not fetch Intel's CRLs or TCB info / QE identity collateral, so a revoked or out-of-date platform is not flagged there; `./verify.sh` and OutLayer's own verifier cover that path.
+- **NEAR AI replies.** `/ask` checks the nonce and signer in report_data, both hashes and the ECDSA signature; NVIDIA GPU evidence is passed through for NEAR AI's verifier.
+
+## Product scope
+
+- The mint page issues a Bronze key only ($1 per trade, $5 per UTC day, 6 calls per minute). Silver, Gold, and Legendary are shown as finishes. The worker already has tier 2 ($10 / $50, 12 per minute) and tier 3 ($100 / $500, 30 per minute). This site does not mint those tiers.
+- The vault form trades USDC and wNEAR only.
+- A quote from the vault uses confidentiality `basic`. The worker also accepts `advanced`.
+- The website gateway allows `info`, `provenance`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, and `withdraw`. `provenance` needs no signature and returns only owner, kind, and event hashes. `copy` and `sweep_minter` return `bad_op`. Copy-trading is the CLI, not the vault page.
+- Fund, quote, trade, withdraw, balance, and history each ask for their own signature. The signature is not a transaction. After a trade or withdraw, the page asks for another signature to re-read the balance. Declining that second signature leaves the trade or withdraw card up and does not leave "You declined the signature."
+- Withdraw pays the connected account only.
+- If the enclave is offline or the payment key is missing, Vault and Mint show the offline state and do not send the signature.
+- The site is English only. There is no language switcher.
+- The 30-step mainnet log later in this file was recorded against worker `f13efe92`. The worker serving the site is `6367401a`.
+- Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.
