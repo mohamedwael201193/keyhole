@@ -563,6 +563,8 @@ test("ask: a reply whose quote does not carry this browser's nonce is not marked
   await expect(page.getByTestId("ask-answer")).toContainText("10-minute");
   await expect(page.getByTestId("ask-verdict")).toHaveAttribute("data-ok", "false");
   await expect(page.locator('[data-pass="false"]').first()).toBeVisible();
+  await expect(page.getByTestId("ask-dcap")).toHaveAttribute("data-ok", "true");
+  await expect(page.getByTestId("ask-dcap-count")).toHaveText("19/19 checks passed");
 });
 
 test("verify: Intel DCAP passes in the browser and a signed answer shows its key and request binding", async ({ page }) => {
@@ -571,6 +573,14 @@ test("verify: Intel DCAP passes in the browser and a signed answer shows its key
   await expect(page.getByTestId("dcap-count")).toHaveText("19/19 checks passed");
   await expect(page.getByTestId("dcap-bind")).toContainText("k5f4750858f328940");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
+  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "25");
+});
+
+test("landing: the 25 browser checks stat links to /verify", async ({ page }) => {
+  await page.goto("/?static");
+  const s = page.getByTestId("checks-stat");
+  await expect(s).toHaveText("25");
+  await expect(s).toHaveAttribute("href", "/verify");
 });
 
 test("key history: a real log re-verifies and an edited row fails", async ({ page }) => {

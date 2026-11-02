@@ -55,11 +55,17 @@ export function VerifyView({ initial }: { initial: string | null }) {
   const known = !!a && WORKER_WASM_SHA256.includes(a.executed_wasm_sha256.toLowerCase());
   const mark = (pass: boolean | null) => pass == null ? "…" : pass ? "✓" : "✕";
   const dot = (pass: boolean | null) => pass == null ? "wait" : pass ? "" : "bad";
+  const six = ck ? [ck.quote, ck.registered, ck.fastfs === true, ck.published, ck.binding?.match === true, ck.output?.match !== false] : null;
+  const tally = six && dcap ? six.filter(Boolean).length + dcap.checks.filter((c) => c.pass).length : null;
   return (
     <div className="page ver">
       <p className="eb">{t("verify.eyebrow")}</p>
       <h1>{t("verify.h1a")}<em>{t("verify.h1b")}</em></h1>
       <p className="lead">{t("verify.lead")}</p>
+      <div className="tally" data-testid="tally" data-n={tally ?? ""}>
+        <b className="tn">{tally ?? "·"}<span>/25</span></b>
+        <div><b>{tally == null ? t("verify.tallyWait") : t("verify.tallyH", { n: tally })}</b><small>{t("verify.tallyD")}</small></div>
+      </div>
       <div className="vg">
         <div className="seal"><Scene name="enclave" alt={t("land.enclAlt")} width={1152} height={864} /></div>
         <div className="card chk">

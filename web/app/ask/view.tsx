@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { verifyQuote, type Dcap } from "@/lib/dcap";
 import { AI_MAX_PROMPT, AI_MODEL, allPass, answerOf, checkReply, newNonce, type AiChecks, type AiReply } from "@/lib/ai";
 
 /** Fictional samples so anyone can try it without real data. */
@@ -29,10 +30,11 @@ export function AskView() {
   const [reply, setReply] = useState<AiReply | null>(null);
   const [nonce, setNonce] = useState<string | null>(null);
   const [checks, setChecks] = useState<AiChecks | null>(null);
+  const [dcap, setDcap] = useState<Dcap | null>(null);
   const ask = async () => {
     const q = prompt.trim();
     if (!q || busy) return;
-    setBusy(true); setErr(null); setReply(null); setChecks(null);
+    setBusy(true); setErr(null); setReply(null); setChecks(null); setDcap(null);
     const n = newNonce();
     setNonce(n);
     try {
@@ -40,11 +42,16 @@ export function AskView() {
       const j = await r.json();
       if (!j.ok) { setErr(j.error?.code === "rate_limited" ? `Too many questions. Try again in ${j.error.retry_after ?? 60} s.` : j.error?.code === "ai_offline" ? "The assistant is offline." : "The model could not answer right now."); return; }
       setReply(j as AiReply);
-      setChecks(await checkReply(j as AiReply, n));
+      const rep = j as AiReply;
+      try {
+        const hx = rep.attestation.intel_quote.replace(/^0x/, "");
+        setDcap(verifyQuote(Uint8Array.from(hx.match(/../g) ?? [], (b) => parseInt(b, 16)), { expectReportData: rep.attestation.signing_address.toLowerCase().replace(/^0x/, "").padEnd(64, "0") }));
+      } catch { setDcap({ ok: false, checks: [{ id: "parse", label: "Quote parses", pass: false }], reportData: "", mrtd: "", rtmr: [] }); }
+      setChecks(await checkReply(rep, n));
     } catch { setErr("The model could not answer right now."); }
     finally { setBusy(false); }
   };
-  const verified = checks ? allPass(checks) : false;
+  const verified = checks ? allPass(checks) && dcap?.ok === true : false;
   const download = () => {
     if (!reply) return;
     const blob = new Blob([JSON.stringify({ nonce, ...reply }, null, 2)], { type: "application/json" });
@@ -99,6 +106,10 @@ export function AskView() {
               </li>
             ))}
           </ol>
+          <details className="dcap" data-testid="ask-dcap" data-ok={dcap ? String(dcap.ok) : "wait"} open={!!dcap && !dcap.ok}>
+            <summary><span className="dot">{dcap ? (dcap.ok ? "✓" : "✕") : "·"}</span><b>Intel DCAP on the model&apos;s quote</b><small data-testid="ask-dcap-count">{dcap ? `${dcap.checks.filter((c) => c.pass).length}/${dcap.checks.length} checks passed` : "runs after an answer"}</small></summary>
+            {dcap && <ol>{dcap.checks.map((c) => <li key={c.id} data-pass={String(c.pass)}><span>{c.pass ? "✓" : "✕"}</span>{c.label}</li>)}</ol>}
+          </details>
           {reply && (
             <dl className="kv">
               <dt>signing address</dt><dd className="mono" data-kind="hash">{reply.attestation.signing_address}</dd>
@@ -106,7 +117,7 @@ export function AskView() {
               <dt>GPU evidence</dt><dd>{reply.attestation.gpu_evidence ? "NVIDIA payload present" : "none"}</dd>
             </dl>
           )}
-          <p className="asknote">Your browser checks the bindings above. It does not check the Intel and NVIDIA certificate chains of the quote itself; download the evidence and run NEAR AI&apos;s verifier for that (<a href="https://docs.near.ai/cloud/verification/cloud-api/model-attestations" target="_blank" rel="noreferrer">how</a>).</p>
+          <p className="asknote">Your browser checks the bindings above and runs the same 19 Intel DCAP checks as /verify on the model&apos;s TDX quote, up to the pinned Intel root. NVIDIA GPU evidence is included in the download for NEAR AI&apos;s verifier (<a href="https://docs.near.ai/cloud/verification/cloud-api/model-attestations" target="_blank" rel="noreferrer">how</a>).</p>
           {reply && <button className="btn b2" onClick={download} data-testid="ask-download">Download evidence (JSON)</button>}
         </section>
       </div>

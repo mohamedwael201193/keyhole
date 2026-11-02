@@ -159,3 +159,20 @@
 .settle .kv dd { overflow-wrap: anywhere; min-width: 0; }
 @media (max-width: 900px) { .dform { grid-template-columns: 1fr 1fr; } .sgrid { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .dform { grid-template-columns: 1fr; } .legend li { grid-template-columns: 1fr; gap: 4px; } }
+
+/* 25 browser checks */
+.statlink { color: inherit; text-decoration: none; border-bottom: 2px solid var(--teal); }
+.ver .tally { display: flex; align-items: center; gap: 20px; margin: 8px 0 28px; padding: 18px 22px; border-radius: 16px; background: rgba(31, 75, 79, .07); border: 1px solid rgba(31, 75, 79, .18); max-width: 760px; }
+.ver .tally .tn { font: 800 52px/1 var(--sans); letter-spacing: -.03em; color: var(--teal); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ver .tally .tn span { font-size: 24px; color: var(--mu); font-weight: 600; }
+.ver .tally > div b { display: block; font-size: 17px; }
+.ver .tally small { display: block; color: var(--mu); margin-top: 4px; line-height: 1.45; }
+@media (max-width: 700px) { .ver .tally { gap: 14px; padding: 14px 16px; } .ver .tally .tn { font-size: 40px; } }
+
+.verified .dcap { border-top: 1px solid var(--ln); margin: 10px 0; padding-top: 10px; }
+.verified .dcap summary { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-wrap: wrap; list-style: none; }
+.verified .dcap summary::-webkit-details-marker { display: none; }
+.verified .dcap summary small { color: var(--mu); font-size: 13px; }
+.verified .dcap ol { list-style: none; margin: 10px 0 4px; padding: 0; display: grid; gap: 5px; font-size: 13px; }
+.verified .dcap li span { display: inline-block; width: 18px; color: var(--teal); }
+.verified .dcap li[data-pass="false"] span { color: var(--coral); }
