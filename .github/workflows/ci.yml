@@ -88,7 +88,8 @@ jobs:
       - run: npx vitest run --reporter=default --reporter=json --outputFile=/tmp/v.json
       - run: echo "| web-unit | $(node -p "require('/tmp/v.json').numPassedTests") |" >> "$GITHUB_STEP_SUMMARY"
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      # system libraries are preinstalled on the runner (its apt mirror is not reachable)
+      - run: npx playwright install chromium
       - name: e2e against the local production build (reads mainnet live)
         run: |
           npx next start -p 3100 & npx -y wait-on http://localhost:3100
