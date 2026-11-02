@@ -31,4 +31,4 @@ How it ran: both passes got the full source. The model wrote its findings in its
 | F5 | `/api/ai` does not itself compare the signature address with the attested one (pass 2) | Already covered | The browser does (`signatureValid`, `signerInQuote` in `web/lib/ai.ts`, tests in `web/tests/ai.test.ts`) |
 | F6 | Two concurrent mints read the same minter nonce (pass 2) | Real, low | One tx is rejected by the chain; no double mint is possible (token id is derived from the account) |
 
-The worker fixes are in source with tests; they go live with the next worker publish, which will be linked here.
+Live since worker `452df1fd` on 2026-11-02: [add_version tx](https://nearblocks.io/txns/FXbXhGNirZCkiP2bx1aiBFQL3Q1EHFMpniJTY579oGWN), [info call 7882f97a](https://api.outlayer.ai/attestations/by-call/7882f97a-06e5-46d3-9e58-5fe6428fb187) (attestation 1246133).

@@ -17,7 +17,7 @@ export interface SignedAuth {
   address?: string;
 }
 
-/** The published enclave 6367401a verifies scheme eip191. */
+/** The published enclave 452df1fd (and 6367401a before it) verifies scheme eip191. */
 export const EIP191_ENCLAVE_LIVE: boolean = true;
 
 /** Intent JSON signed by personal_sign. Same fields the worker parses for scheme eip191. */

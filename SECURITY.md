@@ -91,5 +91,5 @@ Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel
 - Withdraw pays the connected account only.
 - If the enclave is offline or the payment key is missing, Vault and Mint show the offline state and do not send the signature.
 - The site is English only. There is no language switcher.
-- The 30-step mainnet log later in this file was recorded against worker `f13efe92`. The worker serving the site is `6367401a`.
+- The 30-step mainnet log later in this file was recorded against worker `f13efe92`. The worker serving the site is `452df1fd` ([add_version tx](https://nearblocks.io/txns/FXbXhGNirZCkiP2bx1aiBFQL3Q1EHFMpniJTY579oGWN)), which includes the review fixes R1 to R4.
 - Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.

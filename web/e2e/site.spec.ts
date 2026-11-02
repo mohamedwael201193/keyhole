@@ -32,19 +32,19 @@ test("gallery renders every on-chain key", async ({ page }) => {
   await expect(page.getByTestId("gallery").locator('[data-state="locked"]').first()).toBeVisible();
 });
 
-test("verify: a published-build mainnet call passes in the browser", async ({ page }) => {
+test("verify: a previous-build mainnet call still passes in the browser", async ({ page }) => {
   await page.goto("/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
 });
 
-test("verify: the default page checks the published 6367401a info call", async ({ page }) => {
+test("verify: the default page checks the published 452df1fd info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("f4768da8-2e87-4622-8654-d1e67f6cd1f0");
+  await expect(page.locator("#cid")).toHaveValue("7882f97a-06e5-46d3-9e58-5fe6428fb187");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693").first()).toBeVisible();
+  await expect(page.getByText("452df1fd4f69fac618da0a5c11f9b8b5a9f7b0c1c95d5785850dd4746c5c134d").first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
 });

@@ -9,11 +9,11 @@ export const TXS = [
   { label: "Mint by the TEE to a fresh account", hash: "FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4" },
 ] as const;
 
-/** Live info call on the published worker 6367401a. Default on /verify. */
-export const PUBLISHED_INFO_CALL = "f4768da8-2e87-4622-8654-d1e67f6cd1f0";
+/** Live info call on the published worker 452df1fd. Default on /verify. */
+export const PUBLISHED_INFO_CALL = "7882f97a-06e5-46d3-9e58-5fe6428fb187";
 
 export const CALLS = [
-  { label: "info · published build 6367401a", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1227292" },
+  { label: "info · published build 452df1fd", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1246133" },
   { label: "attack · injected agent sends a payout to attacker.near", id: "c1312e2d-8c20-4b3e-ad5b-22dd3102826d", outcome: "refused · bad_params" },
   { label: "attack · drain $2.00 past the holder cap", id: "afaaf3e1-32ff-42d8-88da-412a0bb61e11", outcome: "refused · over_cap_per_tx" },
   { label: "attack · raise the caps (waits 24 h)", id: "06cf2630-aed4-410a-9e28-f0799efddeda", outcome: "ok · pending" },
@@ -27,6 +27,7 @@ export const CALLS = [
   { label: "pnl · signed by the minter, bound to key and request", id: "dda27438-67e6-4c8a-8f32-888d3ff17760", outcome: "ok" },
   { label: "status · locked_until_ms, holder limits", id: "3e53ce83-4c4c-4769-820d-ba8a446dd335", outcome: "ok" },
   { label: "quote · $0.0099 over a $0.0020 holder cap", id: "4eae763a-5732-4e6b-9907-2b8c6294f170", outcome: "refused · over_cap_per_tx" },
+  { label: "info · previous build 6367401a", id: "f4768da8-2e87-4622-8654-d1e67f6cd1f0", outcome: "ok · attestation 1227292" },
   { label: "info · previous build 67c5cd77", id: "0f0bf448-1b66-4200-b6de-7cf095aead54", outcome: "ok · attestation 1225814" },
   { label: "info · previous build 38bd67b9", id: "763812bc-0012-4528-a45d-66a3ce17cae9", outcome: "ok · attestation 1223764" },
   { label: "info · previous build b3fa1a39", id: "9d19bceb-986b-4745-9bf9-91f7dcb62b6e", outcome: "ok · attestation 1189623" },
