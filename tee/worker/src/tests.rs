@@ -733,3 +733,6 @@ fn r3_cap_is_refunded_only_on_a_final_failure() {
 fn r4_wallet_polling_fits_inside_the_gateway_timeout() {
     assert!(WALLET_POLLS as u64 * WALLET_POLL_SECS + 5 < GATEWAY_TIMEOUT_SECS);
 }
+
+#[path = "matrix.rs"]
+mod matrix;
