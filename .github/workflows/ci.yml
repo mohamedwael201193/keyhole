@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup show && rustup component add clippy
       - run: cargo test --locked
+      - name: count passing tests
+        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       # deployed code is frozen; this one style lint is allowed so CI checks the exact deployed source
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
       - name: deployed wasm matches on-chain code_hash
@@ -24,6 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: rustup show && rustup component add clippy
       - run: cargo test --locked
+      - name: count passing tests
+        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings
       - name: reproducible wasm, compared with the deployed hash
         run: |
@@ -49,7 +53,8 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
       - run: npx tsc -p . --noEmit
-      - run: npm test
+      - run: set -o pipefail; npm test 2>&1 | tee /tmp/c.txt
+      - run: echo "| cli | $(awk '/^# pass/{print $3}' /tmp/c.txt) |" >> "$GITHUB_STEP_SUMMARY"
   judge-kit:
     runs-on: ubuntu-24.04
     steps:
@@ -73,10 +78,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      - run: npx vitest run --reporter=default --reporter=json --outputFile=/tmp/v.json
+      - run: echo "| web-unit | $(node -p "require('/tmp/v.json').numPassedTests") |" >> "$GITHUB_STEP_SUMMARY"
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - name: e2e against the local production build (reads mainnet live)
         run: |
           npx next start -p 3100 & npx -y wait-on http://localhost:3100
-          npx playwright test --grep-invert "funded payment key"
+          PLAYWRIGHT_JSON_OUTPUT_NAME=/tmp/p.json npx playwright test --grep-invert "funded payment key" --reporter=list,json
+          echo "| e2e (distinct, each run at 2 widths) | $(node -p "const j=require('/tmp/p.json');new Set(j.suites.flatMap(function f(s){return [...(s.specs||[]).filter(x=>x.ok).map(x=>x.file+x.title),...(s.suites||[]).flatMap(f)]})).size") |" >> "$GITHUB_STEP_SUMMARY"
