@@ -40,3 +40,4 @@
 
 ## 2026-11-02 — Base → Solana settlement from a MetaMask wallet
 - Real 1Click order: 0.6 USDC on Base (tx 0x0e46c0f0…, deposit 0xF60390Eb…) → 0.006268509 SOL to 3TsdHmQS… on Solana (tx JYbHtieC…), SUCCESS in about 90 s. Shown on /settle with Basescan and Solscan links.
+- 2026-11-02: 0.001 SOL → USDC on NEAR from MetaMask (Solana sig 4ws4iem4…, finalized, 1,000,000 lamports at deposit 5sESFfrM…). 1Click deposit/submit returned 500 (timeout) twice; status stayed PENDING_DEPOSIT for 20+ minutes. Listed on /settle with its live status.

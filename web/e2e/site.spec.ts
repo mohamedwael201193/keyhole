@@ -598,5 +598,6 @@ test("settle: dry-run quote and every 1Click status, including REFUNDED and FAIL
   await expect(page.locator('[data-testid="settlement"] [data-status="SUCCESS"]').first()).toBeVisible();
   await expect(page.locator('[data-testid="settlement"] [data-status="REFUNDED"]').first()).toBeVisible();
   await expect(page.getByText("0.6 USDC on Base → SOL on Solana (MetaMask)")).toBeVisible();
+  await expect(page.getByText("0.001 SOL on Solana → USDC on NEAR (MetaMask)")).toBeVisible();
   await expect(page.getByTestId("recorded-failed").locator('[data-status="FAILED"]')).toBeVisible();
 });
