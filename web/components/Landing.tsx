@@ -102,6 +102,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
               <div className="st" key={s.k}><Icon n={s.icon} /><h3>{t(`land.${s.k}t`)}</h3><p>{t(`land.${s.k}d`)}</p></div>
             ))}
           </div>
+          <p className="sealed" data-testid="sealed-line"><b>{t("land.sealedB")}</b> {t("land.sealedD")} <Link href="/judge">{t("land.sealedLink")}</Link></p>
         </div>
       </section>
 

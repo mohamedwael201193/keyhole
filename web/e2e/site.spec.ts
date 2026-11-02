@@ -576,6 +576,35 @@ test("verify: Intel DCAP passes in the browser and a signed answer shows its key
   await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "25");
 });
 
+test("verify: an edited input hash fails the binding and the verdict, and Undo restores it", async ({ page }) => {
+  await page.goto("/verify");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await page.getByTestId("tamper-input_hash").click();
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "false");
+  await expect(page.getByTestId("verdict")).toHaveText("Rejected. This copy was changed.");
+  await expect(page.getByTestId("ck-binding")).not.toContainText("✓ Bound");
+  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "23");
+  await page.getByTestId("tamper-reset").click();
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
+  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "25");
+});
+
+test("verify: one flipped byte of the TD report fails Intel DCAP while the binding still holds", async ({ page }) => {
+  await page.goto("/verify");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await page.getByTestId("tamper-quote").click();
+  await expect(page.getByTestId("dcap")).toHaveAttribute("data-ok", "false");
+  await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "false");
+});
+
+test("landing: says each key holds sealed credentials and links to the mainnet proof", async ({ page }) => {
+  await page.goto("/?static");
+  const l = page.getByTestId("sealed-line");
+  await expect(l).toContainText("NFTs that do something.");
+  await expect(l.getByRole("link")).toHaveAttribute("href", "/judge");
+});
+
 test("landing: the 25 browser checks stat links to /verify", async ({ page }) => {
   await page.goto("/?static");
   const s = page.getByTestId("checks-stat");
