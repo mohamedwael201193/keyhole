@@ -39,7 +39,7 @@ Live site: [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app).
 5. Click **Read balance** and approve the signature. — The total becomes a USD amount, or the token amounts if nothing is priced. A held asset with no price stays in the total as "+ … unpriced". **Assets · N** lists one row per asset: symbol, name, the amount on one line, and the USD value under it when a price exists. The note says "Read from the enclave with your signature."
 6. Open **2 · Trade**. The form lists USDC and wNEAR and the line "Bronze · $1.00 per trade · $5.00 per day" (Silver and Gold caps replace this after a higher tier is read). Click **Get attested quote**. — The receipt shows **You give**, **You get**, **Price**, and **Cap**. Click **Sign & trade** and approve. — The result card starts with "Traded", names the amount out, and includes a status and **Verify**.
 7. Open **3 · Withdraw**. — The note names the account you connected. Enter an amount and click **Sign & withdraw**. — The result card starts with "Withdrawn" and names that account. The worker refuses any other destination.
-8. Open the result's **Verify** link, or open [https://keyhole-seven.vercel.app/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0](https://keyhole-seven.vercel.app/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0). — The page shows **Intel TDX quote present**, **Worker code hash matches**, **Published on NEAR**, and the result **The enclave is genuine.** The verdict element has `data-match="true"`.
+8. Open the result's **Verify** link, or open [https://keyhole-seven.vercel.app/verify?call=7882f97a-06e5-46d3-9e58-5fe6428fb187](https://keyhole-seven.vercel.app/verify?call=7882f97a-06e5-46d3-9e58-5fe6428fb187). — The page shows **Intel TDX quote present**, **Worker code hash matches**, **Published on NEAR**, and the result **The enclave is genuine.** The verdict element has `data-match="true"`.
 
 A declined signature shows "You declined the signature." Starting another action clears that message. A redirect wallet that returns with a completed trade or withdraw shows that result card and does not keep the decline.
 
@@ -76,7 +76,7 @@ npx next start -p 3100 &
 npx playwright test
 ```
 
-`./judge/1-contract.sh` reads the live contract. `./verify.sh 0f0bf448-1b66-4200-b6de-7cf095aead54` checks that call. It prints the executed wasm hash, the TDX measurement (not the same value), and `tee/worker/DEPLOYED_SHA256`. `./verify.sh <call_id> --rebuild` also compares a local worker build. `node tee/worker/verify-log.mjs --self-test` checks the key-log script.
+`./judge/1-contract.sh` reads the live contract. `./verify.sh 7882f97a-06e5-46d3-9e58-5fe6428fb187` checks that call. It prints the executed wasm hash, the TDX measurement (not the same value), and `tee/worker/DEPLOYED_SHA256`. `./verify.sh <call_id> --rebuild` also compares a local worker build. `node tee/worker/verify-log.mjs --self-test` checks the key-log script.
 
 ## Invariants
 
@@ -202,7 +202,7 @@ Do the step. The result on the right is what a correct tree produces. Commands a
 | Do | See |
 |---|---|
 | Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). Supply on the home page matches `nft_total_supply` |
-| Open [https://keyhole-seven.vercel.app/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0](https://keyhole-seven.vercel.app/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, and the verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a` |
+| Open [https://keyhole-seven.vercel.app/verify?call=7882f97a-06e5-46d3-9e58-5fe6428fb187](https://keyhole-seven.vercel.app/verify?call=7882f97a-06e5-46d3-9e58-5fe6428fb187) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, and the verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a` |
 | `./judge/1-contract.sh` | On-chain code hash equals sha256 `d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | `./verify.sh 7882f97a-06e5-46d3-9e58-5fe6428fb187 --rebuild` | The `executed` line equals `tee/worker/DEPLOYED_SHA256` (`452df1fd…`). Then `OK` for a TDX quote, `wasm_hash == executed`, `executed == published build 452df1fd`, the FastFS bytes, and your local `build.sh` |
 | `./verify.sh f4768da8-2e87-4622-8654-d1e67f6cd1f0` | Previous version `6367401a`. Prints `OK executed == previous build 6367401a, superseded by 452df1fd` |
@@ -572,16 +572,16 @@ Previous version `f13efe92`. These 30 steps were run with a real named wallet (`
 | Live `info` on `452df1fd`, attestation 1246133 | [`7882f97a`](https://api.outlayer.ai/attestations/by-call/7882f97a-06e5-46d3-9e58-5fe6428fb187) |
 | Publish previous worker `6367401a` (`add_version`) | [`AJWVEN6F…`](https://nearblocks.io/txns/AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx) |
 | FastFS upload for `6367401a` (expected prepaid-gas revert) | [`oGGRn6jW…`](https://nearblocks.io/txns/oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF) |
-| Live `info` on `6367401a`, attestation 1227292 | [`f4768da8`](https://api.outlayer.ai/attestations/by-call/f4768da8-2e87-4622-8654-d1e67f6cd1f0) |
+| Live `info` on previous build `6367401a`, attestation 1227292 | [`f4768da8`](https://api.outlayer.ai/attestations/by-call/f4768da8-2e87-4622-8654-d1e67f6cd1f0) |
 | Publish previous worker `67c5cd77` (`add_version`) | [`86tCjm92…`](https://nearblocks.io/txns/86tCjm92yBqKoHt2kz99es1NadZeKf91AfUTx2uaqfmr) |
 | FastFS upload for `67c5cd77` (expected prepaid-gas revert) | [`4Wz1EUh1…`](https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk) |
-| Live `info` on `67c5cd77`, attestation 1225814, deploy cost 0.008253 NEAR | [`0f0bf448`](https://api.outlayer.ai/attestations/by-call/0f0bf448-1b66-4200-b6de-7cf095aead54) |
+| Live `info` on previous build `67c5cd77`, attestation 1225814, deploy cost 0.008253 NEAR | [`0f0bf448`](https://api.outlayer.ai/attestations/by-call/0f0bf448-1b66-4200-b6de-7cf095aead54) |
 | Publish previous worker `38bd67b9` (`add_version`) | [`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z) |
 | FastFS upload for `38bd67b9` (expected prepaid-gas revert) | [`AvQNnkVt…`](https://nearblocks.io/txns/AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ) |
-| Live `info` on `38bd67b9`, attestation 1223764, deploy cost 0.008171 NEAR | [`763812bc`](https://api.outlayer.ai/attestations/by-call/763812bc-0012-4528-a45d-66a3ce17cae9) |
+| Live `info` on previous build `38bd67b9`, attestation 1223764, deploy cost 0.008171 NEAR | [`763812bc`](https://api.outlayer.ai/attestations/by-call/763812bc-0012-4528-a45d-66a3ce17cae9) |
 | Publish previous worker `b3fa1a39` (`add_version`) | [`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU) |
 | FastFS upload for `b3fa1a39` (expected prepaid-gas revert) | [`72P1YcuV…`](https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8) |
-| Live `info` on `b3fa1a39`, attestation 1189623, deploy cost 0.008012 NEAR | [`9d19bceb`](https://api.outlayer.ai/attestations/by-call/9d19bceb-986b-4745-9bf9-91f7dcb62b6e) |
+| Live `info` on previous build `b3fa1a39`, attestation 1189623, deploy cost 0.008012 NEAR | [`9d19bceb`](https://api.outlayer.ai/attestations/by-call/9d19bceb-986b-4745-9bf9-91f7dcb62b6e) |
 | Previous version `f13efe92` (`add_version`) | [`22KDVU1s…`](https://nearblocks.io/txns/22KDVU1sNKQhjoYbN8h1JqyQbcNxHRNednT6sz4nogxS) |
 | `set_minter` → current TEE minter `015a0259…` | [`7QFqM5Gi…`](https://nearblocks.io/txns/7QFqM5GiUgZuWJEpRUKvARn1LKyy91NVWFZmzNQscQDp) |
 | Fund the current minter (0.01 + 0.02 NEAR) | [`BLEWXFX8…`](https://nearblocks.io/txns/BLEWXFX8qdX8iAkytAT8pjYpY382PjzGP38S3vUMZPQx), [`ARt9BRAd…`](https://nearblocks.io/txns/ARt9BRAdZDF3nipDD5swjTxL68Vt8uPEG9hQ4KvK8V7F) |
