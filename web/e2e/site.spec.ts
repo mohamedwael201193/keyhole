@@ -573,7 +573,7 @@ test("verify: Intel DCAP passes in the browser and a signed answer shows its key
   await expect(page.getByTestId("dcap-count")).toHaveText("19/19 checks passed");
   await expect(page.getByTestId("dcap-bind")).toContainText("k5f4750858f328940");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
-  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "25");
+  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "37");
 });
 
 test("verify: an edited input hash fails the binding and the verdict, and Undo restores it", async ({ page }) => {
@@ -583,10 +583,10 @@ test("verify: an edited input hash fails the binding and the verdict, and Undo r
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "false");
   await expect(page.getByTestId("verdict")).toHaveText("Rejected. This copy was changed.");
   await expect(page.getByTestId("ck-binding")).not.toContainText("✓ Bound");
-  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "23");
+  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "35");
   await page.getByTestId("tamper-reset").click();
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
-  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "25");
+  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "37");
 });
 
 test("verify: one flipped byte of the TD report fails Intel DCAP while the binding still holds", async ({ page }) => {
@@ -605,10 +605,27 @@ test("landing: says each key holds sealed credentials and links to the mainnet p
   await expect(l.getByRole("link")).toHaveAttribute("href", "/judge");
 });
 
-test("landing: the 25 browser checks stat links to /verify", async ({ page }) => {
+test("verify: Intel revocation lists, TCB Info and QE identity are checked live and the status is shown as Intel reports it", async ({ page }) => {
+  await page.goto("/verify");
+  const p = page.getByTestId("pcs");
+  await expect(p).toHaveAttribute("data-ok", "true", { timeout: 30_000 });
+  await expect(p).toHaveAttribute("data-tcb", "UpToDate");
+  await expect(page.getByTestId("pcs-status")).toHaveText("TCB UpToDate · QE UpToDate · 12/12");
+});
+
+test("api/pcs only forwards the fixed Intel endpoints", async ({ request }) => {
+  expect((await request.get("/api/pcs?r=tcb&fmspc=../x")).status()).toBe(400);
+  expect((await request.get("/api/pcs?r=https://evil.example")).status()).toBe(400);
+  const j = await (await request.get("/api/pcs?r=pckcrl")).json();
+  expect(j.ok).toBe(true);
+  expect(j.body).toContain("-----BEGIN X509 CRL-----");
+  expect(decodeURIComponent(j.chain)).toContain("-----BEGIN CERTIFICATE-----");
+});
+
+test("landing: the 37 browser checks stat links to /verify", async ({ page }) => {
   await page.goto("/?static");
   const s = page.getByTestId("checks-stat");
-  await expect(s).toHaveText("25");
+  await expect(s).toHaveText("37");
   await expect(s).toHaveAttribute("href", "/verify");
 });
 

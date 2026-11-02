@@ -14,9 +14,9 @@ export const INTEL_QE_VENDOR = "939a7233f79c4ca9940a0db3957f0607";
 export type DcapCheck = { id: string; label: string; pass: boolean; detail?: string };
 export type Dcap = { ok: boolean; checks: DcapCheck[]; reportData: string; mrtd: string; rtmr: string[] };
 
-const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
-const u16 = (b: Uint8Array, o: number) => b[o] | (b[o + 1] << 8);
-const u32 = (b: Uint8Array, o: number) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
+export const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+export const u16 = (b: Uint8Array, o: number) => b[o] | (b[o + 1] << 8);
+export const u32 = (b: Uint8Array, o: number) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
 const eq = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
 const cat = (...a: Uint8Array[]) => { const o = new Uint8Array(a.reduce((s, x) => s + x.length, 0)); let p = 0; for (const x of a) { o.set(x, p); p += x.length; } return o; };
 
@@ -26,17 +26,17 @@ export function b64(s: string): Uint8Array {
 }
 
 // ---- minimal DER ----
-type Tlv = { tag: number; start: number; hdr: number; len: number; end: number };
-function tlv(b: Uint8Array, o: number): Tlv {
+export type Tlv = { tag: number; start: number; hdr: number; len: number; end: number };
+export function tlv(b: Uint8Array, o: number): Tlv {
   const tag = b[o]; let len = b[o + 1]; let hdr = 2;
   if (len & 0x80) { const n = len & 0x7f; len = 0; for (let i = 0; i < n; i++) len = len * 256 + b[o + 2 + i]; hdr += n; }
   return { tag, start: o, hdr, len, end: o + hdr + len };
 }
-function kids(b: Uint8Array, t: Tlv): Tlv[] { const out: Tlv[] = []; let p = t.start + t.hdr; while (p < t.end) { const c = tlv(b, p); out.push(c); p = c.end; } return out; }
-const body = (b: Uint8Array, t: Tlv) => b.subarray(t.start + t.hdr, t.end);
+export function kids(b: Uint8Array, t: Tlv): Tlv[] { const out: Tlv[] = []; let p = t.start + t.hdr; while (p < t.end) { const c = tlv(b, p); out.push(c); p = c.end; } return out; }
+export const body = (b: Uint8Array, t: Tlv) => b.subarray(t.start + t.hdr, t.end);
 
 export type Cert = { der: Uint8Array; tbs: Uint8Array; sig: Uint8Array; pub: Uint8Array; notBefore: number; notAfter: number; subject: string; issuer: string };
-function time(b: Uint8Array, t: Tlv): number {
+export function time(b: Uint8Array, t: Tlv): number {
   const s = new TextDecoder().decode(body(b, t));
   const y = t.tag === 0x17 ? 2000 + +s.slice(0, 2) - (+s.slice(0, 2) >= 50 ? 100 : 0) : +s.slice(0, 4);
   const r = t.tag === 0x17 ? s.slice(2) : s.slice(4);
@@ -56,8 +56,8 @@ export function parseCert(der: Uint8Array): Cert {
 export function pemCerts(pem: string): Cert[] {
   return (pem.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) ?? []).map((p) => parseCert(b64(p.replace(/-----[^-]+-----|\s/g, ""))));
 }
-const vDer = (sig: Uint8Array, msg: Uint8Array, pub: Uint8Array) => { try { return p256.verify(sig, msg, pub, { format: "der", lowS: false }); } catch { return false; } };
-const vRaw = (sig: Uint8Array, msg: Uint8Array, xy: Uint8Array) => { try { return p256.verify(sig, msg, cat(Uint8Array.of(4), xy), { lowS: false }); } catch { return false; } };
+export const vDer = (sig: Uint8Array, msg: Uint8Array, pub: Uint8Array) => { try { return p256.verify(sig, msg, pub, { format: "der", lowS: false }); } catch { return false; } };
+export const vRaw = (sig: Uint8Array, msg: Uint8Array, xy: Uint8Array) => { try { return p256.verify(sig, msg, cat(Uint8Array.of(4), xy), { lowS: false }); } catch { return false; } };
 
 /** Parse and verify a TDX v4 quote. `expectReportData` (hex, 64 bytes) is checked when given. `now` for tests. */
 export function verifyQuote(q: Uint8Array, opts: { expectReportData?: string; now?: number } = {}): Dcap {
