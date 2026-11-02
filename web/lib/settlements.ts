@@ -1,8 +1,9 @@
-// Real 1Click settlements executed from keyhole-devmo.near on mainnet (2026-11-01). Status is read live.
-export type Settlement = { label: string; depositAddress: string; depositTx: string; quote: string; recorded?: { status: string; note: string } };
+// Real 1Click settlements on mainnet (2026-11-01 from keyhole-devmo.near; 2026-11-02 from a MetaMask wallet on Base). Status is read live.
+export type Settlement = { label: string; depositAddress: string; depositTx: string; quote: string; depositTxUrl?: string; destTx?: { hash: string; url: string }; note?: string; recorded?: { status: string; note: string } };
 export const SETTLEMENTS: Settlement[] = [
   { label: "0.03 wNEAR → USDC on NEAR", depositAddress: "8ce897e4047c1aa01f9c7c3e92b6392e424fa9e9564153a5c1f0ac563706cc45", depositTx: "BGyVQcr6pb1WpAFQJJCRUUoa5YgbdcgQkpC11KvyKgRd", quote: "0.131325 USDC quoted" },
   { label: "Under-deposit: 0.02 of a 0.05 USDC → wNEAR quote", depositAddress: "15a7f92d61890a802f33d08c631c4f4b7a5c185f336134cb3ae4a70984686794", depositTx: "J2UwPe1XzzugFT9UKnvEEacqFZCXDh6in4ZW2vb3Pgko", quote: "refund due at the deadline, 2026-11-04 07:30 (UTC+2)" },
+  { label: "0.6 USDC on Base → SOL on Solana (MetaMask)", depositAddress: "0xF60390Eb2309c39A5Dc39a619352fCffe83105d6", depositTx: "0x0e46c0f0b49be71f36d4437e71fa9e1d689d4f91fc1e948872320d50126661f3", depositTxUrl: "https://basescan.org/tx/0x0e46c0f0b49be71f36d4437e71fa9e1d689d4f91fc1e948872320d50126661f3", destTx: { hash: "JYbHtieCb7QxwMkikJaoqSArVNgK9mYgEpWQj9rEEF8TQLeBV75M657XQ81HALejo3kMrX7yaNApvCJQUjqGg8X", url: "https://solscan.io/tx/JYbHtieCb7QxwMkikJaoqSArVNgK9mYgEpWQj9rEEF8TQLeBV75M657XQ81HALejo3kMrX7yaNApvCJQUjqGg8X" }, quote: "0.006266471 SOL quoted, 1% slippage", note: "Sent from a MetaMask EVM account on Base to a fresh Solana address; 0.006268509 SOL arrived (2026-11-02 13:41 UTC+2)." },
 ];
 /** A recorded example, clearly labelled, so the FAILED path is visible without breaking anything. */
 export const RECORDED_FAILED = { status: "FAILED", label: "Recorded example (not a live order)", note: "Shape of a FAILED order as returned by /v0/status. KEYHOLE shows the refund address and asks the user to check the refund before retrying." };

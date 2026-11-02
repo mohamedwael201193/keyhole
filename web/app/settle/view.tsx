@@ -24,15 +24,17 @@ function Row({ s }: { s: Settlement }) {
   return (
     <article className="card srow" data-testid="settlement">
       <div className="shead"><b>{s.label}</b>{st ? <Badge status={st.status} /> : <span className="stb wait">{err ? "status unavailable" : "…"}</span>}</div>
+      {s.note && <p className="note">{s.note}</p>}
       {info && <p className="where"><span>Where the funds are:</span> {info.where}</p>}
       <dl className="kv">
-        <dt>deposit tx</dt><dd className="mono"><a href={tx(s.depositTx)} target="_blank" rel="noreferrer">{s.depositTx.slice(0, 10)}…</a></dd>
+        <dt>deposit tx</dt><dd className="mono"><a href={s.depositTxUrl ?? tx(s.depositTx)} target="_blank" rel="noreferrer">{s.depositTx.slice(0, 10)}…</a></dd>
         <dt>deposit address</dt><dd className="mono">{s.depositAddress.slice(0, 10)}…{s.depositAddress.slice(-6)}</dd>
         {st?.details.depositedAmountFormatted && <><dt>deposited</dt><dd>{st.details.depositedAmountFormatted}</dd></>}
         {st?.details.amountOutFormatted && <><dt>received</dt><dd>{st.details.amountOutFormatted}</dd></>}
         {st?.details.refundedAmountFormatted && st.details.refundedAmountFormatted !== "0" && <><dt>refunded</dt><dd>{st.details.refundedAmountFormatted}</dd></>}
         {st?.details.intentHashes?.map((h) => <Fragment key={h}><dt>intent</dt><dd className="mono"><a href={intentTx(h)} target="_blank" rel="noreferrer">{h.slice(0, 10)}…</a></dd></Fragment>)}
         {st?.details.nearTxHashes?.slice(-1).map((h) => <Fragment key={h}><dt>settlement tx</dt><dd className="mono"><a href={tx(h)} target="_blank" rel="noreferrer">{h.slice(0, 10)}…</a></dd></Fragment>)}
+        {s.destTx && <><dt>destination tx</dt><dd className="mono"><a href={s.destTx.url} target="_blank" rel="noreferrer">{s.destTx.hash.slice(0, 10)}…</a></dd></>}
         <dt>quote</dt><dd>{s.quote}</dd>
       </dl>
     </article>
