@@ -37,3 +37,6 @@
 - Minimums from dry quotes: Solana USDC → NEAR needs ≥ 0.010001 USDC; NEAR → Solana costs ~0.01 USDC in fees, so ≥ 0.02 USDC.
 - Executed on mainnet from keyhole-devmo.near: 0.03 wNEAR → 0.131355 USDC (deposit BGyVQcr6…, SUCCESS); under-deposit 0.02 of a 0.05 USDC quote (deposit J2UwPe1X…, INCOMPLETE_DEPOSIT, refund due at the quote deadline 2026-11-04 07:30 UTC+2). A first 0.05 USDC deposit attempt failed for low balance (no funds moved).
 - New /settle page: dry-run quotes (server forces dry:true), live status for each executed order with "where the funds are" and explorer links, a clearly labelled recorded FAILED example, and a legend for every status. ONECLICK_API_KEY added as a sensitive Vercel env var.
+
+## 2026-11-02 — Base → Solana settlement from a MetaMask wallet
+- Real 1Click order: 0.6 USDC on Base (tx 0x0e46c0f0…, deposit 0xF60390Eb…) → 0.006268509 SOL to 3TsdHmQS… on Solana (tx JYbHtieC…), SUCCESS in about 90 s. Shown on /settle with Basescan and Solscan links.
