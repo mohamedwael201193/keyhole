@@ -22,6 +22,8 @@ KEYHOLE is three pieces that work together. The contract [`keyhole-devmo.near`](
 
 The confidential account belongs to the token, not to a NEAR account. The enclave keeps one custody wallet per `token_id` and lets only the account that owns that token right now operate it. Ownership is read live (`nft_tokens_for_owner` and `nft_token.owner_id`) on every request and again just before a swap or withdraw is sent. Transfer the NFT and the new owner operates the same balance; the old account's next call is refused with `not_owner`.
 
+**NFTs that do something.** Each key holds sealed credentials: the enclave keeps one custody wallet key per `token_id` inside Intel TDX, and that key never leaves it ([worker source](tee/worker/src/lib.rs), `custody_lookup`). Only the current on-chain owner can make it act: the worker reads `nft_token.owner_id` on every request and again right before a swap or withdraw ([refusal `not_owner` on mainnet](https://api.outlayer.ai/attestations/by-call/711795b9-3e77-4a59-98ee-d798cb63ccc2)). Selling the NFT moves the access with it, including in the middle of a payout ([mainnet evidence](docs/evidence/mid-payout/README.md)).
+
 ## The problem it solves
 
 A public chain shows balances and trades. Here those stay in the enclave. The holder still has a token they can transfer, and the account goes with it, and each enclave answer includes an attestation the browser can check against the published worker.
@@ -590,12 +592,12 @@ Security summary (STRIDE, invariants and the test for each, audit checklist, sco
 
 ## 12. Tests and CI
 
-**292 passing tests** at commit `57855b1`: [CI run 41485130527](https://github.com/mohamedwael201193/keyhole/actions/runs/41485130527) (all jobs green), reproduce with `scripts/test-count.sh`, output in [`docs/evidence/tests`](docs/evidence/tests/README.md). Each test is counted once; e2e tests also run at two widths.
+**438 passing tests** at commit `521d3c6`: [CI run 41490794527](https://github.com/mohamedwael201193/keyhole/actions/runs/41490794527) (all jobs green), reproduce with `scripts/test-count.sh`, output in [`docs/evidence/tests`](docs/evidence/tests/README.md). Each test is counted once; e2e tests also run at two widths.
 
 | Suite | Count | Where | What it covers | Reproduce |
 |---|---|---|---|---|
 | Contract unit | 43 | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) | mint authority, tiers and holder tier after transfers, NEP-171 events and transfer rules, NEP-177 metadata, NEP-181 enumeration and paging, NEP-199 payout conservation, rounding and royalty cap, minter rotation, batch limits, owner-only setters, init guard | `cd contracts/keys && cargo test --locked` |
-| Worker unit | 49 | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs) | NEP-413 payload and signature, replay, caps, rate limits, holder limits, cooldown, lock, transfer during a payout, PnL statement, request binding, sub-cent formatting | `cd tee/worker && cargo test --locked` |
+| Worker unit | 195 | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs), [`matrix.rs`](tee/worker/src/matrix.rs) (one table row per test) | NEP-413 payload and signature, replay, caps, rate limits, holder limits, cooldown, lock, transfer during a payout, PnL statement, request binding, sub-cent formatting | `cd tee/worker && cargo test --locked` |
 | CLI | 7 | [`cli/test`](cli/test) | signing, request shape, verification helpers, skill file | `cd cli && npm ci && npm test` |
 | Web unit | 150 | [`web/tests`](web/tests) | Intel DCAP quote verification on a real mainnet quote (and tampered copies), report_data binding, key-log chain and signature, published evidence integrity, NEP-413 parity, gateway allowlist, PnL signatures, NEAR AI attestation checks, every worker error code in English | `cd web && npm ci && npx vitest run` |
 | Web e2e (Playwright) | 43 (in CI: 81 passing runs at 1440 and 390 px, 5 runs skipped where a test sets its own width or is desktop-only) | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) | every page without console errors, in-browser verify and DCAP of real calls, key history (real and tampered log), private AI panel, PnL tamper, gateway refusals, no sideways scroll at 390 px | `cd web && npx playwright install chromium && npm run build && npx playwright test` |
