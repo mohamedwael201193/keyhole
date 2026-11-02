@@ -595,11 +595,11 @@ Previous version `f13efe92`. These 30 steps were run with a real named wallet (`
 
 ## 12. Tests and CI
 
-**222 distinct test cases** (counted from CI on 2026-11-01; e2e cases run twice, desktop and mobile):
+**250 distinct test cases** (counted from CI on 2026-11-02; e2e cases run twice, desktop and mobile):
 
 | Suite | Count | Where | What it covers | Reproduce |
 |---|---|---|---|---|
-| Contract unit | 15 | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) | mint authority, tiers, NEP-199 payouts and royalty cap, batch limits, owner-only setters, init guard | `cd contracts/keys && cargo test --locked` |
+| Contract unit | 43 | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) | mint authority, tiers and holder tier after transfers, NEP-171 events and transfer rules, NEP-177 metadata, NEP-181 enumeration and paging, NEP-199 payout conservation, rounding and royalty cap, minter rotation, batch limits, owner-only setters, init guard | `cd contracts/keys && cargo test --locked` |
 | Worker unit | 43 | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs) | NEP-413 payload and signature, replay, caps, rate limits, holder limits, cooldown, lock, transfer during a payout, PnL statement, request binding, sub-cent formatting | `cd tee/worker && cargo test --locked` |
 | CLI | 7 | [`cli/test`](cli/test) | signing, request shape, verification helpers, skill file | `cd cli && npm ci && npm test` |
 | Web unit | 116 | [`web/tests`](web/tests) | Intel DCAP quote verification on a real mainnet quote (and tampered copies), report_data binding, key-log chain and signature, published evidence integrity, NEP-413 parity, gateway allowlist, PnL signatures, NEAR AI attestation checks, every worker error code in English | `cd web && npm ci && npx vitest run` |

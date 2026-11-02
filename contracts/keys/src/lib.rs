@@ -340,4 +340,155 @@ mod tests {
     #[test]
     #[should_panic(expected = "royalty too high")]
     fn royalty_cap() { let mut c = setup(); ctx("owner.near", NearToken::from_yoctonear(1)); c.set_royalty(acc("t.near"), 1001); }
+
+    // ---- NEP-171 / 177 / 181 / 199 compliance and edge cases ----
+    fn logs() -> Vec<String> { near_sdk::test_utils::get_logs() }
+
+    #[test]
+    fn nep177_contract_metadata() {
+        let c = setup(); let m = c.nft_metadata();
+        assert_eq!(m.spec, NFT_METADATA_SPEC); assert_eq!(m.name, "KEYHOLE"); assert_eq!(m.symbol, "KEY");
+    }
+    #[test]
+    fn nep177_token_metadata_kept() {
+        let mut c = setup(); mint(&mut c, "k1", "a.near", 2);
+        let t = c.nft_token("k1".into()).unwrap();
+        assert_eq!(t.metadata.unwrap().title.as_deref(), Some("Key #1"));
+    }
+    #[test]
+    fn nep171_mint_event() {
+        let mut c = setup(); mint(&mut c, "k1", "a.near", 1);
+        let l = logs(); assert!(l.iter().any(|x| x.contains("\"standard\":\"nep171\"") && x.contains("\"event\":\"nft_mint\"") && x.contains("a.near")));
+    }
+    #[test]
+    fn nep171_transfer_event_and_owner() {
+        let mut c = setup(); mint(&mut c, "k1", "a.near", 1);
+        ctx("a.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("b.near"), "k1".into(), None, Some("gift".into()));
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("b.near"));
+        assert!(logs().iter().any(|x| x.contains("\"event\":\"nft_transfer\"") && x.contains("\"old_owner_id\":\"a.near\"") && x.contains("\"new_owner_id\":\"b.near\"") && x.contains("gift")));
+    }
+    #[test]
+    #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+    fn nep171_transfer_needs_one_yocto() { let mut c = setup(); mint(&mut c, "k1", "a.near", 1); ctx("a.near", NearToken::from_yoctonear(0)); c.nft_transfer(acc("b.near"), "k1".into(), None, None); }
+    #[test]
+    #[should_panic]
+    fn nep171_only_owner_transfers() { let mut c = setup(); mint(&mut c, "k1", "a.near", 1); ctx("x.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("x.near"), "k1".into(), None, None); }
+    #[test]
+    #[should_panic]
+    fn nep171_no_self_transfer() { let mut c = setup(); mint(&mut c, "k1", "a.near", 1); ctx("a.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("a.near"), "k1".into(), None, None); }
+    #[test]
+    #[should_panic]
+    fn nep171_duplicate_token_id() { let mut c = setup(); mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k1", "b.near", 1); }
+    #[test]
+    fn nep171_unknown_token_is_none() { let c = setup(); assert!(c.nft_token("nope".into()).is_none()); }
+    #[test]
+    #[should_panic(expected = "token_id too long")]
+    fn token_id_length_cap() { let mut c = setup(); mint(&mut c, &"k".repeat(65), "a.near", 1); }
+    #[test]
+    #[should_panic(expected = "bad tier")]
+    fn tier_zero_rejected() { let mut c = setup(); mint(&mut c, "k1", "a.near", 0); }
+    #[test]
+    fn nep181_enumeration() {
+        let mut c = setup();
+        mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k2", "a.near", 3); mint(&mut c, "k3", "b.near", 2);
+        assert_eq!(c.nft_total_supply().0, 3);
+        assert_eq!(c.nft_supply_for_owner(acc("a.near")).0, 2);
+        assert_eq!(c.nft_tokens(None, Some(2)).len(), 2);
+        assert_eq!(c.nft_tokens(Some(U128(2)), None).len(), 1);
+        let ids: Vec<String> = c.nft_tokens_for_owner(acc("a.near"), None, None).into_iter().map(|t| t.token_id).collect();
+        assert_eq!(ids, vec!["k1".to_string(), "k2".to_string()]);
+        assert_eq!(c.nft_supply_for_owner(acc("nobody.near")).0, 0);
+    }
+    #[test]
+    fn holder_tier_is_best_and_follows_transfer() {
+        let mut c = setup();
+        mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k2", "a.near", 3);
+        assert_eq!(c.holder_tier(acc("a.near")), Some(3));
+        ctx("a.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("b.near"), "k2".into(), None, None);
+        assert_eq!(c.holder_tier(acc("a.near")), Some(1));
+        assert_eq!(c.holder_tier(acc("b.near")), Some(3));
+        assert_eq!(c.holder_tier(acc("nobody.near")), None);
+        assert_eq!(c.nft_tier("k2".into()), Some(3));
+    }
+    #[test]
+    fn nep199_payout_conserves_balance() {
+        let mut c = setup(); mint(&mut c, "k1", "a.near", 1);
+        for bal in [0u128, 1, 19, 20, 21, 9_999, 10_000, 1_000_000_000_000_000_000_000_000, u128::MAX / 10_000] {
+            let p = c.nft_payout("k1".into(), U128(bal), Some(10));
+            let sum: u128 = p.payout.values().map(|v| v.0).sum();
+            assert_eq!(sum, bal, "payout must add up to the balance");
+            assert!(p.payout.len() <= 2);
+        }
+    }
+    #[test]
+    fn nep199_royalty_rounds_down_for_the_treasury() {
+        let mut c = setup(); mint(&mut c, "k1", "a.near", 1);
+        let p = c.nft_payout("k1".into(), U128(39), Some(2)); // 5% of 39 = 1.95 -> 1
+        assert_eq!(p.payout.get(&acc("treasury.near")).unwrap().0, 1);
+        assert_eq!(p.payout.get(&acc("a.near")).unwrap().0, 38);
+    }
+    #[test]
+    fn nep199_treasury_as_owner_gets_all() {
+        let mut c = setup(); mint(&mut c, "k1", "treasury.near", 1);
+        let p = c.nft_payout("k1".into(), U128(1000), Some(1));
+        assert_eq!(p.payout.len(), 1); assert_eq!(p.payout.get(&acc("treasury.near")).unwrap().0, 1000);
+    }
+    #[test]
+    fn nep199_zero_royalty_single_payee() {
+        let mut c = setup(); ctx("owner.near", NearToken::from_yoctonear(1)); c.set_royalty(acc("treasury.near"), 0);
+        mint(&mut c, "k1", "a.near", 1);
+        let p = c.nft_payout("k1".into(), U128(1000), Some(1));
+        assert_eq!(p.payout.len(), 1);
+    }
+    #[test]
+    fn nep199_max_royalty_ten_percent() {
+        let mut c = setup(); ctx("owner.near", NearToken::from_yoctonear(1)); c.set_royalty(acc("t2.near"), MAX_ROYALTY_BPS);
+        mint(&mut c, "k1", "a.near", 1);
+        let p = c.nft_payout("k1".into(), U128(1000), None);
+        assert_eq!(p.payout.get(&acc("t2.near")).unwrap().0, 100);
+    }
+    #[test]
+    #[should_panic(expected = "unknown token")]
+    fn nep199_unknown_token() { let c = setup(); c.nft_payout("nope".into(), U128(1), None); }
+    #[test]
+    fn nep199_transfer_payout_emits_event_and_splits() {
+        let mut c = setup(); mint(&mut c, "k1", "a.near", 1);
+        ctx("a.near", NearToken::from_yoctonear(1));
+        let p = c.nft_transfer_payout(acc("b.near"), "k1".into(), None, Some("sale".into()), U128(10_000), Some(2));
+        assert_eq!(p.payout.get(&acc("treasury.near")).unwrap().0, 500);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("b.near"));
+        assert!(logs().iter().any(|x| x.contains("nft_transfer") && x.contains("sale")));
+    }
+    #[test]
+    #[should_panic(expected = "only owner")]
+    fn set_royalty_only_owner() { let mut c = setup(); ctx("a.near", NearToken::from_yoctonear(1)); c.set_royalty(acc("a.near"), 10); }
+    #[test]
+    #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+    fn set_minter_needs_yocto() { let mut c = setup(); ctx("owner.near", NearToken::from_yoctonear(0)); c.set_minter(acc("x.near")); }
+    #[test]
+    fn old_minter_loses_power() {
+        let mut c = setup(); ctx("owner.near", NearToken::from_yoctonear(1)); c.set_minter(acc("tee.near"));
+        ctx("tee.near", NearToken::from_millinear(100)); c.nft_mint("k1".into(), acc("a.near"), 1, meta());
+        assert_eq!(c.nft_total_supply().0, 1);
+    }
+    #[test]
+    #[should_panic(expected = "only minter")]
+    fn old_minter_cannot_mint() { let mut c = setup(); ctx("owner.near", NearToken::from_yoctonear(1)); c.set_minter(acc("tee.near")); mint(&mut c, "k1", "a.near", 1); }
+    #[test]
+    #[should_panic(expected = "bad batch")]
+    fn beat_batch_limit() {
+        let mut c = setup(); ctx("minter.near", NearToken::from_yoctonear(0));
+        c.beat((0..=MAX_BEAT_BATCH).map(|i| i.to_string()).collect());
+    }
+    #[test]
+    #[should_panic(expected = "bad batch")]
+    fn beat_empty() { let mut c = setup(); ctx("minter.near", NearToken::from_yoctonear(0)); c.beat(vec![]); }
+    #[test]
+    fn beat_counter_increments() {
+        let mut c = setup(); mint(&mut c, "k1", "a.near", 1); ctx("minter.near", NearToken::from_yoctonear(0));
+        assert_eq!(c.beat(vec!["k1".into()]), 1); assert_eq!(c.beat(vec!["k1".into()]), 2); assert_eq!(c.config().beats.0, 2);
+    }
+    #[test]
+    #[should_panic(expected = "royalty too high")]
+    fn init_royalty_cap() { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("o.near"), acc("m.near"), acc("t.near"), MAX_ROYALTY_BPS + 1); }
 }
