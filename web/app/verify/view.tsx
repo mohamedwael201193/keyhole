@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { attestation, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
 import { CALLS, PUBLISHED_INFO_CALL } from "@/lib/evidence";
 import { b64, verifyQuote, type Dcap } from "@/lib/dcap";
-import { bindingCheck, buildIndex, CALL_ID, evidenceOutput, fastfsCheck, fastfsUrl, outputCheck, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
+import { bindingCheck, buildIndex, localChecks, tamperAttestation, TAMPERS, type Tamper, CALL_ID, evidenceOutput, fastfsCheck, fastfsUrl, outputCheck, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
 
 export function VerifyView({ initial }: { initial: string | null }) {
   const { t } = useI18n();
@@ -18,8 +18,19 @@ export function VerifyView({ initial }: { initial: string | null }) {
   const [ck, setCk] = useState<Checks | null>(null);
   const [pasted, setPasted] = useState("");
   const [pasteErr, setPasteErr] = useState(false);
+  const [orig, setOrig] = useState<{ a: Attestation; ck: Checks; dcap: Dcap | null } | null>(null);
+  const [tampered, setTampered] = useState<Tamper | null>(null);
+  const tamper = async (k: Tamper | null) => {
+    if (!orig) return;
+    setTampered(k);
+    if (!k) { setA(orig.a); setCk(orig.ck); setDcap(orig.dcap); return; }
+    const x = tamperAttestation(orig.a, k);
+    const c = await localChecks(x, orig.ck.fastfsHash);
+    setA(x); setCk({ ...c, output: orig.ck.output });
+    try { setDcap(verifyQuote(b64(x.tdx_quote), { expectReportData: c.binding?.expected })); } catch { setDcap(null); }
+  };
   const go = useCallback(async (cid: string) => {
-    setErr(null); setA(null); setCk(null);
+    setErr(null); setA(null); setCk(null); setOrig(null); setTampered(null);
     if (/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(cid.trim())) { setErr("tx"); return; }
     if (!CALL_ID.test(cid.trim())) { setErr("bad_params"); return; }
     setBusy(true); setDcap(null); setBind(null);
@@ -33,8 +44,12 @@ export function VerifyView({ initial }: { initial: string | null }) {
       setCk({ ...st, fastfs: null });
       const [f, binding, ev] = await Promise.all([fastfsCheck(j), bindingCheck(j), evidenceOutput(j.call_id)]);
       const output = ev ? await outputCheck(j, ev, "evidence") : null;
-      setCk({ ...st, ...f, binding, output });
-      try { setDcap(verifyQuote(b64(j.tdx_quote), { expectReportData: binding?.expected })); } catch { setDcap(null); }
+      const full = { ...st, ...f, binding, output };
+      setCk(full);
+      let d: Dcap | null = null;
+      try { d = verifyQuote(b64(j.tdx_quote), { expectReportData: binding?.expected }); } catch { d = null; }
+      setDcap(d);
+      setOrig({ a: j, ck: full, dcap: d });
       const bo = (ev && typeof ev === "object" ? (ev as { bind?: Record<string, string> }).bind : undefined) ?? null;
       setBind(bo);
     } catch { setErr("network"); }
@@ -90,10 +105,19 @@ export function VerifyView({ initial }: { initial: string | null }) {
           <div className="res">
             <div>
               <p className="mono" style={{ fontSize: 12, letterSpacing: ".14em", opacity: .8 }}>{t("verify.result")}</p>
-              <b data-testid="verdict" data-match={ok ? "true" : "false"}>{ck?.fastfs === null && ck.registered ? "…" : ok ? t("verify.genuine") : t("verify.notYet")}</b>
+              <b data-testid="verdict" data-match={ok ? "true" : "false"}>{ck?.fastfs === null && ck.registered ? "…" : ok ? t("verify.genuine") : tampered ? t("verify.tamperFail") : t("verify.notYet")}</b>
             </div>
             <button className="btn" disabled={busy} data-testid="verify-btn" onClick={() => void go(id)}>{busy ? "…" : t("verify.again")}</button>
           </div>
+          {orig && (
+            <div className="tamper" data-testid="tamper" data-active={tampered ?? ""}>
+              <p><b>{t("verify.tamperH")}</b> <small>{t("verify.tamperD")}</small></p>
+              <div className="tbtns">
+                {TAMPERS.map((k) => <button key={k} className={tampered === k ? "on" : ""} data-testid={`tamper-${k}`} onClick={() => void tamper(k)}>{t(`verify.tamper_${k}`)}</button>)}
+                {tampered && <button className="reset" data-testid="tamper-reset" onClick={() => void tamper(null)}>{t("verify.tamperReset")}</button>}
+              </div>
+            </div>
+          )}
           {a && ck && !ck.output?.match && (
             <form className="vpaste" onSubmit={(e) => { e.preventDefault(); void checkPasted(); }}>
               <label htmlFor="vout">{t("verify.pasteLabel")}</label>

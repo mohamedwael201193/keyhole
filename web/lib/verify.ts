@@ -111,3 +111,29 @@ export async function evidenceOutput(callId: string): Promise<unknown | null> {
     return j.output ?? null;
   } catch { return null; }
 }
+
+/** Negative controls for /verify: each edits one thing a forger would have to change. */
+export const TAMPERS = ["quote", "report_data", "input_hash", "executed_wasm", "registered_wasm"] as const;
+export type Tamper = (typeof TAMPERS)[number];
+const flipHexChar = (h: string) => h.slice(0, -1) + (h.endsWith("0") ? "1" : "0");
+function flipQuoteByte(q64: string, at: number): string {
+  const b = quoteBytes(q64);
+  b[at] ^= 0x01;
+  let s = ""; for (const x of b) s += String.fromCharCode(x);
+  return btoa(s);
+}
+/** A copy of `a` with one byte or field changed. Byte 148 sits in the TD report body (MRTD); 568 is report_data[0]. */
+export function tamperAttestation(a: Attestation, kind: Tamper): Attestation {
+  switch (kind) {
+    case "quote": return { ...a, tdx_quote: flipQuoteByte(a.tdx_quote, 48 + 100) };
+    case "report_data": return { ...a, tdx_quote: flipQuoteByte(a.tdx_quote, 568) };
+    case "input_hash": return { ...a, input_hash: flipHexChar(a.input_hash) };
+    case "executed_wasm": return { ...a, executed_wasm_sha256: flipHexChar(a.executed_wasm_sha256) };
+    case "registered_wasm": return { ...a, wasm_hash: flipHexChar(a.wasm_hash) };
+  }
+}
+/** Every check that needs no network, given the FastFS hash already fetched for the original call. */
+export async function localChecks(a: Attestation, fastfsHash: string | undefined): Promise<Checks> {
+  const binding = await bindingCheck(a);
+  return { ...staticChecks(a), published: buildIndex(a.executed_wasm_sha256) >= 0, fastfs: !!fastfsHash && fastfsHash === a.executed_wasm_sha256.toLowerCase(), fastfsHash, binding };
+}
