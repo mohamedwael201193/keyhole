@@ -626,6 +626,14 @@ test("key history: a real log re-verifies and an edited row fails", async ({ pag
   await expect(page.getByTestId("k-chain")).toHaveAttribute("data-pass", "false");
 });
 
+test("settle: the real SOL→NEAR order reads SUCCESS live from 1Click and the NO_LIQUIDITY one reads REFUNDED", async ({ page }) => {
+  await page.goto("/settle");
+  const ok = page.locator('[data-deposit="6pvcZZ2xMUhDpQmySGaVR2Cm9e3Aixx5QUQUPS7RAcha"]');
+  await expect(ok.locator('[data-status="SUCCESS"]')).toBeVisible({ timeout: 30_000 });
+  await expect(ok.locator('a[href="https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh"]').first()).toBeVisible();
+  await expect(page.locator('[data-deposit="5sESFfrM4Tk6L5euDCTjjMxVAs5xmbZpj4i3V29s3KJ"] [data-status="REFUNDED"]')).toBeVisible({ timeout: 30_000 });
+});
+
 test("settle: dry-run quote and every 1Click status, including REFUNDED and FAILED", async ({ page }) => {
   await page.route("**/api/oneclick", (route) => route.request().method() === "POST"
     ? route.fulfill({ json: { ok: true, dry: true, quote: { amountInFormatted: "0.05", amountInUsd: "0.05", amountOutFormatted: "0.049988", amountOutUsd: "0.0499", timeEstimate: 20 } } })
@@ -637,6 +645,7 @@ test("settle: dry-run quote and every 1Click status, including REFUNDED and FAIL
   await expect(page.locator('[data-testid="settlement"] [data-status="SUCCESS"]').first()).toBeVisible();
   await expect(page.locator('[data-testid="settlement"] [data-status="REFUNDED"]').first()).toBeVisible();
   await expect(page.getByText("0.6 USDC on Base → SOL on Solana (MetaMask)")).toBeVisible();
-  await expect(page.getByText("0.001 SOL on Solana → USDC on NEAR (MetaMask)")).toBeVisible();
+  await expect(page.getByText("0.004 SOL on Solana → USDC on NEAR (MetaMask)")).toBeVisible();
+  await expect(page.getByText("Refund path: 0.001 SOL on Solana → USDC on NEAR, refunded for NO_LIQUIDITY")).toBeVisible();
   await expect(page.getByTestId("recorded-failed").locator('[data-status="FAILED"]')).toBeVisible();
 });

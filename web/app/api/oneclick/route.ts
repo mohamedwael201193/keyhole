@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { dryBody, isAddr } from "@/lib/oneclick";
+import { dryBody, isAddr, QUOTE_PER_MIN, STATUS_PER_MIN } from "@/lib/oneclick";
 import { createLimiter } from "@/lib/ratelimit";
 
 // Dry-run quotes and status reads only. This route never creates an executable quote.
 const OC = "https://1click.chaindefuser.com/v0";
-const limit = createLimiter(10, 60_000);
+const limit = createLimiter(QUOTE_PER_MIN, 60_000);
+const statusLimit = createLimiter(STATUS_PER_MIN, 60_000);
 const no = (code: string, status: number) => NextResponse.json({ ok: false, error: { code } }, { status, headers: { "cache-control": "no-store" } });
 const ip = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
 const headers = () => ({ "content-type": "application/json", "user-agent": "keyhole/1.0", ...(process.env.ONECLICK_API_KEY ? { authorization: `Bearer ${process.env.ONECLICK_API_KEY}` } : {}) });
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  if (!limit(ip(req)).ok) return no("rate_limited", 429);
+  if (!statusLimit(ip(req)).ok) return no("rate_limited", 429);
   const a = new URL(req.url).searchParams.get("depositAddress") ?? "";
   if (!isAddr(a)) return no("bad_params", 400);
   try {

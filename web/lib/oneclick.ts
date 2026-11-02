@@ -44,3 +44,7 @@ export const STATUS: Record<OcStatus, { tone: "wait" | "ok" | "warn" | "bad"; la
 };
 export const statusOf = (s: string | undefined | null) => (s && s in STATUS ? STATUS[s as OcStatus] : { tone: "wait" as const, label: s || "Unknown", where: "Status not recognised." });
 export const isAddr = (s: string) => /^[0-9a-f]{64}$|^0x[0-9a-fA-F]{40}$|^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
+
+/** Per-IP, per-minute limits on /api/oneclick. Status reads are read-only and /settle makes one per listed order, so they get their own, larger window; dry quotes keep the small one. */
+export const QUOTE_PER_MIN = 10;
+export const STATUS_PER_MIN = 60;
