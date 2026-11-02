@@ -41,3 +41,6 @@
 ## 2026-11-02 — Base → Solana settlement from a MetaMask wallet
 - Real 1Click order: 0.6 USDC on Base (tx 0x0e46c0f0…, deposit 0xF60390Eb…) → 0.006268509 SOL to 3TsdHmQS… on Solana (tx JYbHtieC…), SUCCESS in about 90 s. Shown on /settle with Basescan and Solscan links.
 - 2026-11-02: 0.001 SOL → USDC on NEAR from MetaMask (Solana sig 4ws4iem4…, finalized, 1,000,000 lamports at deposit 5sESFfrM…). 1Click deposit/submit returned 500 (timeout) twice; status stayed PENDING_DEPOSIT for 20+ minutes. Listed on /settle with its live status.
+
+## 2026-11-02 — Contract standards tests (15 → 43)
+- New unit tests for NEP-171 (mint/transfer events, 1 yocto, owner-only, no self-transfer, duplicate ids), NEP-177 metadata, NEP-181 enumeration and paging, NEP-199 payout conservation over many balances, rounding, zero and max royalty, treasury-as-owner, minter rotation, beat batch limits, init royalty cap. Total distinct tests 250.
