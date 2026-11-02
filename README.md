@@ -592,7 +592,7 @@ Security summary (STRIDE, invariants and the test for each, audit checklist, sco
 
 ## 12. Tests and CI
 
-**438 passing tests** at commit `521d3c6`: [CI run 41490794527](https://github.com/mohamedwael201193/keyhole/actions/runs/41490794527) (all jobs green), reproduce with `scripts/test-count.sh`, output in [`docs/evidence/tests`](docs/evidence/tests/README.md). Each test is counted once; e2e tests also run at two widths.
+**447 passing tests** at commit `5f4502b`: [CI run 41496705855](https://github.com/mohamedwael201193/keyhole/actions/runs/41496705855) (all jobs green), reproduce with `scripts/test-count.sh`, output in [`docs/evidence/tests`](docs/evidence/tests/README.md). Each test is counted once; e2e tests also run at two widths.
 
 | Suite | Count | Where | What it covers | Reproduce |
 |---|---|---|---|---|
