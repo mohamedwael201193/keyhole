@@ -106,6 +106,14 @@ test("header Connect wallet opens the selector on the first click on a 6x slower
   await expect(page.locator("#near-wallet-selector-modal .nws-modal-wrapper.open")).toBeVisible({ timeout: 20_000 });
 });
 
+test("header Connect wallet is disabled in server HTML and enabled after hydration", async ({ page, request }) => {
+  const html = await (await request.get("/")).text();
+  expect(html).toMatch(/data-testid="connect"[^>]*disabled|disabled[^>]*data-testid="connect"/);
+  await page.goto("/");
+  await expect(page.getByTestId("connect")).toHaveAttribute("data-hydrated", "1");
+  await expect(page.getByTestId("connect")).toBeEnabled();
+});
+
 test("header Connect wallet opens the selector on the first click", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const btn = page.getByTestId("connect");

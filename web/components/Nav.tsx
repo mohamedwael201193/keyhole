@@ -28,6 +28,10 @@ export function Nav() {
   const [dark, setDark] = useState(false);
   const [menu, setMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The server renders Connect disabled; it becomes clickable only once React owns it, so an early tap
+  // can never land on a button with no handler (the mobile first-click flake).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const acctRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = document.querySelector("nav.nav");
@@ -85,7 +89,7 @@ export function Nav() {
                   </div>
                 )}
               </div>
-            : <button type="button" className="cw" onClick={() => void connect()} data-testid="connect">{t("nav.connect")}</button>}
+            : <button type="button" className="cw" onClick={() => void connect()} disabled={!hydrated} data-hydrated={hydrated ? "1" : "0"} data-testid="connect">{t("nav.connect")}</button>}
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
