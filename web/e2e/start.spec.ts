@@ -8,7 +8,7 @@ test("/start shows the first step and progress dots without a wallet", async ({ 
   await page.goto("/start");
   await expect(page.getByTestId("start-connect")).toBeVisible();
   await expect(page.getByTestId("start-dots").locator("li")).toHaveCount(6);
-  await expect(page.getByTestId("start-dots").locator("li[aria-current=step]")).toContainText("Connect");
+  await expect(page.getByTestId("start-dots").locator("li[aria-current=step]")).toContainText("Get started");
 });
 test("/start fits 390px without horizontal scroll", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -25,4 +25,18 @@ test("P1: landing hash and more links, verify label, key help, gallery traits", 
   await page.goto("/gallery");
   await page.getByTestId("traits-explain").locator("summary").click();
   await expect(page.getByTestId("traits-explain")).toContainText("Bit cipher");
+});
+test("/start step 1: Google / email first, All wallets second (when the Privy app is configured)", async ({ page }) => {
+  await page.goto("/start");
+  const all = page.getByTestId("start-connect");
+  await expect(all).toBeVisible();
+  const social = page.getByTestId("start-social");
+  if (await social.count()) {
+    await expect(social).toHaveText("Continue with Google / email");
+    await expect(all).toContainText("All wallets");
+    const [a, b] = await Promise.all([social.boundingBox(), all.boundingBox()]);
+    expect(a!.y).toBeLessThan(b!.y);
+    await social.click();
+    await expect(page.locator("#privy-modal-content, [id^=privy-dialog], #privy-dialog")).toBeVisible({ timeout: 20_000 });
+  }
 });
