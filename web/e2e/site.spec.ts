@@ -42,7 +42,7 @@ test("verify: the previous-build verdict says so, and the current call links its
   await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
   await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
-  await expect(page.locator('a[href*="GNqXiicFgXQpS5LsYiNRffK6Xhp5W7Yi8EZK2XqKvX8X"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="AepKgT8M1XhMjWMHMzaJSo3YnBXzG58YYrLVyp8tUW3z"]').first()).toBeVisible();
   await expect(page.locator('a[href*="F1XzcCcz"]')).toHaveCount(0);
 });
 
