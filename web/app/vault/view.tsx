@@ -27,6 +27,7 @@ import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 import { KeyLog } from "@/components/KeyLog";
 import "./vault.css";
+import { MetaMaskNote } from "@/components/MetaMaskNote";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
@@ -197,6 +198,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           {online === null && <span className="chip wait" data-testid="enclave-checking"><i />{t("vault.checking")}</span>}
         </div>
       </div>
+      {!accountId && <MetaMaskNote />}
       {online === false ? (
         <div><OfflineState /><HowStrip /></div>
       ) : !accountId ? (

@@ -17,6 +17,7 @@ import { formatTradePrice } from "@/lib/price";
 import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 import { TxLink } from "@/components/TxLink";
+import { MetaMaskNote } from "@/components/MetaMaskNote";
 
 const SHOWN = [
   { k: "Bronze", art: 3 },
@@ -80,6 +81,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
             <>
               <h1>{t("mint.title")}</h1>
               <p className="lead" style={{ marginTop: 18 }}>{t("mint.sub")}</p>
+              <MetaMaskNote />
               <div className="tg" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 22 }}>
                 {SHOWN.map((x) => (
                   <div className={`tc${x.k === "Bronze" ? " is-mint" : ""}`} key={x.k}>
