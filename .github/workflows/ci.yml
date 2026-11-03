@@ -92,6 +92,8 @@ jobs:
       - run: ./verify.sh "$(jq -r '.[0].call_id' judge/evidence.json)"
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - name: identity.json is the single source of build identities (generated files in sync, wasm sha + base58 code hash agree)
+        run: node scripts/gen-identity.mjs --check
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:
