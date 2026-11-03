@@ -8,6 +8,10 @@ import { clearSession, inSession, loadSession, saveSession, sessionAuth, session
 import { callWorker } from "./worker";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
 import type { NearConnector } from "@hot-labs/near-connect";
+import dynamic from "next/dynamic";
+import { PRIVY_FLAG, privyEnabled, type PrivyNear } from "./privy";
+
+const PrivyBridge = dynamic(() => import("./privyBridge"), { ssr: false });
 
 let ncPromise: Promise<NearConnector> | null = null;
 /** One NearConnector per page (docs.near.org/web3-apps/tutorials/wallet-login). */
@@ -38,6 +42,14 @@ interface WalletCtx {
   connectNear: () => Promise<void>;
   /** The classic selector (MetaMask / Ethereum, and every other wallet). */
   connectOther: () => void;
+  /** Google / email through Privy (NEAR docs "Privy" tutorial); signs in-page, no wallet popups. */
+  connectSocial: () => void;
+  /** True when the Privy app is configured for this build. */
+  socialEnabled: boolean;
+  /** Which path owns the connection. */
+  via: "nc" | "ws" | "privy" | null;
+  /** Privy is creating the user's NEAR wallet right after sign-in. */
+  socialCreating: boolean;
   choosing: boolean;
   closeChooser: () => void;
   disconnect: () => Promise<void>;
@@ -192,7 +204,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [choosing, setChoosing] = useState(false);
   /** Which library owns the connection: near-connect ("nc") or the wallet selector ("ws"). */
-  const owner = useRef<"nc" | "ws" | null>(null);
+  const owner = useRef<"nc" | "ws" | "privy" | null>(null);
+  const [via, setVia] = useState<"nc" | "ws" | "privy" | null>(null);
+  const [privyOn, setPrivyOn] = useState(false);
+  const [wantLogin, setWantLogin] = useState(0);
+  const privy = useRef<PrivyNear | null>(null);
+  const [socialCreating, setSocialCreating] = useState(false);
+  const onPrivy = useCallback((v: PrivyNear) => {
+    privy.current = v;
+    setSocialCreating(v.creating);
+    if (v.accountId) { owner.current = "privy"; setVia("privy"); setAccountId(v.accountId); localStorage.setItem(PRIVY_FLAG, "1"); setReady(true); setRestoring(false); }
+    else if (!v.creating && owner.current === "privy") { owner.current = null; setVia(null); setAccountId(null); }
+    if (v.ready && !v.creating && !v.accountId) setRestoring(false);
+  }, []);
   /** The sign-in signature, kept (in memory only) when the account had no key yet, to unlock right after minting. */
   const stash = useRef<SignedAuth | null>(null);
   useEffect(() => { setSession(loadSession(accountId)); const t = setInterval(() => setSession(loadSession(accountId)), 30_000); return () => clearInterval(t); }, [accountId]);
@@ -206,8 +230,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const sync = () => {
         const st = r.selector.store.getState();
         const a = st.accounts.find((x) => x.active)?.accountId ?? null;
-        if (owner.current === "nc") return;
-        owner.current = a ? "ws" : null;
+        if (owner.current === "nc" || owner.current === "privy") return;
+        owner.current = a ? "ws" : null; setVia(owner.current);
         setAccountId(a);
         if (st.selectedWalletId === "ethereum-wallets" && a && eth?.request) {
           void eth.request({ method: "eth_accounts", params: [] }).then((v: unknown) => setMismatch(ethMismatch(a, v)), () => setMismatch(null));
@@ -240,10 +264,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem(PENDING);
       history.replaceState(null, "", location.pathname + location.search);
     }
+    if (privyEnabled() && localStorage.getItem(PRIVY_FLAG)) { setRestoring(true); setPrivyOn(true); return; }
     if (localStorage.getItem(NC_WALLET_KEY)) {
       setRestoring(true);
       void nearConnector().then((nc) => nc.getConnectedWallet()).then(({ accounts }) => {
-        owner.current = "nc"; setAccountId(accounts[0]?.accountId ?? null); setReady(true);
+        owner.current = "nc"; setVia("nc"); setAccountId(accounts[0]?.accountId ?? null); setReady(true);
       }).catch(() => { localStorage.removeItem(NC_WALLET_KEY); }).finally(() => setRestoring(false));
       return;
     }
@@ -256,6 +281,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [ensure]);
 
   const connect = useCallback(() => { setChoosing(true); }, []);
+  const connectSocial = useCallback(() => { setChoosing(false); setPrivyOn(true); setWantLogin((n) => n + 1); }, []);
   const connectOther = useCallback(() => {
     setChoosing(false);
     return ensure().then(() => {
@@ -276,14 +302,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [ensure]);
   const disconnect = useCallback(async () => {
     setSession(null); stash.current = null; await revokeStored(accountId);
-    if (owner.current === "nc") { const nc = await nearConnector(); await nc.disconnect().catch(() => {}); localStorage.removeItem(NC_WALLET_KEY); }
+    if (owner.current === "privy") { await privy.current?.logout().catch(() => {}); localStorage.removeItem(PRIVY_FLAG); }
+    else if (owner.current === "nc") { const nc = await nearConnector(); await nc.disconnect().catch(() => {}); localStorage.removeItem(NC_WALLET_KEY); }
     else { await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); }
-    owner.current = null; setAccountId(null); setMismatch(null);
+    owner.current = null; setVia(null); setAccountId(null); setMismatch(null);
   }, [ensure, accountId]);
 
   const sign = useCallback(async (op: Op, params: Record<string, unknown> = {}): Promise<SignedAuth> => {
     const live = loadSession(accountId);
     if (live && inSession(op)) return sessionAuth(live, op, params) as unknown as SignedAuth;
+    if (owner.current === "privy") {
+      const p = privy.current;
+      if (!p?.signer || !accountId) throw new SignError("no_auth");
+      const message = buildMessage(op, accountId, params);
+      const nonceBytes = freshNonce();
+      let r;
+      try { r = await p.signer.signNep413Message(accountId, { message, recipient: NEP413_RECIPIENT, nonce: nonceBytes }); }
+      catch { throw new SignError("wallet_rejected"); }
+      return { account_id: accountId, public_key: r.publicKey.toString(), signature: toB64(r.signature), nonce: toB64(nonceBytes), message, recipient: NEP413_RECIPIENT };
+    }
     if (owner.current === "nc") {
       const nc = await nearConnector();
       const w = await nc.wallet().catch(() => null);
@@ -342,7 +379,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const accs = await w.getAccounts();
       const acc = accs[0]?.accountId;
       if (!acc) return;
-      owner.current = "nc"; setAccountId(acc);
+      owner.current = "nc"; setVia("nc"); setAccountId(acc);
       if (!signed) return;
       const auth = authFromSignIn(req, signed);
       const r = await finishSession(auth, "");
@@ -369,7 +406,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [pending, finishSession]);
   const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser /></Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
@@ -406,6 +443,7 @@ function WalletChooser() {
       <div className="wchoose-card">
         <h2>Connect your wallet</h2>
         <p className="kh-sign-note">{SIGN_NOTE}</p>
+        {c.socialEnabled && <button type="button" className="btn b1" data-testid="choose-social" onClick={c.connectSocial}>Continue with Google / email <small>no wallet needed</small></button>}
         <button type="button" className="btn b1" data-testid="choose-near" onClick={() => void c.connectNear()}>NEAR wallet <small>connect and unlock in one popup</small></button>
         <button type="button" className="btn b2" data-testid="choose-other" onClick={() => void c.connectOther()}>MetaMask / Ethereum wallet, or another wallet</button>
         <button type="button" className="btn b2" data-testid="choose-cancel" onClick={c.closeChooser}>Cancel</button>
