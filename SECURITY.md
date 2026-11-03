@@ -54,8 +54,8 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 
 ## Audit checklist
 
-- [x] Contract: init private, mint minter-only, setters owner-only with 1 yocto, royalty ≤ 10 %, token id ≤ 64 bytes, beat batch ≤ 50.
-- [x] Contract: standard NEP-171 transfer rules (owner or approved, 1 yocto, no self-transfer) and events.
+- [x] Contract: init private, mint minter-only, setters owner-only with 1 yocto, royalty ≤ 10 %, token id 1–64 bytes, beat batch ≤ 50, one key per account on mint and every transfer path, `migrate` self-only and once.
+- [x] Contract: standard NEP-171 transfer rules (owner or approved, 1 yocto, no self-transfer) and events; NEP-178 approvals cleared on every transfer.
 - [x] Worker: every state-changing op authenticates, checks freshness and nonce, reads the owner on chain.
 - [x] Worker: amounts parsed as integers; USD caps checked before any external call; spend rolled back on failure.
 - [x] Worker: withdraw destination must be the signer; cooldown after transfer.
@@ -100,14 +100,14 @@ Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel
 
 `chain_sign` asks `v1.signer` for a signature from the key's derived secp256k1 address (`keyhole/key/<token_id>`). The worker does not parse the 32-byte payload, so it cannot price it in USD and the tier caps do not apply. The guards that do apply, in the enclave (live since build `a55ebb14`; a locked key's `chain_sign` refused on mainnet, see `docs/evidence/publish-a55ebb14`): the holder must sign the request (full-access key or EIP-191), the key must not be locked for sale, the post-transfer cooldown must have passed, and each key can request at most 5 signatures per UTC day (each one costs the minter gas). The public gateway does not expose the op. The derived addresses hold no funds; treat any balance sent there as outside KEYHOLE's spend caps.
 
-## Several keys in one account
+## One key per account
 
-The contract allows one account to receive more than one key (for example by buying a second one). The worker then refuses any signed request that does not name `params.token_id`, so it never operates the wrong key's wallet. Caps follow `holder_tier`, which is the highest tier the account holds.
+Since contract v2 the contract refuses a mint or transfer to an account that already holds a key. One edge stays: during `nft_transfer_call`, if the receiver's `nft_on_transfer` asks to return the key and the sender received another key in the meantime, `nft_resolve_transfer` gives the key back anyway (refusing would strand it). Only an account that both sends with `nft_transfer_call` and receives a second key inside that window can reach it. The worker then refuses any signed request that does not name `params.token_id`, so it never operates the wrong key's wallet, and caps follow `holder_tier` (the highest tier the account holds).
 
 ## Royalty
 
-`config.royalty_bps` is 500 and `nft_payout` returns a 5% split to the treasury for marketplaces that honour NEP-199. A plain `nft_transfer`, or `nft_transfer_payout` with a zero balance, pays nothing; the contract cannot force a royalty on a transfer it does not see the price of.
+`config.royalty_bps` is 500. `nft_payout` and `nft_transfer_payout` return a 5% split to the treasury; the marketplace that called `nft_transfer_payout` pays it. A plain `nft_transfer` or `nft_transfer_call` carries no price, so it pays no royalty (as in every NEP-199 contract); a marketplace that ignores NEP-199 is not forced to pay.
 
-## Contract edge cases (frozen contract)
+## Contract upgrades
 
-`nft_mint` accepts any `token_id` up to 64 bytes, including an empty one. Only the TEE minter can call it, and the worker always mints `k` + 16 hex, so an empty id cannot be produced through KEYHOLE. The deployed contract is not being redeployed during the hackathon.
+`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1 changed code only. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`.
