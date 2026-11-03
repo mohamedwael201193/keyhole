@@ -1,0 +1,6 @@
+OK   TDX quote present (6676 chars)
+OK   registered wasm_hash == executed
+OK   executed == published build 09d481a5
+OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4.wasm sha256 matches
+OK   local reproducible build matches executed wasm (09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4)
+note  worker_measurement is the TDX measurement. It is not the wasm sha256.
