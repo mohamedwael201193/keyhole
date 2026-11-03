@@ -170,7 +170,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
         <div className="examples">
           {CALLS.map((x) => <button key={x.id} onClick={() => { setId(x.id); void go(x.id); }}>{x.label}</button>)}
         </div>
-        <pre className="term" style={{ marginTop: 18 }}>{`H=$(curl -s ${attestation("<call_id>")} | jq -r .executed_wasm_sha256)
+        <pre className="term" tabIndex={0} role="region" aria-label="Verify the enclave hash yourself (shell commands)" style={{ marginTop: 18 }}>{`H=$(curl -s ${attestation("<call_id>")} | jq -r .executed_wasm_sha256)
 curl -s https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$H.wasm | sha256sum
 # tx ${WORKER_PUBLISH_TX}`}</pre>
       </section>
