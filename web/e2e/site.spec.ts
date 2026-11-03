@@ -103,6 +103,7 @@ test("header Connect wallet opens the selector on the first click on a 6x slower
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.getByTestId("connect").click();
+  await page.getByTestId("choose-other").click();
   await expect(page.locator("#near-wallet-selector-modal .nws-modal-wrapper.open")).toBeVisible({ timeout: 20_000 });
 });
 
@@ -119,6 +120,9 @@ test("header Connect wallet opens the selector on the first click", async ({ pag
   const btn = page.getByTestId("connect");
   await expect(btn).toHaveText("Connect wallet");
   await btn.click();
+  await expect(page.getByTestId("wallet-chooser")).toBeVisible();
+  await expect(page.getByTestId("choose-near")).toContainText("one popup");
+  await page.getByTestId("choose-other").click();
   const modal = page.locator("#near-wallet-selector-modal .nws-modal-wrapper.open");
   await expect(modal).toBeVisible({ timeout: 20_000 });
   const box = await modal.boundingBox();

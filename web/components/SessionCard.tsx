@@ -17,14 +17,14 @@ export function SessionCard({ tokenId }: { tokenId: string }) {
     return (
       <div className="sess on" data-testid="session-on">
         <span><b>Unlocked</b> · {minutesLeft(live)} min left · trades and withdrawals up to ${(live.max_usd_micro / 1e6).toFixed(2)} need no more wallet popups.</span>
-        <button className="vbtn" type="button" data-testid="session-revoke" onClick={() => void revokeSession()}>Lock now</button>
+        <button className="btn b2" type="button" data-testid="session-revoke" onClick={() => void revokeSession()}>Lock now</button>
       </div>
     );
   }
   return (
     <div className="sess" data-testid="session-off">
       <span><b>Unlock for 30 minutes.</b> Sign once; the enclave then accepts your reads, trades and withdrawals (to your own account, up to $5 in total) without another popup. Raising limits, locking and proofs still ask your wallet.</span>
-      <button className="vbtn pri" type="button" data-testid="session-unlock" disabled={busy} onClick={async () => { setBusy(true); setErr(null); const r = await startSession(tokenId); setBusy(false); if (!r.ok) setErr(r.code); }}>
+      <button className="btn b1" type="button" data-testid="session-unlock" disabled={busy} onClick={async () => { setBusy(true); setErr(null); const r = await startSession(tokenId); setBusy(false); if (!r.ok) setErr(r.code); }}>
         {busy ? <><Spinner label="Waiting for your wallet" /> Confirm in your wallet…</> : "Unlock (1 signature)"}
       </button>
       {err && <ErrorBox code={err} />}

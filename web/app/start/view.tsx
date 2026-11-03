@@ -15,7 +15,8 @@ import { Busy, Purpose } from "@/components/ui";
 const TITLES: Record<StartStep, string> = { connect: "Connect", mint: "Get your key", unlock: "Unlock", limits: "Limits", fund: "Fund", done: "Ready" };
 
 export function StartView() {
-  const { accountId, connect, session } = useWallet();
+  const { accountId, connect, session, startSession } = useWallet();
+  const [autoTried, setAutoTried] = useState("");
   const [token, setToken] = useState<Token | null>(null);
   const [holder, setHolder] = useState<boolean | null>(null);
   const [limitsDone, setLimitsDone] = useState(false);
@@ -45,6 +46,11 @@ export function StartView() {
     if (Array.isArray(b) && b.some((x) => { const v = x.amount ?? x.balance; return !!v && /^[0-9]+$/.test(v) && BigInt(v) > BigInt(0); })) setFunded(true);
   }, [dash.res]);
 
+  // Right after minting, unlock with the sign-in signature kept from connect (no extra popup when it is still fresh).
+  useEffect(() => {
+    if (!token || session || !mint.res?.output?.ok || autoTried === token.token_id) return;
+    setAutoTried(token.token_id); void startSession(token.token_id, { reuseOnly: true });
+  }, [token, session, mint.res, autoTried, startSession]);
   const step = startStep({ connected: !!accountId, holder, unlocked, limitsDone, funded });
   const idx = START_STEPS.indexOf(step);
   const units = toBaseUnits(amt, ASSETS[asset].decimals);
@@ -52,21 +58,21 @@ export function StartView() {
 
   return (
     <main className="wrap start" data-testid="start">
-      <Purpose eyebrow="Start" title="Set up in five short steps" line="A private trading account, three wallet popups at most. Your progress is kept if you leave." />
+      <Purpose eyebrow="Start" title="Set up in five short steps" line="A private trading account: two wallet popups with a NEAR wallet (connect, mint), three with MetaMask. Your progress is kept if you leave." />
       <ol className="dots" aria-label="Progress" data-testid="start-dots">
         {START_STEPS.map((s, i) => <li key={s} data-state={i < idx ? "done" : i === idx ? "now" : "next"} aria-current={i === idx ? "step" : undefined}>{TITLES[s]}</li>)}
       </ol>
       <section className="scard" data-testid={`start-step-${step}`}>
         {step === "connect" && <>
           <h2>1 · Connect a wallet</h2>
-          <p>Any NEAR wallet, or MetaMask. Nothing is sent and nothing is charged.</p>
-          <button className="vbtn pri" type="button" onClick={() => void connect()} data-testid="start-connect">Connect wallet</button>
+          <p>A NEAR wallet connects and unlocks in one popup. MetaMask works too (one more signature to unlock). Nothing is sent and nothing is charged.</p>
+          <button className="btn b1" type="button" onClick={() => void connect()} data-testid="start-connect">Connect wallet</button>
         </>}
         {step !== "connect" && holder === null && <p><Busy l="Looking for your key" /></p>}
         {step === "mint" && holder === false && <>
           <h2>2 · Get your key</h2>
           <p>A key is a free NFT that opens your own account inside the enclave. One signature, no fee: the enclave pays the NEAR storage.</p>
-          <button className="vbtn pri" type="button" disabled={mint.busy} onClick={() => void mint.run({})} data-testid="start-mint">{mint.busy ? <Busy l={mint.label} /> : "Mint my key (1 signature)"}</button>
+          <button className="btn b1" type="button" disabled={mint.busy} onClick={() => void mint.run({})} data-testid="start-mint">{mint.busy ? <Busy l={mint.label} /> : "Mint my key (1 signature)"}</button>
           {mint.res?.output?.ok && <p className="note"><Busy l="Minted. Waiting for the chain to show it" /></p>}
           {mint.res?.error && <ErrorBox code={mint.res.error.code} />}
         </>}
@@ -76,9 +82,9 @@ export function StartView() {
         </>}
         {step === "limits" && <>
           <h2>4 · Safe limits</h2>
-          <p>Cap what this key can move: <b>$1 per trade, $5 a day</b>. Lowering limits needs no popup; raising them later asks your wallet.</p>
-          <button className="vbtn pri" type="button" disabled={limits.busy} onClick={() => void limits.run(SAFE_LIMITS)} data-testid="start-limits">{limits.busy ? <Busy l={limits.label} /> : "Use safe limits"}</button>{" "}
-          <button className="vbtn" type="button" onClick={() => { if (accountId) localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1"); setLimitsDone(true); }} data-testid="start-limits-skip">Keep my key&apos;s tier limits</button>
+          <p><b>Recommended: $1/trade, $5/day.</b> Lowering limits needs no popup; raising them later asks your wallet.</p>
+          <button className="btn b1" type="button" disabled={limits.busy} onClick={() => void limits.run(SAFE_LIMITS)} data-testid="start-limits">{limits.busy ? <Busy l={limits.label} /> : "Use recommended limits"}</button>{" "}
+          <button className="btn b2" type="button" onClick={() => { if (accountId) localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1"); setLimitsDone(true); }} data-testid="start-limits-skip">Keep my key&apos;s tier limits</button>
           {limits.res?.error && <ErrorBox code={limits.res.error.code} />}
         </>}
         {step === "fund" && <>
@@ -86,15 +92,15 @@ export function StartView() {
           <p>Choose an amount. The enclave gives you a deposit address; nothing moves until you send.</p>
           <div className="vfield"><label htmlFor="st-amt">Amount</label><div className="vbox"><input id="st-amt" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} />
             <select aria-label="Asset" value={asset} onChange={(e) => setAsset(e.target.value as AssetKey)}>{(Object.keys(ASSETS) as AssetKey[]).map((k) => <option key={k} value={k}>{ASSETS[k].symbol}</option>)}</select></div></div>
-          <button className="vbtn pri" type="button" disabled={!units || account.busy} onClick={() => units && void account.run(fundParams(asset, units))} data-testid="start-fund">{account.busy ? <Busy l={account.label} /> : "Get deposit address"}</button>
+          <button className="btn b1" type="button" disabled={!units || account.busy} onClick={() => units && void account.run(fundParams(asset, units))} data-testid="start-fund">{account.busy ? <Busy l={account.label} /> : "Get deposit address"}</button>
           {addr && <DepositQr address={addr} amount={`${amt} ${ASSETS[asset].symbol}`} />}
-          {addr && <p><button className="vbtn" type="button" disabled={dash.busy} onClick={() => void runDash({})} data-testid="start-check">{dash.busy ? <Busy l={dash.label} /> : "I sent it · check balance"}</button> <Link href="/vault" className="note">Skip for now</Link></p>}
+          {addr && <p><button className="btn b2" type="button" disabled={dash.busy} onClick={() => void runDash({})} data-testid="start-check">{dash.busy ? <Busy l={dash.label} /> : "I sent it · check balance"}</button> <Link href="/vault" className="note">Skip for now</Link></p>}
           {account.res?.error && <ErrorBox code={account.res.error.code} />}
         </>}
         {step === "done" && <>
           <h2>You&apos;re set</h2>
           <p>Your account is funded and unlocked. Trade, prove your results, or withdraw from the vault.</p>
-          <Link className="vbtn pri" href="/vault" data-testid="start-go">Open my vault</Link>
+          <Link className="btn b1" href="/vault" data-testid="start-go">Open my vault</Link>
         </>}
       </section>
     </main>

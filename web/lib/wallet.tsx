@@ -6,6 +6,15 @@ import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, toB64, ut
 import { NEP413_RECIPIENT } from "./config";
 import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
 import { callWorker } from "./worker";
+import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
+import type { NearConnector } from "@hot-labs/near-connect";
+
+let ncPromise: Promise<NearConnector> | null = null;
+/** One NearConnector per page (docs.near.org/web3-apps/tutorials/wallet-login). */
+function nearConnector(): Promise<NearConnector> {
+  if (!ncPromise) ncPromise = import("@hot-labs/near-connect").then(({ NearConnector }) => new NearConnector({ network: "mainnet", features: { signMessage: true } }));
+  return ncPromise;
+}
 
 /** Tell the enclave to revoke the stored session (best effort) and forget it locally. */
 async function revokeStored(account: string | null) {
@@ -23,7 +32,14 @@ interface WalletCtx {
   restoring: boolean;
   /** MetaMask's active account when it differs from the connected one (lowercase 0x…), else null. */
   mismatch: string | null;
+  /** Opens the in-site chooser: a NEAR wallet (connect + unlock in one popup) or MetaMask / other wallets. */
   connect: () => void;
+  /** near-connect: sign in and sign the session request in one wallet prompt. */
+  connectNear: () => Promise<void>;
+  /** The classic selector (MetaMask / Ethereum, and every other wallet). */
+  connectOther: () => void;
+  choosing: boolean;
+  closeChooser: () => void;
   disconnect: () => Promise<void>;
   /** Signs a NEP-413 request for the worker. Redirect wallets resume via `pending` after return. */
   sign: (op: Op, params?: Record<string, unknown>) => Promise<SignedAuth>;
@@ -32,7 +48,7 @@ interface WalletCtx {
   /** Live app session (one wallet signature, 30 min), or null. */
   session: Session | null;
   /** One wallet popup: signs the NEP-413 'session' request and stores the enclave's token. */
-  startSession: (tokenId: string) => Promise<{ ok: true } | { ok: false; code: string }>;
+  startSession: (tokenId: string, opts?: { reuseOnly?: boolean }) => Promise<{ ok: true } | { ok: false; code: string }>;
   revokeSession: () => Promise<void>;
 }
 const Ctx = createContext<WalletCtx | null>(null);
@@ -174,6 +190,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [restoring, setRestoring] = useState(false);
   const [mismatch, setMismatch] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [choosing, setChoosing] = useState(false);
+  /** Which library owns the connection: near-connect ("nc") or the wallet selector ("ws"). */
+  const owner = useRef<"nc" | "ws" | null>(null);
+  /** The sign-in signature, kept (in memory only) when the account had no key yet, to unlock right after minting. */
+  const stash = useRef<SignedAuth | null>(null);
   useEffect(() => { setSession(loadSession(accountId)); const t = setInterval(() => setSession(loadSession(accountId)), 30_000); return () => clearInterval(t); }, [accountId]);
   const [pending, setPending] = useState<(SignedAuth & { ctx?: OpResume | null }) | null>(null);
   const loading = useRef<Promise<void> | null>(null);
@@ -185,6 +206,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const sync = () => {
         const st = r.selector.store.getState();
         const a = st.accounts.find((x) => x.active)?.accountId ?? null;
+        if (owner.current === "nc") return;
+        owner.current = a ? "ws" : null;
         setAccountId(a);
         if (st.selectedWalletId === "ethereum-wallets" && a && eth?.request) {
           void eth.request({ method: "eth_accounts", params: [] }).then((v: unknown) => setMismatch(ethMismatch(a, v)), () => setMismatch(null));
@@ -217,6 +240,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem(PENDING);
       history.replaceState(null, "", location.pathname + location.search);
     }
+    if (localStorage.getItem(NC_WALLET_KEY)) {
+      setRestoring(true);
+      void nearConnector().then((nc) => nc.getConnectedWallet()).then(({ accounts }) => {
+        owner.current = "nc"; setAccountId(accounts[0]?.accountId ?? null); setReady(true);
+      }).catch(() => { localStorage.removeItem(NC_WALLET_KEY); }).finally(() => setRestoring(false));
+      return;
+    }
     // Only load the wallet bundle eagerly if the user connected before; otherwise wait for a click (keeps LCP fast).
     if (localStorage.getItem("near-wallet-selector:selectedWalletId") || localStorage.getItem("near-wallet-selector:recentlySignedInWallets")) {
       setRestoring(true);
@@ -225,7 +255,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [ensure]);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(() => { setChoosing(true); }, []);
+  const connectOther = useCallback(() => {
+    setChoosing(false);
     return ensure().then(() => {
       const modal = ref.current?.modal;
       if (!modal) return;
@@ -243,12 +275,27 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     });
   }, [ensure]);
   const disconnect = useCallback(async () => {
-    setSession(null); await revokeStored(accountId); await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); setAccountId(null); setMismatch(null);
+    setSession(null); stash.current = null; await revokeStored(accountId);
+    if (owner.current === "nc") { const nc = await nearConnector(); await nc.disconnect().catch(() => {}); localStorage.removeItem(NC_WALLET_KEY); }
+    else { await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); }
+    owner.current = null; setAccountId(null); setMismatch(null);
   }, [ensure, accountId]);
 
   const sign = useCallback(async (op: Op, params: Record<string, unknown> = {}): Promise<SignedAuth> => {
     const live = loadSession(accountId);
     if (live && inSession(op)) return sessionAuth(live, op, params) as unknown as SignedAuth;
+    if (owner.current === "nc") {
+      const nc = await nearConnector();
+      const w = await nc.wallet().catch(() => null);
+      if (!w || !accountId) throw new SignError("no_auth");
+      const message = buildMessage(op, accountId, params);
+      const nonceBytes = freshNonce();
+      let r;
+      try { r = await w.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: nonceBytes }); }
+      catch (e) { const m = String((e as Error)?.message || e); throw new SignError(/not supported|not implemented/i.test(m) ? "wallet_no_sign_message" : "wallet_rejected"); }
+      if (!r?.signature) throw new SignError("wallet_rejected");
+      return { account_id: r.accountId || accountId, public_key: r.publicKey, signature: r.signature, nonce: toB64(nonceBytes), message, recipient: NEP413_RECIPIENT };
+    }
     await ensure();
     const sel = ref.current!.selector;
     const acc = sel.store.getState().accounts.find((a) => a.active)?.accountId;
@@ -283,10 +330,38 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     saveSession(s); setSession(s);
     return { ok: true as const };
   }, []);
-  const startSession = useCallback(async (tokenId: string) => {
+  const connectNear = useCallback(async () => {
+    setChoosing(false);
+    const nc = await nearConnector();
+    const req = signInRequest();
+    let signed: { accountId: string; publicKey: string; signature: string } | undefined;
+    const onSigned = (t: { accounts: { accountId: string; publicKey?: string; signedMessage?: { accountId: string; publicKey: string; signature: string } }[] }) => { signed = t.accounts[0]?.signedMessage; };
+    nc.on("wallet:signInAndSignMessage", onSigned);
+    try {
+      const w = await nc.connect({ signMessageParams: req });
+      const accs = await w.getAccounts();
+      const acc = accs[0]?.accountId;
+      if (!acc) return;
+      owner.current = "nc"; setAccountId(acc);
+      if (!signed) return;
+      const auth = authFromSignIn(req, signed);
+      const r = await finishSession(auth, "");
+      // No key yet: keep the signature to unlock right after minting (it stays valid for a few minutes).
+      if (!r.ok && (r.code === "not_owner" || r.code === "no_key")) stash.current = auth;
+    } catch { /* closed the wallet window */ }
+    finally { nc.off("wallet:signInAndSignMessage", onSigned); }
+  }, [finishSession]);
+  const startSession = useCallback(async (tokenId: string, opts?: { reuseOnly?: boolean }) => {
+    const s0 = stash.current;
+    if (s0 && s0.account_id === accountId && reusable(s0.message)) {
+      stash.current = null;
+      const r = await finishSession(s0, tokenId);
+      if (r.ok) return r;
+    }
+    if (opts?.reuseOnly) return { ok: false as const, code: "no_signin" };
     try { return await finishSession(await sign("session", sessionParams(tokenId)), tokenId); }
     catch (e) { return { ok: false as const, code: e instanceof SignError ? e.code : "wallet_rejected" }; }
-  }, [sign, finishSession]);
+  }, [sign, finishSession, accountId]);
   // Redirect wallets come back with the signed 'session' request in `pending`.
   useEffect(() => {
     if (!pending) return;
@@ -294,7 +369,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [pending, finishSession]);
   const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser /></Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
@@ -320,6 +395,23 @@ export function ethMismatch(connected: string, ethAccounts: unknown): string | n
   if (!/^0x[0-9a-f]{40}$/i.test(connected) || !Array.isArray(ethAccounts) || ethAccounts.length === 0) return null;
   const cur = String(ethAccounts[0]).toLowerCase();
   return /^0x[0-9a-f]{40}$/.test(cur) && cur !== connected.toLowerCase() ? cur : null;
+}
+
+/** In-site chooser (not a wallet popup). */
+function WalletChooser() {
+  const c = useContext(Ctx);
+  if (!c?.choosing) return null;
+  return (
+    <div className="wchoose" role="dialog" aria-modal="true" aria-label="Connect your wallet" data-testid="wallet-chooser" onClick={(e) => { if (e.target === e.currentTarget) c.closeChooser(); }}>
+      <div className="wchoose-card">
+        <h2>Connect your wallet</h2>
+        <p className="kh-sign-note">{SIGN_NOTE}</p>
+        <button type="button" className="btn b1" data-testid="choose-near" onClick={() => void c.connectNear()}>NEAR wallet <small>connect and unlock in one popup</small></button>
+        <button type="button" className="btn b2" data-testid="choose-other" onClick={() => void c.connectOther()}>MetaMask / Ethereum wallet, or another wallet</button>
+        <button type="button" className="btn b2" data-testid="choose-cancel" onClick={c.closeChooser}>Cancel</button>
+      </div>
+    </div>
+  );
 }
 
 export function useWallet() { const c = useContext(Ctx); if (!c) throw new Error("WalletProvider missing"); return c; }

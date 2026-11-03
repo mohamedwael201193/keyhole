@@ -147,3 +147,12 @@
 .start .dots li[data-state=now]{color:var(--ink,#1d2b2a);font-weight:600}
 .start .scard{border:1px solid var(--line,#d9d2c3);border-radius:14px;padding:20px;max-width:640px}
 .start .scard select{border:0;background:transparent;font:inherit}
+.wchoose{position:fixed;inset:0;z-index:9000;background:#1A2A2C66;display:flex;align-items:center;justify-content:center;padding:16px}
+.wchoose-card{background:#F6F1E7;color:#1A2A2C;border:1px solid #B8893E;border-radius:24px;padding:24px;width:min(420px,100%);display:grid;gap:12px}
+.wchoose-card h2{font-family:var(--serif);margin:0;color:#1F4B4F}
+.wchoose-card small{display:block;font-weight:400;opacity:.85}
+.start .scard h2{font-size:clamp(22px,4vw,30px);margin:0 0 8px}.start .scard .btn{margin:6px 6px 0 0}.sess .btn{margin:0}
+.start .vfield{display:grid;gap:6px;margin:12px 0}
+.start .vbox,.depqr .vbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line,#d9d2c3);border-radius:10px;padding:8px 12px;background:#FBF8F2;min-width:0}
+.start .vbox input{border:0;background:transparent;font:inherit;flex:1;min-width:0}
+.depqr .addr{overflow-wrap:anywhere;font-family:var(--mono,monospace);font-size:13px;flex:1;min-width:0}
