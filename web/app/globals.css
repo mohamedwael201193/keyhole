@@ -22,3 +22,6 @@
 .spin{display:inline-block;width:.9em;height:.9em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:khspin .7s linear infinite;vertical-align:-.1em}@keyframes khspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
 .cw.warn{background:var(--coral,#e5654b);color:#fff;border-color:transparent}
 .mmnote{margin:14px 0;font-size:.92em;max-width:62ch}.mmnote summary{cursor:pointer;color:var(--coral,#c4553e);font-weight:600}.mmnote p{margin:.5em 0}
+
+.demo-tag { display: inline-block; font-size: 13px; padding: 4px 10px; border-radius: 8px; background: #fdecc8; color: #7a4a06; border: 1px solid #e8b860; margin: 4px 0 10px; }
+.warnbal { color: #9a3412; font-weight: 600; }

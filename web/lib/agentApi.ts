@@ -32,6 +32,10 @@ export function redact(r: AgentRead | "swap", body: any): unknown {
 export const policyWarnings = (q: any): string[] =>
   (Array.isArray(q?.warnings) ? q.warnings : []).map((w: any) => String(w?.code ?? "")).filter((c: string) => c.startsWith("policy_") || c.startsWith("budget"));
 
+/** Balance codes from a dry quote (e.g. insufficient_balance). Shown, never hidden: the demo agent is unfunded. */
+export const balanceWarnings = (q: any): string[] =>
+  (Array.isArray(q?.warnings) ? q.warnings : []).map((w: any) => String(w?.code ?? "")).filter((c: string) => /balance|insufficient|fund/i.test(c) && !c.startsWith("policy_") && !c.startsWith("budget"));
+
 /** Key-order-independent JSON, so a live policy can be compared with the builder's output. */
 export const canon = (v: unknown): string =>
   Array.isArray(v) ? `[${v.map(canon).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v as object).sort().map((k) => `${JSON.stringify(k)}:${canon((v as any)[k])}`).join(",")}}` : JSON.stringify(v);

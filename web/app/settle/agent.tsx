@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { buildPolicy } from "@/lib/agentPolicy";
-import { policyWarnings, canon } from "@/lib/agentApi";
+import { balanceWarnings, policyWarnings, canon } from "@/lib/agentApi";
 import { TxLink } from "@/components/TxLink";
 
 type Q = { limits: Record<string, number>; usage: Record<string, number>; observed_at: string };
@@ -14,7 +14,7 @@ export function AgentPanel() {
   const [q, setQ] = useState<Q | null>(null);
   const [pol, setPol] = useState<Pol | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [dry, setDry] = useState<{ usd: string; warn: string[] } | null>(null);
+  const [dry, setDry] = useState<{ usd: string; warn: string[]; bal: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const get = (r: string) => fetch(`/api/agent?r=${r}`).then((x) => x.json()).then((j) => (j.ok ? j.body : Promise.reject(j.error?.code)));
@@ -24,7 +24,7 @@ export function AgentPanel() {
     setBusy(true); setDry(null);
     try {
       const j = await (await fetch("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: USDC, dest: "nep141:wrap.near", amount: usdMicro }) })).json();
-      if (j.ok) setDry({ usd: j.body.spend?.amount_usd, warn: policyWarnings(j.body) }); else setErr(j.error?.code);
+      if (j.ok) setDry({ usd: j.body.spend?.amount_usd, warn: policyWarnings(j.body), bal: balanceWarnings(j.body) }); else setErr(j.error?.code);
     } finally { setBusy(false); }
   }
   const expect = buildPolicy({ tier: 1 });
@@ -32,6 +32,7 @@ export function AgentPanel() {
   return (
     <section className="card agent" data-testid="agent">
       <h2>Agent API · holder caps as policy</h2>
+      <p className="demo-tag" data-testid="agent-demo"><b>Demo</b> · one shared NEAR Intents agent, $0 balance. Dry quotes only: it shows the policy the enclave would install for a holder, nothing is moved.</p>
       <p className="note">KEYHOLE tier caps are written into a NEAR Intents Agent API policy, so the agent&apos;s own wallet refuses what the key would refuse. Demo partner deployment on mainnet; quotes are dry and the agent holds no funds.</p>
       {err && <p className="note" role="alert" data-testid="agent-err">Agent API: {err}</p>}
       {net && <p className="note" data-testid="agent-net">Network <b>{net.network}</b> · status <b>{net.status.overall}</b></p>}
@@ -52,7 +53,7 @@ export function AgentPanel() {
         <button className="btn b1" disabled={busy} onClick={() => void quote("500000")} data-testid="agent-dry-ok">Dry quote $0.50</button>
         <button className="btn b1" disabled={busy} onClick={() => void quote("2000000")} data-testid="agent-dry-over">Dry quote $2.00</button>
       </div>
-      {dry && <p className="dout" data-testid="agent-dry-out">${Number(dry.usd).toFixed(2)} · {dry.warn.length ? <b>policy would refuse: {dry.warn.join(", ")}</b> : "within policy"}</p>}
+      {dry && <p className="dout" data-testid="agent-dry-out">${Number(dry.usd).toFixed(2)} · {dry.warn.length ? <b>policy would refuse: {dry.warn.join(", ")}</b> : "within policy"}{dry.bal.length ? <> · <span className="warnbal" data-testid="agent-dry-bal">balance warning: {dry.bal.join(", ")} (demo agent holds $0)</span></> : null}</p>}
     </section>
   );
 }

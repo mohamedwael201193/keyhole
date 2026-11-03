@@ -1,6 +1,6 @@
 // P2: Agent API gateway edge cases — paths, dry-swap bodies, redaction, policy warnings. Each must fail closed.
 import { describe, expect, it } from "vitest";
-import { agentPath, drySwapBody, redact, policyWarnings, canon } from "@/lib/agentApi";
+import { agentPath, balanceWarnings, drySwapBody, redact, policyWarnings, canon } from "@/lib/agentApi";
 import { OC_ASSETS } from "@/lib/oneclick";
 
 const ID = "a".repeat(64);
@@ -38,4 +38,9 @@ describe("canon", () => {
   it("is key-order independent", () => { expect(canon({ b: 1, a: [2, { d: 3, c: 4 }] })).toBe(canon({ a: [2, { c: 4, d: 3 }], b: 1 })); });
   it("distinguishes array order", () => { expect(canon([1, 2])).not.toBe(canon([2, 1])); });
   it("distinguishes types", () => { expect(canon({ a: "1" })).not.toBe(canon({ a: 1 })); });
+});
+
+describe("balanceWarnings", () => {
+  it("keeps insufficient_balance that policyWarnings drops", () => { expect(balanceWarnings({ warnings: [{ code: "policy_transaction_limit_exceeded" }, { code: "insufficient_balance" }] })).toEqual(["insufficient_balance"]); });
+  it.each([undefined, null, {}, { warnings: [{ code: "budget_daily_exceeded" }] }])("%j gives none", (q) => { expect(balanceWarnings(q)).toEqual([]); });
 });
