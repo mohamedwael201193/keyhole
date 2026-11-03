@@ -48,3 +48,17 @@ export const isAddr = (s: string) => /^[0-9a-f]{64}$|^0x[0-9a-fA-F]{40}$|^[1-9A-
 /** Per-IP, per-minute limits on /api/oneclick. Status reads are read-only and /settle makes one per listed order, so they get their own, larger window; dry quotes keep the small one. */
 export const QUOTE_PER_MIN = 10;
 export const STATUS_PER_MIN = 60;
+
+/** The four places funds can be during a 1Click order, in order. */
+export const FUND_STEPS = ["Your wallet", "1Click deposit address", "NEAR Intents (intents.near)", "Recipient"] as const;
+/** Which step the funds are at for a status, and whether the last step is the refund address instead of the recipient. */
+export function fundsStep(status: string | null | undefined): { step: number; refund: boolean } | null {
+  switch (status) {
+    case "PENDING_DEPOSIT": return { step: 0, refund: false };
+    case "KNOWN_DEPOSIT_TX": case "INCOMPLETE_DEPOSIT": return { step: 1, refund: false };
+    case "PROCESSING": return { step: 2, refund: false };
+    case "SUCCESS": return { step: 3, refund: false };
+    case "REFUNDED": case "FAILED": return { step: 3, refund: true };
+    default: return null;
+  }
+}
