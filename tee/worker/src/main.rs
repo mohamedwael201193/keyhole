@@ -102,7 +102,7 @@ mod host {
         if req.op != op { return Err(err("op_mismatch", format!("signed op '{}' but called '{}'", req.op, op))); }
         if !eip191 {
             let (ak, e) = rpc::view_access_key(&auth.account_id, &auth.public_key, "final");
-            if !e.is_empty() || !ak.contains("FullAccess") {
+            if !e.is_empty() || !is_full_access(&ak) {
                 return Err(err("key_not_owned", "the signing key is not a full-access key of this account"));
             }
         }
@@ -113,7 +113,13 @@ mod host {
         // A holder of several keys names one in the signed params; otherwise the first key held.
         let token = if !need_key && tier.is_none() { None } else if let Some(t) = s(&req.params, "token_id") {
             if owns(&t, &account)? { Some(t) } else { None }
-        } else { held_token(&account)? };
+        } else {
+            if tier.is_some() {
+                let n = view(&keys_contract(), "nft_supply_for_owner", json!({"account_id": account}))?;
+                pick_token(None, n.as_str().and_then(|x| x.parse().ok()).unwrap_or(0))?;
+            }
+            held_token(&account)?
+        };
         if need_key && token.is_none() {
             return Err(err("not_owner", "only the current key holder can authorize this"));
         }
@@ -251,6 +257,11 @@ mod host {
         body["dry"] = json!(false);
         match oneclick_quote(&body) {
             Ok(real) => {
+                let wet = real.pointer("/quote/amountInUsd").and_then(|v| v.as_str()).and_then(parse_usd_micro);
+                if let Err(e) = assert_wet_within_dry(usd, wet) {
+                    let _ = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), -(usd as i64));
+                    return Err(e);
+                }
                 out["quote"] = real["quote"].clone();
                 out["deposit_address"] = real.pointer("/quote/depositAddress").cloned().unwrap_or(Value::Null);
                 Ok(out)
@@ -285,12 +296,12 @@ mod host {
         if !minter_can_mint(yocto_of(&acct)) {
             return Err(err("minter_low_balance", "the minter account cannot cover this mint"));
         }
-        let day = c.now_ms / 86_400_000;
-        bump_within(&mut Host, &format!("g/mints/{}", day), 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into())?;
         let tid = token_id_for(&c.account);
-        // An account that minted and then moved its key would reuse this id: refuse before sending.
+        // An account that minted and then moved its key would reuse this id: refuse before the quota is touched.
         let existing = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?;
         assert_mint_id_free(existing.get("owner_id").and_then(|o| o.as_str()))?;
+        let day = c.now_ms / 86_400_000;
+        bump_within(&mut Host, &format!("g/mints/{}", day), 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into())?;
         let (media, media_hash) = bronze_media(&keys_contract(), &tid);
         let args = json!({"token_id": tid, "receiver_id": c.account, "tier": 1,
             "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1, "media": media, "media_hash": media_hash}});
@@ -329,6 +340,12 @@ mod host {
         if let Some(v) = custody_lookup(&mut Host, token, owner)? {
             let j: Value = serde_json::from_slice(&v).map_err(|_| err("storage", "wallet record corrupt"))?;
             return Ok((s(&j, "api_key").unwrap_or_default(), s(&j, "near_account_id").unwrap_or_default()));
+        }
+        let ck = tkey(token, "wallet_claim");
+        let now = chain_now_ms().unwrap_or(0);
+        if !Host.set_if_absent(&ck, now.to_string().as_bytes())? {
+            if !wallet_claim_free(&Host.get(&ck), now) { return Err(err("busy", "this key's wallet is being created, retry in a moment")); }
+            Host.set(&ck, now.to_string().as_bytes());
         }
         let (st, j) = http("POST", &format!("{}/register", OL), None, None)?;
         let (Some(key), Some(id)) = (s(&j, "api_key"), s(&j, "near_account_id")) else {
@@ -676,6 +693,14 @@ mod host {
         let path = chainsig::path_for(&tid).ok_or_else(|| err("no_key", "no key NFT"))?;
         let hx = s(&c.req.params, "payload_hash").unwrap_or_default();
         let args = chainsig::sign_args(&hx, &path).ok_or_else(|| err("bad_params", "params.payload_hash must be 32 bytes hex"))?;
+        // Same holder guards as a withdraw: no signing while the key is locked for sale or inside the
+        // post-transfer cooldown, and a small per-key daily count (each request costs the minter gas).
+        prov_sync_owner(&tid, &c.account, c.now_ms);
+        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        assert_no_cooldown(&evs, &c.account, c.now_ms)?;
+        assert_unlocked(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms)?;
+        let qk = tkey(&tid, &format!("chainsig/{}", c.now_ms / 86_400_000));
+        bump_within(&mut Host, &qk, 1, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
         let (mid, msk) = minter()?;
         let a = args.to_string();
         let (tx, out) = send_full(&mid, &msk, chainsig::SIGNER, &[Action::FunctionCall { method: "sign", args: a.as_bytes(), gas: chainsig::CHAINSIG_GAS, deposit: 1 }])?;
@@ -688,7 +713,7 @@ mod host {
         let child = chainsig::derive(&root, &mid, &path);
         let h: [u8; 32] = hex::decode(hx.trim_start_matches("0x")).ok().and_then(|v| v.try_into().ok()).ok_or_else(|| err("bad_params", "hash"))?;
         if !chainsig::recovers_to(&h, &sig, &child) { return Err(err("bad_signature", "signature does not recover to this key's address")); }
-        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", &hx));
+        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", hx));
         Ok(json!({"ok": true, "op": "chain_sign", "token_id": tid, "path": path, "tx": tx, "payload_hash": hx,
             "signature": sig, "evm_address": chainsig::evm_address(&child)}))
     }

@@ -795,3 +795,40 @@ pub fn parse_beat_key(s: &str, minter_pk: &[u8; 32]) -> Result<[u8; 32], Error> 
     Ok(pk)
 }
 
+
+/// `view_access_key` result: true only when `permission` is the JSON string "FullAccess".
+/// A function-call key is an object and never passes, whatever its method names or receiver are.
+pub fn is_full_access(raw: &str) -> bool {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(raw) else { return false };
+    let p = v.get("permission").or_else(|| v.pointer("/result/permission"));
+    matches!(p, Some(serde_json::Value::String(s)) if s == "FullAccess")
+}
+
+/// Which key a request operates: the one named in the signed params, or the only one held.
+/// Holding several keys without naming one is refused, so a buyer never runs the wrong account.
+pub fn pick_token(named: Option<&str>, owned: u64) -> Result<(), Error> {
+    if named.is_none() && owned > 1 {
+        return Err(err("bad_params", "this account holds several keys: sign params.token_id to choose one"));
+    }
+    Ok(())
+}
+
+/// The executable quote may not be priced above the dry quote the caps were checked against.
+pub fn assert_wet_within_dry(dry_usd: u64, wet_usd: Option<u64>) -> Result<u64, Error> {
+    match wet_usd {
+        Some(w) if w <= dry_usd => Ok(w),
+        Some(_) => Err(err("quote_moved", "the executable quote is priced above the checked quote; nothing was committed, retry")),
+        None => Err(err("upstream", "executable quote has no USD value; cannot apply caps")),
+    }
+}
+
+/// Chain Signatures requests per key per UTC day (each costs the minter gas).
+pub const CHAIN_SIGN_PER_DAY: i64 = 5;
+
+/// First custody-wallet registration is claimed before calling OutLayer, so two parallel first
+/// requests cannot register two wallets. A claim older than this is treated as abandoned.
+pub const WALLET_CLAIM_TTL_MS: u64 = 120_000;
+pub fn wallet_claim_free(existing: &[u8], now_ms: u64) -> bool {
+    std::str::from_utf8(existing).ok().and_then(|s| s.parse::<u64>().ok())
+        .map(|t| now_ms.saturating_sub(t) > WALLET_CLAIM_TTL_MS).unwrap_or(true)
+}
