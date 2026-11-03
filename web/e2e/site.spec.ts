@@ -675,6 +675,7 @@ test("settle: the real SOL→NEAR order reads SUCCESS live from 1Click and the N
   await page.goto("/settle");
   const ok = page.locator('[data-deposit="6pvcZZ2xMUhDpQmySGaVR2Cm9e3Aixx5QUQUPS7RAcha"]');
   await expect(ok.locator('[data-status="SUCCESS"]')).toBeVisible({ timeout: 30_000 });
+  await ok.getByTestId("proof").locator("summary").click();
   await expect(ok.locator('a[href="https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh"]').first()).toBeVisible();
   await expect(ok.getByTestId("st-updated")).toContainText("2026");
   await expect(page.locator('[data-deposit="5sESFfrM4Tk6L5euDCTjjMxVAs5xmbZpj4i3V29s3KJ"] [data-status="REFUNDED"]')).toBeVisible({ timeout: 30_000 });
@@ -726,7 +727,7 @@ test("settle: a vault trade is shown end to end with its attested call and inten
   await page.goto("/settle");
   const v = page.getByTestId("vault-trade");
   await expect(v).toContainText("Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so");
-  await expect(v.locator('a[href="/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539"]')).toBeVisible();
+  await expect(v.locator('a[href="/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539"]').first()).toBeVisible();
   await expect(page.getByText(/due at the deadline/)).toHaveCount(0);
 });
 

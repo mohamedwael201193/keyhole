@@ -1,31 +1,36 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
-import { OC_ASSETS, statusOf, toUnits, assetById, FUND_STEPS, fundsStep } from "@/lib/oneclick";
+import { useEffect, useRef, useState } from "react";
+import { OC_ASSETS, statusOf, toUnits, assetById, fundsStep } from "@/lib/oneclick";
 import Link from "next/link";
 import { SETTLEMENTS, RECORDED_FAILED, VAULT_TRADE, type Settlement } from "@/lib/settlements";
-import { tx, intentTx } from "@/lib/config";
+import { tx, txAlt, intentTx } from "@/lib/config";
 import { AgentPanel } from "./agent";
-import { TxLink } from "@/components/TxLink";
+import { Badge as UBadge, Proof, Purpose, Skeleton, Spinner, type ProofRow, type Tone } from "@/components/ui";
 
 type Dry = { amountInFormatted: string; amountInUsd: string; amountOutFormatted: string; amountOutUsd: string; timeEstimate: number };
 type St = { status: string; updatedAt?: string; details: { depositedAmountFormatted: string | null; amountOutFormatted: string | null; refundedAmountFormatted: string | null; nearTxHashes: string[]; intentHashes: string[] } };
 
+const TONE: Record<string, Tone> = { ok: "ok", bad: "bad", wait: "wait", info: "info", warn: "warn" };
 function Badge({ status }: { status: string }) {
   const s = statusOf(status);
-  return <span className={`stb ${s.tone}`} data-testid="st-badge" data-status={status}>{s.label}</span>;
+  return <UBadge tone={TONE[s.tone] ?? "info"} testid="st-badge" status={status}>{s.label}</UBadge>;
 }
 
-function FundsPath({ status }: { status: string }) {
+const PROG = ["Deposit sent", "Intent matched", "Settled", "Funds here"] as const;
+/** Four plain steps across the card; the last one says "Refunded" when the funds went back. */
+function Progress({ status }: { status: string }) {
   const f = fundsStep(status);
   if (!f) return null;
   return (
-    <ol className="fpath" data-testid="funds-path" data-step={f.step} data-refund={f.refund ? "1" : "0"}>
-      {FUND_STEPS.map((label, i) => (
-        <li key={label} className={i < f.step ? "done" : i === f.step ? "here" : ""}>{i === 3 && f.refund ? "Refund address" : label}{i === f.step && <b> · funds are here</b>}</li>
-      ))}
+    <ol className="oprog" data-testid="funds-path" data-step={f.step} data-refund={f.refund ? "1" : "0"} aria-label="Order progress">
+      {PROG.map((label, i) => {
+        const cls = i < f.step ? "done" : i === f.step ? (f.refund ? "here refund" : f.step === 3 ? "done" : "here") : "";
+        return <li key={label} className={cls}>{i === 3 && f.refund ? "Refunded to sender" : label}</li>;
+      })}
     </ol>
   );
 }
+const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo" }) + " (UTC+2)";
 
 function Row({ s }: { s: Settlement }) {
   const [st, setSt] = useState<St | null>(null);
@@ -36,27 +41,37 @@ function Row({ s }: { s: Settlement }) {
     return () => { dead = true; };
   }, [s.depositAddress]);
   const info = st ? statusOf(st.status) : null;
+  const rows: ProofRow[] = [
+    { label: "deposit tx", value: s.depositTx, href: s.depositTxUrl ?? tx(s.depositTx), alt: s.depositTxUrl ? undefined : txAlt(s.depositTx) },
+    { label: "deposit address", value: s.depositAddress },
+    ...(st?.details.intentHashes ?? []).map((h) => ({ label: "intent", value: h, href: intentTx(h) })),
+    ...(st?.details.nearTxHashes ?? []).slice(-1).map((h) => ({ label: "settlement tx", value: h, href: tx(h), alt: txAlt(h) })),
+    ...(s.destTx ? [{ label: "destination tx", value: s.destTx.hash, href: s.destTx.url }] : []),
+  ];
   return (
-    <article className="card srow" data-testid="settlement" data-deposit={s.depositAddress}>
-      <div className="shead"><b>{s.label}</b>{st ? <Badge status={st.status} /> : <span className="stb wait">{err ? "status unavailable" : "…"}</span>}</div>
-      {s.note && <p className="note">{s.note}</p>}
-      {info && <p className="where"><span>Where the funds are:</span> {info.where}</p>}
-      {st && <FundsPath status={st.status} />}
-      <dl className="kv">
-        <dt>deposit tx</dt><dd className="mono"><a href={s.depositTxUrl ?? tx(s.depositTx)} target="_blank" rel="noreferrer">{s.depositTx.slice(0, 10)}…</a></dd>
-        <dt>deposit address</dt><dd className="mono">{s.depositAddress.slice(0, 10)}…{s.depositAddress.slice(-6)}</dd>
-        {st?.details.depositedAmountFormatted && <><dt>deposited</dt><dd>{st.details.depositedAmountFormatted}</dd></>}
-        {st?.details.amountOutFormatted && <><dt>received</dt><dd>{st.details.amountOutFormatted}</dd></>}
-        {st?.details.refundedAmountFormatted && st.details.refundedAmountFormatted !== "0" && <><dt>refunded</dt><dd>{st.details.refundedAmountFormatted}</dd></>}
-        {st?.details.intentHashes?.map((h) => <Fragment key={h}><dt>intent</dt><dd className="mono"><a href={intentTx(h)} target="_blank" rel="noreferrer">{h.slice(0, 10)}…</a></dd></Fragment>)}
-        {st?.details.nearTxHashes?.slice(-1).map((h) => <Fragment key={h}><dt>settlement tx</dt><dd className="mono"><TxLink hash={h} /></dd></Fragment>)}
-        {s.destTx && <><dt>destination tx</dt><dd className="mono"><a href={s.destTx.url} target="_blank" rel="noreferrer">{s.destTx.hash.slice(0, 10)}…</a></dd></>}
-        <dt>quote</dt><dd>{s.quote}</dd>
-        {st?.updatedAt && <><dt>1Click updated</dt><dd data-testid="st-updated">{new Date(st.updatedAt).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}</dd></>}
-      </dl>
+    <article className="ocard" data-testid="settlement" data-deposit={s.depositAddress}>
+      <div className="ohead">
+        <h3 className="oroute">{s.label}</h3>
+        {st ? <Badge status={st.status} /> : err ? <UBadge tone="warn">Status unavailable</UBadge> : <span data-testid="st-loading"><Spinner label="Reading live status" /></span>}
+      </div>
+      <p className="oamt">{s.quote}{st?.details.amountOutFormatted ? <> · <b>received {st.details.amountOutFormatted}</b></> : null}{st?.details.refundedAmountFormatted && st.details.refundedAmountFormatted !== "0" ? <> · <b>refunded {st.details.refundedAmountFormatted}</b></> : null}</p>
+      {st ? <Progress status={st.status} /> : !err && <Skeleton lines={1} />}
+      {info && <p className="owhere"><b>Where the funds are:</b> {info.where}</p>}
+      {s.note && <p className="note" style={{ margin: 0 }}>{s.note}</p>}
+      {st?.updatedAt && <p className="note" style={{ margin: 0 }}>Live from 1Click, updated <span data-testid="st-updated">{when(st.updatedAt)}</span></p>}
+      <Proof rows={rows} />
     </article>
   );
 }
+
+const human = (code?: string, message?: string) => {
+  const M: Record<string, string> = {
+    policy_transaction_limit_exceeded: "That amount is above this key's per-trade limit, so the policy refused it. Try a smaller amount.",
+    rate_limited: "Too many quotes in a minute. Wait a few seconds and try again.",
+    no_quote: "No solver offered a price for this pair and amount right now. Try a different amount or pair.",
+  };
+  return (code && M[code]) || message || "No quote came back. Try again in a moment.";
+};
 
 export function SettleView() {
   const [origin, setOrigin] = useState<string>(OC_ASSETS[2].id);
@@ -65,6 +80,7 @@ export function SettleView() {
   const [dry, setDry] = useState<Dry | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const outRef = useRef<HTMLDivElement>(null);
   async function run() {
     setDry(null); setMsg(null);
     const o = assetById(origin); const units = o ? toUnits(amount, o.decimals) : null;
@@ -72,50 +88,54 @@ export function SettleView() {
     setBusy(true);
     try {
       const j = await (await fetch("/api/oneclick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin, dest, amount: units }) })).json();
-      if (j.ok) setDry(j.quote); else setMsg(j.error?.message || j.error?.code || "No quote.");
-    } catch { setMsg("Could not reach 1Click."); } finally { setBusy(false); }
+      if (j.ok) setDry(j.quote); else setMsg(human(j.error?.code, j.error?.message));
+    } catch { setMsg("Could not reach 1Click. Check your connection and try again."); } finally { setBusy(false); requestAnimationFrame(() => outRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })); }
   }
   return (
     <div className="page settle">
-      <p className="eb">NEAR Intents · 1Click</p>
-      <h1>Real quotes. <em>Real settlements.</em></h1>
-      <p className="lead">Try a dry-run quote with no wallet and no funds, then see the orders KEYHOLE actually settled on mainnet, with their live 1Click status, where the funds sit, and explorer links. Refunded and failed orders are shown, not hidden.</p>
+      <Purpose eyebrow="NEAR Intents · 1Click · mainnet" title={<>Real quotes. <em>Real settlements.</em></>}
+        line={<>Get a live cross-chain price with no wallet, then see every order KEYHOLE really settled: where the money is now, step by step, with proof one click away.</>} />
       <section className="card dry" data-testid="dry">
-        <h2>Dry-run quote</h2>
-        <p className="note">Uses <span className="mono">dry: true</span>: a real price from 1Click solvers, nothing to sign, nothing executes.</p>
+        <h2>1 · Get a live price (no wallet, nothing moves)</h2>
+        <p className="note">This asks 1Click solvers for a real price with <span className="mono">dry: true</span>. Nothing is signed and nothing executes.</p>
         <form onSubmit={(e) => { e.preventDefault(); void run(); }} className="dform">
           <label>From<select value={origin} onChange={(e) => setOrigin(e.target.value)}>{OC_ASSETS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
           <label>Amount<input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></label>
           <label>To<select value={dest} onChange={(e) => setDest(e.target.value)}>{OC_ASSETS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
-          <button className="btn b1" type="submit" disabled={busy} data-testid="dry-btn">{busy ? "…" : "Get quote"}</button>
+          <button className="btn b1" type="submit" disabled={busy} aria-busy={busy} data-testid="dry-btn">{busy ? <><Spinner label="Getting a quote" /> Asking solvers…</> : "Get quote"}</button>
         </form>
-        {msg && <p className="note" role="alert" data-testid="dry-msg">{msg}</p>}
-        {dry && <p className="dout" data-testid="dry-out"><b>{dry.amountInFormatted}</b> (${Number(dry.amountInUsd).toFixed(4)}) → <b>{dry.amountOutFormatted}</b> (${Number(dry.amountOutUsd).toFixed(4)}) · about {dry.timeEstimate}s · dry run</p>}
+        <div ref={outRef} aria-live="polite">
+          {msg && <p className="note" role="alert" data-testid="dry-msg">{msg}</p>}
+          {dry && <p className="dout" data-testid="dry-out"><b>{dry.amountInFormatted}</b> (${Number(dry.amountInUsd).toFixed(4)}) → <b>{dry.amountOutFormatted}</b> (${Number(dry.amountOutUsd).toFixed(4)}) · about {dry.timeEstimate}s · dry run</p>}
+        </div>
       </section>
       <AgentPanel />
-      <h2 className="sh">A vault trade, end to end</h2>
-      <article className="card srow" data-testid="vault-trade">
-        <div className="shead"><b>{VAULT_TRADE.amountIn} → {VAULT_TRADE.amountOut} inside the vault of key {VAULT_TRADE.token}</b><span className="stb ok">Settled</span></div>
-        <p className="note">The holder signed one swap. The enclave checked the signature, the holder and the Bronze caps, then the key&apos;s sealed account swapped through NEAR Intents. The answer, with its intent hash, is attested by Intel TDX (build {VAULT_TRADE.build}).</p>
-        <dl className="kv">
-          <dt>enclave call</dt><dd className="mono"><Link href={`/verify?call=${VAULT_TRADE.callId}`}>Verify {VAULT_TRADE.callId.slice(0, 8)}</Link></dd>
-          <dt>intent hash</dt><dd className="mono">{VAULT_TRADE.intentHash}</dd>
-          <dt>account</dt><dd className="mono">{VAULT_TRADE.account}</dd>
-          <dt>evidence</dt><dd className="mono">{VAULT_TRADE.file}</dd>
-        </dl>
+      <h2 className="ush">2 · A private vault trade, end to end</h2>
+      <p className="usub">The holder signed one swap. The enclave checked the signature, the holder and the Bronze caps, then the key&apos;s sealed account swapped through NEAR Intents. Intel TDX attested the answer.</p>
+      <article className="ocard" data-testid="vault-trade">
+        <div className="ohead"><h3 className="oroute">{VAULT_TRADE.amountIn}<span className="arr">→</span>{VAULT_TRADE.amountOut}</h3><UBadge tone="ok">Settled</UBadge></div>
+        <p className="oamt">Inside the vault of key {VAULT_TRADE.token} · build {VAULT_TRADE.build}</p>
+        <div className="uact"><Link className="btn b2" href={`/verify?call=${VAULT_TRADE.callId}`}>Verify the enclave call</Link></div>
+        <Proof rows={[
+          { label: "enclave call", value: VAULT_TRADE.callId, href: `/verify?call=${VAULT_TRADE.callId}`, internal: true },
+          { label: "intent hash", value: VAULT_TRADE.intentHash, href: intentTx(VAULT_TRADE.intentHash) },
+          { label: "account", value: VAULT_TRADE.account },
+          { label: "evidence file", value: VAULT_TRADE.file },
+        ]} />
       </article>
-      <h2 className="sh">1Click orders executed on mainnet</h2>
-      <div className="sgrid">{SETTLEMENTS.map((s) => <Row key={s.depositAddress} s={s} />)}</div>
-      <h2 className="sh">Example only: the shape of a failed order</h2>
-      <article className="card srow rec" data-testid="recorded-failed">
-        <div className="shead"><b>{RECORDED_FAILED.label}</b><Badge status={RECORDED_FAILED.status} /></div>
-        <p className="where"><span>Where the funds are:</span> {statusOf("FAILED").where}</p>
+      <h2 className="ush">3 · 1Click orders executed on mainnet</h2>
+      <p className="usub">Each card reads its status live from 1Click. Refunded orders are shown, not hidden.</p>
+      <div className="ogrid">{SETTLEMENTS.map((s) => <Row key={s.depositAddress} s={s} />)}</div>
+      <h2 className="ush">Example only: the shape of a failed order</h2>
+      <article className="ocard rec" data-testid="recorded-failed">
+        <div className="ohead"><h3 className="oroute">{RECORDED_FAILED.label}</h3><Badge status={RECORDED_FAILED.status} /></div>
+        <p className="owhere"><b>Where the funds are:</b> {statusOf("FAILED").where}</p>
         <p className="note">{RECORDED_FAILED.note}</p>
       </article>
-      <section className="card legend">
-        <h2>Every status</h2>
+      <details className="card legend">
+        <summary><h2 style={{ display: "inline" }}>What each status means</h2></summary>
         <ul>{(["PENDING_DEPOSIT", "KNOWN_DEPOSIT_TX", "INCOMPLETE_DEPOSIT", "PROCESSING", "SUCCESS", "REFUNDED", "FAILED"] as const).map((k) => <li key={k}><Badge status={k} /><span>{statusOf(k).where}</span></li>)}</ul>
-      </section>
+      </details>
     </div>
   );
 }
