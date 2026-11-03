@@ -13,16 +13,19 @@ jobs:
     defaults: { run: { working-directory: contracts/keys } }
     steps:
       - uses: actions/checkout@v4
+      - name: disk guard (stale target/ and .next only)
+        working-directory: .
+        run: ./scripts/ci-disk-guard.sh
       - run: rustup show && rustup component add clippy
       - run: cargo test --locked
       - name: count passing tests
         run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
-      - name: source rebuilds to the committed v2.1 release wasm
+      - name: source rebuilds to the committed v2.2 release wasm
         run: |
           cargo near build non-reproducible-wasm >/dev/null
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
-          want=$(grep ' v2.1/' release/SHA256SUMS | cut -d' ' -f1)
+          want=$(grep ' v2.2/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
       - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate, NEP-178, one key, royalty sale
         working-directory: contracts/keys-sandbox
@@ -39,6 +42,9 @@ jobs:
     defaults: { run: { working-directory: tee/worker } }
     steps:
       - uses: actions/checkout@v4
+      - name: disk guard (stale target/ and .next only)
+        working-directory: .
+        run: ./scripts/ci-disk-guard.sh
       - run: rustup show && rustup component add clippy
       - run: cargo test --locked
       - name: count passing tests
@@ -65,6 +71,9 @@ jobs:
     defaults: { run: { working-directory: cli } }
     steps:
       - uses: actions/checkout@v4
+      - name: disk guard (stale target/ and .next only)
+        working-directory: .
+        run: ./scripts/ci-disk-guard.sh
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci
@@ -76,6 +85,9 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
+      - name: disk guard (stale target/ and .next only)
+        working-directory: .
+        run: ./scripts/ci-disk-guard.sh
       - run: ./judge/2-attestations.sh
       - run: ./verify.sh "$(jq -r '.[0].call_id' judge/evidence.json)"
       - uses: actions/setup-node@v4
@@ -87,6 +99,9 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
+      - name: disk guard (stale target/ and .next only)
+        working-directory: .
+        run: ./scripts/ci-disk-guard.sh
       # docs/evidence/oneclick-sol holds 1Click's own public quote signatures (ed25519:…), kept so the quotes stay verifiable
       - name: no secrets or keys committed
         run: |
@@ -97,6 +112,9 @@ jobs:
     defaults: { run: { working-directory: web } }
     steps:
       - uses: actions/checkout@v4
+      - name: disk guard (stale target/ and .next only)
+        working-directory: .
+        run: ./scripts/ci-disk-guard.sh
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm ci

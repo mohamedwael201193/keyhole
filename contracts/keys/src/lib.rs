@@ -67,6 +67,17 @@ pub struct Contract {
     beats: u64,
 }
 
+/// Raw storage marker (no change to the stored struct, so no migration): how many
+/// nft_transfer_call returns are still pending for an account.
+const PENDING_PREFIX: &[u8] = b"pending/";
+fn pending_key(a: &AccountId) -> Vec<u8> { [PENDING_PREFIX, a.as_bytes()].concat() }
+pub fn pending_returns(a: &AccountId) -> u32 {
+    env::storage_read(&pending_key(a)).map(|v| u32::from_le_bytes(v.try_into().unwrap_or([0; 4]))).unwrap_or(0)
+}
+fn set_pending(a: &AccountId, n: u32) {
+    if n == 0 { env::storage_remove(&pending_key(a)); } else { env::storage_write(&pending_key(a), &n.to_le_bytes()); }
+}
+
 #[near]
 impl Contract {
     #[init]
@@ -122,6 +133,9 @@ impl Contract {
     fn assert_no_key(&self, account_id: &AccountId) {
         let n = self.tokens.tokens_per_owner.as_ref().and_then(|m| m.get(account_id)).map(|s| s.len()).unwrap_or(0);
         require!(n == 0, ERR_ONE_KEY);
+        // A key sent with nft_transfer_call may still come back to its sender until
+        // nft_resolve_transfer runs, so the sender counts as a holder until then.
+        require!(pending_returns(account_id) == 0, ERR_ONE_KEY);
     }
 
     fn assert_owner(&self) {
@@ -189,6 +203,9 @@ impl Contract {
     }
 
     /// Used by the TEE gate: does `account_id` hold any key, and the best tier.
+    /// Pending nft_transfer_call returns for `account_id` (0 when none is in flight).
+    pub fn pending_return_count(&self, account_id: AccountId) -> u32 { pending_returns(&account_id) }
+
     pub fn holder_tier(&self, account_id: AccountId) -> Option<u8> {
         let ids = self.tokens.tokens_per_owner.as_ref()?.get(&account_id)?;
         ids.iter().filter_map(|t| self.tiers.get(&t)).max()
@@ -265,6 +282,8 @@ impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_transfer_call(&mut self, receiver_id: AccountId, token_id: TokenId, approval_id: Option<u64>, memo: Option<String>, msg: String) -> PromiseOrValue<bool> {
         self.assert_no_key(&receiver_id);
+        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        set_pending(&owner, pending_returns(&owner) + 1);
         self.tokens.nft_transfer_call(receiver_id, token_id, approval_id, memo, msg)
     }
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
@@ -276,6 +295,7 @@ impl NonFungibleTokenCore for Contract {
 impl near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver for Contract {
     #[private]
     fn nft_resolve_transfer(&mut self, previous_owner_id: AccountId, receiver_id: AccountId, token_id: TokenId, approved_account_ids: Option<HashMap<AccountId, u64>>) -> bool {
+        set_pending(&previous_owner_id, pending_returns(&previous_owner_id).saturating_sub(1));
         self.tokens.nft_resolve_transfer(previous_owner_id, receiver_id, token_id, approved_account_ids)
     }
 }
@@ -981,5 +1001,90 @@ mod v2 {
     }
     #[test] fn new_uses_same_approval_prefix_as_migrate() {
         let c = setup(); assert!(c.tokens.approvals_by_id.is_some() && c.tokens.next_approval_id_by_id.is_some());
+    }
+}
+
+/// nft_transfer_call race: the sender cannot receive another key while its sent key may come back.
+#[cfg(test)]
+mod race {
+    use super::*;
+    use near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver;
+    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::{testing_env, NearToken, PromiseResult};
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
+    fn mint(c: &mut Contract, id: &str, to: &str) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
+    fn send_call(c: &mut Contract, from: &str, to: &str, id: &str) { ctx(from, NearToken::from_yoctonear(1)); let _ = c.nft_transfer_call(acc(to), id.into(), None, None, "".into()); }
+    fn resolve(c: &mut Contract, from: &str, to: &str, id: &str, ret: &[u8]) -> bool {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
+            near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Successful(ret.to_vec())]);
+        c.nft_resolve_transfer(acc(from), acc(to), id.into(), None)
+    }
+
+    #[test] fn transfer_call_marks_sender_pending_until_resolve() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        send_call(&mut c, "alice.near", "bob.near", "k1");
+        assert_eq!(c.pending_return_count(acc("alice.near")), 1);
+        resolve(&mut c, "alice.near", "bob.near", "k1", b"false");
+        assert_eq!(c.pending_return_count(acc("alice.near")), 0);
+    }
+    #[test] #[should_panic(expected = "one key per account")] fn mint_to_pending_sender_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); send_call(&mut c, "alice.near", "bob.near", "k1");
+        mint(&mut c, "k2", "alice.near");
+    }
+    #[test] #[should_panic(expected = "one key per account")] fn transfer_to_pending_sender_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "carol.near");
+        send_call(&mut c, "alice.near", "bob.near", "k1");
+        ctx("carol.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("alice.near"), "k2".into(), None, None);
+    }
+    #[test] #[should_panic(expected = "one key per account")] fn payout_to_pending_sender_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "carol.near");
+        send_call(&mut c, "alice.near", "bob.near", "k1");
+        ctx("carol.near", NearToken::from_yoctonear(1)); c.nft_transfer_payout(acc("alice.near"), "k2".into(), None, None, U128(100), None);
+    }
+    #[test] fn returned_key_lands_on_a_sender_with_no_other_key() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "carol.near");
+        send_call(&mut c, "alice.near", "bob.near", "k1");
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { ctx("carol.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("alice.near"), "k2".into(), None, None); }));
+        assert!(r.is_err(), "race transfer refused");
+        assert!(!resolve(&mut c, "alice.near", "bob.near", "k1", b"true"), "receiver asked to return");
+        assert_eq!(c.nft_supply_for_owner(acc("alice.near")).0, 1);
+        assert_eq!(c.pending_return_count(acc("alice.near")), 0);
+        ctx("carol.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("dave.near"), "k2".into(), None, None);
+    }
+    #[test] fn after_resolve_sender_can_receive_again() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        send_call(&mut c, "alice.near", "bob.near", "k1");
+        resolve(&mut c, "alice.near", "bob.near", "k1", b"false");
+        mint(&mut c, "k2", "alice.near");
+        assert_eq!(c.nft_supply_for_owner(acc("alice.near")).0, 1);
+    }
+    #[test] fn failed_receiver_call_returns_key_and_clears_marker() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        send_call(&mut c, "alice.near", "bob.near", "k1");
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
+            near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Failed]);
+        assert!(!c.nft_resolve_transfer(acc("alice.near"), acc("bob.near"), "k1".into(), None));
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"));
+        assert_eq!(c.pending_return_count(acc("alice.near")), 0);
+    }
+    #[test] fn approved_sender_marks_the_owner_not_the_market() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", NearToken::from_millinear(10)); c.nft_approve("k1".into(), acc("market.near"), None);
+        send_call(&mut c, "market.near", "bob.near", "k1");
+        assert_eq!((c.pending_return_count(acc("alice.near")), c.pending_return_count(acc("market.near"))), (1, 0));
+    }
+    #[test] fn refused_transfer_call_leaves_no_marker() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "bob.near");
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| send_call(&mut c, "alice.near", "bob.near", "k1")));
+        assert!(r.is_err());
+        // a panicking call is rolled back on chain; the check runs before the marker is written
+        assert_eq!(c.pending_return_count(acc("alice.near")), 0);
     }
 }
