@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { verifyQuote, type Dcap } from "@/lib/dcap";
-import { AI_MAX_PROMPT, AI_MODEL, allPass, answerOf, checkReply, newNonce, type AiChecks, type AiReply } from "@/lib/ai";
+import { AI_MAX_PROMPT, AI_MODEL, allPass, answerOf, checkReply, gpuNonceCheck, newNonce, type AiChecks, type AiReply } from "@/lib/ai";
 
 /** Fictional samples so anyone can try it without real data. */
 const SAMPLES: { label: string; prompt: string; context?: string }[] = [
@@ -114,10 +114,10 @@ export function AskView() {
             <dl className="kv">
               <dt>signing address</dt><dd className="mono" data-kind="hash">{reply.attestation.signing_address}</dd>
               <dt>signed text</dt><dd className="mono" data-kind="hash">{reply.signature.text}</dd>
-              <dt>GPU evidence</dt><dd>{reply.attestation.gpu_evidence ? "NVIDIA payload present" : "none"}</dd>
+              <dt>GPU nonce</dt><dd data-testid="gpu-nonce" data-state={gpuNonceCheck(reply.attestation.gpu, reply.attestation.nonce)}>{reply.attestation.gpu ? `${gpuNonceCheck(reply.attestation.gpu, reply.attestation.nonce) === "pass" ? "✓" : "✗"} your nonce is NVIDIA's eat_nonce and appears in all ${reply.attestation.gpu.evidence_nonces.length} ${reply.attestation.gpu.arch} GPU reports` : "no GPU payload in this reply"}</dd>
             </dl>
           )}
-          <p className="asknote">Your browser checks the bindings above and runs the same 19 Intel DCAP checks as /verify on the model&apos;s TDX quote, up to the pinned Intel root. NVIDIA GPU evidence is included in the download for NEAR AI&apos;s verifier (<a href="https://docs.near.ai/cloud/verification/cloud-api/model-attestations" target="_blank" rel="noreferrer">how</a>).</p>
+          <p className="asknote">Your browser checks the bindings above and runs the same 19 Intel DCAP checks as /verify on the model&apos;s TDX quote, up to the pinned Intel root. It also checks that your nonce is NVIDIA&apos;s eat_nonce and sits in every GPU&apos;s signed measurement request. NVIDIA certificate chains and GPU measurements are verified with NEAR AI&apos;s verifier from the download (<a href="https://docs.near.ai/cloud/verification/cloud-api/model-attestations" target="_blank" rel="noreferrer">how</a>).</p>
           {reply && <button className="btn b2" onClick={download} data-testid="ask-download">Download evidence (JSON)</button>}
         </section>
       </div>

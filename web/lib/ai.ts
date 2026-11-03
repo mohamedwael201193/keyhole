@@ -13,7 +13,30 @@ export interface AiReply {
   request_body: string;
   response_body: string;
   signature: { text: string; signature: `0x${string}`; signing_address: string; signing_algo: string };
-  attestation: { nonce: string; request_nonce: string; signing_address: string; signing_algo: string; intel_quote: string; gpu_evidence: boolean; model_name: string };
+  attestation: { nonce: string; request_nonce: string; signing_address: string; signing_algo: string; intel_quote: string; gpu_evidence: boolean; model_name: string; gpu?: GpuNonces | null };
+}
+
+/** Nonces read from NVIDIA's payload: the top-level eat_nonce and the requester nonce inside each GPU's SPDM GET_MEASUREMENTS request (bytes 4..36). */
+export type GpuNonces = { eat_nonce: string; evidence_nonces: string[]; arch: string };
+
+/** Pull the nonces out of `nvidia_payload` (a JSON string). Null if absent or malformed. */
+export function gpuNonces(payload: unknown): GpuNonces | null {
+  try {
+    const p = typeof payload === "string" ? JSON.parse(payload) : payload;
+    if (!p || typeof p.nonce !== "string" || !Array.isArray(p.evidence_list) || !p.evidence_list.length) return null;
+    const ev = p.evidence_list.map((e: { evidence?: unknown }) => {
+      if (typeof e?.evidence !== "string") return "";
+      const b = Uint8Array.from(atob(e.evidence), (c) => c.charCodeAt(0));
+      return b.length >= 36 && b[1] === 0xe0 ? [...b.slice(4, 36)].map((x) => x.toString(16).padStart(2, "0")).join("") : "";
+    });
+    return { eat_nonce: p.nonce.toLowerCase(), evidence_nonces: ev, arch: String(p.arch ?? "") };
+  } catch { return null; }
+}
+
+/** Our nonce in NVIDIA's evidence: "n/a" when the reply carries no GPU payload, otherwise every GPU must echo it. */
+export function gpuNonceCheck(g: GpuNonces | null | undefined, nonce: string): "pass" | "fail" | "n/a" {
+  if (!g) return "n/a";
+  return g.eat_nonce === nonce && g.evidence_nonces.length > 0 && g.evidence_nonces.every((n) => n === nonce) ? "pass" : "fail";
 }
 
 export interface AiChecks {

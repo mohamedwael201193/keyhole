@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLimiter } from "@/lib/ratelimit";
-import { AI_MAX_PROMPT, AI_MAX_TOKENS, AI_MODEL, NONCE_RE } from "@/lib/ai";
+import { AI_MAX_PROMPT, AI_MAX_TOKENS, AI_MODEL, NONCE_RE, gpuNonces } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       request_body: requestBody,
       response_body: responseBody,
       signature: { text: sig.text, signature: sig.signature, signing_address: sig.signing_address, signing_algo: sig.signing_algo },
-      attestation: { nonce, request_nonce: m.request_nonce, signing_address: m.signing_address, signing_algo: m.signing_algo, intel_quote: m.intel_quote, gpu_evidence: !!m.nvidia_payload, model_name: m.model_name },
+      attestation: { nonce, request_nonce: m.request_nonce, signing_address: m.signing_address, signing_algo: m.signing_algo, intel_quote: m.intel_quote, gpu_evidence: !!m.nvidia_payload, model_name: m.model_name, gpu: gpuNonces(m.nvidia_payload) },
     }, { headers: { "cache-control": "no-store" } });
   } catch {
     return no("ai_upstream", 502);
