@@ -28,6 +28,6 @@ F=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)
 if [ "${2:-}" = "--rebuild" ]; then
   B=$("$(dirname "$0")/tee/worker/build.sh")
   [ "$B" = "$H" ] && ok "local reproducible build matches executed wasm ($B)" || bad "local build $B differs from executed $H"
-  echo "note  worker_measurement is the TDX measurement. It is not the wasm sha256."
+  echo "note  worker_measurement is the TDX RTMR3 measurement of the OutLayer worker image. It is not the wasm sha256."
 fi
 exit $fail
