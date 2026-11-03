@@ -1,6 +1,7 @@
 import { nftTier, nftTokens } from "@/lib/near";
 import { IdentityView } from "./view";
-export const revalidate = 30;
+// Rendered per request (chain reads are cached 60 s in lib/rpc.ts), so `next build` never waits on the network.
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Identity · KEYHOLE" };
 export default async function Page() {
   const tokens = await nftTokens().catch(() => []);
