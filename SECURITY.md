@@ -131,3 +131,14 @@ This follows NEAR's documented backend-auth pattern (https://docs.near.org/web3-
 Caveats:
 - The token is a bearer credential, like any Web2 session. Anyone who has it can act within its scope until it expires, is revoked, or its cap is used up. That includes script injection on the site, and the site's gateway, which relays the request body (bodies are not logged). The token cannot raise limits (a raise needs a wallet signature and still waits 24 h), lock, prove, mint or use chain_sign.
 - Withdraw is in scope, but it pays out only to the holder's own account (`assert_withdraw_to`), so a token thief cannot redirect funds.
+`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1 changed code only. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`.
+
+## Worker hardening in source (live after the next publish)
+
+- Replay check runs before the rate limits (`admit`), so replays cost no rate budget.
+- `chain_sign` counts toward the daily quota only after a signature that recovers to the key; a failed MPC call costs nothing.
+- `withdraw` re-reads key ownership after the custody move and reports `needs_review` if the key changed hands meanwhile.
+- `quote` refuses a key locked for sale, and pins `recipient` and `refund_to` to the signer.
+- `add_beat_key` / `del_beat_key` check the signer against the keys contract `config().owner`, read live.
+
+Tests: `tee/worker/src/p2harden.rs`.
