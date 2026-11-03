@@ -58,7 +58,7 @@ export function StartView() {
   const addr = account.res?.output?.ok ? (account.res.output.deposit?.deposit_address as string | undefined) : undefined;
 
   return (
-    <main className="wrap start" data-testid="start">
+    <main className="page start" data-testid="start">
       <Purpose eyebrow="Start" title="Set up in five short steps" line="A private trading account: two wallet popups with a NEAR wallet (connect, mint), three with MetaMask. Your progress is kept if you leave." />
       <div data-testid="start-dots"><Stepper steps={START_STEPS.map((x) => TITLES[x])} current={idx} /></div>
       <StepTransition k={step}><StepCard active className="scard" data-testid={`start-step-${step}`}>
