@@ -527,6 +527,38 @@
   "cooldown": [
    "This key changed hands recently.",
    "Withdraw opens 10 minutes after the transfer. Trades inside the account still work."
+  ],
+  "bad_session": [
+   "That unlock token is malformed.",
+   "Lock and unlock again with one wallet signature."
+  ],
+  "session_cap": [
+   "This unlock's $5 spending cap is used up.",
+   "Unlock again, or confirm in your wallet."
+  ],
+  "session_expired": [
+   "Your 30-minute unlock ended.",
+   "Unlock again with one wallet signature."
+  ],
+  "session_revoked": [
+   "This unlock was ended.",
+   "Unlock again with one wallet signature."
+  ],
+  "session_scope": [
+   "This action needs your wallet.",
+   "Raising limits, locking a key and proofs always ask for a fresh signature."
+  ],
+  "session_token": [
+   "This unlock is for another key.",
+   "Unlock the key you are using."
+  ],
+  "session_too_long": [
+   "An unlock can last at most 30 minutes.",
+   "Unlock again; the site asks for 30 minutes."
+  ],
+  "session_unknown": [
+   "The enclave doesn't know this unlock.",
+   "Unlock again with one wallet signature."
   ]
  },
  "offline": {

@@ -748,3 +748,6 @@ mod p2golden;
 mod p2beat;
 #[path = "p2fail.rs"]
 mod p2fail;
+
+#[path = "session.rs"]
+mod session;
