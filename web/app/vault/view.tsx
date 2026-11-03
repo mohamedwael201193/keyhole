@@ -206,6 +206,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           <EmptyState title={t("empty.vaultTitle")} body={t("empty.vaultBody")} testid="vault-empty">
             <button className="btn b1" onClick={connect} data-testid="vault-connect">{t("nav.connect")}</button>
             <Link className="btn b2" href="/mint">{t("mint.title")}</Link>
+            <Link className="btn b2" href="/demo" data-testid="vault-demo-link">No wallet? See the demo vault</Link>
           </EmptyState>
           <HowStrip active={1} />
         </div>
