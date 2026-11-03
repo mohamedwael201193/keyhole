@@ -1,0 +1,22 @@
+[package]
+name = "race-receiver"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+# Test-only NEP-171 receiver: inside nft_on_transfer it tries to hand the sender a second key
+# (as an approved account), then asks for the received key to be returned.
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+near-sdk = "~5.17"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true

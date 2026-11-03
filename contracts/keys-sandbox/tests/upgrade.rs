@@ -6,7 +6,8 @@ use serde_json::{json, Value};
 
 const V1: &str = "../keys/release/v1/keyhole_keys.wasm";
 const V2_0: &str = "../keys/release/v2/keyhole_keys.wasm";
-const V2: &str = "../keys/release/v2.1/keyhole_keys.wasm";
+const V2_1: &str = "../keys/release/v2.1/keyhole_keys.wasm";
+const V2: &str = "../keys/release/v2.2/keyhole_keys.wasm";
 const MAINNET_OWNER: &str = "keyhole-devmo.near";
 
 fn fixture() -> Vec<Value> {
@@ -190,17 +191,59 @@ async fn v2_one_key_nep178_and_a_real_royalty_sale() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// The mainnet path: v1 -> v2 (+migrate) -> v2.1 (code only, no migrate). State survives both steps.
+/// The mainnet path: v1 -> v2 (+migrate) -> v2.1 -> v2.2 (code only, no migrate). State survives every step.
 #[tokio::test]
 async fn mainnet_path_v1_v2_v2_1_keeps_state() -> anyhow::Result<()> {
     let e = v1_like_mainnet().await?;
     let before = snapshot(&e).await;
     e.c.as_account().deploy(&std::fs::read(V2_0)?).await?.into_result()?;
     e.c.call("migrate").max_gas().transact().await?.into_result()?;
+    e.c.as_account().deploy(&std::fs::read(V2_1)?).await?.into_result()?;
+    assert_eq!(before, snapshot(&e).await);
     e.c.as_account().deploy(&std::fs::read(V2)?).await?.into_result()?;
     assert_eq!(before, snapshot(&e).await);
     let r = e.c.call("migrate").max_gas().transact().await?;
     assert!(format!("{:?}", r.into_result().unwrap_err()).contains("already migrated"));
     assert_eq!(view(&e.c, "nft_is_approved", json!({"token_id": "0", "approved_account_id": "x.test.near"})).await, json!(false));
+    Ok(())
+}
+
+/// The nft_transfer_call race. alice sends k1 to a receiver contract with nft_transfer_call.
+/// Inside nft_on_transfer the receiver (approved by carol for k2) hands k2 to alice, then asks
+/// for k1 back. Returns (alice's key count, k2 owner).
+async fn race(wasm: &str) -> anyhow::Result<(String, String)> {
+    let w = near_workspaces::sandbox().await?;
+    let root = w.root_account()?;
+    let c = w.dev_deploy(&std::fs::read(wasm)?).await?;
+    let mk = |n: &'static str| { let r = root.clone(); async move { r.create_subaccount(n).initial_balance(NearToken::from_near(5)).transact().await.unwrap().into_result().unwrap() } };
+    let (minter, alice, carol) = (mk("minter").await, mk("alice").await, mk("carol").await);
+    let recv = root.create_subaccount("recv").initial_balance(NearToken::from_near(5)).transact().await?.into_result()?
+        .deploy(include_bytes!("fixtures/race_receiver.wasm")).await?.into_result()?;
+    c.call("new").args_json(json!({"owner": c.id(), "minter": minter.id(), "treasury": c.id(), "royalty_bps": 500})).transact().await?.into_result()?;
+    for (id, to) in [("k1", alice.id()), ("k2", carol.id())] {
+        minter.call(c.id(), "nft_mint").args_json(json!({"token_id": id, "receiver_id": to, "tier": 1, "metadata": fixture()[1]["metadata"]}))
+            .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+    }
+    carol.call(c.id(), "nft_approve").args_json(json!({"token_id": "k2", "account_id": recv.id()})).deposit(NearToken::from_millinear(10)).transact().await?.into_result()?;
+    let _ = alice.call(c.id(), "nft_transfer_call")
+        .args_json(json!({"receiver_id": recv.id(), "token_id": "k1", "msg": json!({"keys": c.id(), "other_token": "k2"}).to_string()}))
+        .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    let n: String = c.view("nft_supply_for_owner").args_json(json!({"account_id": alice.id()})).await?.json()?;
+    let k2: Value = c.view("nft_token").args_json(json!({"token_id": "k2"})).await?.json()?;
+    assert_eq!(c.view("nft_token").args_json(json!({"token_id": "k1"})).await?.json::<Value>()?["owner_id"], alice.id().as_str(), "k1 returned");
+    let pending: Value = c.view("pending_return_count").args_json(json!({"account_id": alice.id()})).await.map(|r| r.json().unwrap()).unwrap_or(Value::Null);
+    if !pending.is_null() { assert_eq!(pending, json!(0), "marker cleared after resolve"); }
+    Ok((n, if k2["owner_id"] == alice.id().as_str() { "alice".into() } else { "carol".into() }))
+}
+
+#[tokio::test]
+async fn transfer_call_race_reaches_two_keys_on_v2_1() -> anyhow::Result<()> {
+    assert_eq!(race(V2_1).await?, ("2".to_string(), "alice".to_string()), "the race v2.2 closes");
+    Ok(())
+}
+
+#[tokio::test]
+async fn transfer_call_race_is_closed_on_v2_2() -> anyhow::Result<()> {
+    assert_eq!(race(V2).await?, ("1".to_string(), "carol".to_string()), "inner transfer refused, k1 back, one key");
     Ok(())
 }

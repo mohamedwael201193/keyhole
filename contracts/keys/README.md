@@ -3,7 +3,7 @@
 One NFT contract: NEP-171 core, NEP-177 metadata, NEP-178 approvals, NEP-181 enumeration, NEP-199 payouts, NEP-330 source metadata. Each token is a viewing key; `tier` (1-3) sets access.
 
 - `nft_mint(token_id, receiver_id, tier, metadata)`: minter only; deposit covers storage, excess refunded.
-- One key per account: `nft_mint`, `nft_transfer`, `nft_transfer_call` and `nft_transfer_payout` refuse a receiver that already holds a key (`one key per account: receiver already holds a KEYHOLE key`).
+- One key per account: `nft_mint`, `nft_transfer`, `nft_transfer_call` and `nft_transfer_payout` refuse a receiver that already holds a key (`one key per account: receiver already holds a KEYHOLE key`). An account whose key is out on `nft_transfer_call` counts as a holder until `nft_resolve_transfer` runs (`pending_return_count`).
 - `nft_approve` / `nft_revoke` / `nft_revoke_all` / `nft_is_approved`: NEP-178. Approvals are cleared on every transfer; `msg` triggers `nft_on_approve` on the approved account.
 - `nft_payout` / `nft_transfer_payout`: NEP-199. 5% (`royalty_bps` 500, cap 10%) to the treasury, the rest to the seller; the payout always sums to the sale balance.
 - `beat(token_ids)`: minter only; emits NEP-171 1.2.0 `nft_metadata_update`.
@@ -18,6 +18,7 @@ Build: `cargo near build non-reproducible-wasm` (rustc 1.86 via `rust-toolchain.
 | v1 | `d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b` | `release/v1/keyhole_keys.wasm` |
 | v2 | `a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2` | `release/v2/keyhole_keys.wasm` (adds NEP-178, one key, `migrate`) |
 | v2.1 | `57b63c36d782bb4e60c4a25e9cc238093bc909a328617be864ba6327191a30ac` | `release/v2.1/keyhole_keys.wasm` (`nft_transfer_payout` emits exactly one `nft_transfer` event, with `authorized_id`; no state change) |
+| v2.2 | `9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e` | `release/v2.2/keyhole_keys.wasm` (`nft_transfer_call` marks the sender as a holder until `nft_resolve_transfer` runs, so a key that comes back can never meet a second key; no struct change) |
 
 `deployed/keyhole_keys.wasm` is always the code on `keyhole-devmo.near` (checked against the on-chain `code_hash` by `judge/1-contract.sh`).
 
