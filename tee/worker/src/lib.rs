@@ -357,6 +357,9 @@ pub fn token_id_for(account: &str) -> String {
 pub enum Action<'a> {
     FunctionCall { method: &'a str, args: &'a [u8], gas: u64, deposit: u128 },
     Transfer { deposit: u128 },
+    /// Function-call access key: zero-deposit calls to `receiver`, only `methods`, gas paid from `allowance`.
+    AddFcKey { pk: [u8; 32], allowance: u128, receiver: &'a str, methods: &'a [&'a str] },
+    DeleteKey { pk: [u8; 32] },
 }
 
 /// Borsh-encoded NEAR Transaction (V0): signer, ed25519 pk, nonce, receiver, block hash, actions.
@@ -382,6 +385,23 @@ pub fn encode_tx(signer: &str, pk: &[u8; 32], nonce: u64, receiver: &str, block_
             Action::Transfer { deposit } => {
                 v.push(3);
                 v.extend_from_slice(&deposit.to_le_bytes());
+            }
+            Action::AddFcKey { pk, allowance, receiver, methods } => {
+                v.push(5);
+                v.push(0);
+                v.extend_from_slice(pk);
+                v.extend_from_slice(&0u64.to_le_bytes()); // access key nonce
+                v.push(0); // FunctionCall permission
+                v.push(1); // Some(allowance)
+                v.extend_from_slice(&allowance.to_le_bytes());
+                borsh_string(&mut v, receiver);
+                v.extend_from_slice(&(methods.len() as u32).to_le_bytes());
+                for m in methods.iter() { borsh_string(&mut v, m); }
+            }
+            Action::DeleteKey { pk } => {
+                v.push(6);
+                v.push(0);
+                v.extend_from_slice(pk);
             }
         }
     }
@@ -757,3 +777,21 @@ pub fn assert_no_cooldown(evs: &[ProvEvent], owner: &str, now_ms: u64) -> Result
 }
 
 pub mod chainsig;
+
+/// Scoped beat key: the only method a function-call key on the TEE minter may call, and its gas allowance.
+pub const BEAT_KEY_METHODS: [&str; 1] = ["beat"];
+pub const BEAT_KEY_ALLOWANCE_YOCTO: u128 = 50_000_000_000_000_000_000_000; // 0.05 NEAR
+/// Owner-only ops (signed by the keys contract owner account).
+pub fn assert_owner(signer: &str, owner: &str) -> Result<(), Error> {
+    if signer != owner { return Err(err("not_owner", "only the keys contract owner can manage the beat key")); }
+    Ok(())
+}
+/// Parse `ed25519:<base58 32 bytes>`; refuses the minter's own key so it can never be deleted or downgraded.
+pub fn parse_beat_key(s: &str, minter_pk: &[u8; 32]) -> Result<[u8; 32], Error> {
+    let raw = s.strip_prefix("ed25519:").and_then(|b| bs58::decode(b).into_vec().ok()).filter(|v| v.len() == 32)
+        .ok_or_else(|| err("bad_public_key", "params.public_key must be ed25519:<base58 32 bytes>"))?;
+    let pk: [u8; 32] = raw.try_into().unwrap();
+    if &pk == minter_pk { return Err(err("bad_public_key", "that is the minter's own full-access key")); }
+    Ok(pk)
+}
+
