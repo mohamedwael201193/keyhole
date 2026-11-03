@@ -1,4 +1,5 @@
 "use client";
+import { attestChecks, verdict } from "@/lib/verifyScore";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Scene } from "@/components/Art";
 import { useI18n } from "@/lib/i18n";
@@ -66,7 +67,8 @@ export function VerifyView({ initial }: { initial: string | null }) {
     if (!a || !coll || coll === "err") return null;
     try { return verifyCollateral(b64(a.tdx_quote), coll); } catch { return null; }
   }, [a, coll]);
-  const ok = pcs?.ok === true && !!ck && ck.quote && ck.registered && ck.published && ck.fastfs === true && ck.binding?.match === true && ck.output?.match !== false && dcap?.ok === true;
+  const vd = ck ? verdict(ck, a ? buildIndex(a.executed_wasm_sha256) : -1, dcap?.ok === true, pcs?.ok === true) : "no";
+  const ok = vd !== "no";
   const bi = a ? buildIndex(a.executed_wasm_sha256) : -1;
   const checkPasted = async () => {
     if (!a || !ck) return;
@@ -80,9 +82,10 @@ export function VerifyView({ initial }: { initial: string | null }) {
   const known = !!a && WORKER_WASM_SHA256.includes(a.executed_wasm_sha256.toLowerCase());
   const mark = (pass: boolean | null) => pass == null ? "…" : pass ? "✓" : "✕";
   const dot = (pass: boolean | null) => pass == null ? "wait" : pass ? "" : "bad";
-  const six = ck ? [ck.quote, ck.registered, ck.fastfs === true, ck.published, ck.binding?.match === true, ck.output?.match !== false] : null;
+  const six = ck ? attestChecks(ck) : null;
   const partial = six && dcap ? six.filter(Boolean).length + dcap.checks.filter((c) => c.pass).length : null;
   const pcsDown = coll === "err" && partial != null;
+  const total = six && dcap && pcs ? six.length + dcap.checks.length + pcs.checks.length : TOTAL_CHECKS;
   const tally = six && dcap && pcs ? six.filter(Boolean).length + dcap.checks.filter((c) => c.pass).length + pcs.checks.filter((c) => c.pass).length : null;
   return (
     <div className="page ver">
@@ -90,8 +93,8 @@ export function VerifyView({ initial }: { initial: string | null }) {
       <h1>{t("verify.h1a")}<em>{t("verify.h1b")}</em></h1>
       <p className="lead">{t("verify.lead")}</p>
       <div className="tally" data-testid="tally" data-n={tally ?? ""}>
-        <b className="tn">{tally ?? "·"}<span>/{TOTAL_CHECKS}</span></b>
-        <div><b data-testid="tally-head">{tally != null ? t("verify.tallyH", { n: tally }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small></div>
+        <b className="tn">{tally ?? "·"}<span>/{total}</span></b>
+        <div><b data-testid="tally-head">{tally != null ? t("verify.tallyH", { n: tally, total }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small></div>
       </div>
       <div className="vg">
         <div className="seal"><Scene name="enclave" alt={t("land.enclAlt")} width={1152} height={864} /></div>
@@ -123,7 +126,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
           <div className="res">
             <div>
               <p className="mono" style={{ fontSize: 12, letterSpacing: ".14em", opacity: .8 }}>{t("verify.result")}</p>
-              <b data-testid="verdict" data-match={ok ? "true" : "false"}>{ck?.fastfs === null && ck.registered ? "…" : ok ? t("verify.genuine") : tampered ? t("verify.tamperFail") : pcsDown ? t("verify.pcsDownV") : t("verify.notYet")}</b>
+              <b data-testid="verdict" data-match={vd === "current" ? "true" : vd === "previous" ? "previous" : "false"}>{ck?.fastfs === null && ck.registered ? "…" : vd === "previous" ? t("verify.genuinePrev") : ok ? t("verify.genuine") : tampered ? t("verify.tamperFail") : pcsDown ? t("verify.pcsDownV") : t("verify.notYet")}</b>
             </div>
             <button className="btn" disabled={busy} data-testid="verify-btn" onClick={() => void go(id)}>{busy ? "…" : t("verify.again")}</button>
           </div>

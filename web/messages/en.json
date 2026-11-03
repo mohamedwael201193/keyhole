@@ -289,6 +289,7 @@
   "fetchFail": "The attestation could not be fetched.",
   "result": "Result",
   "genuine": "The enclave is genuine.",
+  "genuinePrev": "Genuine enclave, previous build (not the current one).",
   "notYet": "Not verified yet.",
   "pcsDown": "Intel PCS did not answer. {n} of 25 attestation and DCAP checks passed here; press Run again for the 12 PCS checks.",
   "pcsDownV": "Intel PCS unreachable. Run again.",
@@ -305,7 +306,7 @@
   "tamper_registered_wasm": "the registered wasm hash",
   "tamperReset": "Undo",
   "tamperFail": "Rejected. This copy was changed.",
-  "tallyH": "{n} of 37 checks passed in this browser",
+  "tallyH": "{n} of {total} checks passed in this browser",
   "tallyWait": "37 checks run in this browser",
   "tallyD": "6 attestation checks against NEAR mainnet and the published build, 19 Intel DCAP checks on the TDX quote, and 12 checks against Intel's revocation lists and TCB status. No server of ours is trusted.",
   "dcapNote": "Parses the TDX quote, verifies the quote signature, the Quoting Enclave report and the PCK chain up to the pinned Intel SGX Root CA, and checks report_data against the attested fields. Revocation and TCB status are checked in the next section.",
@@ -418,6 +419,22 @@
   "over_cap_per_tx": [
    "That trade is over your per-trade cap ({cap}).",
    "Lower the amount or upgrade your tier."
+  ],
+  "mint_quota": [
+   "Today's free mints are used up.",
+   "The daily quota resets at 00:00 UTC; try again then."
+  ],
+  "busy": [
+   "The enclave is busy right now.",
+   "Wait a few seconds and sign again."
+  ],
+  "quote_moved": [
+   "The price moved above the checked quote.",
+   "Nothing was committed; request a new quote."
+  ],
+  "chainsig_quota": [
+   "This key reached today's Chain Signatures limit.",
+   "The limit resets at 00:00 UTC."
   ],
   "replay": [
    "This signature was already used.",
