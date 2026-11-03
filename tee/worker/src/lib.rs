@@ -568,6 +568,104 @@ pub fn sign_tx(sk: &[u8; 32], tx: &[u8]) -> Vec<u8> {
     v
 }
 
+
+// ---------- Sessions: NEAR's documented backend-auth pattern ----------
+// https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet
+// The wallet signs ONE NEP-413 message (nonce, recipient, full-access key check, as documented).
+// The backend (here: the enclave) verifies it and issues a session. Later calls present the session
+// token instead of a new wallet signature. Nothing beyond NEP-413 + a server-issued token is used.
+
+/// Longest a session may live.
+pub const SESSION_MAX_MS: u64 = 30 * 60 * 1000;
+/// Largest spend cap a session may carry (USD micro); tier and holder caps still apply on top.
+pub const SESSION_MAX_USD_MICRO: u64 = 1_000_000_000;
+/// Ops a session may run. Withdraw pays only to the holder's own account; `limits` only lowers caps.
+/// Raising limits, lock, prove, mint and chain_sign always need a fresh wallet signature.
+pub const SESSION_OPS: &[&str] = &["status", "quote", "account", "balance", "swap", "copy", "withdraw", "history", "pnl", "limits", "dashboard", "session_revoke"];
+
+/// `auth` for scheme "session".
+#[derive(Debug, Clone, Deserialize)]
+pub struct SessionAuth {
+    pub scheme: String,
+    /// base64 32-byte token the enclave issued for op "session".
+    pub token: String,
+    /// JSON {op, account_id, ts_ms, params} for this call.
+    pub message: String,
+    /// base64 32 bytes, single use (replay protection, same store as wallet nonces).
+    pub nonce: String,
+    pub recipient: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SessionGrant {
+    pub account: String,
+    pub token_id: String,
+    pub iat_ms: u64,
+    pub exp_ms: u64,
+    pub max_usd_micro: u64,
+    pub scope: Vec<String>,
+}
+
+/// sha256 of the token, hex: the only form the enclave stores.
+pub fn session_id(token: &[u8; 32]) -> String { hex::encode(Sha256::digest(token)) }
+pub fn session_key(id: &str, rest: &str) -> String { format!("s/{}/{}", id, rest) }
+
+/// Build the grant from the wallet-signed `session` request. Expiry is now + min(asked, 30 min).
+pub fn grant_from_request(req: &SignedRequest, token_id: &str, now_ms: u64) -> Result<SessionGrant, Error> {
+    if req.op != "session" { return Err(err("bad_session", "a session starts from a signed 'session' request")); }
+    if token_id.is_empty() || token_id.len() > 64 { return Err(err("bad_session", "token_id missing")); }
+    if let Some(t) = req.params.get("token_id").and_then(|v| v.as_str()) { if t != token_id { return Err(err("session_token", "the signed token_id is not the key this account holds")); } }
+    let ttl = req.params.get("ttl_ms").and_then(|v| v.as_u64()).unwrap_or(SESSION_MAX_MS);
+    if ttl == 0 || ttl > SESSION_MAX_MS { return Err(err("session_too_long", "a session may last at most 30 minutes")); }
+    let max_usd_micro = req.params.get("max_usd_micro").and_then(|v| v.as_u64().or_else(|| v.as_str().and_then(|x| x.parse().ok())))
+        .filter(|m| *m > 0 && *m <= SESSION_MAX_USD_MICRO).ok_or_else(|| err("bad_session", "max_usd_micro must be 1..=1000000000"))?;
+    let scope: Vec<String> = match req.params.get("scope") {
+        None => SESSION_OPS.iter().map(|x| x.to_string()).collect(),
+        Some(v) => v.as_array().ok_or_else(|| err("bad_session", "scope must be a list of ops"))?
+            .iter().filter_map(|x| x.as_str()).filter(|x| SESSION_OPS.contains(x)).map(|x| x.to_string()).collect(),
+    };
+    if scope.is_empty() { return Err(err("bad_session", "scope has no allowed ops")); }
+    Ok(SessionGrant { account: req.account_id.clone(), token_id: token_id.to_string(), iat_ms: now_ms, exp_ms: now_ms + ttl, max_usd_micro, scope })
+}
+
+/// Expiry check at use time.
+pub fn check_grant_time(g: &SessionGrant, now_ms: u64) -> Result<(), Error> {
+    if g.exp_ms <= g.iat_ms || g.exp_ms - g.iat_ms > SESSION_MAX_MS { return Err(err("session_too_long", "a session may last at most 30 minutes")); }
+    if now_ms >= g.exp_ms { return Err(err("session_expired", "this session has expired; unlock again with one wallet signature")); }
+    Ok(())
+}
+
+/// Decode the token; returns its id (sha256 hex).
+pub fn parse_session_token(t: &str) -> Result<String, Error> {
+    let b: [u8; 32] = B64.decode(t).ok().and_then(|x| x.try_into().ok()).ok_or_else(|| err("bad_session", "session token must be 32 bytes, base64"))?;
+    Ok(session_id(&b))
+}
+
+/// Check a session request against its grant: recipient, scope, op, account and token.
+pub fn verify_session_request(s: &SessionAuth, g: &SessionGrant, expected_recipient: &str, op: &str) -> Result<(SignedRequest, [u8; 32]), Error> {
+    if s.recipient != expected_recipient { return Err(err("wrong_recipient", "session request made for another recipient")); }
+    if !SESSION_OPS.contains(&op) || !g.scope.iter().any(|x| x == op) { return Err(err("session_scope", "this action needs a fresh wallet signature, not a session")); }
+    let nonce: [u8; 32] = B64.decode(&s.nonce).ok().and_then(|n| n.try_into().ok()).ok_or_else(|| err("bad_nonce", "nonce must be 32 bytes, base64"))?;
+    let req: SignedRequest = serde_json::from_str(&s.message).map_err(|_| err("bad_message", "session message must be JSON {op, account_id, ts_ms, params}"))?;
+    if req.op != op { return Err(err("op_mismatch", format!("request op '{}' but called '{}'", req.op, op))); }
+    if req.account_id != g.account { return Err(err("account_mismatch", "session request names another account")); }
+    if let Some(t) = req.params.get("token_id").and_then(|v| v.as_str()) {
+        if t != g.token_id { return Err(err("session_token", "this session is for another key")); }
+    }
+    Ok((req, nonce))
+}
+
+/// Charge `usd` to a session; refuses (and undoes) past the grant's cap.
+pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) -> Result<u64, Error> {
+    let k = session_key(id, "spent");
+    let now = st.incr(&k, usd as i64)?;
+    if now as u64 > g.max_usd_micro {
+        let _ = st.incr(&k, -(usd as i64));
+        return Err(err("session_cap", "this session's spend cap is used up; unlock a new session or sign in your wallet"));
+    }
+    Ok(now as u64)
+}
+
 #[cfg(test)]
 mod tests;
 
@@ -833,3 +931,15 @@ pub fn wallet_claim_free(existing: &[u8], now_ms: u64) -> bool {
     std::str::from_utf8(existing).ok().and_then(|s| s.parse::<u64>().ok())
         .map(|t| now_ms.saturating_sub(t) > WALLET_CLAIM_TTL_MS).unwrap_or(true)
 }
+
+/// True when a holder-limits update queued a new raise (which must wait and needs a wallet signature).
+pub fn session_limits_raise(cur: Option<&HolderPolicy>, new: &HolderPolicy) -> bool {
+    match (&new.pending, cur.and_then(|c| c.pending.as_ref())) {
+        (None, _) => false,
+        (Some(n), Some(o)) => !(n.per_tx_usd_micro == o.per_tx_usd_micro && n.daily_usd_micro == o.daily_usd_micro && n.effective_ms == o.effective_ms),
+        (Some(_), None) => true,
+    }
+}
+
+/// base64 (standard) for values the enclave returns.
+pub fn b64(b: &[u8]) -> String { B64.encode(b) }
