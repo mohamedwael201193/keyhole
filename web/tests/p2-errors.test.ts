@@ -5,7 +5,7 @@ import { WORKER_ERROR_CODES, isKnownCode } from "@/lib/errors";
 import { errorText } from "@/lib/i18n";
 import en from "@/messages/en.json";
 
-const E = (en as { errors: Record<string, [string, string]> }).errors;
+const E = (en as unknown as { errors: Record<string, string[]> }).errors;
 const unknown = E.unknown;
 const src = ["lib.rs", "main.rs", "chainsig.rs"].map((f) => readFileSync(new URL(`../../tee/worker/src/${f}`, import.meta.url), "utf8")).join("\n");
 const emitted = [...new Set([...src.matchAll(/err\(\s*"([a-z_]+)"/g), ...src.matchAll(/"([a-z_]+)",\s*"[^"]*"\.into\(\)\)/g), ...src.matchAll(/,\s*"([a-z_]+)",\s*format!/g)].map((m) => m[1]))].sort();
