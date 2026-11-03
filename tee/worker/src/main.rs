@@ -78,7 +78,7 @@ mod host {
             .and_then(|s| s.parse().ok()).unwrap_or(0)
     }
 
-    struct Ctx { account: String, req: SignedRequest, now_ms: u64, tier: Option<u8>, token: Option<String> }
+    struct Ctx { account: String, req: SignedRequest, now_ms: u64, tier: Option<u8>, token: Option<String>, session: Option<(String, SessionGrant)> }
 
     impl Ctx {
         /// The key this request acts on: the key held now, else the id this account would mint.
@@ -95,6 +95,9 @@ mod host {
     }
 
     fn authenticate(input: &Value, op: &str, need_key: bool) -> Result<Ctx, Error> {
+        if input.pointer("/auth/scheme").and_then(|v| v.as_str()) == Some("session") {
+            return authenticate_session(input, op);
+        }
         let auth: Auth = serde_json::from_value(input.get("auth").cloned().unwrap_or(Value::Null))
             .map_err(|_| err("no_auth", "missing `auth`: sign the request with your NEAR wallet (NEP-413 signMessage)"))?;
         let eip191 = auth.scheme == "eip191";
@@ -127,7 +130,44 @@ mod host {
         rate_limit(&mut Host, &account, &lim, now_ms)?;
         consume_nonce(&mut Host, &account, &nonce, now_ms)?;
         BIND.with(|b| *b.borrow_mut() = Some((account.clone(), token.clone())));
-        Ok(Ctx { account, req, now_ms, tier, token })
+        Ok(Ctx { account, req, now_ms, tier, token, session: None })
+    }
+
+    /// Session call (docs.near.org/web3-apps/backend/backend pattern): the token the enclave issued after one NEP-413
+    /// signature. Every call re-checks expiry, scope, revocation, freshness, a single-use nonce, and that the account
+    /// still holds the key (a sale ends the session).
+    fn authenticate_session(input: &Value, op: &str) -> Result<Ctx, Error> {
+        let sa: SessionAuth = serde_json::from_value(input.get("auth").cloned().unwrap_or(Value::Null))
+            .map_err(|_| err("no_auth", "session auth must carry {token, message, nonce, recipient}"))?;
+        let id = parse_session_token(&sa.token)?;
+        let raw = Host.get(&session_key(&id, "grant"));
+        let g: SessionGrant = serde_json::from_slice(&raw).map_err(|_| err("session_unknown", "no such session; unlock with one wallet signature"))?;
+        if !Host.get(&session_key(&id, "revoked")).is_empty() { return Err(err("session_revoked", "this session was revoked; unlock again")); }
+        let now_ms = chain_now_ms()?;
+        check_grant_time(&g, now_ms)?;
+        let (req, nonce) = verify_session_request(&sa, &g, &recipient(), op)?;
+        check_freshness(req.ts_ms, now_ms)?;
+        let account = g.account.clone();
+        if !owns(&g.token_id, &account)? { return Err(err("not_owner", "this account no longer holds the key the session was made for")); }
+        let tier = holder_tier(&account)?;
+        let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
+        rate_limit(&mut Host, &account, &lim, now_ms)?;
+        consume_nonce(&mut Host, &account, &nonce, now_ms)?;
+        BIND.with(|b| *b.borrow_mut() = Some((account.clone(), Some(g.token_id.clone()))));
+        Ok(Ctx { account, req, now_ms, tier, token: Some(g.token_id.clone()), session: Some((id, g)) })
+    }
+
+    /// Start a session: one NEP-413 / EIP-191 wallet signature over {op:"session", params:{max_usd_micro, ttl_ms?, scope?}}.
+    /// Returns a random token; only its sha256 is stored. Follows the documented backend-auth flow.
+    fn op_session(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "session", true)?;
+        let g = grant_from_request(&c.req, &c.token_id(), c.now_ms)?;
+        let mut t = [0u8; 32];
+        getrandom::fill(&mut t).map_err(|_| err("rng", "no randomness"))?;
+        let id = session_id(&t);
+        Host.set(&session_key(&id, "grant"), serde_json::to_string(&g).unwrap_or_default().as_bytes());
+        Ok(json!({"ok": true, "op": "session", "account": c.account, "token_id": g.token_id, "session_token": b64(&t),
+            "exp_ms": g.exp_ms, "max_usd_micro": g.max_usd_micro, "scope": g.scope}))
     }
 
     /// Minter key is generated inside the TEE on first use and kept in encrypted storage.
@@ -437,6 +477,7 @@ mod host {
         let (key, id) = c.wallet()?;
         let usd = usd_of(&tin, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
+        if let Some((id, g)) = &c.session { session_charge(&mut Host, id, g, usd)?; }
         enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
         let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
         if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
@@ -471,6 +512,7 @@ mod host {
         let (key, id) = c.wallet()?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
+        if let Some((id, g)) = &c.session { session_charge(&mut Host, id, g, usd)?; }
         enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
         let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
         if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
@@ -591,6 +633,9 @@ mod host {
         let k = tkey(&c.token_id(), "policy");
         let cur = policy_for(&Host.get(&k), &c.account);
         let pol = set_policy(tier, cur.as_ref(), &c.account, pt, d, c.now_ms)?;
+        if c.session.is_some() && session_limits_raise(cur.as_ref(), &pol) {
+            return Err(err("session_scope", "raising limits needs a fresh wallet signature"));
+        }
         Host.set(&k, serde_json::to_string(&pol).unwrap_or_default().as_bytes());
         prov_append(&c.token_id(), "limits", &c.account, c.now_ms, &format!("limits {pt}/{d} pending={}", pol.pending.is_some()));
         let eff = effective_limits(tier, Some(&pol), c.now_ms);
@@ -650,6 +695,37 @@ mod host {
         let tid = c.token_id();
         let chain = prov_body(&tid, Some(&c.account)).unwrap_or(json!({}));
         Ok(json!({"ok": true, "op": "history", "account": c.account, "entries": a, "log": chain}))
+    }
+
+    /// One read for the whole vault screen: status, account, balances, history. One signature (or none with a session).
+    fn op_dashboard(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "dashboard", true)?;
+        let tid = c.token_id();
+        let lim = limits_now(&c)?;
+        let tier_lim = c.tier.and_then(limits_for_tier);
+        let pol = policy_for(&Host.get(&tkey(&tid, "policy")), &c.account);
+        prov_sync_owner(&tid, &c.account, c.now_ms);
+        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        let cool = cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms);
+        let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
+        let locked = active_lock(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms);
+        let (key, id) = c.wallet()?;
+        let (_, b) = http("GET", &format!("{}/wallet/v1/confidential/balance", OL), Some(&key), None)?;
+        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let entries = history_for(&all, &c.account);
+        let session = c.session.as_ref().map(|(id, g)| json!({"exp_ms": g.exp_ms, "max_usd_micro": g.max_usd_micro,
+            "spent_usd_micro": Host.incr(&session_key(id, "spent"), 0).unwrap_or(0), "scope": g.scope}));
+        Ok(json!({"ok": true, "op": "dashboard", "account": c.account, "token_id": tid, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
+            "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent,
+            "confidential_id": id, "balances": b.get("balances").cloned().unwrap_or(json!([])), "entries": entries, "session": session}))
+    }
+
+    /// Ends a session now: called with the session itself (Revoke button / sign out).
+    fn op_session_revoke(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "session_revoke", true)?;
+        let id = c.session.as_ref().map(|(id, _)| id.clone()).ok_or_else(|| err("bad_params", "revoke is sent with the session it ends"))?;
+        Host.set_if_absent(&session_key(&id, "revoked"), c.now_ms.to_string().as_bytes())?;
+        Ok(json!({"ok": true, "op": "session_revoke", "account": c.account, "revoked": true}))
     }
 
     /// Permissionless: if this enclave's minter is no longer the contract's minter, move its NEAR
@@ -740,8 +816,8 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
-            "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes"}))
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
     pub fn run() {
@@ -770,7 +846,10 @@ mod host {
             "chain_sign" => op_chain_sign(&input),
             "add_beat_key" => op_beat_key(&input, true),
             "del_beat_key" => op_beat_key(&input, false),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key")),
+            "dashboard" => op_dashboard(&input),
+            "session" => op_session(&input),
+            "session_revoke" => op_session_revoke(&input),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, session, session_revoke")),
         };
         let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.

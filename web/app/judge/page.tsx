@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { Badge, Proof, See, Step, Steps, Term, Purpose, Reveal, type ProofRow } from "@/components/ui";
-import { attestation, acct, acctAlt, CONTRACT_CODE_HASH, KEYS_CONTRACT, tx, txAlt, WORKER_PUBLISH_TX, WORKER_WASM_SHA256 } from "@/lib/config";
+import { attestation, acct, acctAlt, KEYS_CONTRACT, tx, txAlt } from "@/lib/config";
+import { IDENTITY } from "@/lib/identity.gen";
+import { TxLink } from "@/components/TxLink";
 import { CheckBuild, CheckContract } from "./live";
 
 export const metadata = { title: "Judge path · KEYHOLE" };
 
 const REPO = "https://github.com/mohamedwael201193/keyhole/blob/main";
-const INFO_CALL = "b0a6eadb-cee9-400e-8eca-8b0f4df7bcec";
-const CUR = WORKER_WASM_SHA256[0];
+// Every live identity comes from identity.json (node scripts/gen-identity.mjs).
+const INFO_CALL = IDENTITY.worker.info_call;
+const CUR = IDENTITY.worker.wasm_sha256;
 
 type Call = { id: string; what: string; ok: boolean; result: string; file?: string };
 const txRow = (label: string, h: string): ProofRow => ({ label, value: h, href: tx(h), alt: txAlt(h) });
@@ -52,15 +55,15 @@ export default function JudgePage() {
           <p>Every answer comes from an <Term k="enclave" /> on <Term k="tdx" /> hardware. Intel signs a report naming the exact code that ran. We compare that code&apos;s <Term k="codehash" /> with the current published build, <b className="mono">{CUR.slice(0, 8)}</b>.</p>
           <div className="uact">
             <CheckBuild callId={INFO_CALL} />
-            <Link className="btn b1" href={`/verify?call=${INFO_CALL}`} data-testid="judge-do-1">Run all 37 checks on /verify</Link>
+            <Link className="btn b1" href={`/verify?call=${IDENTITY.worker.info_call}`} data-testid="judge-do-1">Run all 37 checks on /verify</Link>
           </div>
-          <See>The quick check shows <b>Pass</b>. On /verify, all checks are green: the worker downloaded from FastFS hashes to <b className="mono">{CUR.slice(0, 8)}…</b>, the quote&apos;s report data matches, and Intel&apos;s certificate chain verifies. Badge: <b>Current build</b>.</See>
+          <See>The quick check shows <b>Pass</b>. On /verify, all checks are green: the worker downloaded from FastFS hashes to <b className="mono">{CUR.slice(0, 8)}…</b>, the quote&apos;s report data matches, and Intel&apos;s certificate chain verifies. Badge: <b>Current build</b>. Published with <TxLink hash={IDENTITY.worker.add_version_tx}>add_version</TxLink>.</See>
           <Proof rows={[
             { label: "current build", value: CUR },
-            txRow("published in", WORKER_PUBLISH_TX),
+            txRow("published in", IDENTITY.worker.add_version_tx),
             { label: "attested call", value: INFO_CALL, href: `/verify?call=${INFO_CALL}`, internal: true },
           ]} />
-          <Script path="./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec --rebuild">Rebuilds the worker from source with Rust (about 2 minutes) and prints the same hash.</Script>
+          <Script path={`./verify.sh ${IDENTITY.worker.info_call} --rebuild`}>Rebuilds the worker from source with Rust (about 2 minutes) and prints the same hash.</Script>
         </Step></Reveal>
 
         <Reveal><Step n={2} title="The NFT contract is the one in the repo" testid="judge-step-2">
@@ -68,7 +71,7 @@ export default function JudgePage() {
           <div className="uact"><CheckContract /></div>
           <See>The quick check shows <b>Pass</b>. The contract&apos;s only minter is an account whose key was generated inside the enclave.</See>
           <Proof rows={[
-            { label: "expected code hash", value: CONTRACT_CODE_HASH },
+            { label: "expected code hash", value: IDENTITY.contract.code_hash },
             { label: "contract", value: KEYS_CONTRACT, href: acct(KEYS_CONTRACT), alt: acctAlt(KEYS_CONTRACT) },
             { label: "repo file", value: "contracts/keys/deployed/keyhole_keys.wasm", href: `${REPO}/contracts/keys/deployed` },
           ]} />

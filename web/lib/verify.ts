@@ -1,4 +1,5 @@
 import { WORKER_WASM_SHA256 } from "./config";
+import { IDENTITY } from "./identity.gen";
 import { EVIDENCE_IDS } from "./evidenceIds";
 export interface Attestation { call_id: string; task_id: number; task_type?: string; caller_account_id?: string | null; secrets_ref?: string | null; attached_usd?: string | number | null; executed_wasm_sha256: string; wasm_hash: string; worker_measurement: string; project_id: string; input_hash: string; output_hash: string; timestamp: number; tdx_quote: string; build_target: string }
 export const CALL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -6,9 +7,9 @@ export const FASTFS = "https://main.fastfs.io";
 export const fastfsUrl = (projectId: string, hash: string) => `${FASTFS}/${projectId.split("/")[0]}/outlayer.near/${hash}.wasm`;
 export const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 
-/** sha256 of tee/worker/DEPLOYED_SHA256. The published build, prefix a55ebb14. 09d481a5 is the previous version. */
-export const PUBLISHED_WASM_SHA256 = "a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e";
-export const PREVIOUS_WASM_SHA256 = "09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4";
+/** From identity.json (also written to tee/worker/DEPLOYED_SHA256). */
+export const PUBLISHED_WASM_SHA256: string = IDENTITY.worker.wasm_sha256;
+export const PREVIOUS_WASM_SHA256: string = IDENTITY.worker.previous_wasm_sha256;
 
 export interface Checks { quote: boolean; registered: boolean; published: boolean; fastfs: boolean | null; fastfsHash?: string; bytes?: number; binding?: Binding | null; output?: OutputCheck | null }
 export interface Binding { expected: string; inQuote: string; match: boolean }
