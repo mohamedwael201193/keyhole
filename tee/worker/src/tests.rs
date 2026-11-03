@@ -746,3 +746,5 @@ mod p2matrix;
 mod p2golden;
 #[path = "p2beat.rs"]
 mod p2beat;
+#[path = "p2fail.rs"]
+mod p2fail;

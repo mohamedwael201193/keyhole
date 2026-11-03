@@ -337,9 +337,10 @@ pub fn pnl_canonical(token_id: &str, owner: &str, trades: u64, cost: u64, value_
 /// "0.049974300000" -> 49974 micro-dollars (truncating). Rejects negatives/garbage.
 pub fn parse_usd_micro(s: &str) -> Option<u64> {
     let (i, f) = s.split_once('.').unwrap_or((s, ""));
+    // Digits only on both sides (no sign, no spaces, no trailing junk after the 6th decimal).
+    if i.is_empty() || !i.bytes().all(|c| c.is_ascii_digit()) || !f.bytes().all(|c| c.is_ascii_digit()) { return None; }
     let i: u64 = i.parse().ok()?;
     let mut f6: String = f.chars().take(6).collect();
-    if !f6.chars().all(|c| c.is_ascii_digit()) { return None; }
     while f6.len() < 6 { f6.push('0'); }
     Some(i.checked_mul(1_000_000)? + f6.parse::<u64>().ok()?)
 }
