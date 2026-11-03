@@ -111,7 +111,8 @@ Since contract v2 the contract refuses a mint or transfer to an account that alr
 ## Contract upgrades
 
 `keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1 changed code only. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`.
-`nft_mint` accepts any `token_id` up to 64 bytes, including an empty one. Only the TEE minter can call it, and the worker always mints `k` + 16 hex, so an empty id cannot be produced through KEYHOLE. The deployed contract is not being redeployed during the hackathon.
+
+`nft_mint` accepts any `token_id` up to 64 bytes, including an empty one. Only the TEE minter can call it, and the worker always mints `k` + 16 hex, so an empty id cannot be produced through KEYHOLE.
 
 ## Sessions (one signature, then no wallet popups for 30 minutes)
 
