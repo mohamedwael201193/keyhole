@@ -42,18 +42,18 @@ test("verify: the previous-build verdict says so, and the current call links its
   await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
   await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
-  await expect(page.locator('a[href*="F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu"]').first()).toBeVisible();
-  await expect(page.locator('a[href*="FXbXhGNi"]')).toHaveCount(0);
+  await expect(page.locator('a[href*="GNqXiicFgXQpS5LsYiNRffK6Xhp5W7Yi8EZK2XqKvX8X"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="F1XzcCcz"]')).toHaveCount(0);
 });
 
-test("verify: the default page checks the published 09d481a5 info call", async ({ page }) => {
+test("verify: the default page checks the published a55ebb14 info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("2896d0ad-aa27-4e21-b4a1-0cf2d3755d56");
+  await expect(page.locator("#cid")).toHaveValue("b0a6eadb-cee9-400e-8eca-8b0f4df7bcec");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4").first()).toBeVisible();
+  await expect(page.getByText("a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e").first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
   await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓");

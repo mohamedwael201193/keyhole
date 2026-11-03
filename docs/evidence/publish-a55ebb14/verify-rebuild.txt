@@ -1,0 +1,8 @@
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+   = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: `keyhole-worker` (bin "keyhole-worker") generated 1 warning
+    Finished `release` profile [optimized] target(s) in 0.26s
+OK   local reproducible build matches executed wasm (a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e)
+note  worker_measurement is the TDX RTMR3 measurement of the OutLayer worker image. It is not the wasm sha256.
