@@ -319,6 +319,20 @@ Tokens on mainnet today (`nft_total_supply` = 3):
 | `k857b6b68facc0f94` | [`a7458a83…91da`](https://nearblocks.io/address/a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da) | 1 | [`FaYzSUYT…`](https://nearblocks.io/txns/FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4) (signed by the first TEE minter) |
 | `k5f4750858f328940` | [`3bde8ce5…8447`](https://nearblocks.io/address/3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447) | 1 | [`DJxbuaJV…`](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) (signed in-enclave by the current minter) |
 
+
+### How control moves on transfer
+
+The key NFT is the only credential for its confidential account. The enclave never stores "who the holder is"; it asks the chain on every request.
+
+1. **Every request names a key and is signed by its owner.** The worker reads `nft_token(token_id).owner_id` live at finality `final` and refuses unless it equals the NEP-413 signer (`owns`, `tee/worker/src/main.rs`; ordering in `admit_request`, `tee/worker/src/lib.rs`). After a sale the seller's signature no longer matches, so the seller gets `not_owner`.
+2. **The custody wallet belongs to the token, not to a person.** `holder_wallet(token, owner)` looks the wallet up by token id; whoever owns the token operates it, so the confidential balance moves with the NFT (`transfer_moves_the_confidential_account_to_the_new_holder`).
+3. **Ownership is checked again right before funds move.** Swaps and withdraws re-read the owner just before submitting (`settle_if_owner`); a transfer that lands mid-request stops the payout and rolls back the daily spend (`invariant_transfer_mid_payout_never_settles_for_the_old_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `settle_after_transfer_is_refused`).
+4. **The new holder waits 10 minutes before the first withdraw** (`TRANSFER_COOLDOWN_MS`), so a seller who still has a request in flight cannot race the buyer (`withdraw_waits_after_a_transfer_only_for_the_new_owner`, `invariant_cooldown_binds_only_the_latest_transferee`).
+5. **A seller can lock the key for sale**; the lock binds only the owner who set it, so it never traps the buyer (`seller_lock_binds_only_the_owner_who_set_it`).
+6. **Old signed requests stay dead.** Nonces are single-use and requests expire (`transfer_then_old_signature_is_not_owner`, replay rows in `tee/worker/src/matrix.rs`).
+
+On mainnet: transfer [`3AhjtyUN…`](https://nearblocks.io/txns/3AhjtyUNx9T5QCgphV9niUYFFY6si5y1zLo39e8LHkDS); before it A withdraws ([440c2378](https://keyhole-seven.vercel.app/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae)), after it A is refused `not_owner` ([e805f050](https://keyhole-seven.vercel.app/verify?call=e805f050-d416-4a04-9b12-270adbe02068)), and the mid-payout attempt by the old holder is refused ([e72dc176](https://keyhole-seven.vercel.app/verify?call=e72dc176-e6fc-4d89-b348-911f5318b81b)). Full threat list: [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md).
+
 ## 6. The TEE worker
 
 The worker is a WASI program (`wasm32-wasip2`) that runs inside an OutLayer Intel TDX enclave. Version `keyhole-worker/0.2.0` ([`01_info.json`](docs/evidence/mainnet-e2e/01_info.json)). Full reference: [`tee/worker/README.md`](tee/worker/README.md).
