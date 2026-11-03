@@ -13,7 +13,7 @@ const failed = (r: ReturnType<typeof verifyCollateral>) => r.checks.filter((c) =
 const tcbJson = JSON.parse(fx.tcbInfo).tcbInfo;
 
 describe("Intel PCS collateral, real data", () => {
-  it("the published 452df1fd call passes all 12 collateral checks and Intel rates it UpToDate", () => {
+  it("the 452df1fd call (previous build, fixed fixture) passes all 12 collateral checks and Intel rates it UpToDate", () => {
     const r = verifyCollateral(q, base, { now: NOW });
     expect(r.checks).toHaveLength(12);
     expect(failed(r)).toEqual([]);
