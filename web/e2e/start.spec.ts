@@ -8,7 +8,7 @@ test("/start shows the first step and progress dots without a wallet", async ({ 
   await page.goto("/start");
   await expect(page.getByTestId("start-connect")).toBeVisible();
   await expect(page.getByTestId("start-dots").locator("li")).toHaveCount(6);
-  await expect(page.getByTestId("start-dots").locator("li[aria-current=step]")).toHaveText("Connect");
+  await expect(page.getByTestId("start-dots").locator("li[aria-current=step]")).toContainText("Connect");
 });
 test("/start fits 390px without horizontal scroll", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

@@ -4,6 +4,7 @@ import { useWallet } from "@/lib/wallet";
 import { minutesLeft } from "@/lib/session";
 import { ErrorBox } from "./Result";
 import { Spinner } from "./ui";
+import { SuccessCheck } from "./motion";
 
 /** Unlock (one wallet signature for 30 minutes) or show the live session with Revoke. */
 export function SessionCard({ tokenId }: { tokenId: string }) {
@@ -16,7 +17,7 @@ export function SessionCard({ tokenId }: { tokenId: string }) {
   if (live) {
     return (
       <div className="sess on" data-testid="session-on">
-        <span><b>Unlocked</b> · {minutesLeft(live)} min left · trades and withdrawals up to ${(live.max_usd_micro / 1e6).toFixed(2)} need no more wallet popups.</span>
+        <span><SuccessCheck size={18} /> <b>Unlocked</b> · {minutesLeft(live)} min left · trades and withdrawals up to ${(live.max_usd_micro / 1e6).toFixed(2)} need no more wallet popups.</span>
         <button className="btn b2" type="button" data-testid="session-revoke" onClick={() => void revokeSession()}>Lock now</button>
       </div>
     );

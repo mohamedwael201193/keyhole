@@ -11,6 +11,7 @@ import { SessionCard } from "@/components/SessionCard";
 import { DepositQr } from "@/components/DepositQr";
 import { ErrorBox } from "@/components/Result";
 import { Busy, Purpose } from "@/components/ui";
+import { StepCard, Stepper, StepTransition, SuccessCheck } from "@/components/motion";
 
 const TITLES: Record<StartStep, string> = { connect: "Connect", mint: "Get your key", unlock: "Unlock", limits: "Limits", fund: "Fund", done: "Ready" };
 
@@ -59,10 +60,8 @@ export function StartView() {
   return (
     <main className="wrap start" data-testid="start">
       <Purpose eyebrow="Start" title="Set up in five short steps" line="A private trading account: two wallet popups with a NEAR wallet (connect, mint), three with MetaMask. Your progress is kept if you leave." />
-      <ol className="dots" aria-label="Progress" data-testid="start-dots">
-        {START_STEPS.map((s, i) => <li key={s} data-state={i < idx ? "done" : i === idx ? "now" : "next"} aria-current={i === idx ? "step" : undefined}>{TITLES[s]}</li>)}
-      </ol>
-      <section className="scard" data-testid={`start-step-${step}`}>
+      <div data-testid="start-dots"><Stepper steps={START_STEPS.map((x) => TITLES[x])} current={idx} /></div>
+      <StepTransition k={step}><StepCard active className="scard" data-testid={`start-step-${step}`}>
         {step === "connect" && <>
           <h2>1 · Connect a wallet</h2>
           <p>A NEAR wallet connects and unlocks in one popup. MetaMask works too (one more signature to unlock). Nothing is sent and nothing is charged.</p>
@@ -98,11 +97,11 @@ export function StartView() {
           {account.res?.error && <ErrorBox code={account.res.error.code} />}
         </>}
         {step === "done" && <>
-          <h2>You&apos;re set</h2>
+          <SuccessCheck size={48} label="Done" /><h2>You&apos;re set</h2>
           <p>Your account is funded and unlocked. Trade, prove your results, or withdraw from the vault.</p>
           <Link className="btn b1" href="/vault" data-testid="start-go">Open my vault</Link>
         </>}
-      </section>
+      </StepCard></StepTransition>
     </main>
   );
 }

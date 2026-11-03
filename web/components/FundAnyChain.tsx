@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { FUND_ORIGINS, FUND_MAX, FUND_STEPS, fundsStep, statusOf, toUnits, refundOk } from "@/lib/oneclick";
-import { CopyBtn, Spinner } from "./ui";
+import { Spinner } from "./ui";
+import { CopyButton, QRFrame } from "./motion";
 
 type Q = { depositAddress: string; amountInFormatted: string | null; amountOutFormatted: string | null; timeEstimate: number | null; deadline: string | null };
 
@@ -56,10 +57,10 @@ export function FundAnyChain({ recipient, evm }: { recipient: string; evm?: stri
       {err && <p className="vhelp err" role="alert">{err}</p>}
       {q && (
         <div className="depqr" data-testid="fac-deposit">
-          {svg && <div className="qr" role="img" aria-label={`QR code of the ${chain} deposit address`} dangerouslySetInnerHTML={{ __html: svg }} />}
+          {svg && <QRFrame caption="Scan to copy the address"><div className="qr" role="img" aria-label={`QR code of the ${chain} deposit address`} dangerouslySetInnerHTML={{ __html: svg }} /></QRFrame>}
           <div>
             <p>Send exactly <b data-testid="fac-send">{q.amountInFormatted ?? amt} {sym}</b> on <b>{chain}</b> to:</p>
-            <div className="vbox ro"><span className="v addr">{q.depositAddress}</span><CopyBtn value={q.depositAddress} /></div>
+            <div className="vbox ro"><span className="v addr">{q.depositAddress}</span><CopyButton value={q.depositAddress} /></div>
             <p className="vhelp">You receive about {q.amountOutFormatted ?? "—"} USDC in your vault{q.timeEstimate ? `, usually within ${q.timeEstimate}s` : ""}. Quote valid until {q.deadline ? new Date(q.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}.</p>
             <ol className="fanyc-steps" data-testid="fac-progress">{FUND_STEPS.map((s, i) => <li key={s} data-state={fs && i < fs.step ? "done" : fs && i === fs.step ? "now" : "next"}>{i === 3 && fs?.refund ? "Refunded to you" : i === 3 ? "Your vault" : s}</li>)}</ol>
             <p className="note" data-testid="fac-status">{st ? `${statusOf(st.status).label}. ${statusOf(st.status).where}` : "Checking status…"} <a href={`https://explorer.near-intents.org/transactions/${q.depositAddress}`} target="_blank" rel="noreferrer">Intents explorer ↗</a></p>

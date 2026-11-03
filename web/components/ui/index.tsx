@@ -1,4 +1,5 @@
 "use client";
+import { StagedProgress } from "@/components/motion";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GLOSSARY, type Term as TermKey } from "@/lib/glossary";
@@ -111,5 +112,6 @@ export function Purpose({ eyebrow, title, line, children }: { eyebrow: string; t
 
 /** Busy button content: spinner + stage + elapsed seconds (from useSigned().label). */
 export function Busy({ l }: { l: string }) {
-  return <span className="ubusy" role="status" aria-live="polite"><Spinner label={l || "Working"} /> {l || "Working…"}</span>;
+  // Visual from the shared motion kit (PR #105); `l` already carries the stage and elapsed seconds.
+  return <span className="ubusy"><StagedProgress label={l || "Working…"} /></span>;
 }
