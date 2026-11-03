@@ -44,7 +44,7 @@ export default function JudgePage() {
         <li className="c">
           <h2><span>2</span>The NFT contract is the one in the repo</h2>
           <p><b>Do:</b> run <span className="mono">./judge/1-contract.sh</span>, or open <a href="https://nearblocks.io/address/keyhole-devmo.near" target="_blank" rel="noreferrer">keyhole-devmo.near</a> and compare its code hash.</p>
-          <p><b>See:</b> the on-chain code hash equals sha256 <span className="mono">a5712300…31a73ad2</span> of <span className="mono">contracts/keys/deployed/keyhole_keys.wasm</span>. The only minter is the account the TEE holds.</p>
+          <p><b>See:</b> the on-chain code hash equals sha256 <span className="mono">57b63c36…191a30ac</span> of <span className="mono">contracts/keys/deployed/keyhole_keys.wasm</span>. The only minter is the account the TEE holds.</p>
         </li>
 
         <li className="c">

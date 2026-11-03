@@ -1,0 +1,34 @@
+{
+ "block_height": 222901984,
+ "result": {
+  "version": "0.1.0",
+  "link": null,
+  "standards": [
+   {
+    "standard": "nep171",
+    "version": "1.2.0"
+   },
+   {
+    "standard": "nep177",
+    "version": "2.0.0"
+   },
+   {
+    "standard": "nep178",
+    "version": "1.0.0"
+   },
+   {
+    "standard": "nep181",
+    "version": "1.0.0"
+   },
+   {
+    "standard": "nep199",
+    "version": "2.1.0"
+   },
+   {
+    "standard": "nep330",
+    "version": "1.2.0"
+   }
+  ],
+  "build_info": null
+ }
+}

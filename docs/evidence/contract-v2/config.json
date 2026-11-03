@@ -1,0 +1,10 @@
+{
+ "block_height": 222901983,
+ "result": {
+  "owner": "keyhole-devmo.near",
+  "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+  "treasury": "keyhole-devmo.near",
+  "royalty_bps": 500,
+  "beats": "2"
+ }
+}

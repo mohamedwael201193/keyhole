@@ -46,7 +46,7 @@ A declined signature shows "You declined the signature." Starting another action
 
 ## Architecture
 
-- **Contract** [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 NFT. `nft_mint` accepts only the enclave-held minter. The worker reads `holder_tier(account_id)` on each call.
+- **Contract** [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 NFT with NEP-178 approvals and NEP-199 royalties. `nft_mint` accepts only the enclave-held minter, and the contract holds every account to one key. The worker reads `holder_tier(account_id)` on each call.
 - **OutLayer TEE worker.** Rust wasm in an Intel TDX enclave. The live build sha256 begins `a55ebb14` (full hash in [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256)). It checks the signature, the nonce, a 5-minute window, the tier caps, and the rate limit. For a NEAR signature it also checks that the public key is a full-access key. It sends confidential quotes and swaps through NEAR Intents.
 - **Website.** Next.js. The browser posts `{op, auth}` to `/api/worker`. The server adds the OutLayer payment key and does not log the body. The browser never holds that key.
 
@@ -114,7 +114,7 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 
 | | |
 |---|---|
-| Keys NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 core, NEP-177 metadata, NEP-181 enumeration, NEP-199 payouts, tiers 1–3. Deployed wasm 207,996 bytes, sha256 `a5712300…3ad2`, on-chain code hash `C8pL59r9…ivLc1` ([`judge/1-contract.sh`](judge/1-contract.sh)) |
+| Keys NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 core, NEP-177 metadata, NEP-178 approvals, NEP-181 enumeration, NEP-199 payouts, NEP-330 source metadata, one key per account, tiers 1–3. Deployed wasm 208,204 bytes, sha256 `57b63c36…30ac`, on-chain code hash `6uPe67Sg…jwtuh` ([`judge/1-contract.sh`](judge/1-contract.sh)) |
 | TEE worker | Rust, `wasm32-wasip2`, running in an OutLayer Intel TDX enclave. Project `keyhole-devmo.near/keyhole`, build **`a55ebb14…140e`** (708837 bytes), published with [`add_version`](https://nearblocks.io/txns/GNqXiicFgXQpS5LsYiNRffK6Xhp5W7Yi8EZK2XqKvX8X). Previous versions `f7217ae2` ([`CcttLJdw…`](https://nearblocks.io/txns/CcttLJdwCa8EaLhY42fh6SBZbcVphtycrNTc74jnvkyW)), `452df1fd` ([`FXbXhGNi…`](https://nearblocks.io/txns/FXbXhGNirZCkiP2bx1aiBFQL3Q1EHFMpniJTY579oGWN)), `6367401a` ([`AJWVEN6F…`](https://nearblocks.io/txns/AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx)), `38bd67b9` ([`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z)), `b3fa1a39` ([`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU)) and `f13efe92` ([`22KDVU1s…`](https://nearblocks.io/txns/22KDVU1sNKQhjoYbN8h1JqyQbcNxHRNednT6sz4nogxS)) |
 | Mint authority | `nft_mint` is callable only by the minter, the implicit account [`015a0259…c443`](https://nearblocks.io/address/015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443). Its key was generated inside the enclave and never leaves it ([set_minter tx](https://nearblocks.io/txns/7QFqM5GiUgZuWJEpRUKvARn1LKyy91NVWFZmzNQscQDp)) |
 | Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is `a55ebb14`, the active enclave. It binds custody to the token, re-checks the owner at request and settle time, refuses a withdraw `to` that is not the signer, writes `media` on mint, accepts MetaMask `personal_sign` (`scheme: eip191`), enforces holder limits (a cut at once, a raise after 24 hours) and a 10-minute withdraw cooldown after a transfer |
@@ -171,7 +171,7 @@ A trading account that nobody can watch, together with a transferable right to w
   - The old owner is refused (`not_owner`) on their next call, including a signature they made before the transfer.
   - Before listing, the seller can `lock` the key for 1 to 168 hours: swap and withdraw are refused until the lock ends or the key moves, and the holder cannot lift it early. A buyer can ask the seller for a `prove` statement (enclave-signed "this key's account holds at least X", no exact balance) and check it with `node tee/worker/verify-log.mjs --proof`.
   - The buyer sees the balance, not the seller's trade rows: `history` returns only the rows the caller wrote.
-  - Marketplaces get royalties through NEP-199 (`nft_payout`, `nft_transfer_payout`, 500 bps on-chain, see [`config`](#5-the-keys-nft-contract)).
+  - Marketplaces list a key with NEP-178 `nft_approve` and settle with NEP-199 `nft_transfer_payout`: 5% to the treasury, 95% to the seller (500 bps on-chain, see [`config`](#5-the-keys-nft-contract)). A real 0.01 NEAR sale on mainnet: [`Azn3WUud…`](https://nearblocks.io/txns/Azn3WUudmSn4ip9B9HNVXTGXriavZ4JK5f3Aqp7JPx2m) ([evidence](docs/evidence/contract-v2/README.md)).
 - **Every answer comes with proof.**
   - Each reply carries an OutLayer attestation: an Intel TDX quote plus `executed_wasm_sha256`.
   - Anyone can hash the wasm stored on-chain (FastFS) and compare the two.
@@ -204,7 +204,7 @@ Do the step. The result on the right is what a correct tree produces. Commands a
 |---|---|
 | Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). Supply on the home page matches `nft_total_supply` |
 | Open [https://keyhole-seven.vercel.app/verify?call=b0a6eadb-cee9-400e-8eca-8b0f4df7bcec](https://keyhole-seven.vercel.app/verify?call=b0a6eadb-cee9-400e-8eca-8b0f4df7bcec) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, checks Intel's revocation lists and TCB status, and shows 37/37 (6 attestation, 19 Intel DCAP, 12 Intel PCS checks; TCB UpToDate). The verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e`, the published build |
-| `./judge/1-contract.sh` | On-chain code hash equals sha256 `a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
+| `./judge/1-contract.sh` | On-chain code hash equals sha256 `57b63c36d782bb4e60c4a25e9cc238093bc909a328617be864ba6327191a30ac` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec --rebuild` | The `executed` line equals `tee/worker/DEPLOYED_SHA256` (`a55ebb14…`). Then `OK` for a TDX quote, `wasm_hash == executed`, `executed == published build a55ebb14`, the FastFS bytes, and your local `build.sh` |
 | `./verify.sh 2896d0ad-aa27-4e21-b4a1-0cf2d3755d56` | Previous version `09d481a5`. Prints `OK executed == previous build 09d481a5, superseded by a55ebb14` |
 | `./verify.sh 54207d9e-b4f0-438b-9a74-cdba33de80d9` | Previous version `f7217ae2`. Prints `OK executed == previous build f7217ae2, superseded by a55ebb14` |
@@ -227,7 +227,8 @@ Hints named for the tracks this repository is built for. Each row is a shipped b
 | `nfts` | NEP-171 | `nft_transfer`, `nft_mint` event | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs), [mint #0](https://nearblocks.io/txns/UYHismxe3a2Xb5YvbVHuGhsHWf7ERrx5oCrxREePBFR) |
 | `nfts` | NEP-177 | `nft_metadata` / `nft_token` metadata | [`NonFungibleTokenMetadataProvider`](contracts/keys/src/lib.rs) |
 | `nfts` | NEP-181 | `nft_tokens`, `nft_tokens_for_owner`, `nft_total_supply` | same file, enumeration impl |
-| `nfts` | NEP-199 | `nft_payout`, `nft_transfer_payout`, 500 bps | [`nft_payout`](contracts/keys/src/lib.rs), [`config`](https://nearblocks.io/address/keyhole-devmo.near) via [`judge/1-contract.sh`](judge/1-contract.sh) |
+| `nfts` | NEP-178 | `nft_approve`, `nft_revoke`, `nft_revoke_all`, `nft_is_approved`; approvals cleared on transfer | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs), [approve `68er4S4y…`](https://nearblocks.io/txns/68er4S4ypnp7L7dCjMNPsWkQeYSnpCGHKMTSgyVAH9DM) |
+| `nfts` | NEP-199 | `nft_payout`, `nft_transfer_payout`, 500 bps, [sale `Azn3WUud…`](https://nearblocks.io/txns/Azn3WUudmSn4ip9B9HNVXTGXriavZ4JK5f3Aqp7JPx2m) pays 5% to `keyhole-devmo.near` | [`nft_payout`](contracts/keys/src/lib.rs), [`config`](https://nearblocks.io/address/keyhole-devmo.near) via [`judge/1-contract.sh`](judge/1-contract.sh) |
 | `nfts` | dynamic metadata | `beat()` emits `nft_metadata_update` | [beat tx](https://nearblocks.io/txns/2ShJpaoicEm49L9rcsJjXoubuzoF3SvbQFZASUQBi5dq) |
 | `privacy` | TEE | Worker runs in an OutLayer Intel TDX enclave. Each call returns a TDX quote | [`tee/worker`](tee/worker), [attestation `a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533) |
 | `privacy` | private compute | Balances, the trade log, and the custody API key stay in enclave storage. The gateway does not log bodies | [`tee/worker/src/main.rs`](tee/worker/src/main.rs) `history`, [`web/app/api/worker/route.ts`](web/app/api/worker/route.ts) |
@@ -294,8 +295,12 @@ Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat
 
 - **Standards.**
   - NEP-171 core and NEP-177 metadata (`KEYHOLE` / `KEY`) come from `near-contract-standards`.
+  - NEP-178 approvals (`nft_approve`, `nft_revoke`, `nft_revoke_all`, `nft_is_approved`, `nft_on_approve` when `msg` is set) come from `near-contract-standards`. Every transfer clears the approvals.
   - NEP-181 enumeration provides `nft_tokens`, `nft_tokens_for_owner` and `nft_total_supply`.
-  - NEP-199 `nft_payout` and `nft_transfer_payout` are written by hand. The royalty cap is `MAX_ROYALTY_BPS = 1000`; live it is `500`.
+  - NEP-199 `nft_payout` and `nft_transfer_payout` are written by hand. The royalty cap is `MAX_ROYALTY_BPS = 1000`; live it is `500`. The payout always adds up to the sale price.
+  - NEP-330 `contract_source_metadata` lists the standards above.
+- **One key per account.** `nft_mint`, `nft_transfer`, `nft_transfer_call` and `nft_transfer_payout` refuse a receiver that already holds a key ([refusal on mainnet, an expected revert](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV)). The worker's `already_holder` check runs before the mint transaction, so a refused mint costs no gas.
+- **Upgrade.** v1 to v2 was one transaction, deploy plus `migrate()` ([`142eipKr…`](https://nearblocks.io/txns/142eipKrruYWL69w31bzCbcSakGvum5XzwTasHxsAdAC)), rehearsed first in the near-workspaces sandbox against the 5 mainnet tokens ([`contracts/keys-sandbox`](contracts/keys-sandbox/tests/upgrade.rs), [evidence](docs/evidence/contract-v2/README.md)).
 - **Tiers.**
   - `nft_tier(token_id)` and `holder_tier(account_id)` return 1–3 (`MAX_TIER = 3`). The worker maps tier to limits ([§6](#6-the-tee-worker)).
   - **Legendary is a finish, not a tier.** Every key is a one-of-one (`copies: 1` on the minted metadata). The site names tier 1 Bronze, tier 2 Silver, and tier 3 Gold. When the on-chain tier is 3, one key in eight (`seed[1] & 7 == 0` in [`finishOf`](web/lib/traits.ts)) is drawn as the Legendary finish. Its caps stay the Gold caps: $100 per trade and $500 per UTC day ([`CAPS`](web/lib/traits.ts)). The ten catalog pictures on the home gallery and the identity sheet pair two artworks with that finish; a live token still takes its finish from the chain tier and that seed.
@@ -312,7 +317,7 @@ Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat
 - **Tests.**
   - Unit tests in [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) (count in [§12](#12-tests-and-ci)), run in CI with `cargo test --locked` and `clippy -D warnings`.
 - **Code identity.**
-  - On-chain `code_hash` `C8pL59r9NorJxcYXnXusZxz2cNaGEgiVbMnZPANivLc1` is the base58 of sha256 `a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2`, the sha256 of the committed wasm.
+  - On-chain `code_hash` `6uPe67SgsPuE71E73jp8zsbReQPGhTbW8UmUV5mjwtuh` is the base58 of sha256 `57b63c36d782bb4e60c4a25e9cc238093bc909a328617be864ba6327191a30ac`, the sha256 of the committed wasm.
 
 Tokens on mainnet (`nft_total_supply` = 5, read 2026-11-03; re-check with `./judge/1-contract.sh` or the live [/gallery](https://keyhole-seven.vercel.app/gallery)):
 
