@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IDENTITY, short } from "@/lib/identity.gen";
 import { TxLink } from "@/components/TxLink";
 
 export const metadata = { title: "Judge path · KEYHOLE" };
@@ -37,15 +38,15 @@ export default function JudgePage() {
       <ol className="jsteps">
         <li className="c">
           <h2><span>1</span>The code in the enclave is the code in the repo</h2>
-          <p><b>Do:</b> open <Link href="/verify?call=b0a6eadb-cee9-400e-8eca-8b0f4df7bcec">/verify for call b0a6eadb</Link>.</p>
-          <p><b>See:</b> the page fetches the attestation in your browser, downloads the worker from FastFS, hashes it, recomputes the quote&apos;s report_data from the attested fields, and shows six green checks: the sixth hashes this call&apos;s published output and matches the attested <span className="mono">output_hash</span>. Then 19 Intel DCAP and 12 Intel PCS checks run on the quote, 37 in all. <span className="mono">executed_wasm_sha256</span> is <span className="mono">09d481a5…d172aaf4</span>, the same value as <span className="mono">tee/worker/DEPLOYED_SHA256</span>. It was published with <a href={tx("F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu")} target="_blank" rel="noreferrer">add_version F1XzcCcz…</a>.</p>
-          <p className="muted"><b>Deeper (2 min with Rust):</b> <span className="mono">./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec --rebuild</span> rebuilds the worker from source and prints the same hash.</p>
+          <p><b>Do:</b> open <Link href={`/verify?call=${IDENTITY.worker.info_call}`}>/verify for call {IDENTITY.worker.info_call.slice(0, 8)}</Link>.</p>
+          <p><b>See:</b> the page fetches the attestation in your browser, downloads the worker from FastFS, hashes it, recomputes the quote&apos;s report_data from the attested fields, and shows six green checks: the sixth hashes this call&apos;s published output and matches the attested <span className="mono">output_hash</span>. Then 19 Intel DCAP and 12 Intel PCS checks run on the quote, 37 in all. <span className="mono">executed_wasm_sha256</span> is <span className="mono">{short(IDENTITY.worker.wasm_sha256)}</span>, the same value as <span className="mono">tee/worker/DEPLOYED_SHA256</span>. It was published with <TxLink hash={IDENTITY.worker.add_version_tx}>add_version {IDENTITY.worker.add_version_tx.slice(0, 8)}…</TxLink>.</p>
+          <p className="muted"><b>Deeper (2 min with Rust):</b> <span className="mono">./verify.sh {IDENTITY.worker.info_call} --rebuild</span> rebuilds the worker from source and prints the same hash.</p>
         </li>
 
         <li className="c">
           <h2><span>2</span>The NFT contract is the one in the repo</h2>
           <p><b>Do:</b> run <span className="mono">./judge/1-contract.sh</span>, or open <TxLink account="keyhole-devmo.near" /> and compare its code hash.</p>
-          <p><b>See:</b> the on-chain code hash equals sha256 <span className="mono">9e685c32…68d5089e</span> of <span className="mono">contracts/keys/deployed/keyhole_keys.wasm</span>. The only minter is the account the TEE holds.</p>
+          <p><b>See:</b> the on-chain code hash equals sha256 <span className="mono">{short(IDENTITY.contract.wasm_sha256)}</span> (base58 <span className="mono">{IDENTITY.contract.code_hash.slice(0, 8)}…</span>) of <span className="mono">contracts/keys/deployed/keyhole_keys.wasm</span>. The only minter is the account the TEE holds.</p>
         </li>
 
         <li className="c">
@@ -60,7 +61,7 @@ export default function JudgePage() {
             { id: "98b27188-a28c-4720-8fec-1d1329e0f281", what: "B locks the key for sale", result: "ok · lock" },
             { id: "075287b5-a100-4fa5-8e96-94a36019c6bc", what: "B tries to withdraw while locked", result: "refused · locked" },
           ]} />
-          <p className="muted">These calls ran on earlier worker builds (before a55ebb14), so /verify marks the build as <b>Previous version</b>. Their outputs are published in the repo and hash to the attested <span className="mono">output_hash</span>.</p>
+          <p className="muted">These calls ran on earlier worker builds (before {IDENTITY.worker.wasm_sha256.slice(0, 8)}), so /verify marks the build as <b>Previous version</b>. Their outputs are published in the repo and hash to the attested <span className="mono">output_hash</span>.</p>
         </li>
 
         <li className="c">

@@ -61,10 +61,12 @@ describe("current-build pointers", () => {
     }
   });
 
-  it("the /judge verify link's text names the same call as its href", () => {
+  it("/judge takes the worker call, add_version tx and contract hashes from identity.json, not hand-edited text", () => {
     const src = readFileSync(`${root}/web/app/judge/page.tsx`, "utf8");
-    const links = [...src.matchAll(/href="\/verify\?call=([0-9a-f]{8})[^"]*">[^<]*?call ([0-9a-f]{8})/g)];
-    expect(links.length).toBeGreaterThan(0);
-    for (const m of links) expect(m[2]).toBe(m[1]);
+    const id = JSON.parse(readFileSync(`${root}/identity.json`, "utf8"));
+    expect(src).toMatch(/\/verify\?call=\$\{IDENTITY\.worker\.info_call\}/);
+    expect(src).toContain("hash={IDENTITY.worker.add_version_tx}");
+    for (const h of [id.worker.wasm_sha256, id.worker.add_version_tx, id.contract.wasm_sha256, id.contract.code_hash]) expect(src).not.toContain(h.slice(0, 8));
+    expect(readFileSync(`${root}/tee/worker/DEPLOYED_SHA256`, "utf8").trim()).toBe(id.worker.wasm_sha256);
   });
 });
