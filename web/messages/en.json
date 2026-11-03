@@ -551,6 +551,14 @@
   "session_token": [
    "This unlock is for another key.",
    "Unlock the key you are using."
+  ],
+  "bad_session": [
+   "That unlock token is malformed.",
+   "Lock and unlock again with one wallet signature."
+  ],
+  "session_too_long": [
+   "An unlock can last at most 30 minutes.",
+   "Unlock again; the site asks for 30 minutes."
   ]
  },
  "offline": {
