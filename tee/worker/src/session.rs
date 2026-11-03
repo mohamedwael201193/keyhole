@@ -66,3 +66,10 @@ fn call(op: &str, acct: &str, params: &str, nonce: [u8; 32]) -> SessionAuth {
 #[test] fn limits_lowering_is_not_a_raise() { let p = set_policy(limits_for_tier(1).unwrap(), None, "a.near", 100_000, 200_000, T).unwrap(); assert!(!session_limits_raise(None, &p)); }
 #[test] fn limits_raise_is_flagged() { let t = limits_for_tier(1).unwrap(); let low = set_policy(t, None, "a.near", 100_000, 200_000, T).unwrap(); let up = set_policy(t, Some(&low), "a.near", 500_000, 900_000, T + 1).unwrap(); assert!(session_limits_raise(Some(&low), &up)); }
 #[test] fn eip191_account_grant() { let r = SignedRequest { op: "session".into(), account_id: "0xabc".into(), ts_ms: T, params: serde_json::json!({"max_usd_micro": "1000000"}) }; assert_eq!(grant_from_request(&r, "k1", T).unwrap().account, "0xabc"); }
+
+// Sign-in-and-sign-message: the session request is signed before the account is known.
+fn blank(op: &str) -> String { format!(r#"{{"op":"{op}","account_id":"","ts_ms":{T},"params":{{"max_usd_micro":5000000}}}}"#) }
+#[test] fn signin_session_takes_signer_account() { let r = verify_nep413(&signed(1, "alice.near", &blank("session"), [4; 32], RCP), RCP).unwrap().0; assert_eq!(r.account_id, "alice.near"); assert_eq!(grant_from_request(&r, "k1", T).unwrap().account, "alice.near"); }
+#[test] fn signin_blank_account_only_for_session() { assert_eq!(verify_nep413(&signed(1, "alice.near", &blank("swap"), [4; 32], RCP), RCP).unwrap_err().code, "account_mismatch"); }
+#[test] fn signin_blank_still_needs_valid_signature() { let mut a = signed(1, "alice.near", &blank("session"), [4; 32], RCP); a.account_id = "bob.near".into(); assert_eq!(verify_nep413(&a, RCP).unwrap().0.account_id, "bob.near"); /* bob must then pass the full-access-key check in authenticate */ }
+#[test] fn signin_blank_wrong_recipient() { assert!(verify_nep413(&signed(1, "alice.near", &blank("session"), [4; 32], "other"), RCP).is_err()); }

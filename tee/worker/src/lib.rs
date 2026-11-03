@@ -111,8 +111,13 @@ pub fn verify_nep413(auth: &Auth, expected_recipient: &str) -> Result<(SignedReq
     let vk = VerifyingKey::from_bytes(&pk).map_err(|_| err("bad_public_key", "invalid ed25519 point"))?;
     vk.verify_strict(&hash, &Signature::from_bytes(&sig))
         .map_err(|_| err("bad_signature", "signature does not match message"))?;
-    let req: SignedRequest = serde_json::from_str(&auth.message)
+    let mut req: SignedRequest = serde_json::from_str(&auth.message)
         .map_err(|_| err("bad_message", "signed message must be JSON {op, account_id, ts_ms, params}"))?;
+    // Sign-in-and-sign-message (near-connect, https://github.com/hot-dao/near-selector (@hot-labs/near-connect README, "Initialize connection to wallet and sign in"; docs: https://docs.near.org/web3-apps/tutorials/wallet-login)):
+    // the message is built before the account is known, so a `session` request may leave account_id empty. The account is
+    // then the NEP-413 signer, which the caller still proves with the full-access-key check
+    // (https://docs.near.org/web3-apps/backend/backend). Every other op must name its account.
+    if req.op == "session" && req.account_id.is_empty() { req.account_id = auth.account_id.clone(); }
     if req.account_id != auth.account_id {
         return Err(err("account_mismatch", "signed account_id differs from the claimed account"));
     }
