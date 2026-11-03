@@ -4,6 +4,7 @@ import { Medal } from "@/components/Medal";
 import { useI18n } from "@/lib/i18n";
 import { ATLAS, CALLS } from "@/lib/evidence";
 import { attestation, tx } from "@/lib/config";
+import { TxLink } from "@/components/TxLink";
 
 export default function Atlas() {
   const { t } = useI18n();
@@ -19,7 +20,7 @@ export default function Atlas() {
             </div>
             <p className="note">{a.kind === "none" ? t("atlas.planned_d") : a.note}</p>
             <p className="mono" style={{ fontSize: 12, color: a.kind === "none" ? "var(--mu)" : "var(--teal)" }}>{a.kind !== "none" ? t("atlas.real") : t("atlas.planned")}</p>
-            {a.kind === "tx" && <a style={{ color: "var(--teal)" }} href={tx(a.ref!)} target="_blank" rel="noreferrer">{t("atlas.open")} ↗</a>}
+            {a.kind === "tx" && <span style={{ color: "var(--teal)" }}><TxLink hash={a.ref!}>{t("atlas.open")} ↗</TxLink></span>}
             {a.kind === "call" && <a style={{ color: "var(--teal)" }} href={attestation(a.ref!)} target="_blank" rel="noreferrer">{t("atlas.att")} ↗</a>}
           </li>
         ))}

@@ -13,6 +13,7 @@ import { formatTradePrice } from "@/lib/price";
 import { CAPS, CATALOG, type Finish } from "@/lib/traits";
 import { TXS } from "@/lib/evidence";
 import type { Config } from "@/lib/near";
+import { TxLink } from "@/components/TxLink";
 
 const ORBIT = CHAINS.map(([id, name], i) => {
   const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
@@ -136,7 +137,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
               <span className="att">{t("land.attested")}</span>
               <dl className="kv">
                 <dt>{t("land.worker")}</dt><dd className="mono" data-kind="hash">{WORKER_WASM_SHA256[0]}</dd>
-                <dt>{t("land.tx")}</dt><dd className="mono" data-kind="hash"><a href={tx(WORKER_PUBLISH_TX)} target="_blank" rel="noreferrer">{WORKER_PUBLISH_TX}</a></dd>
+                <dt>{t("land.tx")}</dt><dd className="mono" data-kind="hash"><TxLink hash={WORKER_PUBLISH_TX}>{WORKER_PUBLISH_TX}</TxLink></dd>
                 <dt>{t("land.runtime")}</dt><dd>OutLayer · wasm32-wasip2</dd>
               </dl>
               <Link className="btn b1" href="/verify">{t("land.verifySelf")}</Link>
@@ -261,9 +262,9 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <h2>{t("proof.sub")}</h2>
           <ul>
             {TXS.map((x) => (
-              <li key={x.hash}><span>{x.label}</span><a href={tx(x.hash)} target="_blank" rel="noreferrer">{x.hash.slice(0, 12)}…</a></li>
+              <li key={x.hash}><span>{x.label}</span><TxLink hash={x.hash}>{x.hash.slice(0, 12)}…</TxLink></li>
             ))}
-            <li><span>{KEYS_CONTRACT}</span><a href={`https://nearblocks.io/address/${KEYS_CONTRACT}`}>{t("atlas.open")}</a></li>
+            <li><span>{KEYS_CONTRACT}</span><TxLink account={KEYS_CONTRACT}>{t("atlas.open")}</TxLink></li>
             {config && <li><span>{t("proof.beats")}</span><span className="mono">{config.beats}</span></li>}
             {config && <li><span>{t("proof.royalty")}</span><span className="mono">{config.royalty_bps / 100}%</span></li>}
           </ul>

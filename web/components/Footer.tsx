@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { KeyholeLogo } from "./KeyholeLogo";
-import { KEYS_CONTRACT, acct } from "@/lib/config";
+import { KEYS_CONTRACT } from "@/lib/config";
+import { TxLink } from "@/components/TxLink";
 
 export function Footer() {
   const { t } = useI18n();
@@ -16,7 +17,7 @@ export function Footer() {
         <Link href="/settle" data-testid="footer-settle">{t("nav.settle")}</Link>
         <Link href="/atlas">{t("nav.atlas")}</Link>
         <Link href="/identity">{t("nav.identity")}</Link>
-        <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">{KEYS_CONTRACT}</a>
+        <TxLink account={KEYS_CONTRACT}>{KEYS_CONTRACT}</TxLink>
         <a href="https://near.org" target="_blank" rel="noreferrer" className="built" aria-label={t("footer.built")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logos/near.svg" width={16} height={16} alt="" />{t("footer.built")}

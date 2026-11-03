@@ -17,3 +17,6 @@
 :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 4px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .focus\:not-sr-only:focus { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; white-space: normal; }
+.txl{display:inline-flex;gap:.45em;align-items:baseline;flex-wrap:wrap}.txl .alt{font-size:.78em;opacity:.7}.txl .alt:hover{opacity:1}
+.spin{display:inline-block;width:.9em;height:.9em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:khspin .7s linear infinite;vertical-align:-.1em}@keyframes khspin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+.cw.warn{background:var(--coral,#e5654b);color:#fff;border-color:transparent}

@@ -2,9 +2,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { checkLog, holders, short, type ChainCheck, type KeyLogBody } from "@/lib/keylog";
-import { TEE_MINTER, acct } from "@/lib/config";
+import { TEE_MINTER } from "@/lib/config";
+import { TxLink } from "@/components/TxLink";
 
-const ID = /^k[a-z0-9]{4,39}$/i;
+/** New ids are k + hex; the first keys were minted with plain numbers (0, 1, 2…). */
+export const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;
+const ID = KEY_ID;
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 export function KeyHistoryView() {
@@ -14,10 +17,12 @@ export function KeyHistoryView() {
   const [ck, setCk] = useState<ChainCheck | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [legacy, setLegacy] = useState<string | null>(null);
 
   async function load(tid: string) {
-    setErr(null); setBody(null); setCk(null); setCallId(null);
-    if (!ID.test(tid)) { setErr("Enter a key id like k5f4750858f328940."); return; }
+    setErr(null); setBody(null); setCk(null); setCallId(null); setLegacy(null);
+    if (!ID.test(tid)) { setErr("That is not a key id. Paste one from the gallery, like k5f4750858f328940 or 0."); return; }
+    if (/^\d+$/.test(tid)) { setLegacy(tid); return; }
     setBusy(true);
     try {
       const r = await fetch("/api/worker", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op: "provenance", token_id: tid }) });
@@ -46,7 +51,13 @@ export function KeyHistoryView() {
         <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
         <button className="btn b1" type="submit" disabled={busy} data-testid="key-load">{busy ? "…" : "Open"}</button>
       </form>
-      {err && <p className="note" role="alert" style={{ color: "var(--coral)" }}>{err}</p>}
+      {err && <p className="note" role="alert" data-testid="key-error" style={{ color: "var(--coral)" }}>{err}</p>}
+      {legacy !== null && (
+        <section className="card" data-testid="key-legacy">
+          <h2>KEYHOLE Key #{legacy}</h2>
+          <p>This is one of the first keys, minted with a plain number before the enclave began keeping a per-key history book (books exist for ids that start with <span className="mono">k</span>). Its owner is still on the chain: see the <Link href="/gallery">gallery</Link> or the contract&apos;s <span className="mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
+        </section>
+      )}
       {body && ck && (
         <>
           <div className="kpills" data-testid="key-verdict" data-ok={String(ok)}>
@@ -62,7 +73,7 @@ export function KeyHistoryView() {
               <div className="kr kh"><span>Holder</span><span>From</span><span>To</span><span>Deposits</span><span>Paid out</span><span>Trades</span></div>
               {hs.map((h, i) => (
                 <div className="kr" key={`${h.owner}-${i}`} data-testid="holder-row">
-                  <span className="mono"><a href={acct(h.owner)} target="_blank" rel="noreferrer">{short(h.owner)}</a></span>
+                  <span className="mono"><TxLink account={h.owner}>{short(h.owner)}</TxLink></span>
                   <span data-l="From">{when(h.from_ms)}</span><span data-l="To">{h.to_ms ? when(h.to_ms) : "now"}</span>
                   <span data-l="Deposits">{h.deposits}</span><span data-l="Paid out" data-testid="paid-out">{h.withdraws}</span><span data-l="Trades">{h.trades}</span>
                 </div>

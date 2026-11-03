@@ -5,7 +5,7 @@ import { KeyArt } from "./Art";
 import { Guilloche, Hallmark } from "./Engraving";
 import { FoilCard } from "./FoilCard";
 import { useI18n } from "@/lib/i18n";
-import { keyState, shortAccount, type Token } from "@/lib/near";
+import { keyState, shortAccount, shortKeyId, type Token } from "@/lib/near";
 import { formatTradePrice } from "@/lib/price";
 import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 
@@ -20,13 +20,14 @@ export function KeyCard({ token, tier, viewer, displayIndex }: { token: Token; t
   const id = keyIdentity(token.token_id, tier);
   const state = keyState(token, tier, viewer);
   const yours = !!viewer && viewer === token.owner_id;
-  const title = t("gallery.key", { id: String(displayIndex) });
+  /** Same name as the vault and mint pages: short token id. Mint order is shown beside it. */
+  const title = t("gallery.key", { id: shortKeyId(token.token_id) });
   return (
     <article className="gk" data-state={state} data-testid="key-nft">
       <FoilCard finish={id.finish}>
         <div className="top">
           <span className="tier">{t(`finish.${id.finish}`)}</span>
-          <span className="oo">{t("land.oneOfOne")}</span>
+          <span className="oo" data-testid="mint-no">No. {displayIndex} · {t("land.oneOfOne")}</span>
         </div>
         <div className="art">
           <Guilloche seed={id.seedHex} />
