@@ -1,6 +1,7 @@
 import { nftTier, nftTokens } from "@/lib/near";
 import { GalleryView } from "./view";
-export const revalidate = 20;
+// Rendered per request (chain reads are cached 60 s in lib/rpc.ts), so `next build` never waits on the network.
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Keys · KEYHOLE" };
 export default async function Gallery() {
   const tokens = await nftTokens().catch(() => []);
