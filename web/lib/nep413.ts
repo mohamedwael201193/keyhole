@@ -3,7 +3,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import bs58 from "bs58";
 import { NEP413_RECIPIENT } from "./config";
 
-export type Op = "info" | "status" | "quote" | "mint" | "account" | "balance" | "history" | "swap" | "withdraw" | "limits" | "pnl";
+export type Op = "info" | "status" | "quote" | "mint" | "account" | "balance" | "history" | "swap" | "withdraw" | "limits" | "pnl" | "dashboard" | "session" | "session_revoke";
 export const NEP413_TAG = 2147484061; // 2^31 + 413
 
 export interface SignedAuth {
@@ -13,11 +13,12 @@ export interface SignedAuth {
   nonce: string; // base64, 32 bytes
   message: string;
   recipient: string;
-  scheme?: "eip191";
+  scheme?: "eip191" | "session";
+  token?: string;
   address?: string;
 }
 
-/** The published enclave a55ebb14 (and 09d481a5, f7217ae2, 452df1fd, 6367401a before it) verifies scheme eip191. */
+/** The published enclave cff9fd3c (and a55ebb14, 09d481a5, f7217ae2, 452df1fd, 6367401a before it) verifies scheme eip191. */
 export const EIP191_ENCLAVE_LIVE: boolean = true;
 
 /** Intent JSON signed by personal_sign. Same fields the worker parses for scheme eip191. */

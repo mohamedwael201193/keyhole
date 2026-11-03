@@ -1,101 +1,136 @@
 import Link from "next/link";
-import { IDENTITY, short } from "@/lib/identity.gen";
+import { Badge, Proof, See, Step, Steps, Term, Purpose, Reveal, type ProofRow } from "@/components/ui";
+import { attestation, acct, acctAlt, KEYS_CONTRACT, tx, txAlt } from "@/lib/config";
+import { IDENTITY } from "@/lib/identity.gen";
 import { TxLink } from "@/components/TxLink";
+import { CheckBuild, CheckContract } from "./live";
 
 export const metadata = { title: "Judge path · KEYHOLE" };
 
-const SITE = "https://keyhole-seven.vercel.app";
-const REPO_EVIDENCE = "docs/evidence/ownership-and-limits";
-const att = (id: string) => `https://api.outlayer.ai/attestations/by-call/${id}`;
-const tx = (h: string) => `https://nearblocks.io/txns/${h}`;
+const REPO = "https://github.com/mohamedwael201193/keyhole/blob/main";
+// Every live identity comes from identity.json (node scripts/gen-identity.mjs).
+const INFO_CALL = IDENTITY.worker.info_call;
+const CUR = IDENTITY.worker.wasm_sha256;
 
-type Call = { id: string; what: string; result: string; file?: string };
+type Call = { id: string; what: string; ok: boolean; result: string; file?: string };
+const txRow = (label: string, h: string): ProofRow => ({ label, value: h, href: tx(h), alt: txAlt(h) });
 
-function Calls({ rows }: { rows: Call[] }) {
+function Calls({ rows, testid }: { rows: Call[]; testid?: string }) {
   return (
-    <div className="jcalls">
+    <ul className="jcalls2" data-testid={testid}>
       {rows.map((r) => (
-        <div className="jcall" key={r.id}>
-          <div className="jw"><b>{r.what}</b><span className="mono">{r.result}</span></div>
-          <div className="jl mono">
-            <Link href={`/verify?call=${r.id}`}>Verify {r.id.slice(0, 8)}</Link>
-            <a href={att(r.id)} target="_blank" rel="noreferrer">Raw attestation</a>
-            {r.file ? <span>{r.file}</span> : null}
+        <li key={r.id} className="jcall2">
+          <div className="jc-what"><Badge tone={r.ok ? "ok" : "info"}>{r.ok ? "Allowed" : "Refused"}</Badge><span>{r.what}</span></div>
+          <div className="jc-res">{r.result}</div>
+          <div className="jc-act">
+            <Link className="ulink" href={`/verify?call=${r.id}`} aria-label={`Verify call ${r.id.slice(0, 8)}: ${r.what}`}>Verify this call</Link>
+            <a className="ulink" href={attestation(r.id)} target="_blank" rel="noreferrer" aria-label={`Raw attestation for ${r.id.slice(0, 8)}`}>Raw attestation ↗</a>
+            <code title={r.id}>{r.id.slice(0, 8)}</code>
           </div>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
+  );
+}
+
+function Script({ path, children }: { path: string; children: React.ReactNode }) {
+  return (
+    <details className="jscript">
+      <summary>Prefer a terminal? <code>{path}</code></summary>
+      <p>{children} <a href={`${REPO}/${path.replace(/^\.\//, "").split(" ")[0]}`} target="_blank" rel="noreferrer">Read the script ↗</a></p>
+    </details>
   );
 }
 
 export default function JudgePage() {
   return (
     <div className="page judge" data-testid="judge-page">
-      <p className="eb">Judge path · NEAR mainnet · about 5 minutes</p>
-      <h1>Check it yourself. <em>Trust nothing we say.</em></h1>
-      <p className="lede">Every step below runs against NEAR mainnet and the public OutLayer attestation API. Nothing here needs our keys or an account. Each step says what to do and what you should see. If you see something else, the claim fails.</p>
-
-      <ol className="jsteps">
-        <li className="c">
-          <h2><span>1</span>The code in the enclave is the code in the repo</h2>
-          <p><b>Do:</b> open <Link href={`/verify?call=${IDENTITY.worker.info_call}`}>/verify for call {IDENTITY.worker.info_call.slice(0, 8)}</Link>.</p>
-          <p><b>See:</b> the page fetches the attestation in your browser, downloads the worker from FastFS, hashes it, recomputes the quote&apos;s report_data from the attested fields, and shows six green checks: the sixth hashes this call&apos;s published output and matches the attested <span className="mono">output_hash</span>. Then 19 Intel DCAP and 12 Intel PCS checks run on the quote, 37 in all. <span className="mono">executed_wasm_sha256</span> is <span className="mono">{short(IDENTITY.worker.wasm_sha256)}</span>, the same value as <span className="mono">tee/worker/DEPLOYED_SHA256</span>. It was published with <TxLink hash={IDENTITY.worker.add_version_tx}>add_version {IDENTITY.worker.add_version_tx.slice(0, 8)}…</TxLink>.</p>
-          <p className="muted"><b>Deeper (2 min with Rust):</b> <span className="mono">./verify.sh {IDENTITY.worker.info_call} --rebuild</span> rebuilds the worker from source and prints the same hash.</p>
-        </li>
-
-        <li className="c">
-          <h2><span>2</span>The NFT contract is the one in the repo</h2>
-          <p><b>Do:</b> run <span className="mono">./judge/1-contract.sh</span>, or open <TxLink account="keyhole-devmo.near" /> and compare its code hash.</p>
-          <p><b>See:</b> the on-chain code hash equals sha256 <span className="mono">{short(IDENTITY.contract.wasm_sha256)}</span> (base58 <span className="mono">{IDENTITY.contract.code_hash.slice(0, 8)}…</span>) of <span className="mono">contracts/keys/deployed/keyhole_keys.wasm</span>. The only minter is the account the TEE holds.</p>
-        </li>
-
-        <li className="c">
-          <h2><span>3</span>Whoever holds the NFT controls the account, and nobody else</h2>
-          <p><b>Do:</b> open the transfer <TxLink hash="G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD">G35r5pmC…</TxLink> (key moves from account A to account B), then verify the calls below.</p>
-          <p><b>See:</b> before the transfer A could withdraw. After it, the same kind of request from A is refused with <span className="mono">not_owner</span> and B can withdraw. A replayed request and a withdraw while the key is locked for sale are refused too. Each verdict is produced inside the enclave and attested.</p>
-          <Calls rows={[
-            { id: "440c2378-6c27-49fd-8b6b-d74054f331ae", what: "A withdraws before the transfer", result: "ok · withdraw 0.003 USDC" },
-            { id: "e805f050-d416-4a04-9b12-270adbe02068", what: "A signs again after the transfer", result: "refused · not_owner" },
-            { id: "a4867e19-4444-48f7-9594-5b1b7303206e", what: "B (new holder) withdraws", result: "ok · withdraw 0.001 USDC" },
-            { id: "c3a9839f-64d8-4135-a036-eca3796bb672", what: "B's signed request sent twice", result: "refused · replay" },
-            { id: "98b27188-a28c-4720-8fec-1d1329e0f281", what: "B locks the key for sale", result: "ok · lock" },
-            { id: "075287b5-a100-4fa5-8e96-94a36019c6bc", what: "B tries to withdraw while locked", result: "refused · locked" },
+      <Purpose
+        eyebrow="Judge path · NEAR mainnet · about 5 minutes · no wallet needed"
+        title={<>Check it yourself. <em>Trust nothing we say.</em></>}
+        line={<>Seven checks, top to bottom. Each one has a button that runs in your browser and a green box that says what you should see. If you see something else, the claim fails.</>}
+      />
+      <Steps testid="judge-steps">
+        <Reveal><Step n={1} title="The code running in the enclave is the code in the repo" testid="judge-step-1">
+          <p>Every answer comes from an <Term k="enclave" /> on <Term k="tdx" /> hardware. Intel signs a report naming the exact code that ran. We compare that code&apos;s <Term k="codehash" /> with the current published build, <b className="mono">{CUR.slice(0, 8)}</b>.</p>
+          <div className="uact">
+            <CheckBuild callId={INFO_CALL} />
+            <Link className="btn b1" href={`/verify?call=${IDENTITY.worker.info_call}`} data-testid="judge-do-1">Run all 37 checks on /verify</Link>
+          </div>
+          <See>The quick check shows <b>Pass</b>. On /verify, all checks are green: the worker downloaded from FastFS hashes to <b className="mono">{CUR.slice(0, 8)}…</b>, the quote&apos;s report data matches, and Intel&apos;s certificate chain verifies. Badge: <b>Current build</b>. Published with <TxLink hash={IDENTITY.worker.add_version_tx}>add_version</TxLink>.</See>
+          <Proof rows={[
+            { label: "current build", value: CUR },
+            txRow("published in", IDENTITY.worker.add_version_tx),
+            { label: "attested call", value: INFO_CALL, href: `/verify?call=${INFO_CALL}`, internal: true },
           ]} />
-          <p className="muted">These calls ran on earlier worker builds (before {IDENTITY.worker.wasm_sha256.slice(0, 8)}), so /verify marks the build as <b>Previous version</b>. Their outputs are published in the repo and hash to the attested <span className="mono">output_hash</span>.</p>
-        </li>
+          <Script path={`./verify.sh ${IDENTITY.worker.info_call} --rebuild`}>Rebuilds the worker from source with Rust (about 2 minutes) and prints the same hash.</Script>
+        </Step></Reveal>
 
-        <li className="c">
-          <h2><span>4</span>Holder limits and the cooldown are enforced in the enclave</h2>
-          <p><b>Do:</b> verify the calls below. The key went back to A in <TxLink hash="HGKe7Dzd3ERMLkWYcVvffV6opweQqN3wbfFevo44uDUn">HGKe7Dzd…</TxLink>.</p>
-          <p><b>See:</b> A cuts its own caps below the Bronze tier and the cut applies at once. A raise is stored as pending for 24 hours. A quote above the holder cap is refused. Because the key changed hands, withdraw is refused with <span className="mono">cooldown</span> for 10 minutes while swaps still work.</p>
-          <Calls rows={[
-            { id: "38ae4d84-9058-4e3b-a01d-e0f0a1f35bb4", what: "A cuts caps to $0.002 per trade, $0.005 per day", result: "ok · applies now" },
-            { id: "8e142cce-a608-4ed4-ae61-9eed8f7dec12", what: "A asks to raise them again", result: "ok · pending 24 h" },
-            { id: "396bb6dd-ae97-497c-8a09-81e2118d0890", what: "A quotes above its own cap", result: "refused · over_cap_per_tx" },
-            { id: "ec00a7aa-ee0f-465d-bb09-283911aec406", what: "A withdraws right after receiving the key", result: "refused · cooldown" },
+        <Reveal><Step n={2} title="The NFT contract is the one in the repo" testid="judge-step-2">
+          <p>NEAR reports a code hash for every contract. We ask NEAR&apos;s public RPC for <span className="mono">{KEYS_CONTRACT}</span> and compare it with the wasm committed in the repo.</p>
+          <div className="uact"><CheckContract /></div>
+          <See>The quick check shows <b>Pass</b>. The contract&apos;s only minter is an account whose key was generated inside the enclave.</See>
+          <Proof rows={[
+            { label: "expected code hash", value: IDENTITY.contract.code_hash },
+            { label: "contract", value: KEYS_CONTRACT, href: acct(KEYS_CONTRACT), alt: acctAlt(KEYS_CONTRACT) },
+            { label: "repo file", value: "contracts/keys/deployed/keyhole_keys.wasm", href: `${REPO}/contracts/keys/deployed` },
           ]} />
-        </li>
+          <Script path="./judge/1-contract.sh">Same comparison from a terminal, using curl and sha256sum.</Script>
+        </Step></Reveal>
 
-        <li className="c">
-          <h2><span>5</span>Tier caps hold on real trades</h2>
-          <p><b>See:</b> a 2 USDC swap against the $1 Bronze cap was refused by the enclave before anything moved.</p>
-          <Calls rows={[{ id: "a02613a2-d503-45e2-83b8-ef71927c2533", what: "2 USDC swap on a Bronze key", result: "refused · over_cap_per_tx" }]} />
-          <p className="muted">All 30 recorded mainnet steps (run on the earlier build <span className="mono">f13efe92</span>) are in <span className="mono">docs/evidence/mainnet-e2e/</span>. Run <span className="mono">./judge/2-attestations.sh</span> to check each one against its attestation.</p>
-        </li>
+        <Reveal><Step n={3} title="Checks on the current build: only the real holder gets in" testid="judge-step-3">
+          <p>These calls ran on build <b className="mono">{CUR.slice(0, 8)}</b>. Each answer, including each refusal, was produced inside the enclave and signed by Intel.</p>
+          <Calls testid="judge-current-calls" rows={[
+            { id: "40c02b72-b297-4a9a-9265-751ba826fdf8", what: "A limited (function-call) key tries to act for an account", ok: false, result: "Refused: key_not_owned. Only a full-access key counts." },
+            { id: "013b022a-2159-4ec2-bdaf-c878dd73e823", what: "The account's real full-access key signs", ok: true, result: "Allowed: the vault opens." },
+            { id: "91b5b8e7-96e8-4107-9115-f44cb849b3d0", what: "An account that already holds a key tries to mint another", ok: false, result: "Refused: already_holder. No quota was used." },
+            { id: "f5eb650a-b3d4-40df-b5f9-086f0b0f08b5", what: "The holder locks the key for one hour", ok: true, result: "Allowed: locked." },
+            { id: "5a7addfa-86e9-49a3-9653-83f683c60356", what: "A cross-chain signature is asked for while the key is locked", ok: false, result: "Refused: locked." },
+          ]} />
+          <See>Each <b>Verify this call</b> opens /verify with a <b>Current build</b> badge and all checks green.</See>
+        </Step></Reveal>
 
-        <li className="c" data-testid="judge-chainsig">
-          <h2><span>6</span>Each key signs for other chains, and the minter&apos;s agent key is scoped</h2>
-          <p><b>Do:</b> verify the call below, then open the minter&apos;s <TxLink hash="7P9VFx4pz5oxyXpXkyDVE6SheDuTqHgQcEM2vgKFUAfK">v1.signer.sign 7P9VFx4p…</TxLink> and the beat signed by the scoped key, <a href={tx("B1BH9eZycbXqgwod2dqbn6e5UWY8TKTw2ZawyYqLRDtG")} target="_blank" rel="noreferrer">B1BH9eZy…</a>.</p>
-          <p><b>See:</b> the holder of key <span className="mono">k5f4750858f328940</span> asked the enclave for a Chain Signatures signature. NEAR&apos;s MPC network signed it, and it recovers to <span className="mono">0xe39C947d…f063</span>, the EVM address derived for that key alone. The beat key on the minter is a function-call key: receiver <span className="mono">keyhole-devmo.near</span>, method <span className="mono">beat</span>, 0.05 NEAR allowance. NEAR rejects it for <span className="mono">nft_transfer</span>, <span className="mono">set_minter</span> and plain transfers.</p>
-          <Calls rows={[{ id: "0cd1c3bd-21be-44dc-bc60-e792a42344e6", what: "chain_sign for key k5f4750858f328940", result: "ok · recovers to 0xe39C…f063", file: "docs/evidence/publish-09d481a5/" }]} />
-        </li>
+        <Reveal><Step n={4} title="Selling the key moves the account; the old holder is locked out" testid="judge-step-4">
+          <p>The key moved from account A to account B. Before the move A could withdraw; after it A is refused and B can withdraw. Replays and withdrawals while the key is locked are refused too.</p>
+          <See>Open the transfer below. Then, under <b>Recorded on earlier builds</b>, each call verifies with the badge <b>Genuine enclave, previous build</b>. That is expected: the attestation names the build that ran at the time.</See>
+          <Proof rows={[txRow("key transfer A → B", "G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD"), txRow("key back to A", "HGKe7Dzd3ERMLkWYcVvffV6opweQqN3wbfFevo44uDUn")]} title="Transfers" />
+          <details className="jprev" data-testid="judge-previous">
+            <summary>Recorded on earlier builds (10 calls)</summary>
+            <Calls rows={[
+              { id: "440c2378-6c27-49fd-8b6b-d74054f331ae", what: "A withdraws before the transfer", ok: true, result: "Allowed: withdrew 0.003 USDC." },
+              { id: "e805f050-d416-4a04-9b12-270adbe02068", what: "A signs again after the transfer", ok: false, result: "Refused: not_owner." },
+              { id: "a4867e19-4444-48f7-9594-5b1b7303206e", what: "B, the new holder, withdraws", ok: true, result: "Allowed: withdrew 0.001 USDC." },
+              { id: "c3a9839f-64d8-4135-a036-eca3796bb672", what: "B's signed request is sent twice", ok: false, result: "Refused: replay." },
+              { id: "98b27188-a28c-4720-8fec-1d1329e0f281", what: "B locks the key for sale", ok: true, result: "Allowed: locked." },
+              { id: "075287b5-a100-4fa5-8e96-94a36019c6bc", what: "B tries to withdraw while locked", ok: false, result: "Refused: locked." },
+              { id: "38ae4d84-9058-4e3b-a01d-e0f0a1f35bb4", what: "A cuts its caps to $0.002 per trade, $0.005 per day", ok: true, result: "Allowed: applies now." },
+              { id: "8e142cce-a608-4ed4-ae61-9eed8f7dec12", what: "A asks to raise them again", ok: true, result: "Allowed: pending for 24 hours." },
+              { id: "396bb6dd-ae97-497c-8a09-81e2118d0890", what: "A asks for a quote above its own cap", ok: false, result: "Refused: over_cap_per_tx." },
+              { id: "ec00a7aa-ee0f-465d-bb09-283911aec406", what: "A withdraws right after getting the key back", ok: false, result: "Refused: cooldown (10 minutes)." },
+            ]} />
+          </details>
+        </Step></Reveal>
 
-        <li className="c">
-          <h2><span>7</span>Try it with your own wallet (optional)</h2>
-          <p><b>Do:</b> <Link href="/mint">mint a free key</Link> (one signature, the TEE pays storage), then open <Link href="/vault">/vault</Link> and press <b>Read balance</b>.</p>
-          <p><b>See:</b> a result with a call id and a <b>Verify</b> link. That call verifies in step 1 the same way.</p>
-        </li>
-      </ol>
+        <Reveal><Step n={5} title="Tier caps hold on real trades" testid="judge-step-5">
+          <p>A Bronze key may trade at most $1 at a time. A 2 USDC swap was refused before anything moved.</p>
+          <Calls rows={[{ id: "a02613a2-d503-45e2-83b8-ef71927c2533", what: "2 USDC swap on a Bronze key (earlier build f13efe92)", ok: false, result: "Refused: over_cap_per_tx." }]} />
+          <See>/verify shows the refusal with green checks. All 30 recorded mainnet steps are in the repo.</See>
+          <Script path="./judge/2-attestations.sh">Checks each of the 30 recorded steps against its attestation. In the browser instead: open any call id from <a href={`${REPO}/docs/evidence/mainnet-e2e`} target="_blank" rel="noreferrer">docs/evidence/mainnet-e2e</a> on /verify.</Script>
+        </Step></Reveal>
+
+        <Reveal><Step n={6} title="Each key can sign for other chains" testid="judge-chainsig">
+          <p>With <Term k="chainsig" />, NEAR&apos;s MPC network signed for the holder of key <span className="mono">k5f4750858f328940</span>. The signature recovers to <span className="mono">0xe39C947d…f063</span>, the EVM address derived for that key alone. The minter&apos;s agent key is limited: it may only call <span className="mono">beat</span> on the contract.</p>
+          <Calls rows={[{ id: "0cd1c3bd-21be-44dc-bc60-e792a42344e6", what: "chain_sign for key k5f4750858f328940 (build 09d481a5)", ok: true, result: "Allowed: recovers to 0xe39C…f063." }]} />
+          <See>The MPC transaction below shows <span className="mono">v1.signer.sign</span> called by the minter. The beat transaction was signed by the limited key.</See>
+          <Proof rows={[txRow("MPC sign", "7P9VFx4pz5oxyXpXkyDVE6SheDuTqHgQcEM2vgKFUAfK"), txRow("beat (limited key)", "B1BH9eZycbXqgwod2dqbn6e5UWY8TKTw2ZawyYqLRDtG")]} />
+        </Step></Reveal>
+
+        <Reveal><Step n={7} title="Optional: try it with your own wallet" testid="judge-step-7">
+          <p>No wallet? Steps 1 to 6 already cover everything, and the <Link href="/settle">1Click page</Link> gets a real price with no wallet. With a NEAR wallet or MetaMask you can <Link href="/mint">mint a free key</Link>: one signature, and the enclave pays storage. Then open <Link href="/vault">your vault</Link> and press <b>Read balance</b>.</p>
+          <See>Your result shows a <Term k="callid" /> and a <b>Verify</b> link. It checks out on /verify just like step 1.</See>
+          <p className="muted">MetaMask may warn &ldquo;Malicious site&rdquo;. Its scanner flags every <span className="mono">*.vercel.app</span> address, including ones that were never deployed. Details are in <a href={`${REPO}/research/METAMASK_FLAG.md`} target="_blank" rel="noreferrer">research/METAMASK_FLAG.md</a>.</p>
+        </Step></Reveal>
+      </Steps>
 
       <div className="c jlimits jwho" data-testid="who-sees-what">
         <h2>Who sees what</h2>
@@ -119,11 +154,10 @@ export default function JudgePage() {
       <div className="c jlimits">
         <h2>What this does not prove</h2>
         <ul>
-          <li>The attestation proves which code ran on which input and output. It does not prove the code is bug-free. The source is open; the threat model is in <span className="mono">THREAT_MODEL.md</span>.</li>
+          <li>The attestation proves which code ran on which input and output. It does not prove the code is bug-free. The source is open; the threat model is in <a href={`${REPO}/THREAT_MODEL.md`} target="_blank" rel="noreferrer">THREAT_MODEL.md</a>.</li>
           <li>Trust rests on Intel TDX and the OutLayer operator&apos;s quote collateral, like any TEE system.</li>
           <li>Amounts in the recorded runs are tiny on purpose (fractions of a cent to $0.02).</li>
         </ul>
-        <p className="mono muted">Evidence files: {REPO_EVIDENCE}/ in the repository · site {SITE}</p>
       </div>
     </div>
   );
