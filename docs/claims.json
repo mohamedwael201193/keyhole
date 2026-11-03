@@ -6,7 +6,7 @@
  "claims": [
   {
    "id": "contract-code-hash",
-   "claim": "On-chain code_hash 6uPe67Sg…jwtuh of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
+   "claim": "On-chain code_hash BfMiMAfg…xMLeZ of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
    "where": "README.md:320",
    "evidence_type": "script",
    "evidence": "judge/1-contract.sh",
@@ -14,24 +14,24 @@
     "type": "code_hash",
     "account": "keyhole-devmo.near",
     "wasm": "contracts/keys/deployed/keyhole_keys.wasm",
-    "code_hash": "6uPe67SgsPuE71E73jp8zsbReQPGhTbW8UmUV5mjwtuh"
+    "code_hash": "BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ"
    },
    "expected": "code_hash == base58(sha256(wasm)) == Fe79rQUH…",
    "verify": "./judge/1-contract.sh"
   },
   {
    "id": "contract-wasm-sha",
-   "claim": "Deployed contract wasm is 208,204 bytes with sha256 57b63c36…30ac",
+   "claim": "Deployed contract wasm is 209,952 bytes with sha256 9e685c32…089e",
    "where": "README.md:117",
    "evidence_type": "file",
    "evidence": "contracts/keys/deployed/keyhole_keys.wasm",
    "check": {
     "type": "sha256",
     "path": "contracts/keys/deployed/keyhole_keys.wasm",
-    "sha256": "57b63c36d782bb4e60c4a25e9cc238093bc909a328617be864ba6327191a30ac",
-    "bytes": 208204
+    "sha256": "9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e",
+    "bytes": 209952
    },
-   "expected": "sha256 57b63c36…30ac, 208204 bytes",
+   "expected": "sha256 9e685c32…089e, 209952 bytes",
    "verify": "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm"
   },
   {
@@ -2906,6 +2906,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -2926,6 +2927,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -2946,6 +2948,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -2966,6 +2969,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -2986,6 +2990,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3006,6 +3011,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3026,6 +3032,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3046,6 +3053,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3066,6 +3074,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3086,6 +3095,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3106,6 +3116,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3126,6 +3137,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3146,6 +3158,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3166,6 +3179,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3186,6 +3200,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3206,6 +3221,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3226,6 +3242,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3246,6 +3263,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3266,6 +3284,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3286,6 +3305,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3306,6 +3326,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3326,6 +3347,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3346,6 +3368,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3366,6 +3389,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3386,6 +3410,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3406,6 +3431,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3426,6 +3452,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3446,6 +3473,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3466,6 +3494,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3486,6 +3515,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3506,6 +3536,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3513,6 +3544,27 @@
    },
    "expected": "`over_cap_per_tx_refused` found in source",
    "verify": "node judge/verify-claims.mjs --only test-over_cap_per_tx_refused"
+  },
+  {
+   "id": "test-pending_return_count",
+   "claim": "Named test or symbol `pending_return_count` exists in the source",
+   "where": "SECURITY.md:105",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "pending_return_count",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`pending_return_count` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-pending_return_count"
   },
   {
    "id": "test-provenance_chain_verifies_and_rejects_a_tampered_owner",
@@ -3526,6 +3578,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3546,6 +3599,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3566,6 +3620,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3586,6 +3641,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3606,6 +3662,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3626,6 +3683,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3646,6 +3704,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3666,6 +3725,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3673,6 +3733,27 @@
    },
    "expected": "`tampered_message_fails` found in source",
    "verify": "node judge/verify-claims.mjs --only test-tampered_message_fails"
+  },
+  {
+   "id": "test-transfer_call_race_is_closed_on_v2_2",
+   "claim": "Named test or symbol `transfer_call_race_is_closed_on_v2_2` exists in the source",
+   "where": "SECURITY.md:105",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "transfer_call_race_is_closed_on_v2_2",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`transfer_call_race_is_closed_on_v2_2` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-transfer_call_race_is_closed_on_v2_2"
   },
   {
    "id": "test-transfer_moves_the_confidential_account_to_the_new_holder",
@@ -3686,6 +3767,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3706,6 +3788,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3726,6 +3809,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3746,6 +3830,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3766,6 +3851,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3786,6 +3872,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -3806,6 +3893,7 @@
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
      "web/lib",
      "web/app",
      "cli/src"
@@ -5577,9 +5665,23 @@
    "verify": "node judge/verify-claims.mjs --only tx-9kmr1tsb"
   },
   {
+   "id": "tx-GgnNQERT",
+   "claim": "Mainnet transaction GgnNQERT… shown in docs/evidence/contract-v2/README.md",
+   "where": "docs/evidence/contract-v2/README.md:10",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k",
+   "check": {
+    "type": "tx",
+    "hash": "GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-GgnNQERT"
+  },
+  {
    "id": "tx-HahKkkFj",
    "claim": "Mainnet transaction HahKkkFj… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:10",
+   "where": "docs/evidence/contract-v2/README.md:11",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/HahKkkFjXQ5xCky8759qNnoEDm8DjizeveS9B6RHNYy1",
    "check": {
@@ -5593,7 +5695,7 @@
   {
    "id": "tx-F4PWSkmf",
    "claim": "Mainnet transaction F4PWSkmf… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:20",
+   "where": "docs/evidence/contract-v2/README.md:21",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/F4PWSkmfnacCWeX2v68sUL8GZPQNmNo42suHAnfm9Hq",
    "check": {
@@ -5607,7 +5709,7 @@
   {
    "id": "tx-Fa6hnsZi",
    "claim": "Mainnet transaction Fa6hnsZi… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:21",
+   "where": "docs/evidence/contract-v2/README.md:22",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Fa6hnsZiha36XJEqpdeRLjxAr1qaR1cGxJhUGoTH6vM1",
    "check": {
@@ -5621,7 +5723,7 @@
   {
    "id": "tx-DRDtKjYu",
    "claim": "Mainnet transaction DRDtKjYu… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:22",
+   "where": "docs/evidence/contract-v2/README.md:23",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/DRDtKjYuPJzF3ESGe7Lihtx3tRv7YqN4u5reiYjvGSq4",
    "check": {
@@ -5635,7 +5737,7 @@
   {
    "id": "tx-95DJHsQc",
    "claim": "Mainnet transaction 95DJHsQc… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:24",
+   "where": "docs/evidence/contract-v2/README.md:25",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/95DJHsQcJLfFdGnKjAH49W4xX82hrGLQqstXZEMkCcf2",
    "check": {
@@ -5649,7 +5751,7 @@
   {
    "id": "tx-8YY5Xx3s",
    "claim": "Mainnet transaction 8YY5Xx3s… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:24",
+   "where": "docs/evidence/contract-v2/README.md:25",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/8YY5Xx3sY9e4RCMe5FQ6xRvmNifpw6SDirqSFiZ3mCBw",
    "check": {
@@ -5663,7 +5765,7 @@
   {
    "id": "tx-D5xqsdmC",
    "claim": "Mainnet transaction D5xqsdmC… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:24",
+   "where": "docs/evidence/contract-v2/README.md:25",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/D5xqsdmCM6eA6xR5UEsKSQwz4ktdG5eyXXdPLnCaa8j6",
    "check": {
@@ -5677,7 +5779,7 @@
   {
    "id": "tx-AS8pZ7Kw",
    "claim": "Mainnet transaction AS8pZ7Kw… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:24",
+   "where": "docs/evidence/contract-v2/README.md:25",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/AS8pZ7KwHhoFcscUGoDWntCkCemQkDXLvZBURz1BGBJD",
    "check": {

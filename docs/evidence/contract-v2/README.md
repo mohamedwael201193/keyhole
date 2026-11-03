@@ -7,7 +7,8 @@
 | Deploy v2 + `migrate()` in one transaction (atomic: if `migrate` failed, the deploy would roll back) | [`142eipKr…`](https://nearblocks.io/txns/142eipKrruYWL69w31bzCbcSakGvum5XzwTasHxsAdAC) | code_hash `C8pL59r9…` = sha256 `a5712300…` (`contracts/keys/release/v2`) |
 | `migrate()` a second time | [`9kmr1tsb…`](https://nearblocks.io/txns/9kmr1tsbbXwdr3y8VcwmBGW5zE44MCcwsSANa7S8C4LY) | expected revert: `already migrated` |
 | One key per account: a holder sends its key to another holder (`keyhole-devmo.near` holds key `0`) | [`H8qJNgox…`](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV) | expected revert: `one key per account: receiver already holds a KEYHOLE key` |
-| Deploy v2.1 (code only; one `nft_transfer` event per `nft_transfer_payout`, naming the marketplace) | [`HahKkkFj…`](https://nearblocks.io/txns/HahKkkFjXQ5xCky8759qNnoEDm8DjizeveS9B6RHNYy1) | code_hash `6uPe67Sg…` = sha256 `57b63c36…` (`contracts/keys/release/v2.1` = `contracts/keys/deployed`) |
+| Deploy v2.2 (code only; `nft_transfer_call` keeps the sender a holder until resolve, closing the one-key race) | [`GgnNQERT…`](https://nearblocks.io/txns/GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k) | code_hash `BfMiMAfg…` = sha256 `9e685c32…` (`contracts/keys/release/v2.2` = `contracts/keys/deployed`); 5 tokens and config unchanged |
+| Deploy v2.1 (code only; one `nft_transfer` event per `nft_transfer_payout`, naming the marketplace) | [`HahKkkFj…`](https://nearblocks.io/txns/HahKkkFjXQ5xCky8759qNnoEDm8DjizeveS9B6RHNYy1) | code_hash `6uPe67Sg…` = sha256 `57b63c36…` (`contracts/keys/release/v2.1`) |
 
 ## A royalty sale (NEP-178 + NEP-199)
 
