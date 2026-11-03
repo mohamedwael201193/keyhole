@@ -1,3 +1,4 @@
+import { clientIp } from "@/lib/verifyScore";
 import { NextResponse } from "next/server";
 import { agentPath, drySwapBody, redact, type AgentRead } from "@/lib/agentApi";
 import { createLimiter } from "@/lib/ratelimit";
@@ -6,7 +7,7 @@ import { createLimiter } from "@/lib/ratelimit";
 const limit = createLimiter(60, 60_000);
 const no = (code: string, status: number) => NextResponse.json({ ok: false, error: { code } }, { status, headers: { "cache-control": "no-store" } });
 const env = () => ({ base: process.env.AGENT_API_BASE_URL, key: process.env.AGENT_API_KEY, agent: process.env.AGENT_API_AGENT_ID });
-const ip = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
+const ip = (req: Request) => clientIp(req.headers);
 
 async function call(path: string, init?: RequestInit) {
   const { base, key } = env();

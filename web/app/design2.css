@@ -192,3 +192,6 @@
 .settle .agent .ptab th{width:42%;font-weight:500;opacity:.8}
 .settle .agent .abtn{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
 .judgecta{margin:14px 0 0;font:600 14px var(--sans)}.judgecta a{color:var(--ink,#1a2a2c);text-decoration:underline;text-underline-offset:3px}
+.fpath{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;padding:0;font:500 12px var(--sans)}
+.fpath li{padding:4px 10px;border-radius:999px;border:1px solid var(--ln);opacity:.6}
+.fpath li.done{opacity:.85}.fpath li.here{opacity:1;border-color:var(--teal,#1f5c5a);background:rgba(31,92,90,.08)}

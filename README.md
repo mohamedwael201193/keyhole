@@ -32,7 +32,7 @@ A public chain shows balances and trades. Here those stay in the enclave. The ho
 
 Live site: [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app). Do the step. The words after the dash are what the page shows.
 
-1. Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and click **Connect wallet**. Choose a NEAR wallet or MetaMask. A NEAR wallet signs NEP-413. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published worker `67c5cd77` checks both. — The header shows your account. **Vault** shows "Vault · connected as" and the full account id.
+1. Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and click **Connect wallet**. Choose a NEAR wallet or MetaMask. A NEAR wallet signs NEP-413. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published worker (current build in the table above) checks both. — The header shows your account. **Vault** shows "Vault · connected as" and the full account id.
 2. Open [https://keyhole-seven.vercel.app/mint](https://keyhole-seven.vercel.app/mint) and click **Sign and mint**. Approve the signature. There is no transaction and no gas. — The page shows "Your key is revealed." and **Open your vault →**. The line under the card reads "Bronze tier · caps $1.00 per trade / $5.00 per day". One key per account. A second mint is refused.
 3. Open [https://keyhole-seven.vercel.app/vault](https://keyhole-seven.vercel.app/vault) with the wallet that holds the key. — You see your key, **Tier limits**, and the steps **1 · Fund**, **2 · Trade**, and **3 · Withdraw**. Before a balance signature, the total is "—" and the note says "Balances stay sealed until you sign a read." A connected wallet that does not hold a key sees **Only the key holder can open this** and no fund, trade, or withdraw form.
 4. Open **1 · Fund**, enter an amount, and click **Get deposit address**. Approve the signature. That signature is not a transfer. — The page shows **Deposit address** and the address. Sending funds there is a normal transfer you approve in your wallet, and that transfer pays gas. The site does not send it for you.
@@ -119,8 +119,8 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 | Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is `09d481a5`, the active enclave. It binds custody to the token, re-checks the owner at request and settle time, refuses a withdraw `to` that is not the signer, writes `media` on mint, accepts MetaMask `personal_sign` (`scheme: eip191`), enforces holder limits (a cut at once, a raise after 24 hours) and a 10-minute withdraw cooldown after a transfer |
 | Mainnet E2E | **30 recorded steps** on the previous version `f13efe92`. **24 TEE calls**, each attested to `f13efe926132` and re-verified, plus 6 MCP steps ([table](#10-mainnet-end-to-end-30-steps)) |
 | Refusals proven on mainnet | `over_cap_per_tx`, `replay`, `wrong_recipient`, `bad_signature`, `op_mismatch`, `expired`, `no_auth`, `already_holder`, `rate_limited`. Each one is an attested call |
-| Tests | contract **15**, worker **22**, CLI **6**, web unit **44**, web e2e **40** (20 checks × desktop + mobile) |
-| CI | 6 jobs (contract, worker with reproducible-build check, cli, judge-kit, hygiene, web), all green ([run 40572408070](https://github.com/mohamedwael201193/keyhole/actions/runs/40572408070)) |
+| Tests | Per-suite counts, the commit and the green CI run are in [§12](#12-tests-and-ci); reproduce with `scripts/test-count.sh` |
+| CI | 6 jobs (contract, worker with reproducible-build check, cli, judge-kit, hygiene, web) on every push to `main`; the run that produced the current count is linked in [§12](#12-tests-and-ci) |
 | Website | [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app). Mobile Lighthouse: performance 98–100, LCP 1.5–2.3 s. Desktop: 100 on every page. Accessibility, best practices and SEO: 100 ([lighthouse.json](docs/evidence/lighthouse.json)) |
 
 ---
@@ -284,10 +284,10 @@ sequenceDiagram
 
 ## 5. The keys NFT contract
 
-Live configuration, read with [`judge/1-contract.sh`](judge/1-contract.sh):
+Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat, re-read with [`judge/1-contract.sh`](judge/1-contract.sh)):
 
 ```json
-{"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"1"}
+{"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
 ```
 
 - **Standards.**
@@ -308,17 +308,33 @@ Live configuration, read with [`judge/1-contract.sh`](judge/1-contract.sh):
   - `set_minter` and `set_royalty` require 1 yoctoNEAR, and `set_royalty` is capped at 10%.
   - `init` is guarded so that `predecessor == self`.
 - **Tests.**
-  - 15 unit tests in [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs), run in CI with `cargo test --locked` and `clippy -D warnings`.
+  - Unit tests in [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) (count in [§12](#12-tests-and-ci)), run in CI with `cargo test --locked` and `clippy -D warnings`.
 - **Code identity.**
   - On-chain `code_hash` `Fe79rQUHKXnjhuY4NCDYrv3twNKPw7YTmqK3yxjtqxYA` is the base58 of sha256 `d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b`, the sha256 of the committed wasm.
 
-Tokens on mainnet today (`nft_total_supply` = 3):
+Tokens on mainnet (`nft_total_supply` = 5, read 2026-11-03; re-check with `./judge/1-contract.sh` or the live [/gallery](https://keyhole-seven.vercel.app/gallery)):
 
 | token | holder | tier | mint tx |
 |---|---|---|---|
 | `0` | `keyhole-devmo.near` | 1 | [`UYHismxe…`](https://nearblocks.io/txns/UYHismxe3a2Xb5YvbVHuGhsHWf7ERrx5oCrxREePBFR) |
 | `k857b6b68facc0f94` | [`a7458a83…91da`](https://nearblocks.io/address/a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da) | 1 | [`FaYzSUYT…`](https://nearblocks.io/txns/FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4) (signed by the first TEE minter) |
 | `k5f4750858f328940` | [`3bde8ce5…8447`](https://nearblocks.io/address/3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447) | 1 | [`DJxbuaJV…`](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) (signed in-enclave by the current minter) |
+| `k0642e7964b2fb515` | [`476abdb5…8c8`](https://nearblocks.io/address/476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8) | 1 | minted through the enclave, call [`9e62569d`](https://api.outlayer.ai/attestations/by-call/9e62569d-9444-4503-8bf2-4c1c266b8316) |
+| `k102a806df6867547` | [`0xf76e6b09…71a3`](https://nearblocks.io/address/0xf76e6b0920e9332ff4410f6dd53f01722abc71a3) (MetaMask, EIP-191) | 1 | minted through the enclave from a MetaMask account; carries `media` on-chain |
+
+
+### How control moves on transfer
+
+The key NFT is the only credential for its confidential account. The enclave never stores "who the holder is"; it asks the chain on every request.
+
+1. **Every request names a key and is signed by its owner.** The worker reads `nft_token(token_id).owner_id` live at finality `final` and refuses unless it equals the NEP-413 signer (`owns`, `tee/worker/src/main.rs`; ordering in `admit_request`, `tee/worker/src/lib.rs`). After a sale the seller's signature no longer matches, so the seller gets `not_owner`.
+2. **The custody wallet belongs to the token, not to a person.** `holder_wallet(token, owner)` looks the wallet up by token id; whoever owns the token operates it, so the confidential balance moves with the NFT (`transfer_moves_the_confidential_account_to_the_new_holder`).
+3. **Ownership is checked again right before funds move.** Swaps and withdraws re-read the owner just before submitting (`settle_if_owner`); a transfer that lands mid-request stops the payout and rolls back the daily spend (`invariant_transfer_mid_payout_never_settles_for_the_old_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `settle_after_transfer_is_refused`).
+4. **The new holder waits 10 minutes before the first withdraw** (`TRANSFER_COOLDOWN_MS`), so a seller who still has a request in flight cannot race the buyer (`withdraw_waits_after_a_transfer_only_for_the_new_owner`, `invariant_cooldown_binds_only_the_latest_transferee`).
+5. **A seller can lock the key for sale**; the lock binds only the owner who set it, so it never traps the buyer (`seller_lock_binds_only_the_owner_who_set_it`).
+6. **Old signed requests stay dead.** Nonces are single-use and requests expire (`transfer_then_old_signature_is_not_owner`, replay rows in `tee/worker/src/matrix.rs`).
+
+On mainnet: transfer [`3AhjtyUN…`](https://nearblocks.io/txns/3AhjtyUNx9T5QCgphV9niUYFFY6si5y1zLo39e8LHkDS); before it A withdraws ([440c2378](https://keyhole-seven.vercel.app/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae)), after it A is refused `not_owner` ([e805f050](https://keyhole-seven.vercel.app/verify?call=e805f050-d416-4a04-9b12-270adbe02068)), and the mid-payout attempt by the old holder is refused ([e72dc176](https://keyhole-seven.vercel.app/verify?call=e72dc176-e6fc-4d89-b348-911f5318b81b)). Full threat list: [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md).
 
 ## 6. The TEE worker
 
@@ -349,7 +365,7 @@ The worker is a WASI program (`wasm32-wasip2`) that runs inside an OutLayer Inte
 4. **Key authority.** For a NEP-413 signature, the public key must be a **full-access** key of `account_id`, checked live over RPC. For `eip191`, the recovered `0x` address is the account. There is no ed25519 key lookup.
 5. **Freshness.** `ts_ms` must be within 5 minutes of the latest *final block* time, not the caller's clock. Stale → `expired` ([`e7ac0627`](https://api.outlayer.ai/attestations/by-call/e7ac0627-be6d-41e9-95d0-71dcc59aed43)).
 6. **Key holding.** `nft_tokens_for_owner` and `nft_token.owner_id` are read from the contract on every call, before the nonce is used. A signer who does not own the key → `not_owner`. It is read again just before a swap or withdraw is sent.
-7. **Rate limits.** Per holder per minute by tier (6 / 12 / 30), plus 120 per minute globally → `rate_limited` ([`d892ac43`](https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd)).
+7. **Rate limits.** Per holder per minute by tier (6 / 12 / 30), → `rate_limited`, plus 120 per minute globally → `busy` ([`d892ac43`](https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd)).
 8. **Replay.** `(account, nonce)` is written with atomic `set_if_absent`. A second use → `replay` ([`ac289f04`](https://api.outlayer.ai/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab)).
 9. **Caps.** The USD value comes from the solver's quote (`amountInUsd`), never from the caller. Per-trade and per-UTC-day caps apply per holder. Over cap → `over_cap_per_tx` or `over_cap_daily`, and nothing is sent ([`a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533)).
 
@@ -369,7 +385,7 @@ Global limits: 120 requests per minute and 25 free mints per day.
   - The minter signs NEAR transactions itself. They are borsh-encoded and tested byte-for-byte against near-api-js in [`tests.rs`](tee/worker/src/tests.rs), then broadcast with `send_tx`.
   - Example: TEE-signed mint [`DJxbuaJV…`](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF).
 - **Per-holder wallet.** `account` creates one OutLayer confidential custody wallet per holder.
-  - Its API key is stored under `h/<account>/…` in encrypted storage (NEAR account ids cannot contain `/`).
+  - Its API key is stored under `t/<token_id>/wallet` in encrypted storage (an older `h/<account>/wallet` record is migrated once).
   - Holder's confidential id in the E2E: `2c2c4942…21ca` ([`06`](docs/evidence/mainnet-e2e/06_account_crosschain_deposit_address_base.json)).
 
 **Reproducible build**
@@ -469,6 +485,8 @@ How the beat key is scoped, as NEAR enforces it:
 - Live: a real beat [B1BH9eZy…](https://nearblocks.io/txns/B1BH9eZycbXqgwod2dqbn6e5UWY8TKTw2ZawyYqLRDtG) and the three refused attempts are in [docs/evidence/publish-09d481a5](docs/evidence/publish-09d481a5/README.md#scoped-beat-key).
 
 Holders never hand a key to the website or the worker. A request is a NEP-413 message (or EIP-191 from MetaMask) signed in the wallet, bound to one operation, one nonce and the recipient `keyhole`; the worker checks the signing key is a full-access key of the current NFT owner, because a function-call key could be added by any dapp the holder once approved and would not prove ownership.
+
+MetaMask requests take the other path on purpose. An EIP-191 holder is an eth-implicit account (`0x…` on NEAR), and that account is controlled by its Ethereum key alone, so there is no access-key list to consult. The worker instead requires the account id to be a lowercase `0x` address, the signing address to equal it, and the signature to recover to it (`account_mismatch`, `bad_signature` otherwise; [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs) `verify_eip191`). Both paths end at the same check: the account must hold the NFT when the request arrives, and again before a swap or withdraw settles.
 
 For an AI agent, do not give it your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 h), and lock the key while you are away. The worker then enforces, inside the TEE: payouts only to the signing holder, per-trade and per-day caps, one use per signature, a 10-minute withdraw cooldown after a transfer, and the lock. The MCP `copy` tool needs a second confirmation code. See the attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md): an agent that obeys an injected "send everything to attacker.near" is refused on every path.
 
@@ -618,7 +636,7 @@ Security summary (STRIDE, invariants and the test for each, audit checklist, sco
 | Web unit | 194 | [`web/tests`](web/tests) | Intel DCAP quote verification on a real mainnet quote (and tampered copies), Intel PCS revocation and TCB matching on real Intel collateral, report_data binding, key-log chain and signature, published evidence integrity, NEP-413 parity, gateway allowlist, PnL signatures, NEAR AI attestation checks, every worker error code in English | `cd web && npm ci && npx vitest run` |
 | Web e2e (Playwright) | 49 (in CI: 93 passing runs at 1440 and 390 px, 5 runs skipped where a test sets its own width or is desktop-only) | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) | every page without console errors, in-browser verify and DCAP of real calls, key history (real and tampered log), private AI panel, PnL tamper, gateway refusals, no sideways scroll at 390 px | `cd web && npx playwright install chromium && npm run build && npx playwright test` |
 
-Mainnet integrations used live (8 of 10 on the common checklist): OutLayer TEE worker, NEAR AI Cloud (TEE model with attestation), NEAR Intents 1Click (quotes and executed swaps), NEAR wallets + MetaMask, NEP-171, NEP-177, NEP-199, NEP-413. Not used: Chain Signatures, Rhea/Ref. The per-track mapping is in [`TRACK_COVERAGE.md`](TRACK_COVERAGE.md).
+Mainnet integrations used live: OutLayer TEE worker, NEAR AI Cloud (TEE model with attestation), NEAR Intents 1Click (quotes and executed swaps), NEAR Intents Agent API (demo partner deployment; holder caps applied as an agent policy, [tx `biJNTxXc…`](https://nearblocks.io/txns/biJNTxXc9zbQw6nTMJoPM2HeAE9snEf1mSdbsZ1CWEQ), live on [/settle](https://keyhole-seven.vercel.app/settle)), Chain Signatures (`v1.signer`, one real MPC signature per [evidence](docs/evidence/publish-09d481a5/README.md#chain-signatures-one-real-mpc-signature)), a scoped function-call key (see [Key scoping](#key-scoping-function-call-keys-and-agents)), NEAR wallets + MetaMask, NEP-171, NEP-177, NEP-181, NEP-199, NEP-413. The per-track mapping is in [`TRACK_COVERAGE.md`](TRACK_COVERAGE.md).
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs 6 jobs on every push:
 
@@ -629,7 +647,7 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs 6 jobs on every
 - **hygiene:** a scan for keys and tokens.
 - **web:** lint, typecheck, unit tests, build, and Playwright e2e against the production build.
 
-All six jobs passed on [run 40572408070](https://github.com/mohamedwael201193/keyhole/actions/runs/40572408070) (`ca27b3c`), and earlier on [run 40561970338](https://github.com/mohamedwael201193/keyhole/actions/runs/40561970338) for the CLI and worker branch.
+The green run behind the current count is linked at the top of this section; every run is public under [Actions](https://github.com/mohamedwael201193/keyhole/actions).
 
 ## 13. The website
 
@@ -642,7 +660,12 @@ All six jobs passed on [run 40572408070](https://github.com/mohamedwael201193/ke
 | `/vault` | After connect: the holder's key card and signed limits, then **1 · Fund** (deposit address from `account`), **2 · Trade** (quote, then Sign & trade, caps on the form, over-cap shown as a refusal), **3 · Withdraw** to the connected account. Balance and history stay. Every result has an attestation link and Verify | worker `status`, `account`, `quote`, `swap`, `withdraw`, `balance`, `history`, plus `nft_tokens_for_owner` |
 | `/mint` | Bronze mint in one signature, with the cap table for Bronze, Silver, Gold, and Legendary | worker `mint` |
 | `/gallery` | Every key on the contract. State comes from the chain (`locked`, `unlocked`, `expired`). The finish comes from the tier and the token seed | `nft_tokens`, `nft_tier` |
-| `/verify` | The three attestation checks, computed in your browser | OutLayer and FastFS |
+| `/verify` | 37 checks computed in your browser: 6 attestation checks (quote, build, FastFS, published version, report_data binding, published output), 19 Intel DCAP checks on the TDX quote, 12 Intel PCS revocation and TCB checks, plus one-byte tamper controls | OutLayer, FastFS, Intel PCS (through a fixed-URL pass-through) |
+| `/judge` | The judge path: six numbered checks against mainnet with no wallet, a who-sees-what table, and what the proofs do not cover | static, every call links to `/verify` |
+| `/settle` | A no-wallet 1Click dry-run quote, an attested vault trade with its intent hash, real 1Click orders with live status (SUCCESS, REFUNDED) and where the funds are, and the Agent API policy panel | 1Click `/v0/quote` (`dry: true`), `/v0/status`, Agent API |
+| `/key` | One key's history: owners and events from a signed key log, re-verified in the browser | worker `provenance`, NEAR |
+| `/pnl` | A holder-published, minter-signed PnL statement and its signature check | worker `pnl` |
+| `/ask` | Private AI on NEAR AI Cloud with the model's TEE attestation checked in the browser | NEAR AI Cloud |
 | `/identity` | How a key is drawn: specimen cards, wallet and market lockups, the NEP-177 document, and the four finishes | catalog art plus `nep177` for the first live token, or a sample when the contract is empty |
 
 - **Wallets.** A NEAR wallet signs a NEP-413 message. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published enclave `09d481a5` checks both. The wallet bundle loads when you click **Connect wallet**, or when this browser has connected before. A redirect wallet returns the signature in the URL hash, and the vault renders the trade or withdraw result from that return.

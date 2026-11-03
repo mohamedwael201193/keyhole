@@ -1,3 +1,4 @@
+import { clientIp, safeAttPath } from "@/lib/verifyScore";
 import { NextRequest, NextResponse } from "next/server";
 import { checkBody } from "@/lib/gateway";
 import { createLimiter } from "@/lib/ratelimit";
@@ -15,7 +16,7 @@ let infoCache: { at: number; body: unknown } | null = null;
  * replay checks happen inside the TEE.
  */
 export async function POST(req: NextRequest) {
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "anon";
+  const ip = clientIp(req.headers);
   const rl = perIp(ip);
   if (!rl.ok) return NextResponse.json({ ok: false, error: { code: "rate_limited", retry_after: rl.retryAfter } }, { status: 429, headers: { "retry-after": String(rl.retryAfter) } });
   const len = Number(req.headers.get("content-length") || 0);
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
     const body = {
       call_id: j.call_id ?? null, status: j.status ?? null, output: j.output ?? null,
-      attestation_url: j.attestation_url ? `${OUTLAYER_API}${j.attestation_url}` : null, time_ms: j.time_ms ?? null,
+      attestation_url: safeAttPath(j.attestation_url) ? `${OUTLAYER_API}${j.attestation_url}` : null, time_ms: j.time_ms ?? null,
     };
     if (c.op === "info" && j.output?.ok) infoCache = { at: Date.now(), body };
     return NextResponse.json(body, { headers: { "cache-control": "no-store" } });
