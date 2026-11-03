@@ -36,7 +36,7 @@ test("/start step 1: Google / email first, All wallets second (when the Privy ap
     await expect(all).toContainText("All wallets");
     const [a, b] = await Promise.all([social.boundingBox(), all.boundingBox()]);
     expect(a!.y).toBeLessThan(b!.y);
-    await social.click();
-    await expect(page.locator("#privy-modal-content, [id^=privy-dialog], #privy-dialog")).toBeVisible({ timeout: 20_000 });
+    // Click again until hydrated; the Privy modal (Google + email) must open.
+    await expect(async () => { await social.click(); await expect(page.locator("#privy-modal-content")).toBeVisible({ timeout: 5_000 }); }).toPass({ timeout: 30_000 });
   }
 });

@@ -77,7 +77,7 @@ export function StartView() {
 
   return (
     <main className="page start" data-testid="start">
-      <Purpose eyebrow="Start" title="Set up in five short steps" line="A private trading account. With Google or email: one sign-in, no wallet popups. With a NEAR wallet: two popups (connect, mint); MetaMask: three. Your progress is kept if you leave." />
+      <Purpose eyebrow="Start" title="Set up in a few short steps" line="A private trading account. With Google or email: one sign-in, no wallet popups. With a NEAR wallet: two popups (connect, mint); MetaMask: three. Your progress is kept if you leave." />
       {accountId && <p className="acct-ready" data-testid="account-ready"><span className="note">Signed in{via === "privy" ? " with Google / email" : ""} as</span> <b className="addr" title={accountId}>{accountId.length > 24 ? `${accountId.slice(0, 10)}…${accountId.slice(-8)}` : accountId}</b> <CopyButton value={accountId} />{acct && <span className="note" data-testid="account-balance"> · {acct.exists ? `${formatNear(acct.yocto)} NEAR` : "not on chain yet"}</span>}</p>}
       <div data-testid="start-dots"><Stepper steps={steps.map((x) => TITLES[x])} current={idx} /></div>
       <StepTransition k={step}><StepCard active className="scard" data-testid={`start-step-${step}`}>

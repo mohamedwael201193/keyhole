@@ -3287,6 +3287,27 @@
    "verify": "node judge/verify-claims.mjs --only test-invariant_transfer_mid_payout_never_settles_for_the_old_holder"
   },
   {
+   "id": "test-is_full_access",
+   "claim": "Named test or symbol `is_full_access` exists in the source",
+   "where": "SECURITY.md:139",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "is_full_access",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`is_full_access` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-is_full_access"
+  },
+  {
    "id": "test-limits_for_tier",
    "claim": "Named test or symbol `limits_for_tier` exists in the source",
    "where": "README.md:238",
