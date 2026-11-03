@@ -16,6 +16,7 @@ import { tx } from "@/lib/config";
 import { formatTradePrice } from "@/lib/price";
 import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
+import { TxLink } from "@/components/TxLink";
 
 const SHOWN = [
   { k: "Bronze", art: 3 },
@@ -68,7 +69,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               </dl>
               <div className="hero-actions">
                 <Link className="btn b1" href="/vault">{t("mint.openVault")}</Link>
-                {typeof o.tx === "string" && <a className="btn b2" href={tx(o.tx)} target="_blank" rel="noreferrer">{t("mint.view")}</a>}
+                {typeof o.tx === "string" && <><a className="btn b2" href={tx(o.tx)} target="_blank" rel="noreferrer">{t("mint.view")}</a> <TxLink hash={o.tx}>{o.tx.slice(0, 10)}…</TxLink></>}
               </div>
               <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginTop: 18 }} data-testid="minted">
                 {t("mint.capsLine", { finish: t(`finish.${idn.finish}`), tx: fmtUsd(idn.perTx * 1e6), day: fmtUsd(idn.daily * 1e6) })}

@@ -17,3 +17,7 @@ export const acct = (a: string) => `${NEARBLOCKS}/address/${a}`;
 export const INTENTS_EXPLORER = "https://explorer.near-intents.org";
 export const intentTx = (hash: string) => `${INTENTS_EXPLORER}/transactions/${hash}`;
 export const attestation = (callId: string) => `${OUTLAYER_API}/attestations/by-call/${callId}`;
+/** Second explorer for when nearblocks is blocked (it sits behind Cloudflare, which can refuse automated browsers). */
+export const ALT_EXPLORER = "https://pikespeak.ai";
+export const txAlt = (h: string) => `${ALT_EXPLORER}/transaction-viewer/${h}`;
+export const acctAlt = (a: string) => `${ALT_EXPLORER}/wallet-explorer/${a}`;

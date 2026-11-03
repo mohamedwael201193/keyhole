@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SETTLEMENTS, RECORDED_FAILED, VAULT_TRADE, type Settlement } from "@/lib/settlements";
 import { tx, intentTx } from "@/lib/config";
 import { AgentPanel } from "./agent";
+import { TxLink } from "@/components/TxLink";
 
 type Dry = { amountInFormatted: string; amountInUsd: string; amountOutFormatted: string; amountOutUsd: string; timeEstimate: number };
 type St = { status: string; updatedAt?: string; details: { depositedAmountFormatted: string | null; amountOutFormatted: string | null; refundedAmountFormatted: string | null; nearTxHashes: string[]; intentHashes: string[] } };
@@ -48,7 +49,7 @@ function Row({ s }: { s: Settlement }) {
         {st?.details.amountOutFormatted && <><dt>received</dt><dd>{st.details.amountOutFormatted}</dd></>}
         {st?.details.refundedAmountFormatted && st.details.refundedAmountFormatted !== "0" && <><dt>refunded</dt><dd>{st.details.refundedAmountFormatted}</dd></>}
         {st?.details.intentHashes?.map((h) => <Fragment key={h}><dt>intent</dt><dd className="mono"><a href={intentTx(h)} target="_blank" rel="noreferrer">{h.slice(0, 10)}…</a></dd></Fragment>)}
-        {st?.details.nearTxHashes?.slice(-1).map((h) => <Fragment key={h}><dt>settlement tx</dt><dd className="mono"><a href={tx(h)} target="_blank" rel="noreferrer">{h.slice(0, 10)}…</a></dd></Fragment>)}
+        {st?.details.nearTxHashes?.slice(-1).map((h) => <Fragment key={h}><dt>settlement tx</dt><dd className="mono"><TxLink hash={h} /></dd></Fragment>)}
         {s.destTx && <><dt>destination tx</dt><dd className="mono"><a href={s.destTx.url} target="_blank" rel="noreferrer">{s.destTx.hash.slice(0, 10)}…</a></dd></>}
         <dt>quote</dt><dd>{s.quote}</dd>
         {st?.updatedAt && <><dt>1Click updated</dt><dd data-testid="st-updated">{new Date(st.updatedAt).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}</dd></>}

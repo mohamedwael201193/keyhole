@@ -10,6 +10,10 @@ export class SignError extends Error { constructor(public code: string) { super(
 interface WalletCtx {
   accountId: string | null;
   ready: boolean;
+  /** A wallet from an earlier visit is being restored; show a neutral pill, not "Connect wallet". */
+  restoring: boolean;
+  /** MetaMask's active account when it differs from the connected one (lowercase 0x…), else null. */
+  mismatch: string | null;
   connect: () => void;
   disconnect: () => Promise<void>;
   /** Signs a NEP-413 request for the worker. Redirect wallets resume via `pending` after return. */
@@ -153,17 +157,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const ref = useRef<{ selector: WalletSelector; modal: WalletSelectorModal } | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [mismatch, setMismatch] = useState<string | null>(null);
   const [pending, setPending] = useState<(SignedAuth & { ctx?: OpResume | null }) | null>(null);
   const loading = useRef<Promise<void> | null>(null);
 
   const ensure = useCallback(() => {
     if (!loading.current) loading.current = init().then((r) => {
       ref.current = r;
-      const sync = () => setAccountId(r.selector.store.getState().accounts.find((a) => a.active)?.accountId ?? null);
+      const eth = (window as Window & { ethereum?: EthProvider }).ethereum;
+      const sync = () => {
+        const st = r.selector.store.getState();
+        const a = st.accounts.find((x) => x.active)?.accountId ?? null;
+        setAccountId(a);
+        if (st.selectedWalletId === "ethereum-wallets" && a && eth?.request) {
+          void eth.request({ method: "eth_accounts", params: [] }).then((v: unknown) => setMismatch(ethMismatch(a, v)), () => setMismatch(null));
+        } else setMismatch(null);
+      };
       sync();
       r.selector.store.observable.subscribe(sync);
-      setReady(true);
-    }, (e) => { loading.current = null; throw e; });
+      eth?.on?.("accountsChanged", sync);
+      setReady(true); setRestoring(false);
+    }, (e) => { loading.current = null; setRestoring(false); throw e; });
     return loading.current;
   }, []);
 
@@ -188,6 +203,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     // Only load the wallet bundle eagerly if the user connected before; otherwise wait for a click (keeps LCP fast).
     if (localStorage.getItem("near-wallet-selector:selectedWalletId") || localStorage.getItem("near-wallet-selector:recentlySignedInWallets")) {
+      setRestoring(true);
       const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 300));
       idle(() => void ensure());
     }
@@ -211,7 +227,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     });
   }, [ensure]);
   const disconnect = useCallback(async () => {
-    await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); setAccountId(null);
+    await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); setAccountId(null); setMismatch(null);
   }, [ensure]);
 
   const sign = useCallback(async (op: Op, params: Record<string, unknown> = {}) => {
@@ -241,7 +257,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return { account_id: res.accountId, public_key: res.publicKey, signature: res.signature, nonce, message, recipient: NEP413_RECIPIENT };
   }, [ensure]);
 
-  return <Ctx.Provider value={{ accountId, ready, connect, disconnect, sign, pending, clearPending: () => setPending(null) }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, disconnect, sign, pending, clearPending: () => setPending(null) }}>{children}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
@@ -259,6 +275,14 @@ async function signEip191(op: Op, accountId: string, params: Record<string, unkn
   }
   if (typeof signature !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(signature)) throw new SignError("wallet_rejected");
   return { account_id: account, address: account, scheme: "eip191", public_key: "", signature, nonce, message, recipient: NEP413_RECIPIENT };
+}
+
+type EthProvider = { request: (a: { method: string; params: unknown[] }) => Promise<unknown>; on?: (e: string, f: () => void) => void };
+/** The MetaMask account the extension is on, if it is not the one this site connected. */
+export function ethMismatch(connected: string, ethAccounts: unknown): string | null {
+  if (!/^0x[0-9a-f]{40}$/i.test(connected) || !Array.isArray(ethAccounts) || ethAccounts.length === 0) return null;
+  const cur = String(ethAccounts[0]).toLowerCase();
+  return /^0x[0-9a-f]{40}$/.test(cur) && cur !== connected.toLowerCase() ? cur : null;
 }
 
 export function useWallet() { const c = useContext(Ctx); if (!c) throw new Error("WalletProvider missing"); return c; }

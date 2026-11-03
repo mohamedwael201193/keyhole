@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { buildPolicy } from "@/lib/agentPolicy";
 import { policyWarnings, canon } from "@/lib/agentApi";
+import { TxLink } from "@/components/TxLink";
 
 type Q = { limits: Record<string, number>; usage: Record<string, number>; observed_at: string };
 type Pol = { revision: number; status: string; policy_hash: string; transaction_hash?: string; policy: ReturnType<typeof buildPolicy> };
@@ -43,7 +44,7 @@ export function AgentPanel() {
             <tr><th>USD budget / day</th><td>${p.budget.daily_usd}</td></tr>
             <tr><th>Actions</th><td>{p.actions.join(", ")}</td></tr>
             <tr><th>Destinations</th><td>{p.destinations.mode} · {p.destinations.list.length ? p.destinations.list.length : "none (no withdrawals)"}</td></tr>
-            <tr><th>Revision</th><td>{pol!.revision} · {pol!.status}{pol!.transaction_hash && <> · <a href={`https://nearblocks.io/txns/${pol!.transaction_hash}`} target="_blank" rel="noreferrer">tx</a></>}</td></tr>
+            <tr><th>Revision</th><td>{pol!.revision} · {pol!.status}{pol!.transaction_hash && <> · <TxLink hash={pol!.transaction_hash} /></>}</td></tr>
           </tbody>
         </table>
       )}

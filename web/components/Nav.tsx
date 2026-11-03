@@ -22,7 +22,7 @@ const LINKS = [
 
 export function Nav() {
   const { t } = useI18n();
-  const { accountId, connect, disconnect } = useWallet();
+  const { accountId, connect, disconnect, restoring, mismatch } = useWallet();
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
@@ -79,6 +79,7 @@ export function Nav() {
           <span className="desk"><MusicToggle /></span>
           {accountId
             ? <div className="acct" ref={acctRef}>
+                {mismatch && <button type="button" className="cw warn" data-testid="wallet-mismatch" title={`MetaMask is on ${mismatch}, but this site is connected as ${accountId}. Reconnect to switch.`} onClick={() => { void disconnect().then(() => connect()); }}>MetaMask switched · reconnect</button>}
                 <button type="button" className="cw" aria-expanded={menu} aria-controls="acct-menu" data-testid="account" onClick={() => setMenu((v) => !v)} title={accountId}><span className="cw-full">{shortAccount(accountId, 4)}</span><span className="cw-short">{pillAccount(accountId)}</span></button>
                 {menu && (
                   <div id="acct-menu" className="acct-menu" role="menu" data-testid="account-menu">
@@ -89,6 +90,8 @@ export function Nav() {
                   </div>
                 )}
               </div>
+            : restoring
+            ? <button type="button" className="cw" disabled data-testid="wallet-restoring" aria-busy="true"><span className="spin" aria-hidden="true" /> Wallet…</button>
             : <button type="button" className="cw" onClick={() => void connect()} disabled={!hydrated} data-hydrated={hydrated ? "1" : "0"} data-testid="connect">{t("nav.connect")}</button>}
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
