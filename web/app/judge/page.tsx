@@ -49,7 +49,7 @@ export default function JudgePage() {
 
         <li className="c">
           <h2><span>3</span>Whoever holds the NFT controls the account, and nobody else</h2>
-          <p><b>Do:</b> open the transfer <a href={tx("3AhjtyUNx9T5QCgphV9niUYFFY6si5y1zLo39e8LHkDS")} target="_blank" rel="noreferrer">3AhjtyUN…</a> (key moves from account A to account B), then verify the calls below.</p>
+          <p><b>Do:</b> open the transfer <a href={tx("G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD")} target="_blank" rel="noreferrer">G35r5pmC…</a> (key moves from account A to account B), then verify the calls below.</p>
           <p><b>See:</b> before the transfer A could withdraw. After it, the same kind of request from A is refused with <span className="mono">not_owner</span> and B can withdraw. A replayed request and a withdraw while the key is locked for sale are refused too. Each verdict is produced inside the enclave and attested.</p>
           <Calls rows={[
             { id: "440c2378-6c27-49fd-8b6b-d74054f331ae", what: "A withdraws before the transfer", result: "ok · withdraw 0.003 USDC" },
@@ -64,7 +64,7 @@ export default function JudgePage() {
 
         <li className="c">
           <h2><span>4</span>Holder limits and the cooldown are enforced in the enclave</h2>
-          <p><b>Do:</b> verify the calls below. The key went back to A in <a href={tx("HbrJmfpzpiQEqPyoz1QdvL2iYBVLBAvbAZfTtxGbnkXU")} target="_blank" rel="noreferrer">HbrJmfpz…</a>.</p>
+          <p><b>Do:</b> verify the calls below. The key went back to A in <a href={tx("HGKe7Dzd3ERMLkWYcVvffV6opweQqN3wbfFevo44uDUn")} target="_blank" rel="noreferrer">HGKe7Dzd…</a>.</p>
           <p><b>See:</b> A cuts its own caps below the Bronze tier and the cut applies at once. A raise is stored as pending for 24 hours. A quote above the holder cap is refused. Because the key changed hands, withdraw is refused with <span className="mono">cooldown</span> for 10 minutes while swaps still work.</p>
           <Calls rows={[
             { id: "38ae4d84-9058-4e3b-a01d-e0f0a1f35bb4", what: "A cuts caps to $0.002 per trade, $0.005 per day", result: "ok · applies now" },

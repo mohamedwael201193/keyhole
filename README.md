@@ -11,6 +11,7 @@
 <a href="https://keyhole-seven.vercel.app/verify">Verify a TEE call</a> ·
 <a href="https://nearblocks.io/address/keyhole-devmo.near">Keys contract</a> ·
 <a href="#9-verify-it-yourself-judges">Judge kit</a> ·
+<a href="JUDGE_AGENT.md">For AI judges</a> ·
 <a href="#10-mainnet-end-to-end-30-steps">30-step mainnet E2E</a>
 </p>
 
@@ -335,7 +336,7 @@ The key NFT is the only credential for its confidential account. The enclave nev
 5. **A seller can lock the key for sale**; the lock binds only the owner who set it, so it never traps the buyer (`seller_lock_binds_only_the_owner_who_set_it`).
 6. **Old signed requests stay dead.** Nonces are single-use and requests expire (`transfer_then_old_signature_is_not_owner`, replay rows in `tee/worker/src/matrix.rs`).
 
-On mainnet: transfer [`3AhjtyUN…`](https://nearblocks.io/txns/3AhjtyUNx9T5QCgphV9niUYFFY6si5y1zLo39e8LHkDS); before it A withdraws ([440c2378](https://keyhole-seven.vercel.app/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae)), after it A is refused `not_owner` ([e805f050](https://keyhole-seven.vercel.app/verify?call=e805f050-d416-4a04-9b12-270adbe02068)), and the mid-payout attempt by the old holder is refused ([e72dc176](https://keyhole-seven.vercel.app/verify?call=e72dc176-e6fc-4d89-b348-911f5318b81b)). Full threat list: [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md).
+On mainnet: transfer [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD); before it A withdraws ([440c2378](https://keyhole-seven.vercel.app/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae)), after it A is refused `not_owner` ([e805f050](https://keyhole-seven.vercel.app/verify?call=e805f050-d416-4a04-9b12-270adbe02068)), and the mid-payout attempt by the old holder is refused ([e72dc176](https://keyhole-seven.vercel.app/verify?call=e72dc176-e6fc-4d89-b348-911f5318b81b)). Full threat list: [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md).
 
 ## 6. The TEE worker
 
@@ -422,7 +423,7 @@ npx tsx src/cli.ts verify <call_id>
 
 **Website gateway** ([`web/app/api/worker/route.ts`](web/app/api/worker/route.ts), also mounted at `/api/keyhole`):
 
-- **Allowlist:** `info`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, `withdraw`. `swap` and `withdraw` are forwarded only when the body carries a NEP-413 `auth` (account, public key, signature, nonce, recipient, and a message whose `op` matches). The TEE checks the signature, the nonce, the tier caps and the per-minute rate limit on both. The vault sets the withdraw destination to the connected account. Unsigned, incomplete and junk auth are refused with `no_auth`. `copy` stays on the CLI and MCP. `sweep_minter` is for the operator only. Both refusals are `bad_op`. All of this is unit-tested in [`web/tests/gateway.test.ts`](web/tests/gateway.test.ts) and [`web/tests/trade.test.ts`](web/tests/trade.test.ts).
+- **Allowlist:** `info`, `provenance`, `status`, `quote`, `mint`, `account`, `balance`, `history`, `swap`, `withdraw`, `lock`, `prove`, `limits`, `pnl` ([`ALLOWED_OPS`](web/lib/gateway.ts)). `swap` and `withdraw` are forwarded only when the body carries a NEP-413 `auth` (account, public key, signature, nonce, recipient, and a message whose `op` matches). The TEE checks the signature, the nonce, the tier caps and the per-minute rate limit on both. The vault sets the withdraw destination to the connected account. Unsigned, incomplete and junk auth are refused with `no_auth`. `copy` stays on the CLI and MCP. `sweep_minter` is for the operator only. Both refusals are `bad_op`. All of this is unit-tested in [`web/tests/gateway.test.ts`](web/tests/gateway.test.ts) and [`web/tests/trade.test.ts`](web/tests/trade.test.ts).
 - **Request limits:** bodies over 8 KB are rejected with 413. Each IP gets 20 calls a minute (429 with `retry-after`). The signed `op` must match the requested op.
 - **Secret handling:** the OutLayer payment key is a server-only Vercel secret and never reaches the browser.
 - **Logging:** request bodies, amounts and accounts are never logged.
@@ -524,7 +525,7 @@ A live judge run with a different account (`a7458a83…`) gave all three expecte
 | replay of the same request | `replay` | [`b6d8ce4e`](https://api.outlayer.ai/attestations/by-call/b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563) |
 | over-cap quote ($2) | `over_cap_per_tx` | [`9b37dfee`](https://api.outlayer.ai/attestations/by-call/9b37dfee-47bf-4482-a445-0623a49d3f11) |
 
-Previous version `f13efe92`, funded on 2026-10-28. `./verify.sh` on each call below matched that build (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`), now superseded by `b3fa1a39` and then `67c5cd77`. The attestation response has no output body, so the result column is the recorded outcome of that call. The same checks are the live-proof slot in [`docs/policy.md`](docs/policy.md).
+Previous version `f13efe92`, funded on 2026-10-28. `./verify.sh` on each call below matched that build (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`), now superseded; the live build is `a55ebb14`. The attestation response has no output body, so the result column is the recorded outcome of that call. The same checks are the live-proof slot in [`docs/policy.md`](docs/policy.md).
 
 | Call | Result | Attestation |
 |---|---|---|
@@ -539,8 +540,8 @@ Previous version `f13efe92`, funded on 2026-10-28. `./verify.sh` on each call be
 **In the browser.** Open [`https://keyhole-seven.vercel.app/verify`](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539).
 
 - Your browser fetches the attestation, downloads the wasm from FastFS and hashes it with `crypto.subtle`.
-- It runs the same three checks, so you don't have to trust the site.
-- The e2e test [`verify: a real mainnet call passes all three checks`](web/e2e/site.spec.ts) runs this on desktop and mobile.
+- It runs the `verify.sh` checks plus Intel DCAP and Intel PCS checks (37 in all), so you don't have to trust the site.
+- The e2e test [`verify: the default page checks the published a55ebb14 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile.
 
 ![Verify page](web/screenshots/desktop-verify.webp)
 

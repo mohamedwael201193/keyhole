@@ -67,6 +67,10 @@ jobs:
       - uses: actions/checkout@v4
       - run: ./judge/2-attestations.sh
       - run: ./verify.sh "$(jq -r '.[0].call_id' judge/evidence.json)"
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: claims.json file checks (paths, named tests, constants, committed wasm)
+        run: node judge/verify-claims.mjs --offline
   hygiene:
     runs-on: [self-hosted, keyhole-box]
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
