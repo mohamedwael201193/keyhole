@@ -742,3 +742,7 @@ mod beatkey;
 mod audit;
 #[path = "p2matrix.rs"]
 mod p2matrix;
+#[path = "p2golden.rs"]
+mod p2golden;
+#[path = "p2beat.rs"]
+mod p2beat;
