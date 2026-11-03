@@ -693,11 +693,29 @@ mod host {
             "signature": sig, "evm_address": chainsig::evm_address(&child)}))
     }
 
+    /// Scoped beat key on the TEE minter: `add_beat_key` / `del_beat_key {public_key}`, signed by the keys contract owner.
+    /// The added key can call only `beat` on the keys contract, with a 0.05 NEAR gas allowance and no deposit.
+    fn op_beat_key(input: &Value, add: bool) -> Result<Value, Error> {
+        let op = if add { "add_beat_key" } else { "del_beat_key" };
+        let c = authenticate(input, op, false)?;
+        assert_owner(&c.account, &keys_contract())?;
+        let (mid, msk) = minter()?;
+        let raw = bs58::decode(msk.trim_start_matches("ed25519:")).into_vec().map_err(|_| err("signer", "bad key"))?;
+        let mpk: [u8; 32] = raw.get(32..64).and_then(|b| b.try_into().ok()).ok_or_else(|| err("signer", "bad key"))?;
+        let pk = parse_beat_key(&s(&c.req.params, "public_key").unwrap_or_default(), &mpk)?;
+        let kc = keys_contract();
+        let a = if add { Action::AddFcKey { pk, allowance: BEAT_KEY_ALLOWANCE_YOCTO, receiver: &kc, methods: &BEAT_KEY_METHODS } } else { Action::DeleteKey { pk } };
+        let tx = send(&mid, &msk, &mid, &[a])?;
+        let pks = format!("ed25519:{}", bs58::encode(pk).into_string());
+        Ok(json!({"ok": true, "op": op, "minter_account": mid, "public_key": pks, "receiver": kc, "methods": BEAT_KEY_METHODS,
+            "allowance_yocto": BEAT_KEY_ALLOWANCE_YOCTO.to_string(), "tx": tx}))
+    }
+
     fn op_info() -> Result<Value, Error> {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes"}))
     }
 
@@ -725,7 +743,9 @@ mod host {
             "sweep_minter" => op_sweep_minter(),
             "chain_address" => op_chain_address(&input),
             "chain_sign" => op_chain_sign(&input),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign")),
+            "add_beat_key" => op_beat_key(&input, true),
+            "del_beat_key" => op_beat_key(&input, false),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key")),
         };
         let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.

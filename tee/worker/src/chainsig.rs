@@ -8,8 +8,10 @@ use sha3::{Digest, Keccak256, Sha3_256};
 
 pub const SIGNER: &str = "v1.signer";
 pub const DOMAIN_SECP256K1: u64 = 0;
-/// Gas for `v1.signer.sign` (yield/resume needs headroom; unused gas is refunded).
-pub const CHAINSIG_GAS: u64 = 100_000_000_000_000;
+/// Gas for `v1.signer.sign`: the contract requires at least 10 Tgas and burns about 7 (near/mpc README). 15 Tgas leaves headroom
+/// while the up-front reservation stays within the minter balance; unused gas is refunded.
+pub const CHAINSIG_GAS: u64 = 15_000_000_000_000;
+const _: () = assert!(CHAINSIG_GAS >= 10_000_000_000_000 && CHAINSIG_GAS <= 30_000_000_000_000);
 /// `v1.signer` domain 0 root key (mainnet view `public_key {"domain_id":0}`).
 pub const ROOT_PK: &str = "secp256k1:3tFRbMqmoa6AAALMrEFAYCEoHcqKxeW38YptwowBVBtXK1vo36HDbUWuR6EZmoK4JcH6HDkNMGGqP1ouV7VZUWya";
 const EPSILON_PREFIX: &str = "near-mpc-recovery v0.1.0 epsilon derivation:";
@@ -163,3 +165,4 @@ mod tests {
         let mut v = good; v.as_object_mut().unwrap().remove("s"); assert!(decode_sig(&v).is_none());
     }
 }
+
