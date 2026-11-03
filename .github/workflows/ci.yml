@@ -17,8 +17,19 @@ jobs:
       - run: cargo test --locked
       - name: count passing tests
         run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
-      # deployed code is frozen; this one style lint is allowed so CI checks the exact deployed source
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
+      - name: source rebuilds to the committed v2 release wasm
+        run: |
+          cargo near build non-reproducible-wasm >/dev/null
+          got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
+          want=$(grep ' v2/' release/SHA256SUMS | cut -d' ' -f1)
+          echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
+      - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate, NEP-178, one key, royalty sale
+        working-directory: contracts/keys-sandbox
+        run: cargo test --locked
+      - name: count passing sandbox tests
+        working-directory: contracts/keys-sandbox
+        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - name: deployed wasm matches on-chain code_hash
         working-directory: .
         run: ./judge/1-contract.sh

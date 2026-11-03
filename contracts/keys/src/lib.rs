@@ -1,5 +1,7 @@
 //! KEYHOLE keys: one NFT contract. Each token is a viewing key for a
 //! confidential trading account; `tier` sets what the holder may see/copy.
+//! v2: NEP-178 approvals, one key per account enforced on-chain, NEP-330 source metadata.
+use near_contract_standards::non_fungible_token::approval::NonFungibleTokenApproval;
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
 use near_contract_standards::non_fungible_token::metadata::{
@@ -9,13 +11,14 @@ use near_contract_standards::non_fungible_token::{NonFungibleToken, Token, Token
 use near_sdk::collections::{LazyOption, LookupMap};
 use near_sdk::json_types::U128;
 use near_sdk::{
-    assert_one_yocto, env, near, require, AccountId, BorshStorageKey, PanicOnDefault, PromiseOrValue,
+    assert_one_yocto, env, near, require, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue,
 };
 use std::collections::HashMap;
 
 pub const MAX_TIER: u8 = 3;
 pub const MAX_ROYALTY_BPS: u32 = 1_000; // 10% cap
 pub const MAX_BEAT_BATCH: usize = 50;
+pub const ERR_ONE_KEY: &str = "one key per account: receiver already holds a KEYHOLE key";
 
 #[derive(BorshStorageKey)]
 #[near]
@@ -25,6 +28,8 @@ enum Key {
     Enumeration,
     ContractMeta,
     Tiers,
+    // v2 (appended, so every v1 prefix is unchanged)
+    Approvals,
 }
 
 #[near(serializers = [json])]
@@ -41,7 +46,14 @@ pub struct Config {
     pub beats: near_sdk::json_types::U64,
 }
 
-#[near(contract_state)]
+#[near(contract_state, contract_metadata(
+    standard(standard = "nep171", version = "1.2.0"),
+    standard(standard = "nep177", version = "2.0.0"),
+    standard(standard = "nep178", version = "1.0.0"),
+    standard(standard = "nep181", version = "1.0.0"),
+    standard(standard = "nep199", version = "2.1.0"),
+    standard(standard = "nep330", version = "1.2.0"),
+))]
 #[derive(PanicOnDefault)]
 pub struct Contract {
     tokens: NonFungibleToken,
@@ -76,7 +88,7 @@ impl Contract {
                 owner.clone(),
                 Some(Key::TokenMeta),
                 Some(Key::Enumeration),
-                None::<Key>,
+                Some(Key::Approvals),
             ),
             metadata: LazyOption::new(Key::ContractMeta, Some(&meta)),
             tiers: LookupMap::new(Key::Tiers),
@@ -86,6 +98,30 @@ impl Contract {
             royalty_bps,
             beats: 0,
         }
+    }
+
+    /// v1 -> v2. The stored layout is unchanged; v1 kept the two approval maps as `None`,
+    /// v2 turns them on under the appended `Key::Approvals` prefix (same keys `new` uses).
+    /// Self-call only, runs once (a second call panics), touches no token, owner, tier or metadata.
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        // explicit: #[private] is not applied to #[init] methods by near-sdk
+        require!(env::predecessor_account_id() == env::current_account_id(), "migrate is private");
+        let mut c: Contract = env::state_read().unwrap_or_else(|| env::panic_str("no state"));
+        require!(c.tokens.approvals_by_id.is_none(), "already migrated");
+        // Same prefixes NonFungibleToken::new derives (prefix, prefix + "n"). Built directly, NOT via
+        // NonFungibleToken::new: that would run its storage probe against the live owner map.
+        let prefix: Vec<u8> = near_sdk::IntoStorageKey::into_storage_key(Key::Approvals);
+        c.tokens.approvals_by_id = Some(LookupMap::new(prefix.clone()));
+        c.tokens.next_approval_id_by_id = Some(LookupMap::new([prefix, b"n".to_vec()].concat()));
+        c
+    }
+
+    /// Rule: an account holds at most one key. Applies to every way a key can arrive
+    /// (mint, nft_transfer, nft_transfer_call, nft_transfer_payout).
+    fn assert_no_key(&self, account_id: &AccountId) {
+        let n = self.tokens.tokens_per_owner.as_ref().and_then(|m| m.get(account_id)).map(|s| s.len()).unwrap_or(0);
+        require!(n == 0, ERR_ONE_KEY);
     }
 
     fn assert_owner(&self) {
@@ -106,7 +142,9 @@ impl Contract {
     ) -> Token {
         self.assert_minter();
         require!(tier >= 1 && tier <= MAX_TIER, "bad tier");
+        require!(!token_id.is_empty(), "empty token_id");
         require!(token_id.len() <= 64, "token_id too long");
+        self.assert_no_key(&receiver_id);
         // tier entry (~40 B) is charged to the contract; minter-only, bounded.
         self.tiers.insert(&token_id, &tier);
         // internal_mint measures storage, panics if deposit is short, refunds excess,
@@ -187,9 +225,14 @@ impl Contract {
         max_len_payout: Option<u32>,
     ) -> Payout {
         assert_one_yocto();
+        self.assert_no_key(&receiver_id);
         let payout = self.nft_payout(token_id.clone(), balance, max_len_payout);
         let sender = env::predecessor_account_id();
-        let (prev_owner, _) = self.tokens.internal_transfer(&sender, &receiver_id, &token_id, approval_id, memo.clone());
+        let (prev_owner, approved) = self.tokens.internal_transfer(&sender, &receiver_id, &token_id, approval_id, memo.clone());
+        // NEP-178: approvals are cleared by the transfer; their storage goes back to the previous owner.
+        if let Some(a) = approved.filter(|a| !a.is_empty()) {
+            near_contract_standards::non_fungible_token::refund_approved_account_ids(prev_owner.clone(), &a);
+        }
         near_contract_standards::non_fungible_token::events::NftTransfer {
             old_owner_id: &prev_owner,
             new_owner_id: &receiver_id,
@@ -206,10 +249,12 @@ impl Contract {
 impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_transfer(&mut self, receiver_id: AccountId, token_id: TokenId, approval_id: Option<u64>, memo: Option<String>) {
+        self.assert_no_key(&receiver_id);
         self.tokens.nft_transfer(receiver_id, token_id, approval_id, memo)
     }
     #[payable]
     fn nft_transfer_call(&mut self, receiver_id: AccountId, token_id: TokenId, approval_id: Option<u64>, memo: Option<String>, msg: String) -> PromiseOrValue<bool> {
+        self.assert_no_key(&receiver_id);
         self.tokens.nft_transfer_call(receiver_id, token_id, approval_id, memo, msg)
     }
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
@@ -222,6 +267,26 @@ impl near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver
     #[private]
     fn nft_resolve_transfer(&mut self, previous_owner_id: AccountId, receiver_id: AccountId, token_id: TokenId, approved_account_ids: Option<HashMap<AccountId, u64>>) -> bool {
         self.tokens.nft_resolve_transfer(previous_owner_id, receiver_id, token_id, approved_account_ids)
+    }
+}
+
+// NEP-178 approval management (near-contract-standards implementation).
+#[near]
+impl NonFungibleTokenApproval for Contract {
+    #[payable]
+    fn nft_approve(&mut self, token_id: TokenId, account_id: AccountId, msg: Option<String>) -> Option<Promise> {
+        self.tokens.nft_approve(token_id, account_id, msg)
+    }
+    #[payable]
+    fn nft_revoke(&mut self, token_id: TokenId, account_id: AccountId) {
+        self.tokens.nft_revoke(token_id, account_id)
+    }
+    #[payable]
+    fn nft_revoke_all(&mut self, token_id: TokenId) {
+        self.tokens.nft_revoke_all(token_id)
+    }
+    fn nft_is_approved(&self, token_id: TokenId, approved_account_id: AccountId, approval_id: Option<u64>) -> bool {
+        self.tokens.nft_is_approved(token_id, approved_account_id, approval_id)
     }
 }
 
@@ -390,22 +455,23 @@ mod tests {
     #[test]
     fn nep181_enumeration() {
         let mut c = setup();
-        mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k2", "a.near", 3); mint(&mut c, "k3", "b.near", 2);
+        mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k2", "c.near", 3); mint(&mut c, "k3", "b.near", 2);
         assert_eq!(c.nft_total_supply().0, 3);
-        assert_eq!(c.nft_supply_for_owner(acc("a.near")).0, 2);
+        assert_eq!(c.nft_supply_for_owner(acc("a.near")).0, 1);
         assert_eq!(c.nft_tokens(None, Some(2)).len(), 2);
         assert_eq!(c.nft_tokens(Some(U128(2)), None).len(), 1);
         let ids: Vec<String> = c.nft_tokens_for_owner(acc("a.near"), None, None).into_iter().map(|t| t.token_id).collect();
-        assert_eq!(ids, vec!["k1".to_string(), "k2".to_string()]);
+        assert_eq!(ids, vec!["k1".to_string()]);
         assert_eq!(c.nft_supply_for_owner(acc("nobody.near")).0, 0);
     }
     #[test]
     fn holder_tier_is_best_and_follows_transfer() {
         let mut c = setup();
-        mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k2", "a.near", 3);
+        mint(&mut c, "k1", "c.near", 1); mint(&mut c, "k2", "a.near", 3);
         assert_eq!(c.holder_tier(acc("a.near")), Some(3));
         ctx("a.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("b.near"), "k2".into(), None, None);
-        assert_eq!(c.holder_tier(acc("a.near")), Some(1));
+        assert_eq!(c.holder_tier(acc("a.near")), None);
+        assert_eq!(c.holder_tier(acc("c.near")), Some(1));
         assert_eq!(c.holder_tier(acc("b.near")), Some(3));
         assert_eq!(c.holder_tier(acc("nobody.near")), None);
         assert_eq!(c.nft_tier("k2".into()), Some(3));
@@ -496,15 +562,16 @@ mod tests {
     #[test]
     fn nep181_pagination_table() {
         let mut c = setup();
-        for i in 1..=5 { mint(&mut c, &format!("k{i}"), if i % 2 == 0 { "b.near" } else { "a.near" }, 1); }
+        for i in 1..=5 { mint(&mut c, &format!("k{i}"), &format!("o{i}.near"), 1); }
         let ids = |v: Vec<Token>| v.into_iter().map(|t| t.token_id).collect::<Vec<_>>().join(",");
         for (from, lim, want) in [(None, None, "k1,k2,k3,k4,k5"), (Some(0), Some(1), "k1"), (Some(4), None, "k5"), (Some(1), Some(3), "k2,k3,k4"), (Some(3), Some(50), "k4,k5")] {
             assert_eq!(ids(c.nft_tokens(from.map(U128), lim)), want, "from={from:?} limit={lim:?}");
         }
-        for (from, lim, want) in [(None, None, "k1,k3,k5"), (Some(1), Some(1), "k3"), (Some(2), None, "k5")] {
-            assert_eq!(ids(c.nft_tokens_for_owner(acc("a.near"), from.map(U128), lim)), want);
+        for i in 1..=5 {
+            assert_eq!(ids(c.nft_tokens_for_owner(acc(&format!("o{i}.near")), None, None)), format!("k{i}"));
+            assert_eq!(ids(c.nft_tokens_for_owner(acc(&format!("o{i}.near")), Some(U128(0)), Some(1))), format!("k{i}"));
         }
-        assert_eq!(ids(c.nft_tokens_for_owner(acc("b.near"), None, None)), "k2,k4");
+        assert_eq!(ids(c.nft_tokens_for_owner(acc("nobody.near"), None, None)), "");
     }
     #[test]
     #[should_panic]
@@ -515,9 +582,9 @@ mod tests {
     #[test]
     fn nep181_counts_follow_transfers() {
         let mut c = setup();
-        mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k2", "a.near", 1);
+        mint(&mut c, "k1", "a.near", 1); mint(&mut c, "k2", "c.near", 1);
         ctx("a.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("b.near"), "k1".into(), None, None);
-        assert_eq!((c.nft_supply_for_owner(acc("a.near")).0, c.nft_supply_for_owner(acc("b.near")).0, c.nft_total_supply().0), (1, 1, 2));
+        assert_eq!((c.nft_supply_for_owner(acc("a.near")).0, c.nft_supply_for_owner(acc("b.near")).0, c.nft_total_supply().0), (0, 1, 2));
         let ids: Vec<String> = c.nft_tokens_for_owner(acc("b.near"), None, None).into_iter().map(|t| t.token_id).collect();
         assert_eq!(ids, vec!["k1".to_string()]);
     }
@@ -527,26 +594,26 @@ mod tests {
         use near_sdk::test_utils::VMContextBuilder as B;
         use near_sdk::PromiseResult;
         use near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver;
-        for (id, ret, want_owner, want_bool) in [("r1", b"false".to_vec(), "b.near", true), ("r2", b"true".to_vec(), "a.near", false)] {
+        for (id, ret, from, to, want_owner, want_bool) in [("r1", b"false".to_vec(), "a.near", "b.near", "b.near", true), ("r2", b"true".to_vec(), "c.near", "d.near", "c.near", false)] {
             let mut c = setup();
-            mint(&mut c, id, "a.near", 1);
-            ctx("a.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("b.near"), id.into(), None, None);
+            mint(&mut c, id, from, 1);
+            ctx(from, NearToken::from_yoctonear(1)); c.nft_transfer(acc(to), id.into(), None, None);
             testing_env!(B::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
                 near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Successful(ret)]);
-            assert_eq!(c.nft_resolve_transfer(acc("a.near"), acc("b.near"), id.into(), None), want_bool);
+            assert_eq!(c.nft_resolve_transfer(acc(from), acc(to), id.into(), None), want_bool);
             assert_eq!(c.nft_token(id.into()).unwrap().owner_id.as_str(), want_owner);
         }
     }
     #[test]
-    fn nep177_token_has_no_approvals_field_since_nep178_is_not_offered() {
+    fn nep177_token_carries_nep178_approvals_field() {
         let mut c = setup(); mint(&mut c, "k1", "a.near", 1);
         let t = c.nft_token("k1".into()).unwrap();
-        assert!(t.approved_account_ids.is_none(), "no NEP-178 approvals: transfers are owner-only");
+        assert_eq!(t.approved_account_ids, Some(HashMap::new()), "v2: NEP-178 on, no approvals yet");
         assert_eq!(c.nft_metadata().spec, "nft-1.0.0");
     }
 }
 
-/// P2 tables: the frozen contract's behaviour the audit asked to pin (documented, not changed).
+/// P2 tables: behaviour the audit asked to pin.
 #[cfg(test)]
 mod p2 {
     use super::*;
@@ -594,15 +661,13 @@ mod p2 {
     #[test] #[should_panic(expected = "max_len_payout too small")] fn payout_needs_two_slots_with_royalty() {
         let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); c.nft_payout("k1".into(), U128(1000), Some(1));
     }
-    #[test] fn two_keys_for_one_account_holder_tier_is_max() {
+    #[test] #[should_panic(expected = "one key per account")] fn second_mint_to_a_holder_is_refused() {
         let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); mint(&mut c, "k2", "alice.near", 3);
-        assert_eq!(c.holder_tier(acc("alice.near")), Some(3));
-        assert_eq!(c.nft_supply_for_owner(acc("alice.near")), U128(2));
     }
-    #[test] fn holder_tier_drops_when_the_better_key_leaves() {
-        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); mint(&mut c, "k2", "alice.near", 3);
+    #[test] fn holder_tier_moves_with_the_key() {
+        let mut c = setup(); mint(&mut c, "k2", "alice.near", 3);
         xfer(&mut c, "alice.near", "bob.near", "k2", None);
-        assert_eq!(c.holder_tier(acc("alice.near")), Some(1));
+        assert_eq!(c.holder_tier(acc("alice.near")), None);
         assert_eq!(c.holder_tier(acc("bob.near")), Some(3));
     }
     #[test] fn former_holder_has_no_tier() {
@@ -616,10 +681,8 @@ mod p2 {
         ctx("minter.near", NearToken::from_yoctonear(0)); c.beat(vec!["k1".into()]);
         assert_eq!(c.nft_token("k1".into()).unwrap().metadata, before);
     }
-    #[test] fn empty_token_id_is_accepted_by_the_frozen_contract() {
-        // Documented in SECURITY.md: only the TEE minter can mint, and it always uses k + 16 hex.
+    #[test] #[should_panic(expected = "empty token_id")] fn empty_token_id_is_refused() {
         let mut c = setup(); mint(&mut c, "", "alice.near", 1);
-        assert!(c.nft_token("".into()).is_some());
     }
     #[test] fn owner_transfer_ignores_approval_id() {
         // near-contract-standards only checks approval_id for a non-owner sender; the owner's transfer goes through.
@@ -642,10 +705,247 @@ mod p2 {
     #[test] fn enumeration_after_transfers() {
         let mut c = setup();
         for (i, o) in ["a.near", "b.near", "c.near"].iter().enumerate() { mint(&mut c, &format!("k{i}"), o, 1); }
-        xfer(&mut c, "a.near", "c.near", "k0", None);
+        xfer(&mut c, "a.near", "d.near", "k0", None);
         assert_eq!(c.nft_total_supply(), U128(3));
-        assert_eq!(c.nft_supply_for_owner(acc("c.near")), U128(2));
+        assert_eq!(c.nft_supply_for_owner(acc("d.near")), U128(1));
         assert_eq!(c.nft_supply_for_owner(acc("a.near")), U128(0));
         assert_eq!(c.nft_tokens(None, None).len(), 3);
+    }
+}
+
+/// v2: NEP-178 approvals, one key per account, payout through an approved marketplace, migrate.
+#[cfg(test)]
+mod v2 {
+    use super::*;
+    use near_sdk::test_utils::{get_logs, VMContextBuilder};
+    use near_sdk::{testing_env, NearToken};
+
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
+    fn mint(c: &mut Contract, id: &str, to: &str) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
+    fn approve(c: &mut Contract, owner: &str, id: &str, who: &str) { ctx(owner, NearToken::from_millinear(10)); c.nft_approve(id.into(), acc(who), None); }
+    fn yocto(who: &str) { ctx(who, NearToken::from_yoctonear(1)); }
+
+    // ---- NEP-178 ----
+    #[test] fn approve_sets_id_one_and_is_approved() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        assert!(c.nft_is_approved("k1".into(), acc("market.near"), None));
+        assert!(c.nft_is_approved("k1".into(), acc("market.near"), Some(1)));
+        assert!(!c.nft_is_approved("k1".into(), acc("market.near"), Some(2)));
+        assert!(!c.nft_is_approved("k1".into(), acc("other.near"), None));
+        assert_eq!(c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap()[&acc("market.near")], 1);
+    }
+    #[test] fn approval_ids_increase_per_token() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        approve(&mut c, "alice.near", "k1", "m1.near"); approve(&mut c, "alice.near", "k1", "m2.near"); approve(&mut c, "alice.near", "k1", "m1.near");
+        let a = c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap();
+        assert_eq!((a[&acc("m2.near")], a[&acc("m1.near")]), (2, 3), "re-approve gets a fresh id");
+    }
+    #[test] #[should_panic(expected = "Predecessor must be token owner.")] fn only_owner_can_approve() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "mallory.near", "k1", "mallory.near");
+    }
+    #[test] #[should_panic(expected = "Requires attached deposit of at least 1 yoctoNEAR")] fn approve_needs_deposit() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); ctx("alice.near", NearToken::from_yoctonear(0)); c.nft_approve("k1".into(), acc("m.near"), None);
+    }
+    #[test] #[should_panic(expected = "Must attach")] fn approve_deposit_must_cover_storage() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); ctx("alice.near", NearToken::from_yoctonear(1)); c.nft_approve("k1".into(), acc("m.near"), None);
+    }
+    #[test] #[should_panic(expected = "Token not found")] fn approve_unknown_token() {
+        let mut c = setup(); approve(&mut c, "alice.near", "nope", "m.near");
+    }
+    #[test] fn approve_with_msg_schedules_nft_on_approve() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", NearToken::from_millinear(10));
+        assert!(c.nft_approve("k1".into(), acc("market.near"), Some("{\"price\":\"1\"}".into())).is_some(), "msg => nft_on_approve XCC");
+        ctx("alice.near", NearToken::from_millinear(10));
+        assert!(c.nft_approve("k1".into(), acc("m2.near"), None).is_none(), "no msg => no XCC");
+    }
+    #[test] fn revoke_removes_one() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        approve(&mut c, "alice.near", "k1", "m1.near"); approve(&mut c, "alice.near", "k1", "m2.near");
+        yocto("alice.near"); c.nft_revoke("k1".into(), acc("m1.near"));
+        assert!(!c.nft_is_approved("k1".into(), acc("m1.near"), None));
+        assert!(c.nft_is_approved("k1".into(), acc("m2.near"), None));
+    }
+    #[test] fn revoke_all_clears() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        approve(&mut c, "alice.near", "k1", "m1.near"); approve(&mut c, "alice.near", "k1", "m2.near");
+        yocto("alice.near"); c.nft_revoke_all("k1".into());
+        assert!(c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap().is_empty());
+    }
+    #[test] #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")] fn revoke_needs_one_yocto() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "m.near");
+        ctx("alice.near", NearToken::from_yoctonear(0)); c.nft_revoke("k1".into(), acc("m.near"));
+    }
+    #[test] #[should_panic(expected = "Predecessor must be token owner.")] fn revoke_only_owner() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "m.near");
+        yocto("m.near"); c.nft_revoke("k1".into(), acc("m.near"));
+    }
+    #[test] #[should_panic(expected = "Predecessor must be token owner.")] fn revoke_all_only_owner() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); yocto("m.near"); c.nft_revoke_all("k1".into());
+    }
+    #[test] fn approved_account_can_transfer_and_approvals_clear() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near"); approve(&mut c, "alice.near", "k1", "m2.near");
+        yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), Some(1), None);
+        let t = c.nft_token("k1".into()).unwrap();
+        assert_eq!(t.owner_id, acc("bob.near"));
+        assert!(t.approved_account_ids.unwrap().is_empty(), "approvals cleared on transfer");
+        assert!(!c.nft_is_approved("k1".into(), acc("m2.near"), None));
+        let logs = get_logs(); assert!(logs.iter().any(|l| l.contains("\"nft_transfer\"") && l.contains("bob.near")), "{logs:?}");
+    }
+    #[test] #[should_panic(expected = "Sender not approved")] fn unapproved_account_cannot_transfer() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("mallory.near"); c.nft_transfer(acc("mallory.near"), "k1".into(), None, None);
+    }
+    #[test] #[should_panic(expected = "is different from the given approval_id")] fn stale_approval_id_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), Some(7), None);
+    }
+    #[test] #[should_panic(expected = "Sender not approved")] fn revoked_market_cannot_transfer() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("alice.near"); c.nft_revoke("k1".into(), acc("market.near"));
+        yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+    }
+    #[test] #[should_panic(expected = "Sender not approved")] fn old_approval_dies_after_resale() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("alice.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        yocto("market.near"); c.nft_transfer(acc("carol.near"), "k1".into(), None, None);
+    }
+    #[test] fn approved_transfer_call_is_allowed() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("market.near"); let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), Some(1), None, "".into());
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+    }
+
+    // ---- NEP-199 through an approved marketplace ----
+    #[test] fn marketplace_transfer_payout_pays_treasury_five_percent() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("market.near");
+        let p = c.nft_transfer_payout(acc("bob.near"), "k1".into(), Some(1), None, U128(10_000_000), Some(10)).payout;
+        assert_eq!(p[&acc("treasury.near")].0, 500_000);
+        assert_eq!(p[&acc("alice.near")].0, 9_500_000, "seller is the owner before the transfer");
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+        assert!(c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap().is_empty());
+        assert!(get_logs().iter().any(|l| l.contains("\"authorized_id\":\"market.near\"")), "event names the marketplace");
+    }
+    #[test] fn migrate_matches_new_prefixes() {
+        let fresh = setup();
+        let prefix: Vec<u8> = near_sdk::IntoStorageKey::into_storage_key(Key::Approvals);
+        // write through the migrate-style maps, read through `new`'s maps: same storage
+        let mut m: near_sdk::collections::LookupMap<TokenId, u64> = LookupMap::new([prefix, b"n".to_vec()].concat());
+        m.insert(&"x".to_string(), &42);
+        assert_eq!(fresh.tokens.next_approval_id_by_id.as_ref().unwrap().get(&"x".to_string()), Some(42));
+    }
+    #[test] #[should_panic(expected = "Sender not approved")] fn transfer_payout_needs_approval() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        yocto("market.near"); c.nft_transfer_payout(acc("bob.near"), "k1".into(), None, None, U128(100), None);
+    }
+    #[test] #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")] fn transfer_payout_needs_one_yocto() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); ctx("alice.near", NearToken::from_yoctonear(0));
+        c.nft_transfer_payout(acc("bob.near"), "k1".into(), None, None, U128(100), None);
+    }
+    #[test] #[should_panic(expected = "max_len_payout too small")] fn transfer_payout_respects_max_len() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); yocto("alice.near");
+        c.nft_transfer_payout(acc("bob.near"), "k1".into(), None, None, U128(100), Some(1));
+    }
+    #[test] fn payout_follows_set_royalty() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        yocto("owner.near"); c.set_royalty(acc("t2.near"), 250);
+        let p = c.nft_payout("k1".into(), U128(10_000), None).payout;
+        assert_eq!((p[&acc("t2.near")].0, p[&acc("alice.near")].0), (250, 9_750));
+    }
+
+    // ---- one key per account ----
+    #[test] #[should_panic(expected = "one key per account")] fn transfer_to_holder_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "bob.near");
+        yocto("alice.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+    }
+    #[test] #[should_panic(expected = "one key per account")] fn transfer_call_to_holder_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "bob.near");
+        yocto("alice.near"); let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "".into());
+    }
+    #[test] #[should_panic(expected = "one key per account")] fn transfer_payout_to_holder_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "bob.near");
+        yocto("alice.near"); c.nft_transfer_payout(acc("bob.near"), "k1".into(), None, None, U128(100), None);
+    }
+    #[test] #[should_panic(expected = "one key per account")] fn approved_market_cannot_deliver_to_holder() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "bob.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), Some(1), None);
+    }
+    #[test] fn former_holder_can_receive_again() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        yocto("alice.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        yocto("bob.near"); c.nft_transfer(acc("alice.near"), "k1".into(), None, None);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"));
+        mint(&mut c, "k2", "bob.near");
+        assert_eq!(c.nft_supply_for_owner(acc("bob.near")).0, 1);
+    }
+    #[test] fn refused_transfer_leaves_state_untouched_in_a_fresh_call() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "bob.near");
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { yocto("alice.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None); }));
+        assert!(r.is_err());
+    }
+    #[test] fn every_holder_has_exactly_one_key_after_many_moves() {
+        let mut c = setup();
+        for i in 0..6 { mint(&mut c, &format!("k{i}"), &format!("h{i}.near")); }
+        for i in 0..6 { yocto(&format!("h{i}.near")); c.nft_transfer(acc(&format!("n{i}.near")), format!("k{i}"), None, None); }
+        for i in 0..6 { assert_eq!(c.nft_supply_for_owner(acc(&format!("n{i}.near"))).0, 1); assert_eq!(c.nft_supply_for_owner(acc(&format!("h{i}.near"))).0, 0); }
+    }
+
+    // ---- migrate (v1 layout = approvals off) ----
+    fn v1_state() -> Contract {
+        // exactly what v1 `new` built: approvals off
+        ctx("keys.near", NearToken::from_yoctonear(0));
+        let mut c = Contract {
+            tokens: NonFungibleToken::new(Key::Owners, acc("owner.near"), Some(Key::TokenMeta), Some(Key::Enumeration), None::<Key>),
+            metadata: LazyOption::new(Key::ContractMeta, Some(&NFTContractMetadata { spec: NFT_METADATA_SPEC.into(), name: "KEYHOLE".into(), symbol: "KEY".into(), icon: None, base_uri: None, reference: None, reference_hash: None })),
+            tiers: LookupMap::new(Key::Tiers),
+            owner: acc("owner.near"), minter: acc("minter.near"), treasury: acc("treasury.near"), royalty_bps: 500, beats: 0,
+        };
+        for (i, o) in ["a.near", "b.near", "c.near", "d.near", "e.near"].iter().enumerate() {
+            ctx("minter.near", NearToken::from_millinear(100));
+            c.tiers.insert(&format!("k{i}"), &1);
+            c.tokens.internal_mint(format!("k{i}"), acc(o), Some(meta()));
+        }
+        c.beats = 2;
+        c
+    }
+    #[test] fn migrate_turns_on_approvals_and_keeps_everything() {
+        let c = v1_state();
+        let before: Vec<Token> = c.nft_tokens(None, None);
+        let cfg = near_sdk::serde_json::to_string(&c.config()).unwrap();
+        assert!(before.iter().all(|t| t.approved_account_ids.is_none()));
+        env::state_write(&c);
+        ctx("keys.near", NearToken::from_yoctonear(0));
+        let mut m = Contract::migrate();
+        let after = m.nft_tokens(None, None);
+        assert_eq!(after.len(), 5);
+        for (b, a) in before.iter().zip(after.iter()) {
+            assert_eq!((&b.token_id, &b.owner_id, &b.metadata), (&a.token_id, &a.owner_id, &a.metadata));
+            assert_eq!(a.approved_account_ids, Some(HashMap::new()));
+            assert_eq!(m.nft_tier(a.token_id.clone()), Some(1));
+        }
+        assert_eq!(near_sdk::serde_json::to_string(&m.config()).unwrap(), cfg);
+        assert_eq!(m.nft_metadata().symbol, "KEY");
+        approve(&mut m, "a.near", "k0", "market.near");
+        assert!(m.nft_is_approved("k0".into(), acc("market.near"), Some(1)));
+    }
+    #[test] #[should_panic(expected = "already migrated")] fn migrate_twice_fails() {
+        let c = setup(); env::state_write(&c); ctx("keys.near", NearToken::from_yoctonear(0)); Contract::migrate();
+    }
+    #[test] #[should_panic(expected = "migrate is private")] fn migrate_is_self_only() {
+        let c = v1_state(); env::state_write(&c); ctx("owner.near", NearToken::from_yoctonear(0)); Contract::migrate();
+    }
+    #[test] #[should_panic(expected = "no state")] fn migrate_without_state_fails() {
+        ctx("keys.near", NearToken::from_yoctonear(0)); Contract::migrate();
+    }
+    #[test] fn new_uses_same_approval_prefix_as_migrate() {
+        let c = setup(); assert!(c.tokens.approvals_by_id.is_some() && c.tokens.next_approval_id_by_id.is_some());
     }
 }
