@@ -31,7 +31,7 @@ export function AgentPanel() {
   return (
     <section className="card agent" data-testid="agent">
       <h2>Agent API · holder caps as policy</h2>
-      <p className="note">KEYHOLE tier caps are written into a NEAR Intents Agent API policy, so the agent's own wallet refuses what the key would refuse. Demo partner deployment on mainnet; quotes are dry and the agent holds no funds.</p>
+      <p className="note">KEYHOLE tier caps are written into a NEAR Intents Agent API policy, so the agent&apos;s own wallet refuses what the key would refuse. Demo partner deployment on mainnet; quotes are dry and the agent holds no funds.</p>
       {err && <p className="note" role="alert" data-testid="agent-err">Agent API: {err}</p>}
       {net && <p className="note" data-testid="agent-net">Network <b>{net.network}</b> · status <b>{net.status.overall}</b></p>}
       {q && <p className="note" data-testid="agent-quotas">Quotas: {q.usage.agents_last_24_hours}/{q.limits.daily_agents} agents today · {q.usage.requests_this_minute}/{q.limits.requests_per_minute} requests this minute</p>}
