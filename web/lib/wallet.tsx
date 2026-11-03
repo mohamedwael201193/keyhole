@@ -163,7 +163,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       sync();
       r.selector.store.observable.subscribe(sync);
       setReady(true);
-    });
+    }, (e) => { loading.current = null; throw e; });
     return loading.current;
   }, []);
 
@@ -197,10 +197,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return ensure().then(() => {
       const modal = ref.current?.modal;
       if (!modal) return;
-      // The selector modal mounts on show(). A show() in the same task as the
-      // first createRoot can be dropped, so the header's first click opens it twice.
-      modal.show();
-      requestAnimationFrame(() => { modal.show(); tuneWalletChrome(); });
+      // modal-ui creates its React root on the first show(); a show() that lands before that root has
+      // committed is dropped (the cause of the "first click does nothing" flake on slow phones).
+      // So: show, then re-show each frame until the wrapper is actually open (bounded, ~2 s).
+      let tries = 0;
+      const tick = () => {
+        if (document.querySelector("#near-wallet-selector-modal .nws-modal-wrapper.open")) { tuneWalletChrome(); return; }
+        if (tries++ > 120) return;
+        modal.show();
+        requestAnimationFrame(tick);
+      };
+      tick();
     });
   }, [ensure]);
   const disconnect = useCallback(async () => {

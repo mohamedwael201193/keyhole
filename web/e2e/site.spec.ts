@@ -98,6 +98,14 @@ test("English only: no language switcher, and /ar redirects home", async ({ page
   await expect(page.locator("h1").first()).toBeVisible();
 });
 
+test("header Connect wallet opens the selector on the first click on a 6x slower CPU", async ({ page, context }) => {
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.getByTestId("connect").click();
+  await expect(page.locator("#near-wallet-selector-modal .nws-modal-wrapper.open")).toBeVisible({ timeout: 20_000 });
+});
+
 test("header Connect wallet opens the selector on the first click", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   const btn = page.getByTestId("connect");
