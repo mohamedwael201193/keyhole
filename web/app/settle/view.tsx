@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState } from "react";
 import { OC_ASSETS, statusOf, toUnits, assetById } from "@/lib/oneclick";
 import { SETTLEMENTS, RECORDED_FAILED, type Settlement } from "@/lib/settlements";
 import { tx, intentTx } from "@/lib/config";
+import { AgentPanel } from "./agent";
 
 type Dry = { amountInFormatted: string; amountInUsd: string; amountOutFormatted: string; amountOutUsd: string; timeEstimate: number };
 type St = { status: string; updatedAt?: string; details: { depositedAmountFormatted: string | null; amountOutFormatted: string | null; refundedAmountFormatted: string | null; nearTxHashes: string[]; intentHashes: string[] } };
@@ -75,6 +76,7 @@ export function SettleView() {
         {msg && <p className="note" role="alert" data-testid="dry-msg">{msg}</p>}
         {dry && <p className="dout" data-testid="dry-out"><b>{dry.amountInFormatted}</b> (${Number(dry.amountInUsd).toFixed(4)}) → <b>{dry.amountOutFormatted}</b> (${Number(dry.amountOutUsd).toFixed(4)}) · about {dry.timeEstimate}s · dry run</p>}
       </section>
+      <AgentPanel />
       <h2 className="sh">Executed on mainnet</h2>
       <div className="sgrid">{SETTLEMENTS.map((s) => <Row key={s.depositAddress} s={s} />)}</div>
       <article className="card srow rec" data-testid="recorded-failed">

@@ -1,0 +1,314 @@
+{
+ "network": {
+  "status": 200,
+  "body": {
+   "network": "mainnet",
+   "contract_id": "outlayer.near",
+   "supported_owner_types": [
+    "near",
+    "evm",
+    "passkey"
+   ],
+   "status": {
+    "overall": "operational",
+    "checked_at": "2026-11-03T05:20:48.356Z",
+    "components": [
+     {
+      "id": "one_click",
+      "status": "operational",
+      "reason": null,
+      "affects": [
+       "swap",
+       "withdraw",
+       "deposit"
+      ],
+      "since": "2026-11-02T17:20:48.689Z",
+      "checked_at": "2026-11-03T05:20:48.780Z"
+     },
+     {
+      "id": "custody",
+      "status": "operational",
+      "reason": null,
+      "affects": [
+       "swap",
+       "withdraw",
+       "transfer",
+       "shield",
+       "unshield",
+       "deposit",
+       "owner_intents",
+       "balances"
+      ],
+      "since": "2026-11-01T16:32:47.915Z",
+      "checked_at": "2026-11-03T05:20:48.478Z"
+     },
+     {
+      "id": "near",
+      "status": "operational",
+      "reason": null,
+      "affects": [
+       "owner_intents",
+       "balances"
+      ],
+      "since": "2026-11-01T15:40:47.268Z",
+      "checked_at": "2026-11-03T05:20:48.356Z"
+     }
+    ]
+   }
+  }
+ },
+ "whoami": {
+  "status": 200,
+  "body": {
+   "api_key_id": "<redacted:API_KEY_ID>",
+   "tenant_id": "<redacted:TENANT_ID>"
+  }
+ },
+ "quotas": {
+  "status": 200,
+  "body": {
+   "revision": 0,
+   "overrides": {},
+   "limits": {
+    "daily_agents": 100,
+    "api_keys": 10,
+    "requests_per_minute": 4000,
+    "key_requests_per_minute": 1500
+   },
+   "usage": {
+    "agents_last_24_hours": 1,
+    "api_keys": 2,
+    "requests_this_minute": 3
+   },
+   "observed_at": "2026-11-03T05:21:20.533Z"
+  }
+ },
+ "policy": {
+  "status": 200,
+  "body": {
+   "wallet_id": "<redacted:WALLET_ID>",
+   "revision": 1,
+   "policy_hash": "1f5958b07a8578d68b21e8a13103caebee1a0a701c0468fa0f2d024252fef724",
+   "status": "APPLIED",
+   "applied_at": "2026-11-03T05:21:00.741Z",
+   "transaction_hash": "biJNTxXc9zbQw6nTMJoPM2HeAE9snEf1mSdbsZ1CWEQ",
+   "provider_policy_synced": true,
+   "cooldowns": {
+    "policy_change_available_at": null,
+    "unfreeze_available_at": null
+   },
+   "policy": {
+    "frozen": false,
+    "actions": [
+     "swap"
+    ],
+    "confidential": false,
+    "owner_approval": false,
+    "assets": [
+     "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+     "nep141:wrap.near",
+     "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near",
+     "nep141:sol.omft.near",
+     "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+     "nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near"
+    ],
+    "limits": {
+     "per_transaction": {
+      "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near": "1000000",
+      "nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near": "1000000",
+      "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near": "1000000",
+      "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1": "1000000"
+     },
+     "daily": {
+      "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near": "5000000",
+      "nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near": "5000000",
+      "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near": "5000000",
+      "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1": "5000000"
+     }
+    },
+    "max_actions_per_hour": 360,
+    "destinations": {
+     "mode": "only",
+     "list": []
+    },
+    "budget": {
+     "daily_usd": "5.00",
+     "weekly_usd": null,
+     "monthly_usd": null
+    },
+    "timelock_ms": 0
+   },
+   "usage": {
+    "budget": {
+     "daily": {
+      "limit_usd": "5.00",
+      "spent_usd": "0.000000",
+      "remaining_usd": "5.000000",
+      "resets_at": "2026-11-04T05:21:00.736Z"
+     },
+     "weekly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     },
+     "monthly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     }
+    },
+    "timelock": {
+     "delay_ms": 0,
+     "scheduled_count": 0
+    }
+   }
+  }
+ },
+ "dry_swap_ok": {
+  "status": 200,
+  "body": {
+   "dry": true,
+   "type": "swap",
+   "quote": {
+    "amount_out": "130777821029277108433734",
+    "min_amount_out": "129470042818984337349396",
+    "time_estimate_seconds": 12
+   },
+   "spend": {
+    "amount_usd": "0.499634",
+    "budget": {
+     "daily": {
+      "limit_usd": "5.00",
+      "spent_usd": "0.000000",
+      "remaining_usd": "5.000000",
+      "resets_at": "2026-11-04T05:21:00.736Z"
+     },
+     "weekly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     },
+     "monthly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     }
+    }
+   },
+   "owner_approval": false,
+   "fee": {
+    "amount_usd": "0.001370",
+    "percent": "0.27"
+   },
+   "warnings": [
+    {
+     "code": "insufficient_balance",
+     "detail": "The balance this request spends from holds less than its amount (available_amount, atomic units); submitted now, the real request would be refused. A timelocked request is checked again when it releases.",
+     "available_amount": "0"
+    }
+   ]
+  }
+ },
+ "dry_swap_over_cap": {
+  "status": 200,
+  "body": {
+   "dry": true,
+   "type": "swap",
+   "quote": {
+    "amount_out": "523485388241676116818114",
+    "min_amount_out": "518250534359259355649932",
+    "time_estimate_seconds": 10
+   },
+   "spend": {
+    "amount_usd": "1.998534",
+    "budget": {
+     "daily": {
+      "limit_usd": "5.00",
+      "spent_usd": "0.000000",
+      "remaining_usd": "5.000000",
+      "resets_at": "2026-11-04T05:21:00.736Z"
+     },
+     "weekly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     },
+     "monthly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     }
+    }
+   },
+   "owner_approval": false,
+   "fee": {
+    "amount_usd": "0.004054",
+    "percent": "0.20"
+   },
+   "warnings": [
+    {
+     "code": "policy_transaction_limit_exceeded",
+     "detail": "This amount is above the owner's per-transaction limit for the asset it spends; the real request would be refused."
+    },
+    {
+     "code": "insufficient_balance",
+     "detail": "The balance this request spends from holds less than its amount (available_amount, atomic units); submitted now, the real request would be refused. A timelocked request is checked again when it releases.",
+     "available_amount": "0"
+    }
+   ]
+  }
+ },
+ "dry_swap_dest_not_in_assets": {
+  "status": 200,
+  "body": {
+   "dry": true,
+   "type": "swap",
+   "quote": {
+    "amount_out": "499898",
+    "min_amount_out": "494899",
+    "time_estimate_seconds": 10
+   },
+   "spend": {
+    "amount_usd": "0.499634",
+    "budget": {
+     "daily": {
+      "limit_usd": "5.00",
+      "spent_usd": "0.000000",
+      "remaining_usd": "5.000000",
+      "resets_at": "2026-11-04T05:21:00.736Z"
+     },
+     "weekly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     },
+     "monthly": {
+      "limit_usd": null,
+      "spent_usd": null,
+      "remaining_usd": null,
+      "resets_at": null
+     }
+    }
+   },
+   "owner_approval": false,
+   "fee": {
+    "amount_usd": "0.000102",
+    "percent": "0.02"
+   },
+   "warnings": [
+    {
+     "code": "insufficient_balance",
+     "detail": "The balance this request spends from holds less than its amount (available_amount, atomic units); submitted now, the real request would be refused. A timelocked request is checked again when it releases.",
+     "available_amount": "0"
+    }
+   ]
+  }
+ }
+}
