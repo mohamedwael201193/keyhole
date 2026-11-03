@@ -738,3 +738,5 @@ fn r4_wallet_polling_fits_inside_the_gateway_timeout() {
 mod matrix;
 #[path = "beatkey.rs"]
 mod beatkey;
+#[path = "audit.rs"]
+mod audit;
