@@ -1,7 +1,7 @@
 # Track coverage
 
 Each official track prompt, line by line: what KEYHOLE ships for it, where the proof is, and an honest status.
-✅ shipped and live on mainnet · 🟡 partial or a different shape · ❌ not done. Last checked 2026-11-01.
+✅ shipped and live on mainnet · 🟡 partial or a different shape · ❌ not done. Last checked 2026-11-03.
 
 ## NFTs That Do Something (primary)
 
@@ -42,6 +42,7 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 |---|---|---|---|
 | Spending limits / policy engine for agents | Tier caps, holder caps (cut now, raise after 24 h), per-minute limits, lock, cooldown, enforced inside the TEE | worker tests, calls `afaaf3e1`, `06cf2630` | ✅ |
 | Agent signs with a scoped key, limits explained | Function-call key on the TEE minter: `beat` on `keyhole-devmo.near` only, 0.05 NEAR gas allowance, no deposit or transfer possible; added by the enclave on the owner's signed request. Real beat with it on mainnet; other method, deposit and transfer refused by NEAR. Holder requests stay NEP-413 signed by a full-access key of the NFT owner | README "Key scoping", [evidence](docs/evidence/publish-09d481a5/README.md#scoped-beat-key) | ✅ |
+| Agent wallet with a policy (NEAR Intents Agent API) | The holder's Bronze caps are written as an Agent API policy (swap only; $1 per swap and $5 per day on each USDC; only the six assets KEYHOLE routes), applied through the Agent API demo partner deployment on the mainnet network; /settle reads the live policy and checks it equals the caps, and dry quotes over the cap come back with the API's own policy warning | [tx biJNTxXc…](https://nearblocks.io/txns/biJNTxXc9zbQw6nTMJoPM2HeAE9snEf1mSdbsZ1CWEQ), [`docs/evidence/agent-api`](docs/evidence/agent-api/demo_2026-11-03.json), [/settle](https://keyhole-seven.vercel.app/settle), [`web/tests/agentPolicy.test.ts`](web/tests/agentPolicy.test.ts) | ✅ |
 | Attack demo: prompt-injected agent tries to pay a bad address, with a log | Six mainnet attack calls, all stopped; /ask shows the model ignoring a poisoned note | [docs/evidence/prompt-injection](docs/evidence/prompt-injection/README.md) | ✅ |
 | Counterparty check service (allow / warn / block) | — | — | ❌ not our product |
 | TEE attestation | /verify, `verify.sh`, judge kit | README §9 | ✅ |

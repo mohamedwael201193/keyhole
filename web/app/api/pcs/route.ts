@@ -1,3 +1,4 @@
+import { clientIp } from "@/lib/verifyScore";
 import { NextResponse } from "next/server";
 import { pcsUpstream } from "@/lib/pcs";
 import { createLimiter } from "@/lib/ratelimit";
@@ -9,7 +10,7 @@ const limit = createLimiter(240, 60_000);
 const no = (code: string, status: number) => NextResponse.json({ ok: false, error: { code } }, { status, headers: { "cache-control": "no-store" } });
 
 export async function GET(req: Request) {
-  if (!limit(req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon").ok) return no("rate_limited", 429);
+  if (!limit(clientIp(req.headers)).ok) return no("rate_limited", 429);
   const u = new URL(req.url);
   const up = pcsUpstream(u.searchParams.get("r") ?? "", u.searchParams.get("fmspc"));
   if (!up) return no("bad_params", 400);

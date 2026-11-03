@@ -162,6 +162,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <p className="eb">{t("land.chainEyebrow")}</p>
           <h2>{t("land.chainH")}<em>{t("land.chainEm")}</em></h2>
           <p className="lead">{t("land.chainLead")}</p>
+          <p className="chaintry"><Link href="/settle" data-testid="chain-settle">{t("land.chainTry")} →</Link></p>
           <div className="cg">
             {CHAINS.map(([id, name]) => (
               <div className="c" key={id}><Medal id={id} name={name} labeled={false} /><b>{name}</b></div>
@@ -201,7 +202,8 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
         <div className="wrap">
           <p className="eb">{t("land.galEyebrow")}</p>
           <h2>{t("land.galH")}<em>{t("land.galEm")}</em></h2>
-          <p className="lead">{t("land.galLead")} <span className="mono" style={{ fontSize: 14 }}>{t("land.concept")}</span></p>
+          <p className="lead">{t("land.galLead")}</p>
+          <p className="concept" data-testid="concept-banner"><b>{t("land.concept")}</b> <Link href="/gallery">{t("land.conceptLive")} →</Link></p>
           <div className="gg">
             {CATALOG.map((k) => (
               <article className="gk" key={k.n}>
@@ -210,8 +212,8 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
                     <span className="tier">{t(`finish.${k.finish}`)}</span>
                     <span className="oo">{t("land.oneOfOne")}</span>
                   </div>
-                  <div className="art"><KeyArt n={k.n} alt={t("land.keyN", { n: k.n })} width={430} height={1080} /></div>
-                  <h3>{t("land.keyN", { n: k.n })}</h3>
+                  <div className="art"><KeyArt n={k.n} alt={t("land.catN", { n: k.n })} width={430} height={1080} /></div>
+                  <h3>{t("land.catN", { n: k.n })}</h3>
                   <div className="meta">
                     <span>{t("land.cipherN", { n: k.n })}</span>
                     <span>{formatTradePrice(CAPS[k.finish].perTx)}</span>

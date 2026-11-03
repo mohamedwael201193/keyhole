@@ -34,7 +34,16 @@ test("gallery renders every on-chain key", async ({ page }) => {
 
 test("verify: a previous-build mainnet call still passes in the browser", async ({ page }) => {
   await page.goto("/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "previous", { timeout: 30_000 });
+});
+
+test("verify: the previous-build verdict says so, and the current call links its own publish tx", async ({ page }) => {
+  await page.goto("/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0");
+  await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
+  await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await expect(page.locator('a[href*="F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="FXbXhGNi"]')).toHaveCount(0);
 });
 
 test("verify: the default page checks the published 09d481a5 info call", async ({ page }) => {
@@ -47,6 +56,8 @@ test("verify: the default page checks the published 09d481a5 info call", async (
   await expect(page.getByText("09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4").first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
+  await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓");
+  await expect(page.getByTestId("hashes-note")).toContainText("RTMR3");
 });
 
 test("verify: rejects a non-uuid", async ({ page }) => {
@@ -541,7 +552,7 @@ test("judge path links every evidence call to /verify and is reachable from the 
 
 test("verify: an old-build refusal shows the binding, the previous version and the attested output", async ({ page }) => {
   await page.goto("/verify?call=e805f050-d416-4a04-9b12-270adbe02068");
-  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "previous", { timeout: 30_000 });
   await expect(page.getByTestId("build-note")).toContainText("previous published version 38bd67b9");
   await expect(page.getByTestId("output-verdict")).toHaveText("refused · not_owner");
 });
@@ -572,7 +583,7 @@ test("verify: Intel DCAP passes in the browser and a signed answer shows its key
   await expect(page.getByTestId("dcap")).toHaveAttribute("data-ok", "true", { timeout: 30_000 });
   await expect(page.getByTestId("dcap-count")).toHaveText("19/19 checks passed");
   await expect(page.getByTestId("dcap-bind")).toContainText("k5f4750858f328940");
-  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "previous");
   await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "37");
 });
 
@@ -648,6 +659,7 @@ test("settle: the real SOL→NEAR order reads SUCCESS live from 1Click and the N
   const ok = page.locator('[data-deposit="6pvcZZ2xMUhDpQmySGaVR2Cm9e3Aixx5QUQUPS7RAcha"]');
   await expect(ok.locator('[data-status="SUCCESS"]')).toBeVisible({ timeout: 30_000 });
   await expect(ok.locator('a[href="https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh"]').first()).toBeVisible();
+  await expect(ok.getByTestId("st-updated")).toContainText("2026");
   await expect(page.locator('[data-deposit="5sESFfrM4Tk6L5euDCTjjMxVAs5xmbZpj4i3V29s3KJ"] [data-status="REFUNDED"]')).toBeVisible({ timeout: 30_000 });
 });
 
@@ -665,4 +677,46 @@ test("settle: dry-run quote and every 1Click status, including REFUNDED and FAIL
   await expect(page.getByText("0.004 SOL on Solana → USDC on NEAR (MetaMask)")).toBeVisible();
   await expect(page.getByText("Refund path: 0.001 SOL on Solana → USDC on NEAR, refunded for NO_LIQUIDITY")).toBeVisible();
   await expect(page.getByTestId("recorded-failed").locator('[data-status="FAILED"]')).toBeVisible();
+});
+
+test("gallery: every live card shows its token id and links to its history", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/gallery");
+  const card = page.getByTestId("gallery").getByTestId("key-nft").first();
+  await expect(card).toBeVisible({ timeout: 45_000 });
+  const tid = (await card.getByTestId("key-tid").innerText()).replace(/^Token\s+/, "").trim();
+  expect(tid.length).toBeGreaterThan(0);
+  await expect(card.getByTestId("key-link")).toHaveAttribute("href", `/key?id=${encodeURIComponent(tid)}`);
+});
+
+test("home: the catalogue is labelled concept art and the chain section leads to a live quote", async ({ page }) => {
+  await page.goto("/?static");
+  await expect(page.getByTestId("concept-banner")).toContainText("not minted tokens");
+  await expect(page.getByTestId("concept-banner").locator('a[href="/gallery"]')).toBeVisible();
+  await expect(page.getByTestId("chain-settle")).toHaveAttribute("href", "/settle");
+  await expect(page.getByText("Eight assets.")).toHaveCount(0);
+});
+
+test("judge: who sees what, and the Chain Signatures step verifies a published output", async ({ page }) => {
+  await page.goto("/judge");
+  await expect(page.getByTestId("who-sees-what").locator("tbody tr")).toHaveCount(7);
+  await expect(page.getByTestId("judge-chainsig").locator('a[href="/verify?call=0cd1c3bd-21be-44dc-bc60-e792a42344e6"]')).toBeVisible();
+  await page.goto("/verify?call=0cd1c3bd-21be-44dc-bc60-e792a42344e6");
+  await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓", { timeout: 30_000 });
+});
+
+test("settle: a vault trade is shown end to end with its attested call and intent hash", async ({ page }) => {
+  await page.goto("/settle");
+  const v = page.getByTestId("vault-trade");
+  await expect(v).toContainText("Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so");
+  await expect(v.locator('a[href="/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539"]')).toBeVisible();
+  await expect(page.getByText(/due at the deadline/)).toHaveCount(0);
+});
+
+test("verify: when Intel PCS does not answer, the page says so and counts what did pass", async ({ page }) => {
+  await page.route("**/api/pcs**", (route) => route.abort());
+  await page.goto("/verify");
+  await expect(page.getByTestId("tally-head")).toContainText("Intel PCS did not answer", { timeout: 30_000 });
+  await expect(page.getByTestId("tally-head")).toContainText("25 of 25");
+  await expect(page.getByTestId("verdict")).toHaveText("Intel PCS unreachable. Run again.");
 });

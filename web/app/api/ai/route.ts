@@ -1,3 +1,4 @@
+import { clientIp } from "@/lib/verifyScore";
 import { NextRequest, NextResponse } from "next/server";
 import { createLimiter } from "@/lib/ratelimit";
 import { AI_MAX_PROMPT, AI_MAX_TOKENS, AI_MODEL, NONCE_RE, gpuNonces } from "@/lib/ai";
@@ -31,14 +32,16 @@ const no = (code: string, status: number, extra: Record<string, unknown> = {}) =
 export async function POST(req: NextRequest) {
   const key = process.env.NEAR_AI_API_KEY;
   if (!key) return no("ai_offline", 503);
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "anon";
+  const ip = clientIp(req.headers);
   for (const [lim, k] of [[perMinute, ip], [perDay, ip], [globalDay, "all"]] as const) {
     const r = lim(k);
     if (!r.ok) return no("rate_limited", 429, { retry_after: r.retryAfter });
   }
   if (Number(req.headers.get("content-length") || 0) > 4096) return no("too_large", 413);
   let body: { prompt?: unknown; nonce?: unknown; context?: unknown };
-  try { body = await req.json(); } catch { return no("bad_params", 400); }
+  const raw = await req.text();
+  if (raw.length > 4096) return no("too_large", 413);
+  try { body = JSON.parse(raw); } catch { return no("bad_params", 400); }
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   const nonce = typeof body.nonce === "string" ? body.nonce.toLowerCase() : "";
   const context = typeof body.context === "string" ? body.context.slice(0, 600) : "";

@@ -1,3 +1,4 @@
+import { clientIp } from "@/lib/verifyScore";
 import { NextResponse } from "next/server";
 import { dryBody, isAddr, QUOTE_PER_MIN, STATUS_PER_MIN } from "@/lib/oneclick";
 import { createLimiter } from "@/lib/ratelimit";
@@ -7,7 +8,7 @@ const OC = "https://1click.chaindefuser.com/v0";
 const limit = createLimiter(QUOTE_PER_MIN, 60_000);
 const statusLimit = createLimiter(STATUS_PER_MIN, 60_000);
 const no = (code: string, status: number) => NextResponse.json({ ok: false, error: { code } }, { status, headers: { "cache-control": "no-store" } });
-const ip = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
+const ip = (req: Request) => clientIp(req.headers);
 const headers = () => ({ "content-type": "application/json", "user-agent": "keyhole/1.0", ...(process.env.ONECLICK_API_KEY ? { authorization: `Bearer ${process.env.ONECLICK_API_KEY}` } : {}) });
 
 export async function POST(req: Request) {
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   try {
     const r = await fetch(`${OC}/quote`, { method: "POST", headers: headers(), body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(20_000) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return NextResponse.json({ ok: false, error: { code: "quote_refused", message: String((j as { message?: string }).message ?? r.status).slice(0, 200) } }, { status: 200 });
+    if (!r.ok) return NextResponse.json({ ok: false, error: { code: "quote_refused" } }, { status: 200 });
     const q = (j as { quote?: Record<string, unknown> }).quote ?? {};
     const pick = ["amountInFormatted", "amountInUsd", "amountOutFormatted", "amountOutUsd", "minAmountOut", "timeEstimate"] as const;
     return NextResponse.json({ ok: true, dry: true, quote: Object.fromEntries(pick.map((k) => [k, q[k] ?? null])) }, { headers: { "cache-control": "no-store" } });
