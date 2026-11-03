@@ -60,10 +60,11 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
             <Link className="btn b2" href="/verify">{t("land.verify")}</Link>
           </div>
           <p className="judgecta"><Link href="/judge" data-testid="judge-cta">{t("land.judgeCta")} →</Link></p>
+          <p className="morelinks" data-testid="more-links">Also: <Link href="/ask">Ask the enclave privately</Link> · <Link href="/atlas">Atlas of every call</Link> · <Link href="/identity">Key identity</Link></p>
           <dl className="stats">
             <div><SupplyStat initial={supply} /><dt>{t("land.s1")}</dt></div>
             <div><dd><Link href="/verify" className="statlink" data-testid="checks-stat"><span data-count="37">37</span></Link></dd><dt>{t("land.s2")}</dt></div>
-            <div><dd className="h">{hash}</dd><dt>{t("land.s3")}</dt></div>
+            <div><dd className="h"><Link href="/judge" className="statlink" data-testid="hash-stat" title="See this build checked step by step">{hash}</Link></dd><dt>{t("land.s3")}</dt></div>
           </dl>
         </div>
         <div className="stage-slot">

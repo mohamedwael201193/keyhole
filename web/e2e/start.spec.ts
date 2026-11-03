@@ -16,3 +16,13 @@ test("/start fits 390px without horizontal scroll", async ({ page }) => {
   const w = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(w).toBeLessThanOrEqual(390);
 });
+test("P1: landing hash and more links, verify label, key help, gallery traits", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("hash-stat")).toHaveAttribute("href", "/judge");
+  await expect(page.getByTestId("more-links").getByRole("link")).toHaveCount(3);
+  await page.goto("/key");
+  await expect(page.getByTestId("key-help")).toBeVisible();
+  await page.goto("/gallery");
+  await page.getByTestId("traits-explain").locator("summary").click();
+  await expect(page.getByTestId("traits-explain")).toContainText("Bit cipher");
+});

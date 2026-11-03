@@ -30,7 +30,7 @@ import { traitLabel } from "@/components/KeyCard";
 import { KeyLog } from "@/components/KeyLog";
 import "./vault.css";
 import { MetaMaskNote } from "@/components/MetaMaskNote";
-import { Busy } from "@/components/ui";
+import { Busy, Spinner } from "@/components/ui";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
@@ -147,6 +147,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     return () => { cancel = true; };
   }, [history.res]);
   const lookingUpKey = !!accountId && (!keysReady || keysFor !== accountId);
+  const [slowKey, setSlowKey] = useState(false);
+  useEffect(() => { setSlowKey(false); if (!lookingUpKey) return; const id = setTimeout(() => setSlowKey(true), 12_000); return () => clearTimeout(id); }, [lookingUpKey]);
   const clearOtherErrors = (keep: { clear: () => void }) => {
     for (const card of [status, quote, account, balance, history, swap, withdraw, limits, pnl]) if (card !== keep) card.clear();
   };
@@ -231,7 +233,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           <HowStrip active={1} />
         </div>
       ) : lookingUpKey ? (
-        <p className="note" data-testid="key-loading">{t("vault.keyLoading")}</p>
+        <p className="note" data-testid="key-loading"><Spinner label="Looking up your key" /> {t("vault.keyLoading")}{slowKey && <span data-testid="key-slow"> The NEAR RPC is slow right now. <button type="button" className="linkbtn" onClick={() => location.reload()}>Try again</button></span>}</p>
       ) : keyMiss ? (
         <div>
           <EmptyState title={t("vault.holderOnly")} body={t("vault.holderOnlyBody")} testid="holder-only">

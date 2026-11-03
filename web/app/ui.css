@@ -163,3 +163,7 @@
 .fanyc-ref input{flex:1 1 220px}
 .fanyc-steps{display:flex;flex-wrap:wrap;gap:4px 12px;padding:0;list-style:none;font-size:13px}
 .fanyc-steps li[data-state=done]{color:#2e7d5b}.fanyc-steps li[data-state=now]{font-weight:700}
+.morelinks{font-size:14px;margin:6px 0 0;opacity:.9}.morelinks a{text-decoration:underline}
+.ver .vlabel{display:block;font-size:13px;font-weight:600;margin:0 0 4px}.ver .vlabel small{font-weight:400;opacity:.8}
+.linkbtn{background:none;border:0;padding:0;text-decoration:underline;color:inherit;font:inherit;cursor:pointer}
+.traitsx{margin:12px 0 20px;max-width:760px}.traitsx summary{cursor:pointer;font-weight:600}.traitsx dt{font-weight:600;margin-top:8px}.traitsx dd{margin:2px 0 0}
