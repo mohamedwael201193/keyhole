@@ -6,7 +6,7 @@
  "claims": [
   {
    "id": "contract-code-hash",
-   "claim": "On-chain code_hash Fe79rQUH…tqxYA of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
+   "claim": "On-chain code_hash C8pL59r9…ivLc1 of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
    "where": "README.md:315",
    "evidence_type": "script",
    "evidence": "judge/1-contract.sh",
@@ -14,24 +14,24 @@
     "type": "code_hash",
     "account": "keyhole-devmo.near",
     "wasm": "contracts/keys/deployed/keyhole_keys.wasm",
-    "code_hash": "Fe79rQUHKXnjhuY4NCDYrv3twNKPw7YTmqK3yxjtqxYA"
+    "code_hash": "C8pL59r9NorJxcYXnXusZxz2cNaGEgiVbMnZPANivLc1"
    },
    "expected": "code_hash == base58(sha256(wasm)) == Fe79rQUH…",
    "verify": "./judge/1-contract.sh"
   },
   {
    "id": "contract-wasm-sha",
-   "claim": "Deployed contract wasm is 195,389 bytes with sha256 d985104e…817b",
+   "claim": "Deployed contract wasm is 207,996 bytes with sha256 a5712300…3ad2",
    "where": "README.md:117",
    "evidence_type": "file",
    "evidence": "contracts/keys/deployed/keyhole_keys.wasm",
    "check": {
     "type": "sha256",
     "path": "contracts/keys/deployed/keyhole_keys.wasm",
-    "sha256": "d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b",
-    "bytes": 195389
+    "sha256": "a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2",
+    "bytes": 207996
    },
-   "expected": "sha256 d985104e…817b, 195389 bytes",
+   "expected": "sha256 a5712300…3ad2, 207996 bytes",
    "verify": "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm"
   },
   {
