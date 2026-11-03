@@ -34,14 +34,14 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 | Show where funds sit at every step | Vault shows sealed balances and deposit addresses | /vault | 🟡 |
 | History of executed buys with explorer links | Vault history lists trades; intent explorer links | /vault | 🟡 links being added |
 | Dry-run mode with real quotes, no funds | /settle **Dry-run quote** asks 1Click for a real quote with `dry: true` (no deposit address, no funds); CLI `quote` without `--execute` | [/settle](https://keyhole-seven.vercel.app/settle), [`web/app/api/oneclick/route.ts`](web/app/api/oneclick/route.ts) (refuses any non-dry body), [`web/tests/oneclick.test.ts`](web/tests/oneclick.test.ts), e2e `settle: dry-run quote…` in [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) | ✅ |
-| Chain Signatures stretch | Per-key EVM address from `v1.signer` (`chain_address`, live in enclave `f7217ae2`, cross-checked on chain); `chain_sign` op shipped | [publish evidence](docs/evidence/publish-f7217ae2/README.md), [call 3d81f582](https://api.outlayer.ai/attestations/by-call/3d81f582-0548-46ed-8491-eb95a9ffa924) | 🟡 address live; first live `chain_sign` pending |
+| Chain Signatures stretch | Per-key EVM address from `v1.signer` (`chain_address`, cross-checked on chain) and a real MPC signature for that address (`chain_sign`, tx 7P9VFx4p…), live in enclave `09d481a5` | [signature evidence](docs/evidence/publish-09d481a5/README.md#chain-signatures-one-real-mpc-signature), [call 3d81f582](https://api.outlayer.ai/attestations/by-call/3d81f582-0548-46ed-8491-eb95a9ffa924) | ✅ |
 
 ## AI Security & Defense
 
 | Requirement | KEYHOLE feature | Evidence | Status |
 |---|---|---|---|
 | Spending limits / policy engine for agents | Tier caps, holder caps (cut now, raise after 24 h), per-minute limits, lock, cooldown, enforced inside the TEE | worker tests, calls `afaaf3e1`, `06cf2630` | ✅ |
-| Agent signs with a scoped key, limits explained | Requests are NEP-413 signed and bound to one op, one nonce, recipient `keyhole`; worker requires a full-access key of the NFT owner (a function-call key would not prove ownership). Agents get their own account + low holder caps. Every project key and its scope listed | README "Key scoping" | 🟡 different shape (no function-call key for agents, by design) |
+| Agent signs with a scoped key, limits explained | Function-call key on the TEE minter: `beat` on `keyhole-devmo.near` only, 0.05 NEAR gas allowance, no deposit or transfer possible; added by the enclave on the owner's signed request. Real beat with it on mainnet; other method, deposit and transfer refused by NEAR. Holder requests stay NEP-413 signed by a full-access key of the NFT owner | README "Key scoping", [evidence](docs/evidence/publish-09d481a5/README.md#scoped-beat-key) | ✅ |
 | Attack demo: prompt-injected agent tries to pay a bad address, with a log | Six mainnet attack calls, all stopped; /ask shows the model ignoring a poisoned note | [docs/evidence/prompt-injection](docs/evidence/prompt-injection/README.md) | ✅ |
 | Counterparty check service (allow / warn / block) | — | — | ❌ not our product |
 | TEE attestation | /verify, `verify.sh`, judge kit | README §9 | ✅ |

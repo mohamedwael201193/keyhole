@@ -37,14 +37,14 @@ test("verify: a previous-build mainnet call still passes in the browser", async 
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
 });
 
-test("verify: the default page checks the published f7217ae2 info call", async ({ page }) => {
+test("verify: the default page checks the published 09d481a5 info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("54207d9e-b4f0-438b-9a74-cdba33de80d9");
+  await expect(page.locator("#cid")).toHaveValue("2896d0ad-aa27-4e21-b4a1-0cf2d3755d56");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381").first()).toBeVisible();
+  await expect(page.getByText("09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4").first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
 });

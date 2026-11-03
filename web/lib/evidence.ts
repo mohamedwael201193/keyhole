@@ -9,11 +9,12 @@ export const TXS = [
   { label: "Mint by the TEE to a fresh account", hash: "FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4" },
 ] as const;
 
-/** Live info call on the published worker f7217ae2. Default on /verify. */
-export const PUBLISHED_INFO_CALL = "54207d9e-b4f0-438b-9a74-cdba33de80d9";
+/** Live info call on the published worker 09d481a5. Default on /verify. */
+export const PUBLISHED_INFO_CALL = "2896d0ad-aa27-4e21-b4a1-0cf2d3755d56";
 
 export const CALLS = [
-  { label: "info · published build f7217ae2", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1252377" },
+  { label: "info · published build 09d481a5", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1253394" },
+  { label: "info · previous build f7217ae2", id: "54207d9e-b4f0-438b-9a74-cdba33de80d9", outcome: "ok · attestation 1252377" },
   { label: "info · previous build 452df1fd", id: "7882f97a-06e5-46d3-9e58-5fe6428fb187", outcome: "ok · attestation 1246133" },
   { label: "attack · injected agent sends a payout to attacker.near", id: "c1312e2d-8c20-4b3e-ad5b-22dd3102826d", outcome: "refused · bad_params" },
   { label: "attack · drain $2.00 past the holder cap", id: "afaaf3e1-32ff-42d8-88da-412a0bb61e11", outcome: "refused · over_cap_per_tx" },
