@@ -156,3 +156,10 @@
 .start .vbox,.depqr .vbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line,#d9d2c3);border-radius:10px;padding:8px 12px;background:#FBF8F2;min-width:0}
 .start .vbox input{border:0;background:transparent;font:inherit;flex:1;min-width:0}
 .depqr .addr{overflow-wrap:anywhere;font-family:var(--mono,monospace);font-size:13px;flex:1;min-width:0}
+.fanyc{display:grid;gap:10px;border-top:1px dashed var(--line,#d9d2c3);padding-top:12px;margin-top:12px}
+.fanyc-row{display:flex;flex-wrap:wrap;gap:12px}
+.fanyc label{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+.fanyc input,.fanyc select{font:inherit;padding:6px 10px;border:1px solid var(--line,#d9d2c3);border-radius:8px;background:#FBF8F2;min-width:0;max-width:100%}
+.fanyc-ref input{flex:1 1 220px}
+.fanyc-steps{display:flex;flex-wrap:wrap;gap:4px 12px;padding:0;list-style:none;font-size:13px}
+.fanyc-steps li[data-state=done]{color:#2e7d5b}.fanyc-steps li[data-state=now]{font-weight:700}

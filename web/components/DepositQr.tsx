@@ -2,9 +2,10 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { CopyBtn } from "./ui";
+import { FundAnyChain } from "./FundAnyChain";
 
 /** Deposit address with copy, a QR code, and the amount in human units. */
-export function DepositQr({ address, amount }: { address: string; amount: string }) {
+export function DepositQr({ address, amount, evm }: { address: string; amount: string; evm?: string | null }) {
   const [svg, setSvg] = useState("");
   useEffect(() => { QRCode.toString(address, { type: "svg", margin: 1, width: 168 }).then(setSvg).catch(() => setSvg("")); }, [address]);
   return (
@@ -13,7 +14,8 @@ export function DepositQr({ address, amount }: { address: string; amount: string
       <div>
         <p>Send <b data-testid="deposit-amount">{amount}</b> on the NEAR chain to:</p>
         <div className="vbox ro"><span className="v addr" data-testid="deposit-address">{address}</span><CopyBtn value={address} /></div>
-        <p className="vhelp">From any NEAR wallet or an exchange that withdraws on NEAR. Coming from another chain? Use a cross-chain swap with this address as the recipient.</p>
+        <p className="vhelp">From any NEAR wallet or an exchange that withdraws on NEAR.</p>
+        <details className="fanyc-d" open={!!evm} data-testid="fund-other-chain"><summary>Coming from Base, Arbitrum or Solana?</summary><FundAnyChain recipient={address} evm={evm} /></details>
       </div>
     </div>
   );

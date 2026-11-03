@@ -93,7 +93,7 @@ export function StartView() {
           <div className="vfield"><label htmlFor="st-amt">Amount</label><div className="vbox"><input id="st-amt" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} />
             <select aria-label="Asset" value={asset} onChange={(e) => setAsset(e.target.value as AssetKey)}>{(Object.keys(ASSETS) as AssetKey[]).map((k) => <option key={k} value={k}>{ASSETS[k].symbol}</option>)}</select></div></div>
           <button className="btn b1" type="button" disabled={!units || account.busy} onClick={() => units && void account.run(fundParams(asset, units))} data-testid="start-fund">{account.busy ? <Busy l={account.label} /> : "Get deposit address"}</button>
-          {addr && <DepositQr address={addr} amount={`${amt} ${ASSETS[asset].symbol}`} />}
+          {addr && <DepositQr evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={addr} amount={`${amt} ${ASSETS[asset].symbol}`} />}
           {addr && <p><button className="btn b2" type="button" disabled={dash.busy} onClick={() => void runDash({})} data-testid="start-check">{dash.busy ? <Busy l={dash.label} /> : "I sent it · check balance"}</button> <Link href="/vault" className="note">Skip for now</Link></p>}
           {account.res?.error && <ErrorBox code={account.res.error.code} />}
         </>}

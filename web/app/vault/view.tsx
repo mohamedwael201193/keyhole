@@ -389,7 +389,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 {account.res?.output?.ok && typeof account.res.output.deposit?.deposit_address === "string" && (
                   <div className="vfield" data-testid="deposit">
                     <span className="vl">{t("vault.deposit")}</span>
-                    <DepositQr address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
+                    <DepositQr evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
                     {typeof account.res.output.deposit.hint === "string" && <p className="vhelp">{String(account.res.output.deposit.hint)}</p>}
                     {typeof account.res.output.deposit.expires_at === "string" && <p className="vhelp">{t("vault.expires", { time: String(account.res.output.deposit.expires_at) })}</p>}
                   </div>
