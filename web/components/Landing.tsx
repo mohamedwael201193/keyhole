@@ -58,6 +58,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
             <Link className="btn b1" href="/mint">{t("land.mint")}</Link>
             <Link className="btn b2" href="/verify">{t("land.verify")}</Link>
           </div>
+          <p className="judgecta"><Link href="/judge" data-testid="judge-cta">{t("land.judgeCta")} →</Link></p>
           <dl className="stats">
             <div><SupplyStat initial={supply} /><dt>{t("land.s1")}</dt></div>
             <div><dd><Link href="/verify" className="statlink" data-testid="checks-stat"><span data-count="37">37</span></Link></dd><dt>{t("land.s2")}</dt></div>
