@@ -5957,18 +5957,18 @@
    "verify": "node judge/verify-claims.mjs --only ci-40572408070"
   },
   {
-   "id": "ci-41516049447",
-   "claim": "CI run 41516049447 concluded success",
+   "id": "ci-41677252319",
+   "claim": "CI run 41677252319 concluded success",
    "where": "README.md:634",
    "evidence_type": "CI run",
-   "evidence": "https://github.com/mohamedwael201193/keyhole/actions/runs/41516049447",
+   "evidence": "https://github.com/mohamedwael201193/keyhole/actions/runs/41677252319",
    "check": {
     "type": "ci_run",
     "repo": "mohamedwael201193/keyhole",
-    "run": "41516049447"
+    "run": "41677252319"
    },
    "expected": "conclusion == success",
-   "verify": "node judge/verify-claims.mjs --only ci-41516049447"
+   "verify": "node judge/verify-claims.mjs --only ci-41677252319"
   }
  ]
 }
