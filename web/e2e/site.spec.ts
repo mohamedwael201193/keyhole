@@ -34,7 +34,16 @@ test("gallery renders every on-chain key", async ({ page }) => {
 
 test("verify: a previous-build mainnet call still passes in the browser", async ({ page }) => {
   await page.goto("/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "previous", { timeout: 30_000 });
+});
+
+test("verify: the previous-build verdict says so, and the current call links its own publish tx", async ({ page }) => {
+  await page.goto("/verify?call=f4768da8-2e87-4622-8654-d1e67f6cd1f0");
+  await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
+  await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await expect(page.locator('a[href*="F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="FXbXhGNi"]')).toHaveCount(0);
 });
 
 test("verify: the default page checks the published 09d481a5 info call", async ({ page }) => {
@@ -543,7 +552,7 @@ test("judge path links every evidence call to /verify and is reachable from the 
 
 test("verify: an old-build refusal shows the binding, the previous version and the attested output", async ({ page }) => {
   await page.goto("/verify?call=e805f050-d416-4a04-9b12-270adbe02068");
-  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "previous", { timeout: 30_000 });
   await expect(page.getByTestId("build-note")).toContainText("previous published version 38bd67b9");
   await expect(page.getByTestId("output-verdict")).toHaveText("refused · not_owner");
 });
@@ -574,7 +583,7 @@ test("verify: Intel DCAP passes in the browser and a signed answer shows its key
   await expect(page.getByTestId("dcap")).toHaveAttribute("data-ok", "true", { timeout: 30_000 });
   await expect(page.getByTestId("dcap-count")).toHaveText("19/19 checks passed");
   await expect(page.getByTestId("dcap-bind")).toContainText("k5f4750858f328940");
-  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "previous");
   await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "37");
 });
 
