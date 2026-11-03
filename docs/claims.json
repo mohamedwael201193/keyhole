@@ -3289,7 +3289,7 @@
   {
    "id": "test-is_full_access",
    "claim": "Named test or symbol `is_full_access` exists in the source",
-   "where": "SECURITY.md:139",
+   "where": "SECURITY.md:148",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
