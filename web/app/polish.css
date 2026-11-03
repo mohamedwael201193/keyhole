@@ -149,7 +149,7 @@ body { color: #1F2A2C; }
 .stb.bad, .vlt .vbadge.cool { background: #B23A26; color: #fff; border-color: #B23A26; }
 .vlt .vbadge.pend { background: #174A4E; color: #fff; }
 /* Hashes: one line, no wall of hex */
-.ver .ck small, .kv dd.mono, .settle .card dd, .settle .mono { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
+.ver .ck small, .kv dd.mono, .settle .card dd { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
 /* Numbered section chips for sequences */
 .judge .jsteps { counter-reset: khs; }
 .eb, .vlt .vcap { color: #7A5410; font-weight: 700; }
@@ -157,3 +157,14 @@ body { color: #1F2A2C; }
 .khm-hash { display: inline-flex; align-items: center; gap: 6px; } .khm-hash code { font: 600 14px var(--mono); color: #1F2A2C; } .khm-hash .khm-copy { min-height: 26px; padding: 0 8px; }
 .ver .ck > div { min-width: 0; flex: 1; overflow: hidden; } .ver .ck .att { flex: none; }
 .ver .ck { grid-template-columns: 44px minmax(0,1fr) auto; }
+/* inline code stays inline */
+p .mono, li .mono, small .mono, p code, li code { display: inline; white-space: normal; overflow-wrap: anywhere; }
+/* compact header on phones: wordmark never covered */
+@media (max-width: 480px) {
+  .nav { padding-left: 12px !important; padding-right: 12px !important; gap: 8px; grid-template-columns: auto 1fr; }
+  .nav .kh-logo { --kh: 1.6rem; }
+  .nav .nav-tools { gap: 6px; min-width: 0; }
+  .nav .cw, .nav .cw:not(:disabled) { min-height: 36px !important; height: 36px; padding: 0 12px !important; font-size: 13px !important; max-width: 118px; overflow: hidden; text-overflow: ellipsis; box-shadow: none; }
+  .nav .music { width: 36px; height: 36px; }
+}
+@media (max-width: 370px) { .nav .kh-word { letter-spacing: .1em; } .nav .music { display: none; } }
