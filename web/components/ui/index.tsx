@@ -108,3 +108,8 @@ export function Purpose({ eyebrow, title, line, children }: { eyebrow: string; t
     </header>
   );
 }
+
+/** Busy button content: spinner + stage + elapsed seconds (from useSigned().label). */
+export function Busy({ l }: { l: string }) {
+  return <span className="ubusy" role="status" aria-live="polite"><Spinner label={l || "Working"} /> {l || "Working…"}</span>;
+}

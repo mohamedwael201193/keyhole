@@ -100,7 +100,7 @@
   "dry": "Dry quote: no deposit address, no funds move.",
   "nokey": "You don't hold a key yet.",
   "holderOnly": "Only the key holder can open this",
-  "holderOnlyBody": "This wallet does not hold a key on the contract. Fund, trade, withdraw, and the private book stay closed.",
+  "holderOnlyBody": "This wallet does not hold a key yet. A key is a free NFT that opens your own private account in the enclave: minting costs one signature and no fee (the enclave pays the NEAR storage). Until then, fund, trade and withdraw stay closed.",
   "mintFirst": "Mint your key",
   "account": "Your confidential account",
   "accountD": "One private wallet per key, created and held inside the TEE. Whoever holds the key operates it. Balances are read with your signature; nothing is published on-chain.",
@@ -126,7 +126,7 @@
   "withdraw": "Withdraw",
   "withdrawD": "To your wallet",
   "stepFund": "1 · Fund",
-  "fundLead": "Ask the enclave for a deposit address. Your wallet signs. Funds move only when you send them.",
+  "fundLead": "Ask the enclave for a deposit address, then send the amount to it from any NEAR wallet or exchange that sends on the NEAR chain. Funds move only when you send them.",
   "fundBtn": "Get deposit address",
   "deposit": "Deposit address",
   "sendTo": "Confidential account",
@@ -528,14 +528,6 @@
    "This key changed hands recently.",
    "Withdraw opens 10 minutes after the transfer. Trades inside the account still work."
   ],
-  "bad_session": [
-   "That unlock token is malformed.",
-   "Lock and unlock again with one wallet signature."
-  ],
-  "session_cap": [
-   "This unlock's $5 spending cap is used up.",
-   "Unlock again, or confirm in your wallet."
-  ],
   "session_expired": [
    "Your 30-minute unlock ended.",
    "Unlock again with one wallet signature."
@@ -544,21 +536,21 @@
    "This unlock was ended.",
    "Unlock again with one wallet signature."
   ],
+  "session_unknown": [
+   "The enclave doesn't know this unlock.",
+   "Unlock again with one wallet signature."
+  ],
   "session_scope": [
    "This action needs your wallet.",
    "Raising limits, locking a key and proofs always ask for a fresh signature."
   ],
+  "session_cap": [
+   "This unlock's $5 spending cap is used up.",
+   "Unlock again, or confirm in your wallet."
+  ],
   "session_token": [
    "This unlock is for another key.",
    "Unlock the key you are using."
-  ],
-  "session_too_long": [
-   "An unlock can last at most 30 minutes.",
-   "Unlock again; the site asks for 30 minutes."
-  ],
-  "session_unknown": [
-   "The enclave doesn't know this unlock.",
-   "Unlock again with one wallet signature."
   ]
  },
  "offline": {
@@ -587,7 +579,8 @@
   "h1b": "Everything in the key.",
   "lead": "The NFT is the viewing key to a confidential trading account inside an attested Intel TDX enclave on NEAR.",
   "mint": "Mint your key",
-  "verify": "Verify the enclave",
+  "verify": "Check it yourself · no wallet · 30s",
+  "start": "Start in 5 steps",
   "s1": "Keys on mainnet",
   "s2": "Checks in your browser",
   "s3": "Worker code hash",

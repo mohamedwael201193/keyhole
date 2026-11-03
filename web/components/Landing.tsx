@@ -56,7 +56,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
           <h1 className="hero-line">{t("land.h1a")}<em>{t("land.h1b")}</em></h1>
           <p className="lead">{t("land.lead")}</p>
           <div className="hero-actions">
-            <Link className="btn b1" href="/mint">{t("land.mint")}</Link>
+            <Link className="btn b1" href="/start" data-testid="start-cta">{t("land.start")}</Link>
             <Link className="btn b2" href="/verify">{t("land.verify")}</Link>
           </div>
           <p className="judgecta"><Link href="/judge" data-testid="judge-cta">{t("land.judgeCta")} →</Link></p>
@@ -276,7 +276,7 @@ export function Landing({ supply, hash, config }: { supply: number | null; hash:
         <div className="keys"><KeyArt n={5} alt="" width={415} height={1077} /><KeyArt n={7} alt="" width={469} height={1097} /><KeyArt n={9} alt="" width={496} height={1090} /></div>
         <h2>{t("land.ctaH")}<em>{t("land.ctaEm")}</em></h2>
         <div className="hero-actions" style={{ justifyContent: "center" }}>
-          <Link className="btn b1" href="/mint">{t("land.mint")}</Link>
+          <Link className="btn b1" href="/start">{t("land.start")}</Link>
           <a className="btn b2" href="https://github.com/mohamedwael201193/keyhole#readme">{t("land.docs")}</a>
         </div>
       </section>

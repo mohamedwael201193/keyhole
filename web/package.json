@@ -35,6 +35,7 @@
     "motion": "^14.7.1",
     "next": "^16.4.3",
     "ogl": "^1.0.11",
+    "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "server-only": "^0.0.1",
@@ -55,8 +56,14 @@
     "vitest": "^4.1.12"
   },
   "overrides": {
-    "viem": { "@noble/hashes": "1.8.0" },
-    "ox": { "@noble/hashes": "1.8.0" },
-    "@near-wallet-selector/ethereum-wallets": { "@noble/hashes": "1.8.0" }
+    "viem": {
+      "@noble/hashes": "1.8.0"
+    },
+    "ox": {
+      "@noble/hashes": "1.8.0"
+    },
+    "@near-wallet-selector/ethereum-wallets": {
+      "@noble/hashes": "1.8.0"
+    }
   }
 }

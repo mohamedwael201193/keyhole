@@ -18,6 +18,7 @@ import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 import { TxLink } from "@/components/TxLink";
 import { MetaMaskNote } from "@/components/MetaMaskNote";
+import { Busy } from "@/components/ui";
 
 const SHOWN = [
   { k: "Bronze", art: 3 },
@@ -113,7 +114,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               )}
               {online !== false && accountId && (
                 <div style={{ marginTop: 18 }}>
-                  <button className="btn b1" disabled={m.busy} onClick={() => void m.run({})} data-testid="mint-btn">{m.busy ? "…" : t("mint.sign")}</button>
+                  <button className="btn b1" disabled={m.busy} onClick={() => void m.run({})} data-testid="mint-btn">{m.busy ? <Busy l={m.label} /> : t("mint.sign")}</button>
                   {m.res?.error && <ErrorBox code={m.res.error.code} retryAfter={m.res.error.retry_after} />}
                   {m.res && <Attested r={m.res} />}
                 </div>

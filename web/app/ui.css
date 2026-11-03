@@ -133,3 +133,17 @@
 .ubody .btn.b1, .ubody a.btn.b1 { color: #F6F1E7; }
 .unum { font: 800 18px var(--sans); }
 @media (max-width: 760px) { .uterm-t { position: fixed; left: 16px; right: 16px; bottom: 16px; top: auto; width: auto; transform: none !important; } }
+.sess{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--line,#d9d2c3);border-radius:12px;padding:12px 16px;margin:0 0 16px}
+.sess span{flex:1 1 280px;min-width:0}
+.sess.on{border-color:#2e7d5b}
+.depqr{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.depqr .qr{width:168px;height:168px;background:#fff;border-radius:8px;flex:none}
+.depqr>div:last-child{flex:1 1 220px;min-width:0}
+.ubusy{display:inline-flex;gap:8px;align-items:center}
+.start .dots{display:flex;flex-wrap:wrap;gap:6px 14px;list-style:none;padding:0;margin:16px 0}
+.start .dots li{font-size:14px;display:flex;align-items:center;gap:6px;color:var(--muted,#5b5548)}
+.start .dots li::before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid currentColor}
+.start .dots li[data-state=done]::before{background:currentColor}
+.start .dots li[data-state=now]{color:var(--ink,#1d2b2a);font-weight:600}
+.start .scard{border:1px solid var(--line,#d9d2c3);border-radius:14px;padding:20px;max-width:640px}
+.start .scard select{border:0;background:transparent;font:inherit}

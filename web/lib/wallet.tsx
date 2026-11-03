@@ -4,6 +4,15 @@ import type { WalletSelector, WalletModuleFactory } from "@near-wallet-selector/
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { NEP413_RECIPIENT } from "./config";
+import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
+import { callWorker } from "./worker";
+
+/** Tell the enclave to revoke the stored session (best effort) and forget it locally. */
+async function revokeStored(account: string | null) {
+  const live = loadSession(account);
+  clearSession();
+  if (live) await callWorker("session_revoke", sessionAuth(live, "session_revoke") as unknown as SignedAuth).catch(() => null);
+}
 
 export class SignError extends Error { constructor(public code: string) { super(code); } }
 
@@ -20,6 +29,11 @@ interface WalletCtx {
   sign: (op: Op, params?: Record<string, unknown>) => Promise<SignedAuth>;
   pending: (SignedAuth & { ctx?: OpResume | null }) | null;
   clearPending: () => void;
+  /** Live app session (one wallet signature, 30 min), or null. */
+  session: Session | null;
+  /** One wallet popup: signs the NEP-413 'session' request and stores the enclave's token. */
+  startSession: (tokenId: string) => Promise<{ ok: true } | { ok: false; code: string }>;
+  revokeSession: () => Promise<void>;
 }
 const Ctx = createContext<WalletCtx | null>(null);
 const PENDING = "kh_pending_sign";
@@ -159,6 +173,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [mismatch, setMismatch] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  useEffect(() => { setSession(loadSession(accountId)); const t = setInterval(() => setSession(loadSession(accountId)), 30_000); return () => clearInterval(t); }, [accountId]);
   const [pending, setPending] = useState<(SignedAuth & { ctx?: OpResume | null }) | null>(null);
   const loading = useRef<Promise<void> | null>(null);
 
@@ -227,10 +243,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     });
   }, [ensure]);
   const disconnect = useCallback(async () => {
-    await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); setAccountId(null); setMismatch(null);
-  }, [ensure]);
+    setSession(null); await revokeStored(accountId); await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); setAccountId(null); setMismatch(null);
+  }, [ensure, accountId]);
 
-  const sign = useCallback(async (op: Op, params: Record<string, unknown> = {}) => {
+  const sign = useCallback(async (op: Op, params: Record<string, unknown> = {}): Promise<SignedAuth> => {
+    const live = loadSession(accountId);
+    if (live && inSession(op)) return sessionAuth(live, op, params) as unknown as SignedAuth;
     await ensure();
     const sel = ref.current!.selector;
     const acc = sel.store.getState().accounts.find((a) => a.active)?.accountId;
@@ -255,9 +273,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!res) { sessionStorage.removeItem(PENDING); throw new SignError("wallet_rejected"); } // redirect wallets navigate away before this line
     sessionStorage.removeItem(PENDING);
     return { account_id: res.accountId, public_key: res.publicKey, signature: res.signature, nonce, message, recipient: NEP413_RECIPIENT };
-  }, [ensure]);
+  }, [ensure, accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, disconnect, sign, pending, clearPending: () => setPending(null) }}>{children}</Ctx.Provider>;
+  const finishSession = useCallback(async (auth: SignedAuth, tokenId: string) => {
+    const r = await callWorker("session", auth);
+    const o = r.output;
+    if (r.error || !o?.ok || typeof o.session_token !== "string") return { ok: false as const, code: r.error?.code || "session_failed" };
+    const s: Session = { token: o.session_token, account: String(o.account), token_id: String(o.token_id ?? tokenId), exp_ms: Number(o.exp_ms), max_usd_micro: Number(o.max_usd_micro) };
+    saveSession(s); setSession(s);
+    return { ok: true as const };
+  }, []);
+  const startSession = useCallback(async (tokenId: string) => {
+    try { return await finishSession(await sign("session", sessionParams(tokenId)), tokenId); }
+    catch (e) { return { ok: false as const, code: e instanceof SignError ? e.code : "wallet_rejected" }; }
+  }, [sign, finishSession]);
+  // Redirect wallets come back with the signed 'session' request in `pending`.
+  useEffect(() => {
+    if (!pending) return;
+    try { const m = JSON.parse(pending.message) as { op?: string; params?: { token_id?: string } }; if (m.op === "session") { setPending(null); void finishSession(pending, m.params?.token_id || ""); } } catch { /* not ours */ }
+  }, [pending, finishSession]);
+  const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
+
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
