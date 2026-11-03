@@ -545,3 +545,107 @@ mod tests {
         assert_eq!(c.nft_metadata().spec, "nft-1.0.0");
     }
 }
+
+/// P2 tables: the frozen contract's behaviour the audit asked to pin (documented, not changed).
+#[cfg(test)]
+mod p2 {
+    use super::*;
+    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::{testing_env, NearToken};
+
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
+    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
+    fn xfer(c: &mut Contract, from: &str, to: &str, id: &str, appr: Option<u64>) { ctx(from, NearToken::from_yoctonear(1)); c.nft_transfer(acc(to), id.into(), appr, None); }
+
+    macro_rules! payout_rows { ($($name:ident: $bal:expr => $tre:expr, $own:expr;)*) => { $(#[test] fn $name() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        let p = c.nft_payout("k1".into(), U128($bal), None).payout;
+        assert_eq!(p.get(&acc("treasury.near")).map(|v| v.0), $tre);
+        assert_eq!(p.get(&acc("alice.near")).map(|v| v.0), Some($own));
+        assert_eq!(p.values().map(|v| v.0).sum::<u128>(), $bal, "payout sums to balance");
+    })* } }
+    payout_rows! {
+        payout_zero: 0 => None, 0;
+        payout_19_rounds_to_no_royalty: 19 => None, 19;
+        payout_20_first_unit: 20 => Some(1), 19;
+        payout_100: 100 => Some(5), 95;
+        payout_1_near: 1_000_000_000_000_000_000_000_000 => Some(50_000_000_000_000_000_000_000), 950_000_000_000_000_000_000_000;
+        payout_odd: 12_345 => Some(617), 11_728;
+    }
+
+    #[test] fn plain_transfer_moves_the_key_and_pays_no_royalty() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        xfer(&mut c, "alice.near", "bob.near", "k1", None);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+        // NEP-199 royalty only exists in nft_payout/nft_transfer_payout; a plain transfer has no price to split.
+    }
+    #[test] fn treasury_as_owner_takes_whole_payout() {
+        let mut c = setup(); mint(&mut c, "k1", "treasury.near", 1);
+        let p = c.nft_payout("k1".into(), U128(1000), None).payout;
+        assert_eq!(p.len(), 1); assert_eq!(p[&acc("treasury.near")].0, 1000);
+    }
+    #[test] #[should_panic(expected = "max_len_payout too small")] fn payout_needs_two_slots_with_royalty() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); c.nft_payout("k1".into(), U128(1000), Some(1));
+    }
+    #[test] fn two_keys_for_one_account_holder_tier_is_max() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); mint(&mut c, "k2", "alice.near", 3);
+        assert_eq!(c.holder_tier(acc("alice.near")), Some(3));
+        assert_eq!(c.nft_supply_for_owner(acc("alice.near")), U128(2));
+    }
+    #[test] fn holder_tier_drops_when_the_better_key_leaves() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); mint(&mut c, "k2", "alice.near", 3);
+        xfer(&mut c, "alice.near", "bob.near", "k2", None);
+        assert_eq!(c.holder_tier(acc("alice.near")), Some(1));
+        assert_eq!(c.holder_tier(acc("bob.near")), Some(3));
+    }
+    #[test] fn former_holder_has_no_tier() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 2);
+        xfer(&mut c, "alice.near", "bob.near", "k1", None);
+        assert_eq!(c.holder_tier(acc("alice.near")), None);
+    }
+    #[test] fn beat_keeps_token_metadata() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        let before = c.nft_token("k1".into()).unwrap().metadata;
+        ctx("minter.near", NearToken::from_yoctonear(0)); c.beat(vec!["k1".into()]);
+        assert_eq!(c.nft_token("k1".into()).unwrap().metadata, before);
+    }
+    #[test] fn empty_token_id_is_accepted_by_the_frozen_contract() {
+        // Documented in SECURITY.md: only the TEE minter can mint, and it always uses k + 16 hex.
+        let mut c = setup(); mint(&mut c, "", "alice.near", 1);
+        assert!(c.nft_token("".into()).is_some());
+    }
+    #[test] fn owner_transfer_ignores_approval_id() {
+        // near-contract-standards only checks approval_id for a non-owner sender; the owner's transfer goes through.
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); xfer(&mut c, "alice.near", "bob.near", "k1", Some(1));
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+    }
+    #[test] #[should_panic] fn non_owner_cannot_transfer() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); xfer(&mut c, "mallory.near", "mallory.near", "k1", None);
+    }
+    #[test] #[should_panic] fn transfer_without_one_yocto_fails() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        ctx("alice.near", NearToken::from_yoctonear(0)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+    }
+    #[test] #[should_panic] fn transfer_to_self_fails() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); xfer(&mut c, "alice.near", "alice.near", "k1", None);
+    }
+    #[test] #[should_panic(expected = "token_id must be unique")] fn duplicate_id_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); mint(&mut c, "k1", "bob.near", 1);
+    }
+    #[test] fn enumeration_after_transfers() {
+        let mut c = setup();
+        for (i, o) in ["a.near", "b.near", "c.near"].iter().enumerate() { mint(&mut c, &format!("k{i}"), o, 1); }
+        xfer(&mut c, "a.near", "c.near", "k0", None);
+        assert_eq!(c.nft_total_supply(), U128(3));
+        assert_eq!(c.nft_supply_for_owner(acc("c.near")), U128(2));
+        assert_eq!(c.nft_supply_for_owner(acc("a.near")), U128(0));
+        assert_eq!(c.nft_tokens(None, None).len(), 3);
+    }
+}
