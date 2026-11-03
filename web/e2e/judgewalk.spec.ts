@@ -22,9 +22,21 @@ test("gallery titles use the same short id as the vault", async ({ page }) => {
   await expect(card.getByTestId("mint-no")).toContainText(/No\. \d+/);
 });
 
-test("every nearblocks tx link on /judge has a second explorer beside it", async ({ page }) => {
+test("every explorer link on /judge has a second explorer beside it", async ({ page }) => {
   await page.goto("/judge");
-  const links = page.getByTestId("txlink");
-  expect(await links.count()).toBeGreaterThan(2);
-  await expect(links.first().getByTestId("txlink-alt")).toHaveAttribute("href", /^https:\/\/pikespeak\.ai\//);
+  const rows = page.locator(".uprow").filter({ has: page.locator('a[href^="https://nearblocks.io/"]') });
+  expect(await rows.count()).toBeGreaterThan(3);
+  for (const r of await rows.all()) await expect(r.locator("a.alt")).toHaveAttribute("href", /^https:\/\/pikespeak\.ai\//);
+});
+
+test("judge: stepper, in-browser build check, current calls first, previous collapsed", async ({ page }) => {
+  await page.goto("/judge");
+  await expect(page.getByTestId("judge-steps").locator("> li, > div > li")).toHaveCount(7);
+  await expect(page.getByTestId("judge-step-1")).toContainText("a55ebb14");
+  const prev = page.getByTestId("judge-previous");
+  await expect(prev).not.toHaveAttribute("open", "");
+  const run = page.getByTestId("run-build");
+  await run.getByRole("button").click();
+  await expect(run).toHaveAttribute("data-state", "pass", { timeout: 20_000 });
+  await expect(page.getByTestId("storybar")).toBeVisible();
 });

@@ -61,10 +61,12 @@ describe("current-build pointers", () => {
     }
   });
 
-  it("the /judge verify link's text names the same call as its href", () => {
+  it("the /judge step-1 link and in-browser check use the same current-build call", () => {
     const src = readFileSync(`${root}/web/app/judge/page.tsx`, "utf8");
-    const links = [...src.matchAll(/href="\/verify\?call=([0-9a-f]{8})[^"]*">[^<]*?call ([0-9a-f]{8})/g)];
-    expect(links.length).toBeGreaterThan(0);
-    for (const m of links) expect(m[2]).toBe(m[1]);
+    const id = src.match(/const INFO_CALL = "([0-9a-f-]{36})"/)?.[1];
+    expect(id).toBeTruthy();
+    expect(src).toContain("href={`/verify?call=${INFO_CALL}`}");
+    expect(src).toContain("<CheckBuild callId={INFO_CALL} />");
+    expect(readFileSync(`${root}/docs/evidence/publish-a55ebb14/README.md`, "utf8")).toContain(id!);
   });
 });

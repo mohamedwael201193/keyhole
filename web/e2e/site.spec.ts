@@ -562,8 +562,9 @@ test("judge path links every evidence call to /verify and is reachable from the 
   await expect(page.getByTestId("judge-page")).toBeVisible();
   const links = page.locator('a[href^="/verify?call="]');
   expect(await links.count()).toBeGreaterThanOrEqual(12);
-  await expect(page.getByText("refused · not_owner")).toBeVisible();
-  await expect(page.getByText("refused · cooldown")).toBeVisible();
+  await page.getByTestId("judge-previous").locator("summary").click();
+  await expect(page.getByText("Refused: not_owner.")).toBeVisible();
+  await expect(page.getByText("Refused: cooldown (10 minutes).")).toBeVisible();
 });
 
 test("verify: an old-build refusal shows the binding, the previous version and the attested output", async ({ page }) => {

@@ -21,3 +21,5 @@ export const attestation = (callId: string) => `${OUTLAYER_API}/attestations/by-
 export const ALT_EXPLORER = "https://pikespeak.ai";
 export const txAlt = (h: string) => `${ALT_EXPLORER}/transaction-viewer/${h}`;
 export const acctAlt = (a: string) => `${ALT_EXPLORER}/wallet-explorer/${a}`;
+/** base58 sha256 of contracts/keys/deployed/keyhole_keys.wasm (tests/judge-ui.test.ts recomputes it from the file). */
+export const CONTRACT_CODE_HASH = "BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ";
