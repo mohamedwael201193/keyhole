@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HealthStrip } from "@/components/HealthStrip";
 import { IDENTITY, short } from "@/lib/identity.gen";
 import { TxLink } from "@/components/TxLink";
 
@@ -35,6 +36,7 @@ export default function JudgePage() {
       <h1>Check it yourself. <em>Trust nothing we say.</em></h1>
       <p className="lede">Every step below runs against NEAR mainnet and the public OutLayer attestation API. Nothing here needs our keys or an account. Each step says what to do and what you should see. If you see something else, the claim fails.</p>
 
+      <HealthStrip />
       <ol className="jsteps">
         <li className="c">
           <h2><span>1</span>The code in the enclave is the code in the repo</h2>

@@ -131,3 +131,6 @@ This follows NEAR's documented backend-auth pattern (https://docs.near.org/web3-
 Caveats:
 - The token is a bearer credential, like any Web2 session. Anyone who has it can act within its scope until it expires, is revoked, or its cap is used up. That includes script injection on the site, and the site's gateway, which relays the request body (bodies are not logged). The token cannot raise limits (a raise needs a wallet signature and still waits 24 h), lock, prove, mint or use chain_sign.
 - Withdraw is in scope, but it pays out only to the holder's own account (`assert_withdraw_to`), so a token thief cannot redirect funds.
+## Continuity
+
+- If the OutLayer payment balance runs out, live calls stop and `/api/health` (the strip on /judge) shows "offline: payment balance empty". Attestations, FastFS wasm and on-chain state stay public and verifiable.
