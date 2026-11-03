@@ -64,3 +64,9 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
 export function QRFrame({ children, caption }: { children: ReactNode; caption?: ReactNode }) {
   return <figure className="khm-qr">{children}{caption && <figcaption>{caption}</figcaption>}</figure>;
 }
+
+/** Middle-ellipsis hash with copy icon: "a55ebb14…a80140e" [copy]. */
+export function MidHash({ value, head = 8, tail = 6 }: { value: string; head?: number; tail?: number }) {
+  const short = value.length > head + tail + 1 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value;
+  return <span className="khm-hash" title={value}><code>{short}</code><CopyButton value={value} label="⧉" /></span>;
+}

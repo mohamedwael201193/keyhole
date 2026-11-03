@@ -9,7 +9,6 @@
   --kh-field: #6E7778;      /* input border, 4.6:1 on white */
   --kh-shadow: 0 1px 0 #FFFFFFB0 inset, 0 1px 2px #1A2A2C14, 0 10px 28px -14px #1A2A2C40;
   --kh-shadow-hi: 0 1px 0 #FFFFFFB0 inset, 0 2px 4px #1A2A2C18, 0 22px 44px -18px #1F4B4F66;
-  --kh-ring: conic-gradient(from var(--kh-ang), #1F4B4F, #B8893E 20%, #D9644A 35%, #1F4B4F 55%, #2F7F86 75%, #1F4B4F);
 }
 html, body, .nav:not(.dark) { background: var(--bg); }
 .lead, .note, .vlt .vsub, .vlt .note, .vlt .vhelp, .muted { color: var(--mu); }
@@ -31,17 +30,17 @@ html, body, .nav:not(.dark) { background: var(--bg); }
 /* The one live element per screen: a light that travels around its border */
 .vlt [data-testid="move-card"], .judge .jsteps > li:first-child, .ver .card:first-of-type {
   border: 2px solid transparent;
-  background: linear-gradient(var(--sf), var(--sf)) padding-box, var(--kh-ring) border-box;
+  background: linear-gradient(var(--sf), var(--sf)) padding-box, conic-gradient(from var(--kh-ang), var(--kh-stops)) border-box;
   box-shadow: var(--kh-shadow-hi);
   animation: kh-in .55s cubic-bezier(.2,.7,.2,1) both, kh-orbit 5s linear infinite;
 }
 .vlt .vbtn.pri:not(:disabled), .btn.b1:not(:disabled), .cw:not(:disabled) {
   border: 2px solid transparent;
-  background: linear-gradient(#1F4B4F, #1F4B4F) padding-box, var(--kh-ring) border-box;
+  background: linear-gradient(#1F4B4F, #1F4B4F) padding-box, conic-gradient(from var(--kh-ang), var(--kh-stops)) border-box;
   color: #FFFCF6; box-shadow: 0 8px 22px -10px #1F4B4FAA;
   animation: kh-orbit 3.2s linear infinite;
 }
-.vlt .vbtn.pri:hover:not(:disabled), .btn.b1:hover:not(:disabled) { background: linear-gradient(#173B3E, #173B3E) padding-box, var(--kh-ring) border-box; transform: translateY(-1px); }
+.vlt .vbtn.pri:hover:not(:disabled), .btn.b1:hover:not(:disabled) { background: linear-gradient(#173B3E, #173B3E) padding-box, conic-gradient(from var(--kh-ang), var(--kh-stops)) border-box; transform: translateY(-1px); }
 @keyframes kh-orbit { to { --kh-ang: 360deg; } }
 
 /* Secondary + disabled buttons: legible, clearly inactive */
@@ -87,7 +86,7 @@ html, body, .nav:not(.dark) { background: var(--bg); }
 
 /* ---- Shared primitives (components/motion) ---- */
 .khm-step { background: var(--sf); border: 1px solid var(--kh-edge); border-radius: 22px; padding: 22px; box-shadow: var(--kh-shadow); opacity: .78; transition: opacity .3s, box-shadow .3s; }
-.khm-step.is-active { opacity: 1; border: 2px solid transparent; background: linear-gradient(var(--sf), var(--sf)) padding-box, var(--kh-ring) border-box; box-shadow: var(--kh-shadow-hi); animation: kh-orbit 5s linear infinite; }
+.khm-step.is-active { opacity: 1; border: 2px solid transparent; background: linear-gradient(var(--sf), var(--sf)) padding-box, conic-gradient(from var(--kh-ang), var(--kh-stops)) border-box; box-shadow: var(--kh-shadow-hi); animation: kh-orbit 5s linear infinite; }
 .khm-step.is-done { opacity: .92; }
 .khm-step-h { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .khm-step-h h3 { margin: 0; font-size: 24px; }
@@ -116,6 +115,45 @@ html, body, .nav:not(.dark) { background: var(--bg); }
 .khm-copy:hover { border-color: #1F4B4F; }
 .khm-copy.ok { background: #E3EFE7; color: #16603C; border-color: #16603C; }
 .khm-qr { margin: 0; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; background: #fff; border-radius: 18px; border: 2px solid transparent;
-  background: linear-gradient(#fff, #fff) padding-box, var(--kh-ring) border-box; animation: kh-orbit 6s linear infinite; box-shadow: var(--kh-shadow); }
+  background: linear-gradient(#fff, #fff) padding-box, conic-gradient(from var(--kh-ang), var(--kh-stops)) border-box; animation: kh-orbit 6s linear infinite; box-shadow: var(--kh-shadow); }
 .khm-qr figcaption { font: 600 12px var(--mono); color: #3A4547; text-align: center; overflow-wrap: anywhere; max-width: 240px; }
 @media (prefers-reduced-motion: reduce) { .khm-check path { stroke-dashoffset: 0; } }
+
+/* ---- v2: bolder ---- */
+:root { --sf: #FFFFFF; --mu: #3A4547; --ink: #1F2A2C; --kh-edge: #CFC6B3;
+  --kh-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(20,40,40,.12);
+  --kh-shadow-hi: 0 2px 4px rgba(0,0,0,.10), 0 16px 40px rgba(20,60,60,.22);
+  --kh-stops: #0E6B70, #14A3A0 18%, #D4A33A 38%, #F2C25B 50%, #D4A33A 62%, #14A3A0 82%, #0E6B70; }
+body { color: #1F2A2C; }
+.lead { color: #1F2A2C; font-size: 19px; }
+.note, .vlt .vsub, .vlt .note, .vlt .vhelp, .muted, .ver .ck small, .tally small { color: #3A4547; font-size: 16px; }
+.card, .panel, .flow-step, .howstrip li, .bx, .fn, .tt div, .vlt .vcard, .judge .jsteps > li, .judge .jlimits, .ask .vcard, .vault-grid .c,
+.ver .card, .settle .card, .khist .card, .gal .card { background: #fff; border-color: #CFC6B3; box-shadow: var(--kh-shadow); }
+.vlt [data-testid="move-card"], .judge .jsteps > li:first-child, .khm-step.is-active, .ver .vg > :last-child {
+  border: 2px solid transparent !important;
+  background: linear-gradient(#fff, #fff) padding-box, conic-gradient(from var(--kh-ang), var(--kh-stops)) border-box !important;
+  box-shadow: var(--kh-shadow-hi), 0 0 0 6px rgba(20,163,160,.10); animation: kh-in .55s both, kh-orbit 4s linear infinite; }
+.vlt .vbtn.pri:not(:disabled), .btn.b1:not(:disabled), .cw:not(:disabled) {
+  min-height: 52px; font-size: 16px; font-weight: 800; padding-inline: 28px;
+  background: linear-gradient(#174A4E, #174A4E) padding-box, conic-gradient(from var(--kh-ang), var(--kh-stops)) border-box; animation: kh-orbit 4s linear infinite;
+  box-shadow: 0 10px 26px -8px rgba(23,74,78,.6), 0 0 0 4px rgba(242,194,91,.18); }
+.nav .cw:not(:disabled) { min-height: 44px; font-size: 15px; }
+/* Score / summary panels: solid, confident */
+.ver .tally { background: #174A4E; border: 0; color: #fff; box-shadow: var(--kh-shadow-hi); }
+.ver .tally .tn, .ver .tally b { color: #fff; }
+.ver .tally .tn span, .ver .tally small { color: #D6E6E4; }
+.ver .tally[data-n="37"] { background: linear-gradient(135deg, #12643F, #174A4E); }
+/* Status chips: solid */
+.att, .stb.ok, .vlt .vbadge.ok { background: #16794A; color: #fff; border-color: #16794A; }
+.stb.warn, .vlt .vbadge.lock { background: #9A6510; color: #fff; border-color: #9A6510; }
+.stb.bad, .vlt .vbadge.cool { background: #B23A26; color: #fff; border-color: #B23A26; }
+.vlt .vbadge.pend { background: #174A4E; color: #fff; }
+/* Hashes: one line, no wall of hex */
+.ver .ck small, .kv dd.mono, .settle .card dd, .settle .mono { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
+/* Numbered section chips for sequences */
+.judge .jsteps { counter-reset: khs; }
+.eb, .vlt .vcap { color: #7A5410; font-weight: 700; }
+.steps span.on { background: #174A4E; color: #fff; box-shadow: 0 0 0 4px rgba(242,194,91,.35); }
+.khm-hash { display: inline-flex; align-items: center; gap: 6px; } .khm-hash code { font: 600 14px var(--mono); color: #1F2A2C; } .khm-hash .khm-copy { min-height: 26px; padding: 0 8px; }
+.ver .ck > div { min-width: 0; flex: 1; overflow: hidden; } .ver .ck .att { flex: none; }
+.ver .ck { grid-template-columns: 44px minmax(0,1fr) auto; }
