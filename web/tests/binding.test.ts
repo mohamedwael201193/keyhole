@@ -26,7 +26,7 @@ describe("attestation binding", () => {
     expect(canonical({ b: 1, a: [true, null, "x"] })).toBe('{"a":[true,null,"x"],"b":1}');
   });
   it("knows superseded builds", () => {
-    expect(buildIndex(a.executed_wasm_sha256)).toBe(6);
+    expect(buildIndex(a.executed_wasm_sha256)).toBe(7);
     expect(buildIndex("f".repeat(64))).toBe(-1);
   });
 });

@@ -57,13 +57,13 @@ add("key-beat-scoped", "Beat key 9FiNXX2M… on the minter: FunctionCall to keyh
     {"type":"access_key","account":cfg["minter"],"prefix":"ed25519:9FiNXX2M","receiver":"keyhole-devmo.near","methods":["beat"],"max_allowance":"50000000000000000000000"}, "FunctionCall keyhole-devmo.near [beat], allowance <= 0.05 NEAR")
 # ---------------- worker build ----------------
 DEP = open("tee/worker/DEPLOYED_SHA256").read().strip()
-add("worker-deployed", "The live worker build is a55ebb14…140e (tee/worker/DEPLOYED_SHA256)", where(RD,"build **`a55ebb14…140e`**"), "file", "tee/worker/DEPLOYED_SHA256",
-    {"type":"grep","path":"tee/worker/DEPLOYED_SHA256","pattern":"^"+W["wasm_sha256"]+"\\s*$"}, "a55ebb14df4ebb26…80140e")
-add("worker-fastfs", "The a55ebb14 wasm (708837 bytes) is on FastFS and hashes to DEPLOYED_SHA256", where(RD,"(708837 bytes)"), "OutLayer call", f"https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm",
-    {"type":"fastfs","sha256":DEP,"bytes":708837}, "sha256 == DEPLOYED_SHA256, 708837 bytes",
+add("worker-deployed", "The live worker build is cff9fd3c…b1bc (tee/worker/DEPLOYED_SHA256)", where(RD,"build **`cff9fd3c…b1bc`**"), "file", "tee/worker/DEPLOYED_SHA256",
+    {"type":"grep","path":"tee/worker/DEPLOYED_SHA256","pattern":"^"+W["wasm_sha256"]+"\\s*$"}, "cff9fd3c4937ad52…aeb1bc")
+add("worker-fastfs", "The cff9fd3c wasm (737639 bytes) is on FastFS and hashes to DEPLOYED_SHA256", where(RD,"(737639 bytes)"), "OutLayer call", f"https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm",
+    {"type":"fastfs","sha256":DEP,"bytes":737639}, "sha256 == DEPLOYED_SHA256, 737639 bytes",
     f"curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm | sha256sum")
 # ---------------- attestations ----------------
-builds = {"b0a6eadb-cee9-400e-8eca-8b0f4df7bcec":"a55ebb14","2896d0ad-aa27-4e21-b4a1-0cf2d3755d56":"09d481a5","54207d9e-b4f0-438b-9a74-cdba33de80d9":"f7217ae2","7882f97a-06e5-46d3-9e58-5fe6428fb187":"452df1fd","f4768da8-2e87-4622-8654-d1e67f6cd1f0":"6367401a","0f0bf448-1b66-4200-b6de-7cf095aead54":"67c5cd77","763812bc-0012-4528-a45d-66a3ce17cae9":"38bd67b9","9d19bceb-986b-4745-9bf9-91f7dcb62b6e":"b3fa1a39","cefbc64e-6c08-4bfe-a165-1667d9f5f25b":"f13efe92","09d58c09-c1e9-48b6-bebb-485f5ae79539":"f13efe92"}
+builds = {"643a012d-0389-44d7-9c78-efb5d7835e80":"cff9fd3c","b0a6eadb-cee9-400e-8eca-8b0f4df7bcec":"a55ebb14","2896d0ad-aa27-4e21-b4a1-0cf2d3755d56":"09d481a5","54207d9e-b4f0-438b-9a74-cdba33de80d9":"f7217ae2","7882f97a-06e5-46d3-9e58-5fe6428fb187":"452df1fd","f4768da8-2e87-4622-8654-d1e67f6cd1f0":"6367401a","0f0bf448-1b66-4200-b6de-7cf095aead54":"67c5cd77","763812bc-0012-4528-a45d-66a3ce17cae9":"38bd67b9","9d19bceb-986b-4745-9bf9-91f7dcb62b6e":"b3fa1a39","cefbc64e-6c08-4bfe-a165-1667d9f5f25b":"f13efe92","09d58c09-c1e9-48b6-bebb-485f5ae79539":"f13efe92"}
 for c,b in builds.items():
     add(f"att-{c[:8]}-build", f"Call {c[:8]} executed worker build {b}", where(RD,c), "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}",
         {"type":"attestation","call":c,"wasm_prefix":b,"project":"keyhole-devmo.near/keyhole"}, f"executed_wasm_sha256 starts {b}, == wasm_hash, TDX quote present", f"./verify.sh {c}")
@@ -117,7 +117,7 @@ G("src-cooldown","10-minute withdraw cooldown after a transfer (TRANSFER_COOLDOW
 G("src-ai-model","/ask uses Qwen/Qwen3.6-35B-A3B-FP8",where(RD,"`Qwen/Qwen3.6-35B-A3B-FP8`"),"web/lib/ai.ts",r"Qwen/Qwen3\.6-35B-A3B-FP8","model id found")
 G("src-gw-8kb","Gateway rejects bodies over 8 KB with 413",where(RD,"bodies over 8 KB are rejected with 413"),"web/app/api/worker/route.ts",r"len > 8192.*status: 413","8192 / 413")
 G("src-gw-ip","Gateway allows 20 calls a minute per IP",where(RD,"Each IP gets 20 calls a minute"),"web/app/api/worker/route.ts",r"createLimiter\(20, 60_000\)","20 per 60 s")
-G("src-gw-allow","Gateway allowlist: info, provenance, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl"\]',"exact list")
+G("src-gw-allow","Gateway allowlist: info, provenance, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, session, session_revoke",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "session", "session_revoke"\]',"exact list")
 G("src-gw-nocopy","copy and sweep_minter are not in the gateway allowlist (bad_op)",where(RD,"Both refusals are `bad_op`"),"web/lib/gateway.ts",r'code: "bad_op"',"bad_op for any other op")
 G("src-limits-t1","Tier 1: $1 per trade, $5 per day, 6/min",where(RD,"| 1 Bronze | $1 | $5 | 6 |"),"docs/evidence/mainnet-e2e/01_info.json",r'"daily_usd_micro": ?5000000',"in attested info")
 G("src-global","Global limits 120/min and 25 free mints per day",where(RD,"Global limits: 120 requests per minute and 25 free mints per day"),"docs/evidence/mainnet-e2e/01_info.json",r'"global_mints_per_day": ?25',"25 in attested info")
@@ -164,7 +164,7 @@ for h,v in [("strict-transport-security","max-age=63072000; includeSubDomains; p
     add(f"site-hdr-{h}",f"Site sends {h}: …{v}",where(RD,"CSP, HSTS (2 years, preload)"),"live site",SITE,{"type":"header","url":SITE+"/","header":h,"contains":v},f"{h} contains {v}","curl -sI "+SITE)
 add("site-supply-live","Home page supply equals nft_total_supply",where(RD,"Supply on the home page matches `nft_total_supply`"),"live site",SITE,{"type":"site_vs_chain","field":"supply","method":"nft_total_supply"},"home supply == chain supply")
 add("site-beats-live","Home page heartbeats equal config.beats",where(RD,"`nft_total_supply`, `config`"),"live site",SITE,{"type":"site_vs_chain","field":"beats","method":"config"},"home beats == chain beats")
-add("site-hash","Home page names the live build a55ebb14",where(RD,"The enclave serving the site is build `a55ebb14`"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"a55ebb14"},"home carries a55ebb14")
+add("site-hash","Home page names the live build cff9fd3c",where(RD,"The enclave serving the site is build `cff9fd3c`"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"cff9fd3c"},"home carries cff9fd3c")
 import glob
 for f in sorted(glob.glob("web/app/**/*.tsx",recursive=True)+glob.glob("web/lib/**/*.ts",recursive=True)+glob.glob("web/components/**/*.tsx",recursive=True)+glob.glob("docs/evidence/**/README.md",recursive=True)):
     for i,l in enumerate(open(f,encoding="utf8"),1):
