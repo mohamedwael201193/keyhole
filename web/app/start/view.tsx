@@ -77,7 +77,7 @@ export function StartView() {
 
   return (
     <main className="page start" data-testid="start">
-      <Purpose eyebrow="Start" title="Set up in a few short steps" line="A private trading account. With Google or email: one sign-in, no wallet popups. With a NEAR wallet: two popups (connect, mint); MetaMask: three. Your progress is kept if you leave." />
+      <Purpose eyebrow="Start" title={`Set up in ${steps.length - 1} short steps`} line="A private trading account inside a sealed enclave. Sign in with Google or email, or use any wallet. Your progress is kept if you leave." />
       {accountId && <p className="acct-ready" data-testid="account-ready"><span className="note">Signed in{via === "privy" ? " with Google / email" : ""} as</span> <b className="addr" title={accountId}>{accountId.length > 24 ? `${accountId.slice(0, 10)}…${accountId.slice(-8)}` : accountId}</b> <CopyButton value={accountId} />{acct && <span className="note" data-testid="account-balance"> · {acct.exists ? `${formatNear(acct.yocto)} NEAR` : "not on chain yet"}</span>}</p>}
       <div data-testid="start-dots"><Stepper steps={steps.map((x) => TITLES[x])} current={idx} /></div>
       <StepTransition k={step}><StepCard active className="scard" data-testid={`start-step-${step}`}>
@@ -90,7 +90,7 @@ export function StartView() {
               <button className="btn b2" type="button" onClick={() => void connectOther()} data-testid="start-connect">All wallets (NEAR, MetaMask, …)</button>
             </div>
           </> : <>
-            <p>A NEAR wallet connects and unlocks in one popup. MetaMask works too (one more signature to unlock). Nothing is sent and nothing is charged.</p>
+            <p>Connect a NEAR wallet or MetaMask. Nothing is sent and nothing is charged.</p>
             <button className="btn b1" type="button" onClick={() => void connect()} data-testid="start-connect">Connect wallet</button>
           </>}
         </>}
@@ -110,8 +110,8 @@ export function StartView() {
         {step !== "connect" && holder === null && <p><Busy l="Looking for your key" /></p>}
         {step === "mint" && holder === false && <>
           <h2>{idx + 1} · Get your key</h2>
-          <p>A key is a free NFT that opens your own account inside the enclave. One signature, no fee: the enclave pays the NEAR storage.</p>
-          <button className="btn b1" type="button" disabled={mint.busy} onClick={() => void mint.run({})} data-testid="start-mint">{mint.busy ? <Busy l={mint.label} /> : "Mint my key (1 signature)"}</button>
+          <p>A key is a free NFT that opens your own account inside the enclave. No fee: the enclave pays the NEAR storage.</p>
+          <button className="btn b1" type="button" disabled={mint.busy} onClick={() => void mint.run({})} data-testid="start-mint">{mint.busy ? <Busy l={mint.label} /> : "Mint my key"}</button>
           {mint.res?.output?.ok && <p className="note"><Busy l="Minted. Waiting for the chain to show it" /></p>}
           {mint.res?.error && <ErrorBox code={mint.res.error.code} />}
         </>}
@@ -121,7 +121,7 @@ export function StartView() {
         </>}
         {step === "limits" && <>
           <h2>{idx + 1} · Safe limits</h2>
-          <p><b>Recommended: $1/trade, $5/day.</b> Lowering limits needs no popup; raising them later asks your wallet.</p>
+          <p><b>Recommended: $1/trade, $5/day.</b> You can lower them any time; raising them later asks your wallet.</p>
           <button className="btn b1" type="button" disabled={limits.busy} onClick={() => void limits.run(SAFE_LIMITS)} data-testid="start-limits">{limits.busy ? <Busy l={limits.label} /> : "Use recommended limits"}</button>{" "}
           <button className="btn b2" type="button" onClick={() => { if (accountId) localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1"); setLimitsDone(true); }} data-testid="start-limits-skip">Keep my key&apos;s tier limits</button>
           {limits.res?.error && <ErrorBox code={limits.res.error.code} />}
