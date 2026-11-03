@@ -17,7 +17,7 @@ owner_rows! {
     owner_evm: "0xf76e6b0920e9332ff4410f6dd53f01722abc71a3", "keyhole-devmo.near" => false;
 }
 
-macro_rules! key_rows { ($($name:ident: $s:expr => $ok:expr;)*) => { $(#[test] fn $name() { assert_eq!(parse_beat_key(&$s, &MINTER).is_ok(), $ok, "{}", $s); })* } }
+macro_rules! key_rows { ($($name:ident: $s:expr => $ok:expr;)*) => { $(#[test] fn $name() { let s: String = $s; assert_eq!(parse_beat_key(&s, &MINTER).is_ok(), $ok, "{}", s); })* } }
 key_rows! {
     key_valid_ones: b58(&[1u8; 32]) => true;
     key_valid_zero: b58(&[0u8; 32]) => true;
@@ -26,11 +26,11 @@ key_rows! {
     key_31_bytes: b58(&[1u8; 31]) => false;
     key_33_bytes: b58(&[1u8; 33]) => false;
     key_64_bytes: b58(&[1u8; 64]) => false;
-    key_empty_body: "ed25519:".to_string() => false;
+    key_empty_body: String::from("ed25519:") => false;
     key_no_prefix: bs58::encode([1u8; 32]).into_string() => false;
     key_secp_prefix: format!("secp256k1:{}", bs58::encode([1u8; 64]).into_string()) => false;
     key_upper_prefix: format!("ED25519:{}", bs58::encode([1u8; 32]).into_string()) => false;
-    key_bad_char_0: "ed25519:0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl".to_string() => false;
+    key_bad_char_0: String::from("ed25519:0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl") => false;
     key_space: format!("ed25519: {}", bs58::encode([1u8; 32]).into_string()) => false;
     key_trailing_space: format!("{} ", b58(&[1u8; 32])) => false;
     key_hex_body: format!("ed25519:{}", "01".repeat(32)) => false;
