@@ -755,3 +755,5 @@ pub fn assert_no_cooldown(evs: &[ProvEvent], owner: &str, now_ms: u64) -> Result
         _ => Ok(()),
     }
 }
+
+pub mod chainsig;

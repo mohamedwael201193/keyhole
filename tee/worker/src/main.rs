@@ -148,6 +148,11 @@ mod host {
 
     /// Build, sign (inside the enclave) and broadcast a tx; returns tx hash or a readable error.
     fn send(signer: &str, sk_str: &str, receiver: &str, actions: &[Action]) -> Result<String, Error> {
+        send_full(signer, sk_str, receiver, actions).map(|(h, _)| h)
+    }
+
+    /// Like `send`, also returning the final outcome JSON (for calls whose return value matters).
+    fn send_full(signer: &str, sk_str: &str, receiver: &str, actions: &[Action]) -> Result<(String, Value), Error> {
         let raw = bs58::decode(sk_str.trim_start_matches("ed25519:")).into_vec().map_err(|_| err("signer", "bad key"))?;
         let sk: [u8; 32] = raw[..32].try_into().unwrap();
         let pk: [u8; 32] = raw[32..64].try_into().unwrap();
@@ -173,7 +178,7 @@ mod host {
         let hash = v.pointer("/transaction/hash").or(v.pointer("/result/transaction/hash")).or(v.pointer("/transaction_outcome/id"))
             .and_then(|x| x.as_str()).map(|x| x.to_string())
             .or_else(|| if !r.trim().is_empty() && !r.trim_start().starts_with('{') { Some(r.trim().trim_matches('"').to_string()) } else { None });
-        match hash { Some(h) if !h.is_empty() => Ok(h), _ => Err(err("tx_failed", format!("no tx hash; rpc said: {}", r.chars().take(300).collect::<String>()))) }
+        match hash { Some(h) if !h.is_empty() => Ok((h, v)), _ => Err(err("tx_failed", format!("no tx hash; rpc said: {}", r.chars().take(300).collect::<String>()))) }
     }
 
     fn iso(ms: u64) -> String {
@@ -649,11 +654,50 @@ mod host {
         Ok(json!({"ok": true, "op": "sweep_minter", "from": mid, "to": cur, "yocto": send_amt.to_string(), "tx": tx}))
     }
 
+    /// Chain Signatures: the foreign (EVM) address `v1.signer` derives for this key NFT. Public, read-only.
+    fn op_chain_address(input: &Value) -> Result<Value, Error> {
+        let tid = s(&input.get("params").cloned().unwrap_or_default(), "token_id").unwrap_or_default();
+        let path = chainsig::path_for(&tid).ok_or_else(|| err("bad_params", "params.token_id must be k + 16 hex"))?;
+        let (mid, _) = minter()?;
+        let root = chainsig::parse_pk(chainsig::ROOT_PK).ok_or_else(|| err("config", "root key"))?;
+        let child = chainsig::derive(&root, &mid, &path);
+        // Cross-check against the signer contract itself; refuse if they disagree.
+        let onchain = view(chainsig::SIGNER, "derived_public_key", json!({"path": path, "predecessor": mid, "domain_id": chainsig::DOMAIN_SECP256K1}))?;
+        if onchain.as_str() != Some(chainsig::fmt_pk(&child).as_str()) { return Err(err("rpc", "derived key mismatch with v1.signer")); }
+        Ok(json!({"ok": true, "op": "chain_address", "token_id": tid, "path": path, "predecessor": mid,
+            "public_key": chainsig::fmt_pk(&child), "evm_address": chainsig::evm_address(&child)}))
+    }
+
+    /// Chain Signatures: the holder asks the MPC network to sign a 32-byte hash for this key's address.
+    /// The minter calls `v1.signer.sign` (1 yocto); the answer is checked to recover to the derived key.
+    fn op_chain_sign(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "chain_sign", true)?;
+        let tid = c.token_id();
+        let path = chainsig::path_for(&tid).ok_or_else(|| err("no_key", "no key NFT"))?;
+        let hx = s(&c.req.params, "payload_hash").unwrap_or_default();
+        let args = chainsig::sign_args(&hx, &path).ok_or_else(|| err("bad_params", "params.payload_hash must be 32 bytes hex"))?;
+        let (mid, msk) = minter()?;
+        let a = args.to_string();
+        let (tx, out) = send_full(&mid, &msk, chainsig::SIGNER, &[Action::FunctionCall { method: "sign", args: a.as_bytes(), gas: chainsig::CHAINSIG_GAS, deposit: 1 }])?;
+        use base64::Engine;
+        let sv = out.pointer("/status/SuccessValue").or(out.pointer("/result/status/SuccessValue")).and_then(|v| v.as_str())
+            .and_then(|b| base64::engine::general_purpose::STANDARD.decode(b).ok()).and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+            .ok_or_else(|| err("upstream", format!("no signature in outcome of {tx}")))?;
+        let sig = chainsig::decode_sig(&sv).ok_or_else(|| err("bad_signature", "malformed MPC signature"))?;
+        let root = chainsig::parse_pk(chainsig::ROOT_PK).ok_or_else(|| err("config", "root key"))?;
+        let child = chainsig::derive(&root, &mid, &path);
+        let h: [u8; 32] = hex::decode(hx.trim_start_matches("0x")).ok().and_then(|v| v.try_into().ok()).ok_or_else(|| err("bad_params", "hash"))?;
+        if !chainsig::recovers_to(&h, &sig, &child) { return Err(err("bad_signature", "signature does not recover to this key's address")); }
+        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", &hx));
+        Ok(json!({"ok": true, "op": "chain_sign", "token_id": tid, "path": path, "tx": tx, "payload_hash": hx,
+            "signature": sig, "evm_address": chainsig::evm_address(&child)}))
+    }
+
     fn op_info() -> Result<Value, Error> {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes"}))
     }
 
@@ -679,7 +723,9 @@ mod host {
             "history" => op_history(&input),
             "pnl" => op_pnl(&input),
             "sweep_minter" => op_sweep_minter(),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter")),
+            "chain_address" => op_chain_address(&input),
+            "chain_sign" => op_chain_sign(&input),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign")),
         };
         let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.
