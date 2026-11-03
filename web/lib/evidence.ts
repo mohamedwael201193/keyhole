@@ -14,6 +14,7 @@ export const PUBLISHED_INFO_CALL = "2896d0ad-aa27-4e21-b4a1-0cf2d3755d56";
 
 export const CALLS = [
   { label: "info · published build 09d481a5", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1253394" },
+  { label: "chain_sign · real v1.signer MPC signature for key k5f4750858f328940", id: "0cd1c3bd-21be-44dc-bc60-e792a42344e6", outcome: "ok · recovers to 0xe39C…f063" },
   { label: "info · previous build f7217ae2", id: "54207d9e-b4f0-438b-9a74-cdba33de80d9", outcome: "ok · attestation 1252377" },
   { label: "info · previous build 452df1fd", id: "7882f97a-06e5-46d3-9e58-5fe6428fb187", outcome: "ok · attestation 1246133" },
   { label: "attack · injected agent sends a payout to attacker.near", id: "c1312e2d-8c20-4b3e-ad5b-22dd3102826d", outcome: "refused · bad_params" },

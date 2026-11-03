@@ -878,3 +878,19 @@ html.no-motion .foil-card .bw { display: none; }
 .ask .asksamples .vbtn { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ln); background: #FBF8F2; font-weight: 600; font-size: 13px; cursor: pointer; }
 .ask .askctx { font-size: 13px; color: var(--mu); background: #FBF8F2; border: 1px dashed var(--ln); border-radius: 12px; padding: 10px 12px; overflow-wrap: anywhere; }
 .ask .linkish { background: none; border: 0; color: var(--teal); text-decoration: underline; cursor: pointer; font-size: 13px; }
+.judge .jwho { margin-bottom: 18px; }
+.judge .jtw { overflow-x: auto; margin: 10px 0; }
+.judge .jtable { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.45; }
+.judge .jtable th, .judge .jtable td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--ln); }
+.judge .jtable th { font-weight: 600; }
+.judge .jtable td:first-child { font-weight: 600; white-space: nowrap; }
+@media (max-width: 560px) { .judge .jtable { font-size: 14px; } .judge .jtable td:first-child { white-space: normal; } }
+.gk h3 a { color: inherit; text-decoration: none; }
+.gk h3 a:hover, .gk h3 a:focus-visible { text-decoration: underline; }
+.gk .tid { margin: 0; font: 500 12px var(--mono); color: #3E4A4B; overflow-wrap: anywhere; }
+.gk .hist { margin: 0; font: 600 14px var(--sans); }
+.gk .hist a { color: #16603C; display: inline-block; padding: 6px 0; }
+.chains .chaintry { margin: 10px 0 0; font: 600 16px var(--sans); }
+.chains .chaintry a { color: inherit; text-decoration: underline; text-underline-offset: 3px; display: inline-block; padding: 6px 0; }
+.gal .concept { display: inline-flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; margin: 6px 0 22px; padding: 10px 16px; border: 1px dashed #B8893E; border-radius: 12px; background: #FBF6EC; font: 500 15px var(--sans); color: #2A3638; }
+.gal .concept a { color: #16603C; font-weight: 600; }

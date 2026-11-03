@@ -1,7 +1,8 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
 import { OC_ASSETS, statusOf, toUnits, assetById } from "@/lib/oneclick";
-import { SETTLEMENTS, RECORDED_FAILED, type Settlement } from "@/lib/settlements";
+import Link from "next/link";
+import { SETTLEMENTS, RECORDED_FAILED, VAULT_TRADE, type Settlement } from "@/lib/settlements";
 import { tx, intentTx } from "@/lib/config";
 import { AgentPanel } from "./agent";
 
@@ -37,6 +38,7 @@ function Row({ s }: { s: Settlement }) {
         {st?.details.nearTxHashes?.slice(-1).map((h) => <Fragment key={h}><dt>settlement tx</dt><dd className="mono"><a href={tx(h)} target="_blank" rel="noreferrer">{h.slice(0, 10)}…</a></dd></Fragment>)}
         {s.destTx && <><dt>destination tx</dt><dd className="mono"><a href={s.destTx.url} target="_blank" rel="noreferrer">{s.destTx.hash.slice(0, 10)}…</a></dd></>}
         <dt>quote</dt><dd>{s.quote}</dd>
+        {st?.updatedAt && <><dt>1Click updated</dt><dd data-testid="st-updated">{new Date(st.updatedAt).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}</dd></>}
       </dl>
     </article>
   );
@@ -77,8 +79,20 @@ export function SettleView() {
         {dry && <p className="dout" data-testid="dry-out"><b>{dry.amountInFormatted}</b> (${Number(dry.amountInUsd).toFixed(4)}) → <b>{dry.amountOutFormatted}</b> (${Number(dry.amountOutUsd).toFixed(4)}) · about {dry.timeEstimate}s · dry run</p>}
       </section>
       <AgentPanel />
-      <h2 className="sh">Executed on mainnet</h2>
+      <h2 className="sh">A vault trade, end to end</h2>
+      <article className="card srow" data-testid="vault-trade">
+        <div className="shead"><b>{VAULT_TRADE.amountIn} → {VAULT_TRADE.amountOut} inside the vault of key {VAULT_TRADE.token}</b><span className="stb ok">Settled</span></div>
+        <p className="note">The holder signed one swap. The enclave checked the signature, the holder and the Bronze caps, then the key&apos;s sealed account swapped through NEAR Intents. The answer, with its intent hash, is attested by Intel TDX (build {VAULT_TRADE.build}).</p>
+        <dl className="kv">
+          <dt>enclave call</dt><dd className="mono"><Link href={`/verify?call=${VAULT_TRADE.callId}`}>Verify {VAULT_TRADE.callId.slice(0, 8)}</Link></dd>
+          <dt>intent hash</dt><dd className="mono">{VAULT_TRADE.intentHash}</dd>
+          <dt>account</dt><dd className="mono">{VAULT_TRADE.account}</dd>
+          <dt>evidence</dt><dd className="mono">{VAULT_TRADE.file}</dd>
+        </dl>
+      </article>
+      <h2 className="sh">1Click orders executed on mainnet</h2>
       <div className="sgrid">{SETTLEMENTS.map((s) => <Row key={s.depositAddress} s={s} />)}</div>
+      <h2 className="sh">Example only: the shape of a failed order</h2>
       <article className="card srow rec" data-testid="recorded-failed">
         <div className="shead"><b>{RECORDED_FAILED.label}</b><Badge status={RECORDED_FAILED.status} /></div>
         <p className="where"><span>Where the funds are:</span> {statusOf("FAILED").where}</p>

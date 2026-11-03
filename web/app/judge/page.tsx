@@ -37,7 +37,7 @@ export default function JudgePage() {
         <li className="c">
           <h2><span>1</span>The code in the enclave is the code in the repo</h2>
           <p><b>Do:</b> open <Link href="/verify?call=2896d0ad-aa27-4e21-b4a1-0cf2d3755d56">/verify for call 2896d0ad</Link>.</p>
-          <p><b>See:</b> the page fetches the attestation in your browser, downloads the worker from FastFS, hashes it, recomputes the quote&apos;s report_data from the attested fields, and shows five green checks (the sixth, output, is checked for calls whose output we publish, as in steps 3 to 5). <span className="mono">executed_wasm_sha256</span> is <span className="mono">09d481a5…d172aaf4</span>, the same value as <span className="mono">tee/worker/DEPLOYED_SHA256</span>. It was published with <a href={tx("F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu")} target="_blank" rel="noreferrer">add_version F1XzcCcz…</a>.</p>
+          <p><b>See:</b> the page fetches the attestation in your browser, downloads the worker from FastFS, hashes it, recomputes the quote&apos;s report_data from the attested fields, and shows six green checks: the sixth hashes this call&apos;s published output and matches the attested <span className="mono">output_hash</span>. Then 19 Intel DCAP and 12 Intel PCS checks run on the quote, 37 in all. <span className="mono">executed_wasm_sha256</span> is <span className="mono">09d481a5…d172aaf4</span>, the same value as <span className="mono">tee/worker/DEPLOYED_SHA256</span>. It was published with <a href={tx("F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu")} target="_blank" rel="noreferrer">add_version F1XzcCcz…</a>.</p>
           <p className="muted"><b>Deeper (2 min with Rust):</b> <span className="mono">./verify.sh 2896d0ad-aa27-4e21-b4a1-0cf2d3755d56 --rebuild</span> rebuilds the worker from source and prints the same hash.</p>
         </li>
 
@@ -78,15 +78,41 @@ export default function JudgePage() {
           <h2><span>5</span>Tier caps hold on real trades</h2>
           <p><b>See:</b> a 2 USDC swap against the $1 Bronze cap was refused by the enclave before anything moved.</p>
           <Calls rows={[{ id: "a02613a2-d503-45e2-83b8-ef71927c2533", what: "2 USDC swap on a Bronze key", result: "refused · over_cap_per_tx" }]} />
-          <p className="muted">All 30 recorded mainnet steps are in <span className="mono">docs/evidence/mainnet-e2e/</span>. Run <span className="mono">./judge/2-attestations.sh</span> to check each one against its attestation.</p>
+          <p className="muted">All 30 recorded mainnet steps (run on the earlier build <span className="mono">f13efe92</span>) are in <span className="mono">docs/evidence/mainnet-e2e/</span>. Run <span className="mono">./judge/2-attestations.sh</span> to check each one against its attestation.</p>
+        </li>
+
+        <li className="c" data-testid="judge-chainsig">
+          <h2><span>6</span>Each key signs for other chains, and the minter&apos;s agent key is scoped</h2>
+          <p><b>Do:</b> verify the call below, then open the minter&apos;s <a href={tx("7P9VFx4pz5oxyXpXkyDVE6SheDuTqHgQcEM2vgKFUAfK")} target="_blank" rel="noreferrer">v1.signer.sign 7P9VFx4p…</a> and the beat signed by the scoped key, <a href={tx("B1BH9eZycbXqgwod2dqbn6e5UWY8TKTw2ZawyYqLRDtG")} target="_blank" rel="noreferrer">B1BH9eZy…</a>.</p>
+          <p><b>See:</b> the holder of key <span className="mono">k5f4750858f328940</span> asked the enclave for a Chain Signatures signature. NEAR&apos;s MPC network signed it, and it recovers to <span className="mono">0xe39C947d…f063</span>, the EVM address derived for that key alone. The beat key on the minter is a function-call key: receiver <span className="mono">keyhole-devmo.near</span>, method <span className="mono">beat</span>, 0.05 NEAR allowance. NEAR rejects it for <span className="mono">nft_transfer</span>, <span className="mono">set_minter</span> and plain transfers.</p>
+          <Calls rows={[{ id: "0cd1c3bd-21be-44dc-bc60-e792a42344e6", what: "chain_sign for key k5f4750858f328940", result: "ok · recovers to 0xe39C…f063", file: "docs/evidence/publish-09d481a5/" }]} />
         </li>
 
         <li className="c">
-          <h2><span>6</span>Try it with your own wallet (optional)</h2>
+          <h2><span>7</span>Try it with your own wallet (optional)</h2>
           <p><b>Do:</b> <Link href="/mint">mint a free key</Link> (one signature, the TEE pays storage), then open <Link href="/vault">/vault</Link> and press <b>Read balance</b>.</p>
           <p><b>See:</b> a result with a call id and a <b>Verify</b> link. That call verifies in step 1 the same way.</p>
         </li>
       </ol>
+
+      <div className="c jlimits jwho" data-testid="who-sees-what">
+        <h2>Who sees what</h2>
+        <div className="jtw">
+          <table className="jtable">
+            <thead><tr><th>Party</th><th>Sees</th><th>Does not see</th></tr></thead>
+            <tbody>
+              <tr><td>NEAR (anyone)</td><td>Token id, holder, tier, transfer time, the minter&apos;s mint and beat transactions</td><td>Balances, trades, history, caps</td></tr>
+              <tr><td>KEYHOLE website gateway</td><td>The signed request and the reply it relays to the holder&apos;s browser. Bodies are not logged</td><td>Anything without the holder&apos;s fresh signature</td></tr>
+              <tr><td>OutLayer TDX enclave</td><td>Everything for the call it runs, sealed by Intel TDX and attested</td><td>Nothing is hidden from the code, which is why the code hash is checked</td></tr>
+              <tr><td>OutLayer custody wallet</td><td>The key account&apos;s balances and the swaps it settles</td><td>Who holds the NFT</td></tr>
+              <tr><td>1Click solvers</td><td>The asset pair and amount of a quote</td><td>The key, its holder, its history</td></tr>
+              <tr><td>Next holder of the key</td><td>The account, its balances, earlier history rows as hashes</td><td>Earlier holders&apos; trade details</td></tr>
+              <tr><td>Previous holder</td><td>Only what they did while holding it. After the transfer every request is refused (<span className="mono">not_owner</span>)</td><td>The new holder&apos;s balances and trades</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="muted">Who can change things: <span className="mono">keyhole-devmo.near</span> owns the contract (owner-only <span className="mono">set_minter</span> and <span className="mono">set_royalty</span>, royalty capped at 10%) and publishes worker versions with <span className="mono">add_version</span>. Every version is on chain, and an attestation always names the exact build that ran, so a new version cannot rewrite an old proof.</p>
+      </div>
 
       <div className="c jlimits">
         <h2>What this does not prove</h2>
