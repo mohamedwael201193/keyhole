@@ -32,7 +32,7 @@ A public chain shows balances and trades. Here those stay in the enclave. The ho
 
 Live site: [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app). Do the step. The words after the dash are what the page shows.
 
-1. Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and click **Connect wallet**. Choose a NEAR wallet or MetaMask. A NEAR wallet signs NEP-413. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published worker `67c5cd77` checks both. — The header shows your account. **Vault** shows "Vault · connected as" and the full account id.
+1. Open [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app) and click **Connect wallet**. Choose a NEAR wallet or MetaMask. A NEAR wallet signs NEP-413. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published worker (current build in the table above) checks both. — The header shows your account. **Vault** shows "Vault · connected as" and the full account id.
 2. Open [https://keyhole-seven.vercel.app/mint](https://keyhole-seven.vercel.app/mint) and click **Sign and mint**. Approve the signature. There is no transaction and no gas. — The page shows "Your key is revealed." and **Open your vault →**. The line under the card reads "Bronze tier · caps $1.00 per trade / $5.00 per day". One key per account. A second mint is refused.
 3. Open [https://keyhole-seven.vercel.app/vault](https://keyhole-seven.vercel.app/vault) with the wallet that holds the key. — You see your key, **Tier limits**, and the steps **1 · Fund**, **2 · Trade**, and **3 · Withdraw**. Before a balance signature, the total is "—" and the note says "Balances stay sealed until you sign a read." A connected wallet that does not hold a key sees **Only the key holder can open this** and no fund, trade, or withdraw form.
 4. Open **1 · Fund**, enter an amount, and click **Get deposit address**. Approve the signature. That signature is not a transfer. — The page shows **Deposit address** and the address. Sending funds there is a normal transfer you approve in your wallet, and that transfer pays gas. The site does not send it for you.
@@ -351,7 +351,7 @@ The worker is a WASI program (`wasm32-wasip2`) that runs inside an OutLayer Inte
 4. **Key authority.** For a NEP-413 signature, the public key must be a **full-access** key of `account_id`, checked live over RPC. For `eip191`, the recovered `0x` address is the account. There is no ed25519 key lookup.
 5. **Freshness.** `ts_ms` must be within 5 minutes of the latest *final block* time, not the caller's clock. Stale → `expired` ([`e7ac0627`](https://api.outlayer.ai/attestations/by-call/e7ac0627-be6d-41e9-95d0-71dcc59aed43)).
 6. **Key holding.** `nft_tokens_for_owner` and `nft_token.owner_id` are read from the contract on every call, before the nonce is used. A signer who does not own the key → `not_owner`. It is read again just before a swap or withdraw is sent.
-7. **Rate limits.** Per holder per minute by tier (6 / 12 / 30), plus 120 per minute globally → `rate_limited` ([`d892ac43`](https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd)).
+7. **Rate limits.** Per holder per minute by tier (6 / 12 / 30), → `rate_limited`, plus 120 per minute globally → `busy` ([`d892ac43`](https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd)).
 8. **Replay.** `(account, nonce)` is written with atomic `set_if_absent`. A second use → `replay` ([`ac289f04`](https://api.outlayer.ai/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab)).
 9. **Caps.** The USD value comes from the solver's quote (`amountInUsd`), never from the caller. Per-trade and per-UTC-day caps apply per holder. Over cap → `over_cap_per_tx` or `over_cap_daily`, and nothing is sent ([`a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533)).
 
@@ -371,7 +371,7 @@ Global limits: 120 requests per minute and 25 free mints per day.
   - The minter signs NEAR transactions itself. They are borsh-encoded and tested byte-for-byte against near-api-js in [`tests.rs`](tee/worker/src/tests.rs), then broadcast with `send_tx`.
   - Example: TEE-signed mint [`DJxbuaJV…`](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF).
 - **Per-holder wallet.** `account` creates one OutLayer confidential custody wallet per holder.
-  - Its API key is stored under `h/<account>/…` in encrypted storage (NEAR account ids cannot contain `/`).
+  - Its API key is stored under `t/<token_id>/wallet` in encrypted storage (an older `h/<account>/wallet` record is migrated once).
   - Holder's confidential id in the E2E: `2c2c4942…21ca` ([`06`](docs/evidence/mainnet-e2e/06_account_crosschain_deposit_address_base.json)).
 
 **Reproducible build**

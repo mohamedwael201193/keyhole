@@ -95,3 +95,19 @@ Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel
 - The site is English only. There is no language switcher.
 - The 30-step mainnet log later in this file was recorded against worker `f13efe92`. The worker serving the site is `09d481a5` ([add_version tx](https://nearblocks.io/txns/F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu)), which includes the review fixes R1 to R4.
 - Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.
+
+## Chain Signatures (`chain_sign`)
+
+`chain_sign` asks `v1.signer` for a signature from the key's derived secp256k1 address (`keyhole/key/<token_id>`). The worker does not parse the 32-byte payload, so it cannot price it in USD and the tier caps do not apply. The guards that do apply, in the enclave (worker build after audit fix PR #80): the holder must sign the request (full-access key or EIP-191), the key must not be locked for sale, the post-transfer cooldown must have passed, and each key can request at most 5 signatures per UTC day (each one costs the minter gas). The public gateway does not expose the op. The derived addresses hold no funds; treat any balance sent there as outside KEYHOLE's spend caps.
+
+## Several keys in one account
+
+The contract allows one account to receive more than one key (for example by buying a second one). The worker then refuses any signed request that does not name `params.token_id`, so it never operates the wrong key's wallet. Caps follow `holder_tier`, which is the highest tier the account holds.
+
+## Royalty
+
+`config.royalty_bps` is 500 and `nft_payout` returns a 5% split to the treasury for marketplaces that honour NEP-199. A plain `nft_transfer`, or `nft_transfer_payout` with a zero balance, pays nothing; the contract cannot force a royalty on a transfer it does not see the price of.
+
+## Contract edge cases (frozen contract)
+
+`nft_mint` accepts any `token_id` up to 64 bytes, including an empty one. Only the TEE minter can call it, and the worker always mints `k` + 16 hex, so an empty id cannot be produced through KEYHOLE. The deployed contract is not being redeployed during the hackathon.
