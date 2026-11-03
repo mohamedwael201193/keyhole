@@ -13,7 +13,8 @@ const ev = (id: string) => JSON.parse(readFileSync(`${__dirname}/../public/evide
 const sha = (o: unknown) => createHash("sha256").update(canonical(o)).digest("hex");
 // output_hash as served by https://api.outlayer.ai/attestations/by-call/<id> (fetched 2026-11-03).
 const ATTESTED = {
-  [PUBLISHED_INFO_CALL]: "396af1839efae3583b4025ae243f11fdbfc6df2d6fef9a756ce1f7e6794236f8",
+  [PUBLISHED_INFO_CALL]: "9a9a2712656ffa2bd4c4aae870fd42d2c80dd01a822b85f920480f7edc94af00",
+  "b0a6eadb-cee9-400e-8eca-8b0f4df7bcec": "396af1839efae3583b4025ae243f11fdbfc6df2d6fef9a756ce1f7e6794236f8",
   "0cd1c3bd-21be-44dc-bc60-e792a42344e6": "d34549aa0a2d6862d83ef5eb72e83ebc3464fdfa44705a72071ced3aedae2d15",
 } as const;
 
@@ -23,10 +24,10 @@ describe("flagship outputs are published, so the sixth check is a real hash matc
     it(`${id.slice(0, 8)}: published output hashes to the attested output_hash`, () => expect(sha(ev(id).output)).toBe(h));
     it(`${id.slice(0, 8)}: one changed field no longer matches`, () => { const o = structuredClone(ev(id).output); o.ok = !o.ok; expect(sha(o)).not.toBe(h); });
   }
-  it("the info output names the 20 ops of build 09d481a5, Chain Signatures and the beat key included", () => {
+  it("the info output names the 23 ops of build cff9fd3c (sessions), Chain Signatures and the beat key included", () => {
     const o = ev(PUBLISHED_INFO_CALL).output;
-    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(20);
-    for (const op of ["chain_address", "chain_sign", "add_beat_key", "del_beat_key"]) expect(o.ops).toContain(op);
+    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(23);
+    for (const op of ["chain_address", "chain_sign", "add_beat_key", "del_beat_key", "session", "session_revoke"]) expect(o.ops).toContain(op);
   });
   it("the chain_sign output returns the key's EVM address and is listed on /verify", () => {
     const o = ev("0cd1c3bd-21be-44dc-bc60-e792a42344e6").output;
