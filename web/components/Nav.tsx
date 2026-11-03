@@ -15,7 +15,9 @@ const LINKS = [
   ["/vault", "vault"],
   ["/mint", "mint"],
   ["/verify", "verify"],
+  ["/settle", "settle"],
   ["/gallery", "gallery"],
+  ["/judge", "judge"],
 ] as const;
 
 export function Nav() {

@@ -527,6 +527,7 @@
   "c3d": "Your browser downloads the wasm from FastFS and hashes it itself."
  },
  "land": {
+  "judgeCta": "Judging? Start the 5-minute judge path",
   "eyebrow": "Heirloom Nº 001 · Confidential by default",
   "h1a": "Nothing on the chain.",
   "h1b": "Everything in the key.",
