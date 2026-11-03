@@ -58,8 +58,8 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
       - run: npx tsc -p . --noEmit
-      - run: set -o pipefail; npm test 2>&1 | tee /tmp/c.txt
-      - run: echo "| cli | $(awk '/^# pass/{print $3}' /tmp/c.txt) |" >> "$GITHUB_STEP_SUMMARY"
+      - run: set -o pipefail; npm test 2>&1 | tee "$RUNNER_TEMP/c.txt"
+      - run: echo "| cli | $(awk '/^# pass/{print $3}' "$RUNNER_TEMP/c.txt") |" >> "$GITHUB_STEP_SUMMARY"
   judge-kit:
     runs-on: [self-hosted, keyhole-box]
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
@@ -87,13 +87,15 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npx vitest run --reporter=default --reporter=json --outputFile=/tmp/v.json
-      - run: echo "| web-unit | $(node -p "require('/tmp/v.json').numPassedTests") |" >> "$GITHUB_STEP_SUMMARY"
+      - run: npx vitest run --reporter=default --reporter=json --outputFile="$RUNNER_TEMP/v.json"
+      - run: echo "| web-unit | $(node -p "require(process.env.RUNNER_TEMP+'/v.json').numPassedTests") |" >> "$GITHUB_STEP_SUMMARY"
       - run: npm run build
       # system libraries are preinstalled on the runner (its apt mirror is not reachable)
       - run: npx playwright install chromium
       - name: e2e against the local production build (reads mainnet live)
         run: |
-          npx next start -p 3100 & npx -y wait-on http://localhost:3100
-          PLAYWRIGHT_JSON_OUTPUT_NAME=/tmp/p.json npx playwright test --grep-invert "funded payment key" --reporter=list,json
-          echo "| e2e (distinct, each run at 2 widths) | $(node -p "const j=require('/tmp/p.json');new Set(j.suites.flatMap(function f(s){return [...(s.specs||[]).filter(x=>x.ok).map(x=>x.file+x.title),...(s.suites||[]).flatMap(f)]})).size") |" >> "$GITHUB_STEP_SUMMARY"
+          # Each runner instance sets KH_E2E_PORT in its .env, so parallel jobs never share a port.
+          PORT="${KH_E2E_PORT:-3100}"; export BASE_URL="http://localhost:$PORT"
+          npx next start -p "$PORT" & npx -y wait-on "$BASE_URL"
+          PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/p.json" npx playwright test --grep-invert "funded payment key" --reporter=list,json
+          echo "| e2e (distinct, each run at 2 widths) | $(node -p "const j=require(process.env.RUNNER_TEMP+'/p.json');new Set(j.suites.flatMap(function f(s){return [...(s.specs||[]).filter(x=>x.ok).map(x=>x.file+x.title),...(s.suites||[]).flatMap(f)]})).size") |" >> "$GITHUB_STEP_SUMMARY"
