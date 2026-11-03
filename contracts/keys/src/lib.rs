@@ -228,19 +228,29 @@ impl Contract {
         self.assert_no_key(&receiver_id);
         let payout = self.nft_payout(token_id.clone(), balance, max_len_payout);
         let sender = env::predecessor_account_id();
-        let (prev_owner, approved) = self.tokens.internal_transfer(&sender, &receiver_id, &token_id, approval_id, memo.clone());
-        // NEP-178: approvals are cleared by the transfer; their storage goes back to the previous owner.
-        if let Some(a) = approved.filter(|a| !a.is_empty()) {
-            near_contract_standards::non_fungible_token::refund_approved_account_ids(prev_owner.clone(), &a);
-        }
+        // Same checks as near-contract-standards' internal_transfer, but with ONE nft_transfer event
+        // that names the approved account (the library's own event omits authorized_id).
+        let prev_owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        let approved = self.tokens.approvals_by_id.as_mut().map(|m| m.remove(&token_id).unwrap_or_default()).unwrap_or_default();
+        let authorized = if sender != prev_owner {
+            let id = approved.get(&sender).unwrap_or_else(|| env::panic_str("Sender not approved"));
+            require!(approval_id.is_none() || approval_id == Some(*id), "approval_id mismatch");
+            Some(&sender)
+        } else { None };
+        require!(prev_owner != receiver_id, "Current and next owner must differ");
+        self.tokens.internal_transfer_unguarded(&token_id, &prev_owner, &receiver_id);
         near_contract_standards::non_fungible_token::events::NftTransfer {
             old_owner_id: &prev_owner,
             new_owner_id: &receiver_id,
             token_ids: &[&token_id],
-            authorized_id: if sender != prev_owner { Some(&sender) } else { None },
+            authorized_id: authorized.map(|v| &**v),
             memo: memo.as_deref(),
         }
         .emit();
+        // NEP-178: approvals are cleared by the transfer; their storage goes back to the previous owner.
+        if !approved.is_empty() {
+            near_contract_standards::non_fungible_token::refund_approved_account_ids(prev_owner.clone(), &approved);
+        }
         payout
     }
 }
@@ -832,7 +842,9 @@ mod v2 {
         assert_eq!(p[&acc("alice.near")].0, 9_500_000, "seller is the owner before the transfer");
         assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
         assert!(c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap().is_empty());
-        assert!(get_logs().iter().any(|l| l.contains("\"authorized_id\":\"market.near\"")), "event names the marketplace");
+        let ev: Vec<String> = get_logs().into_iter().filter(|l| l.contains("\"nft_transfer\"")).collect();
+        assert_eq!(ev.len(), 1, "exactly one nft_transfer event: {ev:?}");
+        assert!(ev[0].contains("\"authorized_id\":\"market.near\""), "event names the marketplace");
     }
     #[test] fn migrate_matches_new_prefixes() {
         let fresh = setup();
@@ -841,6 +853,28 @@ mod v2 {
         let mut m: near_sdk::collections::LookupMap<TokenId, u64> = LookupMap::new([prefix, b"n".to_vec()].concat());
         m.insert(&"x".to_string(), &42);
         assert_eq!(fresh.tokens.next_approval_id_by_id.as_ref().unwrap().get(&"x".to_string()), Some(42));
+    }
+    #[test] fn owner_transfer_payout_emits_one_event_without_authorized_id() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); yocto("alice.near");
+        c.nft_transfer_payout(acc("bob.near"), "k1".into(), None, Some("m".into()), U128(100), None);
+        let ev: Vec<String> = get_logs().into_iter().filter(|l| l.contains("\"nft_transfer\"")).collect();
+        assert_eq!(ev.len(), 1); assert!(!ev[0].contains("authorized_id")); assert!(ev[0].contains("\"memo\":\"m\""));
+    }
+    #[test] #[should_panic(expected = "approval_id mismatch")] fn transfer_payout_stale_approval_id() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("market.near"); c.nft_transfer_payout(acc("bob.near"), "k1".into(), Some(5), None, U128(100), None);
+    }
+    #[test] #[should_panic(expected = "one key per account")] fn transfer_payout_back_to_the_owner_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("market.near"); c.nft_transfer_payout(acc("alice.near"), "k1".into(), None, None, U128(100), None);
+    }
+    #[test] fn approved_market_can_buy_for_itself() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("market.near"); c.nft_transfer_payout(acc("market.near"), "k1".into(), Some(1), None, U128(100), None);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("market.near"));
+    }
+    #[test] #[should_panic(expected = "unknown token")] fn transfer_payout_unknown_token() {
+        let mut c = setup(); yocto("alice.near"); c.nft_transfer_payout(acc("bob.near"), "nope".into(), None, None, U128(100), None);
     }
     #[test] #[should_panic(expected = "Sender not approved")] fn transfer_payout_needs_approval() {
         let mut c = setup(); mint(&mut c, "k1", "alice.near");

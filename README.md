@@ -114,7 +114,7 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 
 | | |
 |---|---|
-| Keys NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 core, NEP-177 metadata, NEP-181 enumeration, NEP-199 payouts, tiers 1–3. Deployed wasm 195,389 bytes, sha256 `d985104e…817b`, on-chain code hash `Fe79rQUH…tqxYA` ([`judge/1-contract.sh`](judge/1-contract.sh)) |
+| Keys NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 core, NEP-177 metadata, NEP-181 enumeration, NEP-199 payouts, tiers 1–3. Deployed wasm 207,996 bytes, sha256 `a5712300…3ad2`, on-chain code hash `C8pL59r9…ivLc1` ([`judge/1-contract.sh`](judge/1-contract.sh)) |
 | TEE worker | Rust, `wasm32-wasip2`, running in an OutLayer Intel TDX enclave. Project `keyhole-devmo.near/keyhole`, build **`a55ebb14…140e`** (708837 bytes), published with [`add_version`](https://nearblocks.io/txns/GNqXiicFgXQpS5LsYiNRffK6Xhp5W7Yi8EZK2XqKvX8X). Previous versions `f7217ae2` ([`CcttLJdw…`](https://nearblocks.io/txns/CcttLJdwCa8EaLhY42fh6SBZbcVphtycrNTc74jnvkyW)), `452df1fd` ([`FXbXhGNi…`](https://nearblocks.io/txns/FXbXhGNirZCkiP2bx1aiBFQL3Q1EHFMpniJTY579oGWN)), `6367401a` ([`AJWVEN6F…`](https://nearblocks.io/txns/AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx)), `38bd67b9` ([`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z)), `b3fa1a39` ([`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU)) and `f13efe92` ([`22KDVU1s…`](https://nearblocks.io/txns/22KDVU1sNKQhjoYbN8h1JqyQbcNxHRNednT6sz4nogxS)) |
 | Mint authority | `nft_mint` is callable only by the minter, the implicit account [`015a0259…c443`](https://nearblocks.io/address/015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443). Its key was generated inside the enclave and never leaves it ([set_minter tx](https://nearblocks.io/txns/7QFqM5GiUgZuWJEpRUKvARn1LKyy91NVWFZmzNQscQDp)) |
 | Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is `a55ebb14`, the active enclave. It binds custody to the token, re-checks the owner at request and settle time, refuses a withdraw `to` that is not the signer, writes `media` on mint, accepts MetaMask `personal_sign` (`scheme: eip191`), enforces holder limits (a cut at once, a raise after 24 hours) and a 10-minute withdraw cooldown after a transfer |
@@ -204,7 +204,7 @@ Do the step. The result on the right is what a correct tree produces. Commands a
 |---|---|
 | Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). Supply on the home page matches `nft_total_supply` |
 | Open [https://keyhole-seven.vercel.app/verify?call=b0a6eadb-cee9-400e-8eca-8b0f4df7bcec](https://keyhole-seven.vercel.app/verify?call=b0a6eadb-cee9-400e-8eca-8b0f4df7bcec) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, checks Intel's revocation lists and TCB status, and shows 37/37 (6 attestation, 19 Intel DCAP, 12 Intel PCS checks; TCB UpToDate). The verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e`, the published build |
-| `./judge/1-contract.sh` | On-chain code hash equals sha256 `d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
+| `./judge/1-contract.sh` | On-chain code hash equals sha256 `a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec --rebuild` | The `executed` line equals `tee/worker/DEPLOYED_SHA256` (`a55ebb14…`). Then `OK` for a TDX quote, `wasm_hash == executed`, `executed == published build a55ebb14`, the FastFS bytes, and your local `build.sh` |
 | `./verify.sh 2896d0ad-aa27-4e21-b4a1-0cf2d3755d56` | Previous version `09d481a5`. Prints `OK executed == previous build 09d481a5, superseded by a55ebb14` |
 | `./verify.sh 54207d9e-b4f0-438b-9a74-cdba33de80d9` | Previous version `f7217ae2`. Prints `OK executed == previous build f7217ae2, superseded by a55ebb14` |
@@ -312,7 +312,7 @@ Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat
 - **Tests.**
   - Unit tests in [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) (count in [§12](#12-tests-and-ci)), run in CI with `cargo test --locked` and `clippy -D warnings`.
 - **Code identity.**
-  - On-chain `code_hash` `Fe79rQUHKXnjhuY4NCDYrv3twNKPw7YTmqK3yxjtqxYA` is the base58 of sha256 `d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b`, the sha256 of the committed wasm.
+  - On-chain `code_hash` `C8pL59r9NorJxcYXnXusZxz2cNaGEgiVbMnZPANivLc1` is the base58 of sha256 `a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2`, the sha256 of the committed wasm.
 
 Tokens on mainnet (`nft_total_supply` = 5, read 2026-11-03; re-check with `./judge/1-contract.sh` or the live [/gallery](https://keyhole-seven.vercel.app/gallery)):
 

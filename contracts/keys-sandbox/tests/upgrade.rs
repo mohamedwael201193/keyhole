@@ -5,7 +5,8 @@ use near_workspaces::{Account, Contract};
 use serde_json::{json, Value};
 
 const V1: &str = "../keys/release/v1/keyhole_keys.wasm";
-const V2: &str = "../keys/release/v2/keyhole_keys.wasm";
+const V2_0: &str = "../keys/release/v2/keyhole_keys.wasm";
+const V2: &str = "../keys/release/v2.1/keyhole_keys.wasm";
 const MAINNET_OWNER: &str = "keyhole-devmo.near";
 
 fn fixture() -> Vec<Value> {
@@ -162,7 +163,9 @@ async fn v2_one_key_nep178_and_a_real_royalty_sale() -> anyhow::Result<()> {
     let p = &payout["payout"];
     assert_eq!(p[e.c.id().as_str()], (price / 20).to_string(), "5% to the treasury");
     assert_eq!(p[seller.id().as_str()], (price - price / 20).to_string(), "95% to the seller");
-    assert!(r.logs().iter().any(|l| l.contains("\"authorized_id\"") && l.contains(market.id().as_str())));
+    let ev: Vec<&str> = r.logs().into_iter().filter(|l| l.contains("\"nft_transfer\"")).collect();
+    assert_eq!(ev.len(), 1, "one nft_transfer event per sale: {ev:?}");
+    assert!(ev[0].contains(&format!("\"authorized_id\":\"{}\"", market.id())));
     let tok = view(&e.c, "nft_token", json!({"token_id": "kseller"})).await;
     assert_eq!(tok["owner_id"], buyer.id().as_str());
     assert_eq!(tok["approved_account_ids"], json!({}), "approvals cleared");
@@ -184,5 +187,20 @@ async fn v2_one_key_nep178_and_a_real_royalty_sale() -> anyhow::Result<()> {
     // the 5 mainnet tokens are untouched by all of this
     assert_eq!(view(&e.c, "nft_total_supply", json!({})).await, "7");
     for (t, o) in &e.ids { assert_eq!(view(&e.c, "nft_token", json!({"token_id": t})).await["owner_id"], o.as_str()); }
+    Ok(())
+}
+
+/// The mainnet path: v1 -> v2 (+migrate) -> v2.1 (code only, no migrate). State survives both steps.
+#[tokio::test]
+async fn mainnet_path_v1_v2_v2_1_keeps_state() -> anyhow::Result<()> {
+    let e = v1_like_mainnet().await?;
+    let before = snapshot(&e).await;
+    e.c.as_account().deploy(&std::fs::read(V2_0)?).await?.into_result()?;
+    e.c.call("migrate").max_gas().transact().await?.into_result()?;
+    e.c.as_account().deploy(&std::fs::read(V2)?).await?.into_result()?;
+    assert_eq!(before, snapshot(&e).await);
+    let r = e.c.call("migrate").max_gas().transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("already migrated"));
+    assert_eq!(view(&e.c, "nft_is_approved", json!({"token_id": "0", "approved_account_id": "x.test.near"})).await, json!(false));
     Ok(())
 }

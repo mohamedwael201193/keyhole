@@ -11,12 +11,13 @@ One NFT contract: NEP-171 core, NEP-177 metadata, NEP-178 approvals, NEP-181 enu
 - `set_minter` / `set_royalty`: owner only, 1 yocto.
 - `migrate()`: v1 -> v2, self-call only, runs once. Turns on the approval maps; no token, owner, tier, metadata or config changes.
 
-Build: `cargo near build non-reproducible-wasm` (rustc 1.86 via `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2). The build is deterministic: CI rebuilds the source and compares it with `release/SHA256SUMS`.
+Build: `cargo near build non-reproducible-wasm` (rustc 1.86 via `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2). The build is deterministic: CI rebuilds the source and compares it with the newest entry in `release/SHA256SUMS`.
 
 | | sha256 | where |
 |---|---|---|
 | v1 | `d985104e128c598996932a1504cff26093277f4528ef513578af7386a29e817b` | `release/v1/keyhole_keys.wasm` |
-| v2 | `a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2` | `release/v2/keyhole_keys.wasm` |
+| v2 | `a57123002dbc164bfd5684dc2a360d35c5681c4b4ab59172cb6c45b331a73ad2` | `release/v2/keyhole_keys.wasm` (adds NEP-178, one key, `migrate`) |
+| v2.1 | `57b63c36d782bb4e60c4a25e9cc238093bc909a328617be864ba6327191a30ac` | `release/v2.1/keyhole_keys.wasm` (`nft_transfer_payout` emits exactly one `nft_transfer` event, with `authorized_id`; no state change) |
 
 `deployed/keyhole_keys.wasm` is always the code on `keyhole-devmo.near` (checked against the on-chain `code_hash` by `judge/1-contract.sh`).
 
