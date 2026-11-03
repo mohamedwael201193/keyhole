@@ -1,0 +1,9 @@
+call         54207d9e-b4f0-438b-9a74-cdba33de80d9
+project      keyhole-devmo.near/keyhole
+executed     f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381
+measurement  2c925c27de1470a5e8b395da46b898cb90072f29388744443b2e93e7f33a5f008743144e8479efb2036c8389dd90273b
+deployed     f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381
+OK   TDX quote present (6676 chars)
+OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381.wasm sha256 matches
+OK   local reproducible build matches executed wasm (f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381)
+note  worker_measurement is the TDX measurement. It is not the wasm sha256.

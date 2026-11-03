@@ -1,0 +1,12 @@
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { buildPolicy } from "/workspace/kh/web/lib/agentPolicy.ts";
+const c = JSON.parse(readFileSync("/workspace/near_hackathon/.secrets/agent_api_demo.json", "utf8"));
+const kf = "/workspace/near_hackathon/.secrets/agent_api_demo_owner.json";
+if (!existsSync(kf)) writeFileSync(kf, JSON.stringify({ pk: generatePrivateKey() }), { mode: 0o600 });
+const acct = privateKeyToAccount(JSON.parse(readFileSync(kf, "utf8")).pk);
+const api = async (p: string, m = "GET", b?: unknown) => { const r = await fetch(c.base_url + p, { method: m, headers: { "X-API-Key": c.api_key, "content-type": "application/json" }, body: b ? JSON.stringify(b) : undefined }); return [r.status, await r.json()] as const; };
+const owner = { type: "evm", address: acct.address.toLowerCase(), chain_id: 1, public_key: "0x" + acct.publicKey.slice(4) };
+const [s, g] = await api("/v1/generate-intent", "POST", { type: "agent_create", name: "keyhole-tier1-demo", owner, policy: buildPolicy({ tier: 1 }) });
+console.log(s, JSON.stringify(g).slice(0, 900));
+writeFileSync("/tmp/aoi/gen.json", JSON.stringify(g));

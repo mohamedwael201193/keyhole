@@ -6,9 +6,9 @@ export const FASTFS = "https://main.fastfs.io";
 export const fastfsUrl = (projectId: string, hash: string) => `${FASTFS}/${projectId.split("/")[0]}/outlayer.near/${hash}.wasm`;
 export const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 
-/** sha256 of tee/worker/DEPLOYED_SHA256. The published build, prefix 452df1fd. 6367401a is the previous version. */
-export const PUBLISHED_WASM_SHA256 = "452df1fd4f69fac618da0a5c11f9b8b5a9f7b0c1c95d5785850dd4746c5c134d";
-export const PREVIOUS_WASM_SHA256 = "6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693";
+/** sha256 of tee/worker/DEPLOYED_SHA256. The published build, prefix f7217ae2. 452df1fd is the previous version. */
+export const PUBLISHED_WASM_SHA256 = "f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381";
+export const PREVIOUS_WASM_SHA256 = "452df1fd4f69fac618da0a5c11f9b8b5a9f7b0c1c95d5785850dd4746c5c134d";
 
 export interface Checks { quote: boolean; registered: boolean; published: boolean; fastfs: boolean | null; fastfsHash?: string; bytes?: number; binding?: Binding | null; output?: OutputCheck | null }
 export interface Binding { expected: string; inQuote: string; match: boolean }
