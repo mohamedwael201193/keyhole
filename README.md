@@ -659,7 +659,7 @@ The green run behind the current count is linked at the top of this section; eve
 
 | Page | What it shows | Data source |
 |---|---|---|
-| `/` | Heirloom home: the line "Nothing on the chain. Everything in the key.", a key with official chain marks in orbit, three moves, tiers, a ten-key gallery, and a proof list | `nft_total_supply`, `config` (`revalidate = 30` in [`web/app/page.tsx`](web/app/page.tsx)) |
+| `/` | Heirloom home: the line "Nothing on the chain. Everything in the key.", a key with official chain marks in orbit, three moves, tiers, a ten-key gallery, and a proof list | `nft_total_supply`, `config` (rendered per request, chain reads cached 60 s; [`web/app/page.tsx`](web/app/page.tsx)) |
 | `/atlas` | Every chain mark with its trail; chains without one are labeled "No trail yet" | NearBlocks txs, OutLayer attestations |
 | `/vault` | After connect: the holder's key card and signed limits, then **1 · Fund** (deposit address from `account`), **2 · Trade** (quote, then Sign & trade, caps on the form, over-cap shown as a refusal), **3 · Withdraw** to the connected account. Balance and history stay. Every result has an attestation link and Verify | worker `status`, `account`, `quote`, `swap`, `withdraw`, `balance`, `history`, plus `nft_tokens_for_owner` |
 | `/mint` | Bronze mint in one signature, with the cap table for Bronze, Silver, Gold, and Legendary | worker `mint` |
