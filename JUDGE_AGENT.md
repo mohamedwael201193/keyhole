@@ -6,8 +6,20 @@ Every enclave answer carries an attestation whose executed wasm hash equals the 
 
 ## Fastest verification (about 1 minute, no keys, no spending)
 
+Get the source with `git clone`, or, without GitHub access, download the source tarball from the site:
+
 ```bash
-git clone https://github.com/mohamedwael201193/keyhole && cd keyhole
+curl -fsSLO https://keyhole-seven.vercel.app/source/keyhole-src.tar.gz
+curl -fsSLO https://keyhole-seven.vercel.app/source/keyhole-src.tar.gz.sha256
+sha256sum -c keyhole-src.tar.gz.sha256            # must print: keyhole-src.tar.gz: OK
+zcat keyhole-src.tar.gz | git get-tar-commit-id   # the commit it was cut from (also in /source/manifest.json)
+tar xzf keyhole-src.tar.gz && cd keyhole
+```
+
+The tarball is `git archive` of one commit, gzip without timestamps. You do not have to trust it: the checks below tie its bytes to mainnet. `./judge/1-contract.sh` checks that the committed contract wasm hashes to the on-chain `code_hash`. `tee/worker/build.sh` rebuilds the worker to the `executed_wasm_sha256` in every attestation (`./verify.sh <call_id> --rebuild`).
+
+```bash
+# or: git clone https://github.com/mohamedwael201193/keyhole && cd keyhole
 node judge/verify-claims.mjs          # Node 18+. Checks every claim in docs/claims.json live, prints PASS/FAIL per claim
 node judge/verify-claims.mjs --only contract-code-hash   # one claim
 node judge/verify-claims.mjs --offline                   # file checks only
