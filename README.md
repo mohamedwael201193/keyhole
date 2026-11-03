@@ -284,10 +284,10 @@ sequenceDiagram
 
 ## 5. The keys NFT contract
 
-Live configuration, read with [`judge/1-contract.sh`](judge/1-contract.sh):
+Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat, re-read with [`judge/1-contract.sh`](judge/1-contract.sh)):
 
 ```json
-{"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"1"}
+{"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
 ```
 
 - **Standards.**
