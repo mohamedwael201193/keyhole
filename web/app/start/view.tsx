@@ -56,7 +56,7 @@ export function StartView() {
       <ol className="dots" aria-label="Progress" data-testid="start-dots">
         {START_STEPS.map((s, i) => <li key={s} data-state={i < idx ? "done" : i === idx ? "now" : "next"} aria-current={i === idx ? "step" : undefined}>{TITLES[s]}</li>)}
       </ol>
-      <section className="scard" data-testid={`start-${step}`}>
+      <section className="scard" data-testid={`start-step-${step}`}>
         {step === "connect" && <>
           <h2>1 · Connect a wallet</h2>
           <p>Any NEAR wallet, or MetaMask. Nothing is sent and nothing is charged.</p>
