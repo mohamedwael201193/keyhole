@@ -49,4 +49,4 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 
 ## Counts (reproduce in README §12)
 
-1336 passing tests at `08fa468`: contract 69, worker 388, CLI 7, web unit 815, e2e 57 distinct (109 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41677252319](https://github.com/mohamedwael201193/keyhole/actions/runs/41677252319), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
+1551 passing tests at `d0305f2`: contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct (135 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
