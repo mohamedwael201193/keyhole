@@ -168,3 +168,6 @@ p .mono, li .mono, small .mono, p code, li code { display: inline; white-space: 
   .nav .music { width: 36px; height: 36px; }
 }
 @media (max-width: 370px) { .nav .kh-word { letter-spacing: .1em; } .nav .music { display: none; } }
+/* axe fixes: second-explorer link and text on the dark result panel */
+.txl .alt { color: #1F4B4F !important; opacity: 1 !important; }
+.res p, .res small, .res .note { color: #E8F0EE !important; }
