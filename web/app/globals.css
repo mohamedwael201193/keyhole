@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./heirloom.css";
 @import "./design2.css";
+@import "./polish.css";
 
 @theme {
   --color-signal: #1f4b4f;

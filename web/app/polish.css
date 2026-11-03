@@ -1,0 +1,121 @@
+/* Visual polish layer: contrast, elevation, motion. Loaded last; styling only. */
+@property --kh-ang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+:root {
+  --bg: #E6DFD0;            /* page: a step darker so cards lift off it */
+  --sf: #FFFCF6;            /* card surface: near white, not beige-on-beige */
+  --mu: #3A4547;            /* body/secondary text: 9.3:1 on --sf */
+  --ln: #1A2A2C38;          /* hairlines */
+  --kh-edge: #8C8574;       /* card edge, 3.4:1 on --bg */
+  --kh-field: #6E7778;      /* input border, 4.6:1 on white */
+  --kh-shadow: 0 1px 0 #FFFFFFB0 inset, 0 1px 2px #1A2A2C14, 0 10px 28px -14px #1A2A2C40;
+  --kh-shadow-hi: 0 1px 0 #FFFFFFB0 inset, 0 2px 4px #1A2A2C18, 0 22px 44px -18px #1F4B4F66;
+  --kh-ring: conic-gradient(from var(--kh-ang), #1F4B4F, #B8893E 20%, #D9644A 35%, #1F4B4F 55%, #2F7F86 75%, #1F4B4F);
+}
+html, body, .nav:not(.dark) { background: var(--bg); }
+.lead, .note, .vlt .vsub, .vlt .note, .vlt .vhelp, .muted { color: var(--mu); }
+.eb, .vlt .vcap { color: #6A4A12; }
+
+/* Cards: crisp edge + elevation + mount reveal */
+.card, .panel, .flow-step, .howstrip li, .bx, .fn, .tt div,
+.vlt .vcard, .judge .jsteps > li, .judge .jlimits, .ask .vcard, .vault-grid .c {
+  background: var(--sf); border: 1px solid var(--kh-edge); box-shadow: var(--kh-shadow);
+  animation: kh-in .55s cubic-bezier(.2,.7,.2,1) both;
+}
+.vlt-col > :nth-child(2), .judge .jsteps > li:nth-child(2) { animation-delay: .07s; }
+.vlt-col > :nth-child(3), .judge .jsteps > li:nth-child(3) { animation-delay: .14s; }
+.vlt-col > :nth-child(4), .judge .jsteps > li:nth-child(n+4) { animation-delay: .21s; }
+.vlt .vhd { border-bottom-color: #1A2A2C30; }
+.vlt .vhd h2 { color: #0F1E20; }
+@keyframes kh-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* The one live element per screen: a light that travels around its border */
+.vlt [data-testid="move-card"], .judge .jsteps > li:first-child, .ver .card:first-of-type {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--sf), var(--sf)) padding-box, var(--kh-ring) border-box;
+  box-shadow: var(--kh-shadow-hi);
+  animation: kh-in .55s cubic-bezier(.2,.7,.2,1) both, kh-orbit 5s linear infinite;
+}
+.vlt .vbtn.pri:not(:disabled), .btn.b1:not(:disabled), .cw:not(:disabled) {
+  border: 2px solid transparent;
+  background: linear-gradient(#1F4B4F, #1F4B4F) padding-box, var(--kh-ring) border-box;
+  color: #FFFCF6; box-shadow: 0 8px 22px -10px #1F4B4FAA;
+  animation: kh-orbit 3.2s linear infinite;
+}
+.vlt .vbtn.pri:hover:not(:disabled), .btn.b1:hover:not(:disabled) { background: linear-gradient(#173B3E, #173B3E) padding-box, var(--kh-ring) border-box; transform: translateY(-1px); }
+@keyframes kh-orbit { to { --kh-ang: 360deg; } }
+
+/* Secondary + disabled buttons: legible, clearly inactive */
+.vlt .vbtn.sec { border-color: var(--kh-field); color: #0F1E20; }
+.vlt .vbtn:disabled, .btn:disabled {
+  opacity: 1; background: repeating-linear-gradient(135deg, #ECE6DA 0 8px, #E3DCCD 8px 16px);
+  color: #4F5859; border: 1px dashed #8C8574; box-shadow: none; animation: none;
+}
+
+/* Inputs: visible edge + focus ring */
+.vlt .vbox, .input, input.input, .vpaste input, .vpaste textarea { border: 1px solid var(--kh-field); background: #fff; }
+.vlt .vbox:focus-within, .input:focus, .vpaste input:focus { border-color: #1F4B4F; box-shadow: 0 0 0 3px #1F4B4F33; }
+.vlt .vbox.ro { background: #F1ECE1; border-style: dashed; }
+
+/* Stepper + tabs: the active one is unmistakable */
+.vlt .vtabs { border-color: var(--kh-field); box-shadow: inset 0 1px 2px #1A2A2C14; }
+.vlt .vtabs button { transition: background-color .3s, color .3s, box-shadow .3s; color: #2E393A; }
+.vlt .vtabs button[aria-selected="true"] { box-shadow: 0 6px 16px -8px #1F4B4FCC; animation: kh-pop2 .35s cubic-bezier(.2,.9,.3,1.3); }
+.steps span { border-color: var(--kh-edge); color: #2E393A; background: var(--sf); transition: all .3s; }
+.steps span.on { position: relative; box-shadow: 0 0 0 3px #B8893E55; animation: kh-pop2 .35s cubic-bezier(.2,.9,.3,1.3); }
+@keyframes kh-pop2 { from { transform: scale(.94); } to { transform: none; } }
+
+/* Meters fill in; badges + checks pop */
+.vlt .vmeter .tr { background: #1A2A2C1F; }
+.vlt .vmeter .tr i { transition: width .8s cubic-bezier(.2,.7,.2,1); animation: kh-fill .9s cubic-bezier(.2,.7,.2,1) both; transform-origin: left; }
+@keyframes kh-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.vlt .vbadge.ok, .stb.ok, .ck { animation: kh-check .5s cubic-bezier(.2,.9,.3,1.4) both; }
+@keyframes kh-check { 0% { transform: scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* Loading shimmer for empty/pending surfaces */
+.vlt .vempty, .stb.wait, .skel {
+  background: linear-gradient(100deg, #F1ECE1 30%, #FFFCF6 50%, #F1ECE1 70%) 0 0 / 300% 100%;
+  animation: kh-shim 1.8s linear infinite; color: var(--mu); border-color: var(--kh-edge);
+}
+@keyframes kh-shim { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* Proof strings recede so the next action leads */
+.vlt .kv dd.mono, .settle .card .mono, .ver .mono { color: #3A4547; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---- Shared primitives (components/motion) ---- */
+.khm-step { background: var(--sf); border: 1px solid var(--kh-edge); border-radius: 22px; padding: 22px; box-shadow: var(--kh-shadow); opacity: .78; transition: opacity .3s, box-shadow .3s; }
+.khm-step.is-active { opacity: 1; border: 2px solid transparent; background: linear-gradient(var(--sf), var(--sf)) padding-box, var(--kh-ring) border-box; box-shadow: var(--kh-shadow-hi); animation: kh-orbit 5s linear infinite; }
+.khm-step.is-done { opacity: .92; }
+.khm-step-h { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.khm-step-h h3 { margin: 0; font-size: 24px; }
+.khm-n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #1F4B4F; color: #FFFCF6; font: 700 14px var(--mono); }
+.khm-step:not(.is-active):not(.is-done) .khm-n { background: #E3DCCD; color: #2E393A; }
+.khm-stepper { position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr); list-style: none; margin: 0 0 24px; padding: 0; }
+.khm-stepper::before, .khm-bar { content: ""; position: absolute; top: 9px; left: calc(50% / var(--n)); height: 3px; border-radius: 3px; background: #1A2A2C24; width: calc(100% - 100% / var(--n)); }
+.khm-bar { background: linear-gradient(90deg, #1F4B4F, #B8893E); width: calc((100% - 100% / var(--n)) * var(--i) / (var(--n) - 1)); transition: width .6s cubic-bezier(.2,.7,.2,1); }
+.khm-stepper li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; font: 600 13px var(--sans); color: #4F5859; text-align: center; }
+.khm-stepper li i { width: 20px; height: 20px; border-radius: 50%; background: #FFFCF6; border: 2px solid #8C8574; transition: all .35s; }
+.khm-stepper li.done i { background: #1F4B4F; border-color: #1F4B4F; }
+.khm-stepper li.on { color: #0F1E20; }
+.khm-stepper li.on i { background: #FFFCF6; border: 6px solid #1F4B4F; box-shadow: 0 0 0 5px #B8893E44; animation: kh-pulse 1.8s ease-in-out infinite; }
+@keyframes kh-pulse { 50% { box-shadow: 0 0 0 9px #B8893E00; } }
+.khm-enter { animation: khm-slide .42s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes khm-slide { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+.khm-prog { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--kh-edge); font: 600 14px var(--sans); color: #0F1E20;
+  background: linear-gradient(100deg, #F1ECE1 30%, #FFFCF6 50%, #F1ECE1 70%) 0 0 / 300% 100%; animation: kh-shim 1.8s linear infinite; }
+.khm-prog.done { animation: none; background: #E3EFE7; border-color: #16603C66; color: #16603C; }
+.khm-prog-t { margin-left: auto; font: 600 13px var(--mono); color: #3A4547; }
+.khm-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #1F4B4F33; border-top-color: #1F4B4F; animation: kh-spin .8s linear infinite; }
+.khm-check circle { fill: #16603C; stroke: none; transform-origin: center; animation: kh-check .4s cubic-bezier(.2,.9,.3,1.4) both; }
+.khm-check path { fill: none; stroke: #fff; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 26; stroke-dashoffset: 26; animation: khm-draw .45s .25s ease-out forwards; }
+@keyframes khm-draw { to { stroke-dashoffset: 0; } }
+.khm-copy { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--kh-field); background: #fff; color: #1F4B4F; font: 700 12px var(--sans); cursor: pointer; transition: all .2s; }
+.khm-copy:hover { border-color: #1F4B4F; }
+.khm-copy.ok { background: #E3EFE7; color: #16603C; border-color: #16603C; }
+.khm-qr { margin: 0; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; background: #fff; border-radius: 18px; border: 2px solid transparent;
+  background: linear-gradient(#fff, #fff) padding-box, var(--kh-ring) border-box; animation: kh-orbit 6s linear infinite; box-shadow: var(--kh-shadow); }
+.khm-qr figcaption { font: 600 12px var(--mono); color: #3A4547; text-align: center; overflow-wrap: anywhere; max-width: 240px; }
+@media (prefers-reduced-motion: reduce) { .khm-check path { stroke-dashoffset: 0; } }
