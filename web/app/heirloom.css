@@ -39,7 +39,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .kh-logo.h-9 { --kh: 2.25rem; }
 .kh-logo.h-12 { --kh: 3rem; }
 .kh-logo.h-16 { --kh: 4rem; }
-.kh-logo img { height: 100%; width: auto; flex: none; filter: none; }
+.kh-logo img { height: 100%; width: calc(var(--kh, 2.25rem) * 512 / 620); flex: none; filter: none; }
 .kh-word { font-family: var(--font-cormorant), "Cormorant Garamond", var(--serif); font-weight: 700; font-size: calc(var(--kh, 2.25rem) * .65); line-height: 1; letter-spacing: .18em; color: inherit; white-space: nowrap; }
 .links { display: flex; gap: 34px; font-weight: 600; font-size: 16px; font-family: var(--sans); }
 .links a { color: var(--ink); text-decoration: none; padding: 8px 0; }

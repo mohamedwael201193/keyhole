@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Cormorant_Garamond, DM_Mono, Manrope } from "next/font/google";
 import "./globals.css";
+import "./ui.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { StoryBar } from "@/components/StoryBar";
 
 /** Official modal stylesheet, minus the Google Fonts @import (blocked by style-src). */
 const walletModalCss = readFileSync(join(process.cwd(), "node_modules/@near-wallet-selector/modal-ui/styles.css"), "utf8")
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style id="nws-modal-styles" dangerouslySetInnerHTML={{ __html: walletModalCss }} />
         <Providers>
           <Nav />
+          <StoryBar />
           <main id="main">{children}</main>
           <Footer />
         </Providers>

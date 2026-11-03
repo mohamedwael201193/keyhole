@@ -37,7 +37,7 @@ export function PnlView() {
               <dl className="kv">
                 <dt>key</dt><dd className="mono">{s.st.token_id}</dd>
                 <dt>holder</dt><dd className="mono" style={{ overflowWrap: "anywhere" }}>{s.st.owner}</dd>
-                <dt>trades</dt><dd>{s.st.trades}</dd>
+                <dt>lifetime trades (this key, this holder)</dt><dd>{s.st.trades}</dd>
                 <dt>paid at trade time</dt><dd>{usd(s.st.cost_usd_micro)}</dd>
                 <dt>outputs worth now</dt><dd>{usd(s.st.value_now_usd_micro)}</dd>
                 <dt>since</dt><dd>{s.st.since_ms ? new Date(s.st.since_ms).toUTCString() : "—"}</dd>
