@@ -102,7 +102,7 @@ Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel
 
 ## One key per account
 
-Since contract v2 the contract refuses a mint or transfer to an account that already holds a key. One edge stays: during `nft_transfer_call`, if the receiver's `nft_on_transfer` asks to return the key and the sender received another key in the meantime, `nft_resolve_transfer` gives the key back anyway (refusing would strand it). Only an account that both sends with `nft_transfer_call` and receives a second key inside that window can reach it. The worker then refuses any signed request that does not name `params.token_id`, so it never operates the wrong key's wallet, and caps follow `holder_tier` (the highest tier the account holds).
+The contract refuses a mint or a transfer (`nft_transfer`, `nft_transfer_call`, `nft_transfer_payout`) to an account that already holds a key. While a key is out on `nft_transfer_call`, its sender also counts as a holder until `nft_resolve_transfer` runs (`pending_return_count`), so a key the receiver sends back never lands next to a second one. The sandbox test `transfer_call_race_is_closed_on_v2_2` drives that exact interleaving with a receiver contract that tries to hand the sender a second key inside `nft_on_transfer`. Caps follow `holder_tier`, and the worker refuses any signed request that does not name `params.token_id`.
 
 ## Royalty
 
@@ -110,9 +110,7 @@ Since contract v2 the contract refuses a mint or transfer to an account that alr
 
 ## Contract upgrades
 
-`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1 changed code only. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`.
-
-`nft_mint` accepts any `token_id` up to 64 bytes, including an empty one. Only the TEE minter can call it, and the worker always mints `k` + 16 hex, so an empty id cannot be produced through KEYHOLE.
+`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1 and v2.2 changed code only. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`.
 
 ## Sessions (one signature, then no wallet popups for 30 minutes)
 
@@ -133,4 +131,3 @@ This follows NEAR's documented backend-auth pattern (https://docs.near.org/web3-
 Caveats:
 - The token is a bearer credential, like any Web2 session. Anyone who has it can act within its scope until it expires, is revoked, or its cap is used up. That includes script injection on the site, and the site's gateway, which relays the request body (bodies are not logged). The token cannot raise limits (a raise needs a wallet signature and still waits 24 h), lock, prove, mint or use chain_sign.
 - Withdraw is in scope, but it pays out only to the holder's own account (`assert_withdraw_to`), so a token thief cannot redirect funds.
-- The browser keeps the token in `sessionStorage` (cleared when the tab closes), not in `localStorage`.

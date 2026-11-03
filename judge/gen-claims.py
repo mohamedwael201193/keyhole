@@ -18,10 +18,10 @@ def where(doc, needle):
     raise SystemExit(f"not found in {doc}: {needle}")
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
 # ---------------- contract (live RPC) ----------------
-add("contract-code-hash", "On-chain code_hash 6uPe67Sg…jwtuh of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm", where(RD,"6uPe67SgsPuE71E73jp8zsbReQPGhTbW8UmUV5mjwtuh"), "script", "judge/1-contract.sh",
-    {"type":"code_hash","account":"keyhole-devmo.near","wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":"6uPe67SgsPuE71E73jp8zsbReQPGhTbW8UmUV5mjwtuh"}, "code_hash == base58(sha256(wasm)) == Fe79rQUH…", "./judge/1-contract.sh")
-add("contract-wasm-sha", "Deployed contract wasm is 208,204 bytes with sha256 57b63c36…30ac", where(RD,"208,204 bytes"), "file", "contracts/keys/deployed/keyhole_keys.wasm",
-    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":"57b63c36d782bb4e60c4a25e9cc238093bc909a328617be864ba6327191a30ac","bytes":208204}, "sha256 57b63c36…30ac, 208204 bytes", "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm")
+add("contract-code-hash", "On-chain code_hash BfMiMAfg…xMLeZ of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm", where(RD,"BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ"), "script", "judge/1-contract.sh",
+    {"type":"code_hash","account":"keyhole-devmo.near","wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":"BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ"}, "code_hash == base58(sha256(wasm)) == Fe79rQUH…", "./judge/1-contract.sh")
+add("contract-wasm-sha", "Deployed contract wasm is 209,952 bytes with sha256 9e685c32…089e", where(RD,"209,952 bytes"), "file", "contracts/keys/deployed/keyhole_keys.wasm",
+    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":"9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e","bytes":209952}, "sha256 9e685c32…089e, 209952 bytes", "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm")
 cfg = {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}
 for k,v in cfg.items():
     add(f"config-{k}", f"Contract config.{k} is {v}", where(RD,'"royalty_bps":500'), "mainnet view", "keyhole-devmo.near config()",
@@ -138,7 +138,7 @@ for t in sorted(tests):
         try: w = where(d,f"`{t}`"); break
         except SystemExit: pass
     add(f"test-{t}", f"Named test or symbol `{t}` exists in the source", w, "test file", "tee/worker/src, contracts/keys/src, web",
-        {"type":"symbol","name":t,"dirs":["tee/worker/src","contracts/keys/src","web/lib","web/app","cli/src"]}, f"`{t}` found in source")
+        {"type":"symbol","name":t,"dirs":["tee/worker/src","contracts/keys/src","contracts/keys-sandbox/tests","web/lib","web/app","cli/src"]}, f"`{t}` found in source")
 spec = open("web/e2e/site.spec.ts",encoding="utf8").read()
 for d in DOCS:
     for i,l in enumerate(open(d,encoding="utf8"),1):
