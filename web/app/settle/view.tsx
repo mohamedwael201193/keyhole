@@ -1,6 +1,6 @@
 "use client";
 import { Fragment, useEffect, useState } from "react";
-import { OC_ASSETS, statusOf, toUnits, assetById } from "@/lib/oneclick";
+import { OC_ASSETS, statusOf, toUnits, assetById, FUND_STEPS, fundsStep } from "@/lib/oneclick";
 import { SETTLEMENTS, RECORDED_FAILED, type Settlement } from "@/lib/settlements";
 import { tx, intentTx } from "@/lib/config";
 import { AgentPanel } from "./agent";
@@ -11,6 +11,18 @@ type St = { status: string; updatedAt?: string; details: { depositedAmountFormat
 function Badge({ status }: { status: string }) {
   const s = statusOf(status);
   return <span className={`stb ${s.tone}`} data-testid="st-badge" data-status={status}>{s.label}</span>;
+}
+
+function FundsPath({ status }: { status: string }) {
+  const f = fundsStep(status);
+  if (!f) return null;
+  return (
+    <ol className="fpath" data-testid="funds-path" data-step={f.step} data-refund={f.refund ? "1" : "0"}>
+      {FUND_STEPS.map((label, i) => (
+        <li key={label} className={i < f.step ? "done" : i === f.step ? "here" : ""}>{i === 3 && f.refund ? "Refund address" : label}{i === f.step && <b> · funds are here</b>}</li>
+      ))}
+    </ol>
+  );
 }
 
 function Row({ s }: { s: Settlement }) {
@@ -27,6 +39,7 @@ function Row({ s }: { s: Settlement }) {
       <div className="shead"><b>{s.label}</b>{st ? <Badge status={st.status} /> : <span className="stb wait">{err ? "status unavailable" : "…"}</span>}</div>
       {s.note && <p className="note">{s.note}</p>}
       {info && <p className="where"><span>Where the funds are:</span> {info.where}</p>}
+      {st && <FundsPath status={st.status} />}
       <dl className="kv">
         <dt>deposit tx</dt><dd className="mono"><a href={s.depositTxUrl ?? tx(s.depositTx)} target="_blank" rel="noreferrer">{s.depositTx.slice(0, 10)}…</a></dd>
         <dt>deposit address</dt><dd className="mono">{s.depositAddress.slice(0, 10)}…{s.depositAddress.slice(-6)}</dd>
