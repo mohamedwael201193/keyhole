@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { IDENTITY } from "../lib/identity.gen";
 
 test("key: numeric id 0 explains itself instead of erroring", async ({ page }) => {
   await page.goto("/key?id=0");
@@ -32,7 +33,7 @@ test("every explorer link on /judge has a second explorer beside it", async ({ p
 test("judge: stepper, in-browser build check, current calls first, previous collapsed", async ({ page }) => {
   await page.goto("/judge");
   await expect(page.getByTestId("judge-steps").locator("> li, > div > li")).toHaveCount(7);
-  await expect(page.getByTestId("judge-step-1")).toContainText("a55ebb14");
+  await expect(page.getByTestId("judge-step-1")).toContainText(IDENTITY.worker.wasm_sha256.slice(0, 8));
   const prev = page.getByTestId("judge-previous");
   await expect(prev).not.toHaveAttribute("open", "");
   const run = page.getByTestId("run-build");
