@@ -4,6 +4,7 @@ import Link from "next/link";
 import { checkLog, holders, short, type ChainCheck, type KeyLogBody } from "@/lib/keylog";
 import { TEE_MINTER } from "@/lib/config";
 import { TxLink } from "@/components/TxLink";
+import { CopyBtn, Spinner } from "@/components/ui";
 
 /** New ids are k + hex; the first keys were minted with plain numbers (0, 1, 2…). */
 export const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;
@@ -49,8 +50,10 @@ export function KeyHistoryView() {
       <form className="field" onSubmit={(e) => { e.preventDefault(); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
         <label htmlFor="kid" className="sr-only">key id</label>
         <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
-        <button className="btn b1" type="submit" disabled={busy} data-testid="key-load">{busy ? "…" : "Open"}</button>
+        <button className="btn b1" type="submit" disabled={busy} data-testid="key-load">{busy ? <><Spinner label="Opening" /> Opening…</> : "Open"}</button>
       </form>
+      <p className="vhelp" data-testid="key-help">Paste a key id from the <Link href="/gallery">gallery</Link> or your vault (it starts with <span className="mono">k</span>, like k5f4750858f328940). The first keys use plain numbers such as 0.</p>
+      {busy && !body && <p className="note" data-testid="key-loading"><Spinner label="Loading" /> Reading the book from the enclave and checking every link…</p>}
       {err && <p className="note" role="alert" data-testid="key-error" style={{ color: "var(--coral)" }}>{err}</p>}
       {legacy !== null && (
         <section className="card" data-testid="key-legacy">
@@ -85,10 +88,11 @@ export function KeyHistoryView() {
             <h2>Event log</h2>
             <ol>
               {body.events.map((e) => (
-                <li key={e.i}><b>{e.kind}</b><span className="mono">{short(e.owner)}</span><span>{when(e.ts_ms)}</span><span className="mono h">{e.hash.slice(0, 12)}</span></li>
+                <li key={e.i}><b>{e.kind}</b><span className="mono"><TxLink account={e.owner}>{short(e.owner)}</TxLink></span><span>{when(e.ts_ms)}</span><span className="mono h" title={`log entry hash ${e.hash}`}>{e.hash.slice(0, 12)}… <CopyBtn value={e.hash} label="Copy hash" /></span></li>
               ))}
             </ol>
-            <p className="mono khead">head {body.head}</p>
+            <p className="mono khead">head {body.head} <CopyBtn value={body.head} label="Copy" /></p>
+            <p className="note">Each entry hash covers the previous one, so changing any row breaks every hash after it. These are log hashes, not chain transactions.</p>
           </section>
         </>
       )}
