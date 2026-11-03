@@ -18,7 +18,9 @@ import { useHealth } from "@/lib/useHealth";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
 import { keyState, nftTier, shortAccount, shortKeyId, tierName, tokensFor, type Token } from "@/lib/near";
-import { attestation, intentTx, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { acct, acctAlt, attestation, intentTx, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { SessionCard } from "@/components/SessionCard";
+import { DepositQr } from "@/components/DepositQr";
 import { assetRows, formatUsdMicro, isImplicitAccount, totalOf, tradeSummary, withdrawSummary, type PriceBook } from "@/lib/amount";
 import { OP_CTX, type OpResume } from "@/lib/wallet";
 import { copyText } from "@/lib/copyText";
@@ -28,13 +30,14 @@ import { traitLabel } from "@/components/KeyCard";
 import { KeyLog } from "@/components/KeyLog";
 import "./vault.css";
 import { MetaMaskNote } from "@/components/MetaMaskNote";
+import { Busy, Spinner } from "@/components/ui";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
 
 export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline: boolean; initialPrices?: PriceBook }) {
   const { t, fmtUsd } = useI18n();
-  const { accountId, connect, pending } = useWallet();
+  const { accountId, connect, pending, session } = useWallet();
   const online = useHealth(initialOnline);
   const status = useSigned("status");
   const quote = useSigned("quote");
@@ -45,6 +48,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const withdraw = useSigned("withdraw");
   const limits = useSigned("limits");
   const pnl = useSigned("pnl");
+  const dash = useSigned("dashboard");
   const [limTx, setLimTx] = useState("");
   const [limDay, setLimDay] = useState("");
   const [from, setFrom] = useState<AssetKey>("usdc");
@@ -85,13 +89,21 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   }, [accountId]);
 
   const quoteKey = useRef("");
+  const runQuote = quote.run;
+  // With a session a quote costs no popup, so re-quote automatically (debounced) when the trade changes.
+  useEffect(() => {
+    if (!session || !held || !units || !accountId || from === toKey || quoteKey.current === tradeKey) return;
+    const id = setTimeout(() => { quoteKey.current = tradeKey; void runQuote({ origin_asset: ASSETS[from].id, destination_asset: ASSETS[toKey].id, amount: units, refund_to: accountId, recipient: accountId, refund_type: "INTENTS", recipient_type: "INTENTS", deposit_type: "INTENTS", confidentiality: "basic", execute: false }, { quiet: true }); }, 800);
+    return () => clearTimeout(id);
+  }, [session, held, units, accountId, from, toKey, tradeKey, runQuote]);
   useEffect(() => {
     if (!quote.res) return;
     if (!quote.res.output?.ok) { setQuoted(null); return; }
     const min = quote.res.output.quote?.minAmountOut;
     setQuoted({ key: quoteKey.current, minOut: typeof min === "string" && /^\d+$/.test(min) ? min : undefined });
   }, [quote.res]);
-  const s = status.res?.output;
+  const d = dash.res?.output?.ok ? dash.res.output : null;
+  const s = status.res?.output ?? (d ? { ...d, ok: true } : undefined);
   const q = quote.res?.output;
   const tierNum = (s?.ok ? Number(s.tier) : held?.tier) || null;
   const finish: Finish = tierNum === 3 ? "Gold" : tierNum === 2 ? "Silver" : "Bronze";
@@ -106,10 +118,19 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const dayCap = caps ? caps.daily_usd_micro : CAPS[finish].daily * 1e6;
   const spent = s?.ok ? s.spent_today_usd_micro : null;
   const idn = held ? keyIdentity(held.token.token_id, held.tier) : null;
-  const balances = (balance.res?.output?.ok ? balance.res.output.balances as Bal[] : null);
+  const balances = (balance.res?.output?.ok ? balance.res.output.balances as Bal[] : d ? d.balances as Bal[] : null);
   const rows = balances ? assetRows(balances, prices) : null;
   const totalKind = totalOf(rows);
   const entries = (history.res?.output?.ok ? history.res.output.entries as Hist[] : null);
+  // With a live session, one dashboard read fills limits, balance and state (no wallet popup).
+  const runDash = dash.run;
+  const dashFor = useRef("");
+  useEffect(() => {
+    if (!session || !held || session.token_id !== held.token.token_id) return;
+    if (dashFor.current === session.token) return;
+    dashFor.current = session.token;
+    void runDash({}, { quiet: true });
+  }, [session, held, runDash]);
   const [logVerified, setLogVerified] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedConf, setCopiedConf] = useState(false);
@@ -126,6 +147,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     return () => { cancel = true; };
   }, [history.res]);
   const lookingUpKey = !!accountId && (!keysReady || keysFor !== accountId);
+  const [slowKey, setSlowKey] = useState(false);
+  useEffect(() => { setSlowKey(false); if (!lookingUpKey) return; const id = setTimeout(() => setSlowKey(true), 12_000); return () => clearTimeout(id); }, [lookingUpKey]);
   const clearOtherErrors = (keep: { clear: () => void }) => {
     for (const card of [status, quote, account, balance, history, swap, withdraw, limits, pnl]) if (card !== keep) card.clear();
   };
@@ -157,14 +180,14 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const readBalance = balance.run;
   useEffect(() => {
     const out = swap.res?.output;
-    if (!out?.ok || out.op !== "swap") return;
+    if (!out?.ok || out.op !== "swap" || !session) return;
     void readBalance({}, { quiet: true });
-  }, [swap.res, readBalance]);
+  }, [swap.res, readBalance, session]);
   useEffect(() => {
     const out = withdraw.res?.output;
-    if (!out?.ok || out.op !== "withdraw") return;
+    if (!out?.ok || out.op !== "withdraw" || !session) return;
     void readBalance({}, { quiet: true });
-  }, [withdraw.res, readBalance]);
+  }, [withdraw.res, readBalance, session]);
 
   const dayPct = Math.min(100, ((spent ?? 0) / dayCap) * 100);
   const txUsed = q?.ok && quoted?.key === tradeKey ? q.usd_micro : null;
@@ -206,20 +229,23 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           <EmptyState title={t("empty.vaultTitle")} body={t("empty.vaultBody")} testid="vault-empty">
             <button className="btn b1" onClick={connect} data-testid="vault-connect">{t("nav.connect")}</button>
             <Link className="btn b2" href="/mint">{t("mint.title")}</Link>
+            <Link className="btn b2" href="/demo" data-testid="vault-demo-link">No wallet? See the demo vault</Link>
           </EmptyState>
           <HowStrip active={1} />
         </div>
       ) : lookingUpKey ? (
-        <p className="note" data-testid="key-loading">{t("vault.keyLoading")}</p>
+        <p className="note" data-testid="key-loading"><Spinner label="Looking up your key" /> {t("vault.keyLoading")}{slowKey && <span data-testid="key-slow"> The NEAR RPC is slow right now. <button type="button" className="linkbtn" onClick={() => location.reload()}>Try again</button></span>}</p>
       ) : keyMiss ? (
         <div>
           <EmptyState title={t("vault.holderOnly")} body={t("vault.holderOnlyBody")} testid="holder-only">
-            <Link className="btn b1" href="/mint">{t("vault.mintFirst")}</Link>
+            <Link className="btn b1" href="/start" data-testid="vault-start">Start setup (3 popups)</Link> <Link className="btn b2" href="/mint">{t("vault.mintFirst")}</Link>
           </EmptyState>
           <HowStrip active={1} />
         </div>
       ) : (
         <>
+        {held && !session && <p className="note" data-testid="vault-setup"><Link href="/start">New here? Finish setup in 5 steps →</Link></p>}
+        {held && <SessionCard tokenId={held.token.token_id} />}
         <div className="vlt-grid">
           <div className="vlt-col">
             <section className="c vcard" data-testid="key-card">
@@ -273,7 +299,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 </>
               ) : <p className="note">{t("vault.limitsUnread")}</p>}
               {pendingLim && <p className="note-box" data-testid="limits-pending">{t("vault.limitsPending", { tx: fmtUsd(pendingLim.per_tx_usd_micro), day: fmtUsd(pendingLim.daily_usd_micro), time: new Date(pendingLim.effective_ms).toISOString().slice(0, 16).replace("T", " ") })}</p>}
-              <div className="vact"><button className="vbtn sec" disabled={status.busy} onClick={() => { clearOtherErrors(status); void status.run({}); }} data-testid="status-btn">{status.busy ? "…" : t("vault.status")}</button></div>
+              <div className="vact"><button className="vbtn sec" disabled={status.busy} onClick={() => { clearOtherErrors(status); void status.run({}); }} data-testid="status-btn">{status.busy ? <Busy l={status.label} /> : t("vault.status")}</button></div>
               {status.res?.error && <ErrorBox code={status.res.error.code} retryAfter={status.res.error.retry_after} vars={{ cap: capFrom(status.res.error.message) }} />}
               {status.res && <Attested r={status.res} />}
               {s?.ok && held && (
@@ -295,7 +321,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                       </div>
                     </div>
                     {tierCaps && <p className="vhelp">{t("vault.limHelp", { tx: fmtUsd(tierCaps.per_tx_usd_micro), day: fmtUsd(tierCaps.daily_usd_micro) })}</p>}
-                    <button className="vbtn pri block" type="submit" disabled={limits.busy || !usdMicro(limTx) || !usdMicro(limDay)} data-testid="limits-btn">{limits.busy ? "…" : t("vault.setLimits")}</button>
+                    <button className="vbtn pri block" type="submit" disabled={limits.busy || !usdMicro(limTx) || !usdMicro(limDay)} data-testid="limits-btn">{limits.busy ? <Busy l={limits.label} /> : t("vault.setLimits")}</button>
                     {lo?.ok && <p className="note" data-testid="limits-out">{t("vault.limitsNow", { tx: fmtUsd(lo.limits.per_tx_usd_micro), day: fmtUsd(lo.limits.daily_usd_micro) })}</p>}
                     {limits.res?.error && <ErrorBox code={limits.res.error.code} retryAfter={limits.res.error.retry_after} />}
                     {limits.res && <Attested r={limits.res} />}
@@ -333,8 +359,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 )}
               </div>
               <div className="vact">
-                <button className="vbtn pri" disabled={balance.busy} onClick={() => { clearOtherErrors(balance); void balance.run({}); }} data-testid="balance-btn">{balance.busy ? "…" : t("vault.balance")}</button>
-                <button className="vbtn sec" disabled={account.busy} onClick={() => { clearOtherErrors(account); void account.run({}); }} data-testid="account-btn">{account.busy ? "…" : t("vault.open")}</button>
+                <button className="vbtn pri" disabled={balance.busy} onClick={() => { clearOtherErrors(balance); void balance.run({}); }} data-testid="balance-btn">{balance.busy ? <Busy l={balance.label} /> : t("vault.balance")}</button>
+                <button className="vbtn sec" disabled={account.busy} onClick={() => { clearOtherErrors(account); void account.run({}); }} data-testid="account-btn">{account.busy ? <Busy l={account.label} /> : t("vault.open")}</button>
               </div>
               {account.res?.output?.ok && (
                 <div className="vfield" data-testid="confidential-id">
@@ -362,11 +388,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <div className="vfield"><label htmlFor="fund-asset">{t("vault.asset")}</label><div className="vbox pick"><TokenPick id="fund-asset" value={fundAsset} onChange={setFundAsset} /></div></div>
                   <div className="vfield"><label htmlFor="fund-amt">{t("vault.amount")}</label><div className="vbox" aria-invalid={!fundUnits}><input id="fund-amt" inputMode="decimal" value={fundAmt} onChange={(e) => setFundAmt(e.target.value)} /><span className="u">{ASSETS[fundAsset].symbol}</span></div>{!fundUnits && <p className="vhelp err">{t("vault.badAmount")}</p>}</div>
                 </div>
-                <button className="vbtn pri block" type="button" disabled={!fundUnits || account.busy} data-testid="fund-btn" onClick={() => { if (fundUnits && accountId) { clearOtherErrors(account); void account.run(fundParams(fundAsset, fundUnits)); } }}>{account.busy ? "…" : t("vault.fundBtn")}</button>
+                <button className="vbtn pri block" type="button" disabled={!fundUnits || account.busy} data-testid="fund-btn" onClick={() => { if (fundUnits && accountId) { clearOtherErrors(account); void account.run(fundParams(fundAsset, fundUnits)); } }}>{account.busy ? <Busy l={account.label} /> : t("vault.fundBtn")}</button>
                 {account.res?.output?.ok && typeof account.res.output.deposit?.deposit_address === "string" && (
                   <div className="vfield" data-testid="deposit">
                     <span className="vl">{t("vault.deposit")}</span>
-                    <div className="vbox ro"><span className="v addr">{String(account.res.output.deposit.deposit_address)}</span></div>
+                    <DepositQr evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
                     {typeof account.res.output.deposit.hint === "string" && <p className="vhelp">{String(account.res.output.deposit.hint)}</p>}
                     {typeof account.res.output.deposit.expires_at === "string" && <p className="vhelp">{t("vault.expires", { time: String(account.res.output.deposit.expires_at) })}</p>}
                   </div>
@@ -397,9 +423,10 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   </div>
                 )}
                 <div className="vact">
-                  <button className="vbtn sec" disabled={!units || from === toKey || quote.busy} data-testid="quote-btn">{quote.busy ? "…" : t("vault.get")}</button>
-                  <button className="vbtn pri" type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; const ctx: OpResume = { op: "swap", give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[toKey].decimals, symbol: ASSETS[toKey].symbol }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneTrade(ctx); clearOtherErrors(swap); void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? "…" : t("vault.signTrade")}</button>
+                  <button className="vbtn sec" disabled={!units || from === toKey || quote.busy} data-testid="quote-btn">{quote.busy ? <Busy l={quote.label} /> : t("vault.get")}</button>
+                  <button className="vbtn pri" type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; const ctx: OpResume = { op: "swap", give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[toKey].decimals, symbol: ASSETS[toKey].symbol }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneTrade(ctx); clearOtherErrors(swap); void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? <Busy l={swap.label} /> : t("vault.signTrade")}</button>
                 </div>
+                {!swap.busy && units && from !== toKey && quoted?.key !== tradeKey && <p className="vhelp" data-testid="trade-why">{session ? "Getting a fresh quote for this amount…" : "Press “Get attested quote” for this amount first; the trade uses that exact quote."}</p>}
                 {quote.res?.error && <ErrorBox code={quote.res.error.code} retryAfter={quote.res.error.retry_after} vars={{ cap: capFrom(quote.res.error.message) }} />}
                 {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} vars={{ cap: capFrom(swap.res.error.message) }} />}
                 {swap.res?.output?.ok && swap.res.output.op === "swap" && doneTrade && (
@@ -421,13 +448,16 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 </div>
                 <div className="vfield"><span className="vl">{t("vault.dest")}</span><div className="vbox ro"><span className="v">{accountId}</span></div><p className="vhelp">{t("vault.destHelp")}</p></div>
                 {coolUntil ? <p className="note-box" data-testid="cooldown-note">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
-                <button className="vbtn pri block" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) { const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(accountId) }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneWithdraw(ctx); clearOtherErrors(withdraw); void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); } }}>{withdraw.busy ? "…" : t("vault.withdrawBtn")}</button>
+                <button className="vbtn pri block" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) { const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(accountId) }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneWithdraw(ctx); clearOtherErrors(withdraw); void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); } }}>{withdraw.busy ? <Busy l={withdraw.label} /> : t("vault.withdrawBtn")}</button>
                 {withdraw.res?.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw && (
                   <div className="result-card" data-testid="withdraw-out">
                     <b>{withdrawSummary(doneWithdraw.amount, doneWithdraw.to)}</b>
                     <p className="note">{String(withdraw.res.output.status ?? "")}</p>
                     {withdraw.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
-                    <p className="mono" style={{ fontSize: 13 }} data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? "")} · {t("vault.txHash")}: {withdraw.res.output.tx_hash ? String(withdraw.res.output.tx_hash) : "—"} · {t("vault.fee")}: {withdraw.res.output.fee ? String(withdraw.res.output.fee) : "—"}</p>
+                    <p className="mono" style={{ fontSize: 13 }} data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? <> · {t("vault.fee")}: {String(withdraw.res.output.fee)}</> : null}</p>
+                    {withdraw.res.output.tx_hash
+                      ? <p data-testid="withdraw-tx"><a href={`https://nearblocks.io/txns/${String(withdraw.res.output.tx_hash)}`} target="_blank" rel="noreferrer">{t("vault.txHash")} {String(withdraw.res.output.tx_hash).slice(0, 10)}… ↗</a></p>
+                      : <p className="note" data-testid="withdraw-settling">Settling: the payout transaction is sent by the custody wallet and shows on your account&apos;s explorer page within about a minute. <a href={acct(accountId || "")} target="_blank" rel="noreferrer">Open explorer ↗</a> · <a href={acctAlt(accountId || "")} target="_blank" rel="noreferrer">alt ↗</a></p>}
                     {isImplicitAccount(accountId || "") && <p className="note">{t("vault.storageNote")}</p>}
                   </div>
                 )}
@@ -437,7 +467,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             </section>
 
             <section className="c vcard" data-testid="activity-card">
-              <header className="vhd"><h2>{t("vault.activity")}</h2><span className="side"><button className="vbtn sec sm" disabled={history.busy} onClick={() => { clearOtherErrors(history); void history.run({}); }}>{history.busy ? "…" : t("vault.history")}</button></span></header>
+              <header className="vhd"><h2>{t("vault.activity")}</h2><span className="side"><button className="vbtn sec sm" disabled={history.busy} onClick={() => { clearOtherErrors(history); void history.run({}); }}>{history.busy ? <Busy l={history.label} /> : t("vault.history")}</button></span></header>
               {!history.res && <div className="vempty">{t("vault.activityHint")}</div>}
               {history.res?.output?.ok && logVerified === null && <p className="note">{t("vault.checking")}</p>}
               {logVerified === false && <p className="note" data-testid="vault-log-hidden">{t("vault.hiddenLog")}</p>}
@@ -456,7 +486,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               )}
               {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
               <div className="vact" style={{ marginTop: 12 }}>
-                <button className="vbtn sec" disabled={pnl.busy} data-testid="pnl-btn" onClick={() => { clearOtherErrors(pnl); void pnl.run({}); }}>{pnl.busy ? "…" : t("vault.pnlBtn")}</button>
+                <button className="vbtn sec" disabled={pnl.busy} data-testid="pnl-btn" onClick={() => { clearOtherErrors(pnl); void pnl.run({}); }}>{pnl.busy ? <Busy l={pnl.label} /> : t("vault.pnlBtn")}</button>
               </div>
               <p className="vhelp">{t("vault.pnlHelp")}</p>
               {pnl.res?.output && (pnl.res.output as { statement?: string }).statement && (() => {

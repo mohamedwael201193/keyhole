@@ -4,7 +4,7 @@ const root = `${__dirname}/../..`;
 describe("trust labels", () => {
   it("every /judge step carries a trust label and the page has the legend", () => {
     const src = readFileSync(`${root}/web/app/judge/page.tsx`, "utf8");
-    const steps = src.split('<h2><span>').slice(1);
+    const steps = src.split('<Step n={').slice(1);
     expect(steps.length).toBeGreaterThan(0);
     for (const s of steps) expect(s.slice(0, 400)).toContain("<Trust src=");
     expect(src).toContain("<TrustLegend />");

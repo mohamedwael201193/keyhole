@@ -33,3 +33,33 @@
 .t-us { color: #7a4a06; background: #fdecc8; border-color: #e8b860; }
 .trust-legend { font-size: 13px; line-height: 1.8; margin: 0 0 12px; color: inherit; }
 .jsteps .trust { display: flex; margin: -4px 0 8px; }
+/* demo vault */
+.demo-banner { background: #fdecc8; color: #5c3803; border: 1.5px solid #e8b860; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.5; margin: 0 0 18px; }
+.demo-banner b { background: #7a4a06; color: #fff; padding: 1px 8px; border-radius: 6px; margin-right: 8px; letter-spacing: .04em; }
+.dsteps { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 18px 0; }
+.dsteps button { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; border: 1.5px solid #c9ccd1; background: #fff; color: #1f2937; font-weight: 600; cursor: pointer; transition: all .25s ease; }
+.dsteps button span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #e5e7eb; font-size: 12px; }
+.dsteps button.done span { background: #15803d; color: #fff; }
+.dsteps button.on { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.18); }
+.dsteps button.on span { background: #0f766e; color: #fff; }
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.dcard { position: relative; background: #fff; color: #111827; border: 1.5px solid #d6d9de; border-radius: 16px; padding: 16px; box-shadow: 0 4px 14px rgba(0,0,0,.06); transition: opacity .4s ease, transform .4s ease, box-shadow .3s ease; cursor: pointer; }
+.dcard.later { opacity: .55; transform: translateY(4px); }
+.dcard.active { border-color: transparent; box-shadow: 0 10px 30px rgba(15,118,110,.18); }
+.dcard.active::before { content: ""; position: absolute; inset: -2px; border-radius: 17px; padding: 2px; background: conic-gradient(from var(--dang, 0deg), #0f766e, #22c55e, #f59e0b, #0f766e); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: dspin 3s linear infinite; pointer-events: none; }
+@property --dang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes dspin { to { --dang: 360deg; } }
+.dcard header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.dcard h2 { font-size: 18px; margin: 0; flex: 1; }
+.dn { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #0f766e; color: #fff; font-weight: 700; font-size: 13px; }
+.dres { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.dres.ok { background: #dcfce7; color: #14532d; }
+.dres.ref { background: #fee2e2; color: #7f1d1d; }
+.ddoes { font-size: 14px; color: #374151; margin: 4px 0 8px; }
+.dout { font-weight: 700; font-size: 15px; background: #0f172a; color: #f8fafc; border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; }
+.dcard dl { margin: 0 0 8px; font-size: 13px; }
+.dcard dl div { display: flex; gap: 8px; } .dcard dt { color: #4b5563; min-width: 120px; } .dcard dd { margin: 0; overflow-wrap: anywhere; }
+.dproofs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.dproof { font-size: 13px; font-weight: 600; color: #0f766e; text-decoration: underline; text-underline-offset: 3px; }
+.dnext { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+@media (prefers-reduced-motion: reduce) { .dcard, .dsteps button { transition: none; } .dcard.active::before { animation: none; } }

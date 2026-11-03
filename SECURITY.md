@@ -93,7 +93,7 @@ Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel
 - Withdraw pays the connected account only.
 - If the enclave is offline or the payment key is missing, Vault and Mint show the offline state and do not send the signature.
 - The site is English only. There is no language switcher.
-- The 30-step mainnet log in the README (§10) was recorded against worker `f13efe92`. The worker serving the site is `a55ebb14` ([add_version tx](https://nearblocks.io/txns/GNqXiicFgXQpS5LsYiNRffK6Xhp5W7Yi8EZK2XqKvX8X)), which includes the review fixes R1 to R4.
+- The 30-step mainnet log in the README (§10) was recorded against worker `f13efe92`. The worker serving the site is `cff9fd3c` ([add_version tx](https://nearblocks.io/txns/AepKgT8M1XhMjWMHMzaJSo3YnBXzG58YYrLVyp8tUW3z)); before it `a55ebb14`, which includes the review fixes R1 to R4.
 - Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.
 
 ## Chain Signatures (`chain_sign`)
@@ -131,3 +131,20 @@ This follows NEAR's documented backend-auth pattern (https://docs.near.org/web3-
 Caveats:
 - The token is a bearer credential, like any Web2 session. Anyone who has it can act within its scope until it expires, is revoked, or its cap is used up. That includes script injection on the site, and the site's gateway, which relays the request body (bodies are not logged). The token cannot raise limits (a raise needs a wallet signature and still waits 24 h), lock, prove, mint or use chain_sign.
 - Withdraw is in scope, but it pays out only to the holder's own account (`assert_withdraw_to`), so a token thief cannot redirect funds.
+
+## Worker hardening in source (live after the next publish)
+
+- Replay check runs before the rate limits (`admit`), so replays cost no rate budget.
+- `chain_sign` counts toward the daily quota only after a signature that recovers to the key; a failed MPC call costs nothing.
+- `withdraw` re-reads key ownership after the custody move and reports `needs_review` if the key changed hands meanwhile.
+- `quote` refuses a key locked for sale, and pins `recipient` and `refund_to` to the signer.
+- `add_beat_key` / `del_beat_key` check the signer against the keys contract `config().owner`, read live.
+
+Tests: `tee/worker/src/p2harden.rs`.
+## Google / email sign-in (Privy)
+- Follows NEAR's Privy tutorial, "Direct Privy" tab (https://docs.near.org/web3-apps/tutorials/privy) and near-examples/hello-privy: `@privy-io/react-auth` login, a NEAR embedded wallet (`createWallet({ chainType: "near" })`), and a near-api-js `Signer` whose `signBytes` calls Privy `signRawHash`.
+- Trust: Privy's embedded-wallet custody model (key shares split between the user's device and Privy's infrastructure) is a third-party trust assumption. Anyone who controls the user's Google / email login, together with Privy, can sign for that account. Users who want sole custody use a NEAR wallet or MetaMask.
+- Third-party code: Privy's SDK runs in our page (npm-pinned through package-lock). We do not load the near-connect sandbox executor or host a `/sign` page for this path, so no runtime-fetched script is involved.
+- The enclave treats a Privy account like any NEAR account: NEP-413 signature with a full-access key of the implicit account (`is_full_access`), freshness, single-use nonce. No new trust in the TEE.
+- A new implicit account must receive a little NEAR before it exists on chain; until then the worker rejects its signatures (no access key yet). We do not sponsor accounts.
+- Allowed origins in the Privy dashboard: keyhole-seven.vercel.app and localhost for development only.
