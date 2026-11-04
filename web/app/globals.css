@@ -23,6 +23,16 @@
 .cw.warn{background:var(--coral,#e5654b);color:#fff;border-color:transparent}
 .mmnote{margin:14px 0;font-size:.92em;max-width:62ch}.mmnote summary{cursor:pointer;color:var(--coral,#c4553e);font-weight:600}.mmnote p{margin:.5em 0}
 
+/* trust labels: where a check's evidence comes from */
+.trust { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; margin-left: 4px; }
+.tchip { font: 600 10.5px/1.6 ui-sans-serif, system-ui, sans-serif; letter-spacing: .02em; padding: 0 7px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.t-browser { color: #0b5d3b; background: #d9f5e6; border-color: #7fd3a8; }
+.t-chain { color: #12407a; background: #dce9fb; border-color: #8db4ea; }
+.t-outlayer { color: #4b2a85; background: #ebe1fb; border-color: #b59be6; }
+.t-intel { color: #0f4c5c; background: #d6f1f6; border-color: #7cc7d6; }
+.t-us { color: #7a4a06; background: #fdecc8; border-color: #e8b860; }
+.trust-legend { font-size: 13px; line-height: 1.8; margin: 0 0 12px; color: inherit; }
+.jsteps .trust { display: flex; margin: -4px 0 8px; }
 /* demo vault */
 .demo-banner { background: #fdecc8; color: #5c3803; border: 1.5px solid #e8b860; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.5; margin: 0 0 18px; }
 .demo-banner b { background: #7a4a06; color: #fff; padding: 1px 8px; border-radius: 6px; margin-right: 8px; letter-spacing: .04em; }
