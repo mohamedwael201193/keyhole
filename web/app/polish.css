@@ -102,7 +102,7 @@ html, body, .nav:not(.dark) { background: var(--bg); }
 .khm-stepper li.on i { background: #FFFCF6; border: 6px solid #1F4B4F; box-shadow: 0 0 0 5px #B8893E44; animation: kh-pulse 1.8s ease-in-out infinite; }
 @keyframes kh-pulse { 50% { box-shadow: 0 0 0 9px #B8893E00; } }
 .khm-enter { animation: khm-slide .42s cubic-bezier(.2,.7,.2,1) both; }
-@keyframes khm-slide { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes khm-slide { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 .khm-prog { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--kh-edge); font: 600 14px var(--sans); color: #0F1E20;
   background: linear-gradient(100deg, #F1ECE1 30%, #FFFCF6 50%, #F1ECE1 70%) 0 0 / 300% 100%; animation: kh-shim 1.8s linear infinite; }
 .khm-prog.done { animation: none; background: #E3EFE7; border-color: #16603C66; color: #16603C; }
@@ -168,3 +168,8 @@ p .mono, li .mono, small .mono, p code, li code { display: inline; white-space: 
   .nav .music { width: 36px; height: 36px; }
 }
 @media (max-width: 370px) { .nav .kh-word { letter-spacing: .1em; } .nav .music { display: none; } }
+/* axe fixes: second-explorer link and text on the dark result panel */
+.txl .alt { color: #1F4B4F !important; opacity: 1 !important; }
+.res p, .res small, .res .note { color: #E8F0EE !important; }
+@media (max-width: 480px) { .nav .cw, .nav .cw:not(:disabled) { max-width: none; overflow: visible; padding: 0 14px !important; white-space: nowrap; } }
+@media (max-width: 370px) { .nav .cw, .nav .cw:not(:disabled) { padding: 0 10px !important; font-size: 12px !important; } }

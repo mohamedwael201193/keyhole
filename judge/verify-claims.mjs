@@ -12,7 +12,11 @@ const doc = JSON.parse(readFileSync(join(ROOT, "docs/claims.json"), "utf8"));
 const args = process.argv.slice(2);
 const only = args.includes("--only") ? args[args.indexOf("--only") + 1] : null;
 const offline = args.includes("--offline");
-const RPC = process.env.NEAR_RPC || doc.rpc;
+// RPC fallback list: NEAR_RPC (if set), then FastNear, then rpc.mainnet.near.org, then archival nodes for old tx lookups.
+const RPCS = [...new Set([process.env.NEAR_RPC, "https://rpc.mainnet.fastnear.com", "https://rpc.mainnet.near.org", doc.rpc, "https://archival-rpc.mainnet.fastnear.com", "https://archival-rpc.mainnet.near.org"].filter(Boolean))];
+/** Errors that mean "this node cannot answer", not "the claim is false": try the next RPC. */
+const RETRYABLE = /UNKNOWN_TRANSACTION|GARBAGE_COLLECTED|UNKNOWN_BLOCK|NO_SYNCED_BLOCKS|TIMEOUT|INTERNAL|HTTP|fetch failed|aborted|Unexpected token|json/i;
+class InfraError extends Error {}
 const CONTRACT = "keyhole-devmo.near";
 const OUTLAYER = process.env.OUTLAYER_API || "https://api.outlayer.ai";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -23,14 +27,21 @@ async function get(url, opt = {}, tries = 3) {
       const r = await fetch(url, { ...opt, signal: AbortSignal.timeout(30000) });
       if ((r.status === 429 || r.status >= 500) && i < tries - 1) { await sleep(1500 * (i + 1)); continue; }
       return r;
-    } catch (e) { if (i >= tries - 1) throw e; await sleep(1500 * (i + 1)); }
+    } catch (e) { if (i >= tries - 1) throw new InfraError(`${url}: ${e.message}`); await sleep(1500 * (i + 1)); }
   }
 }
 async function rpc(method, params) {
-  const r = await get(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
-  const j = await r.json();
-  if (j.error) throw new Error(j.error.cause?.name || j.error.message);
-  return j.result;
+  let last = "";
+  for (const url of RPCS) {
+    try {
+      const r = await get(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+      if (!r.ok) { last = `HTTP ${r.status} from ${url}`; continue; }
+      const j = await r.json();
+      if (j.error) { const name = j.error.cause?.name || j.error.message || "error"; if (RETRYABLE.test(name)) { last = `${name} from ${url}`; continue; } throw new Error(name); }
+      return j.result;
+    } catch (e) { if (e instanceof Error && !RETRYABLE.test(e.message)) throw e; last = `${e.message} from ${url}`; }
+  }
+  throw new InfraError(`no RPC could answer (${last})`);
 }
 const memo = new Map();
 const once = (k, f) => { if (!memo.has(k)) memo.set(k, f()); return memo.get(k); };
@@ -84,7 +95,15 @@ const checks = {
     const t = await view("nft_tokens_for_owner", { account_id: c.account }); return [t.length > 0, `${t.length} key(s): ${t.map((x) => x.token_id).join(",")}`]; },
   async account(c) { const a = await rpc("query", { request_type: "view_account", finality: "final", account_id: c.account }); return [!!a.block_height, `amount ${a.amount}`]; },
   async tx(c) {
-    const r = await rpc("tx", { tx_hash: c.hash, sender_account_id: CONTRACT, wait_until: "NONE" });
+    // No hardcoded sender: try the claim's sender/signer, then the receiver and the contract. Archival RPCs cover old txs.
+    let r = null, miss = "", unknown = 0, tried = 0;
+    for (const sender of [...new Set([c.sender, c.signer, c.receiver, CONTRACT].filter(Boolean))]) {
+      tried++;
+      try { r = await rpc("tx", { tx_hash: c.hash, sender_account_id: sender, wait_until: "NONE" }); break; } catch (e) { miss = e.message; if (!(e instanceof InfraError)) throw e; if (/UNKNOWN_TRANSACTION/.test(miss)) unknown++; }
+    }
+    // Every node (archival included) answered "unknown" for every sender: the chain says no such tx, so FAIL.
+    if (!r && unknown === tried) return [false, "tx not found on mainnet (archival RPCs, every candidate sender)"];
+    if (!r) throw new InfraError(`tx not found on any RPC with any sender (${miss})`);
     const failed = [r.status, ...r.receipts_outcome.map((o) => o.outcome.status)].some((s) => s && s.Failure);
     if (c.receiver && !r.receipts_outcome.some((o) => o.outcome.executor_id === c.receiver)) return [false, `no receipt on ${c.receiver}`];
     if (c.expect === "exists") return [true, `found, signer ${r.transaction.signer_id}`];
@@ -115,7 +134,7 @@ const checks = {
 const LIVE = new Set(["code_hash", "view", "access_key", "account", "holder", "tx", "attestation", "fastfs", "http", "redirect", "header", "site_vs_chain", "ci_run"]);
 
 const list = doc.claims.filter((c) => !only || c.id === only);
-let pass = 0, fail = 0, skip = 0; const failed = [];
+let pass = 0, fail = 0, skip = 0, errs = 0; const failed = [], errored = [];
 const results = new Array(list.length);
 let next = 0;
 async function worker() {
@@ -124,17 +143,19 @@ async function worker() {
     let r;
     if (!fn) r = [false, `unknown check ${c.check.type}`];
     else if (offline && LIVE.has(c.check.type)) r = [null, "offline (SKIP)"];
-    else { try { r = await fn(c.check); } catch (e) { r = [false, `error ${e.message}`]; } }
+    else { try { r = await fn(c.check); } catch (e) { r = e instanceof InfraError ? ["error", e.message] : [false, `error ${e.message}`]; } }
     results[i] = r;
   }
 }
 await Promise.all(Array.from({ length: 6 }, worker));
 list.forEach((c, i) => {
   const [ok, info] = results[i];
-  const tag = ok === null ? "SKIP" : ok ? "PASS" : "FAIL";
-  if (ok === null) skip++; else if (ok) pass++; else { fail++; failed.push(c.id); }
+  // ERROR = we could not reach a source (infra), distinct from FAIL = the source answered and contradicts the claim.
+  const tag = ok === "error" ? "ERROR" : ok === null ? "SKIP" : ok ? "PASS" : "FAIL";
+  if (ok === "error") { errs++; errored.push(c.id); } else if (ok === null) skip++; else if (ok) pass++; else { fail++; failed.push(c.id); }
   console.log(`${tag} ${c.id}  ${info ?? ""}  [${c.where}]`);
 });
-console.log(`\n${list.length} claims: ${pass} PASS, ${fail} FAIL, ${skip} SKIP`);
+console.log(`\n${list.length} claims: ${pass} PASS, ${fail} FAIL, ${errs} ERROR, ${skip} SKIP`);
 if (failed.length) console.log("failed: " + failed.join(", "));
-process.exit(fail ? 1 : 0);
+if (errored.length) console.log("error (source unreachable, not a failed claim): " + errored.join(", "));
+process.exit(fail ? 1 : errs ? 2 : 0);

@@ -1,3 +1,4 @@
+import { IDENTITY } from "./identity.gen";
 /** Real mainnet evidence. Every entry is a NEAR transaction hash or an OutLayer call id that resolves publicly. */
 export const TXS = [
   { label: "Deploy + init keys contract", hash: "HEgxese5vwUeAz2ctbwpdNDjfyhLib7xWXpTJLhwhRD7" },
@@ -9,11 +10,12 @@ export const TXS = [
   { label: "Mint by the TEE to a fresh account", hash: "FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4" },
 ] as const;
 
-/** Live info call on the published worker a55ebb14. Default on /verify. */
-export const PUBLISHED_INFO_CALL = "b0a6eadb-cee9-400e-8eca-8b0f4df7bcec";
+/** Live info call on the published worker (identity.json). Default on /verify. */
+export const PUBLISHED_INFO_CALL: string = IDENTITY.worker.info_call;
 
 export const CALLS = [
-  { label: "info · published build a55ebb14", id: PUBLISHED_INFO_CALL, outcome: "ok · attestation 1255082" },
+  { label: `info · published build ${IDENTITY.worker.wasm_sha256.slice(0, 8)}`, id: PUBLISHED_INFO_CALL, outcome: "ok" },
+  { label: "info · previous build a55ebb14", id: "b0a6eadb-cee9-400e-8eca-8b0f4df7bcec", outcome: "ok · attestation 1255082" },
   { label: "info · previous build 09d481a5", id: "2896d0ad-aa27-4e21-b4a1-0cf2d3755d56", outcome: "ok · attestation 1253394" },
   { label: "chain_sign · real v1.signer MPC signature for key k5f4750858f328940", id: "0cd1c3bd-21be-44dc-bc60-e792a42344e6", outcome: "ok · recovers to 0xe39C…f063" },
   { label: "info · previous build f7217ae2", id: "54207d9e-b4f0-438b-9a74-cdba33de80d9", outcome: "ok · attestation 1252377" },
