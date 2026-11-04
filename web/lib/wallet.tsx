@@ -9,7 +9,7 @@ import { callWorker } from "./worker";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
-import { PRIVY_FLAG, privyEnabled, type PrivyNear } from "./privy";
+import { PRIVY_FLAG, privyEnabled, privyResume, stripPrivyOauth, hasPrivyOauth, type PrivyNear } from "./privy";
 
 const PrivyBridge = dynamic(() => import("./privyBridge"), { ssr: false });
 
@@ -50,6 +50,8 @@ interface WalletCtx {
   via: "nc" | "ws" | "privy" | null;
   /** Privy is creating the user's NEAR wallet right after sign-in. */
   socialCreating: boolean;
+  /** Back from Google: Privy is completing the OAuth callback. */
+  socialFinishing: boolean;
   choosing: boolean;
   closeChooser: () => void;
   disconnect: () => Promise<void>;
@@ -210,9 +212,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [wantLogin, setWantLogin] = useState(0);
   const privy = useRef<PrivyNear | null>(null);
   const [socialCreating, setSocialCreating] = useState(false);
+  const [socialFinishing, setSocialFinishing] = useState(false);
   const onPrivy = useCallback((v: PrivyNear) => {
     privy.current = v;
     setSocialCreating(v.creating);
+    if (v.accountId) {
+      setSocialFinishing(false);
+      if (hasPrivyOauth(location.search)) history.replaceState(null, "", stripPrivyOauth(location.href));
+    }
     if (v.accountId) { owner.current = "privy"; setVia("privy"); setAccountId(v.accountId); localStorage.setItem(PRIVY_FLAG, "1"); setReady(true); setRestoring(false); }
     else if (!v.creating && owner.current === "privy") { owner.current = null; setVia(null); setAccountId(null); }
     if (v.ready && !v.creating && !v.accountId) setRestoring(false);
@@ -264,7 +271,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem(PENDING);
       history.replaceState(null, "", location.pathname + location.search);
     }
-    if (privyEnabled() && localStorage.getItem(PRIVY_FLAG)) { setRestoring(true); setPrivyOn(true); return; }
+    const resume = privyEnabled() ? privyResume(location.search, Object.keys(localStorage)) : null;
+    if (resume) { setRestoring(true); setPrivyOn(true); if (resume === "oauth") { setSocialFinishing(true); setTimeout(() => setSocialFinishing(false), 45_000); } return; }
     if (localStorage.getItem(NC_WALLET_KEY)) {
       setRestoring(true);
       void nearConnector().then((nc) => nc.getConnectedWallet()).then(({ accounts }) => {
@@ -406,7 +414,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [pending, finishSession]);
   const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} onChange={onPrivy} />}</Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {

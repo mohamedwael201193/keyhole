@@ -3,6 +3,8 @@ import { Badge, Proof, See, Step, Steps, Term, Purpose, Reveal, type ProofRow } 
 import { attestation, acct, acctAlt, KEYS_CONTRACT, tx, txAlt } from "@/lib/config";
 import { IDENTITY } from "@/lib/identity.gen";
 import { TxLink } from "@/components/TxLink";
+import { HealthStrip } from "@/components/HealthStrip";
+import { Trust, TrustLegend } from "@/components/Trust";
 import { CheckBuild, CheckContract } from "./live";
 
 export const metadata = { title: "Judge path · KEYHOLE" };
@@ -50,8 +52,11 @@ export default function JudgePage() {
         title={<>Check it yourself. <em>Trust nothing we say.</em></>}
         line={<>Seven checks, top to bottom. Each one has a button that runs in your browser and a green box that says what you should see. If you see something else, the claim fails.</>}
       />
+      <HealthStrip />
+      <TrustLegend />
       <Steps testid="judge-steps">
         <Reveal><Step n={1} title="The code running in the enclave is the code in the repo" testid="judge-step-1">
+          <Trust src={["outlayer", "browser", "intel", "chain"]} />
           <p>Every answer comes from an <Term k="enclave" /> on <Term k="tdx" /> hardware. Intel signs a report naming the exact code that ran. We compare that code&apos;s <Term k="codehash" /> with the current published build, <b className="mono">{CUR.slice(0, 8)}</b>.</p>
           <div className="uact">
             <CheckBuild callId={INFO_CALL} />
@@ -67,6 +72,7 @@ export default function JudgePage() {
         </Step></Reveal>
 
         <Reveal><Step n={2} title="The NFT contract is the one in the repo" testid="judge-step-2">
+          <Trust src={["chain", "browser"]} />
           <p>NEAR reports a code hash for every contract. We ask NEAR&apos;s public RPC for <span className="mono">{KEYS_CONTRACT}</span> and compare it with the wasm committed in the repo.</p>
           <div className="uact"><CheckContract /></div>
           <See>The quick check shows <b>Pass</b>. The contract&apos;s only minter is an account whose key was generated inside the enclave.</See>
@@ -79,6 +85,7 @@ export default function JudgePage() {
         </Step></Reveal>
 
         <Reveal><Step n={3} title="Checks on the current build: only the real holder gets in" testid="judge-step-3">
+          <Trust src={["outlayer", "us"]} />
           <p>These calls ran on build <b className="mono">{CUR.slice(0, 8)}</b>. Each answer, including each refusal, was produced inside the enclave and signed by Intel.</p>
           <Calls testid="judge-current-calls" rows={[
             { id: "40c02b72-b297-4a9a-9265-751ba826fdf8", what: "A limited (function-call) key tries to act for an account", ok: false, result: "Refused: key_not_owned. Only a full-access key counts." },
@@ -91,6 +98,7 @@ export default function JudgePage() {
         </Step></Reveal>
 
         <Reveal><Step n={4} title="Selling the key moves the account; the old holder is locked out" testid="judge-step-4">
+          <Trust src={["chain", "outlayer", "us"]} />
           <p>The key moved from account A to account B. Before the move A could withdraw; after it A is refused and B can withdraw. Replays and withdrawals while the key is locked are refused too.</p>
           <See>Open the transfer below. Then, under <b>Recorded on earlier builds</b>, each call verifies with the badge <b>Genuine enclave, previous build</b>. That is expected: the attestation names the build that ran at the time.</See>
           <Proof rows={[txRow("key transfer A → B", "G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD"), txRow("key back to A", "HGKe7Dzd3ERMLkWYcVvffV6opweQqN3wbfFevo44uDUn")]} title="Transfers" />
@@ -112,6 +120,7 @@ export default function JudgePage() {
         </Step></Reveal>
 
         <Reveal><Step n={5} title="Tier caps hold on real trades" testid="judge-step-5">
+          <Trust src={["outlayer", "us"]} />
           <p>A Bronze key may trade at most $1 at a time. A 2 USDC swap was refused before anything moved.</p>
           <Calls rows={[{ id: "a02613a2-d503-45e2-83b8-ef71927c2533", what: "2 USDC swap on a Bronze key (earlier build f13efe92)", ok: false, result: "Refused: over_cap_per_tx." }]} />
           <See>/verify shows the refusal with green checks. All 30 recorded mainnet steps are in the repo.</See>
@@ -119,6 +128,7 @@ export default function JudgePage() {
         </Step></Reveal>
 
         <Reveal><Step n={6} title="Each key can sign for other chains" testid="judge-chainsig">
+          <Trust src={["chain", "outlayer"]} />
           <p>With <Term k="chainsig" />, NEAR&apos;s MPC network signed for the holder of key <span className="mono">k5f4750858f328940</span>. The signature recovers to <span className="mono">0xe39C947d…f063</span>, the EVM address derived for that key alone. The minter&apos;s agent key is limited: it may only call <span className="mono">beat</span> on the contract.</p>
           <Calls rows={[{ id: "0cd1c3bd-21be-44dc-bc60-e792a42344e6", what: "chain_sign for key k5f4750858f328940 (build 09d481a5)", ok: true, result: "Allowed: recovers to 0xe39C…f063." }]} />
           <See>The MPC transaction below shows <span className="mono">v1.signer.sign</span> called by the minter. The beat transaction was signed by the limited key.</See>
@@ -126,6 +136,7 @@ export default function JudgePage() {
         </Step></Reveal>
 
         <Reveal><Step n={7} title="Optional: try it with your own wallet" testid="judge-step-7">
+          <Trust src={["browser", "chain"]} />
           <p>No wallet? Steps 1 to 6 already cover everything, and the <Link href="/settle">1Click page</Link> gets a real price with no wallet. With a NEAR wallet or MetaMask you can <Link href="/mint">mint a free key</Link>: one signature, and the enclave pays storage. Then open <Link href="/vault">your vault</Link> and press <b>Read balance</b>.</p>
           <See>Your result shows a <Term k="callid" /> and a <b>Verify</b> link. It checks out on /verify just like step 1.</See>
           <p className="muted">MetaMask may warn &ldquo;Malicious site&rdquo;. Its scanner flags every <span className="mono">*.vercel.app</span> address, including ones that were never deployed. Details are in <a href={`${REPO}/research/METAMASK_FLAG.md`} target="_blank" rel="noreferrer">research/METAMASK_FLAG.md</a>.</p>

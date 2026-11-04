@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Attested, ErrorBox, OfflineState, capFrom } from "@/components/Result";
+import { TxLink } from "@/components/TxLink";
+import { loadMintTx } from "@/lib/mintTx";
 import { HowStrip } from "@/components/HowStrip";
 import { EmptyState } from "@/components/EmptyState";
 import { Cipher } from "@/components/Cipher";
@@ -131,6 +133,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     dashFor.current = session.token;
     void runDash({}, { quiet: true });
   }, [session, held, runDash]);
+  const [mintTx, setMintTx] = useState<string | null>(null);
+  useEffect(() => { setMintTx(loadMintTx(accountId)); }, [accountId]);
+  const sessionLive = !!(session && held && session.token_id === held.token.token_id);
   const [logVerified, setLogVerified] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedConf, setCopiedConf] = useState(false);
@@ -246,6 +251,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         <>
         {held && !session && <p className="note" data-testid="vault-setup"><Link href="/start">New here? Finish setup in 5 steps →</Link></p>}
         {held && <SessionCard tokenId={held.token.token_id} />}
+        {held && mintTx && <p className="note" data-testid="vault-mint-tx">Key minted · <TxLink hash={mintTx} /></p>}
+        {held && !mintTx && <p className="note" data-testid="vault-key-link">Your key: <Link href={`/key?id=${encodeURIComponent(held.token.token_id)}`}>full history</Link> · <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">key contract on NearBlocks ↗</a></p>}
         <div className="vlt-grid">
           <div className="vlt-col">
             <section className="c vcard" data-testid="key-card">
@@ -287,7 +294,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               {s?.ok ? (
                 <>
                   <div className={`vmeter${tone(txPct)}`}>
-                    <p className="top"><span>{t("vault.perTx")}</span><span>{t("vault.ofCap", { used: txUsed == null ? "—" : fmtUsd(txUsed), cap: fmtUsd(perCap) })}</span></p>
+                    <p className="top"><span>{t("vault.perTx")}</span><span data-testid="per-trade-meter">{txUsed == null ? t("vault.capOnly", { cap: fmtUsd(perCap) }) : t("vault.quotePreview", { used: fmtUsd(txUsed), cap: fmtUsd(perCap) })}</span></p>
                     <div className="tr"><i style={{ width: `${txPct}%` }} /></div>
                     <small>{txUsed == null ? t("vault.meterTxNone") : t("vault.meterTx", { pct: Math.round(txPct) })}</small>
                   </div>
@@ -297,6 +304,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                     <small>{t("vault.utc", { time: utcReset })}</small>
                   </div>
                 </>
+              ) : sessionLive ? (
+                dash.busy || !dash.res ? <p className="note" data-testid="limits-reading"><Busy l="Reading your caps with your session" /></p>
+                  : <><p className="note">Could not read your caps with the session.</p>{dash.res.error && <ErrorBox code={dash.res.error.code} />}<button className="vbtn sec" type="button" data-testid="dash-retry" onClick={() => void runDash({})}>Read caps and balance (session, no popup)</button></>
               ) : <p className="note">{t("vault.limitsUnread")}</p>}
               {pendingLim && <p className="note-box" data-testid="limits-pending">{t("vault.limitsPending", { tx: fmtUsd(pendingLim.per_tx_usd_micro), day: fmtUsd(pendingLim.daily_usd_micro), time: new Date(pendingLim.effective_ms).toISOString().slice(0, 16).replace("T", " ") })}</p>}
               <div className="vact"><button className="vbtn sec" disabled={status.busy} onClick={() => { clearOtherErrors(status); void status.run({}); }} data-testid="status-btn">{status.busy ? <Busy l={status.label} /> : t("vault.status")}</button></div>
@@ -340,7 +350,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <p className="big" data-testid="vault-total">{totalKind.kind === "unread" ? "—" : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : formatUsdMicro(totalKind.micro)}</p>
                 </div>
                 {totalKind.kind === "partial" && <p className="note" data-testid="unpriced">{t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</p>}
-                <p className="note" style={{ marginTop: 6 }}>{balances ? t("vault.balanceReal") : t("vault.sealedBook")}</p>
+                <p className="note" style={{ marginTop: 6 }}>{balances ? ((balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")) : t("vault.sealedBook")}</p>
               </div>
               <div>
                 <p className="vcap" style={{ marginBottom: 6 }}>{t("vault.assets", { n: balances?.length ?? 0 })}</p>
@@ -359,7 +369,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 )}
               </div>
               <div className="vact">
-                <button className="vbtn pri" disabled={balance.busy} onClick={() => { clearOtherErrors(balance); void balance.run({}); }} data-testid="balance-btn">{balance.busy ? <Busy l={balance.label} /> : t("vault.balance")}</button>
+                <button className="vbtn pri" disabled={balance.busy} onClick={() => { clearOtherErrors(balance); void balance.run({}); }} data-testid="balance-btn">{balance.busy ? <Busy l={balance.label} /> : sessionLive ? "Refresh balance (session, no popup)" : t("vault.balance")}</button>
                 <button className="vbtn sec" disabled={account.busy} onClick={() => { clearOtherErrors(account); void account.run({}); }} data-testid="account-btn">{account.busy ? <Busy l={account.label} /> : t("vault.open")}</button>
               </div>
               {account.res?.output?.ok && (
