@@ -8,6 +8,7 @@ import { CALLS, PUBLISHED_INFO_CALL } from "@/lib/evidence";
 import { fetchCollateral, pckInfo, quoteParts, verifyCollateral, type Pcs, type PcsInput } from "@/lib/pcs";
 import { b64, verifyQuote, type Dcap } from "@/lib/dcap";
 import { bindingCheck, buildIndex, localChecks, tamperAttestation, TAMPERS, type Tamper, CALL_ID, evidenceOutput, fastfsCheck, fastfsUrl, outputCheck, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
+import { Spinner } from "@/components/ui";
 
 /** 6 attestation checks, 19 Intel DCAP checks on the quote, 12 Intel PCS collateral checks. */
 export const TOTAL_CHECKS = 37;
@@ -94,19 +95,19 @@ export function VerifyView({ initial }: { initial: string | null }) {
       <p className="lead">{t("verify.lead")}</p>
       <div className="tally" data-testid="tally" data-n={tally ?? ""}>
         <b className="tn">{tally ?? "·"}<span>/{total}</span></b>
-        <div><b data-testid="tally-head">{tally != null ? t("verify.tallyH", { n: tally, total }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small></div>
+        <div><b data-testid="tally-head">{tally != null ? t("verify.tallyH", { n: tally, total }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : busy ? <span data-testid="verify-running"><Spinner label="Checking" /> Checking in your browser… {six ? six.filter(Boolean).length + (dcap ? dcap.checks.filter((c) => c.pass).length : 0) : 0} of {total} done</span> : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small></div>
       </div>
       <div className="vg">
         <div className="seal"><Scene name="enclave" alt={t("land.enclAlt")} width={1152} height={864} /></div>
         <div className="card chk">
           <p className="eb" style={{ marginBottom: 10 }}>{t("verify.report")}</p>
           <form className="field" onSubmit={(e) => { e.preventDefault(); void go(id); }} style={{ marginBottom: 8 }}>
-            <label htmlFor="cid" className="sr-only">call id</label>
+            <label htmlFor="cid" className="vlabel">Call ID <small>(an enclave run; prefilled with the latest published one, or paste any from /atlas)</small></label>
             <input id="cid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder={t("verify.placeholder")} spellCheck={false} />
           </form>
           <div className="ck"><span className={`ok ${ck ? dot(ck.quote) : "wait"}`}>{ck ? mark(ck.quote) : "·"}</span><div><b>{t("verify.quote")}</b><small>{t("verify.quoteD")}{a ? ` · ${a.tdx_quote.length}` : ""}</small></div><span className="att">{ck?.quote ? t("verify.badgeAtt") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ck ? dot(ck.registered && ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs === null ? null : ck.registered && ck.fastfs === true) : "·"}</span><div><b>{t("verify.hash")}</b><small>{a?.executed_wasm_sha256 || t("verify.hashD")}</small></div><span className="att">{ck?.registered && ck.fastfs ? t("verify.badgeMatch") : "—"}</span></div>
-          <div className="ck"><span className={`ok ${ck ? dot(ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs) : "·"}</span><div><b>{t("verify.pub")}</b><small>{known && bi === 0 ? <a href={tx(WORKER_PUBLISH_TX)}>{t("verify.tx", { tx: WORKER_PUBLISH_TX })}</a> : a ? <a href={fastfsUrl(a.project_id, a.executed_wasm_sha256)}>wasm</a> : t("verify.pubD")}</small></div><span className="att">{ck?.fastfs ? t("verify.badgeFound") : "—"}</span></div>
+          <div className="ck"><span className={`ok ${ck ? dot(ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs) : "·"}</span><div><b>{t("verify.pub")}</b><small>{known && bi === 0 ? <a href={tx(WORKER_PUBLISH_TX)}>{t("verify.tx", { tx: WORKER_PUBLISH_TX })}</a> : a ? <a href={fastfsUrl(a.project_id, a.executed_wasm_sha256)} target="_blank" rel="noreferrer">published wasm file on FastFS ↗</a> : t("verify.pubD")}</small></div><span className="att">{ck?.fastfs ? t("verify.badgeFound") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ck ? dot(ck.published) : "wait"}`}>{ck ? mark(ck.published) : "·"}</span><div><b>{t("verify.build")}</b><small data-testid="build-note">{bi > 0 ? t("verify.buildPrev", { hash: a!.executed_wasm_sha256.slice(0, 8), cur: PUBLISHED_WASM_SHA256.slice(0, 8) }) : t("verify.buildD", { hash: PUBLISHED_WASM_SHA256.slice(0, 8) })}</small></div><span className="att">{ck?.published ? (bi > 0 ? t("verify.badgePrev") : t("verify.badgeBuild")) : "—"}</span></div>
           <div className="ck" data-testid="ck-binding"><span className={`ok ${ck ? (ck.fastfs === null && !ck.binding ? "wait" : dot(ck.binding?.match ?? false)) : "wait"}`}>{ck ? (ck.binding ? mark(ck.binding.match) : ck.fastfs === null ? "…" : "✕") : "·"}</span><div><b>{t("verify.bind")}</b><small>{ck?.binding ? t("verify.bindD", { rd: ck.binding.inQuote.slice(0, 16) }) : t("verify.bindWait")}</small></div><span className="att">{ck?.binding?.match ? t("verify.badgeBound") : "—"}</span></div>
           <div className="ck" data-testid="ck-output"><span className={`ok ${ck?.output ? dot(ck.output.match) : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? mark(ck.output.match) : ck && ck.fastfs !== null ? "○" : "·"}</span><div><b>{t("verify.out")}</b><small>{ck?.output ? t(ck.output.match ? "verify.outOk" : "verify.outBad", { verdict: ck.output.verdict, src: t(ck.output.source === "evidence" ? "verify.srcEvidence" : "verify.srcPasted") }) : t("verify.outNone")}</small></div><span className="att" data-testid="output-verdict">{ck?.output?.match ? ck.output.verdict : "—"}</span></div>
@@ -128,7 +129,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
               <p className="mono" style={{ fontSize: 12, letterSpacing: ".14em", opacity: .8 }}>{t("verify.result")}</p>
               <b data-testid="verdict" data-match={vd === "current" ? "true" : vd === "previous" ? "previous" : "false"}>{ck?.fastfs === null && ck.registered ? "…" : vd === "previous" ? t("verify.genuinePrev") : ok ? t("verify.genuine") : tampered ? t("verify.tamperFail") : pcsDown ? t("verify.pcsDownV") : t("verify.notYet")}</b>
             </div>
-            <button className="btn" disabled={busy} data-testid="verify-btn" onClick={() => void go(id)}>{busy ? "…" : t("verify.again")}</button>
+            <button className="btn" disabled={busy} data-testid="verify-btn" onClick={() => void go(id)}>{busy ? <><Spinner label="Checking" /> Checking…</> : t("verify.again")}</button>
           </div>
           {orig && (
             <div className="tamper" data-testid="tamper" data-active={tampered ?? ""}>
@@ -170,7 +171,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
         <div className="examples">
           {CALLS.map((x) => <button key={x.id} onClick={() => { setId(x.id); void go(x.id); }}>{x.label}</button>)}
         </div>
-        <pre className="term" style={{ marginTop: 18 }}>{`H=$(curl -s ${attestation("<call_id>")} | jq -r .executed_wasm_sha256)
+        <pre className="term" tabIndex={0} role="region" aria-label="Verify the enclave hash yourself (shell commands)" style={{ marginTop: 18 }}>{`H=$(curl -s ${attestation("<call_id>")} | jq -r .executed_wasm_sha256)
 curl -s https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$H.wasm | sha256sum
 # tx ${WORKER_PUBLISH_TX}`}</pre>
       </section>

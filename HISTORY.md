@@ -44,3 +44,4 @@
 
 ## 2026-11-02 — Contract standards tests (15 → 43)
 - New unit tests for NEP-171 (mint/transfer events, 1 yocto, owner-only, no self-transfer, duplicate ids), NEP-177 metadata, NEP-181 enumeration and paging, NEP-199 payout conservation over many balances, rounding, zero and max royalty, treasury-as-owner, minter rotation, beat batch limits, init royalty cap. Total distinct tests 250.
+- 2026-11-03 23:13 identity bump: identity.json → worker cff9fd3c (737639 B, add_version AepKgT8M…, info 643a012d, previous a55ebb14) via gen-identity; README/SECURITY/policy/verify.sh/claims pointers; vitest 869/869, claims 441/1 (site-hash waits for redeploy).

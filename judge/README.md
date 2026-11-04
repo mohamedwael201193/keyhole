@@ -12,3 +12,7 @@ Needs `bash`, `curl`, `jq`, `sha256sum` (and Node 18+ for step 4). Nothing here 
 `judge/evidence.json` lists the recorded mainnet calls (over-cap, replay, wrong recipient, tampered, stale, op mismatch, no auth, double mint, confidential swaps, MCP copy with confirmation, withdraws).
 
 Step 4 needs a NEAR account key (`KEYHOLE_ACCOUNT`, `KEYHOLE_PRIVATE_KEY`, or near-cli credentials) and a route (`OUTLAYER_PAYMENT_KEY` of your own, or `KEYHOLE_GATEWAY`). It mints you a free key if you have none (the TEE pays storage), then sends a replayed request and an over-cap request.
+
+## verify-claims statuses
+
+`node judge/verify-claims.mjs` prints PASS, FAIL, ERROR or SKIP per claim. FAIL means the source answered and contradicts the claim (exit 1). ERROR means no source could be reached: every RPC in the fallback list (FastNear, rpc.mainnet.near.org, then archival nodes) or the HTTP source was down (exit 2). It is not a failed claim. Set `NEAR_RPC` to put your own node first. The `claims-online` workflow runs the full online check daily and on demand.

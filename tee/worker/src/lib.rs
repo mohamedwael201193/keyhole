@@ -673,6 +673,8 @@ pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) 
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod p2harden;
 
 // ---------- custody bound to the key (token_id), not to the NEAR account ----------
 
@@ -948,3 +950,37 @@ pub fn session_limits_raise(cur: Option<&HolderPolicy>, new: &HolderPolicy) -> b
 
 /// base64 (standard) for values the enclave returns.
 pub fn b64(b: &[u8]) -> String { B64.encode(b) }
+// ---------------- hardening (round-2 judge panel P1-2/4/5/9) ----------------
+
+/// Admission order: the nonce is consumed first, so a replayed request is refused as `replay`
+/// without spending the holder's per-minute budget or the global one.
+pub fn admit(st: &mut dyn Store, account: &str, lim: &Limits, nonce: &[u8; 32], now_ms: u64) -> Result<(), Error> {
+    consume_nonce(st, account, nonce, now_ms)?;
+    rate_limit(st, account, lim, now_ms)
+}
+
+/// Read-only quota check: refuses when `key` already reached `max`. Pair with `bump_within`
+/// after the guarded action succeeded, so a failed upstream call does not burn quota.
+pub fn assert_quota_room(st: &mut dyn Store, key: &str, max: i64, code: &'static str, msg: String) -> Result<(), Error> {
+    if st.incr(key, 0)? >= max { return Err(err(code, msg)); }
+    Ok(())
+}
+
+/// A quote may only send proceeds to, and refund to, the signing holder.
+pub fn assert_quote_parties(signer: &str, recipient: &str, refund_to: &str) -> Result<(), Error> {
+    if recipient != signer { return Err(err("wrong_recipient", "params.recipient must be the account that signed this request")); }
+    if refund_to != signer { return Err(err("wrong_recipient", "params.refund_to must be the account that signed this request")); }
+    Ok(())
+}
+
+/// Status reported after a custody move. If the key changed hands while the move ran,
+/// a success or pending result is reported as `needs_review` instead of a plain success.
+pub fn after_move_status(status: &str, still_owner: bool) -> String {
+    let moved = matches!(status, "success" | "pending" | "processing" | "submitted");
+    if !still_owner && moved { "needs_review".into() } else { status.into() }
+}
+
+/// The keys contract owner from its `config` view (`{"owner": ...}`).
+pub fn config_owner(cfg: &serde_json::Value) -> Option<String> {
+    cfg.get("owner").and_then(|o| o.as_str()).filter(|o| !o.is_empty()).map(|o| o.to_string())
+}

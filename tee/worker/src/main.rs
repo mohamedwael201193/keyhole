@@ -88,7 +88,7 @@ mod host {
         fn cap(&self) -> String { cap_id(&self.token_id()) }
     }
 
-    /// Signature -> key ownership -> freshness -> op binding -> tier -> rate limit -> nonce (replay).
+    /// Signature -> key ownership -> freshness -> op binding -> tier -> nonce (replay) -> rate limit.
     thread_local! {
         // Account and key that passed authentication in this call, echoed in `bind`.
         static BIND: std::cell::RefCell<Option<(String, Option<String>)>> = const { std::cell::RefCell::new(None) };
@@ -127,8 +127,8 @@ mod host {
             return Err(err("not_owner", "only the current key holder can authorize this"));
         }
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
-        rate_limit(&mut Host, &account, &lim, now_ms)?;
-        consume_nonce(&mut Host, &account, &nonce, now_ms)?;
+        // Nonce first: a replay is refused without spending the rate budget (P1-9).
+        admit(&mut Host, &account, &lim, &nonce, now_ms)?;
         BIND.with(|b| *b.borrow_mut() = Some((account.clone(), token.clone())));
         Ok(Ctx { account, req, now_ms, tier, token, session: None })
     }
@@ -151,8 +151,7 @@ mod host {
         if !owns(&g.token_id, &account)? { return Err(err("not_owner", "this account no longer holds the key the session was made for")); }
         let tier = holder_tier(&account)?;
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
-        rate_limit(&mut Host, &account, &lim, now_ms)?;
-        consume_nonce(&mut Host, &account, &nonce, now_ms)?;
+        admit(&mut Host, &account, &lim, &nonce, now_ms)?;
         BIND.with(|b| *b.borrow_mut() = Some((account.clone(), Some(g.token_id.clone()))));
         Ok(Ctx { account, req, now_ms, tier, token: Some(g.token_id.clone()), session: Some((id, g)) })
     }
@@ -267,6 +266,9 @@ mod host {
         let c = authenticate(input, "quote", true)?;
         let p = &c.req.params;
         let lim = limits_now(&c)?;
+        // No quotes on a key locked for sale; proceeds and refunds go only to the signer (P1-4c, P1-9).
+        assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
+        assert_quote_parties(&c.account, &s(p, "recipient").unwrap_or_default(), &s(p, "refund_to").unwrap_or_default())?;
         let conf = s(p, "confidentiality").unwrap_or_else(|| "basic".into());
         if conf != "basic" && conf != "advanced" { return Err(err("bad_params", "confidentiality must be basic or advanced")); }
         let slip = p.get("slippage_bps").and_then(|v| v.as_u64()).unwrap_or(100);
@@ -521,8 +523,11 @@ mod host {
         }
         let r = wallet_op(&key, "/wallet/v1/confidential/withdraw", json!({"chain": chain, "to": to, "amount": amt, "token": token}));
         let r = match r { Ok(r) => r, Err(e) => { let _ = Host.incr(&day_key, -(usd as i64)); return Err(e); } };
-        let status = s(&r, "status").unwrap_or_default();
-        if cap_refund_on(&status) { let _ = Host.incr(&day_key, -(usd as i64)); }
+        let raw_status = s(&r, "status").unwrap_or_default();
+        if cap_refund_on(&raw_status) { let _ = Host.incr(&day_key, -(usd as i64)); }
+        // Re-read ownership after the move (P1-4a): if the key changed hands meanwhile, report needs_review.
+        let still = owns(&c.token_id(), &c.account).unwrap_or(false);
+        let status = after_move_status(&raw_status, still);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status}));
         if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
@@ -776,7 +781,8 @@ mod host {
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms)?;
         let qk = tkey(&tid, &format!("chainsig/{}", c.now_ms / 86_400_000));
-        bump_within(&mut Host, &qk, 1, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
+        // Check room now, count only after a signature that recovers to this key (P1-2): a failed MPC call costs no quota.
+        assert_quota_room(&mut Host, &qk, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
         let (mid, msk) = minter()?;
         let a = args.to_string();
         let (tx, out) = send_full(&mid, &msk, chainsig::SIGNER, &[Action::FunctionCall { method: "sign", args: a.as_bytes(), gas: chainsig::CHAINSIG_GAS, deposit: 1 }])?;
@@ -789,6 +795,7 @@ mod host {
         let child = chainsig::derive(&root, &mid, &path);
         let h: [u8; 32] = hex::decode(hx.trim_start_matches("0x")).ok().and_then(|v| v.try_into().ok()).ok_or_else(|| err("bad_params", "hash"))?;
         if !chainsig::recovers_to(&h, &sig, &child) { return Err(err("bad_signature", "signature does not recover to this key's address")); }
+        bump_within(&mut Host, &qk, 1, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
         prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", hx));
         Ok(json!({"ok": true, "op": "chain_sign", "token_id": tid, "path": path, "tx": tx, "payload_hash": hx,
             "signature": sig, "evm_address": chainsig::evm_address(&child)}))
@@ -799,7 +806,9 @@ mod host {
     fn op_beat_key(input: &Value, add: bool) -> Result<Value, Error> {
         let op = if add { "add_beat_key" } else { "del_beat_key" };
         let c = authenticate(input, op, false)?;
-        assert_owner(&c.account, &keys_contract())?;
+        // The keys contract's configured owner, read live, not the contract account id (P1-5).
+        let owner = config_owner(&view(&keys_contract(), "config", json!({}))?).ok_or_else(|| err("config", "keys contract has no owner in config"))?;
+        assert_owner(&c.account, &owner)?;
         let (mid, msk) = minter()?;
         let raw = bs58::decode(msk.trim_start_matches("ed25519:")).into_vec().map_err(|_| err("signer", "bad key"))?;
         let mpk: [u8; 32] = raw.get(32..64).and_then(|b| b.try_into().ok()).ok_or_else(|| err("signer", "bad key"))?;

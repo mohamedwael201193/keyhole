@@ -1,0 +1,18 @@
+name: claims-online
+# Full online verify-claims against mainnet RPC, OutLayer, FastFS and the live site.
+# Not a PR gate (network flakes must not block merges); runs daily and on demand.
+on:
+  schedule: [{ cron: "17 5 * * *" }]
+  workflow_dispatch: {}
+permissions: { contents: read }
+jobs:
+  claims-online:
+    runs-on: [self-hosted, keyhole-box]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: verify-claims (online). Exit 1 = a claim FAILED; exit 2 = only ERRORs (a source was unreachable)
+        run: node judge/verify-claims.mjs | tee "$RUNNER_TEMP/claims.txt"
+      - if: always()
+        run: tail -3 "$RUNNER_TEMP/claims.txt" >> "$GITHUB_STEP_SUMMARY"
