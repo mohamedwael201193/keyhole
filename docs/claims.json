@@ -4058,17 +4058,17 @@
   },
   {
    "id": "e2e-verify: the default page checks the publ",
-   "claim": "e2e test named 'verify: the default page checks the published cff9fd3c info call' exists",
+   "claim": "e2e test named 'verify: the default page checks the published 94c355ff info call' exists",
    "where": "README.md:552",
    "evidence_type": "test file",
    "evidence": "web/e2e/site.spec.ts",
    "check": {
     "type": "grep",
     "path": "web/e2e/site.spec.ts",
-    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ cff9fd3c\\ info\\ call"
+    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ 94c355ff\\ info\\ call"
    },
    "expected": "test name found",
-   "verify": "grep -n \"verify: the default page checks the published cff9fd3c info call\" web/e2e/site.spec.ts"
+   "verify": "grep -n \"verify: the default page checks the published 94c355ff info call\" web/e2e/site.spec.ts"
   },
   {
    "id": "e2e-settle: the real SOL→NEAR order reads SU",

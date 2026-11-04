@@ -549,7 +549,7 @@ Previous version `f13efe92`, funded on 2026-10-28. `./verify.sh` on each call be
 
 - Your browser fetches the attestation, downloads the wasm from FastFS and hashes it with `crypto.subtle`.
 - It runs the `verify.sh` checks plus Intel DCAP and Intel PCS checks (37 in all), so you don't have to trust the site.
-- The e2e test [`verify: the default page checks the published cff9fd3c info call`](web/e2e/site.spec.ts) runs this on desktop and mobile.
+- The e2e test [`verify: the default page checks the published 94c355ff info call`](web/e2e/site.spec.ts) runs this on desktop and mobile.
 
 ![Verify page](web/screenshots/desktop-verify.webp)
 
