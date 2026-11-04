@@ -21,6 +21,8 @@ export function useSigned(op: Op) {
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<WorkerResult | null>(null);
   const [stage, setStage] = useState<Stage>("idle");
+  /** How the last result was authorised: a live session token or a fresh wallet signature. */
+  const [via, setVia] = useState<"session" | "signature" | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const t0 = useRef(0);
   useEffect(() => {
@@ -43,14 +45,15 @@ export function useSigned(op: Op) {
     finally { setBusy(false); setStage("idle"); t0.current = 0; }
   }, [op]);
   useEffect(() => {
-    if (pending) { try { if (JSON.parse(pending.message).op === op) { clearPending(); void send(pending); } } catch { /* ignore */ } }
+    if (pending) { try { if (JSON.parse(pending.message).op === op) { clearPending(); setVia("signature"); void send(pending); } } catch { /* ignore */ } }
   }, [pending, op, send, clearPending]);
   const clear = useCallback(() => { setRes((prev) => (prev?.error ? null : prev)); }, []);
   const reset = useCallback(() => { setRes(null); }, []);
   const run = useCallback(async (params?: Record<string, unknown>, opts?: { quiet?: boolean }) => {
     if (!opts?.quiet) setRes(null);
     setBusy(true); t0.current = Date.now();
-    setStage(inSession(op) && loadSession(accountId) ? "enclave" : "wallet");
+    const viaSession = !!(inSession(op) && loadSession(accountId));
+    setStage(viaSession ? "enclave" : "wallet"); setVia(viaSession ? "session" : "signature");
     try { const auth = await sign(op, params); await send(auth); }
     catch (e) {
       setBusy(false); setStage("idle"); t0.current = 0;
@@ -58,5 +61,5 @@ export function useSigned(op: Op) {
       setRes({ call_id: null, status: null, output: null, attestation_url: null, time_ms: null, error: { code: e instanceof SignError ? e.code : "wallet_rejected" } });
     }
   }, [sign, op, send, accountId]);
-  return { run, busy, res, clear, reset, stage, elapsed, label: busy ? `${STAGE_TEXT[stage]}… ${elapsed}s` : "" };
+  return { run, busy, res, via, clear, reset, stage, elapsed, label: busy ? `${STAGE_TEXT[stage]}… ${elapsed}s` : "" };
 }
