@@ -11,12 +11,18 @@ import { SessionCard } from "@/components/SessionCard";
 import { DepositQr } from "@/components/DepositQr";
 import { ErrorBox } from "@/components/Result";
 import { Busy, Purpose } from "@/components/ui";
-import { StepCard, Stepper, StepTransition, SuccessCheck } from "@/components/motion";
+import { CopyButton, QRFrame, StepCard, Stepper, StepTransition, SuccessCheck } from "@/components/motion";
+import QRCode from "qrcode";
+import { accountState, formatNear, type AccountState } from "@/lib/nearAccount";
+import { TOPUP_HINT_NEAR } from "@/lib/start";
 
-const TITLES: Record<StartStep, string> = { connect: "Connect", mint: "Get your key", unlock: "Unlock", limits: "Limits", fund: "Fund", done: "Ready" };
+const TITLES: Record<StartStep, string> = { connect: "Get started", topup: "Add NEAR", mint: "Get your key", unlock: "Unlock", limits: "Limits", fund: "Fund", done: "Ready" };
 
 export function StartView() {
-  const { accountId, connect, session, startSession } = useWallet();
+  const { accountId, connect, connectOther, connectSocial, socialEnabled, socialCreating, via, session, startSession } = useWallet();
+  const [acct, setAcct] = useState<AccountState | null>(null);
+  const [sawTopup, setSawTopup] = useState(false);
+  const [qr, setQr] = useState("");
   const [autoTried, setAutoTried] = useState("");
   const [token, setToken] = useState<Token | null>(null);
   const [holder, setHolder] = useState<boolean | null>(null);
@@ -52,42 +58,76 @@ export function StartView() {
     if (!token || session || !mint.res?.output?.ok || autoTried === token.token_id) return;
     setAutoTried(token.token_id); void startSession(token.token_id, { reuseOnly: true });
   }, [token, session, mint.res, autoTried, startSession]);
-  const step = startStep({ connected: !!accountId, holder, unlocked, limitsDone, funded });
-  const idx = START_STEPS.indexOf(step);
+  // Account ready: is it on chain, and with how much NEAR? A new Google / email account is an unfunded implicit id.
+  useEffect(() => {
+    setAcct(null); if (!accountId || /^0x/i.test(accountId)) return;
+    let stop = false;
+    const tick = async () => { const a = await accountState(accountId); if (!stop && a) setAcct(a); };
+    void tick();
+    const id = setInterval(tick, 6_000);
+    return () => { stop = true; clearInterval(id); };
+  }, [accountId]);
+  useEffect(() => { if (acct && !acct.exists) setSawTopup(true); }, [acct]);
+  useEffect(() => { if (accountId && acct && !acct.exists) QRCode.toString(accountId, { type: "svg", margin: 1, width: 168 }).then(setQr).catch(() => setQr("")); }, [accountId, acct]);
+  const step = startStep({ connected: !!accountId, exists: acct ? acct.exists : null, holder, unlocked, limitsDone, funded });
+  const steps = START_STEPS.filter((x) => x !== "topup" || sawTopup);
+  const idx = steps.indexOf(step);
   const units = toBaseUnits(amt, ASSETS[asset].decimals);
   const addr = account.res?.output?.ok ? (account.res.output.deposit?.deposit_address as string | undefined) : undefined;
 
   return (
     <main className="page start" data-testid="start">
-      <Purpose eyebrow="Start" title="Set up in five short steps" line="A private trading account: two wallet popups with a NEAR wallet (connect, mint), three with MetaMask. Your progress is kept if you leave." />
-      <div data-testid="start-dots"><Stepper steps={START_STEPS.map((x) => TITLES[x])} current={idx} /></div>
+      <Purpose eyebrow="Start" title={`Set up in ${steps.length - 1} short steps`} line="A private trading account inside a sealed enclave. Sign in with Google or email, or use any wallet. Your progress is kept if you leave." />
+      {accountId && <p className="acct-ready" data-testid="account-ready"><span className="note">Signed in{via === "privy" ? " with Google / email" : ""} as</span> <b className="addr" title={accountId}>{accountId.length > 24 ? `${accountId.slice(0, 10)}…${accountId.slice(-8)}` : accountId}</b> <CopyButton value={accountId} />{acct && <span className="note" data-testid="account-balance"> · {acct.exists ? `${formatNear(acct.yocto)} NEAR` : "not on chain yet"}</span>}</p>}
+      <div data-testid="start-dots"><Stepper steps={steps.map((x) => TITLES[x])} current={idx} /></div>
       <StepTransition k={step}><StepCard active className="scard" data-testid={`start-step-${step}`}>
-        {step === "connect" && <>
-          <h2>1 · Connect a wallet</h2>
-          <p>A NEAR wallet connects and unlocks in one popup. MetaMask works too (one more signature to unlock). Nothing is sent and nothing is charged.</p>
-          <button className="btn b1" type="button" onClick={() => void connect()} data-testid="start-connect">Connect wallet</button>
+        {step === "connect" && !socialCreating && <>
+          <h2>1 · Get started</h2>
+          {socialEnabled ? <>
+            <p>Sign in with Google or email and we create your NEAR account for you. No wallet, no extension. Already have a wallet? Use it instead. Nothing is sent and nothing is charged.</p>
+            <div className="start-choices">
+              <button className="btn b1 big" type="button" onClick={connectSocial} data-testid="start-social">Continue with Google / email</button>
+              <button className="btn b2" type="button" onClick={() => void connectOther()} data-testid="start-connect">All wallets (NEAR, MetaMask, …)</button>
+            </div>
+          </> : <>
+            <p>Connect a NEAR wallet or MetaMask. Nothing is sent and nothing is charged.</p>
+            <button className="btn b1" type="button" onClick={() => void connect()} data-testid="start-connect">Connect wallet</button>
+          </>}
+        </>}
+        {step === "connect" && socialCreating && <p data-testid="start-creating"><Busy l="Creating your NEAR account" /></p>}
+        {step === "topup" && accountId && <>
+          <h2>{idx + 1} · Add a little NEAR</h2>
+          <p>Your new NEAR account exists on chain once it holds a little NEAR. Send <b>{TOPUP_HINT_NEAR} NEAR</b> (about a cent) from any NEAR wallet or an exchange to your account id. This page moves on by itself when it arrives.</p>
+          <div className="depqr" data-testid="topup">
+            {qr && <QRFrame caption="Scan to copy your account id"><div className="qr" role="img" aria-label="QR code of your NEAR account id" dangerouslySetInnerHTML={{ __html: qr }} /></QRFrame>}
+            <div>
+              <p>Your NEAR account id:</p>
+              <div className="vbox ro"><span className="v addr" data-testid="topup-address">{accountId}</span><CopyButton value={accountId} /></div>
+              <p className="vhelp"><Busy l="Waiting for NEAR to arrive" /></p>
+            </div>
+          </div>
         </>}
         {step !== "connect" && holder === null && <p><Busy l="Looking for your key" /></p>}
         {step === "mint" && holder === false && <>
-          <h2>2 · Get your key</h2>
-          <p>A key is a free NFT that opens your own account inside the enclave. One signature, no fee: the enclave pays the NEAR storage.</p>
-          <button className="btn b1" type="button" disabled={mint.busy} onClick={() => void mint.run({})} data-testid="start-mint">{mint.busy ? <Busy l={mint.label} /> : "Mint my key (1 signature)"}</button>
+          <h2>{idx + 1} · Get your key</h2>
+          <p>A key is a free NFT that opens your own account inside the enclave. No fee: the enclave pays the NEAR storage.</p>
+          <button className="btn b1" type="button" disabled={mint.busy} onClick={() => void mint.run({})} data-testid="start-mint">{mint.busy ? <Busy l={mint.label} /> : "Mint my key"}</button>
           {mint.res?.output?.ok && <p className="note"><Busy l="Minted. Waiting for the chain to show it" /></p>}
           {mint.res?.error && <ErrorBox code={mint.res.error.code} />}
         </>}
         {step === "unlock" && token && <>
-          <h2>3 · Unlock for 30 minutes</h2>
+          <h2>{idx + 1} · Unlock for 30 minutes</h2>
           <SessionCard tokenId={token.token_id} />
         </>}
         {step === "limits" && <>
-          <h2>4 · Safe limits</h2>
-          <p><b>Recommended: $1/trade, $5/day.</b> Lowering limits needs no popup; raising them later asks your wallet.</p>
+          <h2>{idx + 1} · Safe limits</h2>
+          <p><b>Recommended: $1/trade, $5/day.</b> You can lower them any time; raising them later asks your wallet.</p>
           <button className="btn b1" type="button" disabled={limits.busy} onClick={() => void limits.run(SAFE_LIMITS)} data-testid="start-limits">{limits.busy ? <Busy l={limits.label} /> : "Use recommended limits"}</button>{" "}
           <button className="btn b2" type="button" onClick={() => { if (accountId) localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1"); setLimitsDone(true); }} data-testid="start-limits-skip">Keep my key&apos;s tier limits</button>
           {limits.res?.error && <ErrorBox code={limits.res.error.code} />}
         </>}
         {step === "fund" && <>
-          <h2>5 · Fund</h2>
+          <h2>{idx + 1} · Fund</h2>
           <p>Choose an amount. The enclave gives you a deposit address; nothing moves until you send.</p>
           <div className="vfield"><label htmlFor="st-amt">Amount</label><div className="vbox"><input id="st-amt" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} />
             <select aria-label="Asset" value={asset} onChange={(e) => setAsset(e.target.value as AssetKey)}>{(Object.keys(ASSETS) as AssetKey[]).map((k) => <option key={k} value={k}>{ASSETS[k].symbol}</option>)}</select></div></div>
