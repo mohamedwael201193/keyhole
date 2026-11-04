@@ -42,13 +42,13 @@ test("verify: the previous-build verdict says so, and the current call links its
   await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
   await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
-  await expect(page.locator('a[href*="AepKgT8M1XhMjWMHMzaJSo3YnBXzG58YYrLVyp8tUW3z"]').first()).toBeVisible();
-  await expect(page.locator('a[href*="F1XzcCcz"]')).toHaveCount(0);
+  await expect(page.locator('a[href*="EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="AepKgT8M"]')).toHaveCount(0);
 });
 
 test("verify: the default page checks the published 94c355ff info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("643a012d-0389-44d7-9c78-efb5d7835e80");
+  await expect(page.locator("#cid")).toHaveValue("ecb0d1d6-90e3-4522-852a-578ca50fdeb6");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
