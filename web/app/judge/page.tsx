@@ -3,6 +3,7 @@ import { Badge, Proof, See, Step, Steps, Term, Purpose, Reveal, type ProofRow } 
 import { attestation, acct, acctAlt, KEYS_CONTRACT, tx, txAlt } from "@/lib/config";
 import { IDENTITY } from "@/lib/identity.gen";
 import { TxLink } from "@/components/TxLink";
+import { HealthStrip } from "@/components/HealthStrip";
 import { Trust, TrustLegend } from "@/components/Trust";
 import { CheckBuild, CheckContract } from "./live";
 
@@ -51,6 +52,7 @@ export default function JudgePage() {
         title={<>Check it yourself. <em>Trust nothing we say.</em></>}
         line={<>Seven checks, top to bottom. Each one has a button that runs in your browser and a green box that says what you should see. If you see something else, the claim fails.</>}
       />
+      <HealthStrip />
       <TrustLegend />
       <Steps testid="judge-steps">
         <Reveal><Step n={1} title="The code running in the enclave is the code in the repo" testid="judge-step-1">

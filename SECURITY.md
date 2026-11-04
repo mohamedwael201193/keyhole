@@ -148,3 +148,7 @@ Tests: `tee/worker/src/p2harden.rs`.
 - The enclave treats a Privy account like any NEAR account: NEP-413 signature with a full-access key of the implicit account (`is_full_access`), freshness, single-use nonce. No new trust in the TEE.
 - A new implicit account must receive a little NEAR before it exists on chain; until then the worker rejects its signatures (no access key yet). We do not sponsor accounts.
 - Allowed origins in the Privy dashboard: keyhole-seven.vercel.app and localhost for development only.
+
+## Continuity
+
+- If the OutLayer payment balance runs out, live calls stop and `/api/health` (the strip on /judge) shows "offline: payment balance empty". Attestations, FastFS wasm and on-chain state stay public and verifiable.

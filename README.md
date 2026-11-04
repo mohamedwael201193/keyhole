@@ -196,7 +196,7 @@ flowchart LR
 
 ## 2. Judge steps
 
-**Fastest path (5 minutes, browser only):** open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). It walks through six checks with real mainnet call ids and tx links: the enclave code equals the repo build, the NFT contract equals the repo wasm, the new holder controls the account and the old one gets `not_owner`, holder limits and the transfer cooldown are enforced in the enclave, and tier caps hold. Every call links to `/verify` and to its raw attestation. Raw files: [`docs/evidence/ownership-and-limits/`](docs/evidence/ownership-and-limits/).
+**Fastest path (5 minutes, browser only):** open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). It walks through seven checks with real mainnet call ids and tx links: the enclave code equals the repo build, the NFT contract equals the repo wasm, the new holder controls the account and the old one gets `not_owner`, holder limits and the transfer cooldown are enforced in the enclave, and tier caps hold. Every call links to `/verify` and to its raw attestation. Raw files: [`docs/evidence/ownership-and-limits/`](docs/evidence/ownership-and-limits/).
 
 
 Do the step. The result on the right is what a correct tree produces. Commands are read-only except where a test binary runs locally.
@@ -462,7 +462,7 @@ Gateway calls on mainnet, signed with the website's own [`web/lib/nep413.ts`](we
 | Flooding | per-holder and global rate limits in the TEE, plus a per-IP limit at the gateway | step 7, gateway | [`d892ac43`](https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd), [gateway tests](web/tests/gateway.test.ts) |
 | Minting outside the rules | only the enclave-held minter can call `nft_mint`, one key per account | contract and worker | [`a516a457`](https://api.outlayer.ai/attestations/by-call/a516a457-0be8-4805-acb1-4f3a9ad30ad3), [config](#5-the-keys-nft-contract) |
 | Operator swapping the code | attestation of `executed_wasm_sha256`, bytes on FastFS, reproducible build | §9 | [`verify.sh`](verify.sh), [`/verify`](https://keyhole-seven.vercel.app/verify) |
-| Leaked infrastructure secrets | the payment key lives only in a server env, the 1Click JWT is an enclave secret, and CI scans for secrets on every push | gateway, worker, CI `hygiene` | [CI](https://github.com/mohamedwael201193/keyhole/actions/runs/40572408070) |
+| Leaked infrastructure secrets | the payment key lives only in a server env, the 1Click JWT is an enclave secret, and CI scans for secrets on every push | gateway, worker, CI `hygiene` | [CI](https://github.com/mohamedwael201193/keyhole/actions/runs/41677252319) |
 | Browser attacks on the site | CSP, HSTS (2 years, preload), `nosniff`, `frame-ancestors 'none'`, strict referrer and permissions policies | [`web/next.config.ts`](web/next.config.ts) | `curl -I https://keyhole-seven.vercel.app` |
 
 **Privacy guarantees**
@@ -677,7 +677,7 @@ The green run behind the current count is linked at the top of this section; eve
 | `/mint` | Bronze mint in one signature, with the cap table for Bronze, Silver, Gold, and Legendary | worker `mint` |
 | `/gallery` | Every key on the contract. State comes from the chain (`locked`, `unlocked`, `expired`). The finish comes from the tier and the token seed | `nft_tokens`, `nft_tier` |
 | `/verify` | 37 checks computed in your browser: 6 attestation checks (quote, build, FastFS, published version, report_data binding, published output), 19 Intel DCAP checks on the TDX quote, 12 Intel PCS revocation and TCB checks, plus one-byte tamper controls | OutLayer, FastFS, Intel PCS (through a fixed-URL pass-through) |
-| `/judge` | The judge path: six numbered checks against mainnet with no wallet, a who-sees-what table, and what the proofs do not cover | static, every call links to `/verify` |
+| `/judge` | The judge path: seven numbered checks against mainnet with no wallet, a who-sees-what table, and what the proofs do not cover | static, every call links to `/verify` |
 | `/settle` | A no-wallet 1Click dry-run quote, an attested vault trade with its intent hash, real 1Click orders with live status (SUCCESS, REFUNDED) and where the funds are, and the Agent API policy panel | 1Click `/v0/quote` (`dry: true`), `/v0/status`, Agent API |
 | `/key` | One key's history: owners and events from a signed key log, re-verified in the browser | worker `provenance`, NEAR |
 | `/pnl` | A holder-published, minter-signed PnL statement and its signature check | worker `pnl` |
