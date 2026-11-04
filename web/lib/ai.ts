@@ -39,6 +39,11 @@ export function gpuNonceCheck(g: GpuNonces | null | undefined, nonce: string): "
   return g.eat_nonce === nonce && g.evidence_nonces.length > 0 && g.evidence_nonces.every((n) => n === nonce) ? "pass" : "fail";
 }
 
+/** The /ask verdict: every binding, Intel DCAP, and the GPU nonce must not fail. "n/a" (no GPU payload) does not fail the verdict. */
+export function askVerdict(checks: AiChecks | null, dcapOk: boolean | undefined, gpu: "pass" | "fail" | "n/a"): boolean {
+  return !!checks && allPass(checks) && dcapOk === true && gpu !== "fail";
+}
+
 export interface AiChecks {
   nonceInQuote: boolean;
   signerInQuote: boolean;

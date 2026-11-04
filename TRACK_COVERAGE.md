@@ -29,7 +29,7 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 
 | Requirement | KEYHOLE feature | Evidence | Status |
 |---|---|---|---|
-| 1Click API for quotes, deposits, status | Worker quotes, deposits and swaps through 1Click (confidential mode) | README §11, swap call `7f52f7d8` | ✅ |
+| 1Click API for quotes, deposits, status | Worker quotes through 1Click (`confidentiality: basic \| advanced`, dry first, wet only on execute); vault swaps execute through OutLayer's confidential-swap API; /settle runs standalone 1Click orders | README §11, swap call `7f52f7d8` | ✅ |
 | Handle REFUNDED and FAILED, shown in the UI | /settle shows every 1Click status with where the funds are; a real NO_LIQUIDITY refund reads REFUNDED live; FAILED shows the refund address | [/settle](https://keyhole-seven.vercel.app/settle), [`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md), [PR #62](https://github.com/mohamedwael201193/keyhole/pull/62), e2e `settle: the real SOL→NEAR order reads SUCCESS live…` | ✅ |
 | Show where funds sit at every step | Vault shows sealed balances and deposit addresses | /vault | 🟡 |
 | History of executed buys with explorer links | Vault history lists trades; intent explorer links | /vault | 🟡 links being added |
@@ -49,4 +49,8 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 
 ## Counts (reproduce in README §12)
 
-1336 passing tests at `08fa468`: contract 69, worker 388, CLI 7, web unit 815, e2e 57 distinct (109 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41677252319](https://github.com/mohamedwael201193/keyhole/actions/runs/41677252319), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
+1551 passing tests at `d0305f2`: contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct (135 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
+
+## Continuity
+
+The site (Vercel) and the OutLayer worker are paid from the project account `keyhole-devmo.near` and stay up through judging. The NFT contract is on mainnet and every proof (attestations, FastFS wasm, transactions) is public, so verification never depends on our servers.

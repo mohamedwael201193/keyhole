@@ -1,8 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { buildPolicy } from "@/lib/agentPolicy";
-import { policyWarnings, canon } from "@/lib/agentApi";
+import { balanceWarnings, policyWarnings, canon } from "@/lib/agentApi";
 import { TxLink } from "@/components/TxLink";
+import { Spinner } from "@/components/ui";
+
+const AGENT_ERR: Record<string, string> = {
+  policy_transaction_limit_exceeded: "Above the per-trade limit, so the policy refused it. That is the cap doing its job.",
+  rate_limited: "Too many requests this minute. Wait a few seconds and try again.",
+  unavailable: "The Agent API did not answer. The rest of this page still works; try again later.",
+};
+export const agentErr = (c: string) => AGENT_ERR[c] ?? `The Agent API returned an error (${c}). Try again later.`;
 
 type Q = { limits: Record<string, number>; usage: Record<string, number>; observed_at: string };
 type Pol = { revision: number; status: string; policy_hash: string; transaction_hash?: string; policy: ReturnType<typeof buildPolicy> };
@@ -14,7 +22,7 @@ export function AgentPanel() {
   const [q, setQ] = useState<Q | null>(null);
   const [pol, setPol] = useState<Pol | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [dry, setDry] = useState<{ usd: string; warn: string[] } | null>(null);
+  const [dry, setDry] = useState<{ usd: string; warn: string[]; bal: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const get = (r: string) => fetch(`/api/agent?r=${r}`).then((x) => x.json()).then((j) => (j.ok ? j.body : Promise.reject(j.error?.code)));
@@ -24,7 +32,7 @@ export function AgentPanel() {
     setBusy(true); setDry(null);
     try {
       const j = await (await fetch("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: USDC, dest: "nep141:wrap.near", amount: usdMicro }) })).json();
-      if (j.ok) setDry({ usd: j.body.spend?.amount_usd, warn: policyWarnings(j.body) }); else setErr(j.error?.code);
+      if (j.ok) setDry({ usd: j.body.spend?.amount_usd, warn: policyWarnings(j.body), bal: balanceWarnings(j.body) }); else setErr(j.error?.code);
     } finally { setBusy(false); }
   }
   const expect = buildPolicy({ tier: 1 });
@@ -32,8 +40,9 @@ export function AgentPanel() {
   return (
     <section className="card agent" data-testid="agent">
       <h2>Agent API · holder caps as policy</h2>
+      <p className="demo-tag" data-testid="agent-demo"><b>Demo</b> · one shared NEAR Intents agent, $0 balance. Dry quotes only: it shows the policy the enclave would install for a holder, nothing is moved.</p>
       <p className="note">KEYHOLE tier caps are written into a NEAR Intents Agent API policy, so the agent&apos;s own wallet refuses what the key would refuse. Demo partner deployment on mainnet; quotes are dry and the agent holds no funds.</p>
-      {err && <p className="note" role="alert" data-testid="agent-err">Agent API: {err}</p>}
+      {err && <p className="note" role="alert" data-testid="agent-err">{agentErr(err)}</p>}
       {net && <p className="note" data-testid="agent-net">Network <b>{net.network}</b> · status <b>{net.status.overall}</b></p>}
       {q && <p className="note" data-testid="agent-quotas">Quotas: {q.usage.agents_last_24_hours}/{q.limits.daily_agents} agents today · {q.usage.requests_this_minute}/{q.limits.requests_per_minute} requests this minute</p>}
       {p && (
@@ -44,15 +53,15 @@ export function AgentPanel() {
             <tr><th>USD budget / day</th><td>${p.budget.daily_usd}</td></tr>
             <tr><th>Actions</th><td>{p.actions.join(", ")}</td></tr>
             <tr><th>Destinations</th><td>{p.destinations.mode} · {p.destinations.list.length ? p.destinations.list.length : "none (no withdrawals)"}</td></tr>
-            <tr><th>Revision</th><td>{pol!.revision} · {pol!.status}{pol!.transaction_hash && <> · <TxLink hash={pol!.transaction_hash} /></>}</td></tr>
+            <tr><th>Revision</th><td>{pol!.revision} · {pol!.status}{pol!.transaction_hash ? <> · <TxLink hash={pol!.transaction_hash} /></> : <> · not yet written on chain</>}</td></tr>
           </tbody>
         </table>
       )}
       <div className="abtn">
-        <button className="btn b1" disabled={busy} onClick={() => void quote("500000")} data-testid="agent-dry-ok">Dry quote $0.50</button>
-        <button className="btn b1" disabled={busy} onClick={() => void quote("2000000")} data-testid="agent-dry-over">Dry quote $2.00</button>
+        <button className="btn b1" disabled={busy} onClick={() => void quote("500000")} data-testid="agent-dry-ok">{busy ? <Spinner label="Quoting" /> : null} Dry quote $0.50</button>
+        <button className="btn b1" disabled={busy} onClick={() => void quote("2000000")} data-testid="agent-dry-over">{busy ? <Spinner label="Quoting" /> : null} Dry quote $2.00</button>
       </div>
-      {dry && <p className="dout" data-testid="agent-dry-out">${Number(dry.usd).toFixed(2)} · {dry.warn.length ? <b>policy would refuse: {dry.warn.join(", ")}</b> : "within policy"}</p>}
+      {dry && <p className="dout" data-testid="agent-dry-out">${Number(dry.usd).toFixed(2)} · {dry.warn.length ? <b>The policy would refuse this: {dry.warn.map(agentErr).join(" ")}</b> : "within policy"}{dry.bal.length ? <> · <span className="warnbal" data-testid="agent-dry-bal">balance warning: {dry.bal.join(", ")} (demo agent holds $0)</span></> : null}</p>}
     </section>
   );
 }

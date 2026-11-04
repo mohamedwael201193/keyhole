@@ -4,7 +4,7 @@
  * auth object whose signed message names that same op. `provenance` is public and
  * carries no auth. The TEE still verifies the signature, the nonce and the caps.
  */
-export const ALLOWED_OPS = ["info", "provenance", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl"] as const;
+export const ALLOWED_OPS = ["info", "provenance", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "session", "session_revoke"] as const;
 export const MAX_BODY = 8 * 1024;
 export type GatewayCheck = { ok: true; op: string; auth?: unknown } | { ok: false; status: number; code: string };
 
@@ -18,7 +18,9 @@ export function checkBody(raw: string): GatewayCheck {
   if (op !== "info" && op !== "provenance") {
     const a = auth as Record<string, unknown> | undefined;
     if (!a || typeof a !== "object") return { ok: false, status: 400, code: "no_auth" };
-    const fields = a.scheme === "eip191"
+    const fields = a.scheme === "session"
+      ? ["scheme", "token", "nonce", "message", "recipient"]
+      : a.scheme === "eip191"
       ? ["scheme", "account_id", "address", "signature", "nonce", "message", "recipient"]
       : ["account_id", "public_key", "signature", "nonce", "message", "recipient"];
     if (!fields.every((f) => typeof a[f] === "string" && (a[f] as string).length > 0)) return { ok: false, status: 400, code: "no_auth" };

@@ -62,3 +62,29 @@ export function fundsStep(status: string | null | undefined): { step: number; re
     default: return null;
   }
 }
+
+/**
+ * Fund from any chain: an EXECUTABLE 1Click quote (docs: https://docs.near-intents.org/near-intents/integration/distribution-channels/1click-api)
+ * whose recipient is the vault's NEAR deposit address. The visitor sends from the origin chain to the quote's depositAddress;
+ * 1Click swaps through NEAR Intents and delivers on NEAR. Tiny amounts only: capped per origin asset below.
+ */
+export const FUND_ORIGINS = OC_ASSETS.filter((a) => a.chain !== "near");
+export const FUND_DEST: Record<"usdc" | "wnear", string> = { usdc: OC_ASSETS[0].id, wnear: OC_ASSETS[1].id };
+/** Max base units per origin asset (≈$5). */
+export const FUND_MAX: Record<string, bigint> = Object.fromEntries(FUND_ORIGINS.map((a) => [a.id, a.id === "nep141:sol.omft.near" ? BigInt(30_000_000) : BigInt(5_000_000)]));
+export const isNearAccount = (s: string) => /^(?=.{2,64}$)(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/.test(s);
+export function refundOk(chain: string, a: string) {
+  return chain === "sol" ? /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a) : /^0x[0-9a-fA-F]{40}$/.test(a);
+}
+export type FundReq = { origin: string; dest: "usdc" | "wnear"; amount: string; recipient: string; refundTo: string };
+export function fundBody(r: FundReq, now = Date.now()): Record<string, unknown> | null {
+  const o = FUND_ORIGINS.find((a) => a.id === r.origin);
+  const dest = FUND_DEST[r.dest];
+  if (!o || !dest || !/^\d{1,30}$/.test(r.amount) || BigInt(r.amount) <= BigInt(0) || BigInt(r.amount) > FUND_MAX[o.id]) return null;
+  if (!isNearAccount(r.recipient) || !refundOk(o.chain, r.refundTo)) return null;
+  return {
+    dry: false, swapType: "EXACT_INPUT", slippageTolerance: 100, originAsset: o.id, depositType: "ORIGIN_CHAIN", destinationAsset: dest,
+    amount: r.amount, refundTo: r.refundTo, refundType: "ORIGIN_CHAIN", recipient: r.recipient, recipientType: "DESTINATION_CHAIN",
+    deadline: new Date(now + 60 * 60_000).toISOString(),
+  };
+}
