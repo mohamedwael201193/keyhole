@@ -547,7 +547,7 @@
   {
    "id": "att-ecb0d1d6-build",
    "claim": "Call ecb0d1d6 executed worker build 94c355ff",
-   "where": "README.md:207",
+   "where": "README.md:43",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/ecb0d1d6-90e3-4522-852a-578ca50fdeb6",
    "check": {
@@ -562,7 +562,7 @@
   {
    "id": "att-643a012d-build",
    "claim": "Call 643a012d executed worker build cff9fd3c",
-   "where": "README.md:43",
+   "where": "README.md:210",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/643a012d-0389-44d7-9c78-efb5d7835e80",
    "check": {
@@ -1359,22 +1359,9 @@
    "verify": "node judge/verify-claims.mjs --only att-711795b9"
   },
   {
-   "id": "att-643a012d",
-   "claim": "Attested call 643a012d linked from README.md",
-   "where": "README.md:43",
-   "evidence_type": "OutLayer call",
-   "evidence": "https://api.outlayer.ai/attestations/by-call/643a012d-0389-44d7-9c78-efb5d7835e80",
-   "check": {
-    "type": "attestation",
-    "call": "643a012d-0389-44d7-9c78-efb5d7835e80"
-   },
-   "expected": "attestation exists, executed == wasm_hash",
-   "verify": "node judge/verify-claims.mjs --only att-643a012d"
-  },
-  {
    "id": "att-ecb0d1d6",
    "claim": "Attested call ecb0d1d6 linked from README.md",
-   "where": "README.md:207",
+   "where": "README.md:43",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/ecb0d1d6-90e3-4522-852a-578ca50fdeb6",
    "check": {
@@ -1981,6 +1968,19 @@
    },
    "expected": "attestation exists, executed == wasm_hash",
    "verify": "node judge/verify-claims.mjs --only att-3ef04098"
+  },
+  {
+   "id": "att-643a012d",
+   "claim": "Attested call 643a012d linked from README.md",
+   "where": "README.md:613",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/643a012d-0389-44d7-9c78-efb5d7835e80",
+   "check": {
+    "type": "attestation",
+    "call": "643a012d-0389-44d7-9c78-efb5d7835e80"
+   },
+   "expected": "attestation exists, executed == wasm_hash",
+   "verify": "node judge/verify-claims.mjs --only att-643a012d"
   },
   {
    "id": "att-b0a6eadb",
@@ -6280,7 +6280,7 @@
   {
    "id": "att-c1312e2d",
    "claim": "Attested call c1312e2d shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:23",
+   "where": "web/lib/evidence.ts:24",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/c1312e2d-8c20-4b3e-ad5b-22dd3102826d",
    "check": {
@@ -6293,7 +6293,7 @@
   {
    "id": "att-d8f5f0ee",
    "claim": "Attested call d8f5f0ee shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:26",
+   "where": "web/lib/evidence.ts:27",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/d8f5f0ee-3c0b-44bc-afed-bc24ad190ed0",
    "check": {
@@ -6306,7 +6306,7 @@
   {
    "id": "att-16b09581",
    "claim": "Attested call 16b09581 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:27",
+   "where": "web/lib/evidence.ts:28",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/16b09581-9010-4600-b5c5-58af0216cdc8",
    "check": {
@@ -6319,7 +6319,7 @@
   {
    "id": "att-129161f9",
    "claim": "Attested call 129161f9 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:29",
+   "where": "web/lib/evidence.ts:30",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/129161f9-2534-4a3f-9544-44f8da9dd7c2",
    "check": {
@@ -6332,7 +6332,7 @@
   {
    "id": "att-f36d9b54",
    "claim": "Attested call f36d9b54 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:31",
+   "where": "web/lib/evidence.ts:32",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/f36d9b54-417a-4b33-9598-c396ae852d4d",
    "check": {
@@ -6345,7 +6345,7 @@
   {
    "id": "att-dda27438",
    "claim": "Attested call dda27438 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:33",
+   "where": "web/lib/evidence.ts:34",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/dda27438-67e6-4c8a-8f32-888d3ff17760",
    "check": {
@@ -6358,7 +6358,7 @@
   {
    "id": "att-3e53ce83",
    "claim": "Attested call 3e53ce83 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:34",
+   "where": "web/lib/evidence.ts:35",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/3e53ce83-4c4c-4769-820d-ba8a446dd335",
    "check": {
@@ -6371,7 +6371,7 @@
   {
    "id": "att-4eae763a",
    "claim": "Attested call 4eae763a shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:35",
+   "where": "web/lib/evidence.ts:36",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/4eae763a-5732-4e6b-9907-2b8c6294f170",
    "check": {
@@ -6384,7 +6384,7 @@
   {
    "id": "att-e099f957",
    "claim": "Attested call e099f957 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:40",
+   "where": "web/lib/evidence.ts:41",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/e099f957-e3c6-4035-999a-907d9782997e",
    "check": {
@@ -6397,7 +6397,7 @@
   {
    "id": "att-b8a83c55",
    "claim": "Attested call b8a83c55 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:41",
+   "where": "web/lib/evidence.ts:42",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b8a83c55-61bb-448f-8196-08dc23a574df",
    "check": {
@@ -6410,7 +6410,7 @@
   {
    "id": "att-cb3e197b",
    "claim": "Attested call cb3e197b shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:42",
+   "where": "web/lib/evidence.ts:43",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/cb3e197b-61d0-44cb-8fdf-99114b409b25",
    "check": {
@@ -6423,7 +6423,7 @@
   {
    "id": "att-a8097323",
    "claim": "Attested call a8097323 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:44",
+   "where": "web/lib/evidence.ts:45",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a8097323-9fdd-457e-b417-721599793c08",
    "check": {
@@ -6436,7 +6436,7 @@
   {
    "id": "att-806a1150",
    "claim": "Attested call 806a1150 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:45",
+   "where": "web/lib/evidence.ts:46",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/806a1150-8ebb-42b7-b848-fa1dc69299a4",
    "check": {
@@ -6449,7 +6449,7 @@
   {
    "id": "att-b14ffaea",
    "claim": "Attested call b14ffaea shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:46",
+   "where": "web/lib/evidence.ts:47",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b14ffaea-21fe-4fa2-88f8-15a411f8e08f",
    "check": {
@@ -6462,7 +6462,7 @@
   {
    "id": "att-184b6075",
    "claim": "Attested call 184b6075 shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:17",
+   "where": "web/lib/evidenceIds.ts:18",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/184b6075-9e95-4dbe-b75f-3d4c9c9afdcd",
    "check": {
@@ -6475,7 +6475,7 @@
   {
    "id": "att-072e58f1",
    "claim": "Attested call 072e58f1 shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:21",
+   "where": "web/lib/evidenceIds.ts:22",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/072e58f1-4caa-4ce5-9299-b277bab65e97",
    "check": {
@@ -6488,7 +6488,7 @@
   {
    "id": "att-17f2212c",
    "claim": "Attested call 17f2212c shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:24",
+   "where": "web/lib/evidenceIds.ts:25",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/17f2212c-e29c-463a-9693-f3353211d45f",
    "check": {
@@ -6501,7 +6501,7 @@
   {
    "id": "att-3f67169f",
    "claim": "Attested call 3f67169f shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:29",
+   "where": "web/lib/evidenceIds.ts:30",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/3f67169f-c9a7-4776-99c4-9cebfd9ddd04",
    "check": {
@@ -6514,7 +6514,7 @@
   {
    "id": "att-69243490",
    "claim": "Attested call 69243490 shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:32",
+   "where": "web/lib/evidenceIds.ts:33",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/69243490-10c1-4ebd-8f81-b9a195a456dd",
    "check": {
@@ -6527,7 +6527,7 @@
   {
    "id": "att-7420f66a",
    "claim": "Attested call 7420f66a shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:34",
+   "where": "web/lib/evidenceIds.ts:35",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/7420f66a-23d5-4a7d-9949-87056088ddda",
    "check": {
@@ -6540,7 +6540,7 @@
   {
    "id": "att-992a72dc",
    "claim": "Attested call 992a72dc shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:42",
+   "where": "web/lib/evidenceIds.ts:43",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/992a72dc-5a84-4926-bd3e-91f4a9d3b45c",
    "check": {
@@ -6553,7 +6553,7 @@
   {
    "id": "att-a86ed043",
    "claim": "Attested call a86ed043 shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:50",
+   "where": "web/lib/evidenceIds.ts:51",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a86ed043-68b4-402d-9945-ecebdf09fbe4",
    "check": {
@@ -6566,7 +6566,7 @@
   {
    "id": "att-ad9f8102",
    "claim": "Attested call ad9f8102 shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:52",
+   "where": "web/lib/evidenceIds.ts:53",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/ad9f8102-402b-4dba-b1d0-e8166cf7a80b",
    "check": {
@@ -6579,7 +6579,7 @@
   {
    "id": "att-bc67029e",
    "claim": "Attested call bc67029e shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:55",
+   "where": "web/lib/evidenceIds.ts:56",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/bc67029e-fc18-46d4-a217-7a72fe3e34c3",
    "check": {
@@ -6592,7 +6592,7 @@
   {
    "id": "att-c247eaf3",
    "claim": "Attested call c247eaf3 shown on the site (web/lib/evidenceIds.ts)",
-   "where": "web/lib/evidenceIds.ts:56",
+   "where": "web/lib/evidenceIds.ts:57",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/c247eaf3-49db-443e-b745-06a5a6a27e2c",
    "check": {
