@@ -40,3 +40,11 @@ test("/start step 1: Google / email first, All wallets second (when the Privy ap
     await expect(async () => { await social.click(); await expect(page.locator("#privy-modal-content")).toBeVisible({ timeout: 5_000 }); }).toPass({ timeout: 30_000 });
   }
 });
+test("/start back from Google: Privy mounts by itself and shows 'Finishing Google sign-in'", async ({ page }) => {
+  await page.goto("/start");
+  if (!(await page.getByTestId("start-social").count())) return; // Privy not configured in this build
+  const privyReq = page.waitForRequest((r) => /privy\.io/.test(r.url()), { timeout: 20_000 });
+  await page.goto("/start?privy_oauth_state=x&privy_oauth_provider=google&privy_oauth_code=y");
+  await expect(page.getByTestId("start-finishing")).toBeVisible({ timeout: 15_000 });
+  await privyReq;
+});
