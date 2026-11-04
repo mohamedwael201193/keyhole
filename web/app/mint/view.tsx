@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
 import { shortKeyId } from "@/lib/near";
 import { Attested, ErrorBox, OfflineState } from "@/components/Result";
 import { HowStrip } from "@/components/HowStrip";
@@ -17,8 +18,12 @@ import { formatTradePrice } from "@/lib/price";
 import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 import { TxLink } from "@/components/TxLink";
+import { saveMintTx } from "@/lib/mintTx";
 import { MetaMaskNote } from "@/components/MetaMaskNote";
 import { Busy } from "@/components/ui";
+
+/** Remember the mint tx so /start and /vault can link it. */
+function MintTxSave({ hash }: { hash: string }) { const { accountId } = useWallet(); useEffect(() => { saveMintTx(accountId, hash); }, [accountId, hash]); return null; }
 
 const SHOWN = [
   { k: "Bronze", art: 3 },
@@ -71,7 +76,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               </dl>
               <div className="hero-actions">
                 <Link className="btn b1" href="/vault">{t("mint.openVault")}</Link>
-                {typeof o.tx === "string" && <><a className="btn b2" href={tx(o.tx)} target="_blank" rel="noreferrer">{t("mint.view")}</a> <TxLink hash={o.tx}>{o.tx.slice(0, 10)}…</TxLink></>}
+                {typeof o.tx === "string" && <><MintTxSave hash={o.tx} /><a className="btn b2" href={tx(o.tx)} target="_blank" rel="noreferrer">{t("mint.view")}</a> <TxLink hash={o.tx}>{o.tx.slice(0, 10)}…</TxLink></>}
               </div>
               <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginTop: 18 }} data-testid="minted">
                 {t("mint.capsLine", { finish: t(`finish.${idn.finish}`), tx: fmtUsd(idn.perTx * 1e6), day: fmtUsd(idn.daily * 1e6) })}

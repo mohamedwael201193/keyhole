@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { tokensFor, type Token } from "@/lib/near";
@@ -15,14 +15,19 @@ import { CopyButton, QRFrame, StepCard, Stepper, StepTransition, SuccessCheck } 
 import QRCode from "qrcode";
 import { accountState, formatNear, type AccountState } from "@/lib/nearAccount";
 import { TOPUP_HINT_NEAR } from "@/lib/start";
+import { TxLink } from "@/components/TxLink";
+import { loadMintTx, saveMintTx } from "@/lib/mintTx";
+import { minutesLeft } from "@/lib/session";
 
 const TITLES: Record<StartStep, string> = { connect: "Get started", topup: "Add NEAR", mint: "Get your key", unlock: "Unlock", limits: "Limits", fund: "Fund", done: "Ready" };
 
 export function StartView() {
-  const { accountId, connect, connectOther, connectSocial, socialEnabled, socialCreating, via, session, startSession } = useWallet();
+  const { accountId, connect, connectOther, connectSocial, socialEnabled, socialCreating, socialFinishing, via, session, startSession } = useWallet();
   const [acct, setAcct] = useState<AccountState | null>(null);
   const [sawTopup, setSawTopup] = useState(false);
   const [qr, setQr] = useState("");
+  const [mintTx, setMintTx] = useState<string | null>(null);
+  const [justUnlocked, setJustUnlocked] = useState(false);
   const [autoTried, setAutoTried] = useState("");
   const [token, setToken] = useState<Token | null>(null);
   const [holder, setHolder] = useState<boolean | null>(null);
@@ -70,6 +75,13 @@ export function StartView() {
   useEffect(() => { if (acct && !acct.exists) setSawTopup(true); }, [acct]);
   useEffect(() => { if (accountId && acct && !acct.exists) QRCode.toString(accountId, { type: "svg", margin: 1, width: 168 }).then(setQr).catch(() => setQr("")); }, [accountId, acct]);
   const step = startStep({ connected: !!accountId, exists: acct ? acct.exists : null, holder, unlocked, limitsDone, funded });
+  useEffect(() => { setMintTx(loadMintTx(accountId)); }, [accountId]);
+  useEffect(() => { const h = mint.res?.output?.tx; if (mint.res?.output?.ok && accountId) { saveMintTx(accountId, h); setMintTx(loadMintTx(accountId)); } }, [mint.res, accountId]);
+  const wasUnlocked = useRef(false);
+  useEffect(() => {
+    if (unlocked && !wasUnlocked.current) { setJustUnlocked(true); const id = setTimeout(() => setJustUnlocked(false), 8_000); wasUnlocked.current = true; return () => clearTimeout(id); }
+    if (!unlocked) wasUnlocked.current = false;
+  }, [unlocked]);
   const steps = START_STEPS.filter((x) => x !== "topup" || sawTopup);
   const idx = steps.indexOf(step);
   const units = toBaseUnits(amt, ASSETS[asset].decimals);
@@ -79,9 +91,11 @@ export function StartView() {
     <main className="page start" data-testid="start">
       <Purpose eyebrow="Start" title={`Set up in ${steps.length - 1} short steps`} line="A private trading account inside a sealed enclave. Sign in with Google or email, or use any wallet. Your progress is kept if you leave." />
       {accountId && <p className="acct-ready" data-testid="account-ready"><span className="note">Signed in{via === "privy" ? " with Google / email" : ""} as</span> <b className="addr" title={accountId}>{accountId.length > 24 ? `${accountId.slice(0, 10)}…${accountId.slice(-8)}` : accountId}</b> <CopyButton value={accountId} />{acct && <span className="note" data-testid="account-balance"> · {acct.exists ? `${formatNear(acct.yocto)} NEAR` : "not on chain yet"}</span>}</p>}
+      {mintTx && step !== "mint" && <p className="note acct-ready" data-testid="start-mint-tx">Key minted · <TxLink hash={mintTx} /></p>}
+      {justUnlocked && session && <p className="sess on start-unlocked" data-testid="start-unlocked" role="status"><SuccessCheck size={18} /> <b>Unlocked</b> · {minutesLeft(session)} min left</p>}
       <div data-testid="start-dots"><Stepper steps={steps.map((x) => TITLES[x])} current={idx} /></div>
       <StepTransition k={step}><StepCard active className="scard" data-testid={`start-step-${step}`}>
-        {step === "connect" && !socialCreating && <>
+        {step === "connect" && !socialCreating && !socialFinishing && <>
           <h2>1 · Get started</h2>
           {socialEnabled ? <>
             <p>Sign in with Google or email and we create your NEAR account for you. No wallet, no extension. Already have a wallet? Use it instead. Nothing is sent and nothing is charged.</p>
@@ -94,6 +108,7 @@ export function StartView() {
             <button className="btn b1" type="button" onClick={() => void connect()} data-testid="start-connect">Connect wallet</button>
           </>}
         </>}
+        {step === "connect" && socialFinishing && !socialCreating && <p data-testid="start-finishing"><Busy l="Finishing Google sign-in" /></p>}
         {step === "connect" && socialCreating && <p data-testid="start-creating"><Busy l="Creating your NEAR account" /></p>}
         {step === "topup" && accountId && <>
           <h2>{idx + 1} · Add a little NEAR</h2>
@@ -112,7 +127,7 @@ export function StartView() {
           <h2>{idx + 1} · Get your key</h2>
           <p>A key is a free NFT that opens your own account inside the enclave. No fee: the enclave pays the NEAR storage.</p>
           <button className="btn b1" type="button" disabled={mint.busy} onClick={() => void mint.run({})} data-testid="start-mint">{mint.busy ? <Busy l={mint.label} /> : "Mint my key"}</button>
-          {mint.res?.output?.ok && <p className="note"><Busy l="Minted. Waiting for the chain to show it" /></p>}
+          {mint.res?.output?.ok && <p className="note"><Busy l="Minted. Waiting for the chain to show it" />{typeof mint.res.output.tx === "string" && <> · <TxLink hash={mint.res.output.tx} /></>}</p>}
           {mint.res?.error && <ErrorBox code={mint.res.error.code} />}
         </>}
         {step === "unlock" && token && <>

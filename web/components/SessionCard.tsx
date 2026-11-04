@@ -8,7 +8,7 @@ import { SuccessCheck } from "./motion";
 
 /** Unlock (one wallet signature for 30 minutes) or show the live session with Revoke. */
 export function SessionCard({ tokenId }: { tokenId: string }) {
-  const { session, startSession, revokeSession } = useWallet();
+  const { session, startSession, revokeSession, via } = useWallet();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [, tick] = useState(0);
@@ -26,7 +26,7 @@ export function SessionCard({ tokenId }: { tokenId: string }) {
     <div className="sess" data-testid="session-off">
       <span><b>Unlock for 30 minutes.</b> Sign once; the enclave then accepts your reads, trades and withdrawals (to your own account, up to $5 in total) without another popup. Raising limits, locking and proofs still ask your wallet.</span>
       <button className="btn b1" type="button" data-testid="session-unlock" disabled={busy} onClick={async () => { setBusy(true); setErr(null); const r = await startSession(tokenId); setBusy(false); if (!r.ok) setErr(r.code); }}>
-        {busy ? <><Spinner label="Waiting for your wallet" /> Confirm in your wallet…</> : "Unlock (1 signature)"}
+        {busy ? <><Spinner label={via === "privy" ? "Signing securely" : "Waiting for your wallet"} /> {via === "privy" ? "Signing securely…" : "Confirm in your wallet…"}</> : "Unlock (1 signature)"}
       </button>
       {err && <ErrorBox code={err} />}
     </div>
