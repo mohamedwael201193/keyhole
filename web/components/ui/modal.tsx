@@ -31,9 +31,9 @@ export type ModalProps = {
 export function Modal({ open, onClose, title, children, variant = "dialog", testid }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
   const closer = useRef(onClose);
-  closer.current = onClose;
   const titleId = `kh-modal-${title.replace(/\W+/g, "-").toLowerCase()}`;
 
+  useEffect(() => { closer.current = onClose; });
   useEffect(() => {
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;

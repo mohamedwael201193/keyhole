@@ -3,20 +3,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { KeyholeLogo } from "./KeyholeLogo";
-import { AccountControl } from "./AccountControl";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 
 /**
- * Public top bar: the logo (home), the judge path, Verify, one primary action (Open app) and Connect.
- * Everything else lives in the footer (components/Footer.tsx). The app shell has its own bar (components/app/AppShell.tsx).
+ * Public top bar. Logo (home), How it works, Proof, For judges, and one primary action, Launch app. Nothing else: no wallet
+ * control on the site; wallets live in the app. Phones get the same items in a menu list (#mnav). The footer is components/Footer.tsx.
  */
-const LINKS = [
-  ["/judge", "judge"],
-  ["/verify", "verify"],
+export const SITE_LINKS = [
+  { href: "/#how", label: "How it works", match: "/" },
+  { href: "/verify", label: "Proof", match: "/verify" },
+  { href: "/judge", label: "For judges", match: "/judge" },
 ] as const;
 
-const OPEN_APP = ["/dashboard", "openApp"] as const;
+export const LAUNCH_APP = { href: "/dashboard", label: "Launch app" } as const;
 
 export function Nav() {
   const { t } = useI18n();
@@ -40,20 +40,19 @@ export function Nav() {
     return () => { removeEventListener("scroll", tick); removeEventListener("resize", tick); };
   }, [path]);
   useEffect(() => { setOpen(false); }, [path]);
-  const current = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
+  const current = (match: string) => (match === "/" ? path === "/" : path === match || path.startsWith(match + "/"));
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only">{t("nav.skip")}</a>
       <nav className={`nav${open ? " open" : ""}`} aria-label="Main">
-        <Link href="/" className="brand"><KeyholeLogo className="h-9" tone={dark ? "light" : "ink"} /></Link>
+        <Link href="/" className="brand" aria-label="KEYHOLE home"><KeyholeLogo className="h-9" tone={dark ? "light" : "ink"} /></Link>
         <div className="links">
-          {LINKS.map(([href, key]) => (
-            <Link key={key} href={href} aria-current={current(href) ? "page" : undefined} className={current(href) ? "on" : ""}>{t(`nav.${key}`)}</Link>
+          {SITE_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} aria-current={current(l.match) ? "page" : undefined} className={current(l.match) ? "on" : ""}>{l.label}</Link>
           ))}
         </div>
         <div className="nav-tools">
-          <Button href={OPEN_APP[0]} size="sm" className="nav-open" testid="open-app">{t(`nav.${OPEN_APP[1]}`)}</Button>
-          <AccountControl />
+          <Button href={LAUNCH_APP.href} size="sm" className="nav-open" testid="open-app">{LAUNCH_APP.label}</Button>
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
@@ -61,7 +60,9 @@ export function Nav() {
       </nav>
       {open && (
         <ul id="mnav" className="mnav">
-          {[...LINKS, OPEN_APP].map(([href, key]) => <li key={key}><Link onClick={() => setOpen(false)} href={href} aria-current={current(href) ? "page" : undefined}>{t(`nav.${key}`)}</Link></li>)}
+          {[...SITE_LINKS, LAUNCH_APP].map((l) => (
+            <li key={l.href}><Link onClick={() => setOpen(false)} href={l.href} aria-current={"match" in l && current(l.match) ? "page" : undefined}>{l.label}</Link></li>
+          ))}
         </ul>
       )}
     </>

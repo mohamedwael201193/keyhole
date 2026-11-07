@@ -120,11 +120,11 @@ describe("TokenSelect", () => {
 
 describe("Modal and Sheet", () => {
   it("renders nothing while closed", () => {
-    expect(html(createElement(Modal, { open: false, onClose: () => {}, title: "Pick", children: "x" }))).toBe("");
+    expect(html(createElement(Modal, { open: false, onClose: () => {}, title: "Pick" }, "x"))).toBe("");
   });
 
   it("when open: a labelled modal dialog with a close button", () => {
-    const m = html(createElement(Modal, { open: true, onClose: () => {}, title: "Pick a token", children: createElement("p", null, "BODY") }));
+    const m = html(createElement(Modal, { open: true, onClose: () => {}, title: "Pick a token" }, createElement("p", null, "BODY")));
     expect(m).toContain('role="dialog"');
     expect(m).toContain('aria-modal="true"');
     expect(m).toContain("Pick a token");
@@ -134,7 +134,7 @@ describe("Modal and Sheet", () => {
   });
 
   it("the sheet is the same dialog in the sheet shape", () => {
-    const m = html(createElement(Sheet, { open: true, onClose: () => {}, title: "Deposit", children: "x" }));
+    const m = html(createElement(Sheet, { open: true, onClose: () => {}, title: "Deposit" }, "x"));
     expect(m).toContain("kh-modal--sheet");
     expect(m).toContain('role="dialog"');
   });
