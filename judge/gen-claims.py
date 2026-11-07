@@ -57,13 +57,13 @@ add("key-beat-scoped", "Beat key 9FiNXX2M… on the minter: FunctionCall to keyh
     {"type":"access_key","account":cfg["minter"],"prefix":"ed25519:9FiNXX2M","receiver":"keyhole-devmo.near","methods":["beat"],"max_allowance":"50000000000000000000000"}, "FunctionCall keyhole-devmo.near [beat], allowance <= 0.05 NEAR")
 # ---------------- worker build ----------------
 DEP = open("tee/worker/DEPLOYED_SHA256").read().strip()
-add("worker-deployed", "The live worker build is 94c355ff…a9ed (tee/worker/DEPLOYED_SHA256)", where(RD,"build **`94c355ff…a9ed`**"), "file", "tee/worker/DEPLOYED_SHA256",
-    {"type":"grep","path":"tee/worker/DEPLOYED_SHA256","pattern":"^"+W["wasm_sha256"]+"\\s*$"}, "94c355ffa318ec0e…f2bca9ed")
-add("worker-fastfs", "The 94c355ff wasm (739601 bytes) is on FastFS and hashes to DEPLOYED_SHA256", where(RD,"(739601 bytes)"), "OutLayer call", f"https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm",
-    {"type":"fastfs","sha256":DEP,"bytes":739601}, "sha256 == DEPLOYED_SHA256, 739601 bytes",
+add("worker-deployed", "The live worker build is ebeb6a34…583b (tee/worker/DEPLOYED_SHA256)", where(RD,"build **`ebeb6a34…583b`**"), "file", "tee/worker/DEPLOYED_SHA256",
+    {"type":"grep","path":"tee/worker/DEPLOYED_SHA256","pattern":"^"+W["wasm_sha256"]+"\\s*$"}, "ebeb6a3496b9c3e2…060f583b")
+add("worker-fastfs", "The ebeb6a34 wasm (748021 bytes) is on FastFS and hashes to DEPLOYED_SHA256", where(RD,"(748021 bytes)"), "OutLayer call", f"https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm",
+    {"type":"fastfs","sha256":DEP,"bytes":748021}, "sha256 == DEPLOYED_SHA256, 748021 bytes",
     f"curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm | sha256sum")
 # ---------------- attestations ----------------
-builds = {"ecb0d1d6-90e3-4522-852a-578ca50fdeb6":"94c355ff","643a012d-0389-44d7-9c78-efb5d7835e80":"cff9fd3c","b0a6eadb-cee9-400e-8eca-8b0f4df7bcec":"a55ebb14","2896d0ad-aa27-4e21-b4a1-0cf2d3755d56":"09d481a5","54207d9e-b4f0-438b-9a74-cdba33de80d9":"f7217ae2","7882f97a-06e5-46d3-9e58-5fe6428fb187":"452df1fd","f4768da8-2e87-4622-8654-d1e67f6cd1f0":"6367401a","0f0bf448-1b66-4200-b6de-7cf095aead54":"67c5cd77","763812bc-0012-4528-a45d-66a3ce17cae9":"38bd67b9","9d19bceb-986b-4745-9bf9-91f7dcb62b6e":"b3fa1a39","cefbc64e-6c08-4bfe-a165-1667d9f5f25b":"f13efe92","09d58c09-c1e9-48b6-bebb-485f5ae79539":"f13efe92"}
+builds = {"5650a6b7-b7de-410c-b206-e189171bad15":"ebeb6a34","ecb0d1d6-90e3-4522-852a-578ca50fdeb6":"94c355ff","643a012d-0389-44d7-9c78-efb5d7835e80":"cff9fd3c","b0a6eadb-cee9-400e-8eca-8b0f4df7bcec":"a55ebb14","2896d0ad-aa27-4e21-b4a1-0cf2d3755d56":"09d481a5","54207d9e-b4f0-438b-9a74-cdba33de80d9":"f7217ae2","7882f97a-06e5-46d3-9e58-5fe6428fb187":"452df1fd","f4768da8-2e87-4622-8654-d1e67f6cd1f0":"6367401a","0f0bf448-1b66-4200-b6de-7cf095aead54":"67c5cd77","763812bc-0012-4528-a45d-66a3ce17cae9":"38bd67b9","9d19bceb-986b-4745-9bf9-91f7dcb62b6e":"b3fa1a39","cefbc64e-6c08-4bfe-a165-1667d9f5f25b":"f13efe92","09d58c09-c1e9-48b6-bebb-485f5ae79539":"f13efe92"}
 for c,b in builds.items():
     add(f"att-{c[:8]}-build", f"Call {c[:8]} executed worker build {b}", where(RD,c), "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}",
         {"type":"attestation","call":c,"wasm_prefix":b,"project":"keyhole-devmo.near/keyhole"}, f"executed_wasm_sha256 starts {b}, == wasm_hash, TDX quote present", f"./verify.sh {c}")
@@ -162,9 +162,9 @@ add("site-health","/api/health reports the enclave online",where(RD,"`/api/healt
 add("site-ar-redirect","/ar/… redirects to the same path without the prefix and keeps the query",where(RD,"A request to `/ar`"),"live site",SITE+"/ar/judge?x=1",{"type":"redirect","url":SITE+"/ar/judge?x=1","location":SITE+"/judge?x=1"},"308 → /judge?x=1")
 for h,v in [("strict-transport-security","max-age=63072000; includeSubDomains; preload"),("x-content-type-options","nosniff"),("content-security-policy","frame-ancestors 'none'"),("referrer-policy","strict-origin-when-cross-origin"),("permissions-policy","camera=()")]:
     add(f"site-hdr-{h}",f"Site sends {h}: …{v}",where(RD,"CSP, HSTS (2 years, preload)"),"live site",SITE,{"type":"header","url":SITE+"/","header":h,"contains":v},f"{h} contains {v}","curl -sI "+SITE)
-add("site-supply-live","Home page supply equals nft_total_supply",where(RD,"Supply on the home page matches `nft_total_supply`"),"live site",SITE,{"type":"site_vs_chain","field":"supply","method":"nft_total_supply"},"home supply == chain supply")
+add("site-supply-live","Home page key count equals nft_total_supply minus the contract-held test key",where(RD,"The home page key count is `nft_total_supply` minus the test key the contract holds"),"live site",SITE,{"type":"site_vs_chain","field":"supply","method":"nft_total_supply"},"home count == total - contract-held")
 add("site-beats-live","Home page heartbeats equal config.beats",where(RD,"`nft_total_supply`, `config`"),"live site",SITE,{"type":"site_vs_chain","field":"beats","method":"config"},"home beats == chain beats")
-add("site-hash","Home page names the live build 94c355ff",where(RD,"The enclave serving the site is build `94c355ff`"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"94c355ff"},"home carries 94c355ff")
+add("site-hash","Home page names the live build ebeb6a34",where(RD,"The enclave serving the site is build `ebeb6a34`"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"ebeb6a34"},"home carries ebeb6a34")
 import glob
 for f in sorted(glob.glob("web/app/**/*.tsx",recursive=True)+glob.glob("web/lib/**/*.ts",recursive=True)+glob.glob("web/components/**/*.tsx",recursive=True)+glob.glob("docs/evidence/**/README.md",recursive=True)):
     for i,l in enumerate(open(f,encoding="utf8"),1):

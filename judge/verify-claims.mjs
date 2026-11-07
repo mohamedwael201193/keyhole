@@ -122,7 +122,13 @@ const checks = {
   async header(c) { const r = await once(`h:${c.url}`, () => get(c.url)); const v = r.headers.get(c.header) || ""; return [v.includes(c.contains), v.slice(0, 60)]; },
   async site_vs_chain(c) {
     const h = (await homeHtml()).replace(/\\"/g, '"');
-    if (c.field === "supply") { const m = h.match(/"supply":(\d+)/); const live = await view("nft_total_supply", {}); return [m && Number(m[1]) === Number(live), `site ${m?.[1]} chain ${live}`]; }
+    if (c.field === "supply") {
+      // The home stat counts keys held by people: nft_total_supply minus the tokens the contract account holds (its test key).
+      const m = h.match(/"supply":(\d+)/);
+      const total = Number(await view("nft_total_supply", {}));
+      const own = Number(await view("nft_supply_for_owner", { account_id: "keyhole-devmo.near" }));
+      return [m && Number(m[1]) === total - own, `site ${m?.[1]} chain ${total} - contract-held ${own}`];
+    }
     const m = h.match(/"beats":"(\d+)"/); const live = (await view("config", {})).beats; return [m && m[1] === String(live), `site ${m?.[1]} chain ${live}`];
   },
   async ci_run(c) {
