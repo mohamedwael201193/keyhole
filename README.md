@@ -213,7 +213,7 @@ Do the step. The result on the right is what a correct tree produces. Commands a
 
 | Do | See |
 |---|---|
-| Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). Supply on the home page matches `nft_total_supply` |
+| Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). The home page key count is `nft_total_supply` minus the test key the contract holds |
 | Open [https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15](https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, checks Intel's revocation lists and TCB status, and shows 37/37 (6 attestation, 19 Intel DCAP, 12 Intel PCS checks; TCB UpToDate). The verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b`, the published build |
 | `./judge/1-contract.sh` | On-chain code hash equals sha256 `9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | `./verify.sh 5650a6b7-b7de-410c-b206-e189171bad15 --rebuild` | The `executed` line equals `tee/worker/DEPLOYED_SHA256` (`ebeb6a34…`). Then `OK` for a TDX quote, `wasm_hash == executed`, `executed == published build ebeb6a34`, the FastFS bytes, and your local `build.sh` |

@@ -6122,7 +6122,7 @@
   },
   {
    "id": "site-supply-live",
-   "claim": "Home page supply equals nft_total_supply",
+   "claim": "Home page key count equals nft_total_supply minus the contract-held test key",
    "where": "README.md:216",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
@@ -6131,7 +6131,7 @@
     "field": "supply",
     "method": "nft_total_supply"
    },
-   "expected": "home supply == chain supply",
+   "expected": "home count == total - contract-held",
    "verify": "node judge/verify-claims.mjs --only site-supply-live"
   },
   {
