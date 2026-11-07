@@ -225,3 +225,18 @@
   .pp-identity .idrow { grid-template-columns: auto minmax(0, 1fr); }
   .pp-identity .idrow .pp-preview { grid-column: 2; justify-self: start; }
 }
+
+/* ---- /demo: the read-only label is the first thing on the page ---- */
+.pp-demo-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin: 0 0 28px; padding: 18px 22px; border-radius: 20px; background: var(--warn-bg); color: var(--warn-ink); border: 2px solid #C98A1E; }
+.pp-demo-banner p { margin: 0; flex: 1 1 320px; font-size: 17px; line-height: 1.55; color: #3D2804; min-width: 0; }
+.pp-demo-tag { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 16px; border-radius: 999px; background: #7A4A06; color: #FFFCF6; font: 800 17px/1 var(--sans); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.pp-demo .dsteps button { min-height: 44px; font-size: 15px; }
+.pp-demo .dcard { padding: 22px 24px; border-radius: 20px; }
+.pp-demo .dcard h2 { font-size: 22px; line-height: 1.25; }
+.pp-demo .ddoes { font-size: 16px; line-height: 1.55; color: var(--mu); }
+.pp-demo .dout { font-size: 16px; line-height: 1.5; padding: 12px 14px; border-radius: 12px; }
+.pp-demo .dcard dl { font-size: 15px; }
+.pp-demo .dcard dt { min-width: 0; flex: 0 0 110px; font-size: 14px; }
+.pp-demo .dcard dl div { gap: 10px; }
+.pp-demo .dproof { display: inline-flex; align-items: center; min-height: 36px; font-size: 15px; }
+.pp-demo .dnext { align-items: center; margin-top: 32px; }
