@@ -9,6 +9,11 @@
   --color-plate: var(--sf);
   --color-line: var(--ln);
   --color-mute: var(--mu);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-teal: var(--teal);
+  --color-brass: var(--brass);
+  --radius-card: var(--r-card);
   --font-serif: var(--font-cormorant), Georgia, serif;
   --font-mono: var(--font-dm), ui-monospace, monospace;
   --font-sans: var(--font-manrope), sans-serif;

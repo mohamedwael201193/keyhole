@@ -21,6 +21,18 @@
   --kh-stops: #0E6B70, #14A3A0 18%, #D4A33A 38%, #F2C25B 50%, #D4A33A 62%, #14A3A0 82%, #0E6B70;
   --kh-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(20,40,40,.12);
   --kh-shadow-hi: 0 2px 4px rgba(0,0,0,.10), 0 16px 40px rgba(20,60,60,.22);
+  /* Design system v2 (P1): role aliases over the values above, one name per role. Values are not changed here. */
+  --paper: var(--bg);
+  --card: var(--sf);
+  --ink-2: var(--mu);
+  --banner: #174A4E;            /* dark green feature banners and score panels */
+  --banner-ink: #F6F1E7;
+  --neutral-ink: #3A4547; --neutral-bg: #E3DCCD; /* not started, expired */
+  --r-field: 12px; --r-card: 16px; --r-card-lg: 20px; --r-pill: 999px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 72px;
+  --shadow-soft: var(--kh-shadow);
+  --shadow-lifted: var(--kh-shadow-hi);
+  --shadow-glow: 0 12px 28px -10px rgba(20,163,160,.55);
 }
 html, body, .nav:not(.dark) { background: var(--bg); }
 .lead, .note, .vlt .vsub, .vlt .note, .vlt .vhelp, .muted { color: var(--mu); }
@@ -199,3 +211,105 @@ p .mono, li .mono, small .mono, p code, li code { display: inline; white-space: 
 
 /* Phones: smaller display and title sizes, same tokens everywhere. */
 @media (max-width: 560px) { :root { --fs-display: 44px; --fs-title: 28px; } }
+
+/* ---- Design system v2 primitives (P1): components/ui/button.tsx, card.tsx, TxResult, TokenIcon, motion ---- */
+.kh-btn {
+  --kh-btn-bg: var(--teal); --kh-btn-fg: #FFFCF6; --kh-btn-bd: transparent; --kh-btn-shadow: none;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 48px; padding: 0 var(--space-5); border-radius: var(--r-pill);
+  border: 1.5px solid var(--kh-btn-bd); background: var(--kh-btn-bg); color: var(--kh-btn-fg); box-shadow: var(--kh-btn-shadow);
+  font: 600 16px/1.1 var(--sans); letter-spacing: .005em; text-decoration: none; white-space: nowrap; cursor: pointer; user-select: none;
+  transition: transform .2s cubic-bezier(.22,.61,.36,1), box-shadow .25s cubic-bezier(.22,.61,.36,1), background-color .2s, border-color .2s, color .2s;
+}
+.kh-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.kh-btn--sm { min-height: 36px; padding: 0 var(--space-4); font-size: 14px; }
+.kh-btn--lg { min-height: 56px; padding: 0 var(--space-6); font-size: 17px; }
+.kh-btn--block { width: 100%; }
+.kh-btn .kh-btn-label { display: inline-flex; align-items: center; gap: var(--space-2); }
+/* Primary: lit top edge, shaded base, a seated 3D lip; press pushes it down */
+.kh-btn--primary {
+  --kh-btn-bg: linear-gradient(180deg, #2B6569 0%, #1F4B4F 52%, #183C40 100%);
+  --kh-btn-shadow: inset 0 1px 0 rgba(255,255,255,.26), inset 0 -2px 0 rgba(0,0,0,.18), 0 3px 0 #0F2A2C, 0 8px 18px -10px rgba(23,59,62,.7);
+}
+.kh-btn--secondary { --kh-btn-bg: var(--card); --kh-btn-fg: var(--ink); --kh-btn-bd: var(--kh-field); --kh-btn-shadow: inset 0 -1px 0 rgba(26,42,44,.08); }
+.kh-btn--ghost { --kh-btn-bg: transparent; --kh-btn-fg: var(--teal); --kh-btn-bd: transparent; padding: 0 var(--space-3); }
+/* Banner: light button on the dark green surface */
+.kh-btn--banner { --kh-btn-bg: var(--banner-ink); --kh-btn-fg: var(--banner); --kh-btn-shadow: 0 1px 0 rgba(0,0,0,.2), 0 10px 22px -12px rgba(0,0,0,.6); }
+.kh-btn--banner:focus-visible { outline-color: #F2C25B; }
+
+.kh-btn:not(:disabled):not([aria-disabled="true"]):hover { transform: translateY(-1px); }
+.kh-btn--primary:not(:disabled):not([aria-disabled="true"]):hover { --kh-btn-shadow: inset 0 1px 0 rgba(255,255,255,.3), inset 0 -2px 0 rgba(0,0,0,.18), 0 3px 0 #0F2A2C, 0 14px 30px -12px rgba(20,163,160,.6); }
+.kh-btn--secondary:not(:disabled):not([aria-disabled="true"]):hover { --kh-btn-bd: var(--teal); --kh-btn-bg: #F3EEE4; }
+.kh-btn--ghost:not(:disabled):not([aria-disabled="true"]):hover { --kh-btn-bg: #1F4B4F14; transform: none; }
+.kh-btn--banner:not(:disabled):not([aria-disabled="true"]):hover { --kh-btn-bg: #FFFCF6; }
+.kh-btn:not(:disabled):not([aria-disabled="true"]):active { transform: translateY(2px); --kh-btn-shadow: inset 0 2px 4px rgba(0,0,0,.22), 0 1px 0 #0F2A2C; }
+.kh-btn--ghost:not(:disabled):not([aria-disabled="true"]):active { --kh-btn-shadow: none; }
+/* Disabled is grey and flat. Loading keeps the variant colours and blocks repeat presses. */
+.kh-btn:is(:disabled, [aria-disabled="true"]):not([data-loading="true"]) { --kh-btn-bg: var(--neutral-bg); --kh-btn-fg: #4F5859; --kh-btn-bd: transparent; --kh-btn-shadow: none; cursor: not-allowed; transform: none; }
+.kh-btn[data-loading="true"] { cursor: progress; }
+.kh-btn .spin { width: 1em; height: 1em; }
+
+/* Cards: rounded, inner highlight, hover lift only when interactive */
+.kh-card {
+  position: relative; background: var(--card); color: var(--ink); border: 1px solid #1A2A2C1A; border-radius: var(--r-card);
+  padding: var(--space-5); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft);
+}
+.kh-card--lg { border-radius: var(--r-card-lg); padding: var(--space-6); }
+.kh-card--paper { background: var(--paper); }
+.kh-card--banner { background: var(--banner); color: var(--banner-ink); border-color: transparent; box-shadow: var(--shadow-lifted); }
+.kh-card--banner .kh-stat-label { color: #D6E6E4; }
+.kh-card--interactive { transition: transform .3s cubic-bezier(.22,.61,.36,1), box-shadow .3s cubic-bezier(.22,.61,.36,1), border-color .3s; }
+.kh-card--interactive:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-lifted); border-color: #1F4B4F40; }
+.kh-stat { display: grid; gap: var(--space-2); align-content: start; }
+.kh-stat-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.kh-stat-label { font: 600 13px/1.4 var(--sans); color: var(--ink-2); }
+.kh-stat-value { font: 600 var(--fs-title)/1.1 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); overflow-wrap: anywhere; }
+.kh-stat-empty { font: 500 16px/1.5 var(--sans); color: var(--ink-2); margin: 0; }
+.kh-stat-hint { font: 500 13px/1.4 var(--sans); color: var(--ink-2); margin: 0; }
+.kh-stat-icon { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; background: #1F4B4F12; color: var(--teal); flex: none; }
+.kh-card--banner .kh-stat-icon { background: #F6F1E71A; color: var(--banner-ink); }
+
+/* Empty state: same KeyArt, clearer hierarchy */
+.kh-empty { border-radius: var(--r-card-lg); }
+.kh-empty--amber { box-shadow: inset 0 0 0 1px #E8B86066, var(--shadow-soft); }
+.kh-empty-icon { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #1F4B4F12; color: var(--teal); margin-bottom: var(--space-3); }
+.kh-empty h2 { text-wrap: balance; }
+
+/* Token icons: the brass medallion from .medal, or a monogram when the mark is missing */
+.tkicon-mono { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: #1F4B4F; color: #FFFCF6; font: 600 13px/1 var(--sans); letter-spacing: .02em; }
+.tkicon-mono[data-size="sm"] { font-size: 11px; }
+.tkicon-mono[data-size="lg"] { font-size: 16px; }
+
+/* Transaction result: one state line, then the proof links */
+.kh-tx { display: grid; gap: var(--space-3); }
+.kh-tx-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.kh-tx-head b { font: 600 16px/1.3 var(--sans); color: var(--ink); }
+.kh-tx-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font: 500 14px/1.5 var(--sans); color: var(--ink-2); }
+.kh-tx-row code { font: 500 13px/1.4 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+.kh-tx-row .kh-btn { min-height: 32px; padding: 0 var(--space-3); font-size: 13px; }
+.kh-tx-verify { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+.kh-tx-check svg { width: 28px; height: 28px; }
+
+/* Glow reveal: a teal shadow that settles in once the block is on screen; content is never hidden */
+.kh-glow { transition: box-shadow 1s cubic-bezier(.22,.61,.36,1); }
+.kh-glow[data-in="true"] { box-shadow: var(--shadow-soft), 0 18px 40px -18px rgba(20,163,160,.55); }
+
+/* Tilt: pointer glow follows the cursor (mouse only; touch and reduced motion get the flat card) */
+.kh-tilt { position: relative; transform-style: preserve-3d; will-change: transform; }
+.kh-tilt::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: var(--tilt-o, 0); transition: opacity .4s; background: radial-gradient(circle at var(--tilt-x, 50%) var(--tilt-y, 50%), rgba(255,255,255,.34), transparent 52%); }
+.kh-tilt[data-tilt="on"]:hover { --tilt-o: 1; }
+
+/* Count-up: tabular digits so the width does not jump while the number moves */
+.kh-count { font-variant-numeric: tabular-nums; }
+
+/* Parallax frame: the layer moves inside a clipped frame, never past its edge */
+.kh-parallax { position: relative; overflow: hidden; }
+.kh-parallax-layer { will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kh-btn, .kh-card--interactive, .kh-glow, .kh-tilt::after { transition: none !important; }
+  .kh-btn:hover, .kh-card--interactive:hover { transform: none; }
+  .kh-tilt { transform: none !important; }
+  .kh-tilt[data-tilt="on"]:hover { --tilt-o: 0; }
+  .kh-glow[data-in="true"] { box-shadow: var(--shadow-soft), 0 18px 40px -18px rgba(20,163,160,.55); }
+}

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GLOSSARY, type Term as TermKey } from "@/lib/glossary";
 
+export { Button, buttonClass, type ButtonProps, type ButtonSize, type ButtonVariant } from "./button";
+export { Card, StatCard, type CardProps, type StatCardProps } from "./card";
+
 /** One design system for the dense pages: badges, steps, proof drawers, spinners, skeletons, glossary terms. */
 
 export function Spinner({ label = "Loading" }: { label?: string }) {
@@ -19,8 +22,30 @@ export function Skeleton({ lines = 3, testid }: { lines?: number; testid?: strin
 }
 
 export type Tone = "ok" | "bad" | "wait" | "info" | "warn";
-export function Badge({ tone, children, testid, status }: { tone: Tone; children: ReactNode; testid?: string; status?: string }) {
-  return <span className={`ubadge ${tone}`} data-testid={testid} data-status={status}>{children}</span>;
+
+/** Status words the product shows. Each maps to one tone and one plain label; the label is always printed, never colour alone. */
+export const BADGE_STATUS = {
+  settled: { tone: "ok", label: "Settled" },
+  completed: { tone: "ok", label: "Completed" },
+  success: { tone: "ok", label: "Success" },
+  pending: { tone: "warn", label: "Pending" },
+  refunded: { tone: "info", label: "Refunded" },
+  expired: { tone: "wait", label: "Expired" },
+  failed: { tone: "bad", label: "Failed" },
+} as const satisfies Record<string, { tone: Tone; label: string }>;
+export type BadgeStatus = keyof typeof BADGE_STATUS;
+
+/** Tone and label for a status word (case-insensitive), or null when the word is not one of the seven. */
+export function badgeFor(status: string | null | undefined): { tone: Tone; label: string } | null {
+  if (!status) return null;
+  const k = status.toLowerCase();
+  return Object.hasOwn(BADGE_STATUS, k) ? BADGE_STATUS[k as BadgeStatus] : null;
+}
+
+/** Pass `status` alone for a known word; pass `tone` and children to override (existing callers do). */
+export function Badge({ tone, children, testid, status }: { tone?: Tone; children?: ReactNode; testid?: string; status?: string }) {
+  const mapped = tone ? null : badgeFor(status);
+  return <span className={`ubadge ${tone ?? mapped?.tone ?? "info"}`} data-testid={testid} data-status={status}>{children ?? mapped?.label ?? status}</span>;
 }
 
 export function CopyBtn({ value, label = "Copy" }: { value: string; label?: string }) {
