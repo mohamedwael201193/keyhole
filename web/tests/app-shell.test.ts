@@ -148,11 +148,11 @@ describe("SiteFrame picks the chrome per route", () => {
     return renderToStaticMarkup(withI18n(createElement(SiteFrame, { nav, footer, children: createElement("p", null, "BODY") })));
   };
 
-  it("app routes get the shell and no public nav or footer", () => {
+  it("app routes get the shell and the footer, but no public nav", () => {
     const m = render("/dashboard");
     expect(m).toContain('data-testid="app-shell"');
     expect(m).not.toContain('data-chrome="public"');
-    expect(m).not.toContain('data-chrome="footer"');
+    expect(m).toContain('data-chrome="footer"');
     expect(m).toContain("BODY");
   });
 

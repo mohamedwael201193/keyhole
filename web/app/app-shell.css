@@ -136,3 +136,8 @@
 @media (prefers-reduced-motion: reduce) {
   .app-link { transition: none; }
 }
+
+/* Account menu: on phones the pill sits left of other controls, so pin the menu to the viewport edges. */
+@media (max-width: 860px) {
+  .app-top .acct-menu { position: fixed; top: 68px; left: 12px; right: 12px; width: auto; max-width: none; }
+}

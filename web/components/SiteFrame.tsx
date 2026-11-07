@@ -9,7 +9,8 @@ import { AppShell, isAppRoute } from "./app/AppShell";
  */
 export function SiteFrame({ nav, footer, children }: { nav: ReactNode; footer: ReactNode; children: ReactNode }) {
   const path = usePathname();
-  if (isAppRoute(path)) return <AppShell>{children}</AppShell>;
+  // The app shell keeps the site footer (Built on NEAR, links) under the page content.
+  if (isAppRoute(path)) return <AppShell>{children}{footer}</AppShell>;
   return (
     <>
       {nav}
