@@ -33,11 +33,11 @@ describe("app routes", () => {
 });
 
 describe("sidebar items", () => {
-  it("Workspace lists Overview, All keys, Quotes & swaps, Vault, Mint and Activity, in that order", () => {
+  it("Workspace lists Overview, My keys, Quotes & swaps, Vault, Mint and Activity, in that order", () => {
     const ws = APP_NAV.find((g) => g.title === "Workspace")!;
     expect(ws.items.map((i) => [i.label, i.href])).toEqual([
       ["Overview", "/dashboard"],
-      ["All keys", "/gallery"],
+      ["My keys", "/gallery?mine=1"],
       ["Quotes & swaps", "/settle"],
       ["Vault", "/vault"],
       ["Mint", "/mint"],
@@ -52,7 +52,7 @@ describe("sidebar items", () => {
 
   it("every link points at a real route", () => {
     const known = ["/dashboard", "/gallery", "/settle", "/vault", "/mint", "/judge", "/verify"];
-    for (const i of APP_NAV.flatMap((g) => g.items)) expect(known).toContain(i.href.split("#")[0]);
+    for (const i of APP_NAV.flatMap((g) => g.items)) expect(known).toContain(i.href.split("#")[0].split("?")[0]);
   });
 });
 
@@ -64,7 +64,7 @@ describe("active state", () => {
     expect(isItemActive(item("activity"), "/dashboard", "")).toBe(false);
   });
 
-  it("All keys is active on /gallery and on a key page", () => {
+  it("My keys is active on /gallery and on a key page", () => {
     expect(isItemActive(item("keys"), "/gallery", "")).toBe(true);
     expect(isItemActive(item("keys"), "/key", "")).toBe(true);
     expect(isItemActive(item("keys"), "/vault", "")).toBe(false);
