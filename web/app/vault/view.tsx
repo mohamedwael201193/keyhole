@@ -226,7 +226,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           {online === null && <span className="chip wait" data-testid="enclave-checking"><i />{t("vault.checking")}</span>}
         </div>
       </div>
-      {!accountId && <MetaMaskNote />}
       {online === false ? (
         <div><OfflineState /><HowStrip /></div>
       ) : !accountId ? (
@@ -512,6 +511,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         <HowStrip active={2} />
         </>
       )}
+      {!accountId && <MetaMaskNote />}
     </div>
   );
 }

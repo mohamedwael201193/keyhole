@@ -120,7 +120,7 @@ export function Nav() {
                 )}
               </div>
             : restoring
-            ? <button type="button" className="cw" disabled data-testid="wallet-restoring" aria-busy="true"><span className="spin" aria-hidden="true" /> Wallet…</button>
+            ? <button type="button" className="cw" disabled data-testid="wallet-restoring" aria-busy="true">{t("nav.connect")}</button>
             : <button type="button" className="cw" onClick={() => void connect()} disabled={!hydrated} data-hydrated={hydrated ? "1" : "0"} data-testid="connect">{t("nav.connect")}</button>}
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>

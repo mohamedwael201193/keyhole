@@ -46,19 +46,19 @@ export function KeyHistoryView() {
     <div className="page khist">
       <p className="eb">Key history · public</p>
       <h1>Every key has a <em>book.</em></h1>
-      <p className="lead">Who held this key, and when it deposited, paid out and traded. The enclave keeps a hash-chained log and signs its head; this page re-checks every link in your browser. Amounts stay sealed: only the holder who wrote a row can read its detail.</p>
+      <p className="lead">Who held this key, and when it deposited, paid out and traded. This page re-checks every link in your browser; amounts stay sealed.</p>
       <form className="field" onSubmit={(e) => { e.preventDefault(); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
         <label htmlFor="kid" className="sr-only">key id</label>
         <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
         <button className="btn b1" type="submit" disabled={busy} data-testid="key-load">{busy ? <><Spinner label="Opening" /> Opening…</> : "Open"}</button>
       </form>
-      <p className="vhelp" data-testid="key-help">Paste a key id from the <Link href="/gallery">gallery</Link> or your vault (it starts with <span className="mono">k</span>, like k5f4750858f328940). The first keys use plain numbers such as 0.</p>
+      <p className="vhelp" data-testid="key-help">Paste a key id, for example <span className="mono">k5f4750858f328940</span> or <span className="mono">0</span>.</p>
       {busy && !body && <p className="note" data-testid="key-loading"><Spinner label="Loading" /> Reading the book from the enclave and checking every link…</p>}
       {err && <p className="note" role="alert" data-testid="key-error" style={{ color: "var(--coral)" }}>{err}</p>}
       {legacy !== null && (
         <section className="card" data-testid="key-legacy">
           <h2>KEYHOLE Key #{legacy}</h2>
-          <p>This is one of the first keys, minted with a plain number before the enclave began keeping a per-key history book (books exist for ids that start with <span className="mono">k</span>). Its owner is still on the chain: see the <Link href="/gallery">gallery</Link> or the contract&apos;s <span className="mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
+          <p>An early key, minted before per-key history books existed. Its owner is still on chain: see <span className="mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
         </section>
       )}
       {body && ck && (
