@@ -1,0 +1,1 @@
+{"call_id": "2a52742a-2b4a-432d-b087-888ea52f03ce", "output": {"bind": {"account": null, "nonce": "zaccBNdtRiBAzRl+gs5tf4g//OTd30QAMh72Ii0dO5E=", "req_sha256": "3bedbc4d4992a8ed7600196805aae012166810cde7e683bebe29c6248970aec8", "token_id": null}, "error": {"code": "not_owner", "message": "only the current key holder can authorize this"}, "ok": false}}

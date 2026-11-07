@@ -16,8 +16,15 @@ export const PUBLISHED_INFO_CALL: string = IDENTITY.worker.info_call;
 
 export const CALLS = [
   { label: `info · published build ${IDENTITY.worker.wasm_sha256.slice(0, 8)}`, id: PUBLISHED_INFO_CALL, outcome: "ok" },
+  { label: "info · previous build ebeb6a34", id: "5650a6b7-b7de-410c-b206-e189171bad15", outcome: "ok · rolled back · attestation 1298844" },
   { label: "info · previous build 94c355ff", id: "ecb0d1d6-90e3-4522-852a-578ca50fdeb6", outcome: "ok · attestation 1261642" },
   { label: "info · previous build cff9fd3c", id: "643a012d-0389-44d7-9c78-efb5d7835e80", outcome: "ok · attestation 1260452" },
+  { label: "transfer a985fd87 · seller A status, before the sale", id: "baccd727-cdca-4b3e-ae93-999fd581444a", outcome: "ok · attestation 1306933" },
+  { label: "transfer a985fd87 · seller A balance, before the sale", id: "ece5d109-6b98-442f-b682-96af0a23f2e7", outcome: "ok · attestation 1306934" },
+  { label: "transfer a985fd87 · seller A balance, after the sale", id: "2a52742a-2b4a-432d-b087-888ea52f03ce", outcome: "refused · not_owner · attestation 1306940" },
+  { label: "transfer a985fd87 · buyer B balance, after the sale", id: "3e996273-e4a0-4c26-aa54-6775fba29236", outcome: "ok · attestation 1306942" },
+  { label: "transfer a985fd87 · seller A replays the pre-sale request", id: "15f93f58-2568-4064-9581-db04c8b2a1aa", outcome: "refused · not_owner · attestation 1306944" },
+  { label: "transfer a985fd87 · buyer B withdraws right after the transfer", id: "8485f8d4-c4e1-4ab5-ab9c-a19a0d9d21f7", outcome: "refused · cooldown · attestation 1306945" },
   { label: "info · previous build a55ebb14", id: "b0a6eadb-cee9-400e-8eca-8b0f4df7bcec", outcome: "ok · attestation 1255082" },
   { label: "info · previous build 09d481a5", id: "2896d0ad-aa27-4e21-b4a1-0cf2d3755d56", outcome: "ok · attestation 1253394" },
   { label: "chain_sign · real v1.signer MPC signature for key k5f4750858f328940", id: "0cd1c3bd-21be-44dc-bc60-e792a42344e6", outcome: "ok · recovers to 0xe39C…f063" },

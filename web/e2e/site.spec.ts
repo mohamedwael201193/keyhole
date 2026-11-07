@@ -42,18 +42,19 @@ test("verify: the previous-build verdict says so, and the current call links its
   await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
   await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
-  await expect(page.locator('a[href*="MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="MG7pGVSN"]')).toHaveCount(0);
   await expect(page.locator('a[href*="EA7S1TeV"]')).toHaveCount(0);
 });
 
-test("verify: the default page checks the published ebeb6a34 info call", async ({ page }) => {
+test("verify: the default page checks the published a985fd87 info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("5650a6b7-b7de-410c-b206-e189171bad15");
+  await expect(page.locator("#cid")).toHaveValue("246e4a7a-f138-4459-8548-350dd9960751");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b").first()).toBeVisible();
+  await expect(page.getByText("a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8").first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
   await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓");
@@ -574,9 +575,11 @@ test("judge path links every evidence call to /verify and is reachable from the 
   await expect(page.getByTestId("judge-page")).toBeVisible();
   const links = page.locator('a[href^="/verify?call="]');
   expect(await links.count()).toBeGreaterThanOrEqual(12);
-  await page.getByTestId("judge-previous").locator("summary").click();
-  await expect(page.getByText("Refused: not_owner.")).toBeVisible();
-  await expect(page.getByText("Refused: cooldown (10 minutes).")).toBeVisible();
+  // The earlier-build list holds its own Proof disclosure too, so open the list's own summary only.
+  const prev = page.getByTestId("judge-previous");
+  await prev.locator(":scope > summary").click();
+  await expect(prev.getByText("Refused: not_owner.")).toBeVisible();
+  await expect(prev.getByText("Refused: cooldown (10 minutes).")).toBeVisible();
 });
 
 test("verify: an old-build refusal shows the binding, the previous version and the attested output", async ({ page }) => {
