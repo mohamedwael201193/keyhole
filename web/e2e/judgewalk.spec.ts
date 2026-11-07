@@ -39,7 +39,6 @@ test("judge: stepper, in-browser build check, current calls first, previous coll
   const run = page.getByTestId("run-build");
   await run.getByRole("button").click();
   await expect(run).toHaveAttribute("data-state", "pass", { timeout: 20_000 });
-  await expect(page.getByTestId("storybar")).toBeVisible();
 });
 
 test("settle: order cards show route, a 4-step progress and collapsed proof", async ({ page }) => {

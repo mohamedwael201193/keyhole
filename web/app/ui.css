@@ -1,19 +1,8 @@
 /* KEYHOLE component system: one hierarchy, AA contrast, calm motion. Brand: cream, deep teal, serif heads. */
 :root { --ok: #17663F; --okbg: #E3F1E8; --bad: #9A3A25; --badbg: #F8E4DD; --waitc: #6E4F12; --waitbg: #F5EBD3; --info: #1F4B4F; --infobg: #E2ECEC; --card: #FBF8F2; --ring: 0 0 0 3px #1F4B4F55; }
 
-/* Story bar */
+/* Home story section (section.sec.story in Landing.tsx). The persistent story bar was removed. */
 .story { max-width: 1328px; margin: 0 auto; padding: 10px 56px 0; display: flex; gap: 18px 28px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
-.story-one { margin: 0; font-size: 15px; color: var(--ink); max-width: 62ch; }
-.story-one b { color: var(--teal); letter-spacing: .04em; }
-.story-steps { list-style: none; display: flex; gap: 8px; margin: 0; padding: 0; }
-.story-steps a { display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: center; padding: 6px 14px 6px 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--ln); text-decoration: none; color: var(--ink); transition: background .2s, border-color .2s; }
-.story-steps a:hover { border-color: var(--teal); }
-.story-steps .sn { grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--teal); color: #F6F1E7; font: 700 13px var(--sans); }
-.story-steps .st { font-weight: 700; font-size: 14px; line-height: 1.1; }
-.story-steps .sd { font-size: 12px; color: var(--mu); line-height: 1.2; }
-.story-steps li.on a { background: var(--teal); color: #F6F1E7; }
-.story-steps li.on .sd { color: #DCE7E6; }
-.story-steps li.on .sn { background: #F6F1E7; color: var(--teal); }
 
 /* Purpose header */
 .upurpose { margin-bottom: 28px; }
@@ -98,11 +87,6 @@
 
 @media (max-width: 760px) {
   .story { padding: 8px 18px 0; }
-  .story-one { font-size: 14px; }
-  .story-steps { width: 100%; justify-content: space-between; gap: 6px; }
-  .story-steps a { padding: 6px 8px; grid-template-columns: auto; justify-items: center; text-align: center; row-gap: 2px; }
-  .story-steps .sn { grid-row: auto; }
-  .story-steps .sd { display: none; }
   .uline { font-size: 18px; }
   .usteps::before { left: 17px; }
   .ustep { grid-template-columns: 36px minmax(0, 1fr); gap: 12px; }
