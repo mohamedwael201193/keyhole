@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 /// Counters (`n`) and records (`b`) kept apart, like the host storage: `incr` never reads a record.
 #[derive(Default)]
-struct Mem { n: HashMap<String, i64>, b: HashMap<String, Vec<u8>> }
+struct Mem { n: HashMap<String, i64>, b: HashMap<String, Vec<u8>>, lists: u32 }
 impl Store for Mem {
     fn set_if_absent(&mut self, k: &str, v: &[u8]) -> Result<bool, Error> {
         if self.b.contains_key(k) { return Ok(false); }
@@ -20,6 +20,7 @@ impl Store for Mem {
         Ok(*e)
     }
     fn list_prefix(&mut self, p: &str) -> Result<Vec<String>, Error> {
+        self.lists += 1;
         Ok(self.b.keys().filter(|k| k.starts_with(p)).cloned().collect())
     }
     fn read(&mut self, k: &str) -> Result<Vec<u8>, Error> { Ok(self.b.get(k).cloned().unwrap_or_default()) }
@@ -285,13 +286,21 @@ fn replay_is_refused_inside_the_window_and_at_its_edge() {
         "at the retention edge the record is still there");
 }
 #[test]
-fn expired_nonce_record_is_pruned_and_the_new_one_kept() {
+fn consume_never_lists_or_deletes_storage() {
+    // Regression for ebeb6a34: a key listing on the signed-call path hung every call on OutLayer.
+    // consume_nonce must only write its own record, so old records stay and nothing is listed.
     let mut st = Mem::default();
     consume_nonce(&mut st, "alice.near", &[1; 32], T0).unwrap();
-    assert!(st.b.contains_key(&nonce_key("alice.near", 1)));
-    consume_nonce(&mut st, "alice.near", &[2; 32], T0 + NONCE_RETAIN_MS + 1).unwrap();
-    assert!(!st.b.contains_key(&nonce_key("alice.near", 1)), "old record removed");
+    consume_nonce(&mut st, "alice.near", &[2; 32], T0 + 10 * NONCE_RETAIN_MS).unwrap();
+    assert!(st.b.contains_key(&nonce_key("alice.near", 1)), "old record kept");
     assert!(st.b.contains_key(&nonce_key("alice.near", 2)), "new record kept");
+    assert_eq!(st.lists, 0, "no key listing on the call path");
+}
+#[test]
+fn an_old_nonce_is_still_a_replay_long_after() {
+    let mut st = Mem::default();
+    consume_nonce(&mut st, "alice.near", &[1; 32], T0).unwrap();
+    assert_eq!(consume_nonce(&mut st, "alice.near", &[1; 32], T0 + 100 * NONCE_RETAIN_MS).unwrap_err().code, "replay");
 }
 #[test]
 fn pruning_never_touches_another_holder() {

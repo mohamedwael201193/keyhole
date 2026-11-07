@@ -4053,6 +4053,27 @@
    "verify": "node judge/verify-claims.mjs --only test-seller_lock_binds_only_the_owner_who_set_it"
   },
   {
+   "id": "test-set_active_version",
+   "claim": "Named test or symbol `set_active_version` exists in the source",
+   "where": "SECURITY.md:142",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "set_active_version",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`set_active_version` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-set_active_version"
+  },
+  {
    "id": "test-set_minter_only_owner",
    "claim": "Named test or symbol `set_minter_only_owner` exists in the source",
    "where": "SECURITY.md:38",
@@ -5918,6 +5939,19 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/pcs/dcap-qvl_7882f97a.json"
+  },
+  {
+   "id": "path-docs/evidence/publish-ebeb6a34/README.md",
+   "claim": "Linked repo path docs/evidence/publish-ebeb6a34/README.md exists",
+   "where": "SECURITY.md:142",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/publish-ebeb6a34/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/publish-ebeb6a34/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/publish-ebeb6a34/README.md"
   },
   {
    "id": "site-/",
