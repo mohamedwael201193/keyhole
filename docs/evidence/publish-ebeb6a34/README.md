@@ -14,3 +14,9 @@
 - **Refunds on refusal.** A swap or withdraw refused before the send gives back its session budget and its day's spend. A send that fails for good gives both back. A send still pending keeps them (`charge_spend`, `Charge::settle`).
 - **Nonce pruning.** Nonce records are deleted 15 minutes after first use (`NONCE_RETAIN_MS` = 3 × `MAX_SKEW_MS`). A replay after that is refused as `expired` by the freshness check.
 - **Tests.** `tee/worker/src/worker_hardening.rs` covers the callbackUrl with and without, the mismatch case, the payload encoding, the refund paths, pruning inside and outside the window, and `chain_sign` refusal under a session, lock, cooldown and daily count.
+
+## Incident and rollback (2026-11-07)
+- A signed `status` call on ebeb6a34 failed with "WASM execution timed out after 60 seconds" after only about 4.2M instructions, so the worker was blocked on host I/O (call `b5943a66-0015-4781-8d09-d8a1028ec6ca`). Unsigned calls (`info`, `provenance`) still worked, which is why the publish check missed it.
+- Cause: the nonce pruning added here lists storage keys (`list-keys`) on every signed call. That host call blocked on OutLayer.
+- Rollback: `set_active_version` to 94c355ff, tx `ArXzjsWPs9ii119Q3zy3dViPERaKF26rE7Q1xnLmZrEW`. A signed `status` call then completed in 3.7 s (call `e3efc2de-f6d8-47f0-b6d3-79007886b6a7`).
+- Fix: the next build keeps every other change from this build and removes pruning from the call path.

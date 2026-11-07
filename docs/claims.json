@@ -5920,6 +5920,19 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/pcs/dcap-qvl_7882f97a.json"
   },
   {
+   "id": "path-docs/evidence/publish-ebeb6a34/README.md",
+   "claim": "Linked repo path docs/evidence/publish-ebeb6a34/README.md exists",
+   "where": "SECURITY.md:142",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/publish-ebeb6a34/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/publish-ebeb6a34/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/publish-ebeb6a34/README.md"
+  },
+  {
    "id": "site-/",
    "claim": "Live page / serves",
    "where": "README.md:762",

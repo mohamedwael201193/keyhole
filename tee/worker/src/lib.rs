@@ -251,11 +251,12 @@ pub fn hkey(account: &str, rest: &str) -> String {
 /// MAX_SKEW_MS is kept as a margin against chain-time jitter between reads.
 pub const NONCE_RETAIN_MS: u64 = 3 * MAX_SKEW_MS;
 
-/// Replay protection: each (account, nonce) is accepted once, ever, within NONCE_RETAIN_MS.
+/// Replay protection: each (account, nonce) is accepted once, ever. Records are kept (no pruning on the call path).
 pub fn consume_nonce(st: &mut dyn Store, account: &str, nonce: &[u8; 32], now_ms: u64) -> Result<(), Error> {
     let fresh = st.set_if_absent(&hkey(account, &format!("n/{}", hex::encode(nonce))), now_ms.to_string().as_bytes())?;
-    // Garbage collection only. A storage error here never changes the answer for this request.
-    let _ = prune_nonces(st, account, now_ms);
+    // No pruning on this path. Build ebeb6a34 pruned here with a storage key listing, and on OutLayer that
+    // listing blocked every signed call until the 60 s execution limit. `prune_nonces` stays a pure helper,
+    // not called by any op, until a bounded way to list keys is proven on the platform.
     if fresh { Ok(()) } else { Err(err("replay", "this signed request was already used; sign a new one")) }
 }
 

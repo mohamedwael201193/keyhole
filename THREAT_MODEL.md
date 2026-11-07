@@ -20,7 +20,7 @@ Proof: `transfer_then_old_signature_is_not_owner` in [`tee/worker/src/tests.rs`]
 
 Proof: `replay_rejected`, `freshness_window`, and `eip191_recovers_the_fixed_vector_and_rejects_a_tamper` in [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs).
 
-Live in ebeb6a34: nonce records are pruned 15 minutes after first use (`prune_nonces`, `NONCE_RETAIN_MS` in `tee/worker/src/lib.rs`). A signed request is accepted only within 5 minutes of chain time, and the record holds the chain time of first use, so a replay can pass the freshness check only until 10 minutes after that. Past that, the replay is `expired` whether or not the record exists. Proof: `replay_is_refused_inside_the_window_and_at_its_edge`, `a_pruned_nonce_fails_the_freshness_check_on_replay` in [`tee/worker/src/worker_hardening.rs`](tee/worker/src/worker_hardening.rs).
+Nonce records are kept for good: no pruning on the call path. (Build ebeb6a34 pruned them after 15 minutes, but the storage key listing it used blocked signed calls on OutLayer, so that build was rolled back; see SECURITY.md.) A replay is refused as `replay` for as long as the record exists, and as `expired` once its signed time is more than 5 minutes from chain time.
 
 ## Withdraw aimed at someone other than the signer
 
