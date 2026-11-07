@@ -6,7 +6,7 @@
   /* Role tokens: the single colour source. heirloom.css and the Tailwind @theme in globals.css alias these. */
   --bg: #E6DFD0;            /* paper: page, nav, footer frame */
   --sf: #FFFCF6;            /* card: cards, inputs */
-  --ink: #1A2A2C;           /* headings, strong text */
+  --ink: #1F2A2C;           /* headings, strong text (also the engraved cipher on key art, so unchanged) */
   --mu: #3A4547;            /* body, secondary text, meta (9.3:1 on --sf) */
   --teal: #1F4B4F;          /* primary fill, active nav, links, focus */
   --coral: #A8432C;         /* italic accent in display headings (24px and up) */
