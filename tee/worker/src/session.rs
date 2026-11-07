@@ -38,7 +38,7 @@ fn call(op: &str, acct: &str, params: &str, nonce: [u8; 32]) -> SessionAuth {
 
 #[test] fn request_ok() { let g = grant("a.near", "k1"); let (r, n) = verify_session_request(&call("swap", "a.near", r#"{"token_id":"k1"}"#, [5; 32]), &g, RCP, "swap").unwrap(); assert_eq!(r.op, "swap"); assert_eq!(n, [5; 32]); }
 #[test] fn request_without_token_param() { assert!(verify_session_request(&call("balance", "a.near", "{}", [5; 32]), &grant("a.near", "k1"), RCP, "balance").is_ok()); }
-#[test] fn withdraw_in_scope() { assert!(verify_session_request(&call("withdraw", "a.near", "{}", [5; 32]), &grant("a.near", "k1"), RCP, "withdraw").is_ok()); }
+#[test] fn withdraw_refused_in_session() { assert_eq!(verify_session_request(&call("withdraw", "a.near", "{}", [5; 32]), &grant("a.near", "k1"), RCP, "withdraw").unwrap_err().code, "session_scope"); }
 #[test] fn dashboard_in_scope() { assert!(verify_session_request(&call("dashboard", "a.near", "{}", [5; 32]), &grant("a.near", "k1"), RCP, "dashboard").is_ok()); }
 #[test] fn wrong_token() { assert_eq!(verify_session_request(&call("swap", "a.near", r#"{"token_id":"k2"}"#, [5; 32]), &grant("a.near", "k1"), RCP, "swap").unwrap_err().code, "session_token"); }
 #[test] fn wrong_account() { assert_eq!(verify_session_request(&call("swap", "b.near", "{}", [5; 32]), &grant("a.near", "k1"), RCP, "swap").unwrap_err().code, "account_mismatch"); }
