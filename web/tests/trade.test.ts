@@ -20,6 +20,13 @@ describe("site trade params match the CLI", () => {
     });
   });
 
+  it("sends a floor only when it is a positive integer; zero is left for the enclave to derive", () => {
+    expect(swapParams("wnear", "usdc", "1", "0")).not.toHaveProperty("min_amount_out");
+    expect(swapParams("wnear", "usdc", "1", "")).not.toHaveProperty("min_amount_out");
+    expect(swapParams("wnear", "usdc", "1", "007")).not.toHaveProperty("min_amount_out");
+    expect(swapParams("wnear", "usdc", "1", "1")).toHaveProperty("min_amount_out", "1");
+  });
+
   it("withdraw uses the asset id, the same shape as `keyhole withdraw --token <id>`", () => {
     expect(withdrawParams("you.near", "usdc", "10000")).toEqual({
       chain: "near",

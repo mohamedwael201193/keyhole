@@ -15,7 +15,8 @@ export function swapParams(from: AssetKey, to: AssetKey, amountIn: string, minAm
     token_in: ASSETS[from].id,
     token_out: ASSETS[to].id,
     amount_in: amountIn,
-    ...(minAmountOut ? { min_amount_out: minAmountOut } : {}),
+    // Only a positive integer is a floor. Zero would be refused by the enclave, so it is left out (the enclave then derives one).
+    ...(minAmountOut && /^[1-9]\d*$/.test(minAmountOut) ? { min_amount_out: minAmountOut } : {}),
   };
 }
 

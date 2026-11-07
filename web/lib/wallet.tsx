@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { WalletSelector, WalletModuleFactory } from "@near-wallet-selector/core";
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
-import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
+import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { NEP413_RECIPIENT } from "./config";
 import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
 import { callWorker } from "./worker";
@@ -265,9 +265,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const h = new URLSearchParams(location.hash.slice(1));
     const saved = sessionStorage.getItem(PENDING);
     if (h.get("signature") && saved) {
-      const s = JSON.parse(saved) as { message: string; nonce: string; ctx?: OpResume | null };
-      setPending({ account_id: h.get("accountId") || "", public_key: h.get("publicKey") || "", signature: h.get("signature") || "",
-        nonce: s.nonce, message: s.message, recipient: NEP413_RECIPIENT, ctx: s.ctx });
+      const s = JSON.parse(saved) as { message: string; nonce: string; ctx?: OpResume | null; callbackUrl?: string };
+      const signed = { account_id: h.get("accountId") || "", public_key: h.get("publicKey") || "", signature: h.get("signature") || "",
+        nonce: s.nonce, message: s.message, recipient: NEP413_RECIPIENT };
+      // The callback the wallet was given is part of the signed payload only if the wallet kept it (checked here).
+      const cb = s.callbackUrl ? signedCallbackUrl(signed, s.callbackUrl) : undefined;
+      setPending({ ...signed, ...(cb ? { callback_url: cb } : {}), ctx: s.ctx });
       sessionStorage.removeItem(PENDING);
       history.replaceState(null, "", location.pathname + location.search);
     }
@@ -353,10 +356,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const nonce = toB64(nonceBytes);
     let ctx: OpResume | null = null;
     try { ctx = JSON.parse(sessionStorage.getItem(OP_CTX) || "null") as OpResume | null; } catch { ctx = null; }
-    sessionStorage.setItem(PENDING, JSON.stringify({ message, nonce, ctx }));
+    const callbackUrl = location.href.split("#")[0];
+    sessionStorage.setItem(PENDING, JSON.stringify({ message, nonce, ctx, callbackUrl }));
     let res;
     try {
-      res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: nonceBytes as unknown as Buffer, callbackUrl: location.href.split("#")[0] });
+      res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: nonceBytes as unknown as Buffer, callbackUrl });
     } catch (e) {
       sessionStorage.removeItem(PENDING);
       const m = String((e as Error)?.message || e);
@@ -364,7 +368,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     if (!res) { sessionStorage.removeItem(PENDING); throw new SignError("wallet_rejected"); } // redirect wallets navigate away before this line
     sessionStorage.removeItem(PENDING);
-    return { account_id: res.accountId, public_key: res.publicKey, signature: res.signature, nonce, message, recipient: NEP413_RECIPIENT };
+    const signed = { account_id: res.accountId, public_key: res.publicKey, signature: res.signature, nonce, message, recipient: NEP413_RECIPIENT };
+    const cb = signedCallbackUrl(signed, callbackUrl);
+    return cb ? { ...signed, callback_url: cb } : signed;
   }, [ensure, accountId]);
 
   const finishSession = useCallback(async (auth: SignedAuth, tokenId: string) => {

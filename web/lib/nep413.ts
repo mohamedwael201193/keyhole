@@ -16,6 +16,8 @@ export interface SignedAuth {
   scheme?: "eip191" | "session";
   token?: string;
   address?: string;
+  /** NEP-413 callbackUrl that the signature covers (Option<String> in the payload). Only set when the signature verifies with it. */
+  callback_url?: string;
 }
 
 /** The published enclave 94c355ff (and cff9fd3c, a55ebb14, 09d481a5, f7217ae2, 452df1fd, 6367401a before it) verifies scheme eip191. */
@@ -54,10 +56,14 @@ function concat(...parts: Uint8Array[]) {
   return out;
 }
 
-/** NEP-413 payload hash: sha256(borsh(tag u32) ++ borsh(Payload{message, nonce[32], recipient, callbackUrl: None})). */
-export function payloadHash(message: string, nonce: Uint8Array, recipient = NEP413_RECIPIENT): Uint8Array {
+/**
+ * NEP-413 payload hash: sha256(borsh(tag u32) ++ borsh(Payload{message, nonce[32], recipient, callbackUrl})).
+ * callbackUrl is Option<String>: omitted (undefined) is the byte 0x00, a string is 0x01 followed by borsh(string).
+ */
+export function payloadHash(message: string, nonce: Uint8Array, recipient = NEP413_RECIPIENT, callbackUrl?: string): Uint8Array {
   if (nonce.length !== 32) throw new Error("nonce must be 32 bytes");
-  return sha256(concat(u32(NEP413_TAG), borshString(message), nonce, borshString(recipient), new Uint8Array([0])));
+  const cb = callbackUrl === undefined ? new Uint8Array([0]) : concat(new Uint8Array([1]), borshString(callbackUrl));
+  return sha256(concat(u32(NEP413_TAG), borshString(message), nonce, borshString(recipient), cb));
 }
 
 export const toB64 = (b: Uint8Array) => btoa(String.fromCharCode(...b));
@@ -67,6 +73,16 @@ export const fromB64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCode
 export function verifyAuth(a: SignedAuth): boolean {
   if (!a.public_key.startsWith("ed25519:")) return false;
   const pk = bs58.decode(a.public_key.slice(8));
-  try { return ed25519.verify(fromB64(a.signature), payloadHash(a.message, fromB64(a.nonce), a.recipient), pk); }
+  try { return ed25519.verify(fromB64(a.signature), payloadHash(a.message, fromB64(a.nonce), a.recipient, a.callback_url), pk); }
   catch { return false; }
+}
+
+/**
+ * The callbackUrl a wallet signed into the payload, or undefined. Wallets differ: some put the callbackUrl the app
+ * passed into the signed payload, some drop it. The candidate is kept only when the signature verifies with it,
+ * so the worker never receives a callbackUrl that would break its check.
+ */
+export function signedCallbackUrl(a: Omit<SignedAuth, "callback_url">, candidate: string): string | undefined {
+  try { return verifyAuth({ ...a, callback_url: candidate }) ? candidate : undefined; }
+  catch { return undefined; } // a malformed key from a redirect URL must not break the page
 }
