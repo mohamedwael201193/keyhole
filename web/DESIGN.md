@@ -41,3 +41,11 @@ Do not reintroduce a literal colour for a name a token already covers. Do not al
 - Status is a word and a tone together, never colour alone.
 - Motion: one entrance per page, micro-interactions (button press, card lift 2px), no scroll-linked motion on app screens. Everything respects `prefers-reduced-motion`.
 - Components live in `components/ui`. Extend them; do not duplicate.
+
+## Components (components/ui)
+
+- Actions and fields: `Button` (primary, secondary, ghost, danger, banner; sm, md, lg; `loading`; `icon`), `Input`, `AmountInput` (large number, Max, balance, USD sub-line, error), `TokenSelect` (trigger and accessible dialog with search, real marks and balances).
+- Surfaces: `Card`, `StatCard`, `Modal` and `Sheet` (focus trap, Escape, scroll lock, focus returns to the opener), `EmptyState`, `Skeleton`.
+- Status and progress: `Badge`, `Tabs` (arrow keys), `Stepper` (state printed in words), `ToastProvider` and `useToast`, `TxStatus` (the `TxResult` panel under its v3 name).
+- Shell: `components/app/AppShell.tsx` (app), `components/Nav.tsx` and `components/Footer.tsx` (site). The site has no wallet control; the app bar holds the one `AccountControl`.
+- Unit tests: `tests/ui-kit-v3.test.ts`, `tests/tokens-v3.test.ts`, `tests/app-shell.test.ts`.
