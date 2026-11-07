@@ -1,38 +1,31 @@
 /* Visual polish layer: contrast, elevation, motion. Loaded last; styling only. */
 @property --kh-ang { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 :root {
-  /* Type scale: six sizes. Phones lower display and title in the 560px query at the end. */
-  --fs-display: 64px; --fs-title: 36px; --fs-heading: 22px; --fs-lead: 18px; --fs-body: 16px; --fs-label: 13px;
-  /* Role tokens: the single colour source. heirloom.css and the Tailwind @theme in globals.css alias these. */
-  --bg: #E6DFD0;            /* paper: page, nav, footer frame */
-  --sf: #FFFCF6;            /* card: cards, inputs */
-  --ink: #1F2A2C;           /* headings, strong text (also the engraved cipher on key art, so unchanged) */
-  --mu: #3A4547;            /* body, secondary text, meta (9.3:1 on --sf) */
-  --teal: #1F4B4F;          /* primary fill, active nav, links, focus */
-  --coral: #A8432C;         /* italic accent in display headings (24px and up) */
-  --brass: #7A5410;         /* eyebrows and labels */
-  --ln: #1A2A2C38;          /* hairlines */
-  --kh-edge: #CFC6B3;       /* card edge */
-  --kh-field: #6E7778;      /* input border, 4.6:1 on white */
-  --ok-ink: #0B5D3B;  --ok-bg: #D9F5E6;    /* verified, settled, computed in browser */
-  --info-ink: #12407A; --info-bg: #DCE9FB; /* read from NEAR or Intel */
-  --warn-ink: #7A4A06; --warn-bg: #FDECC8; /* we publish, pending, demo */
-  --bad-ink: #9A3412; --bad-bg: #FDE4D6;   /* refused, failed */
+  /* Type scale aliases (tokens.css). Phones lower display and title in the 560px query at the end. */
+  --fs-display: var(--text-display); --fs-title: var(--text-title); --fs-heading: var(--text-heading);
+  --fs-lead: var(--text-lead); --fs-body: var(--text-body); --fs-label: var(--text-small);
+  /* Legacy role names, aliased to tokens.css. New code uses the token names directly. */
+  --bg: var(--surface);          /* paper: page, nav, footer frame */
+  --sf: var(--raised);           /* card: cards, inputs */
+  --mu: var(--ink-2);            /* body, secondary text, meta (9.3:1 on --sf) */
+  --teal: var(--primary);        /* primary fill, active nav, links, focus */
+  --brass: var(--accent-ink);    /* eyebrows and labels */
+  --ln: var(--line);             /* hairlines */
+  --kh-edge: var(--line-strong); /* card edge */
+  --kh-field: var(--field);      /* input border, 4.6:1 on white */
+  --ok-ink: var(--success); --ok-bg: var(--success-bg);
+  --info-ink: var(--info);
+  --warn-ink: var(--warn);
+  --bad-ink: var(--danger); --bad-bg: var(--danger-bg);
   --kh-stops: #0E6B70, #14A3A0 18%, #D4A33A 38%, #F2C25B 50%, #D4A33A 62%, #14A3A0 82%, #0E6B70;
-  --kh-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(20,40,40,.12);
-  --kh-shadow-hi: 0 2px 4px rgba(0,0,0,.10), 0 16px 40px rgba(20,60,60,.22);
-  /* Design system v2 (P1): role aliases over the values above, one name per role. Values are not changed here. */
-  --paper: var(--bg);
-  --card: var(--sf);
-  --ink-2: var(--mu);
-  --banner: #174A4E;            /* dark green feature banners and score panels */
-  --banner-ink: #F6F1E7;
-  --neutral-ink: #3A4547; --neutral-bg: #E3DCCD; /* not started, expired */
-  --r-field: 12px; --r-card: 16px; --r-card-lg: 20px; --r-pill: 999px;
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 72px;
-  --shadow-soft: var(--kh-shadow);
-  --shadow-lifted: var(--kh-shadow-hi);
-  --shadow-glow: 0 12px 28px -10px rgba(20,163,160,.55);
+  --kh-shadow: var(--shadow-1);
+  --kh-shadow-hi: var(--shadow-2);
+  --paper: var(--surface);
+  --card: var(--raised);
+  --banner: var(--vault);        /* dark green feature banners and score panels */
+  --banner-ink: var(--vault-ink);
+  --neutral-ink: var(--ink-2);
+  --r-field: var(--radius-md); --r-card: var(--radius-lg); --r-card-lg: var(--radius-xl); --r-pill: var(--radius-pill);
 }
 html, body, .nav:not(.dark) { background: var(--bg); }
 .lead, .note, .vlt .vsub, .vlt .note, .vlt .vhelp, .muted { color: var(--mu); }

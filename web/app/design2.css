@@ -1,5 +1,5 @@
 /* Design pass 2: tighter art, warmer images, light motion. Loaded after heirloom.css. */
-:root { --warm: saturate(1.12) contrast(1.06) sepia(.06) brightness(1.02); --ease-out: cubic-bezier(.22, .61, .36, 1); }
+:root { --warm: saturate(1.12) contrast(1.06) sepia(.06) brightness(1.02); }
 
 /* Public chain / sealed vault: two clean columns, art cropped from the one scene */
 .priv .pv { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 44px auto 0; max-width: 980px; }

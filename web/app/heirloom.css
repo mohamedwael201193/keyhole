@@ -1,10 +1,10 @@
 :root {
-  /* Colour roles (--bg, --sf, --ink, --mu, --teal, --coral, --brass, --ln) live in polish.css. */
+  /* Colour roles live in tokens.css (legacy names alias in polish.css). Font roles alias the tokens here. */
   --coralL: #D9644A;
-  --brassL: #B8893E;
-  --serif: var(--font-cormorant), Georgia, serif;
-  --sans: var(--font-manrope), sans-serif;
-  --mono: var(--font-dm), ui-monospace, monospace;
+  --brassL: var(--accent);
+  --serif: var(--font-display);
+  --sans: var(--font-ui);
+  --mono: var(--font-mono);
 }
 * { box-sizing: border-box; }
 html { overflow-x: hidden; background: var(--bg); color-scheme: light; }

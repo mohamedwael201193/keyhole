@@ -1,5 +1,5 @@
 /* KEYHOLE component system: one hierarchy, AA contrast, calm motion. Brand: cream, deep teal, serif heads. */
-:root { --ok: #17663F; --okbg: #E3F1E8; --bad: #9A3A25; --badbg: #F8E4DD; --waitc: #6E4F12; --waitbg: #F5EBD3; --info: #1F4B4F; --infobg: #E2ECEC; --ring: 0 0 0 3px #1F4B4F55; }
+:root { --ok: var(--success); --okbg: var(--success-bg); --bad: var(--danger); --badbg: var(--danger-bg); --waitc: var(--warn); --waitbg: var(--warn-bg); --info: var(--primary); --infobg: var(--primary-tint); --ring: var(--focus-ring); }
 
 /* Home story section (section.sec.story in Landing.tsx). The persistent story bar was removed. */
 .story { max-width: 1328px; margin: 0 auto; padding: 10px 56px 0; display: flex; gap: 18px 28px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
