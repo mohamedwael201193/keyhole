@@ -283,3 +283,7 @@
 .mint-next { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
 .gal-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-4) 0; }
 .gal-bar .note { margin: 0; }
+
+/* Key history and PnL (V3-D polish, no logic change). */
+.key-error { color: var(--danger); margin-top: var(--space-3); font-size: var(--text-small); }
+.pnl-raw { white-space: pre-wrap; overflow-wrap: anywhere; }

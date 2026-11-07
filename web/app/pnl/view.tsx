@@ -97,7 +97,7 @@ export function PnlView() {
           </p>
           <details className="pnl-json">
             <summary>Statement JSON</summary>
-            <pre className="term" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{s.share.statement}</pre>
+            <pre className="term pnl-raw">{s.share.statement}</pre>
           </details>
         </>
       )}
