@@ -42,8 +42,8 @@ interface WalletCtx {
   connectNear: () => Promise<void>;
   /** The classic selector (MetaMask / Ethereum, and every other wallet). */
   connectOther: () => void;
-  /** Google / email through Privy (NEAR docs "Privy" tutorial); signs in-page, no wallet popups. */
-  connectSocial: () => void;
+  /** Google / email through Privy (NEAR docs "Privy" tutorial); signs in-page, no wallet popups. `email` limits the Privy modal to the email code. */
+  connectSocial: (method?: "google" | "email") => void;
   /** True when the Privy app is configured for this build. */
   socialEnabled: boolean;
   /** Which path owns the connection. */
@@ -210,6 +210,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [via, setVia] = useState<"nc" | "ws" | "privy" | null>(null);
   const [privyOn, setPrivyOn] = useState(false);
   const [wantLogin, setWantLogin] = useState(0);
+  const [socialMethod, setSocialMethod] = useState<"email" | null>(null);
   const privy = useRef<PrivyNear | null>(null);
   const [socialCreating, setSocialCreating] = useState(false);
   const [socialFinishing, setSocialFinishing] = useState(false);
@@ -292,7 +293,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [ensure]);
 
   const connect = useCallback(() => { setChoosing(true); }, []);
-  const connectSocial = useCallback(() => { setChoosing(false); setPrivyOn(true); setWantLogin((n) => n + 1); }, []);
+  const connectSocial = useCallback((method?: "google" | "email") => { setChoosing(false); setSocialMethod(method === "email" ? "email" : null); setPrivyOn(true); setWantLogin((n) => n + 1); }, []);
   const connectOther = useCallback(() => {
     setChoosing(false);
     return ensure().then(() => {
@@ -420,7 +421,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [pending, finishSession]);
   const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} onChange={onPrivy} />}</Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
@@ -457,7 +458,8 @@ function WalletChooser() {
       <div className="wchoose-card">
         <h2>Connect your wallet</h2>
         <p className="kh-sign-note">{SIGN_NOTE}</p>
-        {c.socialEnabled && <button type="button" className="btn b1" data-testid="choose-social" onClick={c.connectSocial}>Continue with Google / email <small>no wallet needed</small></button>}
+        {c.socialEnabled && <button type="button" className="btn b1" data-testid="choose-social" onClick={() => c.connectSocial("google")}>Continue with Google <small>no wallet needed</small></button>}
+        {c.socialEnabled && <button type="button" className="btn b2" data-testid="choose-email" onClick={() => c.connectSocial("email")}>Continue with email code <small>we email you a one-time code</small></button>}
         <button type="button" className="btn b1" data-testid="choose-near" onClick={() => void c.connectNear()}>NEAR wallet <small>connect and unlock in one popup</small></button>
         <button type="button" className="btn b2" data-testid="choose-other" onClick={() => void c.connectOther()}>MetaMask / Ethereum wallet, or another wallet</button>
         <button type="button" className="btn b2" data-testid="choose-cancel" onClick={c.closeChooser}>Cancel</button>

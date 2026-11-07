@@ -45,6 +45,20 @@ describe("/start with Google / email (Privy)", () => {
     expect(await accountState("x", ["u", "v"])).toBeNull();
     vi.unstubAllGlobals();
   });
+  it("the email card opens the Privy modal email-only; Google keeps the default modal", () => {
+    const b = readFileSync(new URL("../lib/privyBridge.tsx", import.meta.url), "utf8");
+    expect(b).toContain('login(method === "email" ? { loginMethods: ["email"] } : undefined)');
+    const v = readFileSync(new URL("../app/start/view.tsx", import.meta.url), "utf8");
+    expect(v).toContain('connectSocial("email")');
+    expect(v).toContain('connectSocial("google")');
+  });
+  it("/start keeps its testids and the step order", () => {
+    const v = readFileSync(new URL("../app/start/view.tsx", import.meta.url), "utf8");
+    for (const id of ["start", "start-dots", "start-social", "start-email", "start-connect", "start-near", "start-finishing", "start-creating", "start-mint", "start-mint-result", "start-limits", "start-limits-skip", "start-fund", "start-check", "start-go", "start-unlocked", "start-mint-tx", "account-ready", "account-balance", "topup", "topup-address"]) {
+      expect(v, id).toMatch(new RegExp(`(?:data-)?testid="${id}"`));
+    }
+    expect(START_STEPS).toEqual(["connect", "topup", "mint", "unlock", "limits", "fund", "done"]);
+  });
   it("Privy signs NEP-413 in-page through near-api-js (no third-party executor, no /sign page)", () => {
     const w = readFileSync(new URL("../lib/wallet.tsx", import.meta.url), "utf8");
     expect(w).toContain("signNep413Message(accountId, { message, recipient: NEP413_RECIPIENT, nonce: nonceBytes })");
