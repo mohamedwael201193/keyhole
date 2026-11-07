@@ -2,7 +2,7 @@
 
 <h1 align="center">KEYHOLE</h1>
 <p align="center"><b>mainnet, TEE-confidential, verifiable NFT trading account</b></p>
-<p align="center">An NFT on NEAR is the viewing key for a trading account inside an Intel TDX enclave. The chain records who holds the key. Balances and trades stay in the enclave until that holder signs a read.</p>
+<p align="center">An NFT on NEAR is the viewing key for a trading account inside an Intel TDX enclave. The chain records who holds the key. Balances and key history stay sealed in the enclave until that holder signs a read. Swaps settle through NEAR Intents 1Click, whose solvers see the asset pair and amount.</p>
 
 <p align="center"><a href="https://github.com/mohamedwael201193/keyhole/actions/workflows/ci.yml"><img src="https://github.com/mohamedwael201193/keyhole/actions/workflows/ci.yml/badge.svg" alt="CI"></a></p>
 
@@ -23,11 +23,11 @@ KEYHOLE is three pieces that work together. The contract [`keyhole-devmo.near`](
 
 The confidential account belongs to the token, not to a NEAR account. The enclave keeps one custody wallet per `token_id` and lets only the account that owns that token right now operate it. Ownership is read live (`nft_tokens_for_owner` and `nft_token.owner_id`) on every request and again just before a swap or withdraw is sent. Transfer the NFT and the new owner operates the same balance; the old account's next call is refused with `not_owner`.
 
-**NFTs that do something.** Each key holds sealed credentials: the enclave keeps one custody wallet key per `token_id` inside Intel TDX, and that key never leaves it ([worker source](tee/worker/src/lib.rs), `custody_lookup`). Only the current on-chain owner can make it act: the worker reads `nft_token.owner_id` on every request and again right before a swap or withdraw ([refusal `not_owner` on mainnet](https://api.outlayer.ai/attestations/by-call/711795b9-3e77-4a59-98ee-d798cb63ccc2)). Selling the NFT moves the access with it, including in the middle of a payout ([mainnet evidence](docs/evidence/mid-payout/README.md)).
+**NFTs that do something.** Each key holds sealed credentials: the enclave keeps one custody wallet key per `token_id` inside Intel TDX, and that key never leaves it ([worker source](tee/worker/src/lib.rs), `custody_lookup`). Only the current on-chain owner can make it act: the worker reads `nft_token.owner_id` on every request and again right before a swap or withdraw ([refusal `not_owner` on mainnet](https://api.outlayer.ai/attestations/by-call/711795b9-3e77-4a59-98ee-d798cb63ccc2)). Selling the NFT moves the access with it. A payout that was already in flight when the sale landed still completed, to the holder who signed it; the old holder's next request is refused ([mainnet evidence](docs/evidence/mid-payout/README.md)).
 
 ## The problem it solves
 
-A public chain shows balances and trades. Here those stay in the enclave. The holder still has a token they can transfer, and the account goes with it, and each enclave answer includes an attestation the browser can check against the published worker.
+A public chain shows balances and trades. Here balances and key history stay sealed in the enclave. Swaps are the exception that leaves it: they settle through NEAR Intents 1Click, and its solvers see the asset pair and amount. The holder still has a token they can transfer, the account goes with it, and each enclave answer includes an attestation the browser can check against the published worker.
 
 ## Try it
 
@@ -91,13 +91,20 @@ These are properties of the worker source in this repository. The enclave servin
 - **Replay and expiry.** Each `(account, nonce)` is stored once. A second use is `replay`. `ts_ms` must be within five minutes of the final block time or the answer is `expired`. The same nonce store is used after a NEP-413 check and after an EIP-191 check.
 - **The page matches the chain.** A connected wallet with no key on the contract sees "Only the key holder can open this" and no fund, trade, or withdraw form. That gate uses `nft_tokens_for_owner`. It is not a substitute for the worker's check.
 
-## Hackathon window
+## Built during the hackathon
 
-Development started 2026-10-27, inside the window that opened 2026-10-19 (Q-001). The live rules also list the event start as 2026-11-01 and the submission deadline as 2026-11-14.
+- **Window.** The hackathon announcement was 2026-10-19. The live rules list the event start as 2026-11-01 and the submission deadline as 2026-11-14.
+- **Start.** The first commit is [`7a8ec4a`](https://github.com/mohamedwael201193/keyhole/commit/7a8ec4a), dated 2026-10-27, a one-line README change. The first commit with code is [`66f7070`](https://github.com/mohamedwael201193/keyhole/commit/66f7070), dated 2026-10-28: the v1 contract, TEE worker, CLI and MCP, judge kit and website.
+- **No earlier code.** Nothing in this repository predates 2026-10-27, and all 127 commits in its history are inside the window. There is no pre-hackathon baseline, so the repository has no baseline tags.
+- **Libraries.** Third-party dependencies are listed in [Built with](#built-with).
+
+## AI-assisted development
+
+The code was written with AI coding agents, directed by the author, devmo. The repository names the tool it can show: Cursor (Cursor Agent) is a co-author on 25 commits, and 20 `cursor/*` branches were pushed to origin. Run `git log --all --grep "Cursor Agent"` to list them. Other commits name no tool. The author set the scope and merged the changes through pull requests; most commit subjects carry the PR number (for example `(#130)`). CI runs the test suites in [§12](#12-tests-and-ci) on each push to `main`. The AI output is not offered as independent review. The threat model, the mainnet evidence and the judge kit are the checks a reader can run.
 
 ## Built with
 
-Direct dependencies from this repository's `package.json` and `Cargo.toml` files. AI coding assistants were used (Q-005).
+Direct dependencies from this repository's `package.json` and `Cargo.toml` files. AI coding agents were used in building the repository; see [AI-assisted development](#ai-assisted-development).
 
 | Piece | File | Libraries and frameworks |
 |---|---|---|
@@ -135,7 +142,8 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 - [Run it locally](#run-it-locally)
 - [Invariants](#invariants)
 - [Threat model](THREAT_MODEL.md)
-- [Hackathon window](#hackathon-window)
+- [Built during the hackathon](#built-during-the-hackathon)
+- [AI-assisted development](#ai-assisted-development)
 - [Built with](#built-with)
 1. [The idea](#1-the-idea)
 2. [Judge steps](#2-judge-steps)
@@ -163,7 +171,7 @@ A trading account that nobody can watch, together with a transferable right to w
 - The **account** lives inside an Intel TDX enclave run by OutLayer.
   - Its custody wallet, its API key, its trade log and its per-day spend are kept in the enclave's encrypted storage.
   - Nothing about the trading appears on the NEAR chain under the holder's name.
-  - Trades are confidential swaps through NEAR Intents (1Click) with `confidentiality: basic | advanced`.
+  - Trades are swaps through NEAR Intents (1Click) with `confidentiality: basic | advanced`. The 1Click solvers see the asset pair and amount.
 - The **key** is an NFT on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near).
   - The enclave answers a request only if the signer holds a key right now.
   - It checks `holder_tier(account_id)` live on mainnet for every call ([`tee/worker/README.md`](tee/worker/README.md), step 6).
@@ -322,29 +330,37 @@ Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat
 - **Code identity.**
   - On-chain `code_hash` `BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ` is the base58 of sha256 `9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e`, the sha256 of the committed wasm.
 
-Tokens on mainnet (`nft_total_supply` = 5, read 2026-11-03; re-check with `./judge/1-contract.sh` or the live [/gallery](https://keyhole-seven.vercel.app/gallery)):
+Tokens on mainnet (`nft_total_supply` = 6, read 2026-11-07; re-check with `./judge/1-contract.sh` or the live [/gallery](https://keyhole-seven.vercel.app/gallery)). Six tokens exist: five keys held by people, and token `0`, a test key (`KEYHOLE Key #0 (test)`) owned by the contract account `keyhole-devmo.near`. The home page counts the five holder keys and leaves the test key out. The table below was read on 2026-11-03, when five tokens existed; the sixth, `k22b07f20ff167d8d`, is not in it:
 
 | token | holder | tier | mint tx |
 |---|---|---|---|
-| `0` | `keyhole-devmo.near` | 1 | [`UYHismxe…`](https://nearblocks.io/txns/UYHismxe3a2Xb5YvbVHuGhsHWf7ERrx5oCrxREePBFR) |
+| `0` (test key) | `keyhole-devmo.near` | 1 | [`UYHismxe…`](https://nearblocks.io/txns/UYHismxe3a2Xb5YvbVHuGhsHWf7ERrx5oCrxREePBFR) |
 | `k857b6b68facc0f94` | [`a7458a83…91da`](https://nearblocks.io/address/a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da) | 1 | [`FaYzSUYT…`](https://nearblocks.io/txns/FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4) (signed by the first TEE minter) |
 | `k5f4750858f328940` | [`3bde8ce5…8447`](https://nearblocks.io/address/3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447) | 1 | [`DJxbuaJV…`](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) (signed in-enclave by the current minter) |
 | `k0642e7964b2fb515` | [`476abdb5…8c8`](https://nearblocks.io/address/476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8) | 1 | minted through the enclave, call [`9e62569d`](https://api.outlayer.ai/attestations/by-call/9e62569d-9444-4503-8bf2-4c1c266b8316) |
 | `k102a806df6867547` | [`0xf76e6b09…71a3`](https://nearblocks.io/address/0xf76e6b0920e9332ff4410f6dd53f01722abc71a3) (MetaMask, EIP-191) | 1 | minted through the enclave from a MetaMask account; carries `media` on-chain |
 
 
-### How control moves on transfer
+### NFT-bound TEE custody, not a NEAR sub-account
+
+Each `token_id` maps to one custody wallet inside the OutLayer Intel TDX enclave. The wallet's API key is created in the enclave and stored there under the token (`t/<token_id>/wallet`, `holder_wallet` in [`tee/worker/src/main.rs`](tee/worker/src/main.rs)). The enclave operates that wallet only for the account that owns the token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) at that moment. The track hint mentioned NEAR sub-accounts, and KEYHOLE does not use them. A NEAR account is controlled by its access keys, and an NFT transfer does not change those keys. A sub-account handed over with the NFT would need its keys rotated on each sale, and anyone who had kept a copy of a key could still act. Here the custody key never leaves the enclave, so no past or present holder has a copy, and the owner check runs against the chain on every request. The cost is that the account is not a NEAR account a wallet can open directly; it runs only through the enclave.
+
+### How control passes on transfer, and what stops the old owner
 
 The key NFT is the only credential for its confidential account. The enclave never stores "who the holder is"; it asks the chain on every request.
 
 1. **Every request names a key and is signed by its owner.** The worker reads `nft_token(token_id).owner_id` live at finality `final` and refuses unless it equals the NEP-413 signer (`owns`, `tee/worker/src/main.rs`; ordering in `admit_request`, `tee/worker/src/lib.rs`). After a sale the seller's signature no longer matches, so the seller gets `not_owner`.
 2. **The custody wallet belongs to the token, not to a person.** `holder_wallet(token, owner)` looks the wallet up by token id; whoever owns the token operates it, so the confidential balance moves with the NFT (`transfer_moves_the_confidential_account_to_the_new_holder`).
-3. **Ownership is checked again right before funds move.** Swaps and withdraws re-read the owner just before submitting (`settle_if_owner`); a transfer that lands mid-request stops the payout and rolls back the daily spend (`invariant_transfer_mid_payout_never_settles_for_the_old_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `settle_after_transfer_is_refused`).
+3. **Ownership is checked again right before funds move.** Swaps and withdraws re-read the owner just before submitting (`settle_if_owner`). A transfer that lands before that last check stops the send and rolls back the daily spend (`invariant_transfer_mid_payout_never_settles_for_the_old_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `settle_after_transfer_is_refused`). A transfer that lands after the send is already in flight does not stop it: on mainnet the payout finished to the holder who signed it (see below).
 4. **The new holder waits 10 minutes before the first withdraw** (`TRANSFER_COOLDOWN_MS`), so a seller who still has a request in flight cannot race the buyer (`withdraw_waits_after_a_transfer_only_for_the_new_owner`, `invariant_cooldown_binds_only_the_latest_transferee`).
 5. **A seller can lock the key for sale**; the lock binds only the owner who set it, so it never traps the buyer (`seller_lock_binds_only_the_owner_who_set_it`).
 6. **Old signed requests stay dead.** Nonces are single-use and requests expire (`transfer_then_old_signature_is_not_owner`, replay rows in `tee/worker/src/matrix.rs`).
 
-On mainnet: transfer [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD); before it A withdraws ([440c2378](https://keyhole-seven.vercel.app/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae)), after it A is refused `not_owner` ([e805f050](https://keyhole-seven.vercel.app/verify?call=e805f050-d416-4a04-9b12-270adbe02068)), and the mid-payout attempt by the old holder is refused ([e72dc176](https://keyhole-seven.vercel.app/verify?call=e72dc176-e6fc-4d89-b348-911f5318b81b)). Full threat list: [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md).
+On mainnet: transfer [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD); before it A withdraws ([440c2378](https://keyhole-seven.vercel.app/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae)), after it A is refused `not_owner` ([e805f050](https://keyhole-seven.vercel.app/verify?call=e805f050-d416-4a04-9b12-270adbe02068)). In the mid-payout run ([docs/evidence/mid-payout](docs/evidence/mid-payout/README.md), 2026-11-01), B signed a withdraw of 3000 USDC base units (0.003 USDC), then transferred the key to A while that payout was in flight. The payout finished to B, the holder who signed it. B's next request was refused `not_owner` ([e72dc176](https://keyhole-seven.vercel.app/verify?call=e72dc176-e6fc-4d89-b348-911f5318b81b)), and A then saw the remaining 2000 units.
+
+**What stops the old owner, and what does not.** The controls are: the owner check on every request (T1), the owner check again just before a send (T2), a 10-minute withdraw cooldown for a new owner (T3), single-use nonces and expiry (T4), and a seller lock that binds only the owner who set it (T5, T6). One window is left open: the gap between the last owner read and the send, which is one RPC read. A seller can set a lock before a sale, and a lock closes that window ([THREAT_MODEL.md](THREAT_MODEL.md)). A payout that was already sent is not recalled by a later transfer, as the mid-payout run shows. The full list, with the test for each row, is in [THREAT_MODEL.md](THREAT_MODEL.md) and [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md).
+
+**Dates.** The v1 code was committed on 2026-10-28 ([`66f7070`](https://github.com/mohamedwael201193/keyhole/commit/66f7070)). The root [THREAT_MODEL.md](THREAT_MODEL.md) was first committed on 2026-10-31 ([`701faf4`](https://github.com/mohamedwael201193/keyhole/commit/701faf4)), and [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md) on 2026-11-03 ([`4736e9c`](https://github.com/mohamedwael201193/keyhole/commit/4736e9c)). Both were written after the v1 code, not before it as the track's checkpoint asked.
 
 ## 6. The TEE worker
 
@@ -471,9 +487,9 @@ Gateway calls on mainnet, signed with the website's own [`web/lib/nep413.ts`](we
 - **Balances and trades stay off the public record.**
   - Balances, trade history and spend live in TEE encrypted storage under the holder's key.
   - They are readable only through a signed request from the full-access key of the account that holds the key NFT.
-- **Swaps are confidential.** They use 1Click `confidentiality: basic | advanced` ([`03`](docs/evidence/mainnet-e2e/03_quote_dry.json), [`05`](docs/evidence/mainnet-e2e/05_quote_advanced.json)).
+- **Swaps use 1Click confidentiality.** They are sent with `confidentiality: basic | advanced` ([`03`](docs/evidence/mainnet-e2e/03_quote_dry.json), [`05`](docs/evidence/mainnet-e2e/05_quote_advanced.json)). The 1Click solvers still see the asset pair and amount of each quote.
 - **Cross-chain settlement works both ways it can end.** 0.004 SOL on Solana became 0.367068 USDC at `keyhole-devmo.near` ([NEAR `8BQznSfb…`](https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh)), and a 0.001 SOL order with no liquidity came back as a refund ([`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md)). [/settle](https://keyhole-seven.vercel.app/settle) reads both statuses live.
-- **No identity is collected.** The site and CLI ask for no email, no KYC and no region.
+- **No KYC.** The site and CLI ask for no KYC and no region. There are three ways in: a NEAR wallet, MetaMask, or Google or email on [/start](https://keyhole-seven.vercel.app/start). The Google or email path signs in through Privy, which creates an embedded NEAR account, so Privy sees that login. A wallet sign-in does not use Privy.
 - **The gateway keeps no record.** It does not log bodies, amounts or accounts.
 - **Wallet signing moves nothing.** Wallets sign messages, not transactions, so signing costs no gas and moves no funds.
 
