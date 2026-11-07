@@ -21,13 +21,24 @@ const CONTRACT = "keyhole-devmo.near";
 const OUTLAYER = process.env.OUTLAYER_API || "https://api.outlayer.ai";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function get(url, opt = {}, tries = 3) {
+// A rate limit (429) or a server error (5xx) says nothing about the claim, so after the retries it is an ERROR
+// (source unreachable), never a FAIL. Retry-After is honoured when the server sends one.
+async function get(url, opt = {}, tries = 5) {
   for (let i = 0; ; i++) {
     try {
       const r = await fetch(url, { ...opt, signal: AbortSignal.timeout(30000) });
-      if ((r.status === 429 || r.status >= 500) && i < tries - 1) { await sleep(1500 * (i + 1)); continue; }
+      if (r.status === 429 || r.status >= 500) {
+        if (i >= tries - 1) throw new InfraError(`${url}: HTTP ${r.status} after ${tries} tries`);
+        const after = Number(r.headers.get("retry-after"));
+        await sleep(Number.isFinite(after) && after > 0 ? Math.min(after, 30) * 1000 : 2000 * (i + 1));
+        continue;
+      }
       return r;
-    } catch (e) { if (i >= tries - 1) throw new InfraError(`${url}: ${e.message}`); await sleep(1500 * (i + 1)); }
+    } catch (e) {
+      if (e instanceof InfraError) throw e;
+      if (i >= tries - 1) throw new InfraError(`${url}: ${e.message}`);
+      await sleep(2000 * (i + 1));
+    }
   }
 }
 async function rpc(method, params) {
