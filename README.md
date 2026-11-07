@@ -100,7 +100,7 @@ These are properties of the worker source in this repository. The enclave servin
 
 ## AI-assisted development
 
-The code was written with AI coding agents, directed by the author, devmo. The repository names the tool it can show: Cursor (Cursor Agent) is a co-author on 25 commits, and 20 `cursor/*` branches were pushed to origin. Run `git log --all --grep "Cursor Agent"` to list them. Other commits name no tool. The author set the scope and merged the changes through pull requests; most commit subjects carry the PR number (for example `(#130)`). CI runs the test suites in [§12](#12-tests-and-ci) on each push to `main`. The AI output is not offered as independent review. The threat model, the mainnet evidence and the judge kit are the checks a reader can run.
+The code was written with AI coding agents, directed by the author, devmo. The repository names the tool it can show: Cursor (Cursor Agent) is a co-author on 25 commits, and 20 `cursor/*` branches were pushed to origin. Run `git log --all --grep "Cursor Agent"` to list them. From 2026-11-07, Claude Code (Anthropic) was also used; those commits name no tool in their trailers. Other commits name no tool. The author set the scope and merged the changes through pull requests; most commit subjects carry the PR number (for example `(#130)`). CI runs the test suites in [§12](#12-tests-and-ci) on each push to `main`. The AI output is not offered as independent review. The threat model, the mainnet evidence and the judge kit are the checks a reader can run.
 
 ## Built with
 
