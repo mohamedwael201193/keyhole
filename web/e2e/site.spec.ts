@@ -342,7 +342,7 @@ test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
     expect(metrics.rowWidths).toEqual([metrics.listW, metrics.listW]);
     for (const a of metrics.amounts) expect(a.n, `${w} ${a.text}`).toBe(1);
     for (const n of metrics.names) expect(n.n, `${w} ${n.text}`).toBe(1);
-    await expect(page.getByText("Any NEAR wallet or MetaMask")).toBeVisible();
+    await expect(page.getByText("any NEAR wallet, or MetaMask")).toBeVisible();
     await expect(page.getByText("One gas-free signature (NEAR NEP-413 or MetaMask EIP-191)")).toBeVisible();
   }
 });
