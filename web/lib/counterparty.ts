@@ -89,18 +89,39 @@ const str = (x: unknown): string | null => (typeof x === "string" ? x : typeof x
 
 type Fetch = typeof fetch;
 
+/**
+ * Runs one read (request + body) with a hard deadline. The abort signal stops a real fetch; the race also ends a
+ * read whose fetch ignores the signal. The timer is a normal (ref'd) timer, so the deadline fires even when nothing
+ * else keeps the event loop alive.
+ */
+async function timed<T>(timeoutMs: number, read: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const ac = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { ac.abort(); reject(new Error("timeout")); }, timeoutMs);
+  });
+  try {
+    return await Promise.race([read(ac.signal), deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function rpc(f: Fetch, urls: readonly string[], method: string, params: Json, timeoutMs: number): Promise<{ ok: true; result: Json } | { ok: false; code: string }> {
   let code = "unreachable";
   for (const url of urls) {
     try {
-      const r = await f(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: "keyhole", method, params }),
-        signal: AbortSignal.timeout(timeoutMs),
+      const res = await timed(timeoutMs, async (signal) => {
+        const r = await f(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: "keyhole", method, params }),
+          signal,
+        });
+        return r.ok ? { ok: true as const, body: await r.json() } : { ok: false as const, status: r.status };
       });
-      if (!r.ok) { code = `http_${r.status}`; continue; }
-      const j = obj(await r.json());
+      if (!res.ok) { code = `http_${res.status}`; continue; }
+      const j = obj(res.body);
       if (j.error) {
         const s = JSON.stringify(j.error);
         if (/UNKNOWN_ACCOUNT/.test(s)) return { ok: false, code: "UNKNOWN_ACCOUNT" };
@@ -117,9 +138,10 @@ async function rpc(f: Fetch, urls: readonly string[], method: string, params: Js
 
 async function nearblocks(f: Fetch, path: string, key: string | undefined, timeoutMs: number): Promise<unknown> {
   try {
-    const r = await f(NEARBLOCKS + path, { headers: key ? { authorization: `Bearer ${key}` } : {}, signal: AbortSignal.timeout(timeoutMs) });
-    if (!r.ok) return null;
-    return await r.json();
+    return await timed(timeoutMs, async (signal) => {
+      const r = await f(NEARBLOCKS + path, { headers: key ? { authorization: `Bearer ${key}` } : {}, signal });
+      return r.ok ? await r.json() : null;
+    });
   } catch {
     return null;
   }
