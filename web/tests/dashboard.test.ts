@@ -21,7 +21,7 @@ const keysReady = (count: number, tier: number | null = 1, capped = false): Keys
 const keysLoading: KeysView = { status: "loading", count: 0, capped: false, tier: null, onRetry: () => {} };
 const balanceUnread: BalanceView = { read: false, busy: false, busyLabel: "", sessionLive: false, total: null, rows: null, error: null, onSign: () => {} };
 const activityUnread: ActivityView = { read: false, busy: false, busyLabel: "", entries: null, logOk: null, callId: null, error: null, onRead: () => {} };
-const BASE: OverviewProps = { accountId: ACCT, restoring: false, keys: keysReady(1), balance: balanceUnread, activity: activityUnread };
+const BASE: OverviewProps = { accountId: ACCT, restoring: false, keys: keysReady(1), balance: balanceUnread, activity: activityUnread, onConnect: () => {} };
 
 const usdcRows = (raw: string) => {
   const rows = assetRows([{ token: USDC, amount: raw }], {});
@@ -69,9 +69,10 @@ describe("pure helpers", () => {
 describe("Overview: not connected", () => {
   it("shows the calm hero with a 3D sign-in button and the judge link", () => {
     const m = html({ accountId: null });
-    expect(m).toContain("Connect to see your keys");
-    expect(m).toMatch(/href="\/start"/);
-    expect(m).toMatch(/href="\/judge"/);
+    expect(m).toContain("Sign in to see your keys");
+    expect(m).toMatch(/data-testid="dash-connect-cta"/);
+    expect(m).not.toMatch(/href="\/start"/);
+    expect(m).toMatch(/href="\/verify"[^>]*data-testid="dash-explore"|data-testid="dash-explore"[^>]*href="\/verify"/);
     expect(m).toContain("kh-btn--primary");
     expect(m).not.toContain('data-testid="stat-keys"');
   });
@@ -227,5 +228,32 @@ describe("Overview: recent activity from the signed history", () => {
   it("a read error is shown", () => {
     const m = html({ activity: readOk({ error: { code: "session_expired" } }), keys: keysReady(1, 1) });
     expect(m).toContain('data-code="session_expired"');
+  });
+});
+
+describe("Overview: one next step", () => {
+  it("a key with a sealed vault asks for one signature to unseal", () => {
+    const m = html({ keys: keysReady(1, 1) });
+    expect(m).toContain('data-testid="dash-next-unseal"');
+    expect(m).not.toContain('data-testid="dash-next-swap"');
+  });
+
+  it("a funded vault points to Swap, and only Swap", () => {
+    const { rows, total } = usdcRows("2500000");
+    const m = html({ balance: { ...balanceUnread, read: true, rows, total }, keys: keysReady(1, 1) });
+    expect(m).toMatch(/href="\/swap"[^>]*data-testid="dash-next-swap"|data-testid="dash-next-swap"[^>]*href="\/swap"/);
+    expect(m).not.toContain('data-testid="dash-next-fund"');
+  });
+
+  it("an empty vault points to funding it", () => {
+    const m = html({ balance: { ...balanceUnread, read: true, rows: [], total: { kind: "empty" } }, keys: keysReady(1, 1) });
+    expect(m).toContain('data-testid="dash-next-fund"');
+    expect(m).not.toContain('data-testid="dash-next-swap"');
+  });
+
+  it("no key still names Mint, and nothing else", () => {
+    const m = html({ keys: keysReady(0, null) });
+    expect(m).toContain('data-testid="mint-banner"');
+    expect(m).not.toContain('data-testid="next-step"');
   });
 });

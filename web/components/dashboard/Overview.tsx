@@ -52,6 +52,8 @@ export type OverviewProps = {
   keys: KeysView;
   balance: BalanceView;
   activity: ActivityView;
+  /** Opens the shared sign-in sheet (components/SignInModal.tsx). */
+  onConnect: () => void;
 };
 
 const RECENT = 8;
@@ -65,12 +67,18 @@ function totalText(total: Total | null): string | undefined {
 
 export function Overview(p: OverviewProps) {
   if (!p.accountId) {
-    return p.restoring ? <Restoring /> : <ConnectHero />;
+    return p.restoring ? <Restoring /> : <ConnectHero onConnect={p.onConnect} />;
   }
   const { keys, balance, activity } = p;
   const ready = keys.status === "ready";
   const held = ready && keys.count > 0;
   const noKey = ready && keys.count === 0;
+  // The one next step, from what is actually known: no key, a sealed vault, an empty vault, or a funded one.
+  const funded = balance.read && !!balance.total && (
+    balance.total.kind === "amounts" ||
+    ((balance.total.kind === "usd" || balance.total.kind === "partial") && balance.total.micro > 0)
+  );
+  const nextStep: NextStepKind | null = noKey ? "mint" : !held ? null : !balance.read ? "unseal" : funded ? "swap" : "fund";
   const looking = keys.status === "idle" || keys.status === "loading";
   const failed = keys.status === "error";
   const caps = held ? capsOf(keys.tier) : null;
@@ -132,15 +140,7 @@ export function Overview(p: OverviewProps) {
         )}
       </div>
 
-      {noKey && (
-        <Card as="section" tone="banner" size="lg" className="dash-banner" aria-labelledby="dash-mint-h" testid="mint-banner">
-          <h2 id="dash-mint-h">Mint your key</h2>
-          <p>Your key is the account. Minting is free, the enclave pays, and only Bronze is mintable today.</p>
-          <div className="dash-actions">
-            <Button variant="banner" href="/mint" testid="dash-mint">Mint a key</Button>
-          </div>
-        </Card>
-      )}
+      {nextStep && <NextStep step={nextStep} busy={balance.busy} busyLabel={balance.busyLabel} onUnseal={balance.onSign} />}
 
       {held && (
         <div className="dash-two">
@@ -219,16 +219,58 @@ function Restoring() {
   );
 }
 
-function ConnectHero() {
+type NextStepKind = "mint" | "unseal" | "fund" | "swap";
+
+/** The one banner that names the next step. Each state says what it does and why, in one line. */
+function NextStep({ step, busy, busyLabel, onUnseal }: { step: NextStepKind; busy: boolean; busyLabel: string; onUnseal: () => void }) {
+  if (step === "mint") {
+    return (
+      <Card as="section" tone="banner" size="lg" className="dash-banner" aria-labelledby="dash-next-h" testid="mint-banner">
+        <h2 id="dash-next-h">Mint your key</h2>
+        <p>Your key is the account. Minting is free, the enclave pays, and only Bronze is mintable today.</p>
+        <div className="dash-actions"><Button variant="banner" href="/mint" testid="dash-mint">Mint a key</Button></div>
+      </Card>
+    );
+  }
+  if (step === "unseal") {
+    return (
+      <Card as="section" tone="banner" size="lg" className="dash-banner" aria-labelledby="dash-next-h" testid="next-step">
+        <h2 id="dash-next-h">Unseal your vault</h2>
+        <p>Your balance is sealed. One signature reads it, and only your signature can open the vault.</p>
+        <div className="dash-actions">
+          <Button variant="banner" onClick={onUnseal} loading={busy} loadingLabel={busyLabel} testid="dash-next-unseal">Unseal balance</Button>
+        </div>
+      </Card>
+    );
+  }
+  if (step === "fund") {
+    return (
+      <Card as="section" tone="banner" size="lg" className="dash-banner" aria-labelledby="dash-next-h" testid="next-step">
+        <h2 id="dash-next-h">Fund your vault</h2>
+        <p>The vault has no balance yet. A deposit is a normal transfer you approve in your wallet.</p>
+        <div className="dash-actions"><Button variant="banner" href="/vault" testid="dash-next-fund">Open your vault</Button></div>
+      </Card>
+    );
+  }
+  return (
+    <Card as="section" tone="banner" size="lg" className="dash-banner" aria-labelledby="dash-next-h" testid="next-step">
+      <h2 id="dash-next-h">Swap from your vault</h2>
+      <p>Swaps run inside the enclave, from your confidential balance, and each one is checked on its own.</p>
+      <div className="dash-actions"><Button variant="banner" href="/swap" testid="dash-next-swap">Swap</Button></div>
+    </Card>
+  );
+}
+
+function ConnectHero({ onConnect }: { onConnect: () => void }) {
   return (
     <div className="page dash" data-testid="dash">
       <header className="dash-head"><h1>Overview</h1></header>
       <Card as="section" size="lg" className="dash-hero" aria-labelledby="dash-hero-h" testid="dash-connect">
-        <h2 id="dash-hero-h">Connect to see your keys</h2>
+        <h2 id="dash-hero-h">Sign in to see your keys</h2>
         <p className="dash-lead">Your key is an NFT on NEAR mainnet, and the account behind it. Sign in to see the keys you hold. Your vault and activity open only when you sign.</p>
         <div className="dash-actions">
-          <Button href="/start" size="lg" testid="dash-connect-cta">Start sign-in</Button>
-          <Link className="dash-link" href="/judge" data-testid="dash-judge-link">See the judge path</Link>
+          <Button size="lg" onClick={onConnect} testid="dash-connect-cta">Sign in</Button>
+          <Link className="dash-link" href="/verify" data-testid="dash-explore">Explore without a wallet</Link>
         </div>
       </Card>
     </div>
