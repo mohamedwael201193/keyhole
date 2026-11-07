@@ -240,3 +240,24 @@
 .pp-demo .dcard dl div { gap: 10px; }
 .pp-demo .dproof { display: inline-flex; align-items: center; min-height: 36px; font-size: 15px; }
 .pp-demo .dnext { align-items: center; margin-top: 32px; }
+
+/* ---- /source ---- */
+.pp-source .pp-facts { margin: 0; display: grid; gap: 0; }
+.pp-source .pp-facts > div { display: grid; grid-template-columns: minmax(96px, 140px) minmax(0, 1fr); gap: 6px 20px; align-items: baseline; padding: 14px 0; border-top: 1px solid #1A2A2C14; min-width: 0; }
+.pp-source .pp-facts > div:first-child { border-top: 0; padding-top: 4px; }
+.pp-source .pp-facts dt { font: 600 14px var(--sans); color: var(--mu); }
+.pp-source .pp-facts dd { margin: 0; font-size: 16px; color: var(--ink); min-width: 0; }
+.pp-source .pp-facts dd [data-kind="hash"], .pp-source .pp-facts dd .mono { display: block; font: 500 14px/1.6 var(--mono); color: var(--ink); overflow-wrap: anywhere; word-break: break-all; }
+.pp-source .pp-dl { display: flex; flex-wrap: wrap; gap: 12px; }
+.pp-source .pp-links { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 24px; }
+.pp-source .pp-links li { margin: 0; }
+.pp-source .pp-links a { display: inline-flex; align-items: center; min-height: 40px; font-size: 16px; font-weight: 600; color: var(--teal); text-underline-offset: 4px; }
+.pp-source .pp-card p { font-size: 16px; line-height: 1.6; margin: 0 0 10px; }
+.pp-source .pp-card a { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+
+/* ---- not-found ---- */
+.pp-notfound .pp-nf { max-width: 640px; padding: 48px 0 24px; }
+.pp-notfound .pp-nf-ico { display: block; width: 44px; height: 44px; color: var(--teal); margin-bottom: 22px; }
+.pp-notfound .pp-nf h1 { margin: 10px 0 14px; }
+.pp-notfound .pp-nf-lead { font-size: var(--fs-lead); line-height: 1.55; color: var(--mu); margin: 0; }
+.pp-notfound .uact { margin-top: 30px; }
