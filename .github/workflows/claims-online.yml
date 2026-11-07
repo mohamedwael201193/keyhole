@@ -7,7 +7,7 @@ on:
 permissions: { contents: read }
 jobs:
   claims-online:
-    runs-on: [self-hosted, keyhole-box]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
