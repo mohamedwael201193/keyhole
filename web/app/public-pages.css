@@ -135,3 +135,44 @@
   .page.pp-verify .ck { grid-template-columns: 34px minmax(0, 1fr); }
   .page.pp-verify .ck .att { grid-column: 2; justify-self: start; }
 }
+
+/* ---- /ask: prompt card, short sample chips, verified checks ---- */
+.page.pp-ask .lede { font-size: 19px; line-height: 1.6; max-width: 66ch; color: var(--ink); }
+.page.pp-ask .askgrid { gap: 28px; margin-top: 36px; align-items: stretch; }
+.page.pp-ask .vcard { background: var(--card); border: 1px solid #1A2A2C1A; border-radius: 20px; padding: 28px 30px; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft); min-width: 0; }
+.page.pp-ask .vcard > h2, .page.pp-ask .pp-verified .vhd h2 { font-size: var(--fs-heading); line-height: 1.25; margin: 0 0 14px; }
+.page.pp-ask .vhd { border-bottom: 1px solid #1A2A2C18; }
+.page.pp-ask .asksamples { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.page.pp-ask .asksamples .kh-btn--sm { min-height: 40px; padding: 0 14px; font-size: 15px; }
+.page.pp-ask .askform { gap: 10px; }
+.page.pp-ask .askform label { font: 600 15px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink); }
+.page.pp-ask textarea { font-size: 17px; min-height: 130px; }
+.page.pp-ask .askrow { margin-top: 4px; }
+.page.pp-ask .askrow small { font: 500 14px var(--mono); color: var(--mu); }
+.page.pp-ask .askctx { font-size: 15px; line-height: 1.55; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; background: #F3EEE4; }
+.page.pp-ask .askctx .linkish { min-height: 36px; font-size: 15px; }
+.page.pp-ask .answer p:last-child { font-size: 18px; line-height: 1.6; }
+.page.pp-ask .asknotes { font-size: 15px; line-height: 1.6; }
+.page.pp-ask .askchecks { gap: 14px; margin: 14px 0; }
+.page.pp-ask .askchecks li { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; }
+.page.pp-ask .askchecks .dot { width: 30px; height: 30px; font-size: 14px; }
+.page.pp-ask .askchecks b { font-size: 17px; line-height: 1.35; }
+.page.pp-ask .askchecks small { font-size: 15px; line-height: 1.5; }
+.page.pp-ask .vbadge { font-size: 14px; min-height: 32px; padding: 6px 12px; }
+.page.pp-ask .pp-verified .small { font-size: 14px; }
+.page.pp-ask .pp-verified .dcap summary { min-height: 44px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.page.pp-ask .pp-verified .dcap summary small { font-size: 14px; }
+.page.pp-ask .pp-verified .dcap li { font-size: 15px; }
+.page.pp-ask .pp-verified .kv dt { font: 600 13px/1.5 var(--mono); text-transform: none; letter-spacing: 0; color: var(--mu); }
+.page.pp-ask .pp-verified .kv dd { font-size: 15px; white-space: normal; overflow-wrap: anywhere; }
+.page.pp-ask .pp-verified .kv dd[data-kind="hash"] { font: 500 14px/1.5 var(--mono); text-align: start; }
+.page.pp-ask .asknote { font-size: 15px; line-height: 1.6; color: var(--mu); }
+.page.pp-ask .asknote a, .page.pp-ask .asknotes a { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+
+@media (max-width: 900px) {
+  .page.pp-ask .askgrid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .page.pp-ask .vcard { padding: 22px 20px; border-radius: 18px; }
+  .page.pp-ask .asksamples .kh-btn--sm { flex: 1 1 100%; justify-content: flex-start; }
+}
