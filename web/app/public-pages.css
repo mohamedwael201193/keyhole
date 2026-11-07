@@ -261,3 +261,10 @@
 .pp-notfound .pp-nf h1 { margin: 10px 0 14px; }
 .pp-notfound .pp-nf-lead { font-size: var(--fs-lead); line-height: 1.55; color: var(--mu); margin: 0; }
 .pp-notfound .uact { margin-top: 30px; }
+
+/* /identity on phones: the preview label is longer than the old "1 of 1", so let it wrap and let grid cells shrink. */
+.pp-identity .pp-preview { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.pp-identity .thumbs, .pp-identity .wal, .pp-identity .tgrid > *, .pp-identity .idrow > *, .pp-identity .sizes > * { min-width: 0; }
+.pp-identity .idrow { grid-template-columns: auto minmax(0, 1fr) minmax(0, auto); }
+.pp-identity .tgrid, .pp-identity .sizes { max-width: 100%; }
+@media (max-width: 560px) { .pp-identity .idrow { grid-template-columns: auto minmax(0, 1fr); } }
