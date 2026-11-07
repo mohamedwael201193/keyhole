@@ -15,7 +15,7 @@ import { PRIVY_APP_ID, PRIVY_CLIENT_ID, type PrivyNear } from "./privy";
 
 const provider = new JsonRpcProvider({ url: RPC_URL });
 
-function Bridge({ wantLogin, onChange }: { wantLogin: number; onChange: (v: PrivyNear) => void }) {
+function Bridge({ wantLogin, method, onChange }: { wantLogin: number; method: "email" | null; onChange: (v: PrivyNear) => void }) {
   const { ready, authenticated, user } = usePrivy();
   const { login } = useLogin();
   const { logout } = useLogout();
@@ -26,8 +26,9 @@ function Bridge({ wantLogin, onChange }: { wantLogin: number; onChange: (v: Priv
 
   useEffect(() => {
     if (!ready) return;
-    if (!authenticated && wantLogin && asked.current !== wantLogin) { asked.current = wantLogin; login(); }
-  }, [ready, authenticated, wantLogin, login]);
+    // Google keeps the default modal; the email card opens the same modal limited to the email method.
+    if (!authenticated && wantLogin && asked.current !== wantLogin) { asked.current = wantLogin; login(method === "email" ? { loginMethods: ["email"] } : undefined); }
+  }, [ready, authenticated, wantLogin, method, login]);
 
   useEffect(() => {
     if (!ready) return;
@@ -47,7 +48,7 @@ function Bridge({ wantLogin, onChange }: { wantLogin: number; onChange: (v: Priv
   return null;
 }
 
-export default function PrivyBridge(props: { wantLogin: number; onChange: (v: PrivyNear) => void }) {
+export default function PrivyBridge(props: { wantLogin: number; method: "email" | null; onChange: (v: PrivyNear) => void }) {
   return (
     <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID || undefined}
       config={{ appearance: { accentColor: "#1F4B4F", theme: "light", showWalletLoginFirst: false, landingHeader: "Sign in to KEYHOLE" }, loginMethods: ["google", "email"] }}>

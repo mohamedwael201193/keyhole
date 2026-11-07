@@ -1,0 +1,51 @@
+/* /start: sign-in choices, the stepper and the ready step. Colour and type come from the role tokens in app/polish.css. */
+
+.sg-head { display: grid; gap: var(--space-3); justify-items: center; text-align: center; margin: var(--space-2) 0 var(--space-6); }
+.sg-head h1 { font-family: var(--serif); font-weight: 600; font-size: var(--fs-display); line-height: 1.02; letter-spacing: -.01em; color: var(--ink); margin: 0; max-width: 16ch; text-wrap: balance; }
+.sg-lead { font: 500 var(--fs-lead)/1.5 var(--sans); color: var(--mu); margin: 0; max-width: 56ch; text-wrap: pretty; }
+
+.sg-dots { margin: 0 0 var(--space-5); }
+.sg-dots .khm-stepper li { min-width: 0; font-size: 13px; }
+.sg-dots .khm-stepper li span { overflow-wrap: anywhere; }
+
+.sg-step { max-width: 640px; margin-inline: auto; }
+.sg-step h2 { font-family: var(--serif); font-weight: 600; font-size: var(--fs-title); line-height: 1.1; color: var(--ink); margin: 0 0 var(--space-3); text-wrap: balance; }
+.sg-step p { font: 500 16px/1.55 var(--sans); color: var(--mu); margin: 0 0 var(--space-4); text-wrap: pretty; }
+
+/* Connect step: three large choices, one per sign-in route */
+.sg-connect { display: grid; gap: var(--space-5); }
+.sg-h2 { font-family: var(--serif); font-weight: 600; font-size: var(--fs-title); line-height: 1.1; color: var(--ink); margin: 0; text-align: center; text-wrap: balance; }
+.sg-busy { margin: 0; padding: var(--space-5); text-align: center; }
+.sg-choices { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); }
+.sg-choices--solo { width: 100%; max-width: 440px; margin-inline: auto; }
+@media (min-width: 820px) { .sg-choices:not(.sg-choices--solo) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.sg-choice { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-5); text-align: start; }
+.sg-choice h3 { font: 700 20px/1.25 var(--sans); color: var(--ink); margin: var(--space-2) 0 0; }
+.sg-choice p { font: 500 16px/1.5 var(--sans); color: var(--mu); margin: 0; text-wrap: pretty; }
+.sg-choice .kh-btn { width: 100%; min-height: 48px; padding: 10px var(--space-4); white-space: normal; text-align: center; line-height: 1.25; }
+/* The first action sits at the foot of the card, so the three cards line up when they stretch */
+.sg-choice .kh-btn:first-of-type { margin-top: auto; }
+.sg-choice .kh-btn + .kh-btn { margin-top: 0; }
+
+.sg-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #1F4B4F12; color: var(--teal); flex: none; }
+.sg-icon svg { width: 24px; height: 24px; }
+.sg-marks { display: flex; gap: var(--space-2); }
+.sg-marks img { width: 40px; height: 40px; padding: 8px; border-radius: 50%; background: var(--card); box-shadow: inset 0 0 0 1px var(--kh-edge); }
+
+.sg-note { margin: 0; text-align: center; font: 500 15px/1.5 var(--sans); color: var(--mu); }
+.sg-foot { display: flex; justify-content: center; }
+.sg-foot .mmnote { margin: 0; }
+
+/* Actions inside a step: one primary, the alternative beside it */
+.sg-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: var(--space-4) 0 0; }
+.sg-skip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-2); color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+.sg-skip:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 8px; }
+
+/* Fund: amount, asset with its mark */
+.sg-amount select { border: 0; background: transparent; font: inherit; color: var(--ink); min-height: 44px; }
+
+/* Ready step: a clear success with one action */
+.sg-done { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-2) 0; }
+.sg-done h2 { font-family: var(--serif); font-weight: 600; font-size: var(--fs-title); line-height: 1.1; color: var(--ink); margin: 0; }
+.sg-done p { margin: 0; max-width: 52ch; }

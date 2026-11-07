@@ -27,16 +27,18 @@ test("P1: landing hash and more links, verify label, key help, gallery traits", 
   await page.getByTestId("traits-explain").locator("summary").click();
   await expect(page.getByTestId("traits-explain")).toContainText("Bit cipher");
 });
-test("/start step 1: Google / email first, All wallets second (when the Privy app is configured)", async ({ page }) => {
+test("/start step 1: Google, email code, then wallets (when the Privy app is configured)", async ({ page }) => {
   await page.goto("/start");
   const all = page.getByTestId("start-connect");
   await expect(all).toBeVisible();
+  await expect(page.getByTestId("start-near")).toBeVisible();
   const social = page.getByTestId("start-social");
   if (await social.count()) {
-    await expect(social).toHaveText("Continue with Google / email");
-    await expect(all).toContainText("All wallets");
-    const [a, b] = await Promise.all([social.boundingBox(), all.boundingBox()]);
-    expect(a!.y).toBeLessThan(b!.y);
+    await expect(social).toHaveText("Continue with Google");
+    await expect(page.getByTestId("start-email")).toHaveText("Continue with email");
+    await expect(all).toHaveText("MetaMask and other wallets");
+    const order = await page.locator('[data-testid="start-social"],[data-testid="start-email"],[data-testid="start-connect"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
+    expect(order).toEqual(["start-social", "start-email", "start-connect"]);
     // Click again until hydrated; the Privy modal (Google + email) must open.
     await expect(async () => { await social.click(); await expect(page.locator("#privy-modal-content")).toBeVisible({ timeout: 5_000 }); }).toPass({ timeout: 30_000 });
   }
