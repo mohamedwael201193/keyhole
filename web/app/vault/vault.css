@@ -11,7 +11,7 @@
 .vlt .vhd h2 { margin: 0; font: 700 26px/1.1 var(--serif); letter-spacing: 0; max-width: none; }
 .vlt .vhd .side { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .vlt .vsub { margin: 0; font-size: 15px; line-height: 1.5; color: var(--mu); }
-.vlt .vcap { margin: 0; font: 600 12px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #3B4647; }
+.vlt .vcap { margin: 0; font: 600 13px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #3B4647; }
 .vlt .note { margin: 0; font-size: 14px; line-height: 1.5; color: var(--mu); }
 .vlt .errbox, .vlt .note-box, .vlt .result-card, .vlt .receipt { margin-top: 0; }
 .vlt [data-testid="attested"] { margin-top: 0 !important; }
@@ -24,12 +24,15 @@
 .vlt .vbtn.sec:hover:not(:disabled) { border-color: var(--ink); }
 .vlt .vbtn:disabled { background: #E6E0D4; color: #5F6869; border-color: #D6CFC1; cursor: not-allowed; }
 .vlt .vbtn:focus-visible { outline: 3px solid #B8893E; outline-offset: 2px; }
-.vlt .vbtn.sm { height: 36px; padding: 0 14px; font-size: 13px; }
+.vlt .vbtn.sm { height: 40px; padding: 0 14px; font-size: 14px; }
+/* Cooldown and lock notes: a warm box with the time in it, so the wait is read at a glance */
+.vlt .note-box[data-testid="cooldown-note"], .vlt .note-box[data-testid="lock-note"] { background: #F8EEDC; color: #5C3F0E; border: 1px solid #B8893E55; font-weight: 600; }
+.vlt [data-testid="withdraw-out"] .kh-tx-head b, .vlt [data-testid="trade-out"] .kh-tx-head b { font-size: 17px; }
 .vlt .vbtn.block { width: 100%; }
 .vlt .vact { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 
 /* Badges */
-.vlt .vbadge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font: 600 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; border: 1px solid transparent; }
+.vlt .vbadge { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; font: 600 13px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; border: 1px solid transparent; }
 .vlt .vbadge i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .vlt .vbadge.ok { background: #E3EFE7; color: #16603C; border-color: #16603C33; }
 .vlt .vbadge.lock { background: #F3E8D4; color: #6A4A12; border-color: #7D5A1E40; }
@@ -52,7 +55,7 @@
 .vlt .vbox.pick { padding: 0 12px; }
 .vlt .vbox .tpick { flex: 1; }
 .vlt .vbox .tpick b { font: 700 16px/1.1 var(--sans); }
-.vlt .vbox .tpick small { font-size: 11px; }
+.vlt .vbox .tpick small { font-size: 13px; }
 .vlt .vbox .tpick .medal { width: 30px; height: 30px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--brassL); }
 .vlt .vbox .tpick .medal img { width: 18px; height: 18px; }
 .vlt .vhelp { margin: 0; font-size: 13px; line-height: 1.4; color: var(--mu); }
@@ -73,7 +76,7 @@
 .vlt .vmeter .tr i { display: block; height: 100%; border-radius: 99px; background: var(--teal); min-width: 0; }
 .vlt .vmeter.warn .tr i { background: var(--brassL); }
 .vlt .vmeter.full .tr i { background: var(--coral); }
-.vlt .vmeter small { font-size: 12px; color: var(--mu); }
+.vlt .vmeter small { font-size: 13px; color: var(--mu); }
 
 /* Balance */
 .vlt .vtotal { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
@@ -91,7 +94,7 @@
 
 /* Activity */
 .vlt .av { grid-template-columns: 90px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; font-size: 14px; }
-.vlt .av .op { font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--teal); }
+.vlt .av .op { font: 600 13px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--teal); }
 
 @media (max-width: 1100px) { .vlt-grid { grid-template-columns: minmax(0, 1fr); } .vlt .vkey { grid-template-columns: 220px minmax(0, 1fr); align-items: start; } }
 @media (max-width: 700px) {
