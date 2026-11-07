@@ -19,10 +19,12 @@ def where(doc, needle):
 ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
 # ---------------- contract (live RPC) ----------------
-add("contract-code-hash", "On-chain code_hash BfMiMAfg…xMLeZ of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
+add("contract-code-hash", "On-chain code_hash 8YP8Mr2c…WwLG of keyhole-devmo.near (contract v2.3, live since 2026-11-07) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
     {"type":"code_hash","account":"keyhole-devmo.near","wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":K["code_hash"]}, "code_hash == base58(sha256(wasm)) == Fe79rQUH…", "./judge/1-contract.sh")
-add("contract-wasm-sha", "Deployed contract wasm is 209,952 bytes with sha256 9e685c32…089e", where(RD,"209,952 bytes"), "file", "contracts/keys/deployed/keyhole_keys.wasm",
-    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":K["wasm_sha256"],"bytes":209952}, "sha256 9e685c32…089e, 209952 bytes", "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm")
+add("contract-wasm-sha", "Deployed contract wasm is 210,474 bytes with sha256 700bd51f…e09d", where(RD,"210,474 bytes"), "file", "contracts/keys/deployed/keyhole_keys.wasm",
+    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":K["wasm_sha256"],"bytes":210474}, "sha256 700bd51f…e09d, 210474 bytes", "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm")
+add("contract-source-version", "NEP-330 contract_source_metadata of keyhole-devmo.near reports version 2.3.0 (live since 2026-11-07)", where(RD,"version `2.3.0`"), "mainnet view", "keyhole-devmo.near contract_source_metadata()",
+    {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":"2.3.0"}, "version == 2.3.0")
 cfg = {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}
 for k,v in cfg.items():
     add(f"config-{k}", f"Contract config.{k} is {v}", where(RD,'"royalty_bps":500'), "mainnet view", "keyhole-devmo.near config()",

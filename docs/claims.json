@@ -6,7 +6,7 @@
  "claims": [
   {
    "id": "contract-code-hash",
-   "claim": "On-chain code_hash BfMiMAfg…xMLeZ of keyhole-devmo.near is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
+   "claim": "On-chain code_hash 8YP8Mr2c…WwLG of keyhole-devmo.near (contract v2.3, live since 2026-11-07) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
    "where": "README.md:335",
    "evidence_type": "script",
    "evidence": "judge/1-contract.sh",
@@ -14,25 +14,42 @@
     "type": "code_hash",
     "account": "keyhole-devmo.near",
     "wasm": "contracts/keys/deployed/keyhole_keys.wasm",
-    "code_hash": "BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ"
+    "code_hash": "8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG"
    },
    "expected": "code_hash == base58(sha256(wasm)) == Fe79rQUH…",
    "verify": "./judge/1-contract.sh"
   },
   {
    "id": "contract-wasm-sha",
-   "claim": "Deployed contract wasm is 209,952 bytes with sha256 9e685c32…089e",
+   "claim": "Deployed contract wasm is 210,474 bytes with sha256 700bd51f…e09d",
    "where": "README.md:125",
    "evidence_type": "file",
    "evidence": "contracts/keys/deployed/keyhole_keys.wasm",
    "check": {
     "type": "sha256",
     "path": "contracts/keys/deployed/keyhole_keys.wasm",
-    "sha256": "9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e",
-    "bytes": 209952
+    "sha256": "700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d",
+    "bytes": 210474
    },
-   "expected": "sha256 9e685c32…089e, 209952 bytes",
+   "expected": "sha256 700bd51f…e09d, 210474 bytes",
    "verify": "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm"
+  },
+  {
+   "id": "contract-source-version",
+   "claim": "NEP-330 contract_source_metadata of keyhole-devmo.near reports version 2.3.0 (live since 2026-11-07)",
+   "where": "README.md:315",
+   "evidence_type": "mainnet view",
+   "evidence": "keyhole-devmo.near contract_source_metadata()",
+   "check": {
+    "type": "view",
+    "method": "contract_source_metadata",
+    "args": {},
+    "path": "version",
+    "op": "eq",
+    "value": "2.3.0"
+   },
+   "expected": "version == 2.3.0",
+   "verify": "node judge/verify-claims.mjs --only contract-source-version"
   },
   {
    "id": "config-owner",
@@ -2128,6 +2145,20 @@
    "verify": "node judge/verify-claims.mjs --only att-3d81f582"
   },
   {
+   "id": "tx-CM7Jvwdn",
+   "claim": "Mainnet transaction CM7Jvwdn… linked from README.md (succeeded)",
+   "where": "README.md:125",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/CM7JvwdnN2oQ4xakmcSoDPDREBbE7ZUCh5FnJargd5bp",
+   "check": {
+    "type": "tx",
+    "hash": "CM7JvwdnN2oQ4xakmcSoDPDREBbE7ZUCh5FnJargd5bp",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-CM7Jvwdn"
+  },
+  {
    "id": "tx-MG7pGVSN",
    "claim": "Mainnet transaction MG7pGVSN… linked from README.md (succeeded)",
    "where": "README.md:126",
@@ -2364,6 +2395,20 @@
    },
    "expected": "transaction found on mainnet with no failed receipt",
    "verify": "node judge/verify-claims.mjs --only tx-142eipKr"
+  },
+  {
+   "id": "tx-GgnNQERT",
+   "claim": "Mainnet transaction GgnNQERT… linked from README.md (succeeded)",
+   "where": "README.md:318",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k",
+   "check": {
+    "type": "tx",
+    "hash": "GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-GgnNQERT"
   },
   {
    "id": "tx-FaYzSUYT",
@@ -4406,6 +4451,19 @@
    "verify": "node judge/verify-claims.mjs --only path-web/package.json"
   },
   {
+   "id": "path-docs/evidence/contract-v2-3/README.md",
+   "claim": "Linked repo path docs/evidence/contract-v2-3/README.md exists",
+   "where": "README.md:125",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/contract-v2-3/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/contract-v2-3/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/contract-v2-3/README.md"
+  },
+  {
    "id": "path-judge/1-contract.sh",
    "claim": "Linked repo path judge/1-contract.sh exists",
    "where": "README.md:125",
@@ -6189,20 +6247,6 @@
    },
    "expected": "transaction found on mainnet",
    "verify": "node judge/verify-claims.mjs --only tx-9kmr1tsb"
-  },
-  {
-   "id": "tx-GgnNQERT",
-   "claim": "Mainnet transaction GgnNQERT… shown in docs/evidence/contract-v2/README.md",
-   "where": "docs/evidence/contract-v2/README.md:10",
-   "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k",
-   "check": {
-    "type": "tx",
-    "hash": "GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k",
-    "expect": "success"
-   },
-   "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node judge/verify-claims.mjs --only tx-GgnNQERT"
   },
   {
    "id": "tx-HahKkkFj",
