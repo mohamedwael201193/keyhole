@@ -23,7 +23,7 @@ export type ModalProps = {
   open: boolean;
   onClose: () => void;
   title: string;
-  children: ReactNode;
+  children?: ReactNode;
   variant?: "dialog" | "sheet";
   testid?: string;
 };
