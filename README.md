@@ -309,12 +309,13 @@ Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat
 
 - **Standards.**
   - NEP-171 core and NEP-177 metadata (`KEYHOLE` / `KEY`) come from `near-contract-standards`.
-  - NEP-178 approvals (`nft_approve`, `nft_revoke`, `nft_revoke_all`, `nft_is_approved`, `nft_on_approve` when `msg` is set) come from `near-contract-standards`. Every transfer clears the approvals.
+  - NEP-178 approvals (`nft_approve`, `nft_revoke`, `nft_revoke_all`, `nft_is_approved`, `nft_on_approve` when `msg` is set) come from `near-contract-standards`. Every transfer clears the approvals. v2.3 (not deployed yet) caps a token at `MAX_APPROVALS` = 10 approvals; the live v2.2 has no cap.
   - NEP-181 enumeration provides `nft_tokens`, `nft_tokens_for_owner` and `nft_total_supply`.
   - NEP-199 `nft_payout` and `nft_transfer_payout` are written by hand. The royalty cap is `MAX_ROYALTY_BPS = 1000`; live it is `500`. The payout always adds up to the sale price.
-  - NEP-330 `contract_source_metadata` lists the standards above.
+  - NEP-330 `contract_source_metadata` lists the standards above. Live: version `0.1.0`, no link. v2.3 (not deployed yet) sets version `2.3.0` and the repository link.
 - **One key per account.** `nft_mint`, `nft_transfer`, `nft_transfer_call` and `nft_transfer_payout` refuse a receiver that already holds a key ([refusal on mainnet, an expected revert](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV)). The worker's `already_holder` check runs before the mint transaction, so a refused mint costs no gas.
 - **Upgrade.** v1 to v2 was one transaction, deploy plus `migrate()` ([`142eipKr…`](https://nearblocks.io/txns/142eipKrruYWL69w31bzCbcSakGvum5XzwTasHxsAdAC)), rehearsed first in the near-workspaces sandbox against the 5 mainnet tokens ([`contracts/keys-sandbox`](contracts/keys-sandbox/tests/upgrade.rs), [evidence](docs/evidence/contract-v2/README.md)).
+- **Next version, v2.3 (built and tested, not deployed).** Code only over v2.2: no storage layout change, no new state, no `migrate`. It adds the NEP-178 cap of 10 approvals per token and NEP-330 version `2.3.0` with the repository link. Mainnet still runs v2.2. The wasm is [`contracts/keys/release/v2.3/keyhole_keys.wasm`](contracts/keys/release/v2.3/keyhole_keys.wasm) (sha256 `700bd51f…0e09`). Its sandbox test deploys v2.3 over live v2.2 state and checks that nothing moves.
 - **Tiers.**
   - `nft_tier(token_id)` and `holder_tier(account_id)` return 1–3 (`MAX_TIER = 3`). The worker maps tier to limits ([§6](#6-the-tee-worker)).
   - **Legendary is a finish, not a tier.** Every key is a one-of-one (`copies: 1` on the minted metadata). The site names tier 1 Bronze, tier 2 Silver, and tier 3 Gold. When the on-chain tier is 3, one key in eight (`seed[1] & 7 == 0` in [`finishOf`](web/lib/traits.ts)) is drawn as the Legendary finish. Its caps stay the Gold caps: $100 per trade and $500 per UTC day ([`CAPS`](web/lib/traits.ts)). The ten catalog pictures on the home gallery and the identity sheet pair two artworks with that finish; a live token still takes its finish from the chain tier and that seed.
@@ -331,7 +332,7 @@ Configuration at time of capture (2026-11-03; `beats` grows with every heartbeat
 - **Tests.**
   - Unit tests in [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) (count in [§12](#12-tests-and-ci)), run in CI with `cargo test --locked` and `clippy -D warnings`.
 - **Code identity.**
-  - On-chain `code_hash` `BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ` is the base58 of sha256 `9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e`, the sha256 of the committed wasm.
+  - On-chain `code_hash` `BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ` is the base58 of sha256 `9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e`, the sha256 of the deployed wasm, [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm).
 
 Tokens on mainnet (`nft_total_supply` = 6, read 2026-11-07; re-check with `./judge/1-contract.sh` or the live [/gallery](https://keyhole-seven.vercel.app/gallery)). Six tokens exist: five keys held by people, and token `0`, a test key (`KEYHOLE Key #0 (test)`) owned by the contract account `keyhole-devmo.near`. The home page counts the five holder keys and leaves the test key out. The table below was read on 2026-11-03, when five tokens existed; the sixth, `k22b07f20ff167d8d`, is not in it:
 
@@ -732,8 +733,8 @@ Security summary (STRIDE, invariants and the test for each, audit checklist, sco
 
 | Suite | Count | Where | What it covers | Reproduce |
 |---|---|---|---|---|
-| Contract unit | 119 | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) | mint authority, tiers and holder tier after transfers, NEP-171 events and transfer rules, NEP-177 metadata, NEP-181 enumeration and paging, NEP-199 payout conservation, rounding and royalty cap, minter rotation, batch limits, owner-only setters, init guard | `cd contracts/keys && cargo test --locked` |
-| Contract sandbox | 6 | [`contracts/keys-sandbox`](contracts/keys-sandbox) | real wasm on a local NEAR sandbox: upgrades v1 → v2 → v2.2 keep every token, owner, tier and minter; migrate runs once and only as self; NEP-178 one-key rule and a real royalty sale; `nft_transfer_call` one-key rule held on v2.2 | `cd contracts/keys-sandbox && cargo test --locked` |
+| Contract unit | 128 | [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) | mint authority, tiers and holder tier after transfers, NEP-171 events and transfer rules, NEP-177 metadata, NEP-181 enumeration and paging, NEP-199 payout conservation, rounding and royalty cap, minter rotation, batch limits, owner-only setters, init guard | `cd contracts/keys && cargo test --locked` |
+| Contract sandbox | 8 | [`contracts/keys-sandbox`](contracts/keys-sandbox) | real wasm on a local NEAR sandbox: upgrades v1 → v2 → v2.2 keep every token, owner, tier and minter; migrate runs once and only as self; NEP-178 one-key rule and a real royalty sale; `nft_transfer_call` one-key rule held on v2.2; v2.2 → v2.3 code-only upgrade keeps every value, and the approval cap, one-key rule and transfers hold after it | `cd contracts/keys-sandbox && cargo test --locked` |
 | Worker unit | 432 | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs), [`matrix.rs`](tee/worker/src/matrix.rs) (one table row per test) | NEP-413 payload and signature, replay, caps, rate limits, holder limits, cooldown, lock, transfer during a payout, PnL statement, request binding, sub-cent formatting | `cd tee/worker && cargo test --locked` |
 | CLI | 7 | [`cli/test`](cli/test) | signing, request shape, verification helpers, skill file | `cd cli && npm ci && npm test` |
 | Web unit | 916 | [`web/tests`](web/tests) | Intel DCAP quote verification on a real mainnet quote (and tampered copies), Intel PCS revocation and TCB matching on real Intel collateral, report_data binding, key-log chain and signature, published evidence integrity, NEP-413 parity, gateway allowlist, PnL signatures, NEAR AI attestation checks, every worker error code in English | `cd web && npm ci && npx vitest run` |
