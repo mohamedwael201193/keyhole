@@ -121,7 +121,7 @@ This follows NEAR's documented backend-auth pattern (https://docs.near.org/web3-
 - **Start:** the wallet signs `{op:"session", params:{max_usd_micro, ttl_ms?, scope?}}` (NEP-413; EIP-191 for MetaMask). The enclave runs the same checks as every other signed op (signature, full-access key, freshness, single-use nonce, current holder), then returns a random 32-byte `session_token`. Only `sha256(token)` is stored, together with the grant `{account, token_id, exp_ms, max_usd_micro, scope}`.
 - **Use:** each request carries `{token, message:{op, account_id, ts_ms, params}, nonce}`. The enclave checks (`authenticate_session` in `tee/worker/src/main.rs`; pure checks in `lib.rs`; 40 tests in `src/session.rs`):
   - the grant exists, is not revoked and has not expired (30 minutes at most);
-  - the op is in scope: `status, quote, account, balance, swap, copy, withdraw, history, pnl, limits (lowering only), dashboard, session_revoke`;
+  - the op is in scope: `status, quote, account, balance, swap, copy, history, pnl, limits (lowering only), dashboard, session_revoke`. The live build 94c355ff also lists `withdraw`; the next published build removes it (see below);
   - the account and token in the request match the grant;
   - freshness (±5 min) and a single-use nonce;
   - the account **still holds the key**, read live on every call, so a sale ends the session;
@@ -130,9 +130,18 @@ This follows NEAR's documented backend-auth pattern (https://docs.near.org/web3-
 
 Caveats:
 - The token is a bearer credential, like any Web2 session. Anyone who has it can act within its scope until it expires, is revoked, or its cap is used up. That includes script injection on the site, and the site's gateway, which relays the request body (bodies are not logged). The token cannot raise limits (a raise needs a wallet signature and still waits 24 h), lock, prove, mint or use chain_sign.
-- Withdraw is in scope, but it pays out only to the holder's own account (`assert_withdraw_to`), so a token thief cannot redirect funds.
+- The live build 94c355ff accepts `withdraw` with a session token. It pays out only to the holder's own account (`assert_withdraw_to`), so a token thief cannot redirect funds, but could still move the funds in that account.
+- **Next published build (not live yet):** `withdraw` is removed from `SESSION_OPS`. A withdraw needs a fresh NEP-413 or EIP-191 signature, and a session token gets `session_scope`. The site already asks the wallet for that signature, and its gateway refuses a session-scheme withdraw. Those site changes ship with the next site deploy.
 
 ## Worker hardening in source (live after the next publish)
+
+These apply to the next published worker build. The live build is still `94c355ff`, which does not have them.
+
+- A swap with no `min_amount_out` is floored at 1% below a fresh 1Click quote (`DEFAULT_MAX_SLIPPAGE_BPS`, `derive_min_out`). A client `min_amount_out` of `0` is refused with `bad_params`.
+- A swap or withdraw that is refused before the send gives back its session budget and its day's spend. A send that fails for good gives them back too. A send still pending or under review keeps them (`charge_spend`, `Charge::settle`).
+- Nonce records are deleted 10 minutes after their first use (`NONCE_RETAIN_MS`, `prune_nonces`). After that a replay of the same signed request is `expired`, so the record is not needed.
+- A NEP-413 `callbackUrl` is part of the signed payload when the wallet signed one. The site sends it only when the signature verifies with it.
+- `chain_sign` needs a fresh wallet signature, refuses while the key is locked or in the transfer cooldown, and is capped at 5 per key per UTC day.
 
 - Replay check runs before the rate limits (`admit`), so replays cost no rate budget.
 - `chain_sign` counts toward the daily quota only after a signature that recovers to the key; a failed MPC call costs nothing.
