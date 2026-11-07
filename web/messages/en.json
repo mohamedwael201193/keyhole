@@ -21,7 +21,8 @@
   "settle": "Swaps",
   "more": "More",
   "demo": "Demo",
-  "start": "Start"
+  "start": "Start",
+  "openApp": "Open app"
  },
  "hero": {
   "eyebrow": "Confidential by default · The key owns the account",
@@ -337,7 +338,22 @@
  "footer": {
   "built": "Built on NEAR",
   "repo": "Source",
-  "license": "Music: generated, CC0"
+  "license": "Music: generated, CC0",
+  "tagline": "Nothing on the chain. Everything in the key.",
+  "product": "Product",
+  "proof": "Proof & docs",
+  "start": "Sign in",
+  "mint": "Mint a key",
+  "vault": "Vault",
+  "trade": "Trade",
+  "judge": "Judge path",
+  "verify": "Verify",
+  "gallery": "Gallery",
+  "demo": "Demo",
+  "ask": "Ask privately",
+  "atlas": "Atlas",
+  "identity": "Identity",
+  "source": "Source"
  },
  "errors": {
   "account_mismatch": [
@@ -626,7 +642,7 @@
   "privH": "Nothing on the chain. ",
   "privEm": "Everything in the enclave.",
   "privLead": "The public chain records who holds the key. Balances, positions and trade history live sealed inside the TEE, readable only with the key.",
-  "privAlt": "A transparent public chain beside a sealed enamel vault",
+  "privAlt": "A sealed enamel chest with a wax seal and its key",
   "pubEyebrow": "Public chain",
   "pubH": "Only ownership of the key",
   "pubD": "Token id and holder on NEAR. No balances, no trades.",
@@ -675,7 +691,7 @@
   "galH": "Every key is ",
   "galEm": "one of one.",
   "galLead": "Each token is generated from traits: head, filigree, enamel, gem, shaft engraving, tier finish and a bit cipher that encodes the token id.",
-  "concept": "Concept art: ten catalogue finishes, not minted tokens.",
+  "concept": "Silver and Gold are previews, not minted tokens.",
   "conceptLive": "See every live key on mainnet",
   "catN": "Catalogue #{n}",
   "oneOfOne": "1 of 1",

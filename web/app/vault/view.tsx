@@ -32,7 +32,6 @@ import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 import { KeyLog } from "@/components/KeyLog";
 import "./vault.css";
-import { MetaMaskNote } from "@/components/MetaMaskNote";
 import { Busy, Spinner } from "@/components/ui";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
@@ -514,7 +513,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         <HowStrip active={2} />
         </>
       )}
-      {!accountId && <MetaMaskNote />}
     </div>
   );
 }

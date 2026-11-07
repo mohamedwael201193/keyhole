@@ -141,16 +141,30 @@ export function CountUp({ value, duration = 1.2, decimals = 0, className, testid
   const reduce = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-  // The shown text is written straight to the node, so the first paint and the server markup are both the final value.
+  // The shown text is written straight to the node. Off screen it starts at 0 and counts when it scrolls into view, so the
+  // first paint on screen is never a half-counted number.
   useIsoLayoutEffect(() => {
     const el = ref.current;
-    if (!el || reduce || !Number.isFinite(value)) { if (el) el.textContent = fmt(value); return; }
-    const controls = animate(0, value, {
-      duration,
-      ease: "easeOut",
-      onUpdate: (v) => { el.textContent = fmt(v); },
-    });
-    return () => controls.stop();
+    if (!el) return;
+    const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    if (reduce || !Number.isFinite(value)) { el.textContent = fmt(value); return; }
+    let controls: { stop: () => void } | undefined;
+    let io: IntersectionObserver | null = null;
+    const run = () => {
+      io?.disconnect();
+      io = null;
+      controls = animate(0, value, { duration, ease: "easeOut", onUpdate: (v) => { el.textContent = fmt(v); } });
+    };
+    const r = el.getBoundingClientRect();
+    const onScreen = r.top < window.innerHeight * 0.92 && r.bottom > 0;
+    if (onScreen || !("IntersectionObserver" in window)) {
+      run();
+    } else {
+      el.textContent = fmt(0);
+      io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) run(); }, { rootMargin: "0px 0px -8% 0px" });
+      io.observe(el);
+    }
+    return () => { io?.disconnect(); controls?.stop(); };
   }, [value, duration, decimals, reduce]);
   return (
     <span ref={ref} className={`kh-count ${className ?? ""}`.trim()} data-testid={testid} data-value={value}>{fmt(value)}</span>

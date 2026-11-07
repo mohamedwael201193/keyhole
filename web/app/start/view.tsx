@@ -21,7 +21,6 @@ import { TOPUP_HINT_NEAR } from "@/lib/start";
 import { TxLink } from "@/components/TxLink";
 import { TxResult } from "@/components/TxResult";
 import { TokenIcon } from "@/components/TokenIcon";
-import { MetaMaskNote } from "@/components/MetaMaskNote";
 import { loadMintTx, saveMintTx } from "@/lib/mintTx";
 import { minutesLeft } from "@/lib/session";
 import "./start.css";
@@ -166,7 +165,6 @@ export function StartView() {
                 </Stagger>
               </FadeUp>
               {!socialEnabled && <p className="sg-note" data-testid="start-social-off">Google and email sign-in are not enabled in this build. Connect a wallet to start.</p>}
-              <div className="sg-foot"><MetaMaskNote /></div>
             </>}
           </div>
         ) : (

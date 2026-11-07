@@ -1,4 +1,4 @@
-/* Landing (P2). The hero key, the orbit and the key-card art keep their CSS in heirloom.css. Everything here is scoped to .lp. */
+/* Landing. The hero key, the orbit and the key-card art keep their CSS in heirloom.css. Everything here is scoped to .lp, the public top bar and footer. */
 .lp { overflow-x: clip; }
 .lp ::selection { background: #F2C25B; color: #0F1E20; }
 .lp :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 4px; }
@@ -12,13 +12,22 @@
 .lp-link { color: var(--teal); text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
 .lp-link:hover { text-decoration-thickness: 2.5px; }
 .lp-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
-.lp-center { justify-content: center; }
+.lp-center { justify-content: center; margin-left: auto; margin-right: auto; text-align: center; }
 .lp-meta { margin: 24px 0 0; font-size: 14px; color: var(--mu); }
-.lp-moves { margin: 0 0 10px; font: 600 16px/1.3 var(--sans); color: var(--mu); }
 
-/* Hero text column stacks cleanly; the key stage is unchanged (heirloom.css). */
+/* Hero text reveal (components/LandingMotion.tsx). Each line sits in a mask so it rises out of a clean edge. The CSS
+   load animation of heirloom.css is replaced by the GSAP reveal, so the text does not animate twice. */
+.lp .hero h1, .lp .hero .lead { animation: none; }
 .lp-hero-copy { min-width: 0; }
 .lp-hero-copy .lead { margin: 22px 0 0; }
+.lp-mask { display: block; overflow: hidden; padding-bottom: .08em; margin-bottom: -.08em; }
+.lp-line { display: block; }
+
+/* Primary call to action: a light sweep across the button every few seconds. Transform only. */
+.lp-sweep { position: relative; overflow: hidden; isolation: isolate; }
+.lp-sweep::after { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(100deg, transparent 32%, rgba(255, 255, 255, .42) 50%, transparent 68%); transform: translateX(-120%); animation: lp-sweep 5s ease-in-out 1.8s infinite; }
+.lp-sweep > .kh-btn-label { position: relative; z-index: 1; }
+@keyframes lp-sweep { 0%, 40% { transform: translateX(-120%); } 70%, 100% { transform: translateX(120%); } }
 
 /* Live numbers strip: ruled, not boxed. Values are real (see Landing.tsx). */
 .lp-strip { padding-top: 48px; padding-bottom: 48px; }
@@ -31,6 +40,19 @@
 .lp-statlink:hover { border-bottom-color: var(--teal); }
 .lp-mono { font-family: var(--mono) !important; font-weight: 500 !important; font-size: 22px !important; }
 
+/* How it works: three steps. On desktop the section is pinned and the steps light up with the scroll (LandingMotion.tsx). */
+.lp-how { display: flex; align-items: center; min-height: 100vh; }
+.lp-how-inner { width: 100%; }
+.lp-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin-top: 56px; }
+.lp-step { min-width: 0; }
+.lp-step-art { display: block; width: 120px; height: auto; margin: 0 0 22px; filter: drop-shadow(0 16px 20px #0003); }
+.lp-step h3 { font-size: var(--fs-heading); line-height: 1.2; margin: 0 0 8px; }
+.lp-step p { font-size: 16px; line-height: 1.55; color: var(--mu); margin: 0; max-width: 36ch; }
+.lp-how-track { height: 2px; margin-top: 44px; background: var(--ln); border-radius: 2px; overflow: hidden; }
+.lp-how-bar { display: block; width: 100%; height: 100%; background: var(--teal); transform-origin: 0 50%; }
+.lp-sealed { margin: 36px 0 0; font-size: 16px; line-height: 1.55; color: var(--mu); max-width: 70ch; }
+.lp-sealed b { color: var(--ink); }
+
 /* Features: four columns of drawn line icons, hairline tops, no boxes. */
 .lp-features { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px; margin-top: 48px; }
 .lp-features > article { border-top: 1px solid var(--ln); padding-top: 26px; min-width: 0; }
@@ -38,18 +60,8 @@
 .lp-features h3 { font-size: var(--fs-heading); line-height: 1.2; margin: 0 0 10px; }
 .lp-features p { font-size: 16px; line-height: 1.55; color: var(--mu); margin: 0; }
 
-/* How it works: three steps with the sealed-credentials line below. */
-.lp-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin-top: 56px; }
-.lp-step { min-width: 0; }
-.lp-step-art { display: block; width: 128px; height: auto; margin: 0 0 22px; filter: drop-shadow(0 16px 20px #0003); }
-.lp-step h3 { font-size: var(--fs-heading); line-height: 1.2; margin: 0 0 8px; }
-.lp-step p { font-size: 16px; line-height: 1.55; color: var(--mu); margin: 0; max-width: 36ch; }
-.lp-sealed { margin: 48px 0 0; font-size: 16px; line-height: 1.55; color: var(--mu); max-width: 70ch; }
-.lp-sealed b { color: var(--ink); }
-
-/* Two-column sections: decorative art (parallax) beside the text. */
+/* Two-column sections: the image (with a gentle parallax) beside the text. */
 .lp-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 72px; align-items: center; }
-.lp-rev .lp-split > :first-child { order: 2; }
 .lp-art { border-radius: 28px; overflow: hidden; min-width: 0; }
 /* The parallax layer moves up to 10 px; the negative margin keeps its edges outside the frame. */
 .lp-art .kh-parallax-layer { margin: -12px 0; }
@@ -59,20 +71,11 @@
 .lp-two h3 { font-size: var(--fs-heading); line-height: 1.2; margin: 0 0 8px; }
 .lp-two p { font-size: 16px; line-height: 1.55; color: var(--mu); margin: 0; }
 
-/* The key with utility: four checks. */
-.lp-checks { display: grid; gap: 24px; margin-top: 32px; }
-.lp-check { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 16px; align-items: start; }
-.lp-check-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #1F4B4F14; color: var(--teal); }
-.lp-check-ico svg { width: 22px; height: 22px; }
-.lp-check h3 { font-size: var(--fs-heading); line-height: 1.2; margin: 0 0 4px; }
-.lp-check p { font-size: 16px; line-height: 1.55; color: var(--mu); margin: 0; }
-.lp-num { font-weight: 700 !important; color: var(--teal) !important; margin-top: 6px !important; font-variant-numeric: tabular-nums; }
-
 /* Enclave attestation card: the glow settles in once; the card keeps its .attc/.kv structure. */
-.lp-glow { border-radius: 24px; }
+.lp-glow { border-radius: 24px; min-width: 0; }
 .lp-glow .attc { padding: 32px; }
 
-/* Collection: a scroll-snap track of real key cards and labelled previews. */
+/* Collection: a scroll-snap track of real key cards and labelled previews. Tilt and glow come from components/motion. */
 .lp-gal-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
 .lp-gal-head .lp-lead { margin-top: 0; }
 .lp-track-nav { display: flex; gap: 10px; }
@@ -83,60 +86,53 @@
 .lp-empty { margin: 0; padding: 40px 0; font-size: 16px; color: var(--mu); max-width: 40ch; }
 .lp-preview { display: inline-block; margin: 0 0 12px; padding: 6px 12px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); font: 600 14px/1.2 var(--sans); }
 .lp-prev { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.lp-more { margin-top: 64px; }
-.lp-more > summary { cursor: pointer; font: 600 18px/1.3 var(--sans); color: var(--teal); padding: 12px 0; list-style: none; }
-.lp-more > summary::-webkit-details-marker { display: none; }
-.lp-more[open] > summary { margin-bottom: 12px; }
 
-/* Agents: the signed-call example, two columns. */
-.lp-ag .lp-lead { margin-bottom: 0; }
-
-/* Built for the NEAR ecosystem: dark green banner with the chains. */
-.lp-banner { position: relative; overflow: hidden; margin: 0 24px; padding: 112px 56px; border-radius: 32px; background: var(--banner); color: var(--banner-ink); }
-.lp-banner-bg { position: absolute; inset: 0; pointer-events: none; }
-.lp-banner-glow { position: absolute; inset: -20% -10%; background: radial-gradient(40% 50% at 82% 8%, rgba(242,194,91,.18), transparent 70%), radial-gradient(45% 45% at 4% 100%, rgba(20,163,160,.22), transparent 70%); }
-.lp-banner .lp-wrap { position: relative; }
-.lp-banner h2 { color: var(--banner-ink); font-size: var(--fs-title); line-height: 1.08; margin: 0 0 18px; max-width: 24ch; }
-.lp-banner .lp-lead, .lp-banner .lp-note { color: #D6E6E4; }
-.lp-banner .lp-link { color: var(--banner-ink); }
-.lp-chains { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 24px 16px; margin-top: 56px; }
-.lp-chain { display: flex; flex-direction: column; align-items: center; gap: 14px; min-width: 0; }
-.lp-chain .medal { width: 76px; height: 76px; }
-.lp-chain .medal img { width: 42px; height: 42px; }
-.lp-chain b { font: 600 15px/1.2 var(--sans); color: var(--banner-ink); }
-
-/* Proof: ruled list of mainnet transactions and the contract. */
-.lp-proof ul { list-style: none; margin: 36px 0 0; padding: 0; }
-.lp-proof li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--ln); font-size: 16px; min-width: 0; }
-.lp-proof li > span { min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
-.lp-proof li a, .lp-proof .mono { font: 500 14px/1.4 var(--mono); color: var(--teal); flex: none; }
-
-/* Closing call to action. */
-.lp-end { position: relative; overflow: hidden; text-align: center; padding: 128px 56px 96px; }
-.lp-end h2 { margin: 0 auto 28px; font-size: var(--fs-display); line-height: 1.02; max-width: 16ch; text-wrap: balance; }
+/* Final call to action: the NEAR banner, dark green, with the key artwork. */
+.lp-end { position: relative; overflow: hidden; margin: 0 24px; padding: 128px 56px 112px; border-radius: 32px; background: var(--banner); color: var(--banner-ink); text-align: center; }
+.lp-end h2 { color: var(--banner-ink); margin: 0 auto 22px; font-size: var(--fs-display); line-height: 1.02; max-width: 16ch; text-wrap: balance; }
 .lp-end h2 em { display: block; }
-.lp-keys-frame { margin: 0 auto 40px; }
+.lp-eyebrow { margin: 0 0 18px; font: 700 14px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: #F6D9A8; }
+.lp-end .lp-note { color: #D6E6E4; }
+.lp-end .lp-link-light { color: var(--banner-ink); }
+.lp-end .kh-btn--secondary { color: var(--banner-ink); border-color: #F1EBDF66; background: transparent; }
+.lp-keys-frame { margin: 0 auto 44px; }
 .lp-keys { display: flex; justify-content: center; gap: 26px; }
 .lp-keys img { height: 200px; width: auto; }
-.lp-explore { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 28px; margin-top: 44px; font-size: 16px; font-weight: 600; }
+
+/* Footer: product and proof groups, then one bar with the contract, the sound toggle and the NEAR badge. */
+.ft { display: block; padding: 72px 56px 36px; }
+.ft-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 40px; max-width: 1328px; margin: 0 auto; }
+.ft-brand p { margin: 16px 0 0; max-width: 30ch; color: #EDE6D8; opacity: .85; line-height: 1.5; }
+.ft-h { margin: 0 0 14px; font: 700 13px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+.ft-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ft-col a { display: inline-flex; align-items: center; min-height: 40px; color: #EDE6D8; text-decoration: none; font-weight: 600; }
+.ft-col a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.ft-bar { max-width: 1328px; margin: 44px auto 0; padding-top: 22px; border-top: 1px solid #EDE6D833; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+.ft-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+/* Top bar: Open app is the one primary action; it moves into the drawer on phones. */
+.nav .nav-open { min-height: 40px; padding: 0 16px; }
 
 /* Tablet */
 @media (max-width: 1180px) {
   .lp-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lp-chains { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ft-grid { grid-template-columns: 1fr 1fr; }
+  .ft-brand { grid-column: 1 / -1; }
 }
 
-/* Phone: one column, 20 px gutter, no horizontal page scroll. */
+/* Phone: one column, 20 px gutter, no horizontal page scroll. The how-it-works section is a plain stack. */
 @media (max-width: 860px) {
   .lp-sec { padding: 80px 20px; }
   .lp-split, .lp-steps, .lp-two { grid-template-columns: minmax(0, 1fr); gap: 40px; }
-  .lp-rev .lp-split > :first-child { order: 0; }
+  .lp-how { display: block; min-height: 0; }
+  .lp-how-track { display: none; }
   .lp-steps { margin-top: 40px; }
-  .lp-banner { margin: 0 12px; padding: 80px 22px; border-radius: 24px; }
-  .lp-end { padding: 88px 20px 72px; }
+  .lp-end { margin: 0 12px; padding: 88px 22px 80px; border-radius: 24px; }
   .lp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lp-stats > div:nth-child(3) { border-left: 0; padding-left: 0; }
   .lp-stats > div:nth-child(n + 3) { border-top: 1px solid var(--ln); }
+  .nav .nav-open { display: none; }
+  .ft { padding: 56px 20px 32px; }
 }
 
 @media (max-width: 560px) {
@@ -146,17 +142,16 @@
   .lp-stats dd { font-size: 26px; }
   .lp-mono { font-size: 18px !important; }
   .lp-features { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-  .lp-chains { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px 8px; }
-  .lp-chain .medal { width: 60px; height: 60px; }
-  .lp-chain .medal img { width: 34px; height: 34px; }
   .lp-step-art { width: 104px; }
   .lp-keys { gap: 14px; }
   .lp-keys img { height: 150px; }
   .lp-cta .kh-btn { width: 100%; }
   .lp-track { padding-left: 2px; padding-right: 2px; }
+  .ft-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lp-statlink { transition: none; }
   .lp-track { scroll-behavior: auto; }
+  .lp-sweep::after { animation: none; display: none; }
 }

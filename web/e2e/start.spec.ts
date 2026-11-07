@@ -16,11 +16,11 @@ test("/start fits 390px without horizontal scroll", async ({ page }) => {
   const w = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(w).toBeLessThanOrEqual(390);
 });
-test("P1: landing hash and more links, verify label, key help, gallery traits", async ({ page }) => {
+test("P1: landing hash and proof links, verify label, key help, gallery traits", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("hash-stat")).toHaveAttribute("href", "/judge");
-  // Ask, Atlas and Identity moved from a landing row into the nav "More" menu.
-  for (const href of ["/ask", "/atlas", "/identity"]) await expect(page.getByTestId("more-menu").locator(`a[href="${href}"]`)).toHaveCount(1);
+  // Ask, Atlas and Identity live in the footer's Proof & docs group, not the top bar.
+  for (const href of ["/ask", "/atlas", "/identity"]) await expect(page.locator(`footer a[href="${href}"]`)).toHaveCount(1);
   await page.goto("/key");
   await expect(page.getByTestId("key-help")).toBeVisible();
   await page.goto("/gallery");

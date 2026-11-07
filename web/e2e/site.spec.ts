@@ -399,10 +399,8 @@ test("a connected wallet with no key cannot open the vault", async ({ page }) =>
 
 test("music is off by default and toggles", async ({ page }) => {
   await page.goto("/");
-  // Phones: the burger list holds the toggle. Desktop: it lives in the top bar's More menu.
-  if ((page.viewportSize()?.width ?? 1000) < 640) await page.getByRole("button", { name: "Menu" }).click();
-  else await page.getByTestId("nav-more").click();
-  const b = page.getByRole("button", { name: /Sound/ }).first();
+  // The sound toggle lives in the footer on every viewport.
+  const b = page.locator("footer").getByRole("button", { name: /Sound/ }).first();
   await expect(b).toHaveAttribute("aria-pressed", "false");
 });
 
@@ -724,7 +722,7 @@ test("gallery: every live card shows its token id and links to its history", asy
   await expect(card.getByTestId("key-link")).toHaveAttribute("href", `/key?id=${encodeURIComponent(tid)}`);
 });
 
-test("home: the catalogue is labelled concept art and the chain section leads to a live quote", async ({ page }) => {
+test("home: the preview keys are labelled not minted, and the final banner leads to a live quote", async ({ page }) => {
   await page.goto("/?static");
   await expect(page.getByTestId("concept-banner")).toContainText("not minted tokens");
   await expect(page.getByTestId("concept-banner").locator('a[href="/gallery"]')).toBeVisible();

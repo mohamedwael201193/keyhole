@@ -41,19 +41,19 @@ export const APP_NAV: AppNavGroup[] = [
     title: "Workspace",
     items: [
       { id: "overview", label: "Overview", href: "/dashboard", icon: "home", match: ["/dashboard"], notHash: "#activity" },
+      { id: "mint", label: "Mint", href: "/mint", icon: "mint", match: ["/mint"] },
+      { id: "vault", label: "Vault", href: "/vault", icon: "vault", match: ["/vault", "/pnl"] },
+      // Trade is the quotes and swaps page (/settle). The signed PnL statement (/pnl) is opened from the vault, so Vault stays current there.
+      { id: "swaps", label: "Trade", href: "/settle", icon: "swap", match: ["/settle"] },
       // My keys is the connected account's keys (/gallery?mine=1). The All keys tab on /gallery lists every key on chain.
       { id: "keys", label: "My keys", href: "/gallery?mine=1", icon: "key", match: ["/gallery", "/key"] },
-      { id: "swaps", label: "Quotes & swaps", href: "/settle", icon: "swap", match: ["/settle"] },
-      // The signed PnL statement (/pnl) is opened from the vault, so Vault stays current there.
-      { id: "vault", label: "Vault", href: "/vault", icon: "vault", match: ["/vault", "/pnl"] },
-      { id: "mint", label: "Mint", href: "/mint", icon: "mint", match: ["/mint"] },
       { id: "activity", label: "Activity", href: "/dashboard#activity", icon: "activity", match: ["/dashboard"], hash: "#activity" },
     ],
   },
   {
-    title: "Prove it",
+    title: "Secondary",
     items: [
-      { id: "judge", label: "Judge", href: "/judge", icon: "judge", match: ["/judge"] },
+      { id: "judge", label: "Judge path", href: "/judge", icon: "judge", match: ["/judge"] },
       { id: "verify", label: "Verify", href: "/verify", icon: "verify", match: ["/verify"] },
     ],
   },
