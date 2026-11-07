@@ -575,9 +575,11 @@ test("judge path links every evidence call to /verify and is reachable from the 
   await expect(page.getByTestId("judge-page")).toBeVisible();
   const links = page.locator('a[href^="/verify?call="]');
   expect(await links.count()).toBeGreaterThanOrEqual(12);
-  await page.getByTestId("judge-previous").locator("summary").click();
-  await expect(page.getByText("Refused: not_owner.")).toBeVisible();
-  await expect(page.getByText("Refused: cooldown (10 minutes).")).toBeVisible();
+  // The earlier-build list holds its own Proof disclosure too, so open the list's own summary only.
+  const prev = page.getByTestId("judge-previous");
+  await prev.locator(":scope > summary").click();
+  await expect(prev.getByText("Refused: not_owner.")).toBeVisible();
+  await expect(prev.getByText("Refused: cooldown (10 minutes).")).toBeVisible();
 });
 
 test("verify: an old-build refusal shows the binding, the previous version and the attested output", async ({ page }) => {
