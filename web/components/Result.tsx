@@ -21,7 +21,7 @@ export function ErrorBox({ code, vars, retryAfter }: { code: string; vars?: Reco
   return (
     <div role="alert" className="errbox" data-testid="error" data-code={code}>
       <p>{msg}</p><p className="note">{fix}</p>
-      <p className="mono" style={{ fontSize: 12, marginTop: 8 }}>code: {code}</p>
+      <p className="mono" style={{ fontSize: 13, marginTop: 8 }}>code: {code}</p>
     </div>
   );
 }
@@ -30,7 +30,7 @@ export function Attested({ r }: { r: WorkerResult }) {
   const { t } = useI18n();
   if (!r.call_id) return null;
   return (
-    <p className="mono" style={{ marginTop: 12, fontSize: 12, color: "var(--mu)", display: "flex", flexWrap: "wrap", gap: "8px 16px" }} data-testid="attested">
+    <p className="mono" style={{ marginTop: 12, fontSize: 13, color: "var(--mu)", display: "flex", flexWrap: "wrap", gap: "8px 16px" }} data-testid="attested">
       <span>{t("result.call")}: {r.call_id.slice(0, 8)}</span>
       {r.attestation_url && <a style={{ color: "var(--teal)" }} href={r.attestation_url} target="_blank" rel="noreferrer">{t("result.attestation")} ↗</a>}
       <a style={{ color: "var(--teal)" }} href={`/verify?call=${r.call_id}`}>Verify</a>

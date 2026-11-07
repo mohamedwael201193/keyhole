@@ -128,7 +128,7 @@ export function VerifyView({ initial }: { initial: string | null }) {
           {err && <p role="alert" className="note" style={{ color: "var(--coral)" }} data-testid="verify-error">{err === "tx" ? <>{t("verify.isTx")} <a href={tx(id.trim())} target="_blank" rel="noreferrer">{t("verify.openTx")}</a></> : err === "bad_params" ? t("verify.badId") : t("verify.fetchFail")}</p>}
           <div className="res">
             <div>
-              <p className="mono" style={{ fontSize: 12, letterSpacing: ".14em", opacity: .8 }}>{t("verify.result")}</p>
+              <p className="mono" style={{ fontSize: 13, letterSpacing: ".14em", opacity: .8 }}>{t("verify.result")}</p>
               <b data-testid="verdict" data-match={vd === "current" ? "true" : vd === "previous" ? "previous" : "false"}>{ck?.fastfs === null && ck.registered ? "…" : vd === "previous" ? t("verify.genuinePrev") : ok ? t("verify.genuine") : tampered ? t("verify.tamperFail") : pcsDown ? t("verify.pcsDownV") : t("verify.notYet")}</b>
             </div>
             <button className="btn" disabled={busy} data-testid="verify-btn" onClick={() => void go(id)}>{busy ? <><Spinner label="Checking" /> Checking…</> : t("verify.again")}</button>

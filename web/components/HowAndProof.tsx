@@ -17,7 +17,7 @@ export function HowAndProof({ supply, config }: { supply: number | null; config:
         <ol className="mt-10 grid gap-4 md:grid-cols-3">
           {steps.map(([n, k]) => (
             <li key={k} className="plate group p-6 transition hover:border-signal/60">
-              <span className="font-mono text-xs text-signal">{n}</span>
+              <span className="font-mono text-[13px] text-signal">{n}</span>
               <h3 className="mt-3 font-serif text-3xl">{t(`how.${k}`)}</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-300">{t(`how.${k}d`)}</p>
             </li>
@@ -40,7 +40,7 @@ export function HowAndProof({ supply, config }: { supply: number | null; config:
           {TXS.map((x) => (
             <li key={x.hash} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
               <span className="text-sm">{x.label}</span>
-              <a className="font-mono text-xs text-signal hover:underline" href={tx(x.hash)} target="_blank" rel="noreferrer">{x.hash.slice(0, 10)}… ↗</a>
+              <a className="font-mono text-[13px] text-signal hover:underline" href={tx(x.hash)} target="_blank" rel="noreferrer">{x.hash.slice(0, 10)}… ↗</a>
             </li>
           ))}
         </ul>

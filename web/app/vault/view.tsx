@@ -489,7 +489,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                     <div className="av" key={i}>
                       <span className="op">{e.kind || "—"}</span>
                       <span style={{ overflowWrap: "anywhere" }}>{e.token_in ? `${e.amount_in ?? ""} ${e.token_in} → ${e.amount_out ?? ""} ${e.token_out ?? ""}` : `${e.amount ?? ""} ${e.token ?? ""}`}</span>
-                      <span className="mono" style={{ color: "var(--mu)", fontSize: 12 }}>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</span>
+                      <span className="mono" style={{ color: "var(--mu)", fontSize: 13 }}>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</span>
                     </div>
                   ))}
                 </div>

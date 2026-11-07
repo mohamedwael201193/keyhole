@@ -34,7 +34,7 @@ export function KeyLog({ tokenId }: { tokenId: string }) {
       {open && rows && rows.length === 0 && !note && <p className="note">{t("vault.keyLogEmpty")}</p>}
       {open && rows && rows.length > 0 && (
         <div className="assets">
-          {head && <p className="mono" style={{ fontSize: 12, overflowWrap: "anywhere" }}>{head}</p>}
+          {head && <p className="mono" style={{ fontSize: 13, overflowWrap: "anywhere" }}>{head}</p>}
           {rows.map((row) => (
             <div className="arow plain" key={row.i ?? row.hash}>
               <div className="who"><b>{row.kind || "—"}</b><small>{row.owner || ""}</small></div>
