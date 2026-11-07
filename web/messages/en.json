@@ -216,7 +216,7 @@
   "openVault": "Open your vault →",
   "swap": "Swap",
   "capsLine": "{finish} tier: up to {tx} a trade and {day} a day",
-  "bronzeOnly": "Today you can mint a Bronze key: $1 a trade, $5 a day. Silver and Gold are previews for now.",
+  "bronzeOnly": "Minting today issues a Bronze key: $1 a trade, $5 a day. Silver and Gold are previews for now.",
   "finishPreview": "Preview only",
   "perMin": "{n} per minute"
  },
