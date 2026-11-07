@@ -1,37 +1,61 @@
 "use client";
-import { PageHead } from "@/components/PageHead";
-import { Medal } from "@/components/Medal";
+import { Purpose, Badge } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
 import { ATLAS, CALLS } from "@/lib/evidence";
-import { attestation, tx } from "@/lib/config";
+import { attestation } from "@/lib/config";
 import { TxLink } from "@/components/TxLink";
+import { TokenIcon } from "@/components/TokenIcon";
+import "../public-pages.css";
 
+type Tone = "ok" | "info" | "wait";
+
+/** A chain gets a mark only when it has a record: a mainnet tx, an attested dry run or a settled order. Planned chains show no mark. */
 export default function Atlas() {
   const { t } = useI18n();
+  const KIND: Record<"tx" | "call" | "settle" | "none", { tone: Tone; label: string }> = {
+    tx: { tone: "ok", label: t("atlas.real") },
+    settle: { tone: "ok", label: t("atlas.settled") },
+    call: { tone: "info", label: t("atlas.dry") },
+    none: { tone: "wait", label: t("atlas.planned") },
+  };
   return (
-    <div className="page">
-      <PageHead eyebrow={t("atlas.eyebrow")} title={t("atlas.title")} sub={t("atlas.sub")} />
-      <ul className="atlas">
-        {ATLAS.map((a) => (
-          <li key={a.chain} className="card" data-kind={a.kind}>
-            <div className="row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Medal id={a.chain} name="" labeled={false} />
-              <span style={{ fontFamily: "var(--serif)", fontSize: 28 }}>{a.name}</span>
-            </div>
-            <p className="note">{a.kind === "none" ? t("atlas.planned_d") : a.note}</p>
-            <p className="mono" style={{ fontSize: 13, color: a.kind === "none" ? "var(--mu)" : "var(--teal)" }}>{a.kind === "none" ? t("atlas.planned") : a.kind === "call" ? t("atlas.dry") : a.kind === "settle" ? t("atlas.settled") : t("atlas.real")}</p>
-            {a.kind === "tx" && <span style={{ color: "var(--teal)" }}><TxLink hash={a.ref!}>{t("atlas.open")} ↗</TxLink></span>}
-            {a.kind === "call" && <a style={{ color: "var(--teal)" }} href={attestation(a.ref!)} target="_blank" rel="noreferrer">{t("atlas.att")} ↗</a>}
-            {a.kind === "settle" && a.href && <a style={{ color: "var(--teal)" }} href={a.href} target="_blank" rel="noreferrer">{t("atlas.open")} ↗</a>}
-          </li>
-        ))}
+    <div className="page pp pp-atlas">
+      <Purpose eyebrow={t("atlas.eyebrow")} title={t("atlas.title")} line={t("atlas.sub")} />
+      <ul className="pp-marks" data-testid="atlas">
+        {ATLAS.map((a) => {
+          const k = KIND[a.kind];
+          return (
+            <li key={a.chain} className={`pp-mark pp-mark--${a.kind}`} data-kind={a.kind}>
+              <div className="pp-mark-head">
+                {a.kind !== "none" && <TokenIcon symbol={a.name} chain={a.chain} size="lg" />}
+                <div className="pp-mark-name">
+                  <h2>{a.name}</h2>
+                  <Badge tone={k.tone}>{k.label}</Badge>
+                </div>
+              </div>
+              <p className="pp-mark-note">{a.kind === "none" ? t("atlas.planned_d") : a.note}</p>
+              {(a.kind === "tx" || a.kind === "call" || (a.kind === "settle" && a.href)) && (
+                <div className="pp-mark-act">
+                  {a.kind === "tx" && <TxLink hash={a.ref!}>{t("atlas.open")} ↗</TxLink>}
+                  {a.kind === "call" && <a className="ulink" href={attestation(a.ref!)} target="_blank" rel="noreferrer">{t("atlas.att")} ↗</a>}
+                  {a.kind === "settle" && a.href && <a className="ulink" href={a.href} target="_blank" rel="noreferrer">{t("atlas.open")} ↗</a>}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
-      <h2 style={{ marginTop: 48 }}>{t("verify.examples")}</h2>
-      <ul className="proof" style={{ padding: 0 }}>
-        {CALLS.map((c) => (
-          <li key={c.id}><span>{c.label} · {c.outcome}</span><a href={`/verify?call=${c.id}`}>{c.id.slice(0, 8)}</a></li>
-        ))}
-      </ul>
+      <section className="pp-card" aria-labelledby="atlas-calls">
+        <h2 id="atlas-calls">{t("verify.examples")}</h2>
+        <ul className="pp-calls">
+          {CALLS.map((c) => (
+            <li key={c.id}>
+              <span className="pp-call-what">{c.label}<small>{c.outcome}</small></span>
+              <a className="ulink" href={`/verify?call=${c.id}`} aria-label={`Verify call ${c.id.slice(0, 8)}: ${c.label}`}>Verify {c.id.slice(0, 8)}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

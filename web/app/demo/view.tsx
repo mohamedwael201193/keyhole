@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DEMO_META, DEMO_STEPS, type DemoProof } from "@/lib/demo";
 import { intentTx, tx } from "@/lib/config";
+import { Button } from "@/components/ui/button";
+import "../public-pages.css";
 
 function Proof({ p }: { p: DemoProof }) {
   if (p.kind === "call") return <Link className="dproof" href={`/verify?call=${p.ref}`}>verify call {p.ref.slice(0, 8)} →</Link>;
@@ -20,8 +22,11 @@ export function DemoView() {
   }, [at, auto]);
   const go = (i: number) => { setAuto(false); setAt(i); };
   return (
-    <div className="page demo" data-testid="demo-page">
-      <p className="demo-banner" role="note" data-testid="demo-banner"><b>DEMO · read-only</b> Replay of a real mainnet session ({DEMO_META.account}, {DEMO_META.date}, previous build {DEMO_META.build}). Nothing is signed or moved.</p>
+    <div className="page demo pp pp-demo" data-testid="demo-page">
+      <div className="pp-demo-banner" role="note" data-testid="demo-banner">
+        <span className="pp-demo-tag">DEMO · read-only</span>
+        <p>This is a replay of a real mainnet session ({DEMO_META.account}, {DEMO_META.date}, previous build {DEMO_META.build}). Nothing is signed or moved.</p>
+      </div>
       <h1>The whole flow, <em>no wallet needed.</em></h1>
       <ol className="dsteps" aria-label="Demo steps">
         {DEMO_STEPS.map((s, i) => (
@@ -39,7 +44,11 @@ export function DemoView() {
           </section>
         ))}
       </div>
-      <p className="dnext"><Link className="btn b1" href="/vault">Open your own vault</Link> <Link className="btn b2" href="/judge">Judge path</Link> <button type="button" className="btn b2" onClick={() => { setAt(0); setAuto(true); }}>Replay</button></p>
+      <div className="dnext">
+        <Button href="/vault" testid="demo-open-vault">Open your own vault</Button>
+        <Button variant="secondary" href="/judge">Judge path</Button>
+        <Button variant="ghost" onClick={() => { setAt(0); setAuto(true); }}>Replay</Button>
+      </div>
     </div>
   );
 }

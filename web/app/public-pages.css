@@ -1,0 +1,270 @@
+/* Public proof and info pages (P5b): /judge, /verify, /ask, /atlas, /identity, /demo, /source and not-found.
+   Presentation only. Every rule sits under .pp (the page root), so nothing here reaches the app pages. */
+
+.pp :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 6px; }
+.pp .upurpose { margin-bottom: 32px; max-width: 980px; }
+.pp .upurpose h1 { margin: 10px 0 16px; text-wrap: balance; }
+.pp .upurpose .uline { font-size: 19px; line-height: 1.55; color: var(--ink); max-width: 62ch; }
+.pp .uact { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 18px 0 6px; }
+.pp p { overflow-wrap: anywhere; }
+
+/* Plain card for a section on these pages: one surface, one edge, one shadow. */
+.pp-card { position: relative; min-width: 0; margin-top: 28px; padding: 28px 30px; background: var(--card); border: 1px solid #1A2A2C1A; border-radius: 20px; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft); }
+.pp-card > h2 { font-size: var(--fs-heading); line-height: 1.25; margin: 0 0 14px; }
+.pp-card ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+.pp-card li + li { margin-top: 10px; }
+
+/* ---- /judge: seven step cards ---- */
+.pp-judge .usteps { gap: 22px; margin-top: 8px; }
+.pp-judge .ustep { grid-template-columns: 48px minmax(0, 1fr); gap: 18px; }
+.pp-judge .ubody { background: var(--card); border: 1px solid #1A2A2C1A; border-radius: 22px; padding: 28px 30px; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft); }
+.pp-judge .ubody h2 { font-size: 28px; line-height: 1.22; margin: 6px 0 14px; text-wrap: balance; }
+.pp-judge .ubody .trust { margin: 0 0 4px; }
+.pp-judge .jclaim { margin: 4px 0 0; font-size: 17px; line-height: 1.6; color: var(--ink); max-width: 66ch; }
+.pp-judge .jclaim .mono { font-size: 15px; }
+.pp-judge .usee { margin-top: 18px; padding: 16px 18px; font-size: 16px; line-height: 1.55; }
+.pp-judge .usee > b { font-size: 13px; }
+.pp-judge .uproof { margin-top: 18px; }
+.pp-judge .uproof summary { font-size: 16px; }
+.pp-judge .uproof dd code { font-size: 14px; }
+.pp-judge .jcall2 { background: #F7F3EA; border: 1px solid #1A2A2C12; }
+.pp-judge .jc-res { font-size: 16px; }
+.pp-judge .jcall2 .ulink, .pp-judge .jc-act .ulink { min-height: 36px; display: inline-flex; align-items: center; }
+.pp-judge .jscript { margin-top: 18px; font-size: 16px; }
+.pp-judge .jscript summary { min-height: 36px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.pp-judge .jscript p { margin-top: 8px; }
+.pp-judge .jprev { margin-top: 18px; }
+.pp-judge .jprev > summary { min-height: 40px; display: flex; align-items: center; font-size: 16px; }
+.pp-judge .jrun { gap: 14px; }
+.pp-judge .jrun-out { font-size: 16px; line-height: 1.5; }
+.pp-judge .jrun .kh-btn { min-height: 48px; }
+
+/* Who sees what: a table on wide screens, labelled stacks on phones. */
+.pp-judge .pp-who h2 { font-size: var(--fs-heading); margin: 0 0 14px; }
+.pp-judge .pp-who .jtw { overflow: visible; margin: 0 0 14px; }
+.pp-judge .jtable { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.5; }
+.pp-judge .jtable th, .pp-judge .jtable td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid #1A2A2C18; }
+.pp-judge .jtable th { font: 600 13px/1.4 var(--sans); color: var(--mu); text-transform: uppercase; letter-spacing: .06em; }
+.pp-judge .jtable td:first-child { font-weight: 700; color: var(--ink); width: 22%; }
+.pp-judge .jtable tbody tr:last-child td { border-bottom: 0; }
+.pp-judge .pp-who .muted { font-size: 15px; margin: 14px 0 0; }
+@media (max-width: 680px) {
+  .pp-judge .jtable thead { display: none; }
+  .pp-judge .jtable, .pp-judge .jtable tbody, .pp-judge .jtable tr, .pp-judge .jtable td { display: block; width: 100%; }
+  .pp-judge .jtable tr { padding: 14px 16px; margin-bottom: 12px; border: 1px solid #1A2A2C18; border-radius: 16px; background: #F7F3EA; }
+  .pp-judge .jtable td { border: 0; padding: 4px 0; width: auto; }
+  .pp-judge .jtable td::before { content: attr(data-label); display: block; font: 600 13px/1.4 var(--sans); color: var(--mu); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+  .pp-judge .jtable td:first-child { font-size: 18px; margin-bottom: 6px; }
+  .pp-judge .jtable td:first-child::before { display: none; }
+}
+@media (max-width: 560px) {
+  .pp .upurpose .uline { font-size: 17px; }
+  .pp-judge .ubody { padding: 22px 20px; border-radius: 18px; }
+  .pp-judge .ubody h2 { font-size: 24px; }
+  .pp-judge .ustep { grid-template-columns: 36px minmax(0, 1fr); gap: 12px; }
+  .pp-card { padding: 22px 20px; }
+}
+
+/* ---- /verify: result hero, grouped checks, readable hashes ---- */
+.page.pp-verify .tally { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 28px; align-items: center; max-width: none; margin: 8px 0 16px; padding: 28px 32px; border: 0; border-radius: 24px; background: var(--banner); color: var(--banner-ink); box-shadow: var(--shadow-lifted); }
+.page.pp-verify .tally .tn { font: 700 72px/1 var(--sans); letter-spacing: -.03em; color: #FFFCF6; }
+.page.pp-verify .tally .tn span { font-size: 28px; color: #D6E6E4; font-weight: 600; }
+.page.pp-verify .tally > div b { font-size: 20px; line-height: 1.35; color: #FFFCF6; }
+.page.pp-verify .tally small { font-size: 16px; line-height: 1.5; color: #D6E6E4; margin-top: 6px; }
+.page.pp-verify .tally[data-n="37"] { background: linear-gradient(135deg, #12643F, #174A4E); }
+.page.pp-verify .pp-meter { grid-column: 1 / -1; display: block; height: 10px; border-radius: 999px; background: #F6F1E726; overflow: hidden; }
+.page.pp-verify .pp-meter i { display: block; height: 100%; border-radius: inherit; background: #F2C25B; transition: width .6s cubic-bezier(.22,.61,.36,1); }
+.page.pp-verify .tally .tn, .page.pp-verify .tally > div { min-width: 0; }
+
+/* Verdict: a light card with a coloured edge; the state is also in the words. */
+.page.pp-verify .res { --res-c: #C8C1B4; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px 24px; margin: 0 0 28px; padding: 24px 28px; border-radius: 22px; background: var(--card); color: var(--ink); border: 1px solid #1A2A2C1A; box-shadow: inset 8px 0 0 var(--res-c), var(--shadow-soft); }
+.page.pp-verify .res[data-state="ok"] { --res-c: #1F7A4D; }
+.page.pp-verify .res[data-state="previous"] { --res-c: #9A6510; }
+.page.pp-verify .res[data-state="bad"] { --res-c: #B23A26; }
+.page.pp-verify .res > div { min-width: 0; }
+.page.pp-verify .res p { margin: 0 0 6px; font: 600 13px/1.4 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--mu) !important; }
+.page.pp-verify .res b { display: block; font: 700 clamp(24px, 3vw, 32px)/1.2 var(--serif); color: var(--ink); overflow-wrap: anywhere; }
+
+/* Check groups: one heading per source, then its rows. */
+.page.pp-verify .pp-group { margin-top: 30px; min-width: 0; }
+.page.pp-verify .pp-group > h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0 0 4px; font: 700 18px/1.3 var(--sans); color: var(--ink); }
+.page.pp-verify .pp-group > h3 small { font: 600 14px var(--sans); color: var(--mu); }
+.page.pp-verify .ck { padding: 16px 0; grid-template-columns: 40px minmax(0, 1fr) auto; }
+.page.pp-verify .ck b { font-size: 17px; }
+.page.pp-verify .ck .ok { width: 34px; height: 34px; }
+.page.pp-verify .ck small { font: 500 13px/1.5 var(--mono); white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; word-break: normal; color: var(--mu); }
+.page.pp-verify .ck .att { font-size: 14px; white-space: nowrap; }
+.page.pp-verify .dcap { margin-top: 0; }
+.page.pp-verify .dcap summary { min-height: 44px; padding: 6px 0; }
+.page.pp-verify .dcap summary b { font-size: 17px; }
+.page.pp-verify .dcap ol { font-size: 15px; }
+.page.pp-verify .dcap li em { font-size: 14px; }
+.page.pp-verify .dcap .dbind { font-size: 14px; }
+.page.pp-verify .dcap .note { font-size: 15px; line-height: 1.55; }
+
+/* Hashes: wrap, never truncate, copy beside each one. */
+.page.pp-verify .kv { gap: 10px 16px; }
+.page.pp-verify .kv dt { font: 600 13px/1.5 var(--mono); text-transform: none; letter-spacing: 0; color: var(--mu); }
+.page.pp-verify .kv dd { font-size: 15px; }
+.page.pp-verify .kv dd.mono, .page.pp-verify .kv dd[data-kind="hash"] { white-space: normal; overflow: visible; text-overflow: clip; display: block; text-align: start; overflow-wrap: anywhere; }
+.page.pp-verify .pp-hashval { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; max-width: 100%; }
+.page.pp-verify .pp-hashval code { font: 500 14px/1.5 var(--mono); color: var(--ink); overflow-wrap: anywhere; word-break: break-all; }
+.page.pp-verify .pp-hashval .ucopy { min-height: 30px; padding: 2px 12px; font-size: 14px; }
+.page.pp-verify [data-testid="hashes-note"] { margin: 22px 0 0; padding: 16px 18px; border-radius: 16px; background: #F3EEE4; font-size: 16px; line-height: 1.6; color: var(--ink); }
+
+/* Tamper toggles and paste box read as a tool, not an afterthought. */
+.page.pp-verify .tamper { margin-top: 24px; padding: 18px 20px; border-radius: 18px; }
+.page.pp-verify .tamper p { font-size: 17px; }
+.page.pp-verify .tamper small { font-size: 15px; }
+.page.pp-verify .tamper button { min-height: 40px; padding: 8px 14px; font-size: 15px; }
+
+/* Recent real calls: buttons with room to tap. */
+.page.pp-verify .examples button { min-height: 40px; padding: 8px 14px; font: 500 14px var(--sans); }
+.page.pp-verify > section > h2.eb { font-size: 13px; }
+
+@media (max-width: 900px) {
+  .page.pp-verify .vg { grid-template-columns: minmax(0, 1fr); }
+  .page.pp-verify .seal { max-width: 360px; }
+}
+@media (max-width: 560px) {
+  .page.pp-verify .tally { grid-template-columns: minmax(0, 1fr); padding: 22px 20px; gap: 10px; }
+  .page.pp-verify .tally .tn { font-size: 56px; }
+  .page.pp-verify .tally .tn span { font-size: 22px; }
+  .page.pp-verify .res { padding: 20px 20px; }
+  .page.pp-verify .chk { padding: 24px 20px; }
+  .page.pp-verify .ck { grid-template-columns: 34px minmax(0, 1fr); }
+  .page.pp-verify .ck .att { grid-column: 2; justify-self: start; }
+}
+
+/* ---- /ask: prompt card, short sample chips, verified checks ---- */
+.page.pp-ask .lede { font-size: 19px; line-height: 1.6; max-width: 66ch; color: var(--ink); }
+.page.pp-ask .askgrid { gap: 28px; margin-top: 36px; align-items: stretch; }
+.page.pp-ask .vcard { background: var(--card); border: 1px solid #1A2A2C1A; border-radius: 20px; padding: 28px 30px; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft); min-width: 0; }
+.page.pp-ask .vcard > h2, .page.pp-ask .pp-verified .vhd h2 { font-size: var(--fs-heading); line-height: 1.25; margin: 0 0 14px; }
+.page.pp-ask .vhd { border-bottom: 1px solid #1A2A2C18; }
+.page.pp-ask .asksamples { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.page.pp-ask .asksamples .kh-btn--sm { min-height: 40px; padding: 0 14px; font-size: 15px; }
+.page.pp-ask .askform { gap: 10px; }
+.page.pp-ask .askform label { font: 600 15px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink); }
+.page.pp-ask textarea { font-size: 17px; min-height: 130px; }
+.page.pp-ask .askrow { margin-top: 4px; }
+.page.pp-ask .askrow small { font: 500 14px var(--mono); color: var(--mu); }
+.page.pp-ask .askctx { font-size: 15px; line-height: 1.55; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; background: #F3EEE4; }
+.page.pp-ask .askctx .linkish { min-height: 36px; font-size: 15px; }
+.page.pp-ask .answer p:last-child { font-size: 18px; line-height: 1.6; }
+.page.pp-ask .asknotes { font-size: 15px; line-height: 1.6; }
+.page.pp-ask .askchecks { gap: 14px; margin: 14px 0; }
+.page.pp-ask .askchecks li { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; }
+.page.pp-ask .askchecks .dot { width: 30px; height: 30px; font-size: 14px; }
+.page.pp-ask .askchecks b { font-size: 17px; line-height: 1.35; }
+.page.pp-ask .askchecks small { font-size: 15px; line-height: 1.5; }
+.page.pp-ask .vbadge { font-size: 14px; min-height: 32px; padding: 6px 12px; }
+.page.pp-ask .pp-verified .small { font-size: 14px; }
+.page.pp-ask .pp-verified .dcap summary { min-height: 44px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.page.pp-ask .pp-verified .dcap summary small { font-size: 14px; }
+.page.pp-ask .pp-verified .dcap li { font-size: 15px; }
+.page.pp-ask .pp-verified .kv dt { font: 600 13px/1.5 var(--mono); text-transform: none; letter-spacing: 0; color: var(--mu); }
+.page.pp-ask .pp-verified .kv dd { font-size: 15px; white-space: normal; overflow-wrap: anywhere; }
+.page.pp-ask .pp-verified .kv dd[data-kind="hash"] { font: 500 14px/1.5 var(--mono); text-align: start; }
+.page.pp-ask .asknote { font-size: 15px; line-height: 1.6; color: var(--mu); }
+.page.pp-ask .asknote a, .page.pp-ask .asknotes a { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+
+@media (max-width: 900px) {
+  .page.pp-ask .askgrid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .page.pp-ask .vcard { padding: 22px 20px; border-radius: 18px; }
+  .page.pp-ask .asksamples .kh-btn--sm { flex: 1 1 100%; justify-content: flex-start; }
+}
+
+/* ---- /atlas: one card per chain, marks only where a record exists ---- */
+.pp-atlas .pp-marks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.pp-atlas .pp-mark { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 24px; border-radius: 20px; background: var(--card); border: 1px solid #1A2A2C1A; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft); }
+.pp-atlas .pp-mark--none { background: transparent; box-shadow: none; border: 1.5px dashed var(--kh-field); }
+.pp-atlas .pp-mark-head { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.pp-atlas .pp-mark-head .medal { width: 52px; height: 52px; flex: none; }
+.pp-atlas .pp-mark-head .medal img { width: 100%; height: 100%; }
+.pp-atlas .pp-mark-name { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.pp-atlas .pp-mark-name h2 { margin: 0; font: 700 24px/1.2 var(--sans); color: var(--ink); overflow-wrap: anywhere; }
+.pp-atlas .pp-mark-note { margin: 0; font-size: 16px; line-height: 1.6; color: var(--mu); overflow-wrap: anywhere; }
+.pp-atlas .pp-mark-act { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 16px; }
+.pp-atlas .pp-mark-act .txl a { min-height: 36px; display: inline-flex; align-items: center; }
+.pp-atlas .pp-mark-act .ulink { min-height: 36px; display: inline-flex; align-items: center; }
+.pp-atlas .pp-mark--none .pp-mark-name h2 { color: var(--mu); }
+.pp-atlas .ubadge { font-size: 13px; }
+.pp-atlas .pp-calls { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.pp-atlas .pp-calls li { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding: 14px 0; border-top: 1px solid #1A2A2C14; min-width: 0; }
+.pp-atlas .pp-calls li:first-child { border-top: 0; padding-top: 4px; }
+.pp-atlas .pp-call-what { display: grid; gap: 4px; min-width: 0; font-size: 16px; line-height: 1.45; color: var(--ink); overflow-wrap: anywhere; }
+.pp-atlas .pp-call-what small { font: 500 14px var(--mono); color: var(--mu); }
+.pp-atlas .pp-calls .ulink { min-height: 36px; display: inline-flex; align-items: center; font-family: var(--mono); font-size: 14px; }
+
+@media (max-width: 1000px) {
+  .pp-atlas .pp-marks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .pp-atlas .pp-marks { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .pp-atlas .pp-mark { padding: 20px; }
+}
+
+/* ---- /identity: key identity system. Preview labels are always printed, never colour alone. Key art is not restyled. ---- */
+.pp-preview { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 4px 10px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid #E8B86088; font: 600 13px/1.3 var(--sans); vertical-align: middle; white-space: nowrap; }
+.pp-identity .wal > .h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.pp-identity .wal > .h .pp-preview { margin-left: 0; }
+.pp-identity .note { font-size: 16px; line-height: 1.6; color: var(--mu); max-width: 70ch; }
+.pp-identity .tm p { font-size: 15px; }
+.pp-identity .tm .pp-preview { margin: 6px 0 0; }
+.pp-identity .tm p small { font-size: 13px; }
+.pp-identity .idrow b { font-size: 16px; }
+.pp-identity .idrow small { font-size: 14px; }
+.pp-identity .idrow .pp-preview { justify-self: end; margin: 0; }
+.pp-identity dl { font-size: 15px; }
+.pp-identity .blk > p.eb + h2 { margin-top: 6px; }
+.pp-identity .code { font-size: 14px; overflow-x: auto; max-width: 100%; }
+@media (max-width: 560px) {
+  .pp-identity .idrow { grid-template-columns: auto minmax(0, 1fr); }
+  .pp-identity .idrow .pp-preview { grid-column: 2; justify-self: start; }
+}
+
+/* ---- /demo: the read-only label is the first thing on the page ---- */
+.pp-demo-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin: 0 0 28px; padding: 18px 22px; border-radius: 20px; background: var(--warn-bg); color: var(--warn-ink); border: 2px solid #C98A1E; }
+.pp-demo-banner p { margin: 0; flex: 1 1 320px; font-size: 17px; line-height: 1.55; color: #3D2804; min-width: 0; }
+.pp-demo-tag { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 16px; border-radius: 999px; background: #7A4A06; color: #FFFCF6; font: 800 17px/1 var(--sans); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.pp-demo .dsteps button { min-height: 44px; font-size: 15px; }
+.pp-demo .dcard { padding: 22px 24px; border-radius: 20px; }
+.pp-demo .dcard h2 { font-size: 22px; line-height: 1.25; }
+.pp-demo .ddoes { font-size: 16px; line-height: 1.55; color: var(--mu); }
+.pp-demo .dout { font-size: 16px; line-height: 1.5; padding: 12px 14px; border-radius: 12px; }
+.pp-demo .dcard dl { font-size: 15px; }
+.pp-demo .dcard dt { min-width: 0; flex: 0 0 110px; font-size: 14px; }
+.pp-demo .dcard dl div { gap: 10px; }
+.pp-demo .dproof { display: inline-flex; align-items: center; min-height: 36px; font-size: 15px; }
+.pp-demo .dnext { align-items: center; margin-top: 32px; }
+
+/* ---- /source ---- */
+.pp-source .pp-facts { margin: 0; display: grid; gap: 0; }
+.pp-source .pp-facts > div { display: grid; grid-template-columns: minmax(96px, 140px) minmax(0, 1fr); gap: 6px 20px; align-items: baseline; padding: 14px 0; border-top: 1px solid #1A2A2C14; min-width: 0; }
+.pp-source .pp-facts > div:first-child { border-top: 0; padding-top: 4px; }
+.pp-source .pp-facts dt { font: 600 14px var(--sans); color: var(--mu); }
+.pp-source .pp-facts dd { margin: 0; font-size: 16px; color: var(--ink); min-width: 0; }
+.pp-source .pp-facts dd [data-kind="hash"], .pp-source .pp-facts dd .mono { display: block; font: 500 14px/1.6 var(--mono); color: var(--ink); overflow-wrap: anywhere; word-break: break-all; }
+.pp-source .pp-dl { display: flex; flex-wrap: wrap; gap: 12px; }
+.pp-source .pp-links { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 24px; }
+.pp-source .pp-links li { margin: 0; }
+.pp-source .pp-links a { display: inline-flex; align-items: center; min-height: 40px; font-size: 16px; font-weight: 600; color: var(--teal); text-underline-offset: 4px; }
+.pp-source .pp-card p { font-size: 16px; line-height: 1.6; margin: 0 0 10px; }
+.pp-source .pp-card a { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+
+/* ---- not-found ---- */
+.pp-notfound .pp-nf { max-width: 640px; padding: 48px 0 24px; }
+.pp-notfound .pp-nf-ico { display: block; width: 44px; height: 44px; color: var(--teal); margin-bottom: 22px; }
+.pp-notfound .pp-nf h1 { margin: 10px 0 14px; }
+.pp-notfound .pp-nf-lead { font-size: var(--fs-lead); line-height: 1.55; color: var(--mu); margin: 0; }
+.pp-notfound .uact { margin-top: 30px; }
+
+/* /identity on phones: the preview label is longer than the old "1 of 1", so let it wrap and let grid cells shrink. */
+.pp-identity .pp-preview { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.pp-identity .thumbs, .pp-identity .wal, .pp-identity .tgrid > *, .pp-identity .idrow > *, .pp-identity .sizes > * { min-width: 0; }
+.pp-identity .idrow { grid-template-columns: auto minmax(0, 1fr) minmax(0, auto); }
+.pp-identity .tgrid, .pp-identity .sizes { max-width: 100%; }
+@media (max-width: 560px) { .pp-identity .idrow { grid-template-columns: auto minmax(0, 1fr); } }

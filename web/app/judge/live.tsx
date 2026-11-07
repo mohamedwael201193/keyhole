@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { attestation, CONTRACT_CODE_HASH, KEYS_CONTRACT, RPC_URL, WORKER_WASM_SHA256 } from "@/lib/config";
-import { Badge, Spinner } from "@/components/ui";
+import { Badge } from "@/components/ui";
+import { Button } from "@/components/ui/button";
 
 type R = { ok: boolean; text: string } | null;
 
@@ -10,9 +11,9 @@ function Runner({ label, run, testid }: { label: string; run: () => Promise<{ ok
   const [r, setR] = useState<R>(null);
   return (
     <div className="jrun" data-testid={testid} data-state={busy ? "running" : r ? (r.ok ? "pass" : "fail") : "idle"}>
-      <button type="button" className="btn b2" disabled={busy} onClick={async () => { setBusy(true); setR(null); try { setR(await run()); } catch { setR({ ok: false, text: "The check could not reach the network. Try again, or use the link beside it." }); } finally { setBusy(false); } }}>
-        {busy ? <><Spinner label="Checking" /> Checking…</> : r ? "Run again" : label}
-      </button>
+      <Button variant="primary" loading={busy} loadingLabel="Checking" onClick={async () => { setBusy(true); setR(null); try { setR(await run()); } catch { setR({ ok: false, text: "The check could not reach the network. Try again, or use the link beside it." }); } finally { setBusy(false); } }}>
+        {r ? "Run again" : label}
+      </Button>
       {r && <p className="jrun-out" role="status"><Badge tone={r.ok ? "ok" : "bad"}>{r.ok ? "Pass" : "Fail"}</Badge> {r.text}</p>}
     </div>
   );
@@ -20,7 +21,7 @@ function Runner({ label, run, testid }: { label: string; run: () => Promise<{ ok
 
 /** Step 1 in the browser: read the attestation and compare the hash of the code that ran with the current build. */
 export function CheckBuild({ callId }: { callId: string }) {
-  return <Runner testid="run-build" label="Check it here (2 s)" run={async () => {
+  return <Runner testid="run-build" label="Check it here" run={async () => {
     const a = await (await fetch(attestation(callId))).json() as { executed_wasm_sha256?: string };
     const h = String(a.executed_wasm_sha256 || "").toLowerCase();
     return h === WORKER_WASM_SHA256[0]
@@ -31,7 +32,7 @@ export function CheckBuild({ callId }: { callId: string }) {
 
 /** Step 2 in the browser: NEAR RPC view_account, compare code_hash with the committed wasm's hash. */
 export function CheckContract() {
-  return <Runner testid="run-contract" label="Check it here (1 s)" run={async () => {
+  return <Runner testid="run-contract" label="Check it here" run={async () => {
     const j = await (await fetch(RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { request_type: "view_account", finality: "final", account_id: KEYS_CONTRACT } }) })).json() as { result?: { code_hash?: string } };
     const ch = j.result?.code_hash ?? "";
     return ch === CONTRACT_CODE_HASH
