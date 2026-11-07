@@ -28,7 +28,7 @@ h2 em, h1 em { font-style: italic; color: var(--coral); font-weight: 600; }
 .mono { font-family: var(--mono); }
 body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 
-.nav { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 18px 56px; background: #ECE6DA; border-bottom: 1px solid var(--ln); color: var(--ink); transition: none; }
+.nav { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; height: 64px; padding: 0 40px; background: #ECE6DA; border-bottom: 1px solid var(--ln); color: var(--ink); transition: none; }
 .nav.dark { background: #1F4B4F; color: #F1EBDF; border-bottom-color: #F1EBDF22; }
 .nav.dark .links a { color: #F1EBDF; }
 .nav.dark .links a.on { color: #F6D9A8; border-bottom-color: #F6D9A8; }
@@ -41,7 +41,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 .kh-logo.h-16 { --kh: 4rem; }
 .kh-logo img { height: 100%; width: calc(var(--kh, 2.25rem) * 512 / 620); flex: none; filter: none; }
 .kh-word { font-family: var(--font-cormorant), "Cormorant Garamond", var(--serif); font-weight: 700; font-size: calc(var(--kh, 2.25rem) * .65); line-height: 1; letter-spacing: .18em; color: inherit; white-space: nowrap; }
-.links { display: flex; gap: 34px; font-weight: 600; font-size: 16px; font-family: var(--sans); }
+.links { display: flex; gap: 28px; font-weight: 600; font-size: 16px; font-family: var(--sans); }
 .links a { color: var(--ink); text-decoration: none; padding: 8px 0; }
 .links a.on { color: var(--teal); border-bottom: 2px solid var(--teal); }
 .nav-tools { justify-self: end; display: flex; align-items: center; gap: 10px; }

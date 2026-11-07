@@ -560,9 +560,9 @@ for (const p of ["/vault", "/mint"]) {
   });
 }
 
-test("judge path links every evidence call to /verify and is reachable from the footer", async ({ page }) => {
+test("judge path links every evidence call to /verify and is reachable from the top bar", async ({ page }) => {
   await page.goto("/");
-  await page.getByTestId("footer-judge").click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Judge path" }).click();
   await expect(page.getByTestId("judge-page")).toBeVisible();
   const links = page.locator('a[href^="/verify?call="]');
   expect(await links.count()).toBeGreaterThanOrEqual(12);

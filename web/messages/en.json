@@ -18,7 +18,10 @@
   "connectShort": "Connect",
   "home": "Home",
   "identity": "Identity",
-  "settle": "Cross-chain swaps"
+  "settle": "Swaps",
+  "more": "More",
+  "demo": "Demo",
+  "start": "Start"
  },
  "hero": {
   "eyebrow": "Confidential by default · The key owns the account",
