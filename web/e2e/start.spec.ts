@@ -19,7 +19,8 @@ test("/start fits 390px without horizontal scroll", async ({ page }) => {
 test("P1: landing hash and more links, verify label, key help, gallery traits", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("hash-stat")).toHaveAttribute("href", "/judge");
-  await expect(page.getByTestId("more-links").getByRole("link")).toHaveCount(3);
+  // Ask, Atlas and Identity moved from a landing row into the nav "More" menu.
+  for (const href of ["/ask", "/atlas", "/identity"]) await expect(page.getByTestId("more-menu").locator(`a[href="${href}"]`)).toHaveCount(1);
   await page.goto("/key");
   await expect(page.getByTestId("key-help")).toBeVisible();
   await page.goto("/gallery");
