@@ -19,9 +19,10 @@ export default function Atlas() {
               <span style={{ fontFamily: "var(--serif)", fontSize: 28 }}>{a.name}</span>
             </div>
             <p className="note">{a.kind === "none" ? t("atlas.planned_d") : a.note}</p>
-            <p className="mono" style={{ fontSize: 12, color: a.kind === "none" ? "var(--mu)" : "var(--teal)" }}>{a.kind !== "none" ? t("atlas.real") : t("atlas.planned")}</p>
+            <p className="mono" style={{ fontSize: 12, color: a.kind === "none" ? "var(--mu)" : "var(--teal)" }}>{a.kind === "none" ? t("atlas.planned") : a.kind === "call" ? t("atlas.dry") : a.kind === "settle" ? t("atlas.settled") : t("atlas.real")}</p>
             {a.kind === "tx" && <span style={{ color: "var(--teal)" }}><TxLink hash={a.ref!}>{t("atlas.open")} ↗</TxLink></span>}
             {a.kind === "call" && <a style={{ color: "var(--teal)" }} href={attestation(a.ref!)} target="_blank" rel="noreferrer">{t("atlas.att")} ↗</a>}
+            {a.kind === "settle" && a.href && <a style={{ color: "var(--teal)" }} href={a.href} target="_blank" rel="noreferrer">{t("atlas.open")} ↗</a>}
           </li>
         ))}
       </ul>

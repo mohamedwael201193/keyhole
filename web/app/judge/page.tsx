@@ -14,7 +14,9 @@ const REPO = "https://github.com/mohamedwael201193/keyhole/blob/main";
 const INFO_CALL = IDENTITY.worker.info_call;
 const CUR = IDENTITY.worker.wasm_sha256;
 
-type Call = { id: string; what: string; ok: boolean; result: string; file?: string };
+type Call = { id: string; what: string; ok: boolean; result: string; file?: string; build?: string };
+/** Worker build each step-3 call executed on (executed_wasm_sha256 in its attestation). Not the current build. */
+const STEP3_BUILD = "a55ebb14";
 const txRow = (label: string, h: string): ProofRow => ({ label, value: h, href: tx(h), alt: txAlt(h) });
 
 function Calls({ rows, testid }: { rows: Call[]; testid?: string }) {
@@ -28,6 +30,7 @@ function Calls({ rows, testid }: { rows: Call[]; testid?: string }) {
             <Link className="ulink" href={`/verify?call=${r.id}`} aria-label={`Verify call ${r.id.slice(0, 8)}: ${r.what}`}>Verify this call</Link>
             <a className="ulink" href={attestation(r.id)} target="_blank" rel="noreferrer" aria-label={`Raw attestation for ${r.id.slice(0, 8)}`}>Raw attestation ↗</a>
             <code title={r.id}>{r.id.slice(0, 8)}</code>
+            {r.build && <span className="mono">build {r.build}, previous</span>}
           </div>
         </li>
       ))}
@@ -84,17 +87,17 @@ export default function JudgePage() {
           <Script path="./judge/1-contract.sh">Same comparison from a terminal, using curl and sha256sum.</Script>
         </Step></Reveal>
 
-        <Reveal><Step n={3} title="Checks on the current build: only the real holder gets in" testid="judge-step-3">
+        <Reveal><Step n={3} title={`Checks on build ${STEP3_BUILD}: only the real holder gets in`} testid="judge-step-3">
           <Trust src={["outlayer", "us"]} />
-          <p>These calls ran on build <b className="mono">{CUR.slice(0, 8)}</b>. Each answer, including each refusal, was produced inside the enclave and signed by Intel.</p>
-          <Calls testid="judge-current-calls" rows={[
-            { id: "40c02b72-b297-4a9a-9265-751ba826fdf8", what: "A limited (function-call) key tries to act for an account", ok: false, result: "Refused: key_not_owned. Only a full-access key counts." },
-            { id: "013b022a-2159-4ec2-bdaf-c878dd73e823", what: "The account's real full-access key signs", ok: true, result: "Allowed: the vault opens." },
-            { id: "91b5b8e7-96e8-4107-9115-f44cb849b3d0", what: "An account that already holds a key tries to mint another", ok: false, result: "Refused: already_holder. No quota was used." },
-            { id: "f5eb650a-b3d4-40df-b5f9-086f0b0f08b5", what: "The holder locks the key for one hour", ok: true, result: "Allowed: locked." },
-            { id: "5a7addfa-86e9-49a3-9653-83f683c60356", what: "A cross-chain signature is asked for while the key is locked", ok: false, result: "Refused: locked." },
+          <p>These five calls ran on build <b className="mono">{STEP3_BUILD}</b>, which is the previous build. The current build is <b className="mono">{CUR.slice(0, 8)}</b>, and step 1 checks that one. Each answer, including each refusal, was produced inside the enclave and signed by Intel.</p>
+          <Calls testid="judge-step3-calls" rows={[
+            { id: "40c02b72-b297-4a9a-9265-751ba826fdf8", what: "A limited (function-call) key tries to act for an account", ok: false, result: "Refused: key_not_owned. Only a full-access key counts.", build: STEP3_BUILD },
+            { id: "013b022a-2159-4ec2-bdaf-c878dd73e823", what: "The account's real full-access key signs", ok: true, result: "Allowed: the vault opens.", build: STEP3_BUILD },
+            { id: "91b5b8e7-96e8-4107-9115-f44cb849b3d0", what: "An account that already holds a key tries to mint another", ok: false, result: "Refused: already_holder. No quota was used.", build: STEP3_BUILD },
+            { id: "f5eb650a-b3d4-40df-b5f9-086f0b0f08b5", what: "The holder locks the key for one hour", ok: true, result: "Allowed: locked.", build: STEP3_BUILD },
+            { id: "5a7addfa-86e9-49a3-9653-83f683c60356", what: "A cross-chain signature is asked for while the key is locked", ok: false, result: "Refused: locked.", build: STEP3_BUILD },
           ]} />
-          <See>Each <b>Verify this call</b> opens /verify with a <b>Current build</b> badge and all checks green.</See>
+          <See>Each <b>Verify this call</b> opens /verify with the verdict <b>Genuine enclave, previous build (not the current one).</b> That is expected for these calls, because they ran on build {STEP3_BUILD}.</See>
         </Step></Reveal>
 
         <Reveal><Step n={4} title="Selling the key moves the account; the old holder is locked out" testid="judge-step-4">
