@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
 import "./public-pages.css";
+
+// Literal classes: buttonClass() lives in a client module and cannot be called from this server component.
 
 /** Shown for any unknown path. Uses the site's page layout and palette, so it is not a black page. */
 export default function NotFound() {
@@ -14,9 +15,9 @@ export default function NotFound() {
         <h1>This page is not here.</h1>
         <p className="pp-nf-lead">The link may be old or mistyped.</p>
         <div className="uact">
-          <Link className={buttonClass({ variant: "primary" })} href="/">Home</Link>
-          <Link className={buttonClass({ variant: "secondary" })} href="/judge">Judge path</Link>
-          <Link className={buttonClass({ variant: "ghost" })} href="/verify">Verify a call</Link>
+          <Link className="kh-btn kh-btn--primary" href="/">Home</Link>
+          <Link className="kh-btn kh-btn--secondary" href="/judge">Judge path</Link>
+          <Link className="kh-btn kh-btn--ghost" href="/verify">Verify a call</Link>
         </div>
       </div>
     </div>

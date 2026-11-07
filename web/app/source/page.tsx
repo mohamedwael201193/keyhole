@@ -1,7 +1,8 @@
 import manifest from "../../public/source/manifest.json";
 import { Purpose } from "@/components/ui";
-import { buttonClass } from "@/components/ui/button";
 import "../public-pages.css";
+
+// Literal classes: buttonClass() lives in a client module and cannot be called from this server component.
 
 const REPO = "https://github.com/mohamedwael201193/keyhole";
 
@@ -25,8 +26,8 @@ export default function Source() {
       <section className="pp-card" aria-labelledby="src-get">
         <h2 id="src-get">Download</h2>
         <div className="pp-dl">
-          <a className={buttonClass({ variant: "primary" })} href="/source/keyhole-src.tar.gz" download>Download keyhole-src.tar.gz</a>
-          <a className={buttonClass({ variant: "secondary" })} href="/source/keyhole-src.tar.gz.sha256" download>Download the checksum file</a>
+          <a className="kh-btn kh-btn--primary" href="/source/keyhole-src.tar.gz" download>Download keyhole-src.tar.gz</a>
+          <a className="kh-btn kh-btn--secondary" href="/source/keyhole-src.tar.gz.sha256" download>Download the checksum file</a>
         </div>
         <ul className="pp-links">
           <li><a href="/source/manifest.json">Manifest (JSON)</a></li>
