@@ -1,0 +1,66 @@
+/* Public proof and info pages (P5b): /judge, /verify, /ask, /atlas, /identity, /demo, /source and not-found.
+   Presentation only. Every rule sits under .pp (the page root), so nothing here reaches the app pages. */
+
+.pp :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 6px; }
+.pp .upurpose { margin-bottom: 32px; max-width: 980px; }
+.pp .upurpose h1 { margin: 10px 0 16px; text-wrap: balance; }
+.pp .upurpose .uline { font-size: 19px; line-height: 1.55; color: var(--ink); max-width: 62ch; }
+.pp .uact { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 18px 0 6px; }
+.pp p { overflow-wrap: anywhere; }
+
+/* Plain card for a section on these pages: one surface, one edge, one shadow. */
+.pp-card { position: relative; min-width: 0; margin-top: 28px; padding: 28px 30px; background: var(--card); border: 1px solid #1A2A2C1A; border-radius: 20px; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft); }
+.pp-card > h2 { font-size: var(--fs-heading); line-height: 1.25; margin: 0 0 14px; }
+.pp-card ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+.pp-card li + li { margin-top: 10px; }
+
+/* ---- /judge: seven step cards ---- */
+.pp-judge .usteps { gap: 22px; margin-top: 8px; }
+.pp-judge .ustep { grid-template-columns: 48px minmax(0, 1fr); gap: 18px; }
+.pp-judge .ubody { background: var(--card); border: 1px solid #1A2A2C1A; border-radius: 22px; padding: 28px 30px; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--shadow-soft); }
+.pp-judge .ubody h2 { font-size: 28px; line-height: 1.22; margin: 6px 0 14px; text-wrap: balance; }
+.pp-judge .ubody .trust { margin: 0 0 4px; }
+.pp-judge .jclaim { margin: 4px 0 0; font-size: 17px; line-height: 1.6; color: var(--ink); max-width: 66ch; }
+.pp-judge .jclaim .mono { font-size: 15px; }
+.pp-judge .usee { margin-top: 18px; padding: 16px 18px; font-size: 16px; line-height: 1.55; }
+.pp-judge .usee > b { font-size: 13px; }
+.pp-judge .uproof { margin-top: 18px; }
+.pp-judge .uproof summary { font-size: 16px; }
+.pp-judge .uproof dd code { font-size: 14px; }
+.pp-judge .jcall2 { background: #F7F3EA; border: 1px solid #1A2A2C12; }
+.pp-judge .jc-res { font-size: 16px; }
+.pp-judge .jcall2 .ulink, .pp-judge .jc-act .ulink { min-height: 36px; display: inline-flex; align-items: center; }
+.pp-judge .jscript { margin-top: 18px; font-size: 16px; }
+.pp-judge .jscript summary { min-height: 36px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.pp-judge .jscript p { margin-top: 8px; }
+.pp-judge .jprev { margin-top: 18px; }
+.pp-judge .jprev > summary { min-height: 40px; display: flex; align-items: center; font-size: 16px; }
+.pp-judge .jrun { gap: 14px; }
+.pp-judge .jrun-out { font-size: 16px; line-height: 1.5; }
+.pp-judge .jrun .kh-btn { min-height: 48px; }
+
+/* Who sees what: a table on wide screens, labelled stacks on phones. */
+.pp-judge .pp-who h2 { font-size: var(--fs-heading); margin: 0 0 14px; }
+.pp-judge .pp-who .jtw { overflow: visible; margin: 0 0 14px; }
+.pp-judge .jtable { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.5; }
+.pp-judge .jtable th, .pp-judge .jtable td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid #1A2A2C18; }
+.pp-judge .jtable th { font: 600 13px/1.4 var(--sans); color: var(--mu); text-transform: uppercase; letter-spacing: .06em; }
+.pp-judge .jtable td:first-child { font-weight: 700; color: var(--ink); width: 22%; }
+.pp-judge .jtable tbody tr:last-child td { border-bottom: 0; }
+.pp-judge .pp-who .muted { font-size: 15px; margin: 14px 0 0; }
+@media (max-width: 680px) {
+  .pp-judge .jtable thead { display: none; }
+  .pp-judge .jtable, .pp-judge .jtable tbody, .pp-judge .jtable tr, .pp-judge .jtable td { display: block; width: 100%; }
+  .pp-judge .jtable tr { padding: 14px 16px; margin-bottom: 12px; border: 1px solid #1A2A2C18; border-radius: 16px; background: #F7F3EA; }
+  .pp-judge .jtable td { border: 0; padding: 4px 0; width: auto; }
+  .pp-judge .jtable td::before { content: attr(data-label); display: block; font: 600 13px/1.4 var(--sans); color: var(--mu); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+  .pp-judge .jtable td:first-child { font-size: 18px; margin-bottom: 6px; }
+  .pp-judge .jtable td:first-child::before { display: none; }
+}
+@media (max-width: 560px) {
+  .pp .upurpose .uline { font-size: 17px; }
+  .pp-judge .ubody { padding: 22px 20px; border-radius: 18px; }
+  .pp-judge .ubody h2 { font-size: 24px; }
+  .pp-judge .ustep { grid-template-columns: 36px minmax(0, 1fr); gap: 12px; }
+  .pp-card { padding: 22px 20px; }
+}
