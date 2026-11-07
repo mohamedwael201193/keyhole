@@ -10,14 +10,23 @@ import { pillAccount, shortAccount } from "@/lib/near";
 import { acct } from "@/lib/config";
 import { copyText } from "@/lib/copyText";
 
-const LINKS = [
-  ["/", "home"],
+/** Top bar: the audience's first need (judge path) and the core loop. The logo links home. */
+const PRIMARY = [
+  ["/judge", "judge"],
   ["/vault", "vault"],
   ["/mint", "mint"],
   ["/verify", "verify"],
   ["/settle", "settle"],
+] as const;
+
+/** Everything else lives behind "More" (desktop) and in the burger list (mobile). */
+const MORE = [
   ["/gallery", "gallery"],
-  ["/judge", "judge"],
+  ["/demo", "demo"],
+  ["/ask", "ask"],
+  ["/atlas", "atlas"],
+  ["/identity", "identity"],
+  ["/start", "start"],
 ] as const;
 
 export function Nav() {
@@ -26,6 +35,9 @@ export function Nav() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
+  const [more, setMore] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const moreBtn = useRef<HTMLButtonElement>(null);
   const [menu, setMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   // The server renders Connect disabled; it becomes clickable only once React owns it, so an early tap
@@ -49,7 +61,16 @@ export function Nav() {
     addEventListener("resize", tick);
     return () => { removeEventListener("scroll", tick); removeEventListener("resize", tick); };
   }, [path]);
-  useEffect(() => { setMenu(false); }, [path]);
+  useEffect(() => { setMenu(false); setMore(false); setOpen(false); }, [path]);
+  // "More" is a disclosure: Escape and an outside click close it, and Escape returns focus to its button.
+  useEffect(() => {
+    if (!more) return;
+    const onPointer = (e: PointerEvent) => { if (!moreRef.current?.contains(e.target as Node)) setMore(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setMore(false); moreBtn.current?.focus(); } };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onPointer); document.removeEventListener("keydown", onKey); };
+  }, [more]);
   useEffect(() => {
     if (!menu) return;
     const onPointer = (e: PointerEvent) => { if (!acctRef.current?.contains(e.target as Node)) setMenu(false); };
@@ -71,12 +92,20 @@ export function Nav() {
       <nav className={`nav${open ? " open" : ""}`} aria-label="Main">
         <Link href="/" className="brand"><KeyholeLogo className="h-9" tone={dark ? "light" : "ink"} /></Link>
         <div className="links">
-          {LINKS.map(([href, key]) => (
+          {PRIMARY.map(([href, key]) => (
             <Link key={key} href={href} aria-current={current(href) ? "page" : undefined} className={current(href) ? "on" : ""}>{t(`nav.${key}`)}</Link>
           ))}
+          <div className="more" ref={moreRef}>
+            <button ref={moreBtn} type="button" className={`more-btn${MORE.some(([href]) => current(href)) ? " on" : ""}`} aria-expanded={more} aria-controls="more-menu" onClick={() => setMore((v) => !v)} data-testid="nav-more">{t("nav.more")}</button>
+            <ul id="more-menu" className="more-menu" data-testid="more-menu" hidden={!more}>
+              {MORE.map(([href, key]) => (
+                <li key={key}><Link href={href} aria-current={current(href) ? "page" : undefined}>{t(`nav.${key}`)}</Link></li>
+              ))}
+              <li className="more-music"><MusicToggle /></li>
+            </ul>
+          </div>
         </div>
         <div className="nav-tools">
-          <span className="desk"><MusicToggle /></span>
           {accountId
             ? <div className="acct" ref={acctRef}>
                 {mismatch && <button type="button" className="cw warn" data-testid="wallet-mismatch" title={`MetaMask is on ${mismatch}, but this site is connected as ${accountId}. Reconnect to switch.`} onClick={() => { void disconnect().then(() => connect()); }}>MetaMask switched · reconnect</button>}
@@ -91,7 +120,7 @@ export function Nav() {
                 )}
               </div>
             : restoring
-            ? <button type="button" className="cw" disabled data-testid="wallet-restoring" aria-busy="true"><span className="spin" aria-hidden="true" /> Wallet…</button>
+            ? <button type="button" className="cw" disabled data-testid="wallet-restoring" aria-busy="true">{t("nav.connect")}</button>
             : <button type="button" className="cw" onClick={() => void connect()} disabled={!hydrated} data-hydrated={hydrated ? "1" : "0"} data-testid="connect">{t("nav.connect")}</button>}
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -100,7 +129,7 @@ export function Nav() {
       </nav>
       {open && (
         <ul id="mnav" className="mnav">
-          {LINKS.map(([href, key]) => <li key={key}><Link onClick={() => setOpen(false)} href={href}>{t(`nav.${key}`)}</Link></li>)}
+          {[...PRIMARY, ...MORE].map(([href, key]) => <li key={key}><Link onClick={() => setOpen(false)} href={href} aria-current={current(href) ? "page" : undefined}>{t(`nav.${key}`)}</Link></li>)}
           <li><MusicToggle /></li>
         </ul>
       )}

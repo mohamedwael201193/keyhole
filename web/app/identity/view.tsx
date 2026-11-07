@@ -49,7 +49,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
               </FoilCard>
               {/* Only Bronze is minted today (worker main.rs tier 1). Other finishes are design previews, not attested keys. */}
               {k.finish === "Bronze" ? <p className="att">{t("land.attested")}</p> : <p className="att" data-testid="preview-badge">Preview, not minted</p>}
-              <p className="mono" style={{ fontSize: 12, color: "var(--mu)" }}>{KEYS_CONTRACT}</p>
+              <p className="mono" style={{ fontSize: 13, color: "var(--mu)" }}>{KEYS_CONTRACT}</p>
               <dl>
                 <dt>{t("field.head")}</dt><dd>{traitLabel(t, k.head)}</dd>
                 <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, k.filigree)}</dd>
@@ -92,7 +92,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
             <div className="sizes">
               {[120, 72, 40].map((w) => <div className="sq" key={w} style={{ width: w, height: w }}><KeyArt n={1} alt="" width={120} height={280} /></div>)}
             </div>
-            <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginTop: 14 }}>{t("ident.sizesD")}</p>
+            <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginTop: 14 }}>{t("ident.sizesD")}</p>
           </div>
         </div>
       </div>
@@ -114,7 +114,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
               ["Gold", "linear-gradient(135deg,#E3C06A,#9A7420)", "#9A7420 → #E3C06A"],
               ["Legendary", "linear-gradient(135deg,#F6D9A8,#7A1F4F)", "#7A1F4F → #F6D9A8"],
             ].map(([name, bg, hex]) => (
-              <div className="fn" key={name}><div className="sw" style={{ background: bg }} /><div className="t"><b>{t(`finish.${name}`)}</b><p>{t(`ident.metal.${name}`)}</p><p className="mono" style={{ fontSize: 12 }}>{hex}</p></div></div>
+              <div className="fn" key={name}><div className="sw" style={{ background: bg }} /><div className="t"><b>{t(`finish.${name}`)}</b><p>{t(`ident.metal.${name}`)}</p><p className="mono" style={{ fontSize: 13 }}>{hex}</p></div></div>
             ))}
           </div>
         </div>
@@ -125,19 +125,19 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
         <h2>{t("ident.brand")}</h2>
         <div className="brand3">
           <div className="bx">
-            <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginBottom: 16 }}>LOGO</p>
+            <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginBottom: 16 }}>LOGO</p>
             <KeyholeLogo className="h-16" tone="ink" />
             <div style={{ marginTop: 18, background: "#1F4B4F", borderRadius: 18, padding: 18, color: "#F6F1E7" }}><KeyholeLogo className="h-12" tone="light" /></div>
           </div>
           <div className="bx">
-            <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginBottom: 16 }}>{t("ident.type")}</p>
+            <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginBottom: 16 }}>{t("ident.type")}</p>
             <p style={{ font: "700 42px/1 var(--serif)" }}>Cormorant Garamond</p>
-            <p className="mono" style={{ fontSize: 12, color: "var(--mu)" }}>{t("ident.typeD")}</p>
+            <p className="mono" style={{ fontSize: 13, color: "var(--mu)" }}>{t("ident.typeD")}</p>
             <p style={{ font: "600 22px var(--sans)", marginTop: 16 }}>Manrope 500–800</p>
             <p style={{ font: "500 18px var(--mono)", marginTop: 16 }}>DM Mono 400/500</p>
           </div>
           <div className="bx">
-            <p className="mono" style={{ fontSize: 12, color: "var(--mu)", marginBottom: 16 }}>{t("ident.palette")}</p>
+            <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginBottom: 16 }}>{t("ident.palette")}</p>
             <div className="pal">
               {[["#ECE6DA", "#1A2A2C", "Ecru"], ["#F6F1E7", "#1A2A2C", "Ivory"], ["#1A2A2C", "#F6F1E7", "Ink"], ["#1F4B4F", "#F6F1E7", "Teal"], ["#A8432C", "#F6F1E7", "Coral"], ["#D9644A", "#1A2A2C", "Coral"], ["#7D5A1E", "#F6F1E7", "Brass"], ["#B8893E", "#1A2A2C", "Brass"]].map(([bg, fg, name]) => (
                 <div key={bg + name} style={{ background: bg, color: fg }}>{name}<br />{bg}</div>

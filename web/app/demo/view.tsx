@@ -21,7 +21,7 @@ export function DemoView() {
   const go = (i: number) => { setAuto(false); setAt(i); };
   return (
     <div className="page demo" data-testid="demo-page">
-      <p className="demo-banner" role="note" data-testid="demo-banner"><b>DEMO · read-only</b> Replay of a real mainnet session by {DEMO_META.account} on {DEMO_META.date} (previous worker build {DEMO_META.build}). No wallet, nothing is signed or moved. Every result links to its attested enclave call or transaction.</p>
+      <p className="demo-banner" role="note" data-testid="demo-banner"><b>DEMO · read-only</b> Replay of a real mainnet session ({DEMO_META.account}, {DEMO_META.date}, previous build {DEMO_META.build}). Nothing is signed or moved.</p>
       <h1>The whole flow, <em>no wallet needed.</em></h1>
       <ol className="dsteps" aria-label="Demo steps">
         {DEMO_STEPS.map((s, i) => (

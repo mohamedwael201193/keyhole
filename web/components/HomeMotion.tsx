@@ -33,7 +33,7 @@ export function HomeMotion() {
       const byParent = new Map<Element | null, number>();
       document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
         if (el.classList.contains("rv") && hidden.includes(el)) return;
-        if (el.getBoundingClientRect().top < vh * 0.92) return; // already on screen: leave it
+        if (el.getBoundingClientRect().top < vh * 0.92) { el.classList.add("in"); return; } // on screen at mount: visible, never held back
         const i = byParent.get(el.parentElement) ?? 0;
         byParent.set(el.parentElement, i + 1);
         el.classList.add("rv");
@@ -46,7 +46,7 @@ export function HomeMotion() {
       for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
     }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
     hidden.forEach((el) => io.observe(el));
-    const fallback = window.setTimeout(() => hidden.forEach((el) => el.classList.add("in")), 20000);
+    const fallback = window.setTimeout(() => hidden.forEach((el) => el.classList.add("in")), 4000);
 
     const key = document.querySelector<HTMLElement>(".hkey");
     let ticking = false;

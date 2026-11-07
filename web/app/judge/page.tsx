@@ -51,7 +51,7 @@ export default function JudgePage() {
   return (
     <div className="page judge" data-testid="judge-page">
       <Purpose
-        eyebrow="Judge path · NEAR mainnet · about 5 minutes · no wallet needed"
+        eyebrow="Judge path · 5 min · no wallet"
         title={<>Check it yourself. <em>Trust nothing we say.</em></>}
         line={<>Seven checks, top to bottom. Each one has a button that runs in your browser and a green box that says what you should see. If you see something else, the claim fails.</>}
       />

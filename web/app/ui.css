@@ -1,24 +1,13 @@
 /* KEYHOLE component system: one hierarchy, AA contrast, calm motion. Brand: cream, deep teal, serif heads. */
 :root { --ok: #17663F; --okbg: #E3F1E8; --bad: #9A3A25; --badbg: #F8E4DD; --waitc: #6E4F12; --waitbg: #F5EBD3; --info: #1F4B4F; --infobg: #E2ECEC; --card: #FBF8F2; --ring: 0 0 0 3px #1F4B4F55; }
 
-/* Story bar */
+/* Home story section (section.sec.story in Landing.tsx). The persistent story bar was removed. */
 .story { max-width: 1328px; margin: 0 auto; padding: 10px 56px 0; display: flex; gap: 18px 28px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
-.story-one { margin: 0; font-size: 15px; color: var(--ink); max-width: 62ch; }
-.story-one b { color: var(--teal); letter-spacing: .04em; }
-.story-steps { list-style: none; display: flex; gap: 8px; margin: 0; padding: 0; }
-.story-steps a { display: grid; grid-template-columns: auto auto; column-gap: 8px; align-items: center; padding: 6px 14px 6px 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--ln); text-decoration: none; color: var(--ink); transition: background .2s, border-color .2s; }
-.story-steps a:hover { border-color: var(--teal); }
-.story-steps .sn { grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--teal); color: #F6F1E7; font: 700 13px var(--sans); }
-.story-steps .st { font-weight: 700; font-size: 14px; line-height: 1.1; }
-.story-steps .sd { font-size: 12px; color: var(--mu); line-height: 1.2; }
-.story-steps li.on a { background: var(--teal); color: #F6F1E7; }
-.story-steps li.on .sd { color: #DCE7E6; }
-.story-steps li.on .sn { background: #F6F1E7; color: var(--teal); }
 
 /* Purpose header */
 .upurpose { margin-bottom: 28px; }
 .upurpose h1 { margin: 6px 0 10px; }
-.uline { font-size: 21px; line-height: 1.5; color: var(--ink); max-width: 60ch; margin: 0; }
+.uline { font-size: var(--fs-lead); line-height: 1.5; color: var(--ink); max-width: 60ch; margin: 0; }
 
 /* Badges */
 .ubadge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font: 700 13px var(--sans); letter-spacing: .02em; white-space: nowrap; }
@@ -46,7 +35,7 @@
 .uprow dd { margin: 0; display: flex; gap: 10px; align-items: center; min-width: 0; }
 .uprow code { font: 400 13px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; color: var(--ink); }
 .upact { display: inline-flex; gap: 6px; flex: none; }
-.ucopy, .ulink { font: 600 12px var(--sans); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ln); background: var(--card); color: var(--teal); text-decoration: none; cursor: pointer; }
+.ucopy, .ulink { font: 600 13px var(--sans); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ln); background: var(--card); color: var(--teal); text-decoration: none; cursor: pointer; }
 .ucopy:hover, .ulink:hover { border-color: var(--teal); }
 
 /* Stepper */
@@ -56,7 +45,7 @@
 .unum { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--teal); color: #F6F1E7; font: 700 20px var(--serif); z-index: 1; box-shadow: 0 0 0 6px var(--bg); transition: background .3s, transform .3s; }
 .ustep.done .unum { background: var(--ok); transform: scale(1.04); }
 .ubody { background: var(--card); border: 1px solid var(--ln); border-radius: 22px; padding: 22px 26px; min-width: 0; }
-.ubody h2 { font-size: 30px; line-height: 1.15; margin: 0 0 10px; }
+.ubody h2 { font-size: var(--fs-title); line-height: 1.15; margin: 0 0 10px; }
 .ubody > p { margin: 8px 0; font-size: 17px; }
 .uact { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 4px; }
 .usee { margin-top: 14px; border-radius: 16px; padding: 14px 16px; border-left: 5px solid var(--ok); background: var(--okbg); color: #0F3B25; }
@@ -72,8 +61,8 @@
 .uterm:hover .uterm-t, .uterm.open .uterm-t, .uterm-b:focus-visible + .uterm-t { opacity: 1; transform: translateX(-50%); }
 
 /* Reveal */
-.ureveal { opacity: 0; transform: translateY(14px); transition: opacity .5s var(--ease-out, ease), transform .5s var(--ease-out, ease); }
-.ureveal.in { opacity: 1; transform: none; }
+.ureveal { transition: opacity .5s var(--ease-out, ease), transform .5s var(--ease-out, ease); }
+.ureveal.pending { opacity: 0; transform: translateY(14px); }
 @media (prefers-reduced-motion: reduce) { .ureveal { opacity: 1; transform: none; transition: none; } .spin { animation-duration: 2.4s; } .sk span { animation: none; } .unum { transition: none; } }
 
 /* Order card (settle) */
@@ -93,16 +82,11 @@
 .ogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
 
 /* Section heading */
-.ush { font-size: 32px; margin: 48px 0 6px; }
+.ush { font-size: var(--fs-title); margin: 48px 0 6px; }
 .ush + .usub { margin: 0 0 18px; color: var(--mu); font-size: 17px; max-width: 70ch; }
 
 @media (max-width: 760px) {
   .story { padding: 8px 18px 0; }
-  .story-one { font-size: 14px; }
-  .story-steps { width: 100%; justify-content: space-between; gap: 6px; }
-  .story-steps a { padding: 6px 8px; grid-template-columns: auto; justify-items: center; text-align: center; row-gap: 2px; }
-  .story-steps .sn { grid-row: auto; }
-  .story-steps .sd { display: none; }
   .uline { font-size: 18px; }
   .usteps::before { left: 17px; }
   .ustep { grid-template-columns: 36px minmax(0, 1fr); gap: 12px; }
@@ -120,7 +104,7 @@
 .jc-what { display: flex; gap: 10px; align-items: center; font-weight: 600; }
 .jc-res { font-size: 15px; color: var(--ink); }
 .jc-act { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.jc-act code { font: 12px var(--mono); color: var(--mu); }
+.jc-act code { font: 13px var(--mono); color: var(--mu); }
 .jprev { margin-top: 14px; } .jprev summary, .jscript summary { cursor: pointer; font-weight: 700; color: var(--teal); }
 .jscript { margin-top: 12px; font-size: 15px; } .jscript summary code { font: 13px var(--mono); }
 .jrun { display: inline-flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -178,7 +162,7 @@
 /* /start layout: centered container, page gutters, display heading, centered card */
 .start { max-width: 840px; margin-inline: auto; padding-inline: clamp(16px, 4vw, 32px); box-sizing: border-box; width: 100%; }
 .start .upurpose { text-align: center; }
-.start .upurpose h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.1; }
+.start .upurpose h1 { font-size: var(--fs-display); line-height: 1.02; }
 .start .upurpose .uline { max-width: 60ch; margin-inline: auto; }
 .start .scard { max-width: 680px; margin-inline: auto; }
 .start .acct-ready { justify-content: center; }

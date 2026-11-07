@@ -12,11 +12,6 @@ export function Footer() {
       <Link href="/" className="brand"><KeyholeLogo className="h-9" tone="light" /></Link>
       <span className="mono">{KEYS_CONTRACT} · NEAR mainnet · Intel TDX via OutLayer</span>
       <span style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <Link href="/judge" data-testid="footer-judge">{t("nav.judge")}</Link>
-        <Link href="/ask" data-testid="footer-ask">{t("nav.ask")}</Link>
-        <Link href="/settle" data-testid="footer-settle">{t("nav.settle")}</Link>
-        <Link href="/atlas">{t("nav.atlas")}</Link>
-        <Link href="/identity">{t("nav.identity")}</Link>
         <TxLink account={KEYS_CONTRACT}>{KEYS_CONTRACT}</TxLink>
         <a href="https://near.org" target="_blank" rel="noreferrer" className="built" aria-label={t("footer.built")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}

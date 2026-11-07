@@ -88,14 +88,17 @@ export function Term({ k, children }: { k: TermKey; children?: ReactNode }) {
 /** Fade-and-rise when scrolled into view; instant when reduced motion is on (CSS). */
 export function Reveal({ children, className = "" }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [on, setOn] = useState(false);
+  // Visible by default. Only content that starts below the fold is held back, and only once JS has run.
+  const [pending, setPending] = useState(false);
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    if (!("IntersectionObserver" in window)) { setOn(true); return; }
-    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setOn(true); io.disconnect(); } }, { rootMargin: "0px 0px -8% 0px" });
+    if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (el.getBoundingClientRect().top < innerHeight * 0.92) return;
+    setPending(true);
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setPending(false); io.disconnect(); } }, { rootMargin: "0px 0px -8% 0px" });
     io.observe(el); return () => io.disconnect();
   }, []);
-  return <div ref={ref} className={`ureveal${on ? " in" : ""} ${className}`.trim()}>{children}</div>;
+  return <div ref={ref} className={`ureveal${pending ? " pending" : ""} ${className}`.trim()}>{children}</div>;
 }
 
 /** The one-line purpose at the top of every page. */

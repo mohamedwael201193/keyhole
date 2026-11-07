@@ -18,7 +18,10 @@
   "connectShort": "Connect",
   "home": "Home",
   "identity": "Identity",
-  "settle": "Cross-chain swaps"
+  "settle": "Swaps",
+  "more": "More",
+  "demo": "Demo",
+  "start": "Start"
  },
  "hero": {
   "eyebrow": "Confidential by default · The key owns the account",
@@ -211,7 +214,7 @@
   "preview": "Bronze preview",
   "openVault": "Open your vault →",
   "capsLine": "{finish} tier · caps {tx} per trade / {day} per day",
-  "bronzeOnly": "Minting today issues a Bronze key ($1 per trade, $5 per day). Silver and Gold are not minted yet, and their caps are already enforced by the enclave. Legendary is a rare finish of a Gold key. The locked cards preview those finishes.",
+  "bronzeOnly": "Minting today issues a Bronze key ($1 per trade, $5 per day). Silver and Gold are not minted yet.",
   "finishPreview": "Finish preview",
   "perMin": "{n} per minute"
  },
@@ -234,7 +237,7 @@
   "eyebrow": "Gallery",
   "h1a": "Every key is ",
   "h1b": "one of one.",
-  "lead": "Each key's base art comes from its tier's collection. The engraved bit cipher is taken from the token id, and the serial from sha256(contract id + token id).",
+  "lead": "Base art comes from the tier collection. The bit cipher comes from the token id, and the serial from sha256(contract id + token id).",
   "key": "KEYHOLE Key #{id}",
   "yours": "Your key",
   "toIdentity": "NFT identity & metadata →"
@@ -313,7 +316,7 @@
   "tamperFail": "Rejected. This copy was changed.",
   "tallyH": "{n} of {total} checks passed in this browser",
   "tallyWait": "37 checks run in this browser",
-  "tallyD": "6 attestation checks against NEAR mainnet and the published build, 19 Intel DCAP checks on the TDX quote, and 12 checks against Intel's revocation lists and TCB status. No server of ours is trusted.",
+  "tallyD": "6 against NEAR mainnet, 19 Intel DCAP, 12 revocation and TCB. No server of ours is trusted.",
   "dcapNote": "Parses the TDX quote, verifies the quote signature, the Quoting Enclave report and the PCK chain up to the pinned Intel SGX Root CA, and checks report_data against the attested fields. Revocation and TCB status are checked in the next section.",
   "pcsH": "Intel revocation and TCB status",
   "pcsStatus": "TCB {tcb} · QE {qe} · {n}/{total}",
@@ -586,7 +589,7 @@
   "c3d": "Your browser downloads the wasm from FastFS and hashes it itself."
  },
  "land": {
-  "judgeCta": "Judging? Start the 5-minute judge path",
+  "judgeCta": "Judge path, 5 min, no wallet",
   "eyebrow": "Heirloom Nº 001 · Confidential by default",
   "h1a": "Nothing on the chain.",
   "h1b": "Everything in the key.",
@@ -664,7 +667,7 @@
   "tierEyebrow": "Tiers",
   "tierH": "Choose your ",
   "tierEm": "finish.",
-  "tierLead": "The tier sets the caps the enclave enforces and the metal of your key. Minting today issues Bronze. Silver and Gold are not minted yet, and their caps are already enforced by the enclave. Legendary is a rare finish of a Gold key, not a fourth cap.",
+  "tierLead": "The tier sets the caps the enclave enforces and the metal of your key. Minting today issues Bronze. Legendary is a rare finish of a Gold key, not a fourth cap.",
   "perTrade": "per trade",
   "tierDaily": "${n} per day",
   "legDaily": "$500 per day · rarest one-of-one finish",

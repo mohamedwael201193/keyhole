@@ -7,7 +7,6 @@ import "./ui.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { StoryBar } from "@/components/StoryBar";
 
 /** Official modal stylesheet, minus the Google Fonts @import (blocked by style-src). */
 const walletModalCss = readFileSync(join(process.cwd(), "node_modules/@near-wallet-selector/modal-ui/styles.css"), "utf8")
@@ -23,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: { title: "KEYHOLE", description: "Nothing on the chain. Everything in the key.", images: [{ url: "/og.png", width: 1200, height: 630 }] },
   icons: { icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }], apple: "/apple-icon.png" },
 };
-export const viewport: Viewport = { themeColor: "#ECE6DA", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#E6DFD0", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -32,7 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style id="nws-modal-styles" dangerouslySetInnerHTML={{ __html: walletModalCss }} />
         <Providers>
           <Nav />
-          <StoryBar />
           <main id="main">{children}</main>
           <Footer />
         </Providers>
