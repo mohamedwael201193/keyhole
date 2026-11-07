@@ -102,22 +102,23 @@ test("English only: no language switcher, and /ar redirects home", async ({ page
 test("header Connect wallet opens the selector on the first click on a 6x slower CPU", async ({ page, context }) => {
   const cdp = await context.newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  // The site bar has no wallet control in v3; the header Connect lives in the app bar.
+  await page.goto("/vault", { waitUntil: "domcontentloaded" });
   await page.getByTestId("connect").click();
   await page.getByTestId("choose-other").click();
   await expect(page.locator("#near-wallet-selector-modal .nws-modal-wrapper.open")).toBeVisible({ timeout: 20_000 });
 });
 
 test("header Connect wallet is disabled in server HTML and enabled after hydration", async ({ page, request }) => {
-  const html = await (await request.get("/")).text();
+  const html = await (await request.get("/vault")).text();
   expect(html).toMatch(/data-testid="connect"[^>]*disabled|disabled[^>]*data-testid="connect"/);
-  await page.goto("/");
+  await page.goto("/vault");
   await expect(page.getByTestId("connect")).toHaveAttribute("data-hydrated", "1");
   await expect(page.getByTestId("connect")).toBeEnabled();
 });
 
 test("header Connect wallet opens the selector on the first click", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/vault", { waitUntil: "domcontentloaded" });
   const btn = page.getByTestId("connect");
   await expect(btn).toHaveText("Connect wallet");
   await btn.click();
@@ -568,9 +569,9 @@ test("judge path links every evidence call to /verify and is reachable from the 
   // Desktop: a top-bar link. Phones: the same link in the burger list.
   if ((page.viewportSize()?.width ?? 1000) <= 860) {
     await page.getByRole("button", { name: "Menu" }).click();
-    await page.locator("#mnav").getByRole("link", { name: "Judge path" }).click();
+    await page.locator("#mnav").getByRole("link", { name: "For judges" }).click();
   } else {
-    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Judge path" }).click();
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "For judges" }).click();
   }
   await expect(page.getByTestId("judge-page")).toBeVisible();
   const links = page.locator('a[href^="/verify?call="]');
