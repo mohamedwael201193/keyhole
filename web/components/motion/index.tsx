@@ -2,6 +2,8 @@
 /* Shared visual primitives (styles in app/polish.css, prefix .khm-). Presentational only. */
 import { useEffect, useState, type ReactNode } from "react";
 
+export { FadeUp, Stagger, Parallax, Tilt, GlowReveal, CountUp } from "./primitives";
+
 export function StepCard({ active, done, title, n, children, className = "", ...rest }:
   { active?: boolean; done?: boolean; title?: ReactNode; n?: number; children?: ReactNode; className?: string } & React.HTMLAttributes<HTMLElement>) {
   return (

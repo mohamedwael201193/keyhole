@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import { Medal } from "./Medal";
+import { TokenIcon } from "./TokenIcon";
 import { ASSETS, type AssetKey } from "@/lib/assets";
 
 const KEYS = Object.keys(ASSETS) as AssetKey[];
@@ -33,7 +33,7 @@ export function TokenPick({ id, value, onChange }: { id: string; value: AssetKey
   return (
     <div className="tpick" ref={root}>
       <button type="button" id={id} className="tpick-btn" aria-haspopup="listbox" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((v) => !v)} onKeyDown={onKey}>
-        <Medal id={asset.logo} name={asset.symbol} labeled={false} />
+        <TokenIcon assetId={asset.id} symbol={asset.symbol} />
         <span><b>{asset.symbol}</b><small>{asset.name}</small></span>
       </button>
       {open && (
@@ -42,7 +42,7 @@ export function TokenPick({ id, value, onChange }: { id: string; value: AssetKey
             const a = ASSETS[k];
             return (
               <li key={k} id={`${id}-opt-${k}`} role="option" aria-selected={k === value} className={i === active ? "on" : ""} onMouseEnter={() => setActive(i)} onClick={() => choose(k)}>
-                <Medal id={a.logo} name={a.symbol} labeled={false} />
+                <TokenIcon assetId={a.id} symbol={a.symbol} />
                 <span><b>{a.symbol}</b><small>{a.name}</small></span>
               </li>
             );
