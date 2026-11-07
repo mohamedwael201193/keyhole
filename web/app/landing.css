@@ -101,7 +101,7 @@
 
 /* Footer: product and proof groups, then one bar with the contract, the sound toggle and the NEAR badge. */
 .ft { display: block; padding: 72px 56px 36px; }
-.ft-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 40px; max-width: 1328px; margin: 0 auto; }
+.ft-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)); gap: 40px; max-width: 1328px; margin: 0 auto; }
 .ft-brand p { margin: 16px 0 0; max-width: 30ch; color: #EDE6D8; opacity: .85; line-height: 1.5; }
 .ft-h { margin: 0 0 14px; font: 700 13px/1.2 var(--sans); letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
 .ft-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }

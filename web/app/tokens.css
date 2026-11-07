@@ -1,0 +1,93 @@
+/*
+ * KEYHOLE design tokens v3. The one source of colour, type, radius, shadow, spacing and motion values.
+ * Imported first in app/layout.tsx. The older token blocks (polish.css, heirloom.css, design2.css, ui.css,
+ * globals.css @theme) alias these names; do not add new literal colours elsewhere. See web/DESIGN.md.
+ */
+:root {
+  /* Surfaces: page, raised card, sunken field and shimmer. */
+  --surface: #E6DFD0;
+  --raised: #FFFCF6;
+  --sunken: #F1ECE1;
+  --surface-warm: #F8F3EA;
+
+  /* Ink: headings and body. muted is meta text (AA on raised and surface). */
+  --ink: #1F2A2C;
+  --ink-2: #3A4547;
+  --muted: #4E5759;
+
+  /* Lines and fields. */
+  --line: #1A2A2C38;
+  --line-strong: #CFC6B3;
+  --field: #6E7778;
+
+  /* Primary: deep teal. Used for the one main action per screen, links and focus. */
+  --primary: #1F4B4F;
+  --primary-hover: #173B3E;
+  --primary-ink: #FFFCF6;
+  --primary-soft: #1F4B4F14;
+  --primary-tint: #E2ECEC;
+
+  /* Accent: warm brass for eyebrows, fills and a small amount of highlight. coral is the italic display accent only. */
+  --accent: #B8893E;
+  --accent-ink: #7A5410;
+  --coral: #A8432C;
+
+  /* Status: each has an ink (text and icon) and a background. Always printed with a label, never colour alone. */
+  --success: #0B5D3B;
+  --success-bg: #D9F5E6;
+  --warn: #7A4A06;
+  --warn-bg: #FDECC8;
+  --danger: #9A3412;
+  --danger-bg: #FDE4D6;
+  --info: #12407A;
+  --info-bg: #DCE9FB;
+  --neutral-ink: #3A4547;
+  --neutral-bg: #E3DCCD;
+
+  /* Vault: the one dark surface, for hero moments only. */
+  --vault: #174A4E;
+  --vault-ink: #F6F1E7;
+
+  /* Focus ring. */
+  --focus: #1F4B4F;
+  --focus-ring: 0 0 0 3px #1F4B4F55;
+
+  /* Type scale: six sizes. 13px is the floor. */
+  --text-display: 64px;
+  --text-title: 36px;
+  --text-heading: 22px;
+  --text-lead: 18px;
+  --text-body: 16px;
+  --text-small: 13px;
+
+  /* Font roles: the display serif for headlines only, Manrope for UI, mono for hashes and figures. */
+  --font-display: var(--font-cormorant), Georgia, serif;
+  --font-ui: var(--font-manrope), sans-serif;
+  --font-mono: var(--font-dm), ui-monospace, monospace;
+
+  /* Radii. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  /* Elevation. */
+  --shadow-1: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(20,40,40,.12);
+  --shadow-2: 0 2px 4px rgba(0,0,0,.10), 0 16px 40px rgba(20,60,60,.22);
+  --shadow-soft: var(--shadow-1);
+  --shadow-lifted: var(--shadow-2);
+  --shadow-glow: 0 12px 28px -10px rgba(20,163,160,.55);
+
+  /* Spacing: a 4px scale. */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 72px;
+
+  /* Motion: three durations, three easings. Reduced motion turns animation off in polish.css. */
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 600ms;
+  --ease-out: cubic-bezier(.22,.61,.36,1);
+  --ease-std: cubic-bezier(.2,.7,.2,1);
+  --ease-spring: cubic-bezier(.2,.9,.3,1.3);
+}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Cormorant_Garamond, DM_Mono, Manrope } from "next/font/google";
+import "./tokens.css";
 import "./globals.css";
 import "./ui.css";
 import "./landing.css";

@@ -88,20 +88,22 @@ describe("removed noise", () => {
 
 describe("public top bar and footer", () => {
   const nav = src("../components/Nav.tsx");
-  it("the top bar holds Judge path, Verify and Open app, and no More menu", () => {
-    expect(nav).toContain('["/judge", "judge"]');
-    expect(nav).toContain('["/verify", "verify"]');
+  it("the top bar holds How it works, Proof, For judges and Launch app, and no wallet control", () => {
+    expect(nav).toContain('href: "/#how"');
+    expect(nav).toContain('href: "/verify"');
+    expect(nav).toContain('href: "/judge"');
     expect(nav).toContain('"/dashboard"');
     expect(nav).toContain('testid="open-app"');
+    expect(nav).not.toContain("<AccountControl");
     expect(nav).not.toContain("nav-more");
     expect(nav).not.toContain("more-menu");
   });
 
-  it("the footer groups the rest under Product and Proof & docs", () => {
+  it("the footer has three groups (Product, Proof, Learn), the contract line and the NEAR credit", () => {
     const m = renderToStaticMarkup(withI18n(createElement(Footer)));
-    expect(m).toContain('aria-label="Product"');
-    expect(m).toContain('aria-label="Proof &amp; docs"');
-    for (const href of ["/gallery", "/demo", "/ask", "/atlas", "/identity", "/source", "/start"]) expect(m).toContain(`href="${href}"`);
+    for (const g of ["Product", "Proof", "Learn"]) expect(m).toContain(`aria-label="${g}"`);
+    for (const href of ["/dashboard", "/mint", "/swap", "/vault", "/verify", "/judge", "/atlas", "/source", "/ask", "/identity", "/demo"]) expect(m).toContain(`href="${href}"`);
+    expect(m).toContain("NEAR mainnet");
     expect(m).toContain("Built on NEAR");
   });
 });

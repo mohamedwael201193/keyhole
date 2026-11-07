@@ -14,9 +14,12 @@
   --color-teal: var(--teal);
   --color-brass: var(--brass);
   --radius-card: var(--r-card);
-  --font-serif: var(--font-cormorant), Georgia, serif;
-  --font-mono: var(--font-dm), ui-monospace, monospace;
-  --font-sans: var(--font-manrope), sans-serif;
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --font-serif: var(--font-display);
+  --font-sans: var(--font-ui);
 }
 
 :focus { outline: none; }
