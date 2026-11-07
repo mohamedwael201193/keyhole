@@ -8,6 +8,7 @@ const V1: &str = "../keys/release/v1/keyhole_keys.wasm";
 const V2_0: &str = "../keys/release/v2/keyhole_keys.wasm";
 const V2_1: &str = "../keys/release/v2.1/keyhole_keys.wasm";
 const V2: &str = "../keys/release/v2.2/keyhole_keys.wasm";
+const V2_3: &str = "../keys/release/v2.3/keyhole_keys.wasm";
 const MAINNET_OWNER: &str = "keyhole-devmo.near";
 
 fn fixture() -> Vec<Value> {
@@ -245,5 +246,178 @@ async fn transfer_call_race_reaches_two_keys_on_v2_1() -> anyhow::Result<()> {
 #[tokio::test]
 async fn transfer_call_race_is_closed_on_v2_2() -> anyhow::Result<()> {
     assert_eq!(race(V2).await?, ("1".to_string(), "carol".to_string()), "inner transfer refused, k1 back, one key");
+    Ok(())
+}
+
+/// v2.3 (code only, on top of v2.2). The state is built on v2.2 the way the v2 tests build it:
+/// the 5 mainnet tokens, a key with approvals, a royalty of 7%, beats, one key per account.
+struct V22 { e: Env, root: Account, seller: Account, buyer: Account, market: Account, holder: Account }
+
+async fn mk(root: &Account, name: &str) -> Account {
+    root.create_subaccount(name).initial_balance(NearToken::from_near(5)).transact().await.unwrap().into_result().unwrap()
+}
+
+fn approval_count(t: &Value) -> usize {
+    t["approved_account_ids"].as_object().map(|m| m.len()).unwrap_or(0)
+}
+
+async fn v22_with_state() -> anyhow::Result<V22> {
+    let w = near_workspaces::sandbox().await?;
+    let root = w.root_account()?;
+    let c = w.dev_deploy(&std::fs::read(V2)?).await?;
+    let minter = root.create_subaccount("minter").initial_balance(NearToken::from_near(10)).transact().await?.into_result()?;
+    let id = c.id().to_string();
+    c.call("new").args_json(json!({"owner": id, "minter": minter.id(), "treasury": id, "royalty_bps": 500})).transact().await?.into_result()?;
+    let mut ids = vec![];
+    for (n, t) in fixture().into_iter().enumerate() {
+        let owner = if t["owner_id"] == MAINNET_OWNER { id.clone() } else { t["owner_id"].as_str().unwrap().to_string() };
+        minter.call(c.id(), "nft_mint")
+            .args_json(json!({"token_id": t["token_id"], "receiver_id": owner, "tier": (n % 3) + 1, "metadata": t["metadata"]}))
+            .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+        ids.push((t["token_id"].as_str().unwrap().to_string(), owner));
+    }
+    for _ in 0..2 {
+        minter.call(c.id(), "beat").args_json(json!({"token_ids": ids.iter().map(|x| x.0.clone()).collect::<Vec<_>>()})).transact().await?.into_result()?;
+    }
+    let (seller, buyer, market, holder) = (mk(&root, "seller").await, mk(&root, "buyer").await, mk(&root, "market").await, mk(&root, "holder").await);
+    let meta = fixture()[1]["metadata"].clone();
+    for (to, token, tier) in [(seller.id().clone(), "kseller", 2), (holder.id().clone(), "kholder", 3)] {
+        minter.call(c.id(), "nft_mint")
+            .args_json(json!({"token_id": token, "receiver_id": to, "tier": tier, "metadata": meta}))
+            .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+    }
+    for who in [market.id().clone(), buyer.id().clone()] {
+        seller.call(c.id(), "nft_approve").args_json(json!({"token_id": "kseller", "account_id": who}))
+            .deposit(NearToken::from_millinear(10)).transact().await?.into_result()?;
+    }
+    c.call("set_royalty").args_json(json!({"treasury": format!("royalty.{}", root.id()), "royalty_bps": 700}))
+        .deposit(NearToken::from_yoctonear(1)).transact().await?.into_result()?;
+    Ok(V22 { e: Env { c, minter, root: root.clone(), ids }, root, seller, buyer, market, holder })
+}
+
+/// Everything a holder or buyer can read, with approvals, payouts and holder state included.
+async fn full_snapshot(s: &V22) -> Value {
+    let c = &s.e.c;
+    let mut owners: Vec<String> = s.e.ids.iter().map(|(_, o)| o.clone()).collect();
+    owners.extend([s.seller.id(), s.buyer.id(), s.market.id(), s.holder.id()].iter().map(|a| a.to_string()));
+    let mut holders = vec![];
+    for o in &owners {
+        holders.push(json!({
+            "account": o,
+            "holder_tier": view(c, "holder_tier", json!({"account_id": o})).await,
+            "tokens": view(c, "nft_tokens_for_owner", json!({"account_id": o})).await,
+            "supply": view(c, "nft_supply_for_owner", json!({"account_id": o})).await,
+            "pending": view(c, "pending_return_count", json!({"account_id": o})).await,
+        }));
+    }
+    let toks = view(c, "nft_tokens", json!({})).await;
+    let mut tiers = vec![];
+    let mut payouts = vec![];
+    for t in toks.as_array().unwrap() {
+        let id = t["token_id"].as_str().unwrap();
+        tiers.push(view(c, "nft_tier", json!({"token_id": id})).await);
+        payouts.push(view(c, "nft_payout", json!({"token_id": id, "balance": "10000", "max_len_payout": 10})).await);
+    }
+    json!({
+        "tokens": toks, "tiers": tiers, "payouts": payouts, "holders": holders,
+        "config": view(c, "config", json!({})).await,
+        "metadata": view(c, "nft_metadata", json!({})).await,
+        "supply": view(c, "nft_total_supply", json!({})).await,
+    })
+}
+
+#[tokio::test]
+async fn v2_3_is_a_code_only_upgrade_of_v2_2() -> anyhow::Result<()> {
+    let s = v22_with_state().await?;
+    let before = full_snapshot(&s).await;
+    assert_eq!(before["supply"], "7");
+    assert_eq!(before["config"]["royalty_bps"], 700);
+    assert_eq!(before["config"]["beats"], "2");
+    let kseller = before["tokens"].as_array().unwrap().iter().find(|t| t["token_id"] == "kseller").unwrap().clone();
+    assert_eq!(approval_count(&kseller), 2, "two approvals before the upgrade");
+
+    // code only: the same account, live state, no migrate call
+    s.e.c.as_account().deploy(&std::fs::read(V2_3)?).await?.into_result()?;
+    assert_eq!(before, full_snapshot(&s).await, "every token, owner, tier, approval, payout, holder and config value is unchanged");
+
+    // NEP-330 reports 2.3.0 and the link; the standards list is unchanged
+    let src = view(&s.e.c, "contract_source_metadata", json!({})).await;
+    assert_eq!(src["version"], "2.3.0");
+    assert_eq!(src["link"], "https://github.com/mohamedwael201193/keyhole");
+    let stds: Vec<String> = src["standards"].as_array().unwrap().iter().map(|x| x["standard"].as_str().unwrap().to_string()).collect();
+    assert_eq!(stds, ["nep171", "nep177", "nep178", "nep181", "nep199", "nep330"], "standards list");
+
+    // migrate stays one-shot: a second call is refused and changes nothing
+    let r = s.e.c.call("migrate").max_gas().transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("already migrated"));
+    assert_eq!(full_snapshot(&s).await, before);
+    Ok(())
+}
+
+#[tokio::test]
+async fn v2_3_approval_cap_one_key_and_transfers_work_after_upgrade() -> anyhow::Result<()> {
+    let s = v22_with_state().await?;
+    s.e.c.as_account().deploy(&std::fs::read(V2_3)?).await?.into_result()?;
+    let c = s.e.c.id().clone();
+    let root_id = s.root.id().to_string();
+
+    // NEP-178 cap: kseller holds 2 approvals; 8 more make 10. The 11th is refused; re-approving one at the cap is fine.
+    for i in 0..8 {
+        s.seller.call(&c, "nft_approve").args_json(json!({"token_id": "kseller", "account_id": format!("cap{i}.{root_id}")}))
+            .deposit(NearToken::from_millinear(10)).transact().await?.into_result()?;
+    }
+    let t = view(&s.e.c, "nft_token", json!({"token_id": "kseller"})).await;
+    assert_eq!(approval_count(&t), 10, "at the cap");
+    let r = s.seller.call(&c, "nft_approve").args_json(json!({"token_id": "kseller", "account_id": format!("cap8.{root_id}")}))
+        .deposit(NearToken::from_millinear(10)).transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("approval cap reached"), "11th refused");
+    s.seller.call(&c, "nft_approve").args_json(json!({"token_id": "kseller", "account_id": s.market.id()}))
+        .deposit(NearToken::from_millinear(10)).transact().await?.into_result()?;
+    let t = view(&s.e.c, "nft_token", json!({"token_id": "kseller"})).await;
+    assert_eq!(approval_count(&t), 10, "re-approve keeps the count");
+    assert_eq!(t["approved_account_ids"][s.market.id().as_str()], 11, "fresh approval id");
+    s.seller.call(&c, "nft_revoke").args_json(json!({"token_id": "kseller", "account_id": format!("cap0.{root_id}")}))
+        .deposit(NearToken::from_yoctonear(1)).transact().await?.into_result()?;
+    s.seller.call(&c, "nft_approve").args_json(json!({"token_id": "kseller", "account_id": format!("cap8.{root_id}")}))
+        .deposit(NearToken::from_millinear(10)).transact().await?.into_result()?;
+    assert_eq!(view(&s.e.c, "nft_is_approved", json!({"token_id": "kseller", "approved_account_id": format!("cap8.{root_id}")})).await, json!(true));
+
+    // one key per account still holds: mint to a holder, transfer into a holder
+    let r = s.e.minter.call(&c, "nft_mint").args_json(json!({"token_id": "kdup", "receiver_id": s.holder.id(), "tier": 1, "metadata": fixture()[1]["metadata"]}))
+        .deposit(NearToken::from_millinear(100)).max_gas().transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("one key per account"));
+    let r = s.seller.call(&c, "nft_transfer").args_json(json!({"receiver_id": s.holder.id(), "token_id": "kseller"}))
+        .deposit(NearToken::from_yoctonear(1)).transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("one key per account"));
+
+    // plain transfer: the holder gives its key to the buyer, who holds none
+    s.holder.call(&c, "nft_transfer").args_json(json!({"receiver_id": s.buyer.id(), "token_id": "kholder"}))
+        .deposit(NearToken::from_yoctonear(1)).transact().await?.into_result()?;
+    assert_eq!(view(&s.e.c, "holder_tier", json!({"account_id": s.holder.id()})).await, Value::Null);
+    assert_eq!(view(&s.e.c, "holder_tier", json!({"account_id": s.buyer.id()})).await, json!(3));
+
+    // marketplace sale of kseller to the now-empty holder: approved market, payout 7% to the royalty account, rest to the seller
+    let price: u128 = NearToken::from_millinear(100).as_yoctonear();
+    let r = s.market.call(&c, "nft_transfer_payout")
+        .args_json(json!({"receiver_id": s.holder.id(), "token_id": "kseller", "balance": price.to_string(), "max_len_payout": 10}))
+        .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    let p: Value = r.json()?;
+    assert_eq!(p["payout"][format!("royalty.{root_id}")], (price * 7 / 100).to_string());
+    assert_eq!(p["payout"][s.seller.id().as_str()], (price - price * 7 / 100).to_string());
+    assert_eq!(view(&s.e.c, "nft_token", json!({"token_id": "kseller"})).await["owner_id"], s.holder.id().as_str());
+
+    // nft_transfer_call still works. The receiver (race-receiver fixture, holds no key) names an unknown token,
+    // so its inner transfer fails; its callback still returns the key to the holder.
+    let recv = s.root.create_subaccount("recv").initial_balance(NearToken::from_near(5)).transact().await?.into_result()?
+        .deploy(include_bytes!("fixtures/race_receiver.wasm")).await?.into_result()?;
+    let msg = json!({"keys": c.as_str(), "other_token": "none"}).to_string();
+    let _ = s.holder.call(&c, "nft_transfer_call").args_json(json!({"receiver_id": recv.id(), "token_id": "kseller", "msg": msg}))
+        .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    assert_eq!(view(&s.e.c, "nft_token", json!({"token_id": "kseller"})).await["owner_id"], s.holder.id().as_str(), "key returned");
+    assert_eq!(view(&s.e.c, "pending_return_count", json!({"account_id": s.holder.id()})).await, json!(0));
+
+    // the 5 mainnet tokens and the supply are untouched by all of this
+    assert_eq!(view(&s.e.c, "nft_total_supply", json!({})).await, "7");
+    for (t, o) in &s.e.ids { assert_eq!(view(&s.e.c, "nft_token", json!({"token_id": t})).await["owner_id"], o.as_str()); }
     Ok(())
 }
