@@ -12,8 +12,8 @@ A WASI (wasm32-wasip2) program that runs inside an OutLayer Intel TDX enclave. E
 | `mint` | NEP-413 | mints one Bronze key to your account (one per account, global daily quota). Metadata includes `media` (the key art URL on keyhole-seven.vercel.app) and `media_hash` (base64 sha256 of that file) |
 | `account` | NEP-413 + key | your own confidential account (an OutLayer custody wallet created inside the TEE for you; its API key never leaves the enclave). Optional `{chain, token, amount}` returns a cross-chain deposit address |
 | `balance` | NEP-413 + key | confidential balances |
-| `swap` / `copy` | NEP-413 + key | confidential swap `{token_in, token_out, amount_in, min_amount_out?}` within caps, logged privately |
-| `withdraw` | NEP-413 + key | `{chain, to, token, amount}` out of the confidential account, within caps. `to` must be the NEP-413 signer; any other account is `bad_params` and nothing is sent |
+| `swap` / `copy` | NEP-413 + key | confidential swap `{token_in, token_out, amount_in, min_amount_out?}` within caps, logged privately. `min_amount_out` absent: the floor is 1% below a fresh quote (next build). `0` is `bad_params` |
+| `withdraw` | NEP-413 + key (never a session token in the next build) | `{chain, to, token, amount}` out of the confidential account, within caps. `to` must be the NEP-413 signer; any other account is `bad_params` and nothing is sent |
 | `history` | NEP-413 or EIP-191 + key | private activity log, plus the full per-key provenance rows for the holder |
 | `provenance` | none | public owner chain and event hashes for `token_id`. No amounts. |
 | `lock` | NEP-413 or EIP-191 + key | `{hours: 1..168}` refuse swap and withdraw until then; cannot be lifted early; a transfer ends it |
@@ -30,7 +30,7 @@ A WASI (wasm32-wasip2) program that runs inside an OutLayer Intel TDX enclave. E
 6. Key tier from `holder_tier`, then `nft_tokens_for_owner` plus `nft_token.owner_id`. A keyed op whose signer is not that owner is `not_owner`. This is checked again immediately before a swap or withdraw is sent. If the key moved, the send is aborted and the funds stay in the custody account.
 7. Rate limits: per holder per minute (by tier) and global.
 8. Replay: `(account, nonce)` stored with atomic `set_if_absent`. A second use is refused (`replay`). Ownership is checked before the nonce is consumed, so a previous holder's unused signature is `not_owner`.
-9. Caps: the USD value comes from the solver quote, not from the caller. Per-trade and per-UTC-day caps per holder. Over-cap → `over_cap_per_tx` / `over_cap_daily`, and nothing is sent.
+9. Caps: the USD value comes from the solver quote, not from the caller. Per-trade and per-UTC-day caps per holder. Over-cap → `over_cap_per_tx` / `over_cap_daily`, and nothing is sent. A swap or withdraw refused before the send gives back its session budget and day spend (next build).
 
 `nft_mint` is attached with 20 Tgas (`MINT_GAS`). The minter balance is read first. If it cannot cover the deposit plus a fee buffer, the call is `minter_low_balance` and the mint quota is not spent.
 

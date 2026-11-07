@@ -15,6 +15,9 @@ impl Store for Mem {
         self.0.insert(k.into(), (cur + d).to_string().into_bytes());
         Ok(cur + d)
     }
+    fn list_prefix(&mut self, p: &str) -> Result<Vec<String>, Error> { Ok(self.0.keys().filter(|k| k.starts_with(p)).cloned().collect()) }
+    fn read(&mut self, k: &str) -> Result<Vec<u8>, Error> { Ok(self.0.get(k).cloned().unwrap_or_default()) }
+    fn remove(&mut self, k: &str) -> Result<(), Error> { self.0.remove(k); Ok(()) }
 }
 
 const RCP: &str = "keyhole";
@@ -751,3 +754,5 @@ mod p2fail;
 
 #[path = "session.rs"]
 mod session;
+#[path = "worker_hardening.rs"]
+mod worker_hardening;

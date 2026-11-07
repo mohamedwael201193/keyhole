@@ -29,7 +29,8 @@ describe("session client", () => {
   });
   it("scope matches the worker (lock, prove, mint, session never in scope)", () => {
     for (const op of ["lock", "prove", "mint", "session", "info"]) expect(inSession(op)).toBe(false);
-    for (const op of ["swap", "withdraw", "dashboard", "limits"]) expect(inSession(op)).toBe(true);
+    for (const op of ["swap", "dashboard", "limits"]) expect(inSession(op)).toBe(true);
+    expect(inSession("withdraw")).toBe(false); // a withdraw always takes a fresh wallet signature
     const rs = readFileSync("../tee/worker/src/lib.rs", "utf8");
     const m = rs.match(/SESSION_OPS: &\[&str\] = &\[([^\]]+)\]/);
     if (m) expect(m[1].match(/"(\w+)"/g)!.map((x) => x.slice(1, -1))).toEqual([...SESSION_OPS]);
@@ -42,7 +43,10 @@ describe("gateway relays session auth", () => {
   const body = (auth: unknown, op = "swap") => JSON.stringify({ op, auth });
   it("accepts a complete session auth", () => { expect(checkBody(body(sessionAuth(S, "swap"))).ok).toBe(true); });
   it("rejects a missing token", () => { const a = { ...sessionAuth(S, "swap"), token: "" }; expect(checkBody(body(a))).toMatchObject({ ok: false, code: "no_auth" }); });
-  it("rejects an op mismatch", () => { expect(checkBody(body(sessionAuth(S, "withdraw"), "swap"))).toMatchObject({ ok: false, code: "op_mismatch" }); });
+  it("rejects an op mismatch", () => { expect(checkBody(body(sessionAuth(S, "swap"), "balance"))).toMatchObject({ ok: false, code: "op_mismatch" }); });
+  it("refuses a withdraw made with a session token (fresh wallet signature only)", () => {
+    expect(checkBody(body(sessionAuth(S, "swap"), "withdraw"))).toMatchObject({ ok: false, status: 403, code: "session_scope" });
+  });
   it("allows the new ops", () => { for (const op of ["dashboard", "session", "session_revoke"]) expect(checkBody(body(sessionAuth(S, op as "dashboard"), op)).ok).toBe(true); });
 });
 

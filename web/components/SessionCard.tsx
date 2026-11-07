@@ -17,14 +17,14 @@ export function SessionCard({ tokenId }: { tokenId: string }) {
   if (live) {
     return (
       <div className="sess on" data-testid="session-on">
-        <span><SuccessCheck size={18} /> <b>Unlocked</b> · {minutesLeft(live)} min left · trades and withdrawals up to ${(live.max_usd_micro / 1e6).toFixed(2)} need no more wallet popups.</span>
+        <span><SuccessCheck size={18} /> <b>Unlocked</b> · {minutesLeft(live)} min left · trades up to ${(live.max_usd_micro / 1e6).toFixed(2)} need no more wallet popups. Withdrawals always ask your wallet.</span>
         <button className="btn b2" type="button" data-testid="session-revoke" onClick={() => void revokeSession()}>Lock now</button>
       </div>
     );
   }
   return (
     <div className="sess" data-testid="session-off">
-      <span><b>Unlock for 30 minutes.</b> Sign once; the enclave then accepts your reads, trades and withdrawals (to your own account, up to $5 in total) without another popup. Raising limits, locking and proofs still ask your wallet.</span>
+      <span><b>Unlock for 30 minutes.</b> Sign once; the enclave then accepts your reads and trades (up to $5 in total) without another popup. Withdrawals, raising limits, locking and proofs still ask your wallet.</span>
       <button className="btn b1" type="button" data-testid="session-unlock" disabled={busy} onClick={async () => { setBusy(true); setErr(null); const r = await startSession(tokenId); setBusy(false); if (!r.ok) setErr(r.code); }}>
         {busy ? <><Spinner label={via === "privy" ? "Signing securely" : "Waiting for your wallet"} /> {via === "privy" ? "Signing securely…" : "Confirm in your wallet…"}</> : "Unlock (1 signature)"}
       </button>

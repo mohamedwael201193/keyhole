@@ -17,6 +17,9 @@ impl Store for Mem {
         *e += d;
         Ok(*e)
     }
+    fn list_prefix(&mut self, p: &str) -> Result<Vec<String>, Error> { Ok(self.1.keys().filter(|k| k.starts_with(p)).cloned().collect()) }
+    fn read(&mut self, k: &str) -> Result<Vec<u8>, Error> { Ok(self.1.get(k).cloned().unwrap_or_default()) }
+    fn remove(&mut self, k: &str) -> Result<(), Error> { self.1.remove(k); Ok(()) }
 }
 fn code<T: std::fmt::Debug>(r: Result<T, Error>) -> &'static str { match r { Ok(_) => "ok", Err(e) => e.code } }
 

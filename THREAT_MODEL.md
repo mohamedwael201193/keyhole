@@ -20,6 +20,8 @@ Proof: `transfer_then_old_signature_is_not_owner` in [`tee/worker/src/tests.rs`]
 
 Proof: `replay_rejected`, `freshness_window`, and `eip191_recovers_the_fixed_vector_and_rejects_a_tamper` in [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs).
 
+Next published build (not live yet): nonce records are pruned 15 minutes after first use (`prune_nonces`, `NONCE_RETAIN_MS` in `tee/worker/src/lib.rs`). A signed request is accepted only within 5 minutes of chain time, and the record holds the chain time of first use, so a replay can pass the freshness check only until 10 minutes after that. Past that, the replay is `expired` whether or not the record exists. Proof: `replay_is_refused_inside_the_window_and_at_its_edge`, `a_pruned_nonce_fails_the_freshness_check_on_replay` in [`tee/worker/src/worker_hardening.rs`](tee/worker/src/worker_hardening.rs).
+
 ## Withdraw aimed at someone other than the signer
 
 `assert_withdraw_to` returns `bad_params` unless `params.to` equals the account that signed. The vault sets `to` to the connected account before it asks for the signature.

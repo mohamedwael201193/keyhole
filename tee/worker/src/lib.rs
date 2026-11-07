@@ -227,6 +227,12 @@ pub fn check_freshness(ts_ms: u64, chain_now_ms: u64) -> Result<(), Error> {
 pub trait Store {
     fn set_if_absent(&mut self, key: &str, val: &[u8]) -> Result<bool, Error>;
     fn incr(&mut self, key: &str, delta: i64) -> Result<i64, Error>;
+    /// Keys that start with `prefix`. Used only to find nonce records to prune.
+    fn list_prefix(&mut self, prefix: &str) -> Result<Vec<String>, Error>;
+    /// The record at `key`; empty when there is none.
+    fn read(&mut self, key: &str) -> Result<Vec<u8>, Error>;
+    /// Remove the record at `key`, if there is one.
+    fn remove(&mut self, key: &str) -> Result<(), Error>;
 }
 
 /// Per-holder namespace. Account ids cannot contain '/', so prefixes cannot collide.
@@ -234,10 +240,38 @@ pub fn hkey(account: &str, rest: &str) -> String {
     format!("h/{}/{}", account, rest)
 }
 
-/// Replay protection: each (account, nonce) is accepted once, ever.
+/// How long a nonce record is kept after its first use, in chain time.
+///
+/// Replay is refused in two ways. The nonce record refuses a second use, and a request whose signed
+/// `ts_ms` is more than MAX_SKEW_MS from chain time is refused as `expired`. A request is accepted only
+/// when `|ts_ms - chain_now| <= MAX_SKEW_MS`, and the record stores the chain time of the first use `t0`,
+/// so `ts_ms <= t0 + MAX_SKEW_MS`. A replay of the same request can pass the freshness check only while
+/// `chain_now <= ts_ms + MAX_SKEW_MS <= t0 + 2 * MAX_SKEW_MS`. Past that point the replay is refused as
+/// `expired` whether or not the record exists, so a record older than that may be deleted. One extra
+/// MAX_SKEW_MS is kept as a margin against chain-time jitter between reads.
+pub const NONCE_RETAIN_MS: u64 = 3 * MAX_SKEW_MS;
+
+/// Replay protection: each (account, nonce) is accepted once, ever, within NONCE_RETAIN_MS.
 pub fn consume_nonce(st: &mut dyn Store, account: &str, nonce: &[u8; 32], now_ms: u64) -> Result<(), Error> {
     let fresh = st.set_if_absent(&hkey(account, &format!("n/{}", hex::encode(nonce))), now_ms.to_string().as_bytes())?;
+    // Garbage collection only. A storage error here never changes the answer for this request.
+    let _ = prune_nonces(st, account, now_ms);
     if fresh { Ok(()) } else { Err(err("replay", "this signed request was already used; sign a new one")) }
+}
+
+/// Deletes this account's nonce records older than NONCE_RETAIN_MS. A record that cannot be read as a
+/// time is kept. Returns how many were removed. Only keys under `h/<account>/n/` are touched.
+pub fn prune_nonces(st: &mut dyn Store, account: &str, now_ms: u64) -> Result<u32, Error> {
+    let mut removed = 0;
+    for key in st.list_prefix(&hkey(account, "n/"))? {
+        let raw = st.read(&key)?;
+        let Some(first_used) = std::str::from_utf8(&raw).ok().and_then(|s| s.parse::<u64>().ok()) else { continue };
+        if first_used.saturating_add(NONCE_RETAIN_MS) < now_ms {
+            st.remove(&key)?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -584,9 +618,10 @@ pub fn sign_tx(sk: &[u8; 32], tx: &[u8]) -> Vec<u8> {
 pub const SESSION_MAX_MS: u64 = 30 * 60 * 1000;
 /// Largest spend cap a session may carry (USD micro); tier and holder caps still apply on top.
 pub const SESSION_MAX_USD_MICRO: u64 = 1_000_000_000;
-/// Ops a session may run. Withdraw pays only to the holder's own account; `limits` only lowers caps.
-/// Raising limits, lock, prove, mint and chain_sign always need a fresh wallet signature.
-pub const SESSION_OPS: &[&str] = &["status", "quote", "account", "balance", "swap", "copy", "withdraw", "history", "pnl", "limits", "dashboard", "session_revoke"];
+/// Ops a session may run. `limits` only lowers caps. Withdraw, raising limits, lock, prove, mint, chain_sign
+/// and the other custody moves always need a fresh wallet signature (NEP-413 or EIP-191), never a session token.
+/// A bearer token that can move funds out of the account would be a second key, so withdraw is not in scope.
+pub const SESSION_OPS: &[&str] = &["status", "quote", "account", "balance", "swap", "copy", "history", "pnl", "limits", "dashboard", "session_revoke"];
 
 /// `auth` for scheme "session".
 #[derive(Debug, Clone, Deserialize)]
@@ -669,6 +704,43 @@ pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) 
         return Err(err("session_cap", "this session's spend cap is used up; unlock a new session or sign in your wallet"));
     }
     Ok(now as u64)
+}
+
+/// A spend held against the session cap (when the call runs in a session) and the key's daily cap.
+/// Every refusal before the send gives it back at once (`charge_spend`). A send that failed for good
+/// gives it back in `settle`. A send still pending or under review keeps it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Charge {
+    day_key: String,
+    session_id: Option<String>,
+    usd: u64,
+}
+
+/// Hold `usd` for one swap or withdraw. Both counters move only when the whole hold succeeds: the
+/// session is charged first, and if the daily check then refuses, the session charge is undone too.
+pub fn charge_spend(st: &mut dyn Store, cap: &str, lim: &Limits, session: Option<(&str, &SessionGrant)>, usd: u64, now_ms: u64) -> Result<Charge, Error> {
+    if let Some((id, g)) = session { session_charge(st, id, g, usd)?; }
+    if let Err(e) = enforce_caps(st, cap, lim, usd, now_ms, true) {
+        if let Some((id, _)) = session { let _ = st.incr(&session_key(id, "spent"), -(usd as i64)); }
+        return Err(e);
+    }
+    Ok(Charge {
+        day_key: hkey(cap, &format!("spent/{}", now_ms / 86_400_000)),
+        session_id: session.map(|(id, _)| id.to_string()),
+        usd,
+    })
+}
+
+impl Charge {
+    /// Give the whole hold back: the session budget and the day's spend.
+    pub fn release(&self, st: &mut dyn Store) {
+        if let Some(id) = &self.session_id { let _ = st.incr(&session_key(id, "spent"), -(self.usd as i64)); }
+        let _ = st.incr(&self.day_key, -(self.usd as i64));
+    }
+    /// After the wallet answers: give the hold back only on a final failure (see `cap_refund_on`).
+    pub fn settle(&self, st: &mut dyn Store, status: &str) {
+        if cap_refund_on(status) { self.release(st); }
+    }
 }
 
 #[cfg(test)]
@@ -917,6 +989,49 @@ pub fn pick_token(named: Option<&str>, owned: u64) -> Result<(), Error> {
         return Err(err("bad_params", "this account holds several keys: sign params.token_id to choose one"));
     }
     Ok(())
+}
+
+/// Default bound on how far a swap may fill below the fresh quote, in basis points (100 = 1%). Used when
+/// the caller sends no `min_amount_out`. Same unit as 1Click `slippageTolerance`: near-intents
+/// rules/api-quote.md ("Max acceptable slippage in basis points ... Affects minAmountOut"), and
+/// rules/api-confidential-swaps.md (a confidential swap is a normal quote with `confidentiality` set).
+pub const DEFAULT_MAX_SLIPPAGE_BPS: u64 = 100;
+/// Ceiling for the default bound. Matches the quote op's `slippage_bps` limit.
+pub const MAX_SLIPPAGE_BPS: u64 = 500;
+const _: () = assert!(DEFAULT_MAX_SLIPPAGE_BPS <= MAX_SLIPPAGE_BPS && MAX_SLIPPAGE_BPS <= 10_000);
+
+/// A client-sent `min_amount_out`, in destination base units. Zero or non-integer is refused: a zero floor
+/// would let the swap fill at any price.
+pub fn client_min_out(v: &serde_json::Value) -> Result<u128, Error> {
+    let n: Option<u128> = match v {
+        serde_json::Value::String(s) if !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) => s.parse().ok(),
+        serde_json::Value::Number(n) => n.as_u64().map(u128::from),
+        _ => None,
+    };
+    match n {
+        Some(0) => Err(err("bad_params", "min_amount_out must be above 0")),
+        Some(m) => Ok(m),
+        None => Err(err("bad_params", "min_amount_out must be an integer string in base units")),
+    }
+}
+
+/// The `min_amount_out` field as sent: absent or null means none, anything else must pass `client_min_out`.
+pub fn client_min_out_field(v: Option<&serde_json::Value>) -> Result<Option<u128>, Error> {
+    match v {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(x) => client_min_out(x).map(Some),
+    }
+}
+
+/// The floor for a swap with no client `min_amount_out`: the fresh quote's output less DEFAULT_MAX_SLIPPAGE_BPS,
+/// or the quote's own `minAmountOut` when that is higher (a tighter floor). Refused when the floor is zero.
+pub fn derive_min_out(quoted_out: u128, api_min: Option<u128>) -> Result<u128, Error> {
+    let by_bps = quoted_out.saturating_mul((10_000 - DEFAULT_MAX_SLIPPAGE_BPS) as u128) / 10_000;
+    let floor = by_bps.max(api_min.unwrap_or(0));
+    if floor == 0 {
+        return Err(err("upstream", "the quote has no output to bound slippage against"));
+    }
+    Ok(floor)
 }
 
 /// The executable quote may not be priced above the dry quote the caps were checked against.

@@ -29,6 +29,21 @@ mod host {
             if !e.is_empty() { return Err(err("storage", e)); }
             Ok(v)
         }
+        fn list_prefix(&mut self, p: &str) -> Result<Vec<String>, Error> {
+            let (j, e) = storage::list_keys(p);
+            if !e.is_empty() { return Err(err("storage", e)); }
+            serde_json::from_str(&j).map_err(|_| err("storage", "key list is not JSON"))
+        }
+        fn read(&mut self, k: &str) -> Result<Vec<u8>, Error> {
+            let (v, e) = storage::get(k);
+            if !e.is_empty() && !e.to_lowercase().contains("not found") { return Err(err("storage", e)); }
+            Ok(v)
+        }
+        fn remove(&mut self, k: &str) -> Result<(), Error> {
+            let (_, e) = storage::delete(k);
+            if !e.is_empty() { return Err(err("storage", e)); }
+            Ok(())
+        }
     }
 
     impl Kv for Host {
@@ -468,6 +483,15 @@ mod host {
         Ok(json!({"ok": true, "op": "balance", "account": c.account, "confidential_id": id, "balances": j.get("balances").cloned().unwrap_or(json!([]))}))
     }
 
+    /// Fresh dry quote `tin` -> `tout` for `amt`, priced at DEFAULT_MAX_SLIPPAGE_BPS. Same request shape as
+    /// `usd_of`. Its `quote.amountOut` and `quote.minAmountOut` (near-intents rules/api-quote.md, "Response
+    /// Fields") bound the fill when the caller sends no `min_amount_out`.
+    fn swap_quote(tin: &str, tout: &str, amt: &str, id: &str, now_ms: u64) -> Result<Value, Error> {
+        oneclick_quote(&json!({"dry": true, "swapType": "EXACT_INPUT", "slippageTolerance": DEFAULT_MAX_SLIPPAGE_BPS,
+            "originAsset": tin, "destinationAsset": tout, "amount": amt, "depositType": "INTENTS", "refundTo": id,
+            "refundType": "INTENTS", "recipient": id, "recipientType": "INTENTS", "deadline": iso(now_ms + 3_600_000)}))
+    }
+
     fn op_swap(input: &Value, op: &str) -> Result<Value, Error> {
         let c = authenticate(input, op, true)?;
         let p = &c.req.params;
@@ -476,28 +500,40 @@ mod host {
         let tout = s(p, "token_out").ok_or_else(|| err("bad_params", "missing params.token_out"))?;
         if tin == tout { return Err(err("bad_params", "token_in and token_out must differ")); }
         let amt = digits(p, "amount_in")?;
+        // A client floor is checked before anything is priced or held. Zero is refused.
+        let client_min = client_min_out_field(p.get("min_amount_out"))?;
         let (key, id) = c.wallet()?;
         let usd = usd_of(&tin, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
-        if let Some((id, g)) = &c.session { session_charge(&mut Host, id, g, usd)?; }
-        enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
-        let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
+        // The floor the wallet must respect. Without one from the caller, it comes from a fresh quote.
+        let min_out = match client_min {
+            Some(m) => m,
+            None => {
+                let q = swap_quote(&tin, &tout, &amt, &id, c.now_ms)?;
+                let quoted = q.pointer("/quote/amountOut").and_then(|v| v.as_str()).and_then(|x| x.parse::<u128>().ok()).unwrap_or(0);
+                let api_min = q.pointer("/quote/minAmountOut").and_then(|v| v.as_str()).and_then(|x| x.parse::<u128>().ok());
+                derive_min_out(quoted, api_min)?
+            }
+        };
+        // Everything below holds the spend. Each refusal before the send gives it back (charge_spend and release).
+        let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
         if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
-            let _ = Host.incr(&day_key, -(usd as i64));
+            charge.release(&mut Host);
             return Err(e);
         }
-        let mut body = json!({"token_in": tin, "token_out": tout, "amount_in": amt});
-        if let Some(m) = s(p, "min_amount_out") { body["min_amount_out"] = json!(m); }
-        let r = wallet_op(&key, "/wallet/v1/confidential/swap", body);
-        let r = match r { Ok(r) => r, Err(e) => { let _ = Host.incr(&day_key, -(usd as i64)); return Err(e); } };
+        let body = json!({"token_in": tin, "token_out": tout, "amount_in": amt, "min_amount_out": min_out.to_string()});
+        let r = match wallet_op(&key, "/wallet/v1/confidential/swap", body) {
+            Ok(r) => r,
+            Err(e) => { charge.release(&mut Host); return Err(e); }
+        };
         let status = s(&r, "status").unwrap_or_default();
-        if cap_refund_on(&status) { let _ = Host.incr(&day_key, -(usd as i64)); }
+        charge.settle(&mut Host, &status);
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
             "usd_in_micro": usd, "status": status, "source": p.get("source")}));
         if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}")); }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
-            "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
+            "min_amount_out": min_out.to_string(), "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
     }
 
     fn op_withdraw(input: &Value) -> Result<Value, Error> {
@@ -514,17 +550,16 @@ mod host {
         let (key, id) = c.wallet()?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
-        if let Some((id, g)) = &c.session { session_charge(&mut Host, id, g, usd)?; }
-        enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, true)?;
-        let day_key = hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000));
+        // Holds the spend; every refusal before the send gives it back (see charge_spend).
+        let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
         if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
-            let _ = Host.incr(&day_key, -(usd as i64));
+            charge.release(&mut Host);
             return Err(e);
         }
         let r = wallet_op(&key, "/wallet/v1/confidential/withdraw", json!({"chain": chain, "to": to, "amount": amt, "token": token}));
-        let r = match r { Ok(r) => r, Err(e) => { let _ = Host.incr(&day_key, -(usd as i64)); return Err(e); } };
+        let r = match r { Ok(r) => r, Err(e) => { charge.release(&mut Host); return Err(e); } };
         let raw_status = s(&r, "status").unwrap_or_default();
-        if cap_refund_on(&raw_status) { let _ = Host.incr(&day_key, -(usd as i64)); }
+        charge.settle(&mut Host, &raw_status);
         // Re-read ownership after the move (P1-4a): if the key changed hands meanwhile, report needs_review.
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
         let status = after_move_status(&raw_status, still);

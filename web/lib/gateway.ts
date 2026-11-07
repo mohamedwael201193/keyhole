@@ -24,6 +24,8 @@ export function checkBody(raw: string): GatewayCheck {
       ? ["scheme", "account_id", "address", "signature", "nonce", "message", "recipient"]
       : ["account_id", "public_key", "signature", "nonce", "message", "recipient"];
     if (!fields.every((f) => typeof a[f] === "string" && (a[f] as string).length > 0)) return { ok: false, status: 400, code: "no_auth" };
+    // Withdraw needs a fresh wallet signature. The enclave refuses a session token for it too; this is the early refusal.
+    if (op === "withdraw" && a.scheme === "session") return { ok: false, status: 403, code: "session_scope" };
     try { if ((JSON.parse(a.message as string) as { op?: string }).op !== op) return { ok: false, status: 400, code: "op_mismatch" }; }
     catch { return { ok: false, status: 400, code: "bad_message" }; }
   }

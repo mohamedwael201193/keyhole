@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import bs58 from "bs58";
-import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, payloadHash, toB64, utf8ToHex, verifyAuth, NEP413_TAG } from "@/lib/nep413";
+import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, payloadHash, signedCallbackUrl, toB64, utf8ToHex, verifyAuth, NEP413_TAG } from "@/lib/nep413";
 
 // Reference construction copied from scripts/sign-and-call.js (accepted by the TEE on mainnet).
 function reference(message: string, nonce: Buffer, recipient: string) {
@@ -48,5 +48,35 @@ describe("NEP-413", () => {
     expect(utf8ToHex("A")).toBe("0x41");
     expect(EIP191_ENCLAVE_LIVE).toBe(true);
   });
+  it("callbackUrl is Option<String> in the payload: none is 0x00, a string is 0x01 then borsh(string)", () => {
+    const nonce = freshNonce(); const m = buildMessage("swap", "alice.near", {});
+    const sb = (x: string) => { const b = Buffer.from(x); const l = Buffer.alloc(4); l.writeUInt32LE(b.length); return Buffer.concat([l, b]); };
+    const tag = Buffer.alloc(4); tag.writeUInt32LE(2147484061);
+    const cb = "https://app.example/cb?x=1";
+    const want = createHash("sha256").update(Buffer.concat([tag, sb(m), Buffer.from(nonce), sb("keyhole"), Buffer.from([1]), sb(cb)])).digest();
+    expect(Buffer.from(payloadHash(m, nonce, "keyhole", cb))).toEqual(want);
+    expect(Buffer.from(payloadHash(m, nonce, "keyhole"))).toEqual(reference(m, Buffer.from(nonce), "keyhole"));
+    expect(Buffer.from(payloadHash(m, nonce, "keyhole", ""))).not.toEqual(Buffer.from(payloadHash(m, nonce, "keyhole")));
+  });
+  it("verifyAuth and signedCallbackUrl follow what the wallet actually signed", () => {
+    const sk = ed25519.utils.randomSecretKey(); const pk = ed25519.getPublicKey(sk);
+    const nonce = freshNonce(); const message = buildMessage("swap", "bob.near");
+    const cb = "https://app.example/vault";
+    const sigWith = toB64(ed25519.sign(payloadHash(message, nonce, "keyhole", cb), sk));
+    const sigWithout = toB64(ed25519.sign(payloadHash(message, nonce, "keyhole"), sk));
+    const base = { account_id: "bob.near", public_key: "ed25519:" + bs58.encode(pk), nonce: toB64(nonce), message, recipient: "keyhole" };
+    // Wallet signed the callback: verifies only with it.
+    expect(verifyAuth({ ...base, signature: sigWith, callback_url: cb })).toBe(true);
+    expect(verifyAuth({ ...base, signature: sigWith })).toBe(false);
+    expect(verifyAuth({ ...base, signature: sigWith, callback_url: cb + "&evil=1" })).toBe(false);
+    expect(signedCallbackUrl({ ...base, signature: sigWith }, cb)).toBe(cb);
+    // Wallet dropped the callback: the callback must not be sent.
+    expect(verifyAuth({ ...base, signature: sigWithout })).toBe(true);
+    expect(signedCallbackUrl({ ...base, signature: sigWithout }, cb)).toBeUndefined();
+    // Neither matches: nothing is attached.
+    expect(signedCallbackUrl({ ...base, signature: toB64(new Uint8Array(64)) }, cb)).toBeUndefined();
+    // A malformed key (for example from a redirect URL) attaches nothing and does not throw.
+    expect(signedCallbackUrl({ ...base, public_key: "ed25519:!!!", signature: sigWith }, cb)).toBeUndefined();
+    expect(signedCallbackUrl({ ...base, public_key: "", signature: sigWith }, cb)).toBeUndefined();
+  });
 });
-

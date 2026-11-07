@@ -40,6 +40,9 @@ impl Store for Mem {
         let n = std::str::from_utf8(&self.0.get(k).cloned().unwrap_or_default()).ok().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0) + d;
         self.0.insert(k.into(), n.to_string().into_bytes()); Ok(n)
     }
+    fn list_prefix(&mut self, p: &str) -> Result<Vec<String>, Error> { Ok(self.0.keys().filter(|k| k.starts_with(p)).cloned().collect()) }
+    fn read(&mut self, k: &str) -> Result<Vec<u8>, Error> { Ok(self.0.get(k).cloned().unwrap_or_default()) }
+    fn remove(&mut self, k: &str) -> Result<(), Error> { self.0.remove(k); Ok(()) }
 }
 #[test] fn chain_sign_daily_count_stops_at_the_limit() {
     let mut st = Mem::default();

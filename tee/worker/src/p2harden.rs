@@ -5,6 +5,9 @@ struct Mem(HashMap<String, i64>, HashMap<String, Vec<u8>>);
 impl Store for Mem {
     fn set_if_absent(&mut self, k: &str, v: &[u8]) -> Result<bool, Error> { if self.1.contains_key(k) { return Ok(false); } self.1.insert(k.into(), v.to_vec()); Ok(true) }
     fn incr(&mut self, k: &str, d: i64) -> Result<i64, Error> { let e = self.0.entry(k.into()).or_insert(0); *e += d; Ok(*e) }
+    fn list_prefix(&mut self, p: &str) -> Result<Vec<String>, Error> { Ok(self.1.keys().filter(|k| k.starts_with(p)).cloned().collect()) }
+    fn read(&mut self, k: &str) -> Result<Vec<u8>, Error> { Ok(self.1.get(k).cloned().unwrap_or_default()) }
+    fn remove(&mut self, k: &str) -> Result<(), Error> { self.1.remove(k); Ok(()) }
 }
 fn lim() -> Limits { limits_for_tier(1).unwrap() }
 

@@ -12,8 +12,11 @@ import { NEP413_RECIPIENT } from "./config";
 export const SESSION_TTL_MS = 30 * 60 * 1000;
 /** Default spend cap a session asks for: $5. Tier and holder caps still apply inside the enclave. */
 export const SESSION_CAP_USD_MICRO = 5_000_000;
-/** Must match SESSION_OPS in tee/worker/src/lib.rs. */
-export const SESSION_OPS = ["status", "quote", "account", "balance", "swap", "copy", "withdraw", "history", "pnl", "limits", "dashboard", "session_revoke"] as const;
+/**
+ * Must match SESSION_OPS in tee/worker/src/lib.rs. Withdraw is not here: a withdraw always asks the wallet for a
+ * fresh NEP-413 or EIP-191 signature, so a stolen session token cannot move funds out of the account.
+ */
+export const SESSION_OPS = ["status", "quote", "account", "balance", "swap", "copy", "history", "pnl", "limits", "dashboard", "session_revoke"] as const;
 export type SessionOp = (typeof SESSION_OPS)[number];
 export const inSession = (op: string): op is SessionOp => (SESSION_OPS as readonly string[]).includes(op);
 
