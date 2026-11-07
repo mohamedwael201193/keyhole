@@ -80,18 +80,21 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                   testid="mint-result"
                 >
                   {typeof o.tx === "string" && <MintTxSave hash={o.tx} />}
-                  <Button href="/vault" size="lg" testid="mint-open-vault">{t("mint.openVault")}</Button>
+                  <div className="mint-next">
+                    <Button href="/vault" size="lg" testid="mint-open-vault">{t("mint.openVault")}</Button>
+                    <Button href="/swap" variant="secondary" size="lg" testid="mint-swap">{t("mint.swap")}</Button>
+                  </div>
                 </TxResult>
               </div>
-              <p className="mint-caps" style={{ fontSize: 13, color: "var(--mu)", marginTop: 18 }} data-testid="minted">
+              <p className="mint-caps" data-testid="minted">
                 {t("mint.capsLine", { finish: t(`finish.${idn.finish}`), tx: fmtUsd(idn.perTx * 1e6), day: fmtUsd(idn.daily * 1e6) })}
               </p>
             </>
           ) : (
             <>
               <h1>{t("mint.title")}</h1>
-              <p className="lead" style={{ marginTop: 18 }}>{t("mint.sub")}</p>
-              <div className="tg" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 22 }}>
+              <p className="lead mint-lead">{t("mint.sub")}</p>
+              <div className="tg mint-tg">
                 {SHOWN.map((x) => (
                   <div className={`tc${x.k === "Bronze" ? " is-mint" : ""}`} key={x.k}>
                     <FoilCard finish={x.k}>
@@ -117,7 +120,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               {online === false && <OfflineState />}
               {online !== false && !accountId && (
                 <EmptyState title={t("empty.mintTitle")} body={t("empty.mintBody")} testid="mint-empty">
-                  <button className="btn b1" onClick={connect}>{t("nav.connect")}</button>
+                  <Button onClick={connect} testid="mint-connect">{t("nav.connect")}</Button>
                 </EmptyState>
               )}
               {online !== false && accountId && (

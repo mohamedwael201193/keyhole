@@ -22,6 +22,10 @@ export function GalleryView({ tokens, tiers, mine = false }: { tokens: Token[]; 
         <Link href="/gallery" className={`gal-tab${mine ? "" : " on"}`} aria-current={mine ? undefined : "page"} data-testid="gallery-filter-all">All keys</Link>
         <Link href="/gallery?mine=1" className={`gal-tab${mine ? " on" : ""}`} aria-current={mine ? "page" : undefined} data-testid="gallery-filter-mine">My keys</Link>
       </nav>
+      <div className="gal-bar">
+        <p className="note gal-count-top">{mine ? "Keys this wallet holds, read from NEAR mainnet." : "Every key minted on NEAR mainnet."}</p>
+        <Button href="/mint" testid="keys-mint">Mint a key</Button>
+      </div>
 
       <details className="traitsx" data-testid="traits-explain">
         <summary>What the marks on a key mean</summary>
@@ -57,8 +61,8 @@ function MineKeys({ accountId, connect }: { accountId: string | null; connect: (
 
   if (!accountId) {
     return (
-      <EmptyState title="Connect to see your keys" body="Your keys are read from NEAR mainnet for the account you connect. Connecting signs nothing." testid="gallery-mine-connect">
-        <Button onClick={connect} testid="gallery-connect">Connect wallet</Button>
+      <EmptyState title="Sign in to see your keys" body="Your keys are read from NEAR mainnet for the account you sign in with. Reading them needs no signature." testid="gallery-mine-connect">
+        <Button onClick={connect} testid="gallery-connect">Sign in</Button>
       </EmptyState>
     );
   }
@@ -74,7 +78,7 @@ function MineKeys({ accountId, connect }: { accountId: string | null; connect: (
   }
   if (mk.tokens.length === 0) {
     return (
-      <EmptyState title="No key in this wallet yet" body="A key is the account. Minting is free and takes one signature; only Bronze is mintable today." testid="gallery-mine-empty">
+      <EmptyState title="No key in this wallet yet" body="A key is the account. Minting is free and takes one signature. Only Bronze is mintable today." testid="gallery-mine-empty">
         <Button href="/mint" testid="gallery-mine-mint">Mint a key</Button>
       </EmptyState>
     );
