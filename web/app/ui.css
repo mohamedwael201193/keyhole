@@ -61,8 +61,8 @@
 .uterm:hover .uterm-t, .uterm.open .uterm-t, .uterm-b:focus-visible + .uterm-t { opacity: 1; transform: translateX(-50%); }
 
 /* Reveal */
-.ureveal { opacity: 0; transform: translateY(14px); transition: opacity .5s var(--ease-out, ease), transform .5s var(--ease-out, ease); }
-.ureveal.in { opacity: 1; transform: none; }
+.ureveal { transition: opacity .5s var(--ease-out, ease), transform .5s var(--ease-out, ease); }
+.ureveal.pending { opacity: 0; transform: translateY(14px); }
 @media (prefers-reduced-motion: reduce) { .ureveal { opacity: 1; transform: none; transition: none; } .spin { animation-duration: 2.4s; } .sk span { animation: none; } .unum { transition: none; } }
 
 /* Order card (settle) */
