@@ -397,7 +397,9 @@ test("a connected wallet with no key cannot open the vault", async ({ page }) =>
 
 test("music is off by default and toggles", async ({ page }) => {
   await page.goto("/");
+  // Phones: the burger list holds the toggle. Desktop: it lives in the top bar's More menu.
   if ((page.viewportSize()?.width ?? 1000) < 640) await page.getByRole("button", { name: "Menu" }).click();
+  else await page.getByTestId("nav-more").click();
   const b = page.getByRole("button", { name: /Sound/ }).first();
   await expect(b).toHaveAttribute("aria-pressed", "false");
 });
@@ -562,7 +564,13 @@ for (const p of ["/vault", "/mint"]) {
 
 test("judge path links every evidence call to /verify and is reachable from the top bar", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Judge path" }).click();
+  // Desktop: a top-bar link. Phones: the same link in the burger list.
+  if ((page.viewportSize()?.width ?? 1000) <= 860) {
+    await page.getByRole("button", { name: "Menu" }).click();
+    await page.locator("#mnav").getByRole("link", { name: "Judge path" }).click();
+  } else {
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Judge path" }).click();
+  }
   await expect(page.getByTestId("judge-page")).toBeVisible();
   const links = page.locator('a[href^="/verify?call="]');
   expect(await links.count()).toBeGreaterThanOrEqual(12);
