@@ -33,21 +33,21 @@ describe("app routes", () => {
 });
 
 describe("sidebar items", () => {
-  it("Workspace lists Overview, My keys, Quotes & swaps, Vault, Mint and Activity, in that order", () => {
+  it("Workspace lists Overview, Mint, Vault, Trade, My keys and Activity, in that order", () => {
     const ws = APP_NAV.find((g) => g.title === "Workspace")!;
     expect(ws.items.map((i) => [i.label, i.href])).toEqual([
       ["Overview", "/dashboard"],
-      ["My keys", "/gallery?mine=1"],
-      ["Quotes & swaps", "/settle"],
-      ["Vault", "/vault"],
       ["Mint", "/mint"],
+      ["Vault", "/vault"],
+      ["Trade", "/settle"],
+      ["My keys", "/gallery?mine=1"],
       ["Activity", "/dashboard#activity"],
     ]);
   });
 
-  it("Prove it lists Judge and Verify", () => {
-    const pi = APP_NAV.find((g) => g.title === "Prove it")!;
-    expect(pi.items.map((i) => [i.label, i.href])).toEqual([["Judge", "/judge"], ["Verify", "/verify"]]);
+  it("Secondary lists Judge path and Verify", () => {
+    const sec = APP_NAV.find((g) => g.title === "Secondary")!;
+    expect(sec.items.map((i) => [i.label, i.href])).toEqual([["Judge path", "/judge"], ["Verify", "/verify"]]);
   });
 
   it("every link points at a real route", () => {
@@ -101,7 +101,7 @@ describe("AppNav markup", () => {
     const m = html("/dashboard");
     expect(m).toContain('aria-label="App navigation"');
     for (const i of APP_NAV.flatMap((g) => g.items)) expect(m).toContain(`data-testid="app-nav-${i.id}"`);
-    expect(m).toContain("Prove it");
+    expect(m).toContain("Secondary");
   });
 
   it("the activity link is current only with its hash", () => {
@@ -175,8 +175,9 @@ describe("root layout wiring", () => {
   it("the public Nav still owns the account control and keeps its test ids", () => {
     const nav = src("../components/Nav.tsx");
     expect(nav).toContain("<AccountControl />");
-    expect(nav).toContain('data-testid="nav-more"');
-    expect(nav).toContain('data-testid="more-menu"');
+    expect(nav).toContain('testid="open-app"');
+    expect(nav).toContain('"/dashboard"');
+    expect(nav).not.toContain('data-testid="nav-more"');
     const acct = src("../components/AccountControl.tsx");
     expect(acct).toContain('data-testid="connect"');
     expect(acct).toContain('data-testid="account"');

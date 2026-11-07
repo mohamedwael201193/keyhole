@@ -159,20 +159,6 @@ body { color: #1F2A2C; }
   box-shadow: 0 10px 26px -8px rgba(23,74,78,.6), 0 0 0 4px rgba(242,194,91,.18); }
 .nav .cw:not(:disabled) { min-height: 40px; font-size: 15px; }
 /* Top bar: five links, then one disclosure for the rest (components/Nav.tsx) */
-.more { position: relative; display: flex; align-items: center; }
-.more-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; background: none; border: 0; font: inherit; font-weight: 600; font-size: 16px; color: var(--ink); cursor: pointer; }
-.more-btn::after { content: ""; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s; }
-.more-btn[aria-expanded="true"]::after { transform: translateY(2px) rotate(225deg); }
-.more-btn.on { color: var(--teal); box-shadow: inset 0 -2px 0 var(--teal); }
-.nav.dark .more-btn { color: #F1EBDF; }
-.nav.dark .more-btn.on { color: #F6D9A8; box-shadow: inset 0 -2px 0 #F6D9A8; }
-.more-menu { position: absolute; top: calc(100% + 10px); right: 0; z-index: 70; min-width: 232px; margin: 0; padding: 8px; list-style: none; display: flex; flex-direction: column; gap: 2px; background: var(--sf); border: 1px solid var(--kh-edge); border-radius: 16px; box-shadow: var(--kh-shadow-hi); }
-.more-menu[hidden] { display: none; }
-.nav .links .more-menu a, .nav.dark .links .more-menu a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: var(--ink); text-decoration: none; font-weight: 600; }
-.nav .links .more-menu a:hover, .nav .links .more-menu a:focus-visible { background: #1F4B4F14; }
-.nav .links .more-menu a[aria-current="page"] { color: var(--teal); }
-.more-menu .more-music { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--ln); }
-.more-menu .more-music .music { width: 40px; height: 40px; }
 /* Score / summary panels: solid, confident */
 .ver .tally { background: #174A4E; border: 0; color: #fff; box-shadow: var(--kh-shadow-hi); }
 .ver .tally .tn, .ver .tally b { color: #fff; }
