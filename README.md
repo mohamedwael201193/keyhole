@@ -40,14 +40,14 @@ Live site: [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app).
 5. Click **Read balance** and approve the signature. — The total becomes a USD amount, or the token amounts if nothing is priced. A held asset with no price stays in the total as "+ … unpriced". **Assets · N** lists one row per asset: symbol, name, the amount on one line, and the USD value under it when a price exists. The note says "Read from the enclave with your signature."
 6. Open **2 · Trade**. The form lists USDC and wNEAR and the line "Bronze · $1.00 per trade · $5.00 per day" (Silver and Gold caps replace this after a higher tier is read). Click **Get attested quote**. — The receipt shows **You give**, **You get**, **Price**, and **Cap**. Click **Sign & trade** and approve. — The result card starts with "Traded", names the amount out, and includes a status and **Verify**.
 7. Open **3 · Withdraw**. — The note names the account you connected. Enter an amount and click **Sign & withdraw**. — The result card starts with "Withdrawn" and names that account. The worker refuses any other destination.
-8. Open the result's **Verify** link, or open [https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15](https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15). — The page shows **Intel TDX quote present**, **Worker code hash matches**, **Published on NEAR**, and the result **The enclave is genuine.** The verdict element has `data-match="true"`.
+8. Open the result's **Verify** link, or open [https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15](https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751). — The page shows **Intel TDX quote present**, **Worker code hash matches**, **Published on NEAR**, and the result **The enclave is genuine.** The verdict element has `data-match="true"`.
 
 A declined signature shows "You declined the signature." Starting another action clears that message. A redirect wallet that returns with a completed trade or withdraw shows that result card and does not keep the decline.
 
 ## Architecture
 
 - **Contract** [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 NFT with NEP-178 approvals and NEP-199 royalties. `nft_mint` accepts only the enclave-held minter, and the contract holds every account to one key. The worker reads `holder_tier(account_id)` on each call.
-- **OutLayer TEE worker.** Rust wasm in an Intel TDX enclave. The live build sha256 begins `ebeb6a34` (full hash in [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256)). It checks the signature, the nonce, a 5-minute window, the tier caps, and the rate limit. For a NEAR signature it also checks that the public key is a full-access key. It sends confidential quotes and swaps through NEAR Intents.
+- **OutLayer TEE worker.** Rust wasm in an Intel TDX enclave. The live build sha256 begins `a985fd87` (full hash in [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256)). It checks the signature, the nonce, a 5-minute window, the tier caps, and the rate limit. For a NEAR signature it also checks that the public key is a full-access key. It sends confidential quotes and swaps through NEAR Intents.
 - **Website.** Next.js. The browser posts `{op, auth}` to `/api/worker`. The server adds the OutLayer payment key and does not log the body. The browser never holds that key.
 
 ## Run it locally
@@ -81,7 +81,7 @@ npx playwright test
 
 ## Invariants
 
-These are properties of the worker source in this repository. The enclave serving the site is build `ebeb6a34`, built from this source, and every property in this section holds in that build. A property added to source after the live build is not live until a new wasm is published. The checks are in [`THREAT_MODEL.md`](THREAT_MODEL.md).
+These are properties of the worker source in this repository. The enclave serving the site is build `a985fd87`, built from this source, and every property in this section holds in that build. A property added to source after the live build is not live until a new wasm is published. The checks are in [`THREAT_MODEL.md`](THREAT_MODEL.md).
 
 - **Who can authorize.** `account`, `balance`, `quote`, `swap`, `withdraw`, `history`, `lock`, and `prove` run only after the signature verifies and the signer owns the key on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near) (`nft_token.owner_id`, a live view on that call). A wallet that no longer holds the key gets `not_owner`.
 - **Who owns the money.** The custody wallet is bound to the `token_id`. A transfer moves it to the new owner. Wallets that earlier builds created per NEAR account move to that account's key once, on its first call (`custody_lookup` in [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs)). Caps are per key, so moving a key between your own accounts does not reset the day's spend.
@@ -89,7 +89,7 @@ These are properties of the worker source in this repository. The enclave servin
 - **Holder limits.** A holder can set caps under the tier caps (`limits`). A cut applies at once; a raise waits 24 hours. A new owner cannot withdraw for 10 minutes after the enclave records the transfer; trades inside the account still run. Details in [`THREAT_MODEL.md`](THREAT_MODEL.md).
 - **Who can be paid.** `assert_withdraw_to` refuses a withdraw whose `to` is not the account that signed the request. The vault also sets `to` to the connected account. Tier caps still apply: Bronze is $1 per trade and $5 per UTC day, so a larger balance cannot all leave in one day.
 - **What is public.** The NEAR account does not store the confidential balances. The worker returns them in the JSON reply to the holder who just signed. That reply is plaintext to the holder. The gateway does not log the body. The website's 60-second RPC cache is for public contract reads only; `nft_tokens_for_owner` is not cached.
-- **Replay and expiry.** Each `(account, nonce)` is stored once. A second use is `replay`. `ts_ms` must be within five minutes of the final block time or the answer is `expired`. The same nonce store is used after a NEP-413 check and after an EIP-191 check. Records are deleted 15 minutes after first use (`NONCE_RETAIN_MS`, three times the five-minute window); a replay after that is `expired`. The previous build `94c355ff` kept them.
+- **Replay and expiry.** Each `(account, nonce)` is stored once. A second use is `replay`. `ts_ms` must be within five minutes of the final block time or the answer is `expired`. The same nonce store is used after a NEP-413 check and after an EIP-191 check. Records are kept and not pruned on the call path, so a replay stays `replay`. (Build `ebeb6a34` pruned them after 15 minutes; its signed calls hung on OutLayer and it was rolled back. See [SECURITY.md](SECURITY.md).) Once the signed time is more than five minutes from chain time, the answer is `expired`.
 - **The page matches the chain.** A connected wallet with no key on the contract sees "Only the key holder can open this" and no fund, trade, or withdraw form. That gate uses `nft_tokens_for_owner`. It is not a substitute for the worker's check.
 
 ## Built during the hackathon
@@ -123,9 +123,9 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 | | |
 |---|---|
 | Keys NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). NEP-171 core, NEP-177 metadata, NEP-178 approvals, NEP-181 enumeration, NEP-199 payouts, NEP-330 source metadata, one key per account, tiers 1–3. Live v2.3 (since 2026-11-07, [deploy tx](https://nearblocks.io/txns/CM7JvwdnN2oQ4xakmcSoDPDREBbE7ZUCh5FnJargd5bp), [evidence](docs/evidence/contract-v2-3/README.md)). Deployed wasm 210,474 bytes, sha256 `700bd51f…e09d`, on-chain code hash `8YP8Mr2c…WwLG` ([`judge/1-contract.sh`](judge/1-contract.sh)) |
-| TEE worker | Rust, `wasm32-wasip2`, running in an OutLayer Intel TDX enclave. Project `keyhole-devmo.near/keyhole`, build **`ebeb6a34…583b`** (748021 bytes), published with [`add_version`](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq). Previous versions `94c355ff` ([`EA7S1TeV…`](https://nearblocks.io/txns/EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy)), `cff9fd3c` ([`AepKgT8M…`](https://nearblocks.io/txns/AepKgT8M1XhMjWMHMzaJSo3YnBXzG58YYrLVyp8tUW3z)), `f7217ae2` ([`CcttLJdw…`](https://nearblocks.io/txns/CcttLJdwCa8EaLhY42fh6SBZbcVphtycrNTc74jnvkyW)), `452df1fd` ([`FXbXhGNi…`](https://nearblocks.io/txns/FXbXhGNirZCkiP2bx1aiBFQL3Q1EHFMpniJTY579oGWN)), `6367401a` ([`AJWVEN6F…`](https://nearblocks.io/txns/AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx)), `38bd67b9` ([`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z)), `b3fa1a39` ([`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU)) and `f13efe92` ([`22KDVU1s…`](https://nearblocks.io/txns/22KDVU1sNKQhjoYbN8h1JqyQbcNxHRNednT6sz4nogxS)) |
+| TEE worker | Rust, `wasm32-wasip2`, running in an OutLayer Intel TDX enclave. Project `keyhole-devmo.near/keyhole`, build **`a985fd87…e4f8`** (745180 bytes), published with [`add_version`](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG). Previous versions `ebeb6a34` (published with [`MG7pGVSN…`](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq), rolled back to `94c355ff` by [`ArXzjsWP…`](https://nearblocks.io/txns/ArXzjsWPs9ii119Q3zy3dViPERaKF26rE7Q1xnLmZrEW)), `94c355ff` ([`EA7S1TeV…`](https://nearblocks.io/txns/EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy)), `cff9fd3c` ([`AepKgT8M…`](https://nearblocks.io/txns/AepKgT8M1XhMjWMHMzaJSo3YnBXzG58YYrLVyp8tUW3z)), `f7217ae2` ([`CcttLJdw…`](https://nearblocks.io/txns/CcttLJdwCa8EaLhY42fh6SBZbcVphtycrNTc74jnvkyW)), `452df1fd` ([`FXbXhGNi…`](https://nearblocks.io/txns/FXbXhGNirZCkiP2bx1aiBFQL3Q1EHFMpniJTY579oGWN)), `6367401a` ([`AJWVEN6F…`](https://nearblocks.io/txns/AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx)), `38bd67b9` ([`9pk1mDC1…`](https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z)), `b3fa1a39` ([`B3x8cU6G…`](https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU)) and `f13efe92` ([`22KDVU1s…`](https://nearblocks.io/txns/22KDVU1sNKQhjoYbN8h1JqyQbcNxHRNednT6sz4nogxS)) |
 | Mint authority | `nft_mint` is callable only by the minter, the implicit account [`015a0259…c443`](https://nearblocks.io/address/015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443). Its key was generated inside the enclave and never leaves it ([set_minter tx](https://nearblocks.io/txns/7QFqM5GiUgZuWJEpRUKvARn1LKyy91NVWFZmzNQscQDp)) |
-| Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is `ebeb6a34`, the active enclave. It binds custody to the token, re-checks the owner at request and settle time, refuses a withdraw `to` that is not the signer, writes `media` on mint, accepts MetaMask `personal_sign` (`scheme: eip191`), enforces holder limits (a cut at once, a raise after 24 hours) and a 10-minute withdraw cooldown after a transfer. The active build also requires a wallet signature for withdraw, bounds swap slippage with `min_amount_out`, refunds calls refused before the send, and prunes nonces after 15 minutes |
+| Reproducible build | rustc **1.99.1**, `cargo build --locked`, path remapping. [`DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is `a985fd87`, the active enclave. It binds custody to the token, re-checks the owner at request and settle time, refuses a withdraw `to` that is not the signer, writes `media` on mint, accepts MetaMask `personal_sign` (`scheme: eip191`), enforces holder limits (a cut at once, a raise after 24 hours) and a 10-minute withdraw cooldown after a transfer. The active build also requires a wallet signature for withdraw, bounds swap slippage with `min_amount_out`, and refunds calls refused before the send. It does not prune nonces: pruning on the call path hung signed calls |
 | Build identities | One file, [`identity.json`](identity.json), holds the live worker sha256, its `add_version` tx and info call, and the contract code hash and wasm sha256. `node scripts/gen-identity.mjs` writes `web/lib/identity.gen.ts` and `tee/worker/DEPLOYED_SHA256` from it; CI runs it with `--check` and fails on drift. |
 | Mainnet E2E | **30 recorded steps** on the previous version `f13efe92`. **24 TEE calls**, each attested to `f13efe926132` and re-verified, plus 6 MCP steps ([table](#10-mainnet-end-to-end-30-steps)) |
 | Refusals proven on mainnet | `over_cap_per_tx`, `replay`, `wrong_recipient`, `bad_signature`, `op_mismatch`, `expired`, `no_auth`, `already_holder`, `rate_limited`. Each one is an attested call |
@@ -190,7 +190,7 @@ A trading account that nobody can watch, together with a transferable right to w
 ```mermaid
 flowchart LR
   H[Holder wallet] -- "NEP-413 signMessage (no gas)" --> G[Gateway / CLI / MCP]
-  G -- "{op, auth}" --> T[[OutLayer TEE · Intel TDX<br/>KEYHOLE worker ebeb6a34]]
+  G -- "{op, auth}" --> T[[OutLayer TEE · Intel TDX<br/>KEYHOLE worker a985fd87]]
   T -- "holder_tier(account)" --> C[(keyhole-devmo.near<br/>keys NFT)]
   T -- "full-access key check, final block time" --> N[(NEAR RPC)]
   T -- "confidential quote / swap" --> I[(NEAR Intents 1Click)]
@@ -214,20 +214,21 @@ Do the step. The result on the right is what a correct tree produces. Commands a
 | Do | See |
 |---|---|
 | Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). The home page key count is `nft_total_supply` minus the test key the contract holds |
-| Open [https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15](https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, checks Intel's revocation lists and TCB status, and shows 37/37 (6 attestation, 19 Intel DCAP, 12 Intel PCS checks; TCB UpToDate). The verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b`, the published build |
+| Open [https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15](https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, checks Intel's revocation lists and TCB status, and shows 37/37 (6 attestation, 19 Intel DCAP, 12 Intel PCS checks; TCB UpToDate). The verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8`, the published build |
 | `./judge/1-contract.sh` | On-chain code hash equals sha256 `700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
-| `./verify.sh 5650a6b7-b7de-410c-b206-e189171bad15 --rebuild` | The `executed` line equals `tee/worker/DEPLOYED_SHA256` (`ebeb6a34…`). Then `OK` for a TDX quote, `wasm_hash == executed`, `executed == published build ebeb6a34`, the FastFS bytes, and your local `build.sh` |
-| `./verify.sh ecb0d1d6-90e3-4522-852a-578ca50fdeb6` | Previous version `94c355ff`. Prints `OK executed == previous build 94c355ff, superseded by ebeb6a34` |
-| `./verify.sh 643a012d-0389-44d7-9c78-efb5d7835e80` | Previous version `cff9fd3c`. Prints `OK executed == previous build cff9fd3c, superseded by ebeb6a34` |
-| `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec` | Previous version `a55ebb14`. Prints `OK executed == previous build a55ebb14, superseded by ebeb6a34` |
-| `./verify.sh 2896d0ad-aa27-4e21-b4a1-0cf2d3755d56` | Previous version `09d481a5`. Prints `OK executed == previous build 09d481a5, superseded by ebeb6a34` |
-| `./verify.sh 54207d9e-b4f0-438b-9a74-cdba33de80d9` | Previous version `f7217ae2`. Prints `OK executed == previous build f7217ae2, superseded by ebeb6a34` |
-| `./verify.sh 7882f97a-06e5-46d3-9e58-5fe6428fb187` | Previous version `452df1fd`. Prints `OK executed == previous build 452df1fd, superseded by ebeb6a34` |
-| `./verify.sh f4768da8-2e87-4622-8654-d1e67f6cd1f0` | Previous version `6367401a`. Prints `OK executed == previous build 6367401a, superseded by ebeb6a34` |
-| `./verify.sh 0f0bf448-1b66-4200-b6de-7cf095aead54` | Previous version `67c5cd77`. Prints `OK executed == previous build 67c5cd77, superseded by ebeb6a34` |
-| `./verify.sh 763812bc-0012-4528-a45d-66a3ce17cae9` | Previous version `38bd67b9`. Prints `OK executed == previous build 38bd67b9, superseded by ebeb6a34` |
-| `./verify.sh 9d19bceb-986b-4745-9bf9-91f7dcb62b6e` | Previous version `b3fa1a39`. Prints `OK executed == previous build b3fa1a39, superseded by ebeb6a34` |
-| `./verify.sh cefbc64e-6c08-4bfe-a165-1667d9f5f25b` | Previous version `f13efe92`. Prints `OK executed == previous build f13efe92, superseded by ebeb6a34` |
+| `./verify.sh 246e4a7a-f138-4459-8548-350dd9960751 --rebuild` | The `executed` line equals `tee/worker/DEPLOYED_SHA256` (`a985fd87…`). Then `OK` for a TDX quote, `wasm_hash == executed`, `executed == published build a985fd87`, the FastFS bytes, and your local `build.sh` |
+| `./verify.sh 5650a6b7-b7de-410c-b206-e189171bad15` | Build `ebeb6a34`, published and rolled back to `94c355ff`. Prints `OK executed == previous build ebeb6a34, superseded by a985fd87` |
+| `./verify.sh ecb0d1d6-90e3-4522-852a-578ca50fdeb6` | Previous version `94c355ff`. Prints `OK executed == previous build 94c355ff, superseded by a985fd87` |
+| `./verify.sh 643a012d-0389-44d7-9c78-efb5d7835e80` | Previous version `cff9fd3c`. Prints `OK executed == previous build cff9fd3c, superseded by a985fd87` |
+| `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec` | Previous version `a55ebb14`. Prints `OK executed == previous build a55ebb14, superseded by a985fd87` |
+| `./verify.sh 2896d0ad-aa27-4e21-b4a1-0cf2d3755d56` | Previous version `09d481a5`. Prints `OK executed == previous build 09d481a5, superseded by a985fd87` |
+| `./verify.sh 54207d9e-b4f0-438b-9a74-cdba33de80d9` | Previous version `f7217ae2`. Prints `OK executed == previous build f7217ae2, superseded by a985fd87` |
+| `./verify.sh 7882f97a-06e5-46d3-9e58-5fe6428fb187` | Previous version `452df1fd`. Prints `OK executed == previous build 452df1fd, superseded by a985fd87` |
+| `./verify.sh f4768da8-2e87-4622-8654-d1e67f6cd1f0` | Previous version `6367401a`. Prints `OK executed == previous build 6367401a, superseded by a985fd87` |
+| `./verify.sh 0f0bf448-1b66-4200-b6de-7cf095aead54` | Previous version `67c5cd77`. Prints `OK executed == previous build 67c5cd77, superseded by a985fd87` |
+| `./verify.sh 763812bc-0012-4528-a45d-66a3ce17cae9` | Previous version `38bd67b9`. Prints `OK executed == previous build 38bd67b9, superseded by a985fd87` |
+| `./verify.sh 9d19bceb-986b-4745-9bf9-91f7dcb62b6e` | Previous version `b3fa1a39`. Prints `OK executed == previous build b3fa1a39, superseded by a985fd87` |
+| `./verify.sh cefbc64e-6c08-4bfe-a165-1667d9f5f25b` | Previous version `f13efe92`. Prints `OK executed == previous build f13efe92, superseded by a985fd87` |
 | `cargo test --locked --manifest-path tee/worker/Cargo.toml over_cap` | `over_cap_per_tx_refused` and `over_cap_daily_refused_and_rolled_back` pass. A $1.000001 trade on tier 1 returns `over_cap_per_tx` and does not change the daily counter |
 | Read [`docs/evidence/mainnet-e2e/SUMMARY.json`](docs/evidence/mainnet-e2e/SUMMARY.json) and one refusal file, for example [`15_overcap_swap_2usdc.json`](docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json) | 30 recorded steps. The 2 USDC swap against the $1 Bronze cap is an attested refusal, call [`a02613a2-d503-45e2-83b8-ef71927c2533`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533) |
 | Read [`web/lib/gateway.ts`](web/lib/gateway.ts) and [`web/tests/gateway.test.ts`](web/tests/gateway.test.ts), then open [/vault](https://keyhole-seven.vercel.app/vault) and connect a wallet | `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose message `op` matches. The TEE checks the signature, the nonce, the tier caps and the rate limit. Unsigned and junk auth are `no_auth`. `copy` and `sweep_minter` stay `bad_op`. Bodies over 8 KB are 413. Once connected, the vault shows **1 · Fund**, **2 · Trade** (quote, then Sign & trade, with the caps on the form) and **3 · Withdraw**. Withdraw always names the connected account. Each result has an attestation link and **Verify** |
@@ -271,7 +272,7 @@ sequenceDiagram
   autonumber
   participant U as Holder (wallet / CLI / MCP)
   participant G as Gateway (/api/keyhole)
-  participant T as TEE worker ebeb6a34
+  participant T as TEE worker a985fd87
   participant R as NEAR RPC
   participant K as keyhole-devmo.near
   participant X as 1Click / custody
@@ -422,7 +423,7 @@ Global limits: 120 requests per minute and 25 free mints per day.
 
 ```bash
 cd tee/worker && ./build.sh      # rustc 1.99.1 (rust-toolchain.toml), cargo --locked, --remap-path-prefix, SOURCE_DATE_EPOCH=0
-# ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b
+# a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8
 cat DEPLOYED_SHA256              # same value. CI warns if they differ (source ahead of the enclave).
 ```
 
@@ -614,7 +615,7 @@ A live judge run with a different account (`a7458a83…`) gave all three expecte
 | replay of the same request | `replay` | [`b6d8ce4e`](https://api.outlayer.ai/attestations/by-call/b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563) |
 | over-cap quote ($2) | `over_cap_per_tx` | [`9b37dfee`](https://api.outlayer.ai/attestations/by-call/9b37dfee-47bf-4482-a445-0623a49d3f11) |
 
-Previous version `f13efe92`, funded on 2026-10-28. `./verify.sh` on each call below matched that build (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`), now superseded; the live build is `ebeb6a34`. The attestation response has no output body, so the result column is the recorded outcome of that call. The same checks are the live-proof slot in [`docs/policy.md`](docs/policy.md).
+Previous version `f13efe92`, funded on 2026-10-28. `./verify.sh` on each call below matched that build (`f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c`), now superseded; the live build is `a985fd87`. The attestation response has no output body, so the result column is the recorded outcome of that call. The same checks are the live-proof slot in [`docs/policy.md`](docs/policy.md).
 
 | Call | Result | Attestation |
 |---|---|---|
@@ -630,7 +631,7 @@ Previous version `f13efe92`, funded on 2026-10-28. `./verify.sh` on each call be
 
 - Your browser fetches the attestation, downloads the wasm from FastFS and hashes it with `crypto.subtle`.
 - It runs the `verify.sh` checks plus Intel DCAP and Intel PCS checks (37 in all), so you don't have to trust the site.
-- The e2e test [`verify: the default page checks the published ebeb6a34 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile.
+- The e2e test [`verify: the default page checks the published a985fd87 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile.
 
 ![Verify page](web/screenshots/desktop-verify.webp)
 
@@ -686,7 +687,11 @@ Previous version `f13efe92`. These 30 steps were run with a real named wallet (`
 | `set_minter` → first TEE minter | [`HZ3Srg1K…`](https://nearblocks.io/txns/HZ3Srg1K2S2srBkBFTF6gGnTMdXYRdAjcgjooTwhv8eE) |
 | Mint signed by the first TEE minter | [`FaYzSUYT…`](https://nearblocks.io/txns/FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4) |
 | Create OutLayer project `keyhole` | [`9pvby5e2…`](https://nearblocks.io/txns/9pvby5e2qFkHND3roKaaZvXtkD7wPu5rQjrqSBPSuExc) |
-| Publish current worker `ebeb6a34` (`add_version`): wallet-signed withdraw, swap slippage floor, refunds on refused calls, nonce pruning after 15 minutes (PR #134) | [`MG7pGVSN…`](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq) |
+| Publish current worker `a985fd87` (`add_version`, set active): the PR #134 hardening (wallet-signed withdraw, swap slippage floor, refunds on refused calls) without nonce pruning (PR #139) | [`A1o8882h…`](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG) |
+| FastFS upload for `a985fd87` (expected prepaid-gas revert) | [`Bc8YArR3…`](https://nearblocks.io/txns/Bc8YArR3dwjaTY5fVPbqxCVEXf7xp62DkSBuWjuUmdUY) |
+| Live `info` on `a985fd87` | [`246e4a7a`](https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751) |
+| Publish worker `ebeb6a34` (`add_version`): wallet-signed withdraw, swap slippage floor, refunds, nonce pruning after 15 minutes (PR #134). Signed calls hung on OutLayer, so it was rolled back | [`MG7pGVSN…`](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq) |
+| Roll back to `94c355ff` (set-active-version call) | [`ArXzjsWP…`](https://nearblocks.io/txns/ArXzjsWPs9ii119Q3zy3dViPERaKF26rE7Q1xnLmZrEW) |
 | FastFS upload for `ebeb6a34` (expected prepaid-gas revert) | [`HSCTERXC…`](https://nearblocks.io/txns/HSCTERXCUv1uEfrcz44pxM5Ltcy4BKXTfZxxtYUTQsc7) |
 | Live `info` on `ebeb6a34` | [`5650a6b7`](https://api.outlayer.ai/attestations/by-call/5650a6b7-b7de-410c-b206-e189171bad15) |
 | Publish previous worker `94c355ff` (`add_version`): hardening batch 1 (nonce order, chain_sign quota, withdraw re-check, quote pinning, beat-key owner) on top of sessions | [`EA7S1TeV…`](https://nearblocks.io/txns/EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy) |
@@ -772,7 +777,7 @@ The green run behind the current count is linked at the top of this section; eve
 | `/ask` | Private AI on NEAR AI Cloud with the model's TEE attestation checked in the browser | NEAR AI Cloud |
 | `/identity` | How a key is drawn: specimen cards, wallet and market lockups, the NEP-177 document, and the four finishes | catalog art plus `nep177` for the first live token, or a sample when the contract is empty |
 
-- **Wallets.** A NEAR wallet signs a NEP-413 message. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published enclave `ebeb6a34` checks both. The wallet bundle loads when you click **Connect wallet**, or when this browser has connected before. A redirect wallet returns the signature in the URL hash, and the vault renders the trade or withdraw result from that return.
+- **Wallets.** A NEAR wallet signs a NEP-413 message. MetaMask signs the same intent with EIP-191 (`personal_sign`). The published enclave `a985fd87` checks both. The wallet bundle loads when you click **Connect wallet**, or when this browser has connected before. A redirect wallet returns the signature in the URL hash, and the vault renders the trade or withdraw result from that return.
 - **Language.** English only. `html` is `lang="en"` and `dir="ltr"`. There is no language switcher. A request to `/ar` or `/ar/…` redirects to the same path without the prefix, and keeps the query string ([`web/e2e/site.spec.ts`](web/e2e/site.spec.ts)).
   - Copy lives in [`web/messages/en.json`](web/messages/en.json). Every worker and gateway error has a plain English message and a fix.
   - USD amounts and the local time of the UTC daily-cap reset use the browser locale.
