@@ -427,7 +427,8 @@ test("navbar: full lockup shown and every page fits the viewport", async ({ page
     expect(word.x + word.width, `${p} wordmark is cut`).toBeLessThanOrEqual(vw + 1);
   }
   await page.goto("/vault");
-  const box = await page.getByTestId("connect").boundingBox();
+  // /vault is in the app shell: measure the top-bar connect button, not the page's own call to action.
+  const box = await page.locator(".app-top").getByTestId("connect").first().boundingBox();
   expect(box!.height).toBeLessThanOrEqual(48);
   const logo = await page.getByRole("img", { name: "KEYHOLE" }).first().boundingBox();
   expect(logo!.width / logo!.height).toBeGreaterThan(3.5);
