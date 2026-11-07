@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Cormorant_Garamond, DM_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import "./ui.css";
+import "./landing.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
