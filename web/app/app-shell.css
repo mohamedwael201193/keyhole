@@ -1,0 +1,143 @@
+/* App shell (P4) and Overview (/dashboard). Loaded from app/layout.tsx; styles only.
+   Markup: components/app/AppShell.tsx (shell) and components/dashboard/Overview.tsx (page).
+   Tokens come from polish.css (role tokens). Breakpoint: 900px. Under 900px the sidebar is a drawer. */
+
+.app { min-height: 100vh; min-height: 100dvh; background: var(--bg); color: var(--ink); }
+.app-skip { z-index: 90; }
+.app-skip.focus\:not-sr-only:focus { padding: 10px 14px; border-radius: 10px; background: var(--sf); color: var(--ink); box-shadow: var(--shadow-lifted); top: 8px; left: 8px; }
+
+/* Top bar: brand, network, account, and the drawer button on phones */
+.app-top {
+  position: sticky; top: 0; z-index: 60; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  height: 64px; padding: 0 var(--space-5); background: var(--bg); border-bottom: 1px solid var(--ln);
+}
+.app-brand { min-height: 44px; }
+.app-top-end { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.app-top .cw, .app-top .cw:not(:disabled) { height: 40px; min-height: 40px; font-size: 15px; padding-inline: 18px; }
+.app-net {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: var(--r-pill);
+  border: 1px solid var(--kh-edge); background: var(--sf); color: var(--ink); font: 600 13px/1 var(--sans); white-space: nowrap;
+}
+.app-net i, .app-net-line i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok-ink); flex: none; }
+.app-burger {
+  display: none; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: var(--r-pill);
+  border: 1px solid var(--kh-field); background: var(--sf); color: var(--ink); font: 600 14px/1 var(--sans); cursor: pointer;
+}
+.app-burger[aria-expanded="true"] { border-color: var(--teal); color: var(--teal); }
+
+/* Body: sidebar column and the page */
+.app-body { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: calc(100dvh - 64px); }
+.app-side {
+  position: sticky; top: 64px; align-self: start; height: calc(100dvh - 64px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5) var(--space-3);
+  border-right: 1px solid var(--ln); background: var(--bg);
+}
+.app-net-line { display: none; }
+.app-main { min-width: 0; outline: none; }
+.app-nav { display: grid; gap: 4px; }
+.app-group + .app-group { margin-top: var(--space-4); }
+.app-group-title { margin: 0 0 6px var(--space-3); font: 600 13px/1.4 var(--sans); color: #6A4A12; letter-spacing: .02em; }
+.app-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.app-link {
+  display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 var(--space-3); border-radius: 12px;
+  color: var(--ink); text-decoration: none; font: 600 16px/1.2 var(--sans);
+  transition: background-color .2s, color .2s;
+}
+.app-link svg { flex: none; color: var(--ink-2); }
+.app-link:hover { background: #1F4B4F14; }
+.app-link.on { background: var(--teal); color: #FFFCF6; box-shadow: 0 6px 16px -10px rgba(23,59,62,.8); }
+.app-link.on svg { color: #FFFCF6; }
+.app-link:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.app-thesis {
+  margin: auto 0 0; padding: var(--space-3); border-radius: 14px; border: 1px solid var(--kh-edge); background: var(--sf);
+  font: 500 14px/1.5 var(--sans); color: var(--ink-2);
+}
+
+@media (max-width: 899px) {
+  .app-top { height: 60px; padding: 0 var(--space-3); gap: var(--space-2); }
+  .app-top-end { gap: 8px; }
+  .app-top .cw { height: 40px; padding: 0 12px; font-size: 14px; max-width: 124px; overflow: hidden; text-overflow: ellipsis; }
+  .app-brand .kh-logo { --kh: 1.9rem; }
+  .app-burger { display: inline-flex; }
+  .app-body { display: block; min-height: calc(100dvh - 60px); }
+  .app-side {
+    position: fixed; top: 60px; left: 0; right: 0; z-index: 55; display: none; height: auto; max-height: calc(100dvh - 60px);
+    padding: var(--space-4) var(--space-3) var(--space-6); border-right: 0; border-bottom: 1px solid var(--kh-edge);
+    background: var(--sf); box-shadow: var(--shadow-lifted);
+  }
+  .app-side.open { display: flex; }
+  .app-net-line { display: inline-flex; align-items: center; gap: 8px; margin: 0; font: 600 13px/1 var(--sans); color: var(--ink-2); }
+  .app-thesis { margin-top: var(--space-2); }
+  .app-net { display: none; }
+}
+@media (max-width: 419px) {
+  .app-top .cw { max-width: 112px; padding: 0 10px; }
+  .app-net { display: none; }
+}
+
+/* ---- Overview (app/dashboard) ---- */
+.dash { display: grid; gap: var(--space-5); }
+.dash-head { display: grid; gap: var(--space-2); }
+.dash-head h1 { margin: 0; font-size: var(--fs-title); line-height: 1.08; }
+.dash-lead { margin: 0; max-width: 60ch; font: 500 16px/1.55 var(--sans); color: var(--ink-2); }
+.dash-id { font: 500 15px/1.4 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+.dash-stats .kh-stat { min-height: 152px; }
+.dash-stats .kh-stat-value { font-size: 32px; }
+.dash-stats .kh-stat-empty { font-size: 15px; }
+.dash-stats .kh-btn { justify-self: start; }
+.dash-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.dash-card { display: grid; gap: var(--space-4); align-content: start; }
+.dash-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.dash-card h2 { margin: 0; font-size: var(--fs-heading); line-height: 1.2; }
+.dash-card p { margin: 0; font: 500 16px/1.55 var(--sans); color: var(--ink-2); }
+.dash-hero { display: grid; gap: var(--space-4); padding: var(--space-6); }
+.dash-hero h2 { margin: 0; font-size: var(--fs-title); line-height: 1.1; }
+.dash-hero .dash-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
+.dash-link { font: 600 16px/1.2 var(--sans); color: var(--teal); text-underline-offset: 3px; min-height: 44px; display: inline-flex; align-items: center; }
+.dash-banner { display: grid; gap: var(--space-3); padding: var(--space-6); }
+.dash-banner h2 { margin: 0; font-size: var(--fs-title); line-height: 1.1; color: var(--banner-ink); }
+.dash-banner p { color: #D6E6E4; }
+.dash-banner .dash-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.dash-note { font: 500 14px/1.5 var(--sans); color: var(--ink-2); }
+.dash-assets { display: grid; gap: 0; }
+.dash-row {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) 0; border-bottom: 1px solid var(--ln); min-width: 0;
+}
+.dash-row:last-child { border-bottom: 0; }
+.dash-row .who { display: grid; min-width: 0; }
+.dash-row .who b { font: 600 16px/1.3 var(--sans); color: var(--ink); overflow-wrap: anywhere; }
+.dash-row .who small { font: 500 13px/1.4 var(--sans); color: var(--ink-2); overflow-wrap: anywhere; }
+.dash-row .amt { display: grid; justify-items: end; text-align: right; min-width: 0; }
+.dash-row .amt b { font: 600 16px/1.3 var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.dash-row .amt small { font: 500 13px/1.4 var(--sans); color: var(--ink-2); }
+.dash-feed { list-style: none; margin: 0; padding: 0; display: grid; }
+.dash-feed li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--space-3); align-items: center;
+  padding: var(--space-3) 0; border-bottom: 1px solid var(--ln); min-width: 0;
+}
+.dash-feed li:last-child { border-bottom: 0; }
+.dash-feed .k { font: 600 16px/1.3 var(--sans); color: var(--ink); }
+.dash-feed .d { grid-column: 1 / -1; font: 500 14px/1.5 var(--mono); color: var(--ink-2); overflow-wrap: anywhere; }
+.dash-feed .t { grid-column: 1 / -1; font: 500 13px/1.4 var(--sans); color: var(--ink-2); }
+.dash-meta { font: 500 14px/1.5 var(--sans); color: var(--ink-2); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; }
+.dash-meta a { color: var(--teal); font-weight: 600; text-underline-offset: 3px; min-height: 44px; display: inline-flex; align-items: center; }
+#activity { scroll-margin-top: 84px; }
+
+@media (max-width: 1099px) { .dash-two { grid-template-columns: 1fr; } }
+@media (max-width: 899px) {
+  .app-main .page { padding: 24px 16px 64px; }
+  .dash-hero, .dash-banner { padding: var(--space-5); }
+  .dash-hero h2, .dash-banner h2 { font-size: var(--fs-heading); }
+  .dash-stats { grid-template-columns: 1fr; }
+  .dash-stats .kh-stat { min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-link { transition: none; }
+}
+
+/* Account menu: on phones the pill sits left of other controls, so pin the menu to the viewport edges. */
+@media (max-width: 860px) {
+  .app-top .acct-menu { position: fixed; top: 68px; left: 12px; right: 12px; width: auto; max-width: none; }
+}

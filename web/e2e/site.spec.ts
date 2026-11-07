@@ -201,7 +201,8 @@ test("connected account opens a menu instead of disconnecting", async ({ page, c
   await page.goto("/vault");
   const pill = page.getByTestId("account");
   await expect(pill).toBeVisible({ timeout: 20_000 });
-  const brand = await page.locator("nav.nav .brand .kh-logo").first().boundingBox();
+  // /vault is inside the app shell now: its top bar (components/app/AppShell.tsx) holds the brand and the pill.
+  const brand = await page.locator(".app-top .brand .kh-logo").first().boundingBox();
   const pb = await pill.boundingBox();
   expect(brand!.x + brand!.width, "logo overlaps the account pill").toBeLessThanOrEqual(pb!.x);
   await pill.click();
@@ -427,7 +428,8 @@ test("navbar: full lockup shown and every page fits the viewport", async ({ page
     expect(word.x + word.width, `${p} wordmark is cut`).toBeLessThanOrEqual(vw + 1);
   }
   await page.goto("/vault");
-  const box = await page.getByTestId("connect").boundingBox();
+  // /vault is in the app shell: measure the top-bar connect button, not the page's own call to action.
+  const box = await page.locator(".app-top").getByTestId("connect").first().boundingBox();
   expect(box!.height).toBeLessThanOrEqual(48);
   const logo = await page.getByRole("img", { name: "KEYHOLE" }).first().boundingBox();
   expect(logo!.width / logo!.height).toBeGreaterThan(3.5);
