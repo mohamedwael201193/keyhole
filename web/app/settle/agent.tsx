@@ -10,7 +10,9 @@ const AGENT_ERR: Record<string, string> = {
   rate_limited: "Too many requests this minute. Wait a few seconds and try again.",
   unavailable: "The Agent API did not answer. The rest of this page still works; try again later.",
 };
-export const agentErr = (c: string) => AGENT_ERR[c] ?? `The Agent API returned an error (${c}). Try again later.`;
+/** Codes that mean the demo could not be reached or configured. Shown as one plain "unavailable" state with a retry. */
+const DOWN = new Set(["upstream", "config", "unavailable"]);
+export const agentErr = (c: string) => AGENT_ERR[c] ?? "The Agent API could not answer that request. Try again in a moment.";
 
 type Q = { limits: Record<string, number>; usage: Record<string, number>; observed_at: string };
 type Pol = { revision: number; status: string; policy_hash: string; transaction_hash?: string; policy: ReturnType<typeof buildPolicy> };
@@ -22,18 +24,27 @@ export function AgentPanel() {
   const [q, setQ] = useState<Q | null>(null);
   const [pol, setPol] = useState<Pol | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [down, setDown] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [dry, setDry] = useState<{ usd: string; warn: string[]; bal: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
+    let live = true;
     const get = (r: string) => fetch(`/api/agent?r=${r}`).then((x) => x.json()).then((j) => (j.ok ? j.body : Promise.reject(j.error?.code)));
-    Promise.all([get("network"), get("quotas"), get("policy")]).then(([n, qq, p]) => { setNet(n); setQ(qq); setPol(p); }).catch((c) => setErr(String(c || "unavailable")));
-  }, []);
+    setDown(false); setErr(null); setNet(null); setQ(null); setPol(null);
+    Promise.all([get("network"), get("quotas"), get("policy")])
+      .then(([n, qq, p]) => { if (live) { setNet(n); setQ(qq); setPol(p); } })
+      .catch(() => { if (live) setDown(true); });
+    return () => { live = false; };
+  }, [attempt]);
   async function quote(usdMicro: string) {
-    setBusy(true); setDry(null);
+    setBusy(true); setDry(null); setErr(null);
     try {
       const j = await (await fetch("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: USDC, dest: "nep141:wrap.near", amount: usdMicro }) })).json();
-      if (j.ok) setDry({ usd: j.body.spend?.amount_usd, warn: policyWarnings(j.body), bal: balanceWarnings(j.body) }); else setErr(j.error?.code);
-    } finally { setBusy(false); }
+      if (j.ok) setDry({ usd: j.body.spend?.amount_usd, warn: policyWarnings(j.body), bal: balanceWarnings(j.body) });
+      else if (DOWN.has(j.error?.code)) setDown(true);
+      else setErr(j.error?.code ?? "unavailable");
+    } catch { setDown(true); } finally { setBusy(false); }
   }
   const expect = buildPolicy({ tier: 1 });
   const p = pol?.policy;
@@ -42,7 +53,13 @@ export function AgentPanel() {
       <h2>Agent API · holder caps as policy</h2>
       <p className="demo-tag" data-testid="agent-demo"><b>Demo</b> · one shared NEAR Intents agent, $0 balance. Dry quotes only: it shows the policy the enclave would install for a holder, nothing is moved.</p>
       <p className="note">KEYHOLE tier caps are written into a NEAR Intents Agent API policy, so the agent&apos;s own wallet refuses what the key would refuse. Demo partner deployment on mainnet; quotes are dry and the agent holds no funds.</p>
-      {err && <p className="note" role="alert" data-testid="agent-err">{agentErr(err)}</p>}
+      {down && (
+        <p className="note" role="status" data-testid="agent-down">
+          The Agent API demo is unavailable right now. The rest of this page still works.{" "}
+          <button type="button" className="linkbtn" onClick={() => setAttempt((n) => n + 1)} data-testid="agent-retry">Retry</button>
+        </p>
+      )}
+      {err && <p className="note" role="status" data-testid="agent-err">{agentErr(err)}</p>}
       {net && <p className="note" data-testid="agent-net">Network <b>{net.network}</b> · status <b>{net.status.overall}</b></p>}
       {q && <p className="note" data-testid="agent-quotas">Quotas: {q.usage.agents_last_24_hours}/{q.limits.daily_agents} agents today · {q.usage.requests_this_minute}/{q.limits.requests_per_minute} requests this minute</p>}
       {p && (
@@ -58,8 +75,8 @@ export function AgentPanel() {
         </table>
       )}
       <div className="abtn">
-        <button className="btn b1" disabled={busy} onClick={() => void quote("500000")} data-testid="agent-dry-ok">{busy ? <Spinner label="Quoting" /> : null} Dry quote $0.50</button>
-        <button className="btn b1" disabled={busy} onClick={() => void quote("2000000")} data-testid="agent-dry-over">{busy ? <Spinner label="Quoting" /> : null} Dry quote $2.00</button>
+        <button className="btn b1" disabled={busy || down} onClick={() => void quote("500000")} data-testid="agent-dry-ok">{busy ? <Spinner label="Quoting" /> : null} Dry quote $0.50</button>
+        <button className="btn b1" disabled={busy || down} onClick={() => void quote("2000000")} data-testid="agent-dry-over">{busy ? <Spinner label="Quoting" /> : null} Dry quote $2.00</button>
       </div>
       {dry && <p className="dout" data-testid="agent-dry-out">${Number(dry.usd).toFixed(2)} · {dry.warn.length ? <b>The policy would refuse this: {dry.warn.map(agentErr).join(" ")}</b> : "within policy"}{dry.bal.length ? <> · <span className="warnbal" data-testid="agent-dry-bal">balance warning: {dry.bal.join(", ")} (demo agent holds $0)</span></> : null}</p>}
     </section>

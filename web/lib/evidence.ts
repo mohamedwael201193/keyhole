@@ -1,4 +1,5 @@
 import { IDENTITY } from "./identity.gen";
+import { SETTLEMENTS } from "./settlements";
 /** Real mainnet evidence. Every entry is a NEAR transaction hash or an OutLayer call id that resolves publicly. */
 export const TXS = [
   { label: "Deploy + init keys contract", hash: "HEgxese5vwUeAz2ctbwpdNDjfyhLib7xWXpTJLhwhRD7" },
@@ -52,14 +53,20 @@ export const CALLS = [
   { label: "earlier · site gateway · read confidential balance", id: "22cb472d-a759-4284-a3fd-651b059dc576", outcome: "ok" },
 ] as const;
 
-/** Per-chain trail on the atlas. `real` = a KEYHOLE artefact exists; otherwise clearly labeled. */
-export const ATLAS: { chain: string; name: string; kind: "tx" | "call" | "none"; ref?: string; note: string }[] = [
+/**
+ * Per-chain trail on the atlas.
+ * - tx: a NEAR transaction; call: an attested call (a dry run, no funds moved); settle: a 1Click order from /settle (read from SETTLEMENTS); none: no trail.
+ */
+const settled = (needle: string) => SETTLEMENTS.find((s) => s.label.includes(needle));
+const baseOrder = settled("on Base → SOL");
+const solOrder = settled("0.004 SOL on Solana → USDC on NEAR");
+export const ATLAS: { chain: string; name: string; kind: "tx" | "call" | "settle" | "none"; ref?: string; href?: string; note: string }[] = [
   { chain: "near", name: "NEAR", kind: "tx", ref: "FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4", note: "Key minted by the TEE-held minter" },
   { chain: "usdc", name: "USDC", kind: "call", ref: "b8a83c55-61bb-448f-8196-08dc23a574df", note: "Attested confidential quote, dry (no funds moved)" },
   { chain: "eth", name: "ETH", kind: "none", note: "" },
-  { chain: "base", name: "Base", kind: "none", note: "" },
+  { chain: "base", name: "Base", kind: "settle", href: baseOrder?.depositTxUrl, note: "0.6 USDC on Base to SOL on Solana, sent from a MetaMask account through 1Click. 0.006268509 SOL arrived on 2026-11-02. Listed on /settle." },
   { chain: "arb", name: "ARB", kind: "none", note: "" },
-  { chain: "sol", name: "SOL", kind: "none", note: "" },
+  { chain: "sol", name: "SOL", kind: "settle", href: solOrder?.depositTxUrl, note: "0.004 SOL on Solana to 0.367068 USDC on keyhole-devmo.near, settled 2026-11-02. A 0.001 SOL order was refunded for no liquidity. Listed on /settle." },
   { chain: "btc", name: "BTC", kind: "none", note: "" },
   { chain: "zec", name: "ZEC", kind: "none", note: "" },
 ];

@@ -29,17 +29,17 @@ for k,v in cfg.items():
         {"type":"view","method":"config","args":{},"path":k,"op":"eq","value":v}, f"config.{k} == {v}")
 add("config-beats", "Heartbeat count config.beats was 2 at capture (2026-11-03) and only grows", where(RD,'"beats":"2"'), "mainnet view", "keyhole-devmo.near config()",
     {"type":"view","method":"config","args":{},"path":"beats","op":"gte","value":2}, "config.beats >= 2 (live value printed)")
-add("supply", "nft_total_supply was 5 on 2026-11-03 (live value can only grow)", where(RD,"`nft_total_supply` = 5"), "mainnet view", "keyhole-devmo.near nft_total_supply()",
-    {"type":"view","method":"nft_total_supply","args":{},"op":"gte","value":5}, ">= 5 (live value printed)")
+add("supply", "nft_total_supply was 6 on 2026-11-07 (live value can only grow)", where(RD,"`nft_total_supply` = 6"), "mainnet view", "keyhole-devmo.near nft_total_supply()",
+    {"type":"view","method":"nft_total_supply","args":{},"op":"gte","value":6}, ">= 6 (live value printed)")
 add("metadata-symbol", "NEP-177 metadata is KEYHOLE / KEY", where(RD,"(`KEYHOLE` / `KEY`)"), "mainnet view", "nft_metadata()",
     {"type":"view","method":"nft_metadata","args":{},"path":"symbol","op":"eq","value":"KEY"}, "symbol == KEY")
 add("metadata-name", "NEP-177 metadata name is KEYHOLE", where(RD,"(`KEYHOLE` / `KEY`)"), "mainnet view", "nft_metadata()",
     {"type":"view","method":"nft_metadata","args":{},"path":"name","op":"eq","value":"KEYHOLE"}, "name == KEYHOLE")
 toks = {"0":"keyhole-devmo.near","k857b6b68facc0f94":"a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da","k5f4750858f328940":"3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447","k0642e7964b2fb515":"476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8","k102a806df6867547":"0xf76e6b0920e9332ff4410f6dd53f01722abc71a3"}
 for t,o in toks.items():
-    add(f"token-{t}-owner", f"Token {t} is held by {o} (table read 2026-11-03)", where(RD,f"| `{t}` |"), "mainnet view", f"nft_token({t})",
+    add(f"token-{t}-owner", f"Token {t} is held by {o} (table read 2026-11-03)", where(RD,f"| `{t}`"), "mainnet view", f"nft_token({t})",
         {"type":"view","method":"nft_token","args":{"token_id":t},"path":"owner_id","op":"eq","value":o}, f"owner_id == {o}")
-    add(f"token-{t}-tier", f"Token {t} is tier 1", where(RD,f"| `{t}` |"), "mainnet view", f"nft_tier({t})",
+    add(f"token-{t}-tier", f"Token {t} is tier 1", where(RD,f"| `{t}`"), "mainnet view", f"nft_tier({t})",
         {"type":"view","method":"nft_tier","args":{"token_id":t},"op":"eq","value":1}, "1")
 add("token-k102-media", "Token k102a806df6867547 (MetaMask mint) carries media on-chain", where(RD,"carries `media` on-chain"), "mainnet view", "nft_token(k102a806df6867547)",
     {"type":"view","method":"nft_token","args":{"token_id":"k102a806df6867547"},"path":"metadata.media","op":"nonempty"}, "metadata.media is a non-empty URL")

@@ -47,7 +47,8 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
                   <span>{formatTradePrice(CAPS[k.finish].perTx)}</span>
                 </div>
               </FoilCard>
-              <p className="att">{t("land.attested")}</p>
+              {/* Only Bronze is minted today (worker main.rs tier 1). Other finishes are design previews, not attested keys. */}
+              {k.finish === "Bronze" ? <p className="att">{t("land.attested")}</p> : <p className="att" data-testid="preview-badge">Preview, not minted</p>}
               <p className="mono" style={{ fontSize: 12, color: "var(--mu)" }}>{KEYS_CONTRACT}</p>
               <dl>
                 <dt>{t("field.head")}</dt><dd>{traitLabel(t, k.head)}</dd>
@@ -66,6 +67,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
       <div className="blk">
         <p className="eb">{t("ident.s2")}</p>
         <h2>{t("ident.wild")}</h2>
+        <p className="note">Layouts only. Thumbnails of Silver, Gold and Legendary keys are design previews; those tiers are not minted yet.</p>
         <div className="thumbs">
           <div className="wal">
             <p className="h">{t("ident.wallet")}</p>

@@ -17,7 +17,12 @@ describe("judge page", () => {
     expect(s1).toContain("CUR");
     for (const old of WORKER_WASM_SHA256.slice(1)) expect(s1).not.toContain(old.slice(0, 8));
   });
-  it("current-build calls come before previous-build calls", () => expect(judge.indexOf("judge-current-calls")).toBeLessThan(judge.indexOf("judge-previous")));
+  it("step 3 calls come before the previous-build calls", () => expect(judge.indexOf("judge-step3-calls")).toBeLessThan(judge.indexOf("judge-previous")));
+  it("step 3 does not claim its calls ran on the current build", () => {
+    const s3 = judge.slice(judge.indexOf("n={3}"), judge.indexOf("n={4}"));
+    expect(s3).not.toMatch(/Current build/);
+    expect(s3).toContain("previous build");
+  });
   it("previous-build calls are collapsed", () => expect(judge).toMatch(/<details className="jprev"/));
   it("every script step offers a browser alternative and a repo link", () => {
     const scripts = judge.match(/<Script path=/g) ?? [];

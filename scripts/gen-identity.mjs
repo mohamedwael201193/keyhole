@@ -4,7 +4,9 @@
 // usage: node scripts/gen-identity.mjs [--check]
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-const root = new URL("..", import.meta.url).pathname;
+import { fileURLToPath } from "node:url";
+// fileURLToPath (not .pathname): on Windows .pathname gives "/D:/..." and every read fails.
+const root = fileURLToPath(new URL("..", import.meta.url));
 const id = JSON.parse(readFileSync(root + "identity.json", "utf8"));
 const A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const b58 = (hex) => { let n = BigInt("0x" + hex), s = ""; while (n > 0n) { s = A[Number(n % 58n)] + s; n /= 58n; } return s; };
