@@ -1,6 +1,7 @@
 //! KEYHOLE keys: one NFT contract. Each token is a viewing key for a
 //! confidential trading account; `tier` sets what the holder may see/copy.
 //! v2: NEP-178 approvals, one key per account enforced on-chain, NEP-330 source metadata.
+//! v2.3: at most MAX_APPROVALS approvals per token (NEP-178 gas bound); no state change.
 use near_contract_standards::non_fungible_token::approval::NonFungibleTokenApproval;
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
@@ -18,6 +19,9 @@ use std::collections::HashMap;
 pub const MAX_TIER: u8 = 3;
 pub const MAX_ROYALTY_BPS: u32 = 1_000; // 10% cap
 pub const MAX_BEAT_BATCH: usize = 50;
+/// NEP-178: approvals one token may hold at once. Bounds nft_revoke_all, the transfer refunds and the
+/// marketplace fan-out. Re-approving an account already on the list does not count as a new approval.
+pub const MAX_APPROVALS: usize = 10;
 pub const ERR_ONE_KEY: &str = "one key per account: receiver already holds a KEYHOLE key";
 
 #[derive(BorshStorageKey)]
@@ -47,6 +51,8 @@ pub struct Config {
 }
 
 #[near(contract_state, contract_metadata(
+    version = "2.3.0",
+    link = "https://github.com/mohamedwael201193/keyhole",
     standard(standard = "nep171", version = "1.2.0"),
     standard(standard = "nep177", version = "2.0.0"),
     standard(standard = "nep178", version = "1.0.0"),
@@ -143,6 +149,19 @@ impl Contract {
     }
     fn assert_minter(&self) {
         require!(env::predecessor_account_id() == self.minter, "only minter");
+    }
+
+    /// NEP-178 cap (v2.3). Runs before the library touches state or schedules nft_on_approve.
+    /// A non-owner is left to the library's own "Predecessor must be token owner." panic.
+    /// Re-approving an account already on the list replaces its entry, so it stays allowed at the cap.
+    fn assert_approval_cap(&self, token_id: &TokenId, account_id: &AccountId) {
+        if self.tokens.owner_by_id.get(token_id).as_ref() != Some(&env::predecessor_account_id()) {
+            return;
+        }
+        let approved = self.tokens.approvals_by_id.as_ref().and_then(|m| m.get(token_id)).unwrap_or_default();
+        if approved.len() >= MAX_APPROVALS && !approved.contains_key(account_id) {
+            env::panic_str(&format!("approval cap reached: a token holds at most {MAX_APPROVALS} approvals"));
+        }
     }
 
     /// Minter only. Attached deposit must cover storage; the excess is refunded.
@@ -305,6 +324,7 @@ impl near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver
 impl NonFungibleTokenApproval for Contract {
     #[payable]
     fn nft_approve(&mut self, token_id: TokenId, account_id: AccountId, msg: Option<String>) -> Option<Promise> {
+        self.assert_approval_cap(&token_id, &account_id);
         self.tokens.nft_approve(token_id, account_id, msg)
     }
     #[payable]
@@ -1086,5 +1106,95 @@ mod race {
         assert!(r.is_err());
         // a panicking call is rolled back on chain; the check runs before the marker is written
         assert_eq!(c.pending_return_count(acc("alice.near")), 0);
+    }
+}
+
+/// v2.3: NEP-178 approval cap. A token holds at most MAX_APPROVALS approvals; the 11th is refused
+/// before any state change or nft_on_approve call.
+#[cfg(test)]
+mod v23 {
+    use super::*;
+    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::{testing_env, NearToken};
+
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
+    fn mint(c: &mut Contract, id: &str, to: &str) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
+    fn approve(c: &mut Contract, owner: &str, id: &str, who: &str) { ctx(owner, NearToken::from_millinear(10)); c.nft_approve(id.into(), acc(who), None); }
+    fn revoke(c: &mut Contract, owner: &str, id: &str, who: &str) { ctx(owner, NearToken::from_yoctonear(1)); c.nft_revoke(id.into(), acc(who)); }
+    fn approved(c: &Contract, id: &str) -> HashMap<AccountId, u64> { c.nft_token(id.into()).unwrap().approved_account_ids.unwrap() }
+    fn fill(c: &mut Contract, owner: &str, id: &str, n: usize) { for i in 0..n { approve(c, owner, id, &format!("m{i}.near")); } }
+
+    #[test] fn cap_is_ten() { assert_eq!(MAX_APPROVALS, 10); }
+    #[test] fn tenth_approval_is_allowed() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        assert_eq!(approved(&c, "k1").len(), 10);
+        assert!(c.nft_is_approved("k1".into(), acc("m9.near"), Some(10)));
+    }
+    #[test] #[should_panic(expected = "approval cap reached: a token holds at most 10 approvals")]
+    fn eleventh_approval_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        approve(&mut c, "alice.near", "k1", "m10.near");
+    }
+    #[test] #[should_panic(expected = "approval cap reached")]
+    fn eleventh_approval_with_msg_is_refused_before_the_callback() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        ctx("alice.near", NearToken::from_millinear(10));
+        let _ = c.nft_approve("k1".into(), acc("market.near"), Some("{\"price\":\"1\"}".into()));
+    }
+    #[test] fn refused_eleventh_changes_nothing_and_takes_no_approval_id() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        let before = approved(&c, "k1");
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| approve(&mut c, "alice.near", "k1", "m10.near")));
+        assert!(r.is_err(), "11th refused");
+        assert_eq!(approved(&c, "k1"), before, "approvals unchanged");
+        assert!(!c.nft_is_approved("k1".into(), acc("m10.near"), None));
+        // the refused call took no id: the next approval after a revoke is still id 11
+        revoke(&mut c, "alice.near", "k1", "m0.near");
+        approve(&mut c, "alice.near", "k1", "m10.near");
+        assert_eq!(approved(&c, "k1")[&acc("m10.near")], 11);
+        assert_eq!(approved(&c, "k1").len(), 10);
+    }
+    #[test] fn reapproving_an_approved_account_at_the_cap_is_allowed() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        approve(&mut c, "alice.near", "k1", "m3.near");
+        let a = approved(&c, "k1");
+        assert_eq!(a.len(), 10, "same account, no new slot");
+        assert_eq!(a[&acc("m3.near")], 11, "fresh approval id, as before");
+    }
+    #[test] fn revoke_frees_a_slot() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        revoke(&mut c, "alice.near", "k1", "m0.near");
+        approve(&mut c, "alice.near", "k1", "m10.near");
+        assert!(c.nft_is_approved("k1".into(), acc("m10.near"), None));
+        assert!(!c.nft_is_approved("k1".into(), acc("m0.near"), None));
+        assert_eq!(approved(&c, "k1").len(), 10);
+    }
+    #[test] #[should_panic(expected = "Predecessor must be token owner.")]
+    fn non_owner_gets_the_owner_error_not_the_cap_error() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        approve(&mut c, "mallory.near", "k1", "mallory.near");
+    }
+    #[test] fn cap_is_per_holding_transfer_clears_it() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        fill(&mut c, "alice.near", "k1", MAX_APPROVALS);
+        revoke(&mut c, "alice.near", "k1", "m0.near"); // leave a slot free so the transfer below is the only change
+        ctx("alice.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        assert!(approved(&c, "k1").is_empty(), "transfer clears approvals");
+        fill(&mut c, "bob.near", "k1", MAX_APPROVALS);
+        assert_eq!(approved(&c, "k1").len(), 10);
     }
 }
