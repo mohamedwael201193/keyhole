@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { OC_ASSETS, statusOf, toUnits, assetById, fundsStep } from "@/lib/oneclick";
-import Link from "next/link";
 import { SETTLEMENTS, RECORDED_FAILED, VAULT_TRADE, type Settlement } from "@/lib/settlements";
 import { tx, txAlt, intentTx } from "@/lib/config";
 import { AgentPanel } from "./agent";
-import { Badge as UBadge, Proof, Purpose, Skeleton, Spinner, type ProofRow, type Tone } from "@/components/ui";
+import { Badge as UBadge, Button, Proof, Purpose, Skeleton, Spinner, type ProofRow, type Tone } from "@/components/ui";
+import { TokenIcon } from "@/components/TokenIcon";
 
 type Dry = { amountInFormatted: string; amountInUsd: string; amountOutFormatted: string; amountOutUsd: string; timeEstimate: number };
 type St = { status: string; updatedAt?: string; details: { depositedAmountFormatted: string | null; amountOutFormatted: string | null; refundedAmountFormatted: string | null; nearTxHashes: string[]; intentHashes: string[] } };
@@ -73,6 +73,22 @@ const human = (code?: string, message?: string) => {
   return (code && M[code]) || message || "No quote came back. Try again in a moment.";
 };
 
+/** A token picker: the real token mark (or monogram) beside a native select, so the choice is readable and keyboard-operable. */
+function AssetSelect({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
+  const a = assetById(value);
+  return (
+    <label className="pick" htmlFor={id}>
+      <span className="pick-l">{label}</span>
+      <span className="pick-row">
+        <TokenIcon assetId={a?.id} symbol={a?.label.split(" · ")[0]} chain={a?.chain} size="sm" />
+        <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
+          {OC_ASSETS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+        </select>
+      </span>
+    </label>
+  );
+}
+
 export function SettleView() {
   const [origin, setOrigin] = useState<string>(OC_ASSETS[2].id);
   const [dest, setDest] = useState<string>(OC_ASSETS[0].id);
@@ -99,14 +115,26 @@ export function SettleView() {
         <h2>1 · Get a live price (no wallet, nothing moves)</h2>
         <p className="note">This asks 1Click solvers for a real price with <span className="mono">dry: true</span>. Nothing is signed and nothing executes.</p>
         <form onSubmit={(e) => { e.preventDefault(); void run(); }} className="dform">
-          <label>From<select value={origin} onChange={(e) => setOrigin(e.target.value)}>{OC_ASSETS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
-          <label>Amount<input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></label>
-          <label>To<select value={dest} onChange={(e) => setDest(e.target.value)}>{OC_ASSETS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
-          <button className="btn b1" type="submit" disabled={busy} aria-busy={busy} data-testid="dry-btn">{busy ? <><Spinner label="Getting a quote" /> Asking solvers…</> : "Get quote"}</button>
+          <AssetSelect id="oc-from" label="From" value={origin} onChange={setOrigin} />
+          <label className="pick-amt"><span className="pick-l">Amount</span><input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></label>
+          <AssetSelect id="oc-to" label="To" value={dest} onChange={setDest} />
+          <Button type="submit" loading={busy} loadingLabel="Asking solvers" testid="dry-btn">Get quote</Button>
         </form>
         <div ref={outRef} aria-live="polite">
           {msg && <p className="note" role="alert" data-testid="dry-msg">{msg}</p>}
-          {dry && <p className="dout" data-testid="dry-out"><b>{dry.amountInFormatted}</b> (${Number(dry.amountInUsd).toFixed(4)}) → <b>{dry.amountOutFormatted}</b> (${Number(dry.amountOutUsd).toFixed(4)}) · about {dry.timeEstimate}s · dry run</p>}
+          {dry && (
+            <article className="bestq" data-testid="dry-out" aria-label="Best quote">
+              <p className="bestq-tag">Best quote · dry run · nothing moves</p>
+              <p className="bestq-route">{assetById(origin)?.label} <span aria-hidden="true">→</span> {assetById(dest)?.label}</p>
+              <dl className="bestq-grid">
+                <div><dt>You send</dt><dd>{dry.amountInFormatted} <small>${Number(dry.amountInUsd).toFixed(4)}</small></dd></div>
+                <div><dt>You receive</dt><dd>{dry.amountOutFormatted} <small>${Number(dry.amountOutUsd).toFixed(4)}</small></dd></div>
+                <div><dt>Fee and spread</dt><dd>${(Number(dry.amountInUsd) - Number(dry.amountOutUsd)).toFixed(4)} <small>USD in minus USD out</small></dd></div>
+                <div><dt>Estimated time</dt><dd>about {dry.timeEstimate}s</dd></div>
+              </dl>
+              <p className="note">The quote came from 1Click solvers. Nothing was signed and no funds moved.</p>
+            </article>
+          )}
         </div>
       </section>
       <AgentPanel />
@@ -115,7 +143,7 @@ export function SettleView() {
       <article className="ocard" data-testid="vault-trade">
         <div className="ohead"><h3 className="oroute">{VAULT_TRADE.amountIn}<span className="arr">→</span>{VAULT_TRADE.amountOut}</h3><UBadge tone="ok">Settled</UBadge></div>
         <p className="oamt">Inside the vault of key {VAULT_TRADE.token} · build {VAULT_TRADE.build}</p>
-        <div className="uact"><Link className="btn b2" href={`/verify?call=${VAULT_TRADE.callId}`}>Verify the enclave call</Link></div>
+        <div className="uact"><Button variant="secondary" href={`/verify?call=${VAULT_TRADE.callId}`} testid="vault-trade-verify">Verify the enclave call</Button></div>
         <Proof rows={[
           { label: "enclave call", value: VAULT_TRADE.callId, href: `/verify?call=${VAULT_TRADE.callId}`, internal: true },
           { label: "intent hash", value: VAULT_TRADE.intentHash, href: intentTx(VAULT_TRADE.intentHash) },

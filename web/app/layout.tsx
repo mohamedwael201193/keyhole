@@ -6,6 +6,7 @@ import "./globals.css";
 import "./ui.css";
 import "./landing.css";
 import "./app-shell.css";
+import "./app-pages.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
