@@ -15,10 +15,13 @@ const text = (x: unknown) => ({ content: [{ type: "text" as const, text: typeof 
  */
 export async function copyTrade(key: Key, a: { amount?: string; token_in: string; token_out: string; source?: string }, deps?: GuardDeps): Promise<string> {
   if (!a.amount) return "amount is required";
-  const params = { token_in: a.token_in, token_out: a.token_out, amount_in: a.amount, source: a.source ?? "mcp" };
   const q = await run(key, "quote", { origin_asset: a.token_in, destination_asset: a.token_out, amount: a.amount, deposit_type: "INTENTS", refund_to: key.accountId,
     refund_type: "INTENTS", recipient: key.accountId, recipient_type: "INTENTS", confidentiality: "basic" });
   if (!q.output?.ok) return JSON.stringify(q.output, null, 2);
+  // The quote's own floor (minAmountOut at the default slippage) is sent explicitly, so the enclave bounds the fill by it.
+  const floor = q.output.quote?.minAmountOut;
+  const minOut = typeof floor === "string" && /^[1-9]\d*$/.test(floor) ? { min_amount_out: floor } : {};
+  const params = { token_in: a.token_in, token_out: a.token_out, amount_in: a.amount, source: a.source ?? "mcp", ...minOut };
   const summary = `copy ${a.amount} from ${a.token_in} to ${a.token_out}; about ${(q.output.usd_micro / 1e6).toFixed(2)} USD; expected out ${q.output.quote?.amountOutFormatted ?? "?"}`;
   try {
     const r = await guardedRun(key, "copy", params, { receiver: key.accountId, foreign: false, alwaysConfirm: true, summary }, deps);

@@ -120,15 +120,18 @@ test("operator gate: the typed code allows, anything else refuses, and the code 
 let gateway: Server;
 let gatewayUrl = "";
 const seen: string[] = [];
+const sentMessages: string[] = [];
 before(async () => {
   gateway = createServer((req, res) => {
     let body = "";
     req.on("data", (c) => { body += c; });
     req.on("end", () => {
-      const op = (JSON.parse(body) as { op: string }).op;
+      const sent = JSON.parse(body) as { op: string; auth?: { message: string } };
+      const op = sent.op;
       seen.push(op);
+      if (sent.auth) sentMessages.push(sent.auth.message);
       const output = op === "quote"
-        ? { ok: true, usd_micro: 10000, quote: { amountOutFormatted: "0.001" } }
+        ? { ok: true, usd_micro: 10000, quote: { amountOutFormatted: "0.001", minAmountOut: "990000" } }
         : { ok: true, intent: "copied" };
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ output }));
@@ -194,4 +197,13 @@ test("copy without an amount asks for one and makes no call", async () => {
 test("the MCP source no longer returns or stores a confirmation code", () => {
   const src = readFileSync(new URL("../src/mcp.ts", import.meta.url), "utf8");
   assert.doesNotMatch(src, /confirm_code|makeConfirm|takeConfirm/);
+});
+
+test("copy sends the quote's floor to the enclave as min_amount_out", async () => {
+  seen.length = 0; sentMessages.length = 0;
+  await copyTrade(key, copyArgs, liveish("allow", async () => true));
+  const copy = sentMessages.map((m) => JSON.parse(m) as { op: string; params: Record<string, unknown> }).find((m) => m.op === "copy");
+  assert.ok(copy, "a copy was sent");
+  assert.equal(copy.params.min_amount_out, "990000");
+  assert.equal(copy.params.amount_in, "10000");
 });
