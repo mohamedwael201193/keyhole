@@ -270,8 +270,11 @@ const T0: u64 = 1_800_000_000_000;
 fn nonce_key(acct: &str, n: u8) -> String { hkey(acct, &format!("n/{}", hex::encode([n; 32]))) }
 
 #[test]
-fn retention_is_twice_the_skew() {
-    assert_eq!(NONCE_RETAIN_MS, 2 * MAX_SKEW_MS);
+fn retention_covers_the_replay_window_with_a_margin() {
+    // The record must outlive the replay window (2 x skew) with a margin; checked by behaviour, not a constant.
+    let mut st = Mem::default();
+    consume_nonce(&mut st, "alice.near", &[9; 32], T0).unwrap();
+    assert_eq!(prune_nonces(&mut st, "alice.near", T0 + 2 * MAX_SKEW_MS + 1).unwrap(), 0, "kept just past the replay window");
 }
 #[test]
 fn replay_is_refused_inside_the_window_and_at_its_edge() {

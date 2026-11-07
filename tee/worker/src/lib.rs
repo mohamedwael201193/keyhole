@@ -247,8 +247,9 @@ pub fn hkey(account: &str, rest: &str) -> String {
 /// when `|ts_ms - chain_now| <= MAX_SKEW_MS`, and the record stores the chain time of the first use `t0`,
 /// so `ts_ms <= t0 + MAX_SKEW_MS`. A replay of the same request can pass the freshness check only while
 /// `chain_now <= ts_ms + MAX_SKEW_MS <= t0 + 2 * MAX_SKEW_MS`. Past that point the replay is refused as
-/// `expired` whether or not the record exists, so a record older than this may be deleted.
-pub const NONCE_RETAIN_MS: u64 = 2 * MAX_SKEW_MS;
+/// `expired` whether or not the record exists, so a record older than that may be deleted. One extra
+/// MAX_SKEW_MS is kept as a margin against chain-time jitter between reads.
+pub const NONCE_RETAIN_MS: u64 = 3 * MAX_SKEW_MS;
 
 /// Replay protection: each (account, nonce) is accepted once, ever, within NONCE_RETAIN_MS.
 pub fn consume_nonce(st: &mut dyn Store, account: &str, nonce: &[u8; 32], now_ms: u64) -> Result<(), Error> {

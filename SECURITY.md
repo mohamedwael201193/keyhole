@@ -139,7 +139,7 @@ These apply to the next published worker build. The live build is still `94c355f
 
 - A swap with no `min_amount_out` is floored at 1% below a fresh 1Click quote (`DEFAULT_MAX_SLIPPAGE_BPS`, `derive_min_out`). A client `min_amount_out` of `0` is refused with `bad_params`.
 - A swap or withdraw that is refused before the send gives back its session budget and its day's spend. A send that fails for good gives them back too. A send still pending or under review keeps them (`charge_spend`, `Charge::settle`).
-- Nonce records are deleted 10 minutes after their first use (`NONCE_RETAIN_MS`, `prune_nonces`). After that a replay of the same signed request is `expired`, so the record is not needed.
+- Nonce records are deleted 15 minutes after their first use (`NONCE_RETAIN_MS`, `prune_nonces`). After that a replay of the same signed request is `expired`, so the record is not needed.
 - A NEP-413 `callbackUrl` is part of the signed payload when the wallet signed one. The site sends it only when the signature verifies with it.
 - `chain_sign` needs a fresh wallet signature, refuses while the key is locked or in the transfer cooldown, and is capped at 5 per key per UTC day.
 
