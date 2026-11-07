@@ -1,14 +1,7 @@
 :root {
-  --bg: #ECE6DA;
-  --sf: #F6F1E7;
-  --ink: #1A2A2C;
-  --mu: #4A5556;
-  --teal: #1F4B4F;
-  --coral: #A8432C;
+  /* Colour roles (--bg, --sf, --ink, --mu, --teal, --coral, --brass, --ln) live in polish.css. */
   --coralL: #D9644A;
-  --brass: #7D5A1E;
   --brassL: #B8893E;
-  --ln: #1A2A2C24;
   --serif: var(--font-cormorant), Georgia, serif;
   --sans: var(--font-manrope), sans-serif;
   --mono: var(--font-dm), ui-monospace, monospace;
@@ -28,7 +21,7 @@ h2 em, h1 em { font-style: italic; color: var(--coral); font-weight: 600; }
 .mono { font-family: var(--mono); }
 body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 
-.nav { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; height: 64px; padding: 0 40px; background: #ECE6DA; border-bottom: 1px solid var(--ln); color: var(--ink); transition: none; }
+.nav { position: sticky; top: 0; z-index: 50; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; height: 64px; padding: 0 40px; background: var(--bg); border-bottom: 1px solid var(--ln); color: var(--ink); transition: none; }
 .nav.dark { background: #1F4B4F; color: #F1EBDF; border-bottom-color: #F1EBDF22; }
 .nav.dark .links a { color: #F1EBDF; }
 .nav.dark .links a.on { color: #F6D9A8; border-bottom-color: #F6D9A8; }
@@ -109,7 +102,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
 
 /* hero */
 .hero { display: grid; grid-template-columns: 1fr 700px; gap: 20px 30px; align-items: center; padding: 20px 56px 30px; position: relative; overflow: hidden; }
-.hero:before { content: ""; position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px; border-radius: 50%; background: radial-gradient(#F8F3EA, #ECE6DA 66%); z-index: 0; pointer-events: none; }
+.hero:before { content: ""; position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px; border-radius: 50%; background: radial-gradient(#F8F3EA, var(--bg) 66%); z-index: 0; pointer-events: none; }
 .hero-dust { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .hero > *:not(.hero-dust) { position: relative; z-index: 1; }
 .hero h1 { font-size: var(--fs-display); line-height: 1.02; font-weight: 700; }
@@ -456,7 +449,7 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
   .nav-tools { gap: 6px; min-width: 0; }
   .cw { padding: 0 12px; font-size: 14px; }
   .mint > .foil-card { position: static; }
-  .nav.open + .mnav, .mnav { display: flex; flex-direction: column; gap: 4px; padding: 8px 16px 16px; background: #ECE6DA; border-bottom: 1px solid var(--ln); }
+  .nav.open + .mnav, .mnav { display: flex; flex-direction: column; gap: 4px; padding: 8px 16px 16px; background: var(--bg); border-bottom: 1px solid var(--ln); }
   .mnav a, .mnav button { min-height: 44px; display: flex; align-items: center; text-decoration: none; font-weight: 600; }
   .gg, .cards { grid-template-columns: 1fr 1fr; }
   .howstrip { grid-template-columns: 1fr; }
@@ -684,10 +677,10 @@ html.no-motion .foil-card .bw { display: none; }
   --content-bg: #F6F1E7;
   --wallet-option-bg-hover: #1F4B4F18;
   --selected-wallet-bg: #1F4B4F;
-  --option-wallet-bg-color: #ECE6DA;
-  --option-single-wallet-bg-color: #ECE6DA;
+  --option-wallet-bg-color: var(--bg);
+  --option-single-wallet-bg-color: var(--bg);
   --bottom-section: #F6F1E7;
-  --close-button-bg-color: #ECE6DA;
+  --close-button-bg-color: var(--bg);
   --close-button-fill-icon-color: #1F4B4F;
   --mobile-text: #1A2A2C;
   --sidebar-border-color: #B8893E55;
@@ -736,7 +729,7 @@ html.no-motion .foil-card .bw { display: none; }
 }
 #near-wallet-selector-modal .single-wallet,
 #near-wallet-selector-modal .single-wallet.sidebar {
-  background: #ECE6DA;
+  background: var(--bg);
   border: 1px solid #1A2A2C22;
   border-radius: 16px;
   color: #1F4B4F;

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: { title: "KEYHOLE", description: "Nothing on the chain. Everything in the key.", images: [{ url: "/og.png", width: 1200, height: 630 }] },
   icons: { icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }], apple: "/apple-icon.png" },
 };
-export const viewport: Viewport = { themeColor: "#ECE6DA", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#E6DFD0", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
