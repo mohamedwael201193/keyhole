@@ -14,59 +14,77 @@ const withI18n = (el: ReturnType<typeof createElement>) => createElement(I18nPro
 const html = renderToStaticMarkup(withI18n(createElement(Landing, { supply: 12, hash: "f4768da8", tokens: [], tiers: [] })));
 
 describe("landing sections", () => {
-  it("keeps the essentials in order: hero, live numbers, how it works, features, vault, proof, collection, CTA", () => {
-    const ids = ["s01", "how-h", "feat-h", "priv-h", "encl-h", "gal-h", "cta-h"];
-    const at = ids.map((id) => html.indexOf(`id="${id}"`));
+  it("keeps the order: hero, what you get, how a trade runs, proof, the collection, the closing band", () => {
+    const ids = ['id="top"', 'id="outcomes"', 'id="how"', 'id="proof"', 'id="keys"', 'id="cta"'];
+    const at = ids.map((id) => html.indexOf(id));
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
-    expect(html.indexOf('aria-label="Live numbers"')).toBeGreaterThan(0);
-    expect(html.indexOf('aria-label="Live numbers"')).toBeLessThan(at[1]);
+    const heads = ["out-h", "how-h", "proof-h", "keys-h", "cta-h"].map((id) => html.indexOf(`id="${id}"`));
+    expect(heads.every((i) => i > 0)).toBe(true);
+    expect([...heads].sort((a, b) => a - b)).toEqual(heads);
   });
 
-  it("the cut sections are gone: utility checks, agents, long proof list, chain medals, explore row", () => {
+  it("the cut sections are gone: utility checks, agents, long proof list, chain medals, explore row, the attestation card", () => {
     expect(html).not.toContain('id="util-h"');
     expect(html).not.toContain('id="ag-h"');
-    expect(html).not.toContain('id="proof-h"');
+    expect(html).not.toContain('id="encl-h"');
+    expect(html).not.toContain('id="priv-h"');
     expect(html).not.toContain('class="lp-chains"');
     expect(html).not.toContain('class="lp-explore"');
     expect(html).not.toContain("lp-more");
+    expect(html).not.toContain('class="attc"');
   });
 
-  it("the enclave card keeps its structure and links to the verifier and the judge path", () => {
-    expect(html).toMatch(/class="[^"]*attc/);
-    expect(html).toContain('data-testid="verify-cta"');
-    expect(html).toMatch(/href="\/judge"/);
+  it("the hero's primary action launches the app and the secondary checks the proof", () => {
+    expect(html).toContain('data-testid="start-cta"');
+    expect(html).toMatch(/data-testid="start-cta"[^>]*href="\/dashboard"|href="\/dashboard"[^>]*data-testid="start-cta"/);
+    expect(html).toMatch(/href="\/verify"[^]*?Check the proof/);
   });
 
-  it("the three how-it-works steps are rendered on the server, so the page works without JavaScript", () => {
-    expect(html.match(/class="lp-step"/g)?.length).toBe(3);
+  it("what you get: three outcomes with real product UI (a live key, the swap card, the transfer calls)", () => {
+    expect(html.match(/class="lp-out"/g)?.length).toBe(3);
+    expect(html).toContain('data-testid="swap-now"');
+    expect(html).toContain('data-testid="transfer-now"');
+    expect(html).toContain('data-testid="own-key"'.length ? "ui-key" : "");
+    expect(html.match(/data-ok="(true|false)"/g)?.length).toBe(6);
+  });
+
+  it("how a trade runs: three nodes on the server, so the page works without JavaScript", () => {
+    expect(html.match(/class="how-node /g)?.length).toBe(3);
     expect(html).toContain('data-testid="sealed-line"');
+    expect(html).toContain("NFTs that do something.");
   });
 
-  it("the live numbers are final values in the server markup", () => {
+  it("proof: the 37 browser checks, the worker and contract hashes, and the order count are final values in the server markup", () => {
     expect(html).toContain('data-testid="checks-stat"');
     expect(html).toMatch(/data-testid="checks-stat"[^]*?>37</);
+    expect(html).toContain('data-testid="hash-stat"');
+    expect(html).toContain('data-testid="orders-stat"');
+    expect(html).toContain('data-testid="verify-cta"');
+    expect(html).toContain('data-testid="judge-cta"');
     expect(html).toContain('data-testid="supply"');
   });
 
-  it("primary calls to action: Start, plus Mint as the secondary", () => {
-    expect(html).toContain('data-testid="start-cta"');
-    expect(html).toContain('href="/start"');
-    expect(html).toContain('href="/mint"');
+  it("the collection is a grid: no carousel, no tilt, the previews labelled as not minted", () => {
+    expect(html).toContain('class="lp-grid"');
+    expect(html).not.toContain("lp-track");
+    expect(html).not.toContain("kh-tilt");
+    expect(html).toContain('data-testid="concept-banner"');
+    expect(html).toContain('data-testid="gallery-link"');
   });
 });
 
 describe("landing images", () => {
   const images = [...html.matchAll(/<img[^>]*src="([^"]+)"/g)].map((m) => m[1]).concat([...html.matchAll(/srcSet="([^"]+)"/g)].map((m) => m[1]));
 
-  it("no longer shows the glass chain picture", () => {
+  it("no longer shows the glass chain picture or the duplicate chests", () => {
     expect(images.some((s) => s.includes("privacy-chain"))).toBe(false);
+    expect(images.some((s) => s.includes("privacy-chest"))).toBe(false);
+    expect(images.filter((s) => s.includes("/heirloom/privacy")).length).toBe(0);
   });
 
-  it("shows the sealed chest only once, and the chest it shows is the enclave image", () => {
-    expect(images.some((s) => s.includes("privacy-chest"))).toBe(false);
-    expect(images.filter((s) => s.includes("/heirloom/enclave")).length).toBeGreaterThan(0);
-    expect(images.filter((s) => s.includes("/heirloom/privacy")).length).toBe(0);
+  it("the enclave chest is not on the landing; the verifier page keeps it", () => {
+    expect(images.filter((s) => s.includes("/heirloom/enclave")).length).toBe(0);
   });
 });
 

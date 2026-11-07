@@ -497,17 +497,6 @@ test("technical lists are left-aligned; vault traits keep the body face", async 
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  await page.goto("/");
-  const worker = page.locator(".attc .kv dd[data-kind=hash]").first();
-  await expect(worker).toBeVisible();
-  await expect(worker).toHaveCSS("text-align", "start");
-  await expect(worker).toHaveCSS("font-weight", "500");
-  expect((await worker.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).toContain("dm mono");
-  for (const dd of await page.locator(".attc .kv dd").all()) await expect(dd).toHaveCSS("text-align", "start");
-  const runtime = page.locator(".attc .kv dd").last();
-  await expect(runtime).toHaveCSS("font-weight", "600");
-  expect((await runtime.evaluate((el) => getComputedStyle(el).fontFamily)).toLowerCase()).not.toContain("dm mono");
-
   await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   const hash = page.locator(".ver .kv dd[data-kind=hash]").first();

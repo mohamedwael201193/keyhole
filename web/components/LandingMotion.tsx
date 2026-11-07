@@ -2,7 +2,7 @@
 /**
  * GSAP motion for the landing, the only place GSAP runs on the public site. Each piece renders its final state on the server
  * and without JavaScript; the animation only starts after hydration. Everything is off under prefers-reduced-motion and when the
- * page is opened with ?static (the same switch as HomeMotion). matchMedia reverts every tween and ScrollTrigger on unmount.
+ * page is opened with ?static (the same switch as HomeMotion). matchMedia reverts every ScrollTrigger on unmount.
  */
 import { useEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
@@ -48,10 +48,12 @@ export function HeroIntro({ children, className }: { children: ReactNode; classN
 }
 
 /**
- * "How it works" on desktop: the section pins while the three steps light up one after another, scrubbed to the scroll,
- * with a progress rule underneath. Phones and tablets keep the plain stack (no pin, no animation).
+ * The how-it-works moment. The section is two screens tall; its stage sticks inside it (CSS), and a ScrollTrigger scrubs the
+ * pulses along the lines and lights each node as the pulse reaches it. No pin, no scroll-jacking, nothing else moves.
+ * Pulses are `[data-pulse]` circles on a `[data-path]` line, running from `data-from` to `data-to` of the scroll; nodes are
+ * `[data-node]` lit at `data-at`. Phones and tablets keep the still diagram (no pulses are drawn there).
  */
-export function HowPin({ children, className, labelledBy }: { children: ReactNode; className?: string; labelledBy?: string }) {
+export function HowMoment({ children, className, labelledBy }: { children: ReactNode; className?: string; labelledBy?: string }) {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     const root = ref.current;
@@ -60,17 +62,34 @@ export function HowPin({ children, className, labelledBy }: { children: ReactNod
     const mm = gsap.matchMedia();
     mm.add(`${DESKTOP} and ${MOTION_OK}`, () => {
       if (motionOff()) return;
-      const steps = gsap.utils.toArray<HTMLElement>(root.querySelectorAll(".lp-step"));
-      const bar = root.querySelector<HTMLElement>(".lp-how-bar");
-      const tl = gsap.timeline({
-        scrollTrigger: { trigger: root, start: "top top", end: "+=120%", pin: true, scrub: 0.6, anticipatePin: 1 },
+      const pulses = Array.from(root.querySelectorAll<SVGCircleElement>("[data-pulse]")).flatMap((el) => {
+        const path = root.querySelector<SVGPathElement>(`#${CSS.escape(el.dataset.path ?? "")}`);
+        if (!path) return [];
+        return [{ el, path, len: path.getTotalLength(), from: Number(el.dataset.from), to: Number(el.dataset.to) }];
       });
-      tl.fromTo(steps, { opacity: 0.16, y: 40 }, { opacity: 1, y: 0, duration: 1, stagger: 1, ease: "power2.out" }, 0);
-      if (bar) tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: steps.length, ease: "none" }, 0);
-      // Fonts and images change the layout after first paint; re-measure so the pin lines up.
+      const nodes = Array.from(root.querySelectorAll<HTMLElement>("[data-node]")).map((el) => ({ el, at: Number(el.dataset.at) }));
+      const st = ScrollTrigger.create({
+        trigger: root,
+        start: "top top",
+        end: "bottom bottom",
+        scrub: 0.6,
+        onUpdate: (self) => {
+          const p = self.progress;
+          for (const { el, path, len, from, to } of pulses) {
+            const local = gsap.utils.clamp(0, 1, (p - from) / (to - from));
+            const pt = path.getPointAtLength(local * len);
+            el.setAttribute("cx", pt.x.toFixed(1));
+            el.setAttribute("cy", pt.y.toFixed(1));
+            el.style.opacity = p < from || p > to ? "0" : "1";
+          }
+          for (const n of nodes) n.el.classList.toggle("is-lit", p >= n.at);
+        },
+      });
+      // Fonts and images change the layout after first paint; re-measure so the scroll range lines up.
       void document.fonts?.ready.then(() => ScrollTrigger.refresh());
+      return () => st.kill();
     });
     return () => mm.revert();
   }, []);
-  return <section ref={ref} className={className} aria-labelledby={labelledBy}>{children}</section>;
+  return <section ref={ref} id="how" className={className} aria-labelledby={labelledBy}>{children}</section>;
 }
