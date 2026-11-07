@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-test("landing primary CTA goes to /start", async ({ page }) => {
+test("landing primary CTA launches the app", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByTestId("start-cta")).toHaveAttribute("href", "/start");
+  await expect(page.getByTestId("start-cta")).toHaveAttribute("href", "/dashboard");
 });
 test("/start shows the first step and progress dots without a wallet", async ({ page }) => {
   await page.goto("/start");
