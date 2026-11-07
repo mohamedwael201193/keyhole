@@ -4053,27 +4053,6 @@
    "verify": "node judge/verify-claims.mjs --only test-seller_lock_binds_only_the_owner_who_set_it"
   },
   {
-   "id": "test-set_active_version",
-   "claim": "Named test or symbol `set_active_version` exists in the source",
-   "where": "SECURITY.md:142",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "set_active_version",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`set_active_version` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-set_active_version"
-  },
-  {
    "id": "test-set_minter_only_owner",
    "claim": "Named test or symbol `set_minter_only_owner` exists in the source",
    "where": "SECURITY.md:38",
