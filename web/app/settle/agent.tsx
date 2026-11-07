@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { buildPolicy } from "@/lib/agentPolicy";
 import { balanceWarnings, policyWarnings, canon } from "@/lib/agentApi";
 import { TxLink } from "@/components/TxLink";
-import { Spinner } from "@/components/ui";
+import { Button } from "@/components/ui";
 
 const AGENT_ERR: Record<string, string> = {
   policy_transaction_limit_exceeded: "Above the per-trade limit, so the policy refused it. That is the cap doing its job.",
@@ -75,8 +75,8 @@ export function AgentPanel() {
         </table>
       )}
       <div className="abtn">
-        <button className="btn b1" disabled={busy || down} onClick={() => void quote("500000")} data-testid="agent-dry-ok">{busy ? <Spinner label="Quoting" /> : null} Dry quote $0.50</button>
-        <button className="btn b1" disabled={busy || down} onClick={() => void quote("2000000")} data-testid="agent-dry-over">{busy ? <Spinner label="Quoting" /> : null} Dry quote $2.00</button>
+        <Button variant="secondary" disabled={down} loading={busy} loadingLabel="Quoting" onClick={() => void quote("500000")} testid="agent-dry-ok">Dry quote $0.50</Button>
+        <Button variant="secondary" disabled={down} loading={busy} loadingLabel="Quoting" onClick={() => void quote("2000000")} testid="agent-dry-over">Dry quote $2.00</Button>
       </div>
       {dry && <p className="dout" data-testid="agent-dry-out">${Number(dry.usd).toFixed(2)} · {dry.warn.length ? <b>The policy would refuse this: {dry.warn.map(agentErr).join(" ")}</b> : "within policy"}{dry.bal.length ? <> · <span className="warnbal" data-testid="agent-dry-bal">balance warning: {dry.bal.join(", ")} (demo agent holds $0)</span></> : null}</p>}
     </section>

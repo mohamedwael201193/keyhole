@@ -10,7 +10,8 @@ import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
 import { Guilloche, Hallmark } from "@/components/Engraving";
 import { FoilCard } from "@/components/FoilCard";
-import { Medal } from "@/components/Medal";
+import { TokenIcon } from "@/components/TokenIcon";
+import { TxResult } from "@/components/TxResult";
 import { TokenPick } from "@/components/TokenPick";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
@@ -359,7 +360,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <div className="assets" data-testid="asset-list">
                     {rows.map((b) => (
                       <div className={`arow${b.logo ? "" : " plain"}`} key={b.key} data-token={b.symbol}>
-                        {b.logo ? <Medal id={b.logo} name={b.symbol} /> : null}
+                        <TokenIcon assetId={b.known ? b.key : null} symbol={b.symbol} size="md" />
                         <div className="who"><b>{b.symbol}</b>{b.name ? <small>{b.name}</small> : null}</div>
                         <div className="amt"><b>{b.amountLabel}</b>{b.usdMicro != null ? <small>{formatUsdMicro(b.usdMicro)}</small> : null}</div>
                       </div>
@@ -432,22 +433,24 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   </div>
                 )}
                 <div className="vact">
-                  <button className="vbtn sec" disabled={!units || from === toKey || quote.busy} data-testid="quote-btn">{quote.busy ? <Busy l={quote.label} /> : t("vault.get")}</button>
-                  <button className="vbtn pri" type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; const ctx: OpResume = { op: "swap", give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[toKey].decimals, symbol: ASSETS[toKey].symbol }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneTrade(ctx); clearOtherErrors(swap); void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? <Busy l={swap.label} /> : t("vault.signTrade")}</button>
+                  <button className={`vbtn ${quoted?.key === tradeKey ? "sec" : "pri"}`} disabled={!units || from === toKey || quote.busy} data-testid="quote-btn">{quote.busy ? <Busy l={quote.label} /> : t("vault.get")}</button>
+                  <button className={`vbtn ${quoted?.key === tradeKey ? "pri" : "sec"}`} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; const ctx: OpResume = { op: "swap", give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[toKey].decimals, symbol: ASSETS[toKey].symbol }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneTrade(ctx); clearOtherErrors(swap); void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? <Busy l={swap.label} /> : t("vault.signTrade")}</button>
                 </div>
                 {!swap.busy && units && from !== toKey && quoted?.key !== tradeKey && <p className="vhelp" data-testid="trade-why">{session ? "Getting a fresh quote for this amount…" : "Press “Get attested quote” for this amount first; the trade uses that exact quote."}</p>}
                 {quote.res?.error && <ErrorBox code={quote.res.error.code} retryAfter={quote.res.error.retry_after} vars={{ cap: capFrom(quote.res.error.message) }} />}
                 {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} vars={{ cap: capFrom(swap.res.error.message) }} />}
+                {swap.busy && <TxResult state="pending" title="Signing and settling the trade" testid="trade-pending" />}
                 {swap.res?.output?.ok && swap.res.output.op === "swap" && doneTrade && (
                   <div className="result-card" data-testid="trade-out">
-                    <b>{tradeSummary(doneTrade.give, String(swap.res.output.amount_out ?? "0"), doneTrade.decimals, doneTrade.symbol)}</b>
-                    <p className="note">{String(swap.res.output.status ?? "")}</p>
-                    {swap.res.output.intent_hash && <p><a href={intentTx(String(swap.res.output.intent_hash))} target="_blank" rel="noreferrer">{t("vault.intent")} ↗</a></p>}
-                    {swap.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(swap.res.output.request_id)}</p>}
+                    <TxResult state="confirmed" title={tradeSummary(doneTrade.give, String(swap.res.output.amount_out ?? "0"), doneTrade.decimals, doneTrade.symbol)} callId={swap.res.call_id ?? undefined}>
+                      <p className="note">{String(swap.res.output.status ?? "")}</p>
+                      {swap.res.output.intent_hash && <p><a href={intentTx(String(swap.res.output.intent_hash))} target="_blank" rel="noreferrer">{t("vault.intent")} ↗</a></p>}
+                      {swap.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(swap.res.output.request_id)}</p>}
+                    </TxResult>
                   </div>
                 )}
                 {quote.res && <Attested r={quote.res} />}
-                {swap.res && <Attested r={swap.res} />}
+                {swap.res && !(swap.res.output?.ok && swap.res.output.op === "swap" && doneTrade) && <Attested r={swap.res} />}
               </form>}
               {step === 3 && <div className="vform" role="tabpanel">
                 <p className="vsub">{t("vault.withdrawLead", { account: accountId })}</p>
@@ -458,20 +461,20 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 <div className="vfield"><span className="vl">{t("vault.dest")}</span><div className="vbox ro"><span className="v">{accountId}</span></div><p className="vhelp">{t("vault.destHelp")}</p></div>
                 {coolUntil ? <p className="note-box" data-testid="cooldown-note">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
                 <button className="vbtn pri block" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) { const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(accountId) }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneWithdraw(ctx); clearOtherErrors(withdraw); void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); } }}>{withdraw.busy ? <Busy l={withdraw.label} /> : t("vault.withdrawBtn")}</button>
+                {withdraw.busy && <TxResult state="pending" title="Waiting for the payout" testid="withdraw-pending" />}
                 {withdraw.res?.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw && (
                   <div className="result-card" data-testid="withdraw-out">
-                    <b>{withdrawSummary(doneWithdraw.amount, doneWithdraw.to)}</b>
-                    <p className="note">{String(withdraw.res.output.status ?? "")}</p>
-                    {withdraw.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
-                    <p className="mono" style={{ fontSize: 13 }} data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? <> · {t("vault.fee")}: {String(withdraw.res.output.fee)}</> : null}</p>
-                    {withdraw.res.output.tx_hash
-                      ? <p data-testid="withdraw-tx"><a href={`https://nearblocks.io/txns/${String(withdraw.res.output.tx_hash)}`} target="_blank" rel="noreferrer">{t("vault.txHash")} {String(withdraw.res.output.tx_hash).slice(0, 10)}… ↗</a></p>
-                      : <p className="note" data-testid="withdraw-settling">Settling: the payout transaction is sent by the custody wallet and shows on your account&apos;s explorer page within about a minute. <a href={acct(accountId || "")} target="_blank" rel="noreferrer">Open explorer ↗</a> · <a href={acctAlt(accountId || "")} target="_blank" rel="noreferrer">alt ↗</a></p>}
-                    {isImplicitAccount(accountId || "") && <p className="note">{t("vault.storageNote")}</p>}
+                    <TxResult state="confirmed" title={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} hash={withdraw.res.output.tx_hash ? String(withdraw.res.output.tx_hash) : undefined} callId={withdraw.res.call_id ?? undefined}>
+                      <p className="note">{String(withdraw.res.output.status ?? "")}</p>
+                      {withdraw.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
+                      <p className="mono" style={{ fontSize: 13 }} data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? <> · {t("vault.fee")}: {String(withdraw.res.output.fee)}</> : null}</p>
+                      {!withdraw.res.output.tx_hash && <p className="note" data-testid="withdraw-settling">Settling: the payout transaction is sent by the custody wallet and shows on your account&apos;s explorer page within about a minute. <a href={acct(accountId || "")} target="_blank" rel="noreferrer">Open explorer ↗</a> · <a href={acctAlt(accountId || "")} target="_blank" rel="noreferrer">alt ↗</a></p>}
+                      {isImplicitAccount(accountId || "") && <p className="note">{t("vault.storageNote")}</p>}
+                    </TxResult>
                   </div>
                 )}
                 {withdraw.res?.error && <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />}
-                {withdraw.res && <Attested r={withdraw.res} />}
+                {withdraw.res && !(withdraw.res.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw) && <Attested r={withdraw.res} />}
               </div>}
             </section>
 

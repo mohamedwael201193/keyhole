@@ -4,7 +4,8 @@ import Link from "next/link";
 import { checkLog, holders, short, type ChainCheck, type KeyLogBody } from "@/lib/keylog";
 import { TEE_MINTER } from "@/lib/config";
 import { TxLink } from "@/components/TxLink";
-import { CopyBtn, Spinner } from "@/components/ui";
+import { Button, CopyBtn, Spinner } from "@/components/ui";
+import { TxResult } from "@/components/TxResult";
 
 /** New ids are k + hex; the first keys were minted with plain numbers (0, 1, 2…). */
 export const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;
@@ -50,7 +51,7 @@ export function KeyHistoryView() {
       <form className="field" onSubmit={(e) => { e.preventDefault(); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
         <label htmlFor="kid" className="sr-only">key id</label>
         <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
-        <button className="btn b1" type="submit" disabled={busy} data-testid="key-load">{busy ? <><Spinner label="Opening" /> Opening…</> : "Open"}</button>
+        <Button type="submit" loading={busy} loadingLabel="Opening" testid="key-load">Open</Button>
       </form>
       <p className="vhelp" data-testid="key-help">Paste a key id, for example <span className="mono">k5f4750858f328940</span> or <span className="mono">0</span>.</p>
       {busy && !body && <p className="note" data-testid="key-loading"><Spinner label="Loading" /> Reading the book from the enclave and checking every link…</p>}
@@ -68,8 +69,14 @@ export function KeyHistoryView() {
             {pill(ck.head, "head matches", "k-head")}
             {pill(ck.sig, "head signed", "k-sig")}
             {pill(ck.minter, "signer is the TEE minter", "k-minter")}
-            {callId && <Link className="kpill link" href={`/verify?call=${callId}`}>attested call {callId.slice(0, 8)} ↗</Link>}
           </div>
+          <TxResult
+            state={ok ? "confirmed" : "failed"}
+            title={ok ? "Log checked in your browser" : "Log did not check out"}
+            reason="A link in this log does not match the enclave's signed head. Do not trust this history."
+            callId={callId ?? undefined}
+            testid="key-result"
+          />
           <section className="card khold">
             <h2>Holders</h2>
             <div className="ktable" data-testid="holders">

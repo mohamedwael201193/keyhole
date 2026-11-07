@@ -108,6 +108,7 @@ export function Landing({ supply, hash, config, tokens, tiers }: {
           <div className="lp-cta">
             <Button href="/start" size="lg" testid="start-cta">{t("land.start")}</Button>
             <Button href="/mint" size="lg" variant="secondary">{t("land.mint")}</Button>
+            <Button href="/dashboard" size="lg" variant="ghost" testid="explore-app">Explore app</Button>
           </div>
           <p className="lp-links">
             <Link href="/verify" className="lp-link">{t("land.verify")}</Link>

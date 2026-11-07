@@ -1,0 +1,103 @@
+/* App pages on the app shell (P5): /settle, /mint, /gallery, /key, /pnl. Presentation only.
+   Tokens from polish.css and app-shell.css. Breakpoints: 700px for phones. Minimum text size 13px. */
+
+/* ---- Quotes & swaps (app/settle) ---- */
+.settle .dform { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, 1.2fr) auto; align-items: end; gap: var(--space-3); margin-top: var(--space-4); }
+.settle .dform .pick, .settle .dform .pick-amt { display: grid; gap: 8px; min-width: 0; font: 600 14px/1.3 var(--sans); color: var(--ink); }
+.settle .dform .pick-l { font: 600 13px/1.3 var(--sans); color: var(--ink-2); }
+.settle .pick-row {
+  display: flex; align-items: center; gap: 10px; min-width: 0; height: 52px; padding: 0 12px 0 10px;
+  border-radius: 14px; border: 1px solid var(--kh-field); background: var(--card);
+}
+.settle .pick-row:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px #1F4B4F22; }
+.settle .pick-row select { flex: 1; min-width: 0; height: 100%; border: 0; padding: 0; background: transparent; font: 600 16px/1.2 var(--sans); color: var(--ink); outline: 0; cursor: pointer; }
+.settle .dform .pick-amt .input { height: 52px; border-radius: 14px; font: 600 16px/1 var(--mono); }
+.settle .dform .kh-btn { align-self: end; }
+.bestq {
+  display: grid; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-5); border-radius: var(--r-card-lg);
+  background: var(--banner); color: var(--banner-ink); box-shadow: var(--shadow-lifted);
+}
+.bestq-tag { margin: 0; font: 600 13px/1.4 var(--sans); color: #F2C25B; }
+.bestq-route { margin: 0; font: 700 22px/1.25 var(--sans); color: var(--banner-ink); overflow-wrap: anywhere; }
+.bestq-route span { color: #F2C25B; }
+.bestq-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4); margin: 0; }
+.bestq-grid > div { display: grid; gap: 4px; min-width: 0; }
+.bestq-grid dt { font: 600 13px/1.4 var(--sans); color: #D6E6E4; }
+.bestq-grid dd { margin: 0; font: 700 18px/1.3 var(--mono); color: var(--banner-ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.bestq-grid dd small { display: block; font: 500 13px/1.4 var(--sans); color: #D6E6E4; }
+.bestq .note { margin: 0; font: 500 14px/1.5 var(--sans); color: #D6E6E4; }
+.settle .agent .abtn { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); }
+
+/* ---- Mint (app/mint): the ceremony is untouched; these frame the action and the result ---- */
+.mint-action { display: grid; gap: 12px; margin-top: 18px; justify-items: start; }
+.mint-action .note { margin: 0; font-size: 14px; }
+.mint-result { margin-top: 18px; }
+.mint-result .kh-tx-head b { font-size: 18px; }
+
+/* ---- Keys (app/gallery): All keys and My keys ---- */
+.gal-filter { display: inline-flex; flex-wrap: wrap; gap: 6px; padding: 4px; margin: 0 0 var(--space-5); border-radius: var(--r-pill); border: 1px solid var(--kh-field); background: var(--card); }
+.gal-tab { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--r-pill); font: 600 15px/1 var(--sans); color: var(--ink); text-decoration: none; transition: background-color .2s, color .2s; }
+.gal-tab:hover { background: #1F4B4F14; }
+.gal-tab[aria-current="page"] { background: var(--teal); color: #FFFCF6; }
+.gal-tab:focus-visible, .gal-link:focus-visible, .pnl-link:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.gal-count { margin: 0 0 var(--space-4); font-size: 15px; }
+.gal-foot { margin-top: 28px; }
+.gal-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+
+/* ---- Key history (app/key): holders and log read as rows; phones stack each row ---- */
+.khist .field { display: flex; flex-wrap: wrap; gap: 10px; max-width: 640px; }
+.khist .field .input { flex: 1 1 220px; min-width: 0; min-height: 48px; }
+.khist .khold .ktable .kr > * { min-width: 0; }
+
+@media (max-width: 700px) {
+  .khist .ktable .kh { display: none; }
+  .khist .ktable .kr { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 14px; padding: 14px 0; }
+  .khist .ktable .kr > span:first-child { grid-column: 1 / -1; font-weight: 600; }
+  .khist .ktable .kr > span[data-l]::before { content: attr(data-l); display: block; font: 600 13px/1.3 var(--mono); color: var(--mu); letter-spacing: .04em; text-transform: uppercase; }
+  .khist .ktable .kr > span[data-l] { font-size: 15px; }
+  .khist .khold, .khist .klog { overflow: hidden; }
+  .settle .dform { grid-template-columns: minmax(0, 1fr); }
+  .settle .dform .kh-btn { width: 100%; }
+  .bestq { padding: var(--space-4); }
+  .bestq-route { font-size: 19px; }
+  .bestq-grid dd { font-size: 17px; }
+  .pnl-figure-v { font-size: 40px; }
+  .pnl-checks > li { grid-template-columns: 32px minmax(0, 1fr); }
+  .pnl-mark { width: 32px; height: 32px; font-size: 16px; }
+}
+
+/* ---- Signed PnL (app/pnl) ---- */
+.pnl { display: grid; gap: var(--space-5); max-width: 980px; }
+.pnl-head { display: grid; gap: var(--space-2); }
+.pnl-head h1 { margin: 0; }
+.pnl-head .lead { margin: 0; max-width: 64ch; font: 500 16px/1.6 var(--sans); color: var(--ink-2); }
+.pnl-figure { display: grid; gap: var(--space-2); }
+.pnl-figure-l { font: 600 13px/1.4 var(--sans); color: var(--ink-2); }
+.pnl-figure-v { font: 700 52px/1.05 var(--sans); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pnl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-5); margin: var(--space-4) 0 0; }
+.pnl-grid > div { display: grid; gap: 4px; min-width: 0; }
+.pnl-grid dt { font: 600 13px/1.4 var(--sans); color: var(--ink-2); }
+.pnl-grid dd { margin: 0; font: 600 16px/1.4 var(--sans); color: var(--ink); overflow-wrap: anywhere; }
+.pnl-grid dd.mono { font: 500 14px/1.45 var(--mono); }
+.pnl-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.pnl-checks > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--space-3); align-items: start; }
+.pnl-checks h2 { margin: 0 0 6px; font: 600 18px/1.3 var(--sans); color: var(--ink); }
+.pnl-checks p { margin: 0; font: 500 15px/1.55 var(--sans); color: var(--ink-2); overflow-wrap: anywhere; }
+.pnl-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; font: 700 18px/1 var(--sans); background: #1F4B4F12; color: var(--teal); }
+.pnl-mark.ok { background: #16794A; color: #FFFCF6; }
+.pnl-mark.bad { background: #B23A26; color: #FFFCF6; }
+.pnl-mark.wait { background: #1F4B4F12; color: var(--ink-2); }
+.pnl-verdict { margin: 0; padding: var(--space-4); border-radius: var(--r-card); font: 600 16px/1.5 var(--sans); }
+.pnl-verdict.ok { background: #E3EFE7; color: #16603C; }
+.pnl-verdict.bad { background: #F8E7E1; color: #8E3522; }
+.pnl-note { display: grid; gap: var(--space-2); }
+.pnl-note h2 { margin: 0; font: 600 22px/1.3 var(--sans); color: var(--ink); }
+.pnl-note p { margin: 0; font: 500 16px/1.55 var(--sans); color: var(--ink-2); }
+.pnl-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-2); }
+.pnl-link { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+.pnl-json summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--teal); font: 600 15px/1 var(--sans); }
+.pnl-json pre { font-size: 13px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gal-tab { transition: none; }
+}

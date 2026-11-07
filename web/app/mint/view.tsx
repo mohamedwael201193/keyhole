@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useEffect } from "react";
 import { shortKeyId } from "@/lib/near";
 import { Attested, ErrorBox, OfflineState } from "@/components/Result";
@@ -13,14 +12,13 @@ import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { useHealth } from "@/lib/useHealth";
-import { tx } from "@/lib/config";
 import { formatTradePrice } from "@/lib/price";
 import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
-import { TxLink } from "@/components/TxLink";
+import { TxResult } from "@/components/TxResult";
 import { saveMintTx } from "@/lib/mintTx";
 import { MetaMaskNote } from "@/components/MetaMaskNote";
-import { Busy } from "@/components/ui";
+import { Busy, Button } from "@/components/ui";
 
 /** Remember the mint tx so /start and /vault can link it. */
 function MintTxSave({ hash }: { hash: string }) { const { accountId } = useWallet(); useEffect(() => { saveMintTx(accountId, hash); }, [accountId, hash]); return null; }
@@ -74,14 +72,21 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                 ))}
                 <div><dt>{t("field.cipher")}</dt><dd><Cipher bits={idn.bits} /></dd></div>
               </dl>
-              <div className="hero-actions">
-                <Link className="btn b1" href="/vault">{t("mint.openVault")}</Link>
-                {typeof o.tx === "string" && <><MintTxSave hash={o.tx} /><a className="btn b2" href={tx(o.tx)} target="_blank" rel="noreferrer">{t("mint.view")}</a> <TxLink hash={o.tx}>{o.tx.slice(0, 10)}…</TxLink></>}
+              <div className="mint-result">
+                <TxResult
+                  state="confirmed"
+                  title={t("mint.done")}
+                  hash={typeof o.tx === "string" ? o.tx : undefined}
+                  callId={m.res?.call_id ?? undefined}
+                  testid="mint-result"
+                >
+                  {typeof o.tx === "string" && <MintTxSave hash={o.tx} />}
+                  <Button href="/vault" size="lg" testid="mint-open-vault">{t("mint.openVault")}</Button>
+                </TxResult>
               </div>
-              <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginTop: 18 }} data-testid="minted">
+              <p className="mint-caps" style={{ fontSize: 13, color: "var(--mu)", marginTop: 18 }} data-testid="minted">
                 {t("mint.capsLine", { finish: t(`finish.${idn.finish}`), tx: fmtUsd(idn.perTx * 1e6), day: fmtUsd(idn.daily * 1e6) })}
               </p>
-              {m.res && <Attested r={m.res} />}
             </>
           ) : (
             <>
@@ -118,10 +123,12 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                 </EmptyState>
               )}
               {online !== false && accountId && (
-                <div style={{ marginTop: 18 }}>
-                  <button className="btn b1" disabled={m.busy} onClick={() => void m.run({})} data-testid="mint-btn">{m.busy ? <Busy l={m.label} /> : t("mint.sign")}</button>
+                <div className="mint-action">
+                  <Button size="lg" disabled={m.busy} onClick={() => void m.run({})} testid="mint-btn">{m.busy ? <Busy l={m.label} /> : t("mint.sign")}</Button>
+                  <p className="note">{t("mint.one")}</p>
+                  {m.busy && <TxResult state="pending" title="Waiting for the enclave" testid="mint-pending" />}
                   {m.res?.error && <ErrorBox code={m.res.error.code} retryAfter={m.res.error.retry_after} />}
-                  {m.res && <Attested r={m.res} />}
+                  {m.res && !m.res.error && m.res.call_id && <Attested r={m.res} />}
                 </div>
               )}
             </>

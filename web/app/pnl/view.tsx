@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { decodeShare, minterIsContracts, parseStatement, sigValid, usd, type PnlShare, type PnlStatement } from "@/lib/pnl";
 import { KEYS_CONTRACT } from "@/lib/config";
+import { Card, Button } from "@/components/ui";
 
 type State = { share: PnlShare; st: PnlStatement | null; sig: boolean; minter: boolean | null } | "none" | "bad";
 
+/** Signed PnL statement, checked in the browser. The checks and the verdict are the same as before; only the layout changed. */
 export function PnlView() {
   const [s, setS] = useState<State | null>(null);
   useEffect(() => {
@@ -23,36 +25,80 @@ export function PnlView() {
   }, []);
   const ok = s && typeof s === "object" && s.sig && s.minter === true && !!s.st;
   return (
-    <div className="page judge pnl" data-testid="pnl-page">
-      <p className="eb">Signed PnL · opt-in · verified in your browser</p>
-      <h1>A track record <em>you can check.</em></h1>
-      <p className="lede">A key holder chose to publish this. The enclave read its own trade log for that holder, priced each trade&apos;s output now, and signed the totals with the minter key the NFT contract names. No balances, assets or per-trade amounts are in it.</p>
-      {s === "none" && <div className="c jlimits"><p>No statement in this link. A holder creates one from <Link href="/vault">/vault</Link> → Activity → <b>Publish signed PnL</b>.</p></div>}
-      {s === "bad" && <div className="c jlimits" data-testid="pnl-bad"><p>This link does not contain a readable statement.</p></div>}
+    <div className="page pnl" data-testid="pnl-page">
+      <header className="pnl-head">
+        <p className="eb">Signed PnL · opt-in · verified in your browser</p>
+        <h1>A track record <em>you can check.</em></h1>
+        <p className="lead">A key holder chose to publish this. The enclave read its own trade log for that holder, priced each trade&apos;s output now, and signed the totals with the minter key the NFT contract names. No balances, assets or per-trade amounts are in it.</p>
+      </header>
+
+      {s === "none" && (
+        <Card className="pnl-note" testid="pnl-none">
+          <h2>No statement in this link</h2>
+          <p>A holder creates one from <Link href="/vault">the vault</Link>: Activity, then <b>Publish signed PnL</b>.</p>
+          <div className="pnl-actions"><Button href="/vault" variant="secondary">Open a vault</Button></div>
+        </Card>
+      )}
+      {s === "bad" && (
+        <Card className="pnl-note" testid="pnl-bad">
+          <h2>Not a readable statement</h2>
+          <p>This link does not contain a readable statement. Ask the holder for a new link.</p>
+        </Card>
+      )}
+
       {s && typeof s === "object" && (
         <>
-          <div className="c jlimits" data-testid="pnl-card">
-            <h2>{s.st ? usd(s.st.pnl_usd_micro) : "—"} <span className="mono muted" style={{ fontSize: 14 }}>PnL</span></h2>
+          <Card size="lg" className="pnl-figure" testid="pnl-card">
+            <span className="pnl-figure-l">Signed PnL</span>
+            <span className="pnl-figure-v">{s.st ? usd(s.st.pnl_usd_micro) : "—"}</span>
             {s.st && (
-              <dl className="kv">
-                <dt>key</dt><dd className="mono">{s.st.token_id}</dd>
-                <dt>holder</dt><dd className="mono" style={{ overflowWrap: "anywhere" }}>{s.st.owner}</dd>
-                <dt>lifetime trades (this key, this holder)</dt><dd>{s.st.trades}</dd>
-                <dt>paid at trade time</dt><dd>{usd(s.st.cost_usd_micro)}</dd>
-                <dt>outputs worth now</dt><dd>{usd(s.st.value_now_usd_micro)}</dd>
-                <dt>since</dt><dd>{s.st.since_ms ? new Date(s.st.since_ms).toUTCString() : "—"}</dd>
-                <dt>signed at</dt><dd>{new Date(s.st.ts_ms).toUTCString()}</dd>
-                <dt>method</dt><dd>{s.st.method}</dd>
+              <dl className="pnl-grid">
+                <div><dt>Key</dt><dd className="mono">{s.st.token_id}</dd></div>
+                <div><dt>Holder</dt><dd className="mono">{s.st.owner}</dd></div>
+                <div><dt>Lifetime trades (this key, this holder)</dt><dd>{s.st.trades}</dd></div>
+                <div><dt>Paid at trade time</dt><dd>{usd(s.st.cost_usd_micro)}</dd></div>
+                <div><dt>Outputs worth now</dt><dd>{usd(s.st.value_now_usd_micro)}</dd></div>
+                <div><dt>Since</dt><dd>{s.st.since_ms ? new Date(s.st.since_ms).toUTCString() : "—"}</dd></div>
+                <div><dt>Signed at</dt><dd>{new Date(s.st.ts_ms).toUTCString()}</dd></div>
+                <div><dt>Method</dt><dd>{s.st.method}</dd></div>
               </dl>
             )}
-          </div>
-          <ol className="jsteps">
-            <li className="c" data-testid="pnl-sig" data-pass={String(s.sig)}><h2><span>{s.sig ? "✓" : "✕"}</span>Signature valid</h2><p>ed25519 over the exact statement bytes, checked against <span className="mono">{s.share.minter.slice(0, 12)}…</span> in your browser.</p></li>
-            <li className="c" data-testid="pnl-minter" data-pass={String(s.minter)}><h2><span>{s.minter == null ? "…" : s.minter ? "✓" : "✕"}</span>Signer is the contract&apos;s minter</h2><p><span className="mono">{KEYS_CONTRACT}</span> config names this account as minter, and that key exists only inside the enclave.</p></li>
-            <li className="c"><h2><span>{s.share.call_id ? "→" : "–"}</span>Attested call</h2><p>{s.share.call_id ? <>The statement is in the output of <Link href={`/verify?call=${s.share.call_id}`}>call {s.share.call_id.slice(0, 8)}</Link>; paste this statement JSON there to match it to the attested output hash.</> : "No call id was attached."}</p></li>
+          </Card>
+
+          <ol className="pnl-checks">
+            <li className="kh-card" data-testid="pnl-sig" data-pass={String(s.sig)}>
+              <span className={`pnl-mark ${s.sig ? "ok" : "bad"}`} aria-hidden="true">{s.sig ? "✓" : "✕"}</span>
+              <div>
+                <h2>Signature valid</h2>
+                <p>ed25519 over the exact statement bytes, checked against <span className="mono">{s.share.minter.slice(0, 12)}…</span> in your browser.</p>
+              </div>
+            </li>
+            <li className="kh-card" data-testid="pnl-minter" data-pass={String(s.minter)}>
+              <span className={`pnl-mark ${s.minter == null ? "wait" : s.minter ? "ok" : "bad"}`} aria-hidden="true">{s.minter == null ? "…" : s.minter ? "✓" : "✕"}</span>
+              <div>
+                <h2>Signer is the contract&apos;s minter</h2>
+                <p><span className="mono">{KEYS_CONTRACT}</span> config names this account as minter, and that key exists only inside the enclave.</p>
+              </div>
+            </li>
+            <li className="kh-card">
+              <span className={`pnl-mark ${s.share.call_id ? "link" : "wait"}`} aria-hidden="true">{s.share.call_id ? "→" : "–"}</span>
+              <div>
+                <h2>Attested call</h2>
+                {/* A pointer, not a verdict: TxResult would read as "Confirmed", so this stays a plain link. */}
+                {s.share.call_id ? (
+                  <p>The statement is in the output of <Link href={`/verify?call=${s.share.call_id}`} className="pnl-link">call {s.share.call_id.slice(0, 8)}</Link>. Paste this statement JSON there to match it to the attested output hash.</p>
+                ) : <p>No call id was attached to this statement.</p>}
+              </div>
+            </li>
           </ol>
-          <p className="mono" data-testid="pnl-verdict" data-ok={ok ? "true" : "false"}>{ok ? "Verified: signed by the KEYHOLE enclave minter." : s.minter == null ? "Checking…" : "Not verified."}</p>
-          <details><summary>Statement JSON</summary><pre className="term" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{s.share.statement}</pre></details>
+
+          <p className={`pnl-verdict ${ok ? "ok" : "bad"}`} data-testid="pnl-verdict" data-ok={ok ? "true" : "false"}>
+            {ok ? "Verified: signed by the KEYHOLE enclave minter." : s.minter == null ? "Checking…" : "Not verified."}
+          </p>
+          <details className="pnl-json">
+            <summary>Statement JSON</summary>
+            <pre className="term" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{s.share.statement}</pre>
+          </details>
         </>
       )}
     </div>

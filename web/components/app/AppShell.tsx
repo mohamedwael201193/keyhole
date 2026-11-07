@@ -41,8 +41,8 @@ export const APP_NAV: AppNavGroup[] = [
     title: "Workspace",
     items: [
       { id: "overview", label: "Overview", href: "/dashboard", icon: "home", match: ["/dashboard"], notHash: "#activity" },
-      // /gallery lists every key on chain (there is no per-holder filter yet), so the label says so.
-      { id: "keys", label: "All keys", href: "/gallery", icon: "key", match: ["/gallery", "/key"] },
+      // My keys is the connected account's keys (/gallery?mine=1). The All keys tab on /gallery lists every key on chain.
+      { id: "keys", label: "My keys", href: "/gallery?mine=1", icon: "key", match: ["/gallery", "/key"] },
       { id: "swaps", label: "Quotes & swaps", href: "/settle", icon: "swap", match: ["/settle"] },
       // The signed PnL statement (/pnl) is opened from the vault, so Vault stays current there.
       { id: "vault", label: "Vault", href: "/vault", icon: "vault", match: ["/vault", "/pnl"] },
