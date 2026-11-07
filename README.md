@@ -40,7 +40,7 @@ Live site: [https://keyhole-seven.vercel.app](https://keyhole-seven.vercel.app).
 5. Click **Read balance** and approve the signature. — The total becomes a USD amount, or the token amounts if nothing is priced. A held asset with no price stays in the total as "+ … unpriced". **Assets · N** lists one row per asset: symbol, name, the amount on one line, and the USD value under it when a price exists. The note says "Read from the enclave with your signature."
 6. Open **2 · Trade**. The form lists USDC and wNEAR and the line "Bronze · $1.00 per trade · $5.00 per day" (Silver and Gold caps replace this after a higher tier is read). Click **Get attested quote**. — The receipt shows **You give**, **You get**, **Price**, and **Cap**. Click **Sign & trade** and approve. — The result card starts with "Traded", names the amount out, and includes a status and **Verify**.
 7. Open **3 · Withdraw**. — The note names the account you connected. Enter an amount and click **Sign & withdraw**. — The result card starts with "Withdrawn" and names that account. The worker refuses any other destination.
-8. Open the result's **Verify** link, or open [https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15](https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751). — The page shows **Intel TDX quote present**, **Worker code hash matches**, **Published on NEAR**, and the result **The enclave is genuine.** The verdict element has `data-match="true"`.
+8. Open the result's **Verify** link, or open [https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751](https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751). — The page shows **Intel TDX quote present**, **Worker code hash matches**, **Published on NEAR**, and the result **The enclave is genuine.** The verdict element has `data-match="true"`.
 
 A declined signature shows "You declined the signature." Starting another action clears that message. A redirect wallet that returns with a completed trade or withdraw shows that result card and does not keep the decline.
 
@@ -77,7 +77,7 @@ npx next start -p 3100 &
 npx playwright test
 ```
 
-`./judge/1-contract.sh` reads the live contract. `./verify.sh 5650a6b7-b7de-410c-b206-e189171bad15` checks that call. It prints the executed wasm hash, the TDX measurement (not the same value), and `tee/worker/DEPLOYED_SHA256`. `./verify.sh <call_id> --rebuild` also compares a local worker build. `node tee/worker/verify-log.mjs --self-test` checks the key-log script.
+`./judge/1-contract.sh` reads the live contract. `./verify.sh 246e4a7a-f138-4459-8548-350dd9960751` checks that call. It prints the executed wasm hash, the TDX measurement (not the same value), and `tee/worker/DEPLOYED_SHA256`. `./verify.sh <call_id> --rebuild` also compares a local worker build. `node tee/worker/verify-log.mjs --self-test` checks the key-log script.
 
 ## Invariants
 
@@ -214,7 +214,7 @@ Do the step. The result on the right is what a correct tree produces. Commands a
 | Do | See |
 |---|---|
 | Open [https://keyhole-seven.vercel.app/gallery](https://keyhole-seven.vercel.app/gallery) | One card per token on [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near). The home page key count is `nft_total_supply` minus the test key the contract holds |
-| Open [https://keyhole-seven.vercel.app/verify?call=5650a6b7-b7de-410c-b206-e189171bad15](https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, checks Intel's revocation lists and TCB status, and shows 37/37 (6 attestation, 19 Intel DCAP, 12 Intel PCS checks; TCB UpToDate). The verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8`, the published build |
+| Open [https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751](https://keyhole-seven.vercel.app/verify?call=246e4a7a-f138-4459-8548-350dd9960751) | The page fetches the attestation in the browser, re-hashes the FastFS wasm, checks Intel's revocation lists and TCB status, and shows 37/37 (6 attestation, 19 Intel DCAP, 12 Intel PCS checks; TCB UpToDate). The verdict element has `data-match="true"`. This call's `executed_wasm_sha256` is `a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8`, the published build |
 | `./judge/1-contract.sh` | On-chain code hash equals sha256 `700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d` of [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | `./verify.sh 246e4a7a-f138-4459-8548-350dd9960751 --rebuild` | The `executed` line equals `tee/worker/DEPLOYED_SHA256` (`a985fd87…`). Then `OK` for a TDX quote, `wasm_hash == executed`, `executed == published build a985fd87`, the FastFS bytes, and your local `build.sh` |
 | `./verify.sh 5650a6b7-b7de-410c-b206-e189171bad15` | Build `ebeb6a34`, published and rolled back to `94c355ff`. Prints `OK executed == previous build ebeb6a34, superseded by a985fd87` |
@@ -693,7 +693,7 @@ Previous version `f13efe92`. These 30 steps were run with a real named wallet (`
 | Publish worker `ebeb6a34` (`add_version`): wallet-signed withdraw, swap slippage floor, refunds, nonce pruning after 15 minutes (PR #134). Signed calls hung on OutLayer, so it was rolled back | [`MG7pGVSN…`](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq) |
 | Roll back to `94c355ff` (set-active-version call) | [`ArXzjsWP…`](https://nearblocks.io/txns/ArXzjsWPs9ii119Q3zy3dViPERaKF26rE7Q1xnLmZrEW) |
 | FastFS upload for `ebeb6a34` (expected prepaid-gas revert) | [`HSCTERXC…`](https://nearblocks.io/txns/HSCTERXCUv1uEfrcz44pxM5Ltcy4BKXTfZxxtYUTQsc7) |
-| Live `info` on `ebeb6a34` | [`5650a6b7`](https://api.outlayer.ai/attestations/by-call/5650a6b7-b7de-410c-b206-e189171bad15) |
+| Live `info` on previous `ebeb6a34` (rolled back) | [`5650a6b7`](https://api.outlayer.ai/attestations/by-call/5650a6b7-b7de-410c-b206-e189171bad15) |
 | Publish previous worker `94c355ff` (`add_version`): hardening batch 1 (nonce order, chain_sign quota, withdraw re-check, quote pinning, beat-key owner) on top of sessions | [`EA7S1TeV…`](https://nearblocks.io/txns/EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy) |
 | FastFS upload for previous `94c355ff` (expected prepaid-gas revert) | [`8r5RMGJo…`](https://nearblocks.io/txns/8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x) |
 | Live `info` on previous `94c355ff` | [`ecb0d1d6`](https://api.outlayer.ai/attestations/by-call/ecb0d1d6-90e3-4522-852a-578ca50fdeb6) |
