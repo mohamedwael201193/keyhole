@@ -1,0 +1,56 @@
+/* /swap: one centred card, one primary action, facts in plain words. Tokens only (app/tokens.css); components from components/ui. */
+.sw-page { display: grid; gap: var(--space-5); justify-items: center; }
+.sw-page > .upurpose { width: 100%; max-width: 520px; }
+
+.sw-card { width: 100%; max-width: 520px; display: grid; gap: var(--space-4); padding: var(--space-5); animation: sw-in var(--dur-slow) var(--ease-out) both; }
+@keyframes sw-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.sw-leg { display: grid; gap: var(--space-2); min-width: 0; }
+.sw-leg .kh-amount-row { flex-wrap: wrap; }
+.sw-leg .kh-amount-input { min-width: 120px; font-size: 36px; }
+.sw-leg .kh-amount-symbol { display: none; }
+.sw-hint { display: flex; justify-content: flex-end; }
+.sw-hint .kh-btn { min-height: 40px; }
+
+.sw-flip { display: flex; justify-content: center; margin: calc(var(--space-2) * -1) 0; position: relative; z-index: 1; }
+.sw-flip button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); display: grid; place-items: center; cursor: pointer; transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+.sw-flip button:hover { transform: rotate(180deg); border-color: var(--primary); }
+.sw-flip button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.sw-recv { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-radius: var(--radius-lg); background: var(--sunken); border: 1px solid var(--line); min-width: 0; }
+.sw-recv-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.sw-recv-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.sw-label { font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink-2); }
+.sw-amt { font: 600 36px/1.1 var(--font-ui); font-variant-numeric: tabular-nums; color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
+.sw-amt.empty { color: var(--muted); font-weight: 500; }
+
+.sw-facts { margin: 0; display: grid; gap: var(--space-2); }
+.sw-facts > div { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--line); }
+.sw-facts dt { font-size: var(--text-small); color: var(--muted); flex: none; }
+.sw-facts dd { margin: 0; font-size: var(--text-small); font-weight: 600; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
+
+.sw-note { margin: 0; font-size: var(--text-small); line-height: 1.5; color: var(--ink-2); }
+.sw-card .kh-tx { padding-top: var(--space-2); }
+
+.sw-recent { width: 100%; max-width: 520px; display: grid; gap: var(--space-3); }
+.sw-recent-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.sw-recent h2 { margin: 0; font: 600 var(--text-heading)/1.2 var(--font-ui); color: var(--ink); }
+.sw-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.sw-list li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) 0; border-top: 1px solid var(--line); font-size: var(--text-small); color: var(--ink); }
+.sw-list li > span { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.sw-list small { color: var(--muted); font-size: var(--text-small); }
+.sw-list a { color: var(--primary); font-weight: 600; }
+
+.sw-recent .kh-btn--secondary.kh-btn--sm { min-height: 40px; }
+
+@media (max-width: 480px) {
+  .sw-card { padding: var(--space-4); }
+  .sw-recv { padding: var(--space-3) var(--space-4); }
+  .sw-amt { font-size: 30px; }
+  .sw-leg .kh-amount-input { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-card { animation: none; }
+  .sw-flip button { transition: none; }
+  .sw-flip button:hover { transform: none; }
+}
