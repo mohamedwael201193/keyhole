@@ -4,7 +4,6 @@ import { ed25519 } from "@noble/curves/ed25519";
 import { sha256 } from "@noble/hashes/sha256";
 import bs58 from "bs58";
 import { nep413Bytes, signRequest, keyFromString, fmt, explainPnl } from "../src/core.ts";
-import { makeConfirm, takeConfirm } from "../src/mcp.ts";
 
 const secret = new Uint8Array(32).fill(1);
 const key = keyFromString("alice.near", "ed25519:" + bs58.encode(secret));
@@ -40,11 +39,3 @@ test("formatting and pnl", () => {
   assert.match(s, /\$0\.01/);
 });
 
-test("copy needs a single-use, expiring confirmation", () => {
-  const c = makeConfirm({ amount_in: "1" }, 0);
-  assert.equal(takeConfirm("nope", 0), null);
-  assert.deepEqual(takeConfirm(c, 1000), { amount_in: "1" });
-  assert.equal(takeConfirm(c, 1000), null);
-  const d = makeConfirm({ amount_in: "1" }, 0);
-  assert.equal(takeConfirm(d, 6 * 60_000), null);
-});

@@ -47,7 +47,11 @@ Amounts are in base units (USDC: 6 decimals, so `10000` = 0.01 USDC).
   "env": { "KEYHOLE_KEY_FILE": "/path/key.json", "KEYHOLE_GATEWAY": "https://…/api/keyhole" } } } }
 ```
 
-Tools: `verify`, `explain_pnl`, `quote_buy`, `copy`. `copy` is two steps: the first call returns a preview and a `confirm_code`. The trade runs only when called again with that code (single use, 5 minutes). Assistants must show the preview and get an explicit yes first.
+Tools: `verify`, `explain_pnl`, `quote_buy`, `copy`. `copy` previews the trade, runs the counterparty check on your own account, and then waits for the operator to type a code shown on the operator's terminal (5 minutes). The code is never part of a tool result, so the assistant cannot confirm for itself. With no operator terminal (for example, when the MCP server is started by a client with no terminal), `copy` is refused.
+
+## Counterparty guard
+
+`withdraw`, `quote --execute` and MCP `copy` check the receiver before signing (`src/counterparty.ts`, rules in the root README, "AI Security & Defense"). `block` refuses and exits 2 without signing. `warn` asks the operator at their terminal (`/dev/tty` on macOS and Linux, `CONIN$` and `CONOUT$` on Windows) and exits 3 if not confirmed. Audit lines go to stderr as JSON with verdicts and reason codes only. Advisory: anyone holding the full-access key can sign without this CLI.
 
 ## Interface for apps (stable)
 

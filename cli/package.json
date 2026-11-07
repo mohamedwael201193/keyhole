@@ -6,7 +6,7 @@
   "type": "module",
   "bin": { "keyhole": "dist/cli.js", "keyhole-mcp": "dist/mcp.js" },
   "scripts": {
-    "build": "tsc -p .",
+    "build": "tsc -p . && node -e \"require('node:fs').copyFileSync('src/blocklist.json','dist/blocklist.json')\"",
     "test": "node --test --import tsx test/*.test.ts",
     "keyhole": "tsx src/cli.ts",
     "mcp": "tsx src/mcp.ts"

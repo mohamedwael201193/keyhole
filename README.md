@@ -153,6 +153,7 @@ The steps, and the words each one should show, are in [Try it](#try-it).
 6. [The TEE worker](#6-the-tee-worker)
 7. [CLI, MCP and the website gateway](#7-cli-mcp-and-the-website-gateway)
 8. [Threat model, security controls, privacy](#8-threat-model-security-controls-and-privacy)
+8b. [AI Security & Defense: counterparty check](#ai-security--defense-counterparty-check)
 9. [Verify it yourself (judges)](#9-verify-it-yourself-judges)
 10. [Mainnet end-to-end (30 steps)](#10-mainnet-end-to-end-30-steps)
 11. [On-chain transactions](#11-on-chain-transactions)
@@ -257,7 +258,7 @@ Source sentence, [status 2106269343881519444](https://x.com/ilblackdragon/status
 |---|---|---|
 | "Private trading" | `swap` runs a confidential NEAR Intents swap inside the worker. The fill is not written to the NEAR account of the holder | [step 8](docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json), [`swap`](tee/worker/src/main.rs) |
 | "you sell your viewing keys" | The token is the account: custody is keyed by `token_id`. `nft_transfer` / `nft_transfer_payout` moves it, and the next call re-reads the owner | [`nft_transfer_payout`](contracts/keys/src/lib.rs), [TEE-signed mint](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) |
-| "for people to follow/copy trade" | `copy` is a two-step tool: preview, then a one-time confirmation code, then the swap | [steps 10–12](docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json), [`cli/src/mcp.ts`](cli/src/mcp.ts) |
+| "for people to follow/copy trade" | `copy` previews, checks the receiver, then needs the operator's code on their own terminal before the swap (steps 10–12 were recorded with the older two-step flow) | [steps 10–12](docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json), [`cli/src/mcp.ts`](cli/src/mcp.ts) |
 | "NEAR Intents confidential trading is all private" | Quotes and swaps set `confidentiality` to `basic` or `advanced`. `history` and `balance` require the holder's NEP-413 signature | [step 5](docs/evidence/mainnet-e2e/05_quote_advanced.json), [step 24](docs/evidence/mainnet-e2e/24_history.json) |
 | "sell \"keys\" for only select people to see" | The worker answers the account that holds the NFT at call time. Anyone else is refused `not_owner` | [`holder_tier`](tee/worker/src/main.rs), [step 6 in the worker README](tee/worker/README.md) |
 
@@ -442,8 +443,8 @@ npx tsx src/cli.ts verify <call_id>
 
 **MCP server.** Its tools are `verify`, `explain_pnl`, `quote_buy` and `copy`.
 
-- `copy` is a two-step trade. The first call returns a preview and a single-use `confirm_code` that is valid for 5 minutes. The trade runs only when the tool is called again with that code.
-- Mainnet proof: preview ([`10`](docs/evidence/mainnet-e2e/10_mcp_copy_preview.json)), wrong code refused ([`11`](docs/evidence/mainnet-e2e/11_mcp_copy_bad_code.json)), confirmed trade with intent `Gagspu7r…` ([`12`](docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json)).
+- `copy` previews the trade, checks the receiver (the holder's own account), and then waits for the operator to type a code shown on the operator's terminal, for up to 5 minutes. The code never appears in a tool result. With no operator terminal the copy is refused. See [AI Security & Defense](#ai-security--defense-counterparty-check).
+- Mainnet proof of the earlier two-step flow, which returned the code in the tool result (superseded by the operator-terminal gate): preview ([`10`](docs/evidence/mainnet-e2e/10_mcp_copy_preview.json)), wrong code refused ([`11`](docs/evidence/mainnet-e2e/11_mcp_copy_bad_code.json)), confirmed trade with intent `Gagspu7r…` ([`12`](docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json)).
 
 **Website gateway** ([`web/app/api/worker/route.ts`](web/app/api/worker/route.ts), also mounted at `/api/keyhole`):
 
@@ -514,7 +515,68 @@ Holders never hand a key to the website or the worker. A request is a NEP-413 me
 
 MetaMask requests take the other path on purpose. An EIP-191 holder is an eth-implicit account (`0x…` on NEAR), and that account is controlled by its Ethereum key alone, so there is no access-key list to consult. The worker instead requires the account id to be a lowercase `0x` address, the signing address to equal it, and the signature to recover to it (`account_mismatch`, `bad_signature` otherwise; [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs) `verify_eip191`). Both paths end at the same check: the account must hold the NFT when the request arrives, and again before a swap or withdraw settles.
 
-For an AI agent, do not give it your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 h), and lock the key while you are away. The worker then enforces, inside the TEE: payouts only to the signing holder, per-trade and per-day caps, one use per signature, a 10-minute withdraw cooldown after a transfer, and the lock. The MCP `copy` tool needs a second confirmation code. See the attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md): an agent that obeys an injected "send everything to attacker.near" is refused on every path.
+For an AI agent, do not give it your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 h), and lock the key while you are away. The worker then enforces, inside the TEE: payouts only to the signing holder, per-trade and per-day caps, one use per signature, a 10-minute withdraw cooldown after a transfer, and the lock. The MCP `copy` tool needs the operator's confirmation on their own terminal. See the attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md): an agent that obeys an injected "send everything to attacker.near" is refused on every path.
+
+## AI Security & Defense: counterparty check
+
+**What it does.** Before an agent pays or copies, the KEYHOLE CLI and MCP server check the receiver and return `allow`, `warn` or `block` with reason codes. `block` stops the call before anything is signed. `warn` needs a human to type a code shown on their own terminal. The rules are in [`cli/src/counterparty.ts`](cli/src/counterparty.ts). The same file is in [`web/lib/counterparty.ts`](web/lib/counterparty.ts) and is served read-only by [`GET /api/check?account=<id>[&agent=<id>]`](web/app/api/check/route.ts) (30 calls a minute per client, 60 s cache, no keys in the response). The web route ships with the next site deploy; this change did not deploy anything.
+
+**Where the guard sits (scope).** `withdraw`, `quote --execute` and MCP `copy` check the receiver first. For `copy`, the receiver is the holder's own account. This CLI has no `chain_sign` command, so that path is not guarded here. KEYHOLE's worker does not yet pay third parties, so the attack demo below shows a refusal on a path KEYHOLE does not offer to strangers yet.
+
+**Signals and data sources**
+
+| Signal | Source (read only) | If it cannot be read |
+|---|---|---|
+| Account exists; is a contract; code hash now | NEAR RPC `view_account` at final, `rpc.mainnet.near.org`, fallback `rpc.mainnet.fastnear.com` | WARN (`signal unavailable: exists`) |
+| Code changed in the last 24 h and the last 7 days | Block height estimated from block timestamps; `view_account` at that height on the archival node `archival-rpc.mainnet.fastnear.com`, fallback `archival-rpc.mainnet.near.org` | WARN (`signal unavailable: code_history`) |
+| Account age | Nearblocks `GET /v1/account/{id}`, `created.block_timestamp` | WARN (`signal unavailable: account_age`) |
+| Activity in 30 days | Nearblocks `GET /v1/account/{id}/txns?per_page=25` (25 means "25 or more") | WARN (`signal unavailable: activity`) |
+| Prior interactions agent and receiver | Nearblocks `GET /v1/account/{agent}/txns?per_page=100`, filtered to the receiver | WARN (`signal unavailable: prior_interactions`) |
+| Blocklist | [`security/blocklist.json`](security/blocklist.json), shipped with the code; no network | not needed |
+
+Every request has a 5 s timeout. A failed read is an unknown signal, and an unknown signal is a WARN, never an ALLOW.
+
+**Rules** (first match sets the verdict, and all reasons are returned)
+
+| Verdict | Reason code | When |
+|---|---|---|
+| BLOCK | `blocklist: …` | the receiver is in the blocklist (the entry's `evidence_tx` is printed) |
+| BLOCK | `receiver_missing` | the account does not exist |
+| BLOCK | `code_changed_within_24h` | a contract, not allowlisted, whose code differs from 24 h ago |
+| BLOCK | `invalid_account_id` | not a NEAR account id |
+| WARN | `account_age_days=N<7` | account younger than 7 days |
+| WARN | `no_prior_interactions` | agent given and no transaction with the receiver in the agent's newest 100 |
+| WARN | `code_changed_within_7d` | a contract, not allowlisted, whose code changed in the last 7 days |
+| WARN | `low_activity: N txns in 30d<5` | fewer than 5 transactions in 30 days |
+| WARN | `foreign_destination` | the destination is on another chain (for example `withdraw` to base); no NEAR signal applies |
+| WARN | `signal unavailable: …` | a signal could not be read |
+| ALLOW | none | everything else |
+
+The allowlist (receivers whose code is not checked): `keyhole-devmo.near`, `v1.signer`, `wrap.near` and the USDC token contract. 1Click deposit addresses are created per quote, so they cannot be listed.
+
+**Limits.**
+- **Advisory.** Anyone holding the account's full-access key can sign without this CLI or MCP server. The check is not enforced inside the TEE. A worker op would need outbound HTTP from OutLayer (not documented) and a 60 s budget that is not yet measured.
+- **ALLOW is not safety.** A new address with history can still be a scam.
+- **Nearblocks rate limit.** Anonymous calls returned HTTP 429 ("You have exceeded your API request limit") after a short burst of test checks from one IP. Nearblocks does not state its limit in a form we could confirm. A 429 is a WARN, so real traffic needs a key. If `NEARBLOCKS_API_KEY` is set, the server sends it as a bearer token. That header format was not checked against Nearblocks docs, because no key was available for this change.
+- **History depth.** The public RPC keeps about 120,000 blocks, roughly a day at 0.58 s per block, so the 1-day and 7-day code checks use the archival node. If both archival nodes are down, the check warns.
+- **Code change.** Comparing code hashes proves the code differs between two points in time. It does not count deploys.
+- **Block heights** for "N days ago" are estimated from the average block time over the last 1,000 blocks.
+- **Prior interactions** read only the agent's newest 100 transactions.
+
+**Function-call keys: what exists and what they cannot do.**
+- The beat key on the minter `015a0259…c443` is `ed25519:9FiNXX2M…`, a FunctionCall key with receiver `keyhole-devmo.near`, methods `["beat"]` only, and a remaining allowance of `49820698473980300000000` yocto (0.0498 NEAR on 2026-11-07). Read from mainnet RPC `view_access_key_list`.
+- It cannot transfer NEAR, attach a deposit, add or delete keys, or call any method other than `beat`. When the allowance is spent it stops working, and it cannot be topped up.
+- **It is not the payment signing key.** The worker refuses function-call keys for holder requests (`key_not_owned`; [evidence](docs/evidence/publish-a55ebb14/README.md)). So `withdraw`, `quote --execute` and `copy` still need the full-access key of a holder account. The agent should use an account only it controls, with low holder caps (see "Key scoping" above). Accepting function-call keys for holder requests would reopen that audit fix, so this is not changed here.
+- An account that holds only function-call keys cannot transfer NEAR or add keys, and it locks itself out when the allowance runs out.
+- Whether a function-call key can sign NEP-413 messages is not verified. Nothing here depends on it.
+
+**Reporting a bad receiver.** An agent reports with a NEP-413 signed JSON made by `signReport` ([`cli/src/report.ts`](cli/src/report.ts)). Recipient `keyhole-blocklist`. Fields: `kind`, `reporter`, `account`, `reason`, `evidence_tx` (a NEAR transaction hash that shows the harm), `ts_ms`. A curator runs `verifyReport` (signature, recipient, freshness, field formats), confirms on chain that the public key is a full-access key of `reporter`, and only then adds the entry by pull request. An entry is added to `security/blocklist.json` and to its two copies, `cli/src/blocklist.json` and `web/lib/blocklist.json`. A test fails if they differ. Nothing is added automatically, and reports are not written on chain.
+
+**Operator confirmation (warn).** The CLI asks at `/dev/tty` (macOS, Linux) or `CONIN$`/`CONOUT$` (Windows). The code is written only to that terminal, never to stdout or stderr, and never into an MCP result. The MCP server can ask only when it has a terminal; without one, a warn is refused. Audit lines on stderr carry verdicts and reason codes only. CLI exit codes: 2 blocked, 3 not confirmed. The Windows console path is not covered by CI; the tests use an injected terminal.
+
+**Attack demo.** `cd cli && npx tsx ../scripts/attack-demo.mts`. A scripted agent obeys an injected document. It tries to pay the demo blocklisted account, and it tries to send to a Base address. The first is refused by the blocklist. The second is refused because it is a warn with no operator terminal. The signer is a stub that throws if called, and the run asserts it was never called. No key is loaded and nothing is broadcast. Log: [`docs/evidence/attack-demo/2026-11-07.log`](docs/evidence/attack-demo/2026-11-07.log). The entry `keyhole-demo-blocked.near` is labelled as a demo. It is not a real account and not an accusation.
+
+**Tests.** CLI: `counterparty.test.ts` (rules, every signal's failure mode, timeouts, identity of the web and CLI copies), `guard.test.ts` (block, warn, allow, operator gate, MCP copy with the code kept out of the result), `report.test.ts` (signed report verification). Web: `check.test.ts` (400 on bad input, blocklist refusal with no network, rate limit).
 
 ## 9. Verify it yourself (judges)
 

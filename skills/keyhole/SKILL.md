@@ -12,8 +12,8 @@ Install this skill with `npx skills add mohamedwael201193/keyhole`.
 ## Safety
 
 - `quote` with no `--execute`, `info`, `status`, `balance`, `history`, `pnl`, and `verify` do not move funds.
-- Do not run `swap`, `withdraw`, `quote --execute`, or MCP `copy` step 2 unless the user asked for that action and those amounts in this conversation.
-- MCP `copy` without `confirm_code` returns a preview and a code. Show the preview. Wait for an explicit yes. Then call `copy` again with that `confirm_code` within 5 minutes. The code is single use.
+- Do not run `swap`, `withdraw`, `quote --execute`, or MCP `copy` unless the user asked for that action and those amounts in this conversation.
+- Withdraw, `quote --execute` and `copy` check the receiver first. A `block` refuses before anything is signed (exit 2). A `warn` needs the operator to type a code shown on their own terminal (exit 3 if not confirmed). The code is never printed in a tool result or on stdout or stderr, so do not look for it or ask for it. With no operator terminal, a warn is refused.
 - `over_cap_per_tx`, `over_cap_daily`, `replay`, `no_key`, `expired`, `wrong_recipient`, `bad_signature`, and `rate_limited` are the worker's answer. Do not raise the amount, reuse the nonce, or sign for a different recipient to get past them.
 - Before trusting a trade log, run `keyhole verify <call_id>` or `./verify.sh <call_id>` and read the `OK` lines. The published worker hash is `tee/worker/DEPLOYED_SHA256`.
 - `KEYHOLE_PRIVATE_KEY` stays in the environment or a key file. Do not print it, and do not put it in a commit.
@@ -48,7 +48,7 @@ keyhole verify <call_id> [--wasm path]         check attestation vs FastFS (and 
 | `verify` | Attestation versus FastFS for `call_id`. Optional `wasm_path` for a local build |
 | `explain_pnl` | Plain-language summary of the holder's private `history` and `balance` |
 | `quote_buy` | Confidential quote. No funds move |
-| `copy` | Step 1 previews. Step 2, with `confirm_code`, sends the copy |
+| `copy` | Previews, runs the counterparty guard, then needs the operator's code on their terminal |
 
 ## Verify
 

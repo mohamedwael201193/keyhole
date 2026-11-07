@@ -1,0 +1,12 @@
+{
+  "_doc": "Shared counterparty blocklist. Canonical file; web/lib/blocklist.json and cli/src/blocklist.json are byte-identical copies (cli/test/identity.test.ts). An entry is added by a curator PR, only with evidence_tx (a NEAR transaction that shows the harm) or a clearly marked demo entry. See README 'AI Security & Defense' for how agents report.",
+  "entries": [
+    {
+      "account": "keyhole-demo-blocked.near",
+      "reason": "DEMO ENTRY for the attack demo (scripts/attack-demo.mts). Not a real account and not an accusation against anyone.",
+      "evidence_tx": null,
+      "added": "2026-11-07",
+      "demo": true
+    }
+  ]
+}

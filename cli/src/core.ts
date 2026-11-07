@@ -4,9 +4,11 @@ import { ed25519 } from "@noble/curves/ed25519";
 import { sha256 } from "@noble/hashes/sha256";
 import { randomBytes } from "@noble/hashes/utils";
 import bs58 from "bs58";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, openSync, closeSync, writeSync, createReadStream } from "node:fs";
+import { createInterface } from "node:readline";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { checkCounterparty, type BlocklistEntry, type CounterpartyResult, type Verdict } from "./counterparty.js";
 
 export const NEP413_TAG = 2147484061;
 export const DEFAULTS = {
@@ -138,4 +140,114 @@ export function explainPnl(history: any[], balances: { token: string; balance: s
   const bal = balances.map((b) => fmt(b.token, b.balance)).join(", ") || "empty";
   return [`Trades: ${lines.length}. USD put into trades: $${(usdIn / 1e6).toFixed(2)}.`, `Confidential balance now: ${bal}.`, ...lines,
     "Note: values are from your private log inside the TEE; current USD value of balances needs a fresh quote."].join("\n");
+}
+
+// ---- Counterparty guard -------------------------------------------------------------------------------------------
+// Before a guarded op signs, the receiver is checked (see counterparty.ts). block: refuse, nothing is signed.
+// warn: the operator must type a code shown on their own terminal. No terminal means refuse (fail closed).
+
+/** The blocklist shipped next to this module (copy of security/blocklist.json; build copies it into dist/). */
+export function loadBlocklist(): BlocklistEntry[] {
+  const j = JSON.parse(readFileSync(new URL("./blocklist.json", import.meta.url), "utf8")) as { entries?: unknown };
+  if (!Array.isArray(j.entries)) throw new Error("blocklist.json has no entries array");
+  for (const e of j.entries as Partial<BlocklistEntry>[]) {
+    if (typeof e.account !== "string" || typeof e.reason !== "string" || typeof e.added !== "string" || !("evidence_tx" in e)) throw new Error("blocklist.json entry needs account, reason, evidence_tx, added");
+  }
+  return j.entries as BlocklistEntry[];
+}
+
+/** The operator's own terminal. Input and output go to the controlling terminal only, never stdout or stderr, because an agent reads those. */
+export interface Terminal { write(s: string): void; readLine(timeoutMs: number): Promise<string | null>; close(): void }
+export function openOperatorTerminal(): Terminal | null {
+  let rfd: number, wfd: number;
+  try {
+    if (process.platform === "win32") { wfd = openSync("CONOUT$", "w"); rfd = openSync("CONIN$", "r"); }
+    else { rfd = openSync("/dev/tty", "r"); wfd = openSync("/dev/tty", "w"); }
+  } catch { return null; }
+  return {
+    write: (s) => { writeSync(wfd, s); },
+    readLine: (timeoutMs) => new Promise((resolve) => {
+      let settled = false;
+      const rs = createReadStream(undefined as unknown as string, { fd: rfd, autoClose: false, encoding: "utf8" });
+      const rl = createInterface({ input: rs });
+      const done = (v: string | null) => { if (settled) return; settled = true; clearTimeout(timer); rl.close(); rs.destroy(); resolve(v); };
+      const timer = setTimeout(() => done(null), timeoutMs);
+      rl.once("line", (line) => done(line));
+      rs.once("error", () => done(null));
+      rs.once("close", () => done(null));
+    }),
+    close: () => { try { closeSync(rfd); } catch { /* already closed */ } try { closeSync(wfd); } catch { /* already closed */ } },
+  };
+}
+
+export interface GateRequest { op: string; receiver: string; verdict: Verdict; reasons: string[]; summary: string }
+/** Asks the human at their terminal. The code is shown there only, and is never returned to the caller. */
+export async function operatorGate(req: GateRequest, terminal: () => Terminal | null = openOperatorTerminal, timeoutMs = 300_000): Promise<boolean> {
+  const term = terminal();
+  if (!term) return false;
+  try {
+    const code = hex(randomBytes(3));
+    term.write(`\nKEYHOLE guard: ${req.op} to ${req.receiver} is ${req.verdict.toUpperCase()}.\n${req.reasons.map((r) => `  - ${r}`).join("\n")}\n${req.summary}\n` +
+      `Type ${code} to allow this one action (5 minutes). Anything else refuses.\n> `);
+    const line = await term.readLine(timeoutMs);
+    return line !== null && line.trim() === code;
+  } finally {
+    term.close();
+  }
+}
+
+export class GuardError extends Error {
+  constructor(public readonly code: "blocked" | "not_confirmed", public readonly result: CounterpartyResult) {
+    super(code === "blocked" ? `blocked by the counterparty check: ${result.reasons.join("; ")}` : `not confirmed by the operator: ${result.reasons.join("; ")}`);
+  }
+}
+
+export interface GuardTarget { receiver: string; foreign: boolean }
+/** Which receiver a guarded op pays. Null: the op is not guarded. foreign: the receiver is an address on another chain. */
+export function guardTarget(op: string, params: Record<string, unknown>, accountId: string): GuardTarget | null {
+  if (op === "withdraw") return { receiver: String(params.to ?? ""), foreign: params.chain !== "near" };
+  if (op === "chain_sign") return { receiver: String(params.receiver ?? params.to ?? ""), foreign: params.chain !== "near" };
+  if (op === "quote" && params.execute) return { receiver: String(params.recipient ?? accountId), foreign: false };
+  if (op === "copy") return { receiver: accountId, foreign: false };
+  return null;
+}
+
+export interface GuardDeps {
+  check: (receiver: string, o: { agent: string; foreign: boolean }) => Promise<CounterpartyResult>;
+  gate: (r: GateRequest) => Promise<boolean>;
+  execute: (op: string, params: Record<string, unknown>) => Promise<CallResult>;
+  audit: (line: Record<string, unknown>) => void;
+}
+export function liveGuardDeps(key: Key): GuardDeps {
+  return {
+    check: (receiver, o) => checkCounterparty(receiver, { blocklist: loadBlocklist(), agent: o.agent, foreign: o.foreign, nearblocksKey: process.env.NEARBLOCKS_API_KEY }),
+    gate: (r) => operatorGate(r),
+    execute: (op, params) => run(key, op, params),
+    // Audit lines carry verdicts and reason codes only: never a key, a signature or a confirmation code.
+    audit: (line) => { process.stderr.write(JSON.stringify({ keyhole_guard: line }) + "\n"); },
+  };
+}
+
+/**
+ * Run a guarded op. The receiver is checked first. A block throws before anything is signed.
+ * A warn (or alwaysConfirm) needs the operator's code at their terminal. Only then does execute sign and send.
+ */
+export async function guardedRun(key: Key, op: string, params: Record<string, unknown> = {}, opts: { receiver?: string; foreign?: boolean; alwaysConfirm?: boolean; summary?: string } = {}, deps: GuardDeps = liveGuardDeps(key)): Promise<CallResult> {
+  const target = opts.receiver !== undefined ? { receiver: opts.receiver, foreign: !!opts.foreign } : guardTarget(op, params, key.accountId);
+  if (!target) return run(key, op, params);
+  const r = await deps.check(target.receiver, { agent: key.accountId, foreign: target.foreign });
+  const base = { op, receiver: target.receiver, verdict: r.verdict, reasons: r.reasons, ts: new Date().toISOString() };
+  if (r.verdict === "block") {
+    deps.audit({ ...base, signed: false, decision: "refused_block" });
+    throw new GuardError("blocked", r);
+  }
+  if (r.verdict === "warn" || opts.alwaysConfirm) {
+    const ok = await deps.gate({ op, receiver: target.receiver, verdict: r.verdict, reasons: r.reasons, summary: opts.summary ?? `params: ${JSON.stringify(params).slice(0, 300)}` });
+    if (!ok) {
+      deps.audit({ ...base, signed: false, decision: "refused_no_operator_confirmation" });
+      throw new GuardError("not_confirmed", r);
+    }
+  }
+  deps.audit({ ...base, signed: true, decision: "signing" });
+  return deps.execute(op, params);
 }
