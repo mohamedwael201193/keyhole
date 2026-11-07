@@ -11,9 +11,9 @@ export const IDENTITY = {
   },
   "contract": {
     "account": "keyhole-devmo.near",
-    "code_hash": "BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ",
-    "wasm_sha256": "9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e",
-    "deploy_tx": "GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k"
+    "code_hash": "8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG",
+    "wasm_sha256": "700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d",
+    "deploy_tx": "CM7JvwdnN2oQ4xakmcSoDPDREBbE7ZUCh5FnJargd5bp"
   }
 } as const;
 export const WORKER_SHA256 = IDENTITY.worker.wasm_sha256;
