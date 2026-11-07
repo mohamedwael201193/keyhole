@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // keyhole CLI. Usage: keyhole <command> [--account a.near] [--key-file f.json] [--json '{"..."}']
-import { loadKey, run, verifyCall, explainPnl, DEFAULTS } from "./core.js";
+import { loadKey, run, verifyCall, explainPnl, guardedRun, GuardError, DEFAULTS } from "./core.js";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 const HELP = `keyhole: private trading account behind a NEAR NFT key (TEE-attested)
@@ -46,16 +46,18 @@ async function main() {
   switch (cmd) {
     case "mint": case "status": case "balance": case "history":
       return out(await run(key, cmd, extra));
-    case "quote":
-      return out(await run(key, "quote", { origin_asset: from, destination_asset: to, amount: String(o.amount ?? "50000"), deposit_type: "INTENTS",
+    case "quote": {
+      const params = { origin_asset: from, destination_asset: to, amount: String(o.amount ?? "50000"), deposit_type: "INTENTS",
         refund_to: key.accountId, refund_type: "INTENTS", recipient: key.accountId, recipient_type: "INTENTS", confidentiality: (o.mode as string) ?? "basic",
-        execute: !!o.execute, ...extra }));
+        execute: !!o.execute, ...extra };
+      return out(o.execute ? await guardedRun(key, "quote", params) : await run(key, "quote", params));
+    }
     case "account":
       return out(await run(key, "account", o.chain ? { chain: o.chain, token: o.token ?? "USDC", amount: String(o.amount) } : {}));
     case "swap":
       return out(await run(key, "swap", { token_in: from, token_out: to, amount_in: String(o.amount), ...extra }));
     case "withdraw":
-      return out(await run(key, "withdraw", { chain: o.chain, to: o.to, token: o.token, amount: String(o.amount) }));
+      return out(await guardedRun(key, "withdraw", { chain: o.chain, to: o.to, token: o.token, amount: String(o.amount) }));
     case "pnl": {
       const h = await run(key, "history"); const b = await run(key, "balance");
       if (!h.output?.ok) return out(h);
@@ -64,4 +66,8 @@ async function main() {
     default: throw new Error(`unknown command '${cmd}'. Run: keyhole help`);
   }
 }
-main().catch((e) => { console.error("error:", e.message); process.exitCode = 1; });
+main().catch((e) => {
+  // Exit 2: the counterparty check blocked the receiver, nothing was signed. Exit 3: the operator did not confirm a warn.
+  if (e instanceof GuardError) { console.error(`refused: ${e.message}`); process.exitCode = e.code === "blocked" ? 2 : 3; return; }
+  console.error("error:", e.message); process.exitCode = 1;
+});

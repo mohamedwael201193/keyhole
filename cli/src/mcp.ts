@@ -1,25 +1,32 @@
 #!/usr/bin/env node
-// KEYHOLE MCP server (stdio). Tools: verify, explain_pnl, quote_buy, copy (two-step confirm).
+// KEYHOLE MCP server (stdio). Tools: verify, explain_pnl, quote_buy, copy (guarded; operator confirms on their own terminal).
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { randomBytes } from "node:crypto";
-import { loadKey, run, verifyCall, explainPnl } from "./core.js";
+import { loadKey, run, verifyCall, explainPnl, guardedRun, GuardError, type Key, type GuardDeps } from "./core.js";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 const text = (x: unknown) => ({ content: [{ type: "text" as const, text: typeof x === "string" ? x : JSON.stringify(x, null, 2) }] });
 
-/** Pending copy trades awaiting the user's second confirmation (5-minute TTL, single use). */
-const pending = new Map<string, { params: Record<string, string>; exp: number }>();
-export function makeConfirm(params: Record<string, string>, now = Date.now()) {
-  const code = randomBytes(4).toString("hex");
-  pending.set(code, { params, exp: now + 5 * 60_000 });
-  return code;
-}
-export function takeConfirm(code: string, now = Date.now()) {
-  const p = pending.get(code); pending.delete(code);
-  if (!p || p.exp < now) return null;
-  return p.params;
+/**
+ * copy: a preview quote, then the counterparty guard, then the operator's terminal code (always, for a copy).
+ * The confirmation code is shown on the operator's terminal only. It is never part of this result, so the model cannot confirm for itself.
+ * With no operator terminal the copy is refused (fail closed).
+ */
+export async function copyTrade(key: Key, a: { amount?: string; token_in: string; token_out: string; source?: string }, deps?: GuardDeps): Promise<string> {
+  if (!a.amount) return "amount is required";
+  const params = { token_in: a.token_in, token_out: a.token_out, amount_in: a.amount, source: a.source ?? "mcp" };
+  const q = await run(key, "quote", { origin_asset: a.token_in, destination_asset: a.token_out, amount: a.amount, deposit_type: "INTENTS", refund_to: key.accountId,
+    refund_type: "INTENTS", recipient: key.accountId, recipient_type: "INTENTS", confidentiality: "basic" });
+  if (!q.output?.ok) return JSON.stringify(q.output, null, 2);
+  const summary = `copy ${a.amount} from ${a.token_in} to ${a.token_out}; about ${(q.output.usd_micro / 1e6).toFixed(2)} USD; expected out ${q.output.quote?.amountOutFormatted ?? "?"}`;
+  try {
+    const r = await guardedRun(key, "copy", params, { receiver: key.accountId, foreign: false, alwaysConfirm: true, summary }, deps);
+    return JSON.stringify(r.output, null, 2);
+  } catch (e) {
+    if (e instanceof GuardError) return `not executed (${e.code}): ${e.message}. The operator has to confirm copies on their own terminal.`;
+    throw e;
+  }
 }
 
 export function buildServer() {
@@ -38,24 +45,10 @@ export function buildServer() {
       return text((await run(key, "quote", { origin_asset: token_in, destination_asset: token_out, amount, deposit_type: "INTENTS", refund_to: key.accountId,
         refund_type: "INTENTS", recipient: key.accountId, recipient_type: "INTENTS", confidentiality: "basic" })).output);
     });
-  s.tool("copy", "Copy a trade into the holder's confidential account. Step 1 (no confirm_code) returns a preview and a code; step 2 with confirm_code executes. Always show the preview to the user and get an explicit yes before step 2.",
+  s.tool("copy", "Copy a trade into the holder's confidential account. The operator must confirm on their own terminal (a code shown there, not in this result). Refused if the counterparty check blocks, or when there is no operator terminal.",
     { amount: z.string().regex(/^\d+$/).optional(), token_in: z.string().default(USDC), token_out: z.string().default("nep141:wrap.near"),
-      source: z.string().optional(), confirm_code: z.string().optional() },
-    async ({ amount, token_in, token_out, source, confirm_code }) => {
-      const key = loadKey();
-      if (!confirm_code) {
-        if (!amount) return text("amount is required");
-        const params = { token_in, token_out, amount_in: amount, source: source ?? "mcp" };
-        const q = await run(key, "quote", { origin_asset: token_in, destination_asset: token_out, amount, deposit_type: "INTENTS", refund_to: key.accountId,
-          refund_type: "INTENTS", recipient: key.accountId, recipient_type: "INTENTS", confidentiality: "basic" });
-        if (!q.output?.ok) return text(q.output);
-        return text({ preview: { ...params, usd: (q.output.usd_micro / 1e6).toFixed(2), expected_out: q.output.quote?.amountOutFormatted }, confirm_code: makeConfirm(params),
-          next: "Ask the user to confirm. Then call copy again with confirm_code within 5 minutes." });
-      }
-      const params = takeConfirm(confirm_code);
-      if (!params) return text("confirm_code is invalid or expired; start again without confirm_code");
-      return text((await run(key, "copy", params)).output);
-    });
+      source: z.string().optional() },
+    async ({ amount, token_in, token_out, source }) => text(await copyTrade(loadKey(), { amount, token_in, token_out, source })));
   return s;
 }
 
