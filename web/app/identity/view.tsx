@@ -10,6 +10,10 @@ import { KEYS_CONTRACT } from "@/lib/config";
 import type { Token } from "@/lib/near";
 import { formatTradePrice } from "@/lib/price";
 import { CAPS, CATALOG, nep177, serialOf, traitSeed, toHex } from "@/lib/traits";
+import "../public-pages.css";
+
+/** Every design image that is not a minted key carries this label. Only Bronze is minted today (worker tier 1). */
+const PREVIEW = "Preview, not minted";
 
 const CARDS = [CATALOG[2], CATALOG[3], CATALOG[1], CATALOG[0]];
 
@@ -19,7 +23,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
   const meta = live ? nep177(live.token_id, tiers[0]) : nep177("3", 1);
   const bits = (n: number) => n.toString(2).padStart(8, "0");
   return (
-    <div className="page sheet">
+    <div className="page sheet pp pp-identity">
       <p className="eb">{t("ident.eyebrow")}</p>
       <h1>{t("ident.h1a")}<em>{t("ident.h1b")}</em></h1>
 
@@ -67,13 +71,13 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
       <div className="blk">
         <p className="eb">{t("ident.s2")}</p>
         <h2>{t("ident.wild")}</h2>
-        <p className="note">Layouts only. Thumbnails of Silver, Gold and Legendary keys are design previews; those tiers are not minted yet.</p>
+        <p className="note">These are layout previews. Silver, Gold and Legendary are not minted; only Bronze is minted today.</p>
         <div className="thumbs">
           <div className="wal">
-            <p className="h">{t("ident.wallet")}</p>
+            <p className="h">{t("ident.wallet")} <span className="pp-preview" data-testid="preview-label">{PREVIEW}</span></p>
             <div className="tgrid">
               {CATALOG.slice(0, 6).map((k) => (
-                <div className="tm" key={k.n}><div className="sq"><KeyArt n={k.n} alt="" width={200} height={480} /></div><p>{t("land.keyN", { n: k.n })}<small>{t(`finish.${k.finish}`)}</small></p></div>
+                <div className="tm" key={k.n}><div className="sq"><KeyArt n={k.n} alt="" width={200} height={480} /></div><p>{t("land.keyN", { n: k.n })}<small>{t(`finish.${k.finish}`)}</small></p><span className="pp-preview">{PREVIEW}</span></div>
               ))}
             </div>
           </div>
@@ -83,12 +87,12 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
               <div className="idrow" key={k.n}>
                 <div className="sq"><KeyArt n={k.n} alt="" width={80} height={200} /></div>
                 <div><b>{t("land.keyN", { n: k.n })}</b><small>{t(`finish.${k.finish}`)} · {traitLabel(t, k.head)}</small></div>
-                <span className="p">{t("land.oneOfOne")}</span>
+                <span className="pp-preview" data-testid="preview-label">{PREVIEW}</span>
               </div>
             ))}
           </div>
           <div className="wal">
-            <p className="h">{t("ident.sizes")}</p>
+            <p className="h">{t("ident.sizes")} <span className="pp-preview" data-testid="preview-label">{PREVIEW}</span></p>
             <div className="sizes">
               {[120, 72, 40].map((w) => <div className="sq" key={w} style={{ width: w, height: w }}><KeyArt n={1} alt="" width={120} height={280} /></div>)}
             </div>

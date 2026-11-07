@@ -206,3 +206,22 @@
   .pp-atlas .pp-marks { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pp-atlas .pp-mark { padding: 20px; }
 }
+
+/* ---- /identity: key identity system. Preview labels are always printed, never colour alone. Key art is not restyled. ---- */
+.pp-preview { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 4px 10px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid #E8B86088; font: 600 13px/1.3 var(--sans); vertical-align: middle; white-space: nowrap; }
+.pp-identity .wal > .h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.pp-identity .wal > .h .pp-preview { margin-left: 0; }
+.pp-identity .note { font-size: 16px; line-height: 1.6; color: var(--mu); max-width: 70ch; }
+.pp-identity .tm p { font-size: 15px; }
+.pp-identity .tm .pp-preview { margin: 6px 0 0; }
+.pp-identity .tm p small { font-size: 13px; }
+.pp-identity .idrow b { font-size: 16px; }
+.pp-identity .idrow small { font-size: 14px; }
+.pp-identity .idrow .pp-preview { justify-self: end; margin: 0; }
+.pp-identity dl { font-size: 15px; }
+.pp-identity .blk > p.eb + h2 { margin-top: 6px; }
+.pp-identity .code { font-size: 14px; overflow-x: auto; max-width: 100%; }
+@media (max-width: 560px) {
+  .pp-identity .idrow { grid-template-columns: auto minmax(0, 1fr); }
+  .pp-identity .idrow .pp-preview { grid-column: 2; justify-self: start; }
+}
