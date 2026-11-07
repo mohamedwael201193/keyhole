@@ -14,7 +14,7 @@ export const nftToken = (id: string) => view<Token | null>("nft_token", { token_
 export const nftTier = (id: string) => view<number | null>("nft_tier", { token_id: id });
 export const nftSupply = () => view<string>("nft_total_supply");
 export const contractConfig = () => view<Config>("config");
-export const tokensFor = (account_id: string) => view<Token[]>("nft_tokens_for_owner", { account_id, from_index: "0", limit: 10 });
+export const tokensFor = (account_id: string, limit = 10) => view<Token[]>("nft_tokens_for_owner", { account_id, from_index: "0", limit });
 
 export type KeyState = "locked" | "unlocked" | "expired" | "legendary";
 /**
