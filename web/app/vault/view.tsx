@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Attested, ErrorBox, OfflineState, capFrom } from "@/components/Result";
 import { TxLink } from "@/components/TxLink";
 import { loadMintTx } from "@/lib/mintTx";
@@ -11,102 +11,101 @@ import { KeyArt } from "@/components/Art";
 import { Guilloche, Hallmark } from "@/components/Engraving";
 import { FoilCard } from "@/components/FoilCard";
 import { TokenIcon } from "@/components/TokenIcon";
-import { TxResult } from "@/components/TxResult";
-import { TokenPick } from "@/components/TokenPick";
 import { useI18n } from "@/lib/i18n";
-import { useWallet } from "@/lib/wallet";
+import { useWallet, OP_CTX, type OpResume } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { encodeShare } from "@/lib/pnl";
 import { useHealth } from "@/lib/useHealth";
+import { useHeldKey } from "@/lib/useHeldKey";
+import { useLogVerified } from "@/lib/useLogVerified";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
-import { fundParams, swapParams, withdrawParams } from "@/lib/trade";
-import { keyState, nftTier, shortAccount, shortKeyId, tierName, tokensFor, type Token } from "@/lib/near";
-import { acct, acctAlt, attestation, intentTx, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { fundParams, withdrawParams } from "@/lib/trade";
+import { keyState, shortAccount, shortKeyId } from "@/lib/near";
+import { acct, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { SessionCard } from "@/components/SessionCard";
 import { DepositQr } from "@/components/DepositQr";
-import { assetRows, formatUsdMicro, isImplicitAccount, totalOf, tradeSummary, withdrawSummary, type PriceBook } from "@/lib/amount";
-import { OP_CTX, type OpResume } from "@/lib/wallet";
+import { assetRows, formatUsdMicro, isImplicitAccount, totalOf, withdrawSummary, type PriceBook } from "@/lib/amount";
 import { copyText } from "@/lib/copyText";
-import { publishedBuild, staticChecks, type Attestation } from "@/lib/verify";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 import { KeyLog } from "@/components/KeyLog";
+import { AmountInput, Button, Busy, Card, Sheet, Spinner, Tabs, TokenSelect, type TokenOption } from "@/components/ui";
+import { TxStatus } from "@/components/ui/tx-status";
 import "./vault.css";
-import { Busy, Spinner } from "@/components/ui";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
+type Tab = "limits" | "session" | "lock";
+type DoneWithdraw = { amount: string; to: string };
+
+const ASSET_KEYS = Object.keys(ASSETS) as AssetKey[];
+const keyOfId = (id: string): AssetKey => ASSET_KEYS.find((k) => ASSETS[k].id === id) ?? "usdc";
+/** The vault holds and withdraws the two assets the trade supports. */
+const TOKEN_OPTIONS: TokenOption[] = ASSET_KEYS.map((k) => ({ id: ASSETS[k].id, symbol: ASSETS[k].symbol, name: ASSETS[k].name, assetId: ASSETS[k].id, chain: "near" }));
+
+/** A labelled meter. The bar is drawn only when there is a real percentage to show. */
+function Meter({ label, value, pct, note, testid }: { label: string; value: ReactNode; pct?: number; note?: string; testid?: string }) {
+  const p = pct == null ? null : Math.max(0, Math.min(100, pct));
+  const tone = p == null ? "" : p >= 100 ? " full" : p >= 80 ? " warn" : "";
+  return (
+    <div className={`vlt-meter${tone}`}>
+      <p className="vlt-meter-top"><span>{label}</span><span data-testid={testid}>{value}</span></p>
+      {p != null && <div className="vlt-track" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(p)}><i style={{ width: `${p}%` }} /></div>}
+      {note && <small>{note}</small>}
+    </div>
+  );
+}
 
 export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline: boolean; initialPrices?: PriceBook }) {
   const { t, fmtUsd } = useI18n();
   const { accountId, connect, pending, session } = useWallet();
   const online = useHealth(initialOnline);
+  const { held, keyMiss, lookingUp } = useHeldKey(accountId);
   const status = useSigned("status");
-  const quote = useSigned("quote");
   const account = useSigned("account");
   const balance = useSigned("balance");
   const history = useSigned("history");
-  const swap = useSigned("swap");
   const withdraw = useSigned("withdraw");
   const limits = useSigned("limits");
   const pnl = useSigned("pnl");
   const dash = useSigned("dashboard");
+  const logVerified = useLogVerified(history.res);
+
+  const [tab, setTab] = useState<Tab>("limits");
   const [limTx, setLimTx] = useState("");
   const [limDay, setLimDay] = useState("");
-  const [from, setFrom] = useState<AssetKey>("usdc");
-  const [toKey, setToKey] = useState<AssetKey>("wnear");
-  const [amount, setAmount] = useState("0.05");
+  const [depOpen, setDepOpen] = useState(false);
+  const [wOpen, setWOpen] = useState(false);
   const [fundAsset, setFundAsset] = useState<AssetKey>("usdc");
   const [fundAmt, setFundAmt] = useState("1");
   const [wAsset, setWAsset] = useState<AssetKey>("usdc");
   const [wAmt, setWAmt] = useState("0.05");
-  const [quoted, setQuoted] = useState<{ key: string; minOut?: string } | null>(null);
-  const [step, setStep] = useState<1 | 2 | 3>(2);
-  const [held, setHeld] = useState<{ token: Token; tier: number | null } | null>(null);
-  const [keysFor, setKeysFor] = useState<string | null>(null);
-  const [keysReady, setKeysReady] = useState(false);
-  const [keyMiss, setKeyMiss] = useState(false);
-  const [doneTrade, setDoneTrade] = useState<{ give: string; decimals: number; symbol: string } | null>(null);
-  const [doneWithdraw, setDoneWithdraw] = useState<{ amount: string; to: string } | null>(null);
+  const [doneWithdraw, setDoneWithdraw] = useState<DoneWithdraw | null>(null);
   const [prices, setPrices] = useState(initialPrices);
-  const units = toBaseUnits(amount, ASSETS[from].decimals);
+  const [mintTx, setMintTx] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copiedConf, setCopiedConf] = useState(false);
+  const [slowKey, setSlowKey] = useState(false);
   const fundUnits = toBaseUnits(fundAmt, ASSETS[fundAsset].decimals);
   const wUnits = toBaseUnits(wAmt, ASSETS[wAsset].decimals);
-  const tradeKey = `${from}:${toKey}:${units ?? ""}`;
   const utcReset = (() => { const d = new Date(); d.setUTCHours(24, 0, 0, 0); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); })();
-  useEffect(() => {
-    if (!accountId) { setHeld(null); setKeysFor(null); setKeysReady(false); setKeyMiss(false); return; }
-    let cancel = false;
-    setKeysFor(accountId);
-    setKeysReady(false);
-    setHeld(null);
-    setKeyMiss(false);
-    tokensFor(accountId).then(async (toks) => {
-      const token = toks[0];
-      if (!token || cancel) { if (!cancel) { setHeld(null); setKeyMiss(true); setKeysReady(true); } return; }
-      const tier = await nftTier(token.token_id).catch(() => null);
-      if (!cancel) { setHeld({ token, tier }); setKeyMiss(false); setKeysReady(true); }
-    }).catch(() => { if (!cancel) { setHeld(null); setKeyMiss(false); setKeysReady(true); } });
-    return () => { cancel = true; };
-  }, [accountId]);
+  const sessionLive = !!(session && held && session.token_id === held.token.token_id);
 
-  const quoteKey = useRef("");
-  const runQuote = quote.run;
-  // With a session a quote costs no popup, so re-quote automatically (debounced) when the trade changes.
+  // With a live session one dashboard read fills limits, balance and state, with no wallet popup.
+  const runDash = dash.run;
+  const dashFor = useRef("");
   useEffect(() => {
-    if (!session || !held || !units || !accountId || from === toKey || quoteKey.current === tradeKey) return;
-    const id = setTimeout(() => { quoteKey.current = tradeKey; void runQuote({ origin_asset: ASSETS[from].id, destination_asset: ASSETS[toKey].id, amount: units, refund_to: accountId, recipient: accountId, refund_type: "INTENTS", recipient_type: "INTENTS", deposit_type: "INTENTS", confidentiality: "basic", execute: false }, { quiet: true }); }, 800);
-    return () => clearTimeout(id);
-  }, [session, held, units, accountId, from, toKey, tradeKey, runQuote]);
-  useEffect(() => {
-    if (!quote.res) return;
-    if (!quote.res.output?.ok) { setQuoted(null); return; }
-    const min = quote.res.output.quote?.minAmountOut;
-    setQuoted({ key: quoteKey.current, minOut: typeof min === "string" && /^\d+$/.test(min) ? min : undefined });
-  }, [quote.res]);
+    if (!session || !held || session.token_id !== held.token.token_id) return;
+    if (dashFor.current === session.token) return;
+    dashFor.current = session.token;
+    void runDash({}, { quiet: true });
+  }, [session, held, runDash]);
+
+  useEffect(() => { setMintTx(loadMintTx(accountId)); }, [accountId]);
+  useEffect(() => { setSlowKey(false); if (!lookingUp) return; const id = setTimeout(() => setSlowKey(true), 12_000); return () => clearTimeout(id); }, [lookingUp]);
+
   const d = dash.res?.output?.ok ? dash.res.output : null;
   const s = status.res?.output ?? (d ? { ...d, ok: true } : undefined);
-  const q = quote.res?.output;
   const tierNum = (s?.ok ? Number(s.tier) : held?.tier) || null;
   const finish: Finish = tierNum === 3 ? "Gold" : tierNum === 2 ? "Silver" : "Bronze";
   const lo = limits.res?.output;
@@ -119,113 +118,141 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const perCap = caps ? caps.per_tx_usd_micro : CAPS[finish].perTx * 1e6;
   const dayCap = caps ? caps.daily_usd_micro : CAPS[finish].daily * 1e6;
   const spent = s?.ok ? s.spent_today_usd_micro : null;
+  const dayPct = Math.min(100, ((spent ?? 0) / dayCap) * 100);
   const idn = held ? keyIdentity(held.token.token_id, held.tier) : null;
   const balances = (balance.res?.output?.ok ? balance.res.output.balances as Bal[] : d ? d.balances as Bal[] : null);
   const rows = balances ? assetRows(balances, prices) : null;
   const totalKind = totalOf(rows);
   const entries = (history.res?.output?.ok ? history.res.output.entries as Hist[] : null);
-  // With a live session, one dashboard read fills limits, balance and state (no wallet popup).
-  const runDash = dash.run;
-  const dashFor = useRef("");
-  useEffect(() => {
-    if (!session || !held || session.token_id !== held.token.token_id) return;
-    if (dashFor.current === session.token) return;
-    dashFor.current = session.token;
-    void runDash({}, { quiet: true });
-  }, [session, held, runDash]);
-  const [mintTx, setMintTx] = useState<string | null>(null);
-  useEffect(() => { setMintTx(loadMintTx(accountId)); }, [accountId]);
-  const sessionLive = !!(session && held && session.token_id === held.token.token_id);
-  const [logVerified, setLogVerified] = useState<boolean | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [copiedConf, setCopiedConf] = useState(false);
-  useEffect(() => {
-    const id = history.res?.call_id;
-    if (!history.res?.output?.ok || !id) { setLogVerified(null); return; }
-    let cancel = false;
-    setLogVerified(null);
-    fetch(attestation(id)).then((r) => { if (!r.ok) throw new Error(); return r.json(); }).then((a: Attestation) => {
-      if (cancel) return;
-      const st = staticChecks(a);
-      setLogVerified(st.quote && st.registered && publishedBuild(a.executed_wasm_sha256));
-    }).catch(() => { if (!cancel) setLogVerified(false); });
-    return () => { cancel = true; };
-  }, [history.res]);
-  const lookingUpKey = !!accountId && (!keysReady || keysFor !== accountId);
-  const [slowKey, setSlowKey] = useState(false);
-  useEffect(() => { setSlowKey(false); if (!lookingUpKey) return; const id = setTimeout(() => setSlowKey(true), 12_000); return () => clearTimeout(id); }, [lookingUpKey]);
+  const lockUntil = s?.ok ? (s.locked_until_ms as number | null | undefined) : null;
+  const hhmm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
+  const stateBadge = !s?.ok ? null : lockUntil
+    ? <span className="vlt-state lock" data-testid="state-badge" data-state="locked"><i />{t("vault.stLocked", { time: hhmm(lockUntil) })}</span>
+    : coolUntil
+      ? <span className="vlt-state cool" data-testid="state-badge" data-state="cooldown"><i />{t("vault.stCooldown", { time: hhmm(coolUntil) })}</span>
+      : <span className="vlt-state ok" data-testid="state-badge" data-state="open"><i />{t("vault.stOpen")}</span>;
+
   const clearOtherErrors = (keep: { clear: () => void }) => {
-    for (const card of [status, quote, account, balance, history, swap, withdraw, limits, pnl]) if (card !== keep) card.clear();
+    for (const card of [status, account, balance, history, withdraw, limits, pnl]) if (card !== keep) card.clear();
   };
   const clearStatus = status.clear;
-  const clearQuote = quote.clear;
   const clearAccount = account.clear;
   const clearBalance = balance.clear;
   const clearHistory = history.clear;
-  const clearSwap = swap.clear;
-  const clearWithdraw = withdraw.clear;
+  // A redirect wallet returns with a withdrawal pending: reopen its sheet and show what it was for.
   useEffect(() => {
     const ctx = pending?.ctx;
     if (!ctx) return;
-    clearStatus(); clearQuote(); clearAccount(); clearBalance(); clearHistory();
-    if (ctx.op === "swap") { clearWithdraw(); setDoneTrade({ give: ctx.give, decimals: ctx.decimals, symbol: ctx.symbol }); setStep(2); }
-    if (ctx.op === "withdraw") { clearSwap(); setDoneWithdraw({ amount: ctx.amount, to: ctx.to }); setStep(3); }
-  }, [pending, clearStatus, clearQuote, clearAccount, clearBalance, clearHistory, clearSwap, clearWithdraw]);
-  useEffect(() => {
-    if (swap.res || withdraw.res) sessionStorage.removeItem(OP_CTX);
-  }, [swap.res, withdraw.res]);
+    clearStatus(); clearAccount(); clearBalance(); clearHistory();
+    if (ctx.op === "withdraw") { setDoneWithdraw({ amount: ctx.amount, to: ctx.to }); setWOpen(true); }
+  }, [pending, clearStatus, clearAccount, clearBalance, clearHistory]);
+  useEffect(() => { if (withdraw.res) sessionStorage.removeItem(OP_CTX); }, [withdraw.res]);
   useEffect(() => {
     if (!balances) return;
     let cancel = false;
-    fetch("/api/prices").then((r) => r.ok ? r.json() : null).then((j) => {
-      if (!cancel && j?.prices) setPrices(j.prices);
-    }).catch(() => {});
+    fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices(j.prices); }).catch(() => {});
     return () => { cancel = true; };
   }, [balances]);
   const readBalance = balance.run;
-  useEffect(() => {
-    const out = swap.res?.output;
-    if (!out?.ok || out.op !== "swap" || !session) return;
-    void readBalance({}, { quiet: true });
-  }, [swap.res, readBalance, session]);
   useEffect(() => {
     const out = withdraw.res?.output;
     if (!out?.ok || out.op !== "withdraw" || !session) return;
     void readBalance({}, { quiet: true });
   }, [withdraw.res, readBalance, session]);
 
-  const dayPct = Math.min(100, ((spent ?? 0) / dayCap) * 100);
-  const txUsed = q?.ok && quoted?.key === tradeKey ? q.usd_micro : null;
-  const txPct = txUsed == null ? 0 : Math.min(100, (txUsed / perCap) * 100);
-  const tone = (p: number) => (p >= 100 ? " full" : p >= 80 ? " warn" : "");
-  const lockUntil = s?.ok ? (s.locked_until_ms as number | null | undefined) : null;
-  const hhmm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
-  const stateBadge = !s?.ok ? null : lockUntil
-    ? <span className="vbadge lock" data-testid="state-badge" data-state="locked"><i />{t("vault.stLocked", { time: hhmm(lockUntil) })}</span>
-    : coolUntil
-      ? <span className="vbadge cool" data-testid="state-badge" data-state="cooldown"><i />{t("vault.stCooldown", { time: hhmm(coolUntil) })}</span>
-      : <span className="vbadge ok" data-testid="state-badge" data-state="open"><i />{t("vault.stOpen")}</span>;
-  const tabs = [1, 2, 3] as const;
+  function copyAccount() {
+    if (!accountId) return;
+    void copyText(accountId).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1600); });
+  }
+  function doWithdraw() {
+    if (!wUnits || !accountId) return;
+    const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(accountId) };
+    sessionStorage.setItem(OP_CTX, JSON.stringify(ctx));
+    setDoneWithdraw(ctx);
+    clearOtherErrors(withdraw);
+    void withdraw.run(withdrawParams(accountId, wAsset, wUnits));
+  }
+
+  const balanceLabel = balances
+    ? (sessionLive ? "Refresh balance (session, no popup)" : "Refresh balance")
+    : (sessionLive ? "Unseal (session, no popup)" : "Unseal");
+  const totalText = totalKind.kind === "unread" ? t("vault.sealed") : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : formatUsdMicro(totalKind.micro);
+
+  const limitsPanel = (
+    <div className="vlt-stack">
+      {s?.ok ? (
+        <>
+          <p className="vlt-cap" data-testid="limits-label">{lowered ? t("vault.limitsLabelOwn", { tier: t(`finish.${finish}`), tx: fmtUsd(tierCaps!.per_tx_usd_micro), day: fmtUsd(tierCaps!.daily_usd_micro) }) : t("vault.limitsLabel", { tier: t(`finish.${finish}`) })}</p>
+          <Meter label={t("vault.perTx")} value={t("vault.capOnly", { cap: fmtUsd(perCap) })} testid="per-trade-meter" />
+          <Meter label={t("vault.today")} value={t("vault.ofCap", { used: fmtUsd(spent ?? 0), cap: fmtUsd(dayCap) })} pct={dayPct} note={t("vault.utc", { time: utcReset })} />
+        </>
+      ) : sessionLive ? (
+        dash.busy || !dash.res ? <p className="vlt-sub" data-testid="limits-reading"><Busy l="Reading your caps with your session" /></p>
+          : <><p className="vlt-sub">Could not read your caps with the session.</p>{dash.res.error && <ErrorBox code={dash.res.error.code} />}<Button variant="secondary" size="sm" testid="dash-retry" onClick={() => void runDash({})}>Read caps and balance (session, no popup)</Button></>
+      ) : <p className="vlt-sub">{t("vault.limitsUnread")}</p>}
+      {pendingLim && <p className="note-box" data-testid="limits-pending">{t("vault.limitsPending", { tx: fmtUsd(pendingLim.per_tx_usd_micro), day: fmtUsd(pendingLim.daily_usd_micro), time: new Date(pendingLim.effective_ms).toISOString().slice(0, 16).replace("T", " ") })}</p>}
+      <div className="vlt-actions">
+        <Button variant="secondary" size="sm" loading={status.busy} loadingLabel={status.label} testid="status-btn" onClick={() => { clearOtherErrors(status); void status.run({}); }}>
+          {status.busy ? status.label : t("vault.status")}
+        </Button>
+      </div>
+      {status.res?.error && <ErrorBox code={status.res.error.code} retryAfter={status.res.error.retry_after} vars={{ cap: capFrom(status.res.error.message) }} />}
+      {status.res && <Attested r={status.res} />}
+      {s?.ok && held && (
+        <form className="vlt-form" data-testid="limits-form" onSubmit={(e) => { e.preventDefault(); const a = usdMicro(limTx), b = usdMicro(limDay); if (!a || !b) return; clearOtherErrors(limits); void limits.run({ per_tx_usd_micro: a, daily_usd_micro: b }); }}>
+          <p className="vlt-cap">{t("vault.myLimits")}</p>
+          <p className="vlt-sub">{t("vault.myLimitsNote")}</p>
+          <div className="vlt-pair">
+            <div className="vlt-field">
+              <label htmlFor="lim-tx">{t("vault.limPerTx")}</label>
+              <div className="vlt-box" aria-invalid={!!limTx && !usdMicro(limTx)}><span className="u">$</span><input id="lim-tx" inputMode="decimal" placeholder={(perCap / 1e6).toString()} value={limTx} onChange={(e) => setLimTx(e.target.value)} data-testid="lim-tx" /></div>
+            </div>
+            <div className="vlt-field">
+              <label htmlFor="lim-day">{t("vault.limDay")}</label>
+              <div className="vlt-box" aria-invalid={!!limDay && !usdMicro(limDay)}><span className="u">$</span><input id="lim-day" inputMode="decimal" placeholder={(dayCap / 1e6).toString()} value={limDay} onChange={(e) => setLimDay(e.target.value)} data-testid="lim-day" /></div>
+            </div>
+          </div>
+          {tierCaps && <p className="vlt-sub">{t("vault.limHelp", { tx: fmtUsd(tierCaps.per_tx_usd_micro), day: fmtUsd(tierCaps.daily_usd_micro) })}</p>}
+          <Button type="submit" block loading={limits.busy} loadingLabel={limits.label} disabled={limits.busy || !usdMicro(limTx) || !usdMicro(limDay)} testid="limits-btn">
+            {limits.busy ? limits.label : t("vault.setLimits")}
+          </Button>
+          {lo?.ok && <p className="vlt-sub" data-testid="limits-out">{t("vault.limitsNow", { tx: fmtUsd(lo.limits.per_tx_usd_micro), day: fmtUsd(lo.limits.daily_usd_micro) })}</p>}
+          {limits.res?.error && <ErrorBox code={limits.res.error.code} retryAfter={limits.res.error.retry_after} />}
+          {limits.res && <Attested r={limits.res} />}
+        </form>
+      )}
+    </div>
+  );
+
+  const lockPanel = (
+    <div className="vlt-stack" data-testid="lock-panel">
+      {!s?.ok ? <p className="vlt-sub">Read your limits on the Limits tab to see the lock state.</p>
+        : lockUntil ? <p className="note-box" data-testid="lock-note">{t("vault.lockNote", { time: hhmm(lockUntil) })}</p>
+        : <p className="vlt-sub">No time lock is set on this vault.</p>}
+      {coolUntil ? <p className="vlt-sub" data-testid="lock-cooldown">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
+    </div>
+  );
 
   return (
-    <div className="page vlt">
-      <div className="vhead">
+    <div className="page vlt" data-testid="vault-page">
+      <header className="vlt-head">
         <div>
           <p className="eb">{accountId ? t("vault.eyebrow", { account: shortAccount(accountId) }) : t("vault.eyebrowOff")}</p>
           <h1>{t("vault.title")}</h1>
           {accountId && (
-            <p className="acct-line">
+            <p className="vlt-acct">
               <span className="id" data-testid="vault-account">{accountId}</span>
-              <button type="button" onClick={() => { void copyText(accountId).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1600); }); }}>{copied ? t("nav.copied") : t("nav.copy")}</button>
+              <button type="button" className="vlt-link" onClick={copyAccount}>{copied ? t("nav.copied") : t("nav.copy")}</button>
             </p>
           )}
         </div>
-        <div className="chips">
+        <div className="vlt-chips">
           {stateBadge}
-          {online === true && <span className="chip"><i />{t("vault.live", { hash: WORKER_WASM_SHA256[0].slice(0, 8) })}</span>}
-          {online === null && <span className="chip wait" data-testid="enclave-checking"><i />{t("vault.checking")}</span>}
+          {online === true && <span className="vlt-chip"><i />{t("vault.live", { hash: WORKER_WASM_SHA256[0].slice(0, 8) })}</span>}
+          {online === null && <span className="vlt-chip wait" data-testid="enclave-checking"><i />{t("vault.checking")}</span>}
         </div>
-      </div>
+      </header>
+
       {online === false ? (
         <div><OfflineState /><HowStrip /></div>
       ) : !accountId ? (
@@ -237,8 +264,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           </EmptyState>
           <HowStrip active={1} />
         </div>
-      ) : lookingUpKey ? (
-        <p className="note" data-testid="key-loading"><Spinner label="Looking up your key" /> {t("vault.keyLoading")}{slowKey && <span data-testid="key-slow"> The NEAR RPC is slow right now. <button type="button" className="linkbtn" onClick={() => location.reload()}>Try again</button></span>}</p>
+      ) : lookingUp ? (
+        <p className="note" data-testid="key-loading"><Spinner label="Looking up your key" /> {t("vault.keyLoading")}{slowKey && <span data-testid="key-slow"> The NEAR RPC is slow right now. <button type="button" className="vlt-link" onClick={() => location.reload()}>Try again</button></span>}</p>
       ) : keyMiss ? (
         <div>
           <EmptyState title={t("vault.holderOnly")} body={t("vault.holderOnlyBody")} testid="holder-only">
@@ -248,117 +275,41 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         </div>
       ) : (
         <>
-        {held && !session && <p className="note" data-testid="vault-setup"><Link href="/start">New here? Finish setup in 5 steps →</Link></p>}
-        {held && <SessionCard tokenId={held.token.token_id} />}
-        {held && mintTx && <p className="note" data-testid="vault-mint-tx">Key minted · <TxLink hash={mintTx} /></p>}
-        {held && !mintTx && <p className="note" data-testid="vault-key-link">Your key: <Link href={`/key?id=${encodeURIComponent(held.token.token_id)}`}>full history</Link> · <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">key contract on NearBlocks ↗</a></p>}
-        <div className="vlt-grid">
-          <div className="vlt-col">
-            <section className="c vcard" data-testid="key-card">
-              <header className="vhd"><h2>{t("vault.cardKey")}</h2>{idn && held ? <span className="vbadge ok" data-state={keyState(held.token, held.tier, accountId)}><i />{t(`gallery.${keyState(held.token, held.tier, accountId)}`)}</span> : null}</header>
-              {idn && held ? (
-                <>
-                  <div className="vkey">
-                    <FoilCard finish={idn.finish}>
-                      <div className="top">
-                        <span className="tier">{t(`finish.${idn.finish}`)}</span>
-                        <span className="oo">{t("land.oneOfOne")}</span>
-                      </div>
-                      <div className="art">
-                        <Guilloche seed={idn.seedHex} />
-                        <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
-                      </div>
-                      <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />
-                      <h3 title={held.token.token_id} data-testid="key-title">{t("gallery.key", { id: shortKeyId(held.token.token_id) })}</h3>
-                    </FoilCard>
-                    <dl className="kv" data-testid="vault-traits">
-                      <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>
-                      <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, idn.filigree)}</dd>
-                      <dt>{t("field.enamel")}</dt><dd>{traitLabel(t, idn.enamel)}</dd>
-                      <dt>{t("field.gem")}</dt><dd>{traitLabel(t, idn.gem)}</dd>
-                      <dt>{t("field.cipher")}</dt><dd><Cipher bits={idn.bits} /></dd>
-                      <dt>{t("proof.contract")}</dt><dd className="mono">{KEYS_CONTRACT}</dd>
-                    </dl>
-                  </div>
-                  <KeyLog tokenId={held.token.token_id} />
-                </>
-              ) : (
-                <div className="vempty">{t("vault.nokey")} <Link href="/mint">{t("vault.mintFirst")}</Link></div>
-              )}
-            </section>
+          {held && !session && <p className="note" data-testid="vault-setup"><Link href="/start">New here? Finish setup in 5 steps →</Link></p>}
+          {held && mintTx && <p className="note" data-testid="vault-mint-tx">Key minted · <TxLink hash={mintTx} /></p>}
+          {held && !mintTx && <p className="note" data-testid="vault-key-link">Your key: <Link href={`/key?id=${encodeURIComponent(held.token.token_id)}`}>full history</Link> · <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">key contract on NearBlocks ↗</a></p>}
 
-            <section className="c vcard" data-testid="limits-card">
-              <header className="vhd"><h2>{t("vault.cardLimits")}</h2><span className="side">{pendingLim ? <span className="vbadge pend" data-testid="pending-badge"><i />{t("vault.stPending")}</span> : null}<span className="vbadge mute">{tierName(tierNum === 3 ? 3 : tierNum === 2 ? 2 : tierNum === 1 ? 1 : null)}</span></span></header>
-              <p className="vcap" data-testid="limits-label">{lowered ? t("vault.limitsLabelOwn", { tier: t(`finish.${finish}`), tx: fmtUsd(tierCaps!.per_tx_usd_micro), day: fmtUsd(tierCaps!.daily_usd_micro) }) : t("vault.limitsLabel", { tier: t(`finish.${finish}`) })}</p>
-              {s?.ok ? (
-                <>
-                  <div className={`vmeter${tone(txPct)}`}>
-                    <p className="top"><span>{t("vault.perTx")}</span><span data-testid="per-trade-meter">{txUsed == null ? t("vault.capOnly", { cap: fmtUsd(perCap) }) : t("vault.quotePreview", { used: fmtUsd(txUsed), cap: fmtUsd(perCap) })}</span></p>
-                    <div className="tr"><i style={{ width: `${txPct}%` }} /></div>
-                    <small>{txUsed == null ? t("vault.meterTxNone") : t("vault.meterTx", { pct: Math.round(txPct) })}</small>
-                  </div>
-                  <div className={`vmeter${tone(dayPct)}`}>
-                    <p className="top"><span>{t("vault.today")}</span><span>{t("vault.ofCap", { used: fmtUsd(spent ?? 0), cap: fmtUsd(dayCap) })}</span></p>
-                    <div className="tr"><i style={{ width: `${dayPct}%` }} /></div>
-                    <small>{t("vault.utc", { time: utcReset })}</small>
-                  </div>
-                </>
-              ) : sessionLive ? (
-                dash.busy || !dash.res ? <p className="note" data-testid="limits-reading"><Busy l="Reading your caps with your session" /></p>
-                  : <><p className="note">Could not read your caps with the session.</p>{dash.res.error && <ErrorBox code={dash.res.error.code} />}<button className="vbtn sec" type="button" data-testid="dash-retry" onClick={() => void runDash({})}>Read caps and balance (session, no popup)</button></>
-              ) : <p className="note">{t("vault.limitsUnread")}</p>}
-              {pendingLim && <p className="note-box" data-testid="limits-pending">{t("vault.limitsPending", { tx: fmtUsd(pendingLim.per_tx_usd_micro), day: fmtUsd(pendingLim.daily_usd_micro), time: new Date(pendingLim.effective_ms).toISOString().slice(0, 16).replace("T", " ") })}</p>}
-              <div className="vact"><button className="vbtn sec" disabled={status.busy} onClick={() => { clearOtherErrors(status); void status.run({}); }} data-testid="status-btn">{status.busy ? <Busy l={status.label} /> : t("vault.status")}</button></div>
-              {status.res?.error && <ErrorBox code={status.res.error.code} retryAfter={status.res.error.retry_after} vars={{ cap: capFrom(status.res.error.message) }} />}
-              {status.res && <Attested r={status.res} />}
-              {s?.ok && held && (
-                <>
-                  <hr className="vline" />
-                  <form className="vform" data-testid="limits-form" onSubmit={(e) => { e.preventDefault(); const a = usdMicro(limTx), b = usdMicro(limDay); if (!a || !b) return; clearOtherErrors(limits); void limits.run({ per_tx_usd_micro: a, daily_usd_micro: b }); }}>
-                    <div>
-                      <p className="vcap">{t("vault.myLimits")}</p>
-                      <p className="vhelp" style={{ marginTop: 6 }}>{t("vault.myLimitsNote")}</p>
-                    </div>
-                    <div className="vrow">
-                      <div className="vfield">
-                        <label htmlFor="lim-tx">{t("vault.limPerTx")}</label>
-                        <div className="vbox" aria-invalid={!!limTx && !usdMicro(limTx)}><span className="u">$</span><input id="lim-tx" inputMode="decimal" placeholder={(perCap / 1e6).toString()} value={limTx} onChange={(e) => setLimTx(e.target.value)} data-testid="lim-tx" /></div>
-                      </div>
-                      <div className="vfield">
-                        <label htmlFor="lim-day">{t("vault.limDay")}</label>
-                        <div className="vbox" aria-invalid={!!limDay && !usdMicro(limDay)}><span className="u">$</span><input id="lim-day" inputMode="decimal" placeholder={(dayCap / 1e6).toString()} value={limDay} onChange={(e) => setLimDay(e.target.value)} data-testid="lim-day" /></div>
-                      </div>
-                    </div>
-                    {tierCaps && <p className="vhelp">{t("vault.limHelp", { tx: fmtUsd(tierCaps.per_tx_usd_micro), day: fmtUsd(tierCaps.daily_usd_micro) })}</p>}
-                    <button className="vbtn pri block" type="submit" disabled={limits.busy || !usdMicro(limTx) || !usdMicro(limDay)} data-testid="limits-btn">{limits.busy ? <Busy l={limits.label} /> : t("vault.setLimits")}</button>
-                    {lo?.ok && <p className="note" data-testid="limits-out">{t("vault.limitsNow", { tx: fmtUsd(lo.limits.per_tx_usd_micro), day: fmtUsd(lo.limits.daily_usd_micro) })}</p>}
-                    {limits.res?.error && <ErrorBox code={limits.res.error.code} retryAfter={limits.res.error.retry_after} />}
-                    {limits.res && <Attested r={limits.res} />}
-                  </form>
-                </>
-              )}
-            </section>
-          </div>
+          <Card tone="banner" as="section" className="c vlt-hero" testid="balance-card" aria-labelledby="vlt-hero-cap">
+            <div className="vlt-hero-top">
+              <p id="vlt-hero-cap" className="vlt-cap">Vault balance</p>
+              <span className="vlt-src">{balances ? ((balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")) : t("vault.sealedBook")}</span>
+            </div>
+            <p className="vlt-total" data-testid="vault-total">{totalText}</p>
+            {totalKind.kind === "partial" && <p className="vlt-src" data-testid="unpriced">{t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</p>}
+            <div className="vlt-actions">
+              <Button variant="banner" testid="balance-btn" loading={balance.busy} loadingLabel={balance.label} onClick={() => { clearOtherErrors(balance); void balance.run({}); }}>
+                {balance.busy ? balance.label : balanceLabel}
+              </Button>
+              <Button variant="secondary" testid="open-deposit" onClick={() => setDepOpen(true)}>Deposit</Button>
+              <Button variant="secondary" testid="open-withdraw" onClick={() => setWOpen(true)}>Withdraw</Button>
+            </div>
+            {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
+            {balance.res && <Attested r={balance.res} />}
+          </Card>
 
-          <div className="vlt-col">
-            <section className="c vcard" data-testid="balance-card">
-              <header className="vhd"><h2>{t("vault.cardBalance")}</h2><span className="side"><span className="vbadge mute">{balances ? t("vault.read") : t("vault.sealed")}</span></span></header>
-              <div>
-                <p className="vcap">{t("vault.total")}</p>
-                <div className="vtotal">
-                  <p className="big" data-testid="vault-total">{totalKind.kind === "unread" ? "—" : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : formatUsdMicro(totalKind.micro)}</p>
+          <div className="vlt-grid">
+            <div className="vlt-main">
+              <Card as="section" className="c vlt-card" testid="assets-card" aria-labelledby="vlt-assets-h">
+                <div className="vlt-cardhead">
+                  <h2 id="vlt-assets-h">Assets</h2>
+                  {balances && <span className="vlt-cap">{t("vault.assets", { n: balances.length })}</span>}
                 </div>
-                {totalKind.kind === "partial" && <p className="note" data-testid="unpriced">{t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</p>}
-                <p className="note" style={{ marginTop: 6 }}>{balances ? ((balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")) : t("vault.sealedBook")}</p>
-              </div>
-              <div>
-                <p className="vcap" style={{ marginBottom: 6 }}>{t("vault.assets", { n: balances?.length ?? 0 })}</p>
-                {!balances && <div className="vempty">{t("vault.sealedBook")}</div>}
-                {balances && balances.length === 0 && <div className="vempty">{t("vault.empty")}</div>}
+                {!balances && <p className="vlt-sub">{t("vault.sealedBook")}</p>}
+                {balances && balances.length === 0 && <p className="vlt-sub">{t("vault.empty")}</p>}
                 {rows && rows.length > 0 && (
                   <div className="assets" data-testid="asset-list">
                     {rows.map((b) => (
-                      <div className={`arow${b.logo ? "" : " plain"}`} key={b.key} data-token={b.symbol}>
+                      <div className="arow" key={b.key} data-token={b.symbol}>
                         <TokenIcon assetId={b.known ? b.key : null} symbol={b.symbol} size="md" />
                         <div className="who"><b>{b.symbol}</b>{b.name ? <small>{b.name}</small> : null}</div>
                         <div className="amt"><b>{b.amountLabel}</b>{b.usdMicro != null ? <small>{formatUsdMicro(b.usdMicro)}</small> : null}</div>
@@ -366,153 +317,183 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                     ))}
                   </div>
                 )}
-              </div>
-              <div className="vact">
-                <button className="vbtn pri" disabled={balance.busy} onClick={() => { clearOtherErrors(balance); void balance.run({}); }} data-testid="balance-btn">{balance.busy ? <Busy l={balance.label} /> : sessionLive ? "Refresh balance (session, no popup)" : t("vault.balance")}</button>
-                <button className="vbtn sec" disabled={account.busy} onClick={() => { clearOtherErrors(account); void account.run({}); }} data-testid="account-btn">{account.busy ? <Busy l={account.label} /> : t("vault.open")}</button>
-              </div>
-              {account.res?.output?.ok && (
-                <div className="vfield" data-testid="confidential-id">
-                  <span className="vl">{t("vault.sendTo")}</span>
-                  <div className="vbox ro"><span className="v">{String(account.res.output.confidential_id)}</span>
-                    <button type="button" className="vbtn sec sm" onClick={() => { const id = String(account.res?.output?.confidential_id ?? ""); void copyText(id).then(() => { setCopiedConf(true); window.setTimeout(() => setCopiedConf(false), 1600); }); }}>{copiedConf ? t("nav.copied") : t("nav.copy")}</button>
-                  </div>
-                </div>
-              )}
-              {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
-              {balance.res && <Attested r={balance.res} />}
-            </section>
+              </Card>
 
-            <section className="c vcard" data-testid="move-card">
-              <header className="vhd"><h2>{t("vault.cardMove")}</h2><span className="side"><span className="vbadge mute" data-testid="caps">{t("vault.capsLine", { finish: t(`finish.${finish}`), tx: fmtUsd(perCap), day: fmtUsd(dayCap) })}</span></span></header>
-              {lockUntil ? <p className="note-box" data-testid="lock-note">{t("vault.lockNote", { time: hhmm(lockUntil) })}</p> : null}
-              <div className="vtabs" role="tablist">
-                {tabs.map((n) => (
-                  <button key={n} type="button" role="tab" aria-selected={step === n} onClick={() => setStep(n)}>{t(n === 1 ? "vault.stepFund" : n === 2 ? "vault.stepTrade" : "vault.stepWithdraw")}</button>
-                ))}
-              </div>
-              {step === 1 && <div className="vform" role="tabpanel">
-                <p className="vsub">{t("vault.fundLead")}</p>
-                <div className="vrow">
-                  <div className="vfield"><label htmlFor="fund-asset">{t("vault.asset")}</label><div className="vbox pick"><TokenPick id="fund-asset" value={fundAsset} onChange={setFundAsset} /></div></div>
-                  <div className="vfield"><label htmlFor="fund-amt">{t("vault.amount")}</label><div className="vbox" aria-invalid={!fundUnits}><input id="fund-amt" inputMode="decimal" value={fundAmt} onChange={(e) => setFundAmt(e.target.value)} /><span className="u">{ASSETS[fundAsset].symbol}</span></div>{!fundUnits && <p className="vhelp err">{t("vault.badAmount")}</p>}</div>
+              <Card as="section" className="c vlt-card" testid="activity-card" aria-labelledby="vlt-activity-h">
+                <div className="vlt-cardhead">
+                  <h2 id="vlt-activity-h">{t("vault.activity")}</h2>
+                  <Button variant="secondary" size="sm" loading={history.busy} loadingLabel={history.label} onClick={() => { clearOtherErrors(history); void history.run({}); }}>{t("vault.history")}</Button>
                 </div>
-                <button className="vbtn pri block" type="button" disabled={!fundUnits || account.busy} data-testid="fund-btn" onClick={() => { if (fundUnits && accountId) { clearOtherErrors(account); void account.run(fundParams(fundAsset, fundUnits)); } }}>{account.busy ? <Busy l={account.label} /> : t("vault.fundBtn")}</button>
-                {account.res?.output?.ok && typeof account.res.output.deposit?.deposit_address === "string" && (
-                  <div className="vfield" data-testid="deposit">
-                    <span className="vl">{t("vault.deposit")}</span>
-                    <DepositQr evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
-                    {typeof account.res.output.deposit.hint === "string" && <p className="vhelp">{String(account.res.output.deposit.hint)}</p>}
-                    {typeof account.res.output.deposit.expires_at === "string" && <p className="vhelp">{t("vault.expires", { time: String(account.res.output.deposit.expires_at) })}</p>}
-                  </div>
+                {!history.res && <p className="vlt-sub">{t("vault.activityHint")}</p>}
+                {history.res?.output?.ok && logVerified === null && <p className="vlt-sub">{t("vault.checking")}</p>}
+                {logVerified === false && <p className="vlt-sub" data-testid="vault-log-hidden">{t("vault.hiddenLog")}</p>}
+                {logVerified === true && <p><span className="vlt-state ok" data-testid="vault-verified"><i />{t("vault.verified")}</span></p>}
+                {logVerified === true && entries && entries.length === 0 && <p className="vlt-sub">{t("vault.empty")}</p>}
+                {logVerified === true && entries && entries.length > 0 && (
+                  <ul className="vlt-log">
+                    {[...entries].reverse().slice(0, 8).map((e, i) => (
+                      <li key={i}>
+                        <span className="op">{e.kind || "—"}</span>
+                        <span>{e.token_in ? `${e.amount_in ?? ""} ${e.token_in} → ${e.amount_out ?? ""} ${e.token_out ?? ""}` : `${e.amount ?? ""} ${e.token ?? ""}`}</span>
+                        <small>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</small>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-                {account.res?.error && <ErrorBox code={account.res.error.code} retryAfter={account.res.error.retry_after} />}
-                {account.res && <Attested r={account.res} />}
-              </div>}
-              {step === 2 && <form className="vform" role="tabpanel" onSubmit={(e) => { e.preventDefault(); if (!units || !accountId || from === toKey) return; quoteKey.current = tradeKey; clearOtherErrors(quote); swap.reset(); void quote.run({ origin_asset: ASSETS[from].id, destination_asset: ASSETS[toKey].id, amount: units, refund_to: accountId, recipient: accountId, refund_type: "INTENTS", recipient_type: "INTENTS", deposit_type: "INTENTS", confidentiality: "basic", execute: false }); }}>
-                <p className="vsub">{t("vault.tradeLead")}</p>
-                <div className="vrow">
-                  <div className="vfield"><label htmlFor="from">{t("vault.from")}</label><div className="vbox pick"><TokenPick id="from" value={from} onChange={setFrom} /></div></div>
-                  <div className="vfield"><label htmlFor="amt">{t("vault.amount")}</label><div className="vbox" aria-invalid={!units}><input id="amt" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /><span className="u">{ASSETS[from].symbol}</span></div>{!units && <p className="vhelp err">{t("vault.badAmount")}</p>}</div>
+                {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
+                {history.res && <Attested r={history.res} />}
+                <div className="vlt-actions">
+                  <Button variant="secondary" size="sm" loading={pnl.busy} loadingLabel={pnl.label} testid="pnl-btn" onClick={() => { clearOtherErrors(pnl); void pnl.run({}); }}>{t("vault.pnlBtn")}</Button>
                 </div>
-                <div className="vflip"><button type="button" aria-label={t("vault.flip")} onClick={() => { const next = from; setFrom(toKey); setToKey(next); }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16M3 16l4 4 4-4" /><path d="M17 20V4M13 8l4-4 4 4" /></svg>
-                </button></div>
-                <div className="vrow">
-                  <div className="vfield"><label htmlFor="to">{t("vault.to")}</label><div className="vbox pick"><TokenPick id="to" value={toKey} onChange={setToKey} /></div></div>
-                  <div className="vfield"><span className="vl">{t("vault.youGet")}</span><div className="vbox ro"><span className="v">{q?.ok && quoted?.key === tradeKey ? Number(q.quote?.amountOutFormatted).toPrecision(6) : "—"}</span><span className="u" style={{ marginLeft: "auto" }}>{ASSETS[toKey].symbol}</span></div></div>
-                </div>
-                {from === toKey && <p className="vhelp err">{t("vault.same")}</p>}
-                {q?.ok && quoted?.key === tradeKey && (
-                  <div className="receipt" data-testid="quote">
-                    <div className="row"><span>{t("vault.give")}</span><span>{amount} {ASSETS[from].symbol}</span></div>
-                    <div className="row"><span>{t("vault.youGet")}</span><span>{Number(q.quote?.amountOutFormatted).toPrecision(6)} {ASSETS[toKey].symbol}</span></div>
-                    <div className="row"><span>{t("vault.price")}</span><span>{fmtUsd(q.usd_micro)}</span></div>
-                    <div className="row"><span>{t("vault.capUsed")}</span><span>{t("vault.ofCap", { used: fmtUsd(q.usd_micro), cap: fmtUsd(perCap) })}</span></div>
-                  </div>
-                )}
-                <div className="vact">
-                  <button className={`vbtn ${quoted?.key === tradeKey ? "sec" : "pri"}`} disabled={!units || from === toKey || quote.busy} data-testid="quote-btn">{quote.busy ? <Busy l={quote.label} /> : t("vault.get")}</button>
-                  <button className={`vbtn ${quoted?.key === tradeKey ? "pri" : "sec"}`} type="button" data-testid="trade-btn" disabled={!units || from === toKey || quoted?.key !== tradeKey || swap.busy} onClick={() => { if (!units || !quoted || quoted.key !== tradeKey) return; const ctx: OpResume = { op: "swap", give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[toKey].decimals, symbol: ASSETS[toKey].symbol }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneTrade(ctx); clearOtherErrors(swap); void swap.run(swapParams(from, toKey, units, quoted.minOut)); }}>{swap.busy ? <Busy l={swap.label} /> : t("vault.signTrade")}</button>
-                </div>
-                {!swap.busy && units && from !== toKey && quoted?.key !== tradeKey && <p className="vhelp" data-testid="trade-why">{session ? "Getting a fresh quote for this amount…" : "Press “Get attested quote” for this amount first; the trade uses that exact quote."}</p>}
-                {quote.res?.error && <ErrorBox code={quote.res.error.code} retryAfter={quote.res.error.retry_after} vars={{ cap: capFrom(quote.res.error.message) }} />}
-                {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} vars={{ cap: capFrom(swap.res.error.message) }} />}
-                {swap.busy && <TxResult state="pending" title="Signing and settling the trade" testid="trade-pending" />}
-                {swap.res?.output?.ok && swap.res.output.op === "swap" && doneTrade && (
-                  <div className="result-card" data-testid="trade-out">
-                    <TxResult state="confirmed" title={tradeSummary(doneTrade.give, String(swap.res.output.amount_out ?? "0"), doneTrade.decimals, doneTrade.symbol)} callId={swap.res.call_id ?? undefined}>
-                      <p className="note">{String(swap.res.output.status ?? "")}</p>
-                      {swap.res.output.intent_hash && <p><a href={intentTx(String(swap.res.output.intent_hash))} target="_blank" rel="noreferrer">{t("vault.intent")} ↗</a></p>}
-                      {swap.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(swap.res.output.request_id)}</p>}
-                    </TxResult>
-                  </div>
-                )}
-                {quote.res && <Attested r={quote.res} />}
-                {swap.res && !(swap.res.output?.ok && swap.res.output.op === "swap" && doneTrade) && <Attested r={swap.res} />}
-              </form>}
-              {step === 3 && <div className="vform" role="tabpanel">
-                <p className="vsub">{t("vault.withdrawLead", { account: accountId })}</p>
-                <div className="vrow">
-                  <div className="vfield"><label htmlFor="w-asset">{t("vault.asset")}</label><div className="vbox pick"><TokenPick id="w-asset" value={wAsset} onChange={setWAsset} /></div></div>
-                  <div className="vfield"><label htmlFor="w-amt">{t("vault.amount")}</label><div className="vbox" aria-invalid={!wUnits}><input id="w-amt" inputMode="decimal" value={wAmt} onChange={(e) => setWAmt(e.target.value)} /><span className="u">{ASSETS[wAsset].symbol}</span></div>{!wUnits && <p className="vhelp err">{t("vault.badAmount")}</p>}</div>
-                </div>
-                <div className="vfield"><span className="vl">{t("vault.dest")}</span><div className="vbox ro"><span className="v">{accountId}</span></div><p className="vhelp">{t("vault.destHelp")}</p></div>
-                {coolUntil ? <p className="note-box" data-testid="cooldown-note">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
-                <button className="vbtn pri block" type="button" data-testid="withdraw-btn" disabled={!wUnits || withdraw.busy} onClick={() => { if (wUnits && accountId) { const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(accountId) }; sessionStorage.setItem(OP_CTX, JSON.stringify(ctx)); setDoneWithdraw(ctx); clearOtherErrors(withdraw); void withdraw.run(withdrawParams(accountId, wAsset, wUnits)); } }}>{withdraw.busy ? <Busy l={withdraw.label} /> : t("vault.withdrawBtn")}</button>
-                {withdraw.busy && <TxResult state="pending" title="Waiting for the payout" testid="withdraw-pending" />}
-                {withdraw.res?.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw && (
-                  <div className="result-card" data-testid="withdraw-out">
-                    <TxResult state="confirmed" title={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} hash={withdraw.res.output.tx_hash ? String(withdraw.res.output.tx_hash) : undefined} callId={withdraw.res.call_id ?? undefined}>
-                      <p className="note">{String(withdraw.res.output.status ?? "")}</p>
-                      {withdraw.res.output.request_id && <p className="mono" style={{ fontSize: 13 }}>{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
-                      <p className="mono" style={{ fontSize: 13 }} data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? <> · {t("vault.fee")}: {String(withdraw.res.output.fee)}</> : null}</p>
-                      {!withdraw.res.output.tx_hash && <p className="note" data-testid="withdraw-settling">Settling: the payout transaction is sent by the custody wallet and shows on your account&apos;s explorer page within about a minute. <a href={acct(accountId || "")} target="_blank" rel="noreferrer">Open explorer ↗</a> · <a href={acctAlt(accountId || "")} target="_blank" rel="noreferrer">alt ↗</a></p>}
-                      {isImplicitAccount(accountId || "") && <p className="note">{t("vault.storageNote")}</p>}
-                    </TxResult>
-                  </div>
-                )}
-                {withdraw.res?.error && <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />}
-                {withdraw.res && !(withdraw.res.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw) && <Attested r={withdraw.res} />}
-              </div>}
-            </section>
+                <p className="vlt-sub">{t("vault.pnlHelp")}</p>
+                {pnl.res?.output && (pnl.res.output as { statement?: string }).statement && (() => {
+                  const o = pnl.res!.output as { statement: string; sig: string; minter: string };
+                  const href = `/pnl#${encodeShare({ statement: o.statement, sig: o.sig, minter: o.minter, call_id: pnl.res!.call_id })}`;
+                  return <p className="vlt-sub" data-testid="pnl-link"><Link href={href}>{t("vault.pnlOpen")}</Link></p>;
+                })()}
+                {pnl.res?.error && <ErrorBox code={pnl.res.error.code} retryAfter={pnl.res.error.retry_after} />}
+              </Card>
+            </div>
 
-            <section className="c vcard" data-testid="activity-card">
-              <header className="vhd"><h2>{t("vault.activity")}</h2><span className="side"><button className="vbtn sec sm" disabled={history.busy} onClick={() => { clearOtherErrors(history); void history.run({}); }}>{history.busy ? <Busy l={history.label} /> : t("vault.history")}</button></span></header>
-              {!history.res && <div className="vempty">{t("vault.activityHint")}</div>}
-              {history.res?.output?.ok && logVerified === null && <p className="note">{t("vault.checking")}</p>}
-              {logVerified === false && <p className="note" data-testid="vault-log-hidden">{t("vault.hiddenLog")}</p>}
-              {logVerified === true && <p><span className="vbadge ok" data-testid="vault-verified"><i />{t("vault.verified")}</span></p>}
-              {logVerified === true && entries && entries.length === 0 && <div className="vempty">{t("vault.empty")}</div>}
-              {logVerified === true && entries && entries.length > 0 && (
-                <div>
-                  {[...entries].reverse().slice(0, 8).map((e, i) => (
-                    <div className="av" key={i}>
-                      <span className="op">{e.kind || "—"}</span>
-                      <span style={{ overflowWrap: "anywhere" }}>{e.token_in ? `${e.amount_in ?? ""} ${e.token_in} → ${e.amount_out ?? ""} ${e.token_out ?? ""}` : `${e.amount ?? ""} ${e.token ?? ""}`}</span>
-                      <span className="mono" style={{ color: "var(--mu)", fontSize: 13 }}>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</span>
+            <div className="vlt-side">
+              <Card as="section" className="c vlt-card" testid="key-card" aria-labelledby="vlt-key-h">
+                <div className="vlt-cardhead">
+                  <h2 id="vlt-key-h">Your key</h2>
+                  {idn && held ? <span className="vlt-state ok" data-state={keyState(held.token, held.tier, accountId)}><i />{t(`gallery.${keyState(held.token, held.tier, accountId)}`)}</span> : null}
+                </div>
+                {idn && held ? (
+                  <>
+                    <div className="vlt-key">
+                      <FoilCard finish={idn.finish}>
+                        <div className="top">
+                          <span className="tier">{t(`finish.${idn.finish}`)}</span>
+                          <span className="oo">{t("land.oneOfOne")}</span>
+                        </div>
+                        <div className="art">
+                          <Guilloche seed={idn.seedHex} />
+                          <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
+                        </div>
+                        <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />
+                        <h3 title={held.token.token_id} data-testid="key-title">{t("gallery.key", { id: shortKeyId(held.token.token_id) })}</h3>
+                      </FoilCard>
+                      <dl className="vlt-kv" data-testid="vault-traits">
+                        <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>
+                        <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, idn.filigree)}</dd>
+                        <dt>{t("field.enamel")}</dt><dd>{traitLabel(t, idn.enamel)}</dd>
+                        <dt>{t("field.gem")}</dt><dd>{traitLabel(t, idn.gem)}</dd>
+                        <dt>{t("field.cipher")}</dt><dd><Cipher bits={idn.bits} /></dd>
+                        <dt>{t("proof.contract")}</dt><dd className="mono">{KEYS_CONTRACT}</dd>
+                      </dl>
                     </div>
-                  ))}
+                    <KeyLog tokenId={held.token.token_id} />
+                  </>
+                ) : (
+                  <p className="vlt-sub">{t("vault.nokey")} <Link href="/mint">{t("vault.mintFirst")}</Link></p>
+                )}
+              </Card>
+
+              <Card as="section" className="c vlt-card" testid="settings-card" aria-labelledby="vlt-set-h">
+                <div className="vlt-cardhead">
+                  <h2 id="vlt-set-h">Settings</h2>
+                  {pendingLim ? <span className="vlt-state pend" data-testid="pending-badge"><i />{t("vault.stPending")}</span> : null}
                 </div>
-              )}
-              {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
-              <div className="vact" style={{ marginTop: 12 }}>
-                <button className="vbtn sec" disabled={pnl.busy} data-testid="pnl-btn" onClick={() => { clearOtherErrors(pnl); void pnl.run({}); }}>{pnl.busy ? <Busy l={pnl.label} /> : t("vault.pnlBtn")}</button>
-              </div>
-              <p className="vhelp">{t("vault.pnlHelp")}</p>
-              {pnl.res?.output && (pnl.res.output as { statement?: string }).statement && (() => {
-                const o = pnl.res!.output as { statement: string; sig: string; minter: string };
-                const href = `/pnl#${encodeShare({ statement: o.statement, sig: o.sig, minter: o.minter, call_id: pnl.res!.call_id })}`;
-                return <p className="vhelp" data-testid="pnl-link"><Link href={href}>{t("vault.pnlOpen")}</Link></p>;
-              })()}
-              {pnl.res?.error && <ErrorBox code={pnl.res.error.code} retryAfter={pnl.res.error.retry_after} />}
-              {history.res && <Attested r={history.res} />}
-            </section>
+                <Tabs id="vset" label="Vault settings" value={tab} onChange={(v) => setTab(v as Tab)} testid="settings-tabs" items={[
+                  { id: "limits", label: "Limits" },
+                  { id: "session", label: "Session" },
+                  { id: "lock", label: "Lock" },
+                ]} />
+                <div id="vset-panel" role="tabpanel" aria-labelledby={`vset-tab-${tab}`} className="vlt-panel">
+                  {tab === "limits" && limitsPanel}
+                  {tab === "session" && (held ? <SessionCard tokenId={held.token.token_id} /> : <p className="vlt-sub">Mint a key to unlock a session.</p>)}
+                  {tab === "lock" && lockPanel}
+                </div>
+              </Card>
+
+              <Card as="section" className="c vlt-card" testid="vault-swap-card" aria-labelledby="vlt-swap-h">
+                <div className="vlt-cardhead"><h2 id="vlt-swap-h">Swap</h2></div>
+                <p className="vlt-sub">Trade USDC and wNEAR from this vault on the Swap page. The price check there needs no wallet.</p>
+                <div className="vlt-actions">
+                  <Button href="/swap" variant="secondary" testid="vault-swap-link">Open swap</Button>
+                </div>
+              </Card>
+            </div>
           </div>
-        </div>
-        <HowStrip active={2} />
+
+          <HowStrip active={2} />
         </>
       )}
+
+      <Sheet open={depOpen} onClose={() => setDepOpen(false)} title="Deposit" testid="deposit-sheet">
+        <p className="vlt-sub">{t("vault.fundLead")}</p>
+        <div className="vlt-stack">
+          <div className="vlt-field">
+            <span className="vlt-label">{t("vault.asset")}</span>
+            <TokenSelect label={t("vault.asset")} options={TOKEN_OPTIONS} value={ASSETS[fundAsset].id} onChange={(id) => setFundAsset(keyOfId(id))} testid="fund-asset" />
+          </div>
+          <AmountInput label={t("vault.amount")} value={fundAmt} onChange={setFundAmt} symbol={ASSETS[fundAsset].symbol} error={fundUnits ? null : t("vault.badAmount")} testid="fund-amt" />
+          <Button block testid="fund-btn" loading={account.busy} loadingLabel={account.label} disabled={!fundUnits || account.busy} onClick={() => { if (fundUnits && accountId) { clearOtherErrors(account); void account.run(fundParams(fundAsset, fundUnits)); } }}>
+            {account.busy ? account.label : t("vault.fundBtn")}
+          </Button>
+          {account.res?.output?.ok && typeof account.res.output.deposit?.deposit_address === "string" && (
+            <div className="vlt-stack" data-testid="deposit">
+              <span className="vlt-label">{t("vault.deposit")}</span>
+              <DepositQr evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
+              {typeof account.res.output.deposit.hint === "string" && <p className="vlt-sub">{String(account.res.output.deposit.hint)}</p>}
+              {typeof account.res.output.deposit.expires_at === "string" && <p className="vlt-sub">{t("vault.expires", { time: String(account.res.output.deposit.expires_at) })}</p>}
+            </div>
+          )}
+          {account.res?.error && <ErrorBox code={account.res.error.code} retryAfter={account.res.error.retry_after} />}
+          {account.res && <Attested r={account.res} />}
+          <div className="vlt-stack">
+            <span className="vlt-label">Vault address</span>
+            <div className="vlt-actions">
+              <Button variant="secondary" size="sm" testid="account-btn" onClick={() => { clearOtherErrors(account); void account.run({}); }}>{t("vault.open")}</Button>
+            </div>
+            {account.res?.output?.ok && account.res.output.confidential_id != null && (
+              <div className="vlt-field" data-testid="confidential-id">
+                <span className="vlt-label">{t("vault.sendTo")}</span>
+                <div className="vlt-box ro"><span className="v">{String(account.res.output.confidential_id)}</span>
+                  <Button variant="secondary" size="sm" onClick={() => { const id = String(account.res?.output?.confidential_id ?? ""); void copyText(id).then(() => { setCopiedConf(true); window.setTimeout(() => setCopiedConf(false), 1600); }); }}>{copiedConf ? t("nav.copied") : t("nav.copy")}</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Sheet>
+
+      <Sheet open={wOpen} onClose={() => setWOpen(false)} title="Withdraw" testid="withdraw-sheet">
+        <p className="vlt-sub">{t("vault.withdrawLead", { account: accountId ?? "" })}</p>
+        <div className="vlt-stack">
+          <div className="vlt-field">
+            <span className="vlt-label">{t("vault.asset")}</span>
+            <TokenSelect label={t("vault.asset")} options={TOKEN_OPTIONS} value={ASSETS[wAsset].id} onChange={(id) => setWAsset(keyOfId(id))} testid="w-asset" />
+          </div>
+          <AmountInput label={t("vault.amount")} value={wAmt} onChange={setWAmt} symbol={ASSETS[wAsset].symbol} error={wUnits ? null : t("vault.badAmount")} testid="w-amt" />
+          <div className="vlt-field">
+            <span className="vlt-label">{t("vault.dest")}</span>
+            <div className="vlt-box ro"><span className="v">{accountId}</span></div>
+            <p className="vlt-sub">{t("vault.destHelp")}</p>
+          </div>
+          {coolUntil ? <p className="note-box" data-testid="cooldown-note">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
+          <Button block testid="withdraw-btn" loading={withdraw.busy} loadingLabel={withdraw.label} disabled={!wUnits || withdraw.busy} onClick={doWithdraw}>
+            {withdraw.busy ? withdraw.label : t("vault.withdrawBtn")}
+          </Button>
+          {withdraw.busy && <TxStatus state="pending" title="Waiting for the payout" testid="withdraw-pending" />}
+          {withdraw.res?.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw && (
+            <div className="vlt-stack" data-testid="withdraw-out">
+              <TxStatus state="confirmed" title={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} hash={withdraw.res.output.tx_hash ? String(withdraw.res.output.tx_hash) : undefined} callId={withdraw.res.call_id ?? undefined}>
+                <p className="vlt-sub">{String(withdraw.res.output.status ?? "")}</p>
+                {withdraw.res.output.request_id && <p className="mono vlt-small">{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
+                <p className="mono vlt-small" data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? <> · {t("vault.fee")}: {String(withdraw.res.output.fee)}</> : null}</p>
+                {!withdraw.res.output.tx_hash && <p className="vlt-sub" data-testid="withdraw-settling">Settling: the payout transaction is sent by the custody wallet and shows on your account&apos;s explorer page within about a minute. <a href={acct(accountId || "")} target="_blank" rel="noreferrer">Open explorer ↗</a></p>}
+                {isImplicitAccount(accountId || "") && <p className="vlt-sub">{t("vault.storageNote")}</p>}
+              </TxStatus>
+            </div>
+          )}
+          {withdraw.res?.error && <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />}
+          {withdraw.res && !(withdraw.res.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw) && <Attested r={withdraw.res} />}
+        </div>
+      </Sheet>
     </div>
   );
 }

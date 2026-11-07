@@ -245,7 +245,8 @@ for (const kind of ["swap", "withdraw"] as const) {
           : { op, give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
       }));
     }, { nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", kind });
-    await page.goto("/vault#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+    // A swap is started and resumed on /swap; a withdrawal on /vault (its sheet reopens).
+    await page.goto(`${kind === "swap" ? "/swap" : "/vault"}#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc`);
     if (kind === "swap") {
       await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
       await expect(page.getByTestId("trade-out")).toContainText("success");
@@ -287,7 +288,7 @@ test("a decline is gone after a later trade success", async ({ page }) => {
       ctx: { op: "swap", give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
     }));
   });
-  await page.goto("/vault?back=1#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+  await page.goto("/swap?back=1#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
   await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
   await expect(page.getByTestId("trade-out")).toContainText("success");
   await expect(page.getByTestId("error")).toHaveCount(0);

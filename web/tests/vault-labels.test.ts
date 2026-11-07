@@ -11,11 +11,12 @@ describe("vault labels", () => {
     expect(v).toContain('=== "session" ? t("vault.balanceSession")');
     expect(src("../lib/useSigned.ts")).toContain('setVia(viaSession ? "session" : "signature")');
   });
-  it("per-trade meter: cap only with no quote, quote is labelled a preview", () => {
-    expect(v).toContain('txUsed == null ? t("vault.capOnly"');
+  it("per-trade meter shows the cap, never a spend: trading and its quote preview moved to /swap", () => {
+    expect(v).toContain('testid="per-trade-meter"');
+    expect(v).toContain('t("vault.capOnly", { cap: fmtUsd(perCap) })');
+    expect(v).not.toContain("swapParams");
+    expect(v).not.toContain("quotePreview");
     expect(en.vault.quotePreview).toMatch(/^this quote /);
-    expect(en.vault.meterTxNone).toContain("Nothing has been spent");
-    expect(en.vault.meterTx).toMatch(/^Preview:/);
   });
   it("links the key's history and contract when no mint tx is stored", () => {
     expect(v).toContain('data-testid="vault-key-link"');
