@@ -143,6 +143,8 @@ describe("SiteFrame picks the chrome per route", () => {
   const footer = createElement("footer", { "data-chrome": "footer" }, "FOOT");
   const render = (path: string | null) => {
     route.path = path;
+    // children is a required prop of SiteFrame, so it is passed in props here for the type check.
+    // eslint-disable-next-line react/no-children-prop
     return renderToStaticMarkup(withI18n(createElement(SiteFrame, { nav, footer, children: createElement("p", null, "BODY") })));
   };
 
