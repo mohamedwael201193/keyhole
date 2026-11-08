@@ -8,12 +8,12 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 | Requirement | KEYHOLE feature | Evidence | Status |
 |---|---|---|---|
 | NEP-171 contract tying each token to an account it controls | `keyhole-devmo.near` keys contract (NEP-171/177/178/181/199/330, one key per account enforced on-chain; [royalty sale on mainnet](docs/evidence/contract-v2/README.md); v2.3 live, [evidence](docs/evidence/contract-v2-3/README.md)); each key maps to a confidential account inside the TEE that only the current owner can drive | [`contracts/keys`](contracts/keys), README §5, live [/gallery](https://keyhole-seven.vercel.app/gallery) | ✅ |
-| README: how control passes on transfer, what stops the old owner | The worker reads `nft_token` owner on every request; old owner gets `not_owner`; holder limits and locks bind only the holder who set them; 10-minute withdraw cooldown after a transfer | README §5–§8, [THREAT_MODEL.md](THREAT_MODEL.md); current build a985fd87: sale run with team test wallets, [docs/evidence/transfer-a985fd87](docs/evidence/transfer-a985fd87/README.md) (calls `2a52742a`, `3e996273`, `15f93f58`, `8485f8d4`); earlier builds: calls `e72dc176`, `711795b9`, `369f522d` | ✅ |
+| README: how control passes on transfer, what stops the old owner | The worker reads `nft_token` owner on every request; old owner gets `not_owner`; holder limits and locks bind only the holder who set them; 10-minute withdraw cooldown after a transfer | README §5 and §9, [THREAT_MODEL.md](THREAT_MODEL.md); current build a985fd87: sale run with team test wallets, [docs/evidence/transfer-a985fd87](docs/evidence/transfer-a985fd87/README.md) (calls `2a52742a`, `3e996273`, `15f93f58`, `8485f8d4`); earlier builds: calls `e72dc176`, `711795b9`, `369f522d` | ✅ |
 | Gated page only current holders can open | /vault: balances, history and actions need a fresh NEP-413/EIP-191 signature from the current owner | live [/vault](https://keyhole-seven.vercel.app/vault), e2e | ✅ |
 | History per NFT: earned, paid out, who held it | /key?id=…: holders with from/to, deposits, payouts, trades; hash-chained log signed by the TEE minter, re-verified in the browser; USD totals as signed PnL | [/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940), [/pnl](https://keyhole-seven.vercel.app/pnl), `tests/keylog.test.ts` | ✅ (USD per holder is private by design; holders publish it as signed PnL) |
 | Tests for the transfer path incl. a sale in the middle of a payout | 6 worker invariant tests; mainnet run where the key moved while a payout was in flight | `tee/worker/src/tests.rs`, [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md) | ✅ |
 | Threat model for the transfer | Every way a seller could keep the money, with the control that stops it | [THREAT_MODEL.md](THREAT_MODEL.md) | ✅ |
-| Sub-accounts / Top Level Accounts | Confidential per-key accounts live in the TEE (OutLayer), not NEAR sub-accounts | README §1 | 🟡 different shape |
+| Sub-accounts / Top Level Accounts | Confidential per-key accounts live in the TEE (OutLayer), not NEAR sub-accounts | README §6 | 🟡 different shape |
 
 ## Privacy & Private AI
 
@@ -29,7 +29,7 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 
 | Requirement | KEYHOLE feature | Evidence | Status |
 |---|---|---|---|
-| 1Click API for quotes, deposits, status | Worker quotes through 1Click (`confidentiality: basic \| advanced`, dry first, wet only on execute); vault swaps execute through OutLayer's confidential-swap API; /settle runs standalone 1Click orders | README §11, swap call `7f52f7d8` | ✅ |
+| 1Click API for quotes, deposits, status | Worker quotes through 1Click (`confidentiality: basic \| advanced`, dry first, wet only on execute); vault swaps execute through OutLayer's confidential-swap API; /settle runs standalone 1Click orders | README §8, swap call `7f52f7d8` | ✅ |
 | Handle REFUNDED and FAILED, shown in the UI | /settle shows every 1Click status with where the funds are; a real NO_LIQUIDITY refund reads REFUNDED live; FAILED shows the refund address | [/settle](https://keyhole-seven.vercel.app/settle), [`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md), [PR #62](https://github.com/mohamedwael201193/keyhole/pull/62), e2e `settle: the real SOL→NEAR order reads SUCCESS live…` | ✅ |
 | Show where funds sit at every step | Vault shows sealed balances and deposit addresses | /vault | 🟡 |
 | History of executed buys with explorer links | Vault history lists trades; intent explorer links | /vault | 🟡 links being added |
@@ -46,9 +46,9 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 | Attack demo: prompt-injected agent tries to pay a bad address, with a log | Six mainnet attack calls, all stopped; /ask shows the model ignoring a poisoned note | [docs/evidence/prompt-injection](docs/evidence/prompt-injection/README.md) | ✅ |
 | Counterparty check service (allow / warn / block) with signals, a shared blocklist and an agent wrapper | `cli/src/counterparty.ts` (identical copy in `web/lib/counterparty.ts`), served by `GET /api/check`; `guardedRun` on withdraw, quote --execute and MCP copy; blocklist in `security/blocklist.json` (one labelled demo entry, no real accusations); signed report format in `cli/src/report.ts`. Advisory only: not enforced in the TEE; the web route ships with the next site deploy | README "AI Security & Defense: counterparty check", [`cli/test/counterparty.test.ts`](cli/test/counterparty.test.ts), [`cli/test/guard.test.ts`](cli/test/guard.test.ts), [`web/tests/check.test.ts`](web/tests/check.test.ts) | 🟡 |
 | Attack demo on the guard: a scripted agent obeys an injected instruction, the guard refuses before signing | [`scripts/attack-demo.mts`](scripts/attack-demo.mts): the signer is a stub that throws, and the run asserts it was never called. Refusals only: the worker does not yet pay third parties | [log](docs/evidence/attack-demo/2026-11-07.log) | 🟡 |
-| TEE attestation | /verify, `verify.sh`, judge kit | README §9 | ✅ |
+| TEE attestation | /verify, `verify.sh`, judge kit | README §8 | ✅ |
 
-## Counts (reproduce in README §12)
+## Counts (reproduce in README §10)
 
 1551 passing tests at `d0305f2`: contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct (135 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
 
