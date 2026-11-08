@@ -10,9 +10,15 @@ export type PrivyNear = { ready: boolean; accountId: string | null; creating: bo
 export const PRIVY_OAUTH_PARAMS = ["privy_oauth_state", "privy_oauth_provider", "privy_oauth_code"] as const;
 export const hasPrivyOauth = (search: string) => { const q = new URLSearchParams(search); return PRIVY_OAUTH_PARAMS.some((k) => q.has(k)); };
 /** Mount Privy on load: an OAuth callback in the URL, our own flag, or Privy's own local state (keys "privy:…"). */
+/** Keys a wallet session leaves: the wallet selector's pick and NEAR Connect's (lib/nearConnect.ts NC_WALLET_KEY). */
+const WALLET_SESSION_KEYS = ["near-wallet-selector:selectedWalletId", "selected-wallet"];
 export function privyResume(search: string, storageKeys: string[]): "oauth" | "restore" | null {
   if (hasPrivyOauth(search)) return "oauth";
-  if (storageKeys.some((k) => k === PRIVY_FLAG || k.startsWith("privy:"))) return "restore";
+  if (storageKeys.includes(PRIVY_FLAG)) return "restore";
+  // Privy writes privy:* keys as soon as its SDK loads, even when nobody finished a Google or email sign-in. They mean a
+  // Privy session only when no wallet session is stored; otherwise a wallet (Meteor, MyNearWallet, NEAR Connect) restores.
+  const walletSession = storageKeys.some((k) => WALLET_SESSION_KEYS.includes(k));
+  if (!walletSession && storageKeys.some((k) => k.startsWith("privy:"))) return "restore";
   return null;
 }
 /** Same URL without the privy_oauth_* params (after the login finished). */

@@ -266,7 +266,8 @@
 .signin-opt { width: 100%; min-height: 56px; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
 .signin-opt:hover { border-color: var(--primary); transform: translateY(-1px); }
 .signin-opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.signin-ico { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--raised); border: 1px solid var(--line); color: var(--primary-ink); }
+.signin-ico { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--raised); border: 1px solid var(--line); color: var(--primary); }
+.signin-ico img { border-radius: 4px; }
 .signin-ico img { display: block; }
 .signin-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .signin-txt b { font-size: var(--text-body); font-weight: 700; }

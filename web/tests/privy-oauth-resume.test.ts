@@ -13,6 +13,11 @@ describe("Privy OAuth callback mounts Privy on load", () => {
     expect(privyResume("", ["privy:token"])).toBe("restore");
     expect(privyResume("?x=1", ["near-wallet-selector:selectedWalletId"])).toBeNull();
   });
+  it("Privy's own keys do not hide a stored wallet session (our flag still wins)", () => {
+    expect(privyResume("", ["privy:caid", "privy:connections", "near-wallet-selector:selectedWalletId"])).toBeNull();
+    expect(privyResume("", ["privy:caid", "selected-wallet"])).toBeNull();
+    expect(privyResume("", ["kh_privy", "privy:token", "near-wallet-selector:selectedWalletId"])).toBe("restore");
+  });
   it("strips only the privy_oauth_* params", () => {
     expect(stripPrivyOauth(`https://k.app/start${cb}&keep=1#h`)).toBe("/start?keep=1#h");
     expect(stripPrivyOauth(`https://k.app/start${cb}`)).toBe("/start");
