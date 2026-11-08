@@ -253,6 +253,23 @@ Hints named for the tracks this repository is built for. Each row is a shipped b
 | `security` | nonce replay protection | `(account, nonce)` stored with `set_if_absent` | [`16_replay_first.json`](docs/evidence/mainnet-e2e/16_replay_first.json), [`17_replay_second_refused.json`](docs/evidence/mainnet-e2e/17_replay_second_refused.json) |
 | `security` | rate limits | Per holder per minute (6/12/30) and 120/minute global | [`rate_limit_per_holder`](tee/worker/src/tests.rs), [`docs/evidence/mainnet-e2e/`](docs/evidence/mainnet-e2e/) |
 
+### Track 10 prompt: how each requirement is met
+
+One row per requirement of the Track 10 prompt. Where a row is not fully met, the note says so.
+
+| Requirement | Where it is | Honest note |
+|---|---|---|
+| NEP-171 contract, with tie logic from each token to its account | Contract: [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs) (`nft_transfer`, `nft_mint`, one key per account). Custody by `token_id`: `holder_wallet` in [`tee/worker/src/main.rs`](tee/worker/src/main.rs) | NEP-171 is shipped. The tie is to a TEE custody wallet per `token_id`, not a NEAR sub-account. See deviation (a). |
+| README explains control on transfer and what stops the old owner | This README, section 5 "How control passes on transfer"; [`THREAT_MODEL.md`](THREAT_MODEL.md); [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) | Written. The old owner is stopped by the live owner check on every request and again before a send. A payout already in flight is not stopped; it completes to the holder who signed it. |
+| Holder-only gated page | [`web/app/vault`](web/app/vault) (the page gate); owner check on every request in [`tee/worker/src/main.rs`](tee/worker/src/main.rs) | The page gate is display-only. The worker's owner check is the real control. |
+| Per-NFT history of earned, paid out, and held | [`web/app/key/view.tsx`](web/app/key/view.tsx) at `/key?id=`: deposits, withdraw events, and the holder list | Shipped with limits. "Paid out" counts withdraw events, not amounts. Earned amounts are private; the PnL view is opt-in. |
+| Transfer tests, including a sale in the middle of a payout | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs): `transfer_moves_the_confidential_account_to_the_new_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle`; mainnet run in [`docs/evidence/mid-payout`](docs/evidence/mid-payout/README.md) | The mid-payout unit test checks a predicate, not a send in flight. The in-flight case is shown on mainnet: the payout completed to the signer, and that holder's next request was refused `not_owner`. |
+| Threat model before coding | [`THREAT_MODEL.md`](THREAT_MODEL.md), [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) | Not met in order. The files were written after the first contract and worker code. See deviation (b). |
+
+**Deviation (a): no NEAR sub-account.** Each `token_id` maps to one custody wallet held inside the OutLayer Intel TDX enclave. A NEAR sub-account would need an access key, and someone would hold that key. Here the keys never leave the enclave.
+
+**Deviation (b): threat model written after the code.** The contract and worker code were first committed on 2026-10-28 (`66f7070`). [`THREAT_MODEL.md`](THREAT_MODEL.md) was first committed on 2026-10-31 (`701faf4`), and [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) on 2026-11-03 (`4736e9c`). The track asked for the threat model first.
+
 ## 3b. Spec to shipped
 
 Source sentence, [status 2106269343881519444](https://x.com/ilblackdragon/status/2106269343881519444), the private-trading idea only. A clause with no shipped row is omitted. Nothing below adds behavior the repository does not contain.
@@ -356,7 +373,7 @@ The key NFT is the only credential for its confidential account. The enclave nev
 
 1. **Every request names a key and is signed by its owner.** The worker reads `nft_token(token_id).owner_id` live at finality `final` and refuses unless it equals the NEP-413 signer (`owns`, `tee/worker/src/main.rs`; ordering in `admit_request`, `tee/worker/src/lib.rs`). After a sale the seller's signature no longer matches, so the seller gets `not_owner`.
 2. **The custody wallet belongs to the token, not to a person.** `holder_wallet(token, owner)` looks the wallet up by token id; whoever owns the token operates it, so the confidential balance moves with the NFT (`transfer_moves_the_confidential_account_to_the_new_holder`).
-3. **Ownership is checked again right before funds move.** Swaps and withdraws re-read the owner just before submitting (`settle_if_owner`). A transfer that lands before that last check stops the send and rolls back the daily spend (`invariant_transfer_mid_payout_never_settles_for_the_old_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `settle_after_transfer_is_refused`). A transfer that lands after the send is already in flight does not stop it: on mainnet the payout finished to the holder who signed it (see below).
+3. **Ownership is checked again right before funds move.** Swaps and withdraws re-read the owner just before submitting (`settle_if_owner`). A transfer that lands before that last check stops the send and rolls back the daily spend (`invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle`, `transfer_while_withdraw_is_pending_does_not_send`, `settle_after_transfer_is_refused`). A transfer that lands after the send is already in flight does not stop it: on mainnet the payout finished to the holder who signed it (see below).
 4. **The new holder waits 10 minutes before the first withdraw** (`TRANSFER_COOLDOWN_MS`), so a seller who still has a request in flight cannot race the buyer (`withdraw_waits_after_a_transfer_only_for_the_new_owner`, `invariant_cooldown_binds_only_the_latest_transferee`).
 5. **A seller can lock the key for sale**; the lock binds only the owner who set it, so it never traps the buyer (`seller_lock_binds_only_the_owner_who_set_it`).
 6. **Old signed requests stay dead.** Nonces are single-use and requests expire (`transfer_then_old_signature_is_not_owner`, replay rows in `tee/worker/src/matrix.rs`).
