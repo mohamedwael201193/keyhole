@@ -5,7 +5,7 @@ import { KeyCard } from "@/components/KeyCard";
 import { EmptyState } from "@/components/EmptyState";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
-import { useMyKeys, KEY_LIST_LIMIT, type MyKeys } from "@/lib/useMyKeys";
+import { KEY_LIST_LIMIT, useKeyStore } from "@/lib/keyStore";
 import { nftTier, type Token } from "@/lib/near";
 import { Button, Skeleton } from "@/components/ui";
 
@@ -51,13 +51,14 @@ export function GalleryView({ tokens, tiers, mine = false }: { tokens: Token[]; 
 }
 
 /**
- * The connected account's keys, read from NEAR mainnet with public views (nft_tokens_for_owner, nft_tier): no signature.
- * Every state is said plainly: not connected, reading, unreachable, no key yet, or the keys.
+ * The connected account's keys, from the shared key store (mounted by components/app/AppShell.tsx). A cached list shows at once
+ * and a fresh read runs behind it, so this does not look the keys up again. The store holds the first key's tier; the tiers of
+ * the other keys are read in the background. Every state is said plainly: not connected, reading, unreachable, no key, or the keys.
  */
 function MineKeys({ accountId, connect }: { accountId: string | null; connect: () => void }) {
-  const [attempt, setAttempt] = useState(0);
-  const mk: MyKeys = useMyKeys(accountId, attempt);
-  const tiers = useTiers(mk);
+  const store = useKeyStore();
+  const keys = store.keys;
+  const tiers = useTiers(keys.slice(1).map((tk) => tk.token_id));
 
   if (!accountId) {
     return (
@@ -66,17 +67,17 @@ function MineKeys({ accountId, connect }: { accountId: string | null; connect: (
       </EmptyState>
     );
   }
-  if (mk.status === "idle" || mk.status === "loading" || mk.accountId !== accountId) {
+  if (keys.length === 0 && (store.status === "idle" || store.status === "loading")) {
     return <div data-testid="gallery-mine-loading" aria-live="polite"><p className="note">Looking up your keys on NEAR mainnet…</p><Skeleton lines={2} /></div>;
   }
-  if (mk.status === "error") {
+  if (keys.length === 0 && store.status === "error") {
     return (
       <EmptyState title="NEAR mainnet did not answer" body="Your keys could not be read just now. The rest of this page still works." testid="gallery-mine-error">
-        <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)} testid="gallery-mine-retry">Try again</Button>
+        <Button variant="secondary" onClick={() => store.refresh()} testid="gallery-mine-retry">Try again</Button>
       </EmptyState>
     );
   }
-  if (mk.tokens.length === 0) {
+  if (keys.length === 0) {
     return (
       <EmptyState title="No key in this wallet yet" body="A key is the account. Minting is free and takes one signature. Only Bronze is mintable today." testid="gallery-mine-empty">
         <Button href="/mint" testid="gallery-mine-mint">Mint a key</Button>
@@ -86,25 +87,27 @@ function MineKeys({ accountId, connect }: { accountId: string | null; connect: (
   return (
     <>
       <p className="note gal-count" data-testid="gallery-mine-count">
-        {mk.tokens.length >= KEY_LIST_LIMIT ? `Showing the first ${KEY_LIST_LIMIT} keys this wallet holds.` : `${mk.tokens.length} ${mk.tokens.length === 1 ? "key" : "keys"} in this wallet.`}
+        {store.capped ? `Showing the first ${KEY_LIST_LIMIT} keys this wallet holds.` : `${keys.length} ${keys.length === 1 ? "key" : "keys"} in this wallet.`}
       </p>
       <div className="gg" data-testid="gallery">
-        {mk.tokens.map((tk, i) => <KeyCard key={tk.token_id} token={tk} tier={tiers[tk.token_id] ?? null} viewer={accountId} displayIndex={i + 1} />)}
+        {keys.map((tk, i) => <KeyCard key={tk.token_id} token={tk} tier={i === 0 ? store.tier : (tiers[tk.token_id] ?? null)} viewer={accountId} displayIndex={i + 1} />)}
       </div>
     </>
   );
 }
 
-/** nft_tier for each key in the list (useMyKeys reads only the first). Null while unread; a failed read stays null. */
-function useTiers(mk: MyKeys): Record<string, number | null> {
+/** nft_tier for each id given (the keys after the first). Null while unread; a failed read stays null. Re-reads only when the ids change. */
+function useTiers(ids: string[]): Record<string, number | null> {
   const [tiers, setTiers] = useState<Record<string, number | null>>({});
+  const joined = ids.join(",");
   useEffect(() => {
-    if (mk.status !== "ready") return;
+    if (!joined) return;
     let cancel = false;
-    Promise.all(mk.tokens.map((tk) => nftTier(tk.token_id).catch(() => null))).then((ts) => {
-      if (!cancel) setTiers(Object.fromEntries(mk.tokens.map((tk, i) => [tk.token_id, ts[i]])));
+    const list = joined.split(",");
+    Promise.all(list.map((id) => nftTier(id).catch(() => null))).then((ts) => {
+      if (!cancel) setTiers(Object.fromEntries(list.map((id, i) => [id, ts[i]])));
     });
     return () => { cancel = true; };
-  }, [mk.status, mk.tokens]);
+  }, [joined]);
   return tiers;
 }

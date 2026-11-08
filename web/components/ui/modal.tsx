@@ -1,9 +1,12 @@
 "use client";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Dialog and bottom sheet. Traps focus inside while open, closes on Escape and on a backdrop press, locks page scroll,
- * and returns focus to the element that opened it. Renders nothing while closed. Styles: app/ui.css (.kh-modal-*).
+ * and returns focus to the element that opened it. Renders nothing while closed. The dialog is portalled to document.body, so its
+ * full-viewport backdrop is never trapped under a transformed or stacking ancestor (the page behind does not show through).
+ * Styles: app/ui.css (.kh-modal-*).
  */
 export const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -31,6 +34,9 @@ export type ModalProps = {
 export function Modal({ open, onClose, title, children, variant = "dialog", testid }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
   const closer = useRef(onClose);
+  // Portals need the browser. The first (server) render is inline; once mounted, the dialog moves to document.body.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const titleId = `kh-modal-${title.replace(/\W+/g, "-").toLowerCase()}`;
 
   useEffect(() => { closer.current = onClose; });
@@ -38,7 +44,9 @@ export function Modal({ open, onClose, title, children, variant = "dialog", test
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;
     const prevOverflow = document.body.style.overflow;
+    const prevRootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     const items = () => (panel.current ? [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)] : []);
     // A child marked data-autofocus (for example a search box) takes focus first; otherwise the first control does.
     (panel.current?.querySelector<HTMLElement>("[data-autofocus]") ?? items()[0] ?? panel.current)?.focus();
@@ -53,12 +61,13 @@ export function Modal({ open, onClose, title, children, variant = "dialog", test
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      document.documentElement.style.overflow = prevRootOverflow;
       opener?.focus?.();
     };
   }, [open]);
 
   if (!open) return null;
-  return (
+  const dialog = (
     <div className={`kh-modal kh-modal--${variant}`} onMouseDown={(e) => { if (e.target === e.currentTarget) closer.current(); }} data-testid={testid}>
       <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} className="kh-modal-panel" tabIndex={-1}>
         <header className="kh-modal-head">
@@ -71,6 +80,7 @@ export function Modal({ open, onClose, title, children, variant = "dialog", test
       </div>
     </div>
   );
+  return mounted ? createPortal(dialog, document.body) : dialog;
 }
 
 /** A bottom sheet on phones and a centred dialog on wider screens (CSS decides the shape). */

@@ -1,13 +1,19 @@
-/* /vault (v3-B): a balance hero on the dark vault surface, assets, and a settings card with tabs. Tokens only (app/tokens.css); cards and buttons from components/ui. */
-.vlt { display: grid; gap: var(--space-5); }
-.vlt h1 { margin: var(--space-1) 0 0; }
+/*
+ * /vault: the balance hero, the asset list, Deposit and Withdraw, and one settings card. Same visual language as overview.css:
+ * tokens only (app/tokens.css), 16px cards with one card shadow, tabular figures for amounts, display serif for the title only.
+ * Markup: app/vault/view.tsx. Cards and buttons come from components/ui (kh-card, kh-btn).
+ */
 
-.vlt-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
-.vlt-acct { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: var(--space-2) 0 0; font-size: var(--text-small); color: var(--muted); }
+.vlt { display: grid; gap: var(--space-5); min-width: 0; color: var(--ink); }
+.vlt-title { margin: 0; font: 600 var(--text-title)/1.08 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
+
+.vlt-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; min-width: 0; }
+.vlt-acct { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: var(--space-2) 0 0; font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
 .vlt-acct .id { font: 500 var(--text-small)/1.4 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
-.vlt-link { border: 0; background: none; padding: 0; font: 600 var(--text-small)/1 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
+.vlt-link { border: 0; background: none; padding: 0; min-height: 44px; display: inline-flex; align-items: center; font: 600 var(--text-small)/1 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .vlt-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
 .vlt-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.vlt-note { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
 
 .vlt-state, .vlt-chip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-pill); font: 600 var(--text-small)/1.2 var(--font-ui); border: 1px solid transparent; max-width: 100%; }
 .vlt-state i, .vlt-chip i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
@@ -18,27 +24,41 @@
 .vlt-chip { background: var(--raised); color: var(--ink-2); border-color: var(--line-strong); }
 .vlt-chip.wait { color: var(--warn); }
 
-/* The balance hero: the one dark surface on this page. */
-.vlt-hero { display: grid; gap: var(--space-3); padding: var(--space-6); background: var(--vault); color: var(--vault-ink); border-color: transparent; }
-.vlt-hero-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
-.vlt-hero .vlt-cap { color: #D6E6E4; }
-.vlt-hero .vlt-src { font-size: var(--text-small); color: #D6E6E4; }
-.vlt-total { margin: 0; font: 600 var(--text-display)/1 var(--font-display); color: var(--vault-ink); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.vlt-hero .vlt-src { margin: 0; }
-.vlt-hero .vlt-actions .kh-btn--secondary { background: transparent; color: var(--vault-ink); border-color: #F6F1E766; box-shadow: none; }
-.vlt-hero .vlt-actions .kh-btn--secondary:hover:not(:disabled) { border-color: var(--vault-ink); }
-.vlt-hero .kh-btn--banner { --kh-btn-bg: var(--vault-ink); --kh-btn-fg: var(--vault); }
-.vlt-hero .kh-err, .vlt-hero .errbox { background: var(--raised); color: var(--ink); }
+/* Balance hero: the one dark surface on this page. */
+.vlt .vlt-hero {
+  display: grid; gap: var(--space-4); padding: var(--space-6); min-width: 0;
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-1); border-color: transparent;
+  background: var(--vault); color: var(--vault-ink);
+}
+.vlt-hero-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.vlt .vlt-hero .vlt-cap { color: var(--vault-ink); }
+.vlt-net {
+  display: inline-flex; align-items: center; gap: var(--space-2); min-height: 28px; padding: 0 var(--space-3);
+  border-radius: var(--radius-pill); background: var(--primary-tint); color: var(--primary); font: 600 var(--text-small)/1 var(--font-ui);
+}
+.vlt-net i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex: none; }
+.vlt-total {
+  margin: 0; font: 700 var(--text-display)/1 var(--font-ui); color: var(--vault-ink);
+  font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.vlt .vlt-hero .vlt-src { margin: 0; font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--vault-ink); overflow-wrap: anywhere; }
+.vlt-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); min-width: 0; }
+.vlt-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.vlt-hero-actions .kh-btn, .vlt-status .kh-btn { min-height: 44px; }
+.vlt .vlt-hero .kh-btn--secondary { background: transparent; color: var(--vault-ink); border-color: var(--vault-ink); box-shadow: none; }
+.vlt .vlt-hero .kh-btn--secondary:hover:not(:disabled) { background: var(--primary); }
+.vlt .vlt-hero .kh-err, .vlt .vlt-hero .errbox { background: var(--raised); color: var(--ink); }
 
-.vlt-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: var(--space-5); align-items: start; }
+/* Two columns: assets and activity on the left, the key and settings on the right. */
+.vlt-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: var(--space-5); align-items: start; min-width: 0; }
 .vlt-main, .vlt-side { display: grid; gap: var(--space-5); min-width: 0; align-content: start; }
 
-.vlt-card { display: grid; gap: var(--space-4); padding: var(--space-5); min-width: 0; }
-.vlt-cardhead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
-.vlt-card h2 { margin: 0; font: 600 var(--text-heading)/1.2 var(--font-ui); color: var(--ink); }
+.vlt .vlt-card { display: grid; gap: var(--space-4); align-content: start; padding: var(--space-5); min-width: 0; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+.vlt-cardhead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; min-width: 0; }
+.vlt .vlt-card h2 { margin: 0; font: 700 var(--text-heading)/1.2 var(--font-ui); color: var(--ink); }
 .vlt-cap { margin: 0; font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink-2); }
-.vlt-sub { margin: 0; font-size: var(--text-small); line-height: 1.5; color: var(--ink-2); }
-.vlt-small { margin: 0; font-size: var(--text-small); overflow-wrap: anywhere; color: var(--ink-2); }
+.vlt-sub { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+.vlt-small { margin: 0; font: 500 var(--text-small)/1.5 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
 .vlt-label { font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink); }
 .vlt-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .vlt-actions .kh-btn { min-height: 44px; }
@@ -46,61 +66,70 @@
 .vlt-field { display: grid; gap: var(--space-2); min-width: 0; }
 .vlt-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .vlt-form { display: grid; gap: var(--space-3); }
+.vlt-panel { display: grid; gap: var(--space-3); min-width: 0; }
+.vlt-session { display: grid; gap: var(--space-3); justify-items: start; min-width: 0; }
 
 /* Fields: one bordered box, the unit inside, the value in mono. */
 .vlt-box { display: flex; align-items: center; gap: var(--space-2); min-height: 48px; padding: 0 var(--space-4); border-radius: var(--radius-md); background: var(--raised); border: 1px solid var(--field); min-width: 0; }
-.vlt-box:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px #1F4B4F33; }
+.vlt-box:focus-within { border-color: var(--primary); box-shadow: var(--focus-ring); }
 .vlt-box[aria-invalid="true"] { border-color: var(--danger); }
 .vlt-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; height: 46px; font: 600 var(--text-body) var(--font-mono); color: var(--ink); padding: 0; }
 .vlt-box .u { font: 600 var(--text-small) var(--font-mono); color: var(--ink-2); flex: none; }
 .vlt-box.ro { background: var(--sunken); }
 .vlt-box.ro .v { font: 500 var(--text-small)/1.4 var(--font-mono); color: var(--ink); overflow-wrap: anywhere; min-width: 0; flex: 1; padding: var(--space-2) 0; }
 
-/* Meters. The bar has a real value; the label and the number always print. */
+/* Meters. The bar is drawn only from a real percentage; the label and the number always print. */
 .vlt-meter { display: grid; gap: var(--space-2); }
 .vlt-meter-top { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0; font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink); }
 .vlt-meter-top span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.vlt-track { height: 8px; border-radius: var(--radius-pill); background: #1A2A2C14; overflow: hidden; }
+.vlt-track { height: 8px; border-radius: var(--radius-pill); background: var(--primary-soft); overflow: hidden; }
 .vlt-track i { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
 .vlt-meter.warn .vlt-track i { background: var(--accent); }
 .vlt-meter.full .vlt-track i { background: var(--danger); }
-.vlt-meter small { font-size: var(--text-small); color: var(--muted); }
+.vlt-meter small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
 
-.vlt .note-box { margin: 0; font-size: var(--text-small); line-height: 1.5; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--warn-bg); color: var(--warn); font-weight: 600; }
-.vlt-panel { display: grid; gap: var(--space-3); min-width: 0; }
+.vlt .note-box { margin: 0; font: 600 var(--text-small)/1.5 var(--font-ui); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--warn-bg); color: var(--warn); }
 
-/* Assets: one line per asset, the amount and the USD on the right. */
-.assets { display: grid; border-top: 1px solid var(--line); }
-.arow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
-.arow .who, .arow .amt { display: grid; gap: 2px; min-width: 0; }
-.arow .who b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); }
-.arow .who small, .arow .amt small { font-size: var(--text-small); color: var(--muted); }
-.arow .amt { text-align: right; }
-.arow .amt b { font: 600 var(--text-body)/1.3 var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* Assets: symbol and chain on the left, amount and USD on the right. */
+.vlt-assets { display: grid; min-width: 0; }
+.vlt-asset {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) 0; border-bottom: 1px solid var(--line); min-width: 0;
+}
+.vlt-asset:last-child { border-bottom: 0; }
+.vlt-asset-who { display: grid; min-width: 0; }
+.vlt-asset-who b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
+.vlt-asset-who small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.vlt-asset-amt { display: grid; justify-items: end; text-align: right; min-width: 0; }
+.vlt-asset-amt b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vlt-asset-amt small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Activity log */
 .vlt-log { list-style: none; margin: 0; padding: 0; display: grid; }
-.vlt-log li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-1) var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line); font-size: var(--text-small); color: var(--ink); overflow-wrap: anywhere; }
+.vlt-log li {
+  display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: baseline;
+  padding: var(--space-3) 0; border-top: 1px solid var(--line); font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--ink); overflow-wrap: anywhere;
+}
 .vlt-log li small { grid-column: 2; color: var(--muted); font-family: var(--font-mono); }
-.vlt-log .op { font: 600 var(--text-small)/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--primary); }
+.vlt-log .op { font: 600 var(--text-small)/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); }
 
 /* Key card */
 .vlt-key { display: grid; gap: var(--space-4); }
 .vlt-key .foil-card { max-width: 240px; margin: 0 auto; width: 100%; }
-.vlt-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); margin: 0; font-size: var(--text-small); }
+.vlt-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); margin: 0; font: 500 var(--text-small)/1.4 var(--font-ui); }
 .vlt-kv dt { font-weight: 600; color: var(--ink-2); }
 .vlt-kv dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; text-align: end; font-weight: 600; }
 .vlt-kv dd.mono { font-family: var(--font-mono); font-weight: 500; }
 
-.vlt .tkicon .medal { width: 40px; height: 40px; }
+.vlt-link:disabled { cursor: progress; color: var(--muted); }
 
 @media (max-width: 960px) {
   .vlt-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 480px) {
-  .vlt-hero { padding: var(--space-5); }
+  .vlt .vlt-hero { padding: var(--space-5); }
   .vlt-total { font-size: 48px; }
-  .vlt-card { padding: var(--space-4); }
+  .vlt .vlt-card { padding: var(--space-4); }
   .vlt-pair { grid-template-columns: minmax(0, 1fr); }
   .vlt-log li { grid-template-columns: minmax(0, 1fr); }
   .vlt-log li small { grid-column: 1; }

@@ -3,7 +3,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { usePathname } from "next/navigation";
 import { useWallet } from "./wallet";
 import { nftTier, tokensFor, type Token } from "./near";
-import { KEY_LIST_LIMIT } from "./useMyKeys";
+import { KEY_LIST_LIMIT } from "./keysApi";
+
+export { KEY_LIST_LIMIT };
 
 /**
  * The signed-in account's keys, read once and shared by every app route (mounted in components/app/AppShell.tsx).
@@ -12,6 +14,23 @@ import { KEY_LIST_LIMIT } from "./useMyKeys";
  * a fresh read runs behind it. A failed revalidation keeps the last good answer; it never turns a key into "no key".
  */
 export type KeyStatus = "idle" | "loading" | "ready" | "error";
+/**
+ * One read of an account's keys. The server route /api/keys answers first (its own RPC attempts, 4 s each, and a 15 s cache).
+ * If that route is unreachable or fails, the browser reads the same two public views directly, as before.
+ */
+async function readKeys(accountId: string): Promise<{ keys: Token[]; tier: number | null }> {
+  try {
+    const r = await fetch(`/api/keys?account=${encodeURIComponent(accountId)}`, { cache: "no-store", signal: AbortSignal.timeout(12_000) });
+    if (r.ok) {
+      const j = (await r.json()) as { keys?: unknown; tier?: unknown };
+      if (Array.isArray(j.keys)) return { keys: j.keys as Token[], tier: typeof j.tier === "number" ? j.tier : null };
+    }
+  } catch { /* fall through to the direct read */ }
+  const keys = await tokensFor(accountId, KEY_LIST_LIMIT);
+  const tier = keys[0] ? await nftTier(keys[0].token_id).catch(() => null) : null;
+  return { keys, tier };
+}
+
 export type KeyEntry = { keys: Token[]; tier: number | null; at: number };
 
 /** A cached read younger than this is shown without a new RPC call on route change. */
@@ -83,8 +102,7 @@ export function KeyStoreProvider({ children }: { children: ReactNode }) {
     let cancel = false;
     void (async () => {
       try {
-        const keys = await tokensFor(accountId, KEY_LIST_LIMIT);
-        const tier = keys[0] ? await nftTier(keys[0].token_id).catch(() => null) : null;
+        const { keys, tier } = await readKeys(accountId);
         const entry: KeyEntry = { keys, tier, at: Date.now() };
         memory.set(accountId, entry);
         writeStored(accountId, entry);
@@ -117,4 +135,18 @@ export function useKeyStore(): KeyStore {
   const c = useContext(Ctx);
   if (!c) throw new Error("KeyStoreProvider missing");
   return c;
+}
+
+/**
+ * The holder's key as /vault and /swap read it, from the shared store (no lookup of their own). Pure, so it is unit-tested.
+ * `lookingUp`: the first read for this account is still running (a cached answer is never "looking up").
+ * `keyMiss`: the read settled with no key. `failed`: the read failed and there is no earlier answer to show.
+ */
+export function heldFrom(store: Pick<KeyStore, "status" | "primary" | "tier">, accountId: string | null) {
+  return {
+    held: store.primary ? { token: store.primary, tier: store.tier } : null,
+    lookingUp: !!accountId && (store.status === "idle" || store.status === "loading"),
+    keyMiss: !!accountId && store.status === "ready" && !store.primary,
+    failed: !!accountId && store.status === "error" && !store.primary,
+  };
 }
