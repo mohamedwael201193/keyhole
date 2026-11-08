@@ -518,8 +518,8 @@
    "Nothing happened. Sign when ready."
   ],
   "wallet_popup_blocked": [
-   "Your browser blocked the wallet window.",
-   "Allow pop-ups for this site (the icon at the right of the address bar), then try again."
+   "Your browser or an ad blocker stopped the wallet window.",
+   "Allow pop-ups for this site and pause the ad blocker here, then try again."
   ],
   "unknown": [
    "Something went wrong.",
