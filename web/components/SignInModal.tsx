@@ -77,8 +77,8 @@ export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, o
       { method: "google" as const, testid: "choose-social", title: "Continue with Google", sub: "No wallet needed", icon: GOOGLE_G, run: onGoogle },
       { method: "email" as const, testid: "choose-email", title: "Continue with email", sub: "We email you a one-time code", icon: MAIL, run: onEmail },
     ] : []),
-    { method: "near", testid: "choose-near", title: "NEAR wallet", sub: "Meteor, HOT, MyNearWallet, Intear, Here. Connect and unlock in one popup.", icon: NEAR_MARK, run: onNear },
-    { method: "evm", testid: "choose-other", title: "MetaMask and other EVM wallets", sub: "Opens the wallet list", icon: EVM_MARK, run: onOther },
+    { method: "near", testid: "choose-near", title: "NEAR wallet", sub: "HOT, MyNearWallet, Intear, Here. Connect and unlock in one popup.", icon: NEAR_MARK, run: onNear },
+    { method: "evm", testid: "choose-other", title: "MetaMask and other EVM wallets", sub: "Opens the full wallet list, including Meteor", icon: EVM_MARK, run: onOther },
   ];
 
   return (

@@ -15,9 +15,15 @@ import { SignInModal, SIGN_NOTE } from "@/components/SignInModal";
 const PrivyBridge = dynamic(() => import("./privyBridge"), { ssr: false });
 
 let ncPromise: Promise<NearConnector> | null = null;
-/** One NearConnector per page (docs.near.org/web3-apps/tutorials/wallet-login). */
+/** The wallet id near-connect's manifest uses for Meteor (hot-dao/near-selector repository/manifest.json). */
+const METEOR_NEAR_CONNECT_ID = "meteor-wallet";
+/**
+ * One NearConnector per page (docs.near.org/web3-apps/tutorials/wallet-login).
+ * Meteor is excluded: near-connect's sandbox rewrites window.open for Meteor's sign-in, so the popup closes and the
+ * dialog never returns. Meteor is reached through the wallet-selector module instead (connectOther, same as MetaMask).
+ */
 function nearConnector(): Promise<NearConnector> {
-  if (!ncPromise) ncPromise = import("@hot-labs/near-connect").then(({ NearConnector }) => new NearConnector({ network: "mainnet", features: { signMessage: true } }));
+  if (!ncPromise) ncPromise = import("@hot-labs/near-connect").then(({ NearConnector }) => new NearConnector({ network: "mainnet", features: { signMessage: true }, excludedWallets: [METEOR_NEAR_CONNECT_ID] }));
   return ncPromise;
 }
 

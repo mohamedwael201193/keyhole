@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { NearConnector } from "@hot-labs/near-connect";
 import { readFileSync } from "node:fs";
 import { authFromSignIn, reusable, signInRequest, SIGNIN_REUSE_MS } from "@/lib/nearConnect";
 import { NEP413_RECIPIENT } from "@/lib/config";
@@ -37,5 +38,38 @@ describe("near-connect sign-in + session (one popup)", () => {
     const w = readFileSync("lib/wallet.tsx", "utf8");
     expect(w).toMatch(/nc\.connect\(\{ signMessageParams: req \}\)/);
     expect(w).toContain("@hot-labs/near-connect");
+  });
+});
+
+describe("Meteor goes through the wallet-selector path, not near-connect", () => {
+  it("near-connect is built with Meteor excluded", () => {
+    const w = readFileSync("lib/wallet.tsx", "utf8");
+    expect(w).toMatch(/const METEOR_NEAR_CONNECT_ID = "meteor-wallet";/);
+    expect(w).toMatch(/excludedWallets: \[METEOR_NEAR_CONNECT_ID\]/);
+  });
+  it("the connector drops Meteor from its picker and keeps the other wallets", async () => {
+    const wallet = (id: string) => ({ id, name: id, type: "sandbox", permissions: {}, executor: "https://example.invalid/executor.js", icon: "", description: "", website: "", version: "1.0.0" }) as never;
+    const nc = new NearConnector({
+      network: "mainnet",
+      excludedWallets: ["meteor-wallet"],
+      manifest: { version: "1.0.0", wallets: [wallet("meteor-wallet"), wallet("hot-wallet"), wallet("mynearwallet"), wallet("intear-wallet")] },
+    });
+    await nc.whenManifestLoaded;
+    const ids = nc.manifest.wallets.map((x) => x.id);
+    expect(ids).not.toContain("meteor-wallet");
+    expect(ids).toEqual(expect.arrayContaining(["hot-wallet", "mynearwallet", "intear-wallet"]));
+  });
+  it("the selector module for Meteor is installed and registered in the chooser", async () => {
+    const meteor = await import("@near-wallet-selector/meteor-wallet");
+    expect(typeof meteor.setupMeteorWallet).toBe("function");
+    const w = readFileSync("lib/wallet.tsx", "utf8");
+    expect(w).toContain("meteor.setupMeteorWallet()");
+    expect(w).toMatch(/const modal = setupModal\(selector/);
+  });
+  it("the sign-in sheet reaches the selector list (connectOther) for Meteor, and the NEAR option stays on near-connect", () => {
+    const w = readFileSync("lib/wallet.tsx", "utf8");
+    expect(w).toContain('onOther={() => void connectOther()}');
+    expect(w).toContain("onNear={() => void connectNear()}");
+    expect(w).toContain("nc.connect({ signMessageParams: req })");
   });
 });
