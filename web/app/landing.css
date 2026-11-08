@@ -7,13 +7,12 @@
 .lp-sec { position: relative; padding: 120px 56px; }
 .lp-wrap { max-width: 1328px; margin: 0 auto; }
 .lp-h2 { font-family: var(--font-display); font-weight: 700; font-size: var(--text-title); line-height: 1.08; color: var(--ink); margin: 0 0 18px; max-width: 24ch; text-wrap: balance; }
-.lp-h2 em { display: block; font-style: italic; color: var(--coral); }
 .lp-lead { font-size: var(--text-lead); line-height: 1.55; color: var(--ink-2); max-width: 60ch; margin: 0; }
-.lp-note { font-size: var(--text-body); line-height: 1.55; color: var(--muted); margin: 16px 0 0; max-width: 64ch; }
-.lp-links { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 22px 0 0; font-size: var(--text-body); font-weight: 600; }
+.lp-note { font-size: var(--text-body); line-height: 1.55; color: var(--muted); margin: 24px 0 0; max-width: 64ch; }
 .lp-link { color: var(--primary); text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
 .lp-link:hover { text-decoration-thickness: 2.5px; }
-.lp-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.lp-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 32px; }
+.lp-cta-link { min-height: 44px; display: inline-flex; align-items: center; font-weight: 600; }
 .lp-center { justify-content: center; margin-left: auto; margin-right: auto; text-align: center; }
 
 /* Hero text reveal (components/LandingMotion.tsx). Each line sits in a mask so it rises out of a clean edge. The CSS
@@ -24,65 +23,7 @@
 .lp-mask { display: block; overflow: hidden; padding-bottom: .08em; margin-bottom: -.08em; }
 .lp-line { display: block; }
 
-/* What you get: three outcomes. Each card holds its title, one line, then the real UI. Nothing sits under a visual. */
-.lp-outs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 48px; }
-.lp-out { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 28px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-lg); }
-.lp-out h3 { font: 700 var(--text-heading)/1.2 var(--font-ui); color: var(--ink); margin: 0; }
-.lp-out > p:not(.lp-out-n) { font-size: var(--text-body); line-height: 1.55; color: var(--ink-2); margin: 0; }
-.lp-out-n { margin: 0; font-size: var(--text-small); color: var(--accent-ink); }
-.lp-out-vis { margin-top: 12px; padding: 20px; background: var(--sunken); border-radius: var(--radius-md); min-width: 0; }
-
-/* Live key (KeyNow). */
-.ui-key { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 18px; align-items: center; min-width: 0; }
-.ui-key-art { overflow: hidden; border-radius: var(--radius-sm); }
-.ui-key-art img { display: block; width: 100%; height: auto; }
-.ui-key-title { margin: 0 0 10px; font: 700 var(--text-body)/1.3 var(--font-ui); color: var(--ink); }
-.ui-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; margin: 0; font-size: var(--text-small); }
-.ui-kv dt { color: var(--muted); }
-.ui-kv dd { margin: 0; color: var(--ink); font-weight: 600; text-align: right; min-width: 0; overflow-wrap: anywhere; }
-.ui-note { margin: 0; font-size: var(--text-body); color: var(--ink-2); }
-
-/* Swap card (SwapNow): one order from the evidence file, pay and receive legs. */
-.ui-swap { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.ui-leg { padding: 16px; background: var(--raised); border-radius: var(--radius-md); min-width: 0; }
-.ui-leg-label { display: block; font-size: var(--text-small); color: var(--muted); margin-bottom: 8px; }
-.ui-leg-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.ui-amount { font-size: 22px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
-.ui-asset { display: flex; flex-direction: column; margin-left: auto; text-align: right; font-weight: 700; color: var(--ink); }
-.ui-asset small { font-size: var(--text-small); font-weight: 500; color: var(--muted); }
-.ui-flip { align-self: center; font-size: 18px; color: var(--muted); line-height: 1; }
-.ui-route { margin: 6px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: var(--text-small); color: var(--muted); text-align: center; }
-
-/* Transfer calls (TransferNow): the current build's calls, each with its real result. */
-.ui-calls { background: var(--raised); border-radius: var(--radius-md); padding: 16px; min-width: 0; }
-.ui-calls-title { margin: 0 0 6px; font: 700 15px/1.3 var(--font-ui); color: var(--ink); }
-.ui-calls ol { list-style: none; margin: 0; padding: 0; }
-.ui-calls li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); min-width: 0; }
-.ui-call-what { font-size: var(--text-small); color: var(--ink-2); min-width: 0; }
-.ui-call-res { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; font-size: var(--text-small); font-weight: 700; color: var(--success); }
-.ui-call-res[data-ok="false"] { color: var(--danger); }
-.ui-call-res small { font-weight: 500; color: var(--muted); font-size: var(--text-small); }
-
-/* How a trade runs: the one dealt moment. The section is two screens; its stage sticks inside it (sticky, no pin). */
-.lp-how { height: 200svh; }
-.lp-how-stick { position: sticky; top: 0; height: 100svh; display: flex; flex-direction: column; justify-content: flex-start; padding: 112px 56px 40px; box-sizing: border-box; }
-.lp-how-stick .lp-wrap { width: 100%; }
-.how-stage { position: relative; width: 100%; aspect-ratio: 1200 / 400; margin-top: 48px; }
-.how-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.how-line { fill: none; stroke: var(--line-strong); stroke-width: 2; stroke-dasharray: 4 6; }
-.how-pulse { fill: var(--primary); filter: drop-shadow(0 0 6px #1F4B4F66); }
-.how-nodes { position: absolute; inset: 0; list-style: none; margin: 0; padding: 0; }
-.how-node { position: absolute; top: 25%; height: 50%; width: 23.33%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 22px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-lg); transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); min-width: 0; }
-.how-node--1 { left: 3.33%; }
-.how-node--2 { left: 38.33%; }
-.how-node--3 { left: 72.5%; }
-.how-node.is-lit { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
-.how-index { font-size: var(--text-small); color: var(--accent-ink); }
-.how-node h3 { margin: 0; font: 700 var(--text-heading)/1.2 var(--font-ui); color: var(--ink); }
-.how-node p { margin: 0; font-size: var(--text-body); line-height: 1.5; color: var(--ink-2); }
-.how-link { display: none; }
-
-/* Proof: a ruled strip of real values, then the two ways to check. */
+/* Proof, not promises: a ruled strip of four live numbers, each a link to its proof. */
 .pf-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 40px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .pf-stats > div { min-width: 0; padding: 24px 24px 24px 0; }
 .pf-stats > div + div { border-left: 1px solid var(--line); padding-left: 24px; }
@@ -92,25 +33,59 @@
 .pf-stats .mono { font-size: 22px; font-weight: 500; }
 .pf-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 
-/* Collection: a grid of real keys (no carousel), then the labelled previews. */
-.lp-head { max-width: 760px; }
-.lp-head .lp-h2 { max-width: 20ch; }
-.lp-supply { margin: 16px 0 0; font-size: var(--text-body); color: var(--muted); }
-.lp-supply span { margin-right: 6px; }
-.lp-supply [data-testid="supply"] { font: 700 var(--text-body) var(--font-ui); color: var(--ink); }
-.lp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-top: 40px; align-items: start; }
-.lp-card { min-width: 0; transition: transform var(--dur-fast) var(--ease-out); }
-.lp-card .art { overflow: hidden; }
-.lp-card .art img { transition: transform 600ms var(--ease-out); }
-.lp-empty { margin: 0; padding: 40px 0; font-size: var(--text-body); color: var(--muted); max-width: 40ch; }
-.lp-preview { display: inline-block; margin: 0 0 12px; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--warn-bg); color: var(--warn); font: 600 var(--text-small)/1.2 var(--font-ui); }
-.lp-prev { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.lp-cta .kh-btn--secondary { font-size: var(--text-body); }
+/* The handover: the one dealt moment. On desktop the section is pinned (LandingMotion.tsx) and its steps are reached in turn. */
+.lp-handover { min-height: 100svh; box-sizing: border-box; display: flex; align-items: center; padding: 96px 56px; background: var(--sunken); }
+.lp-handover .lp-wrap { width: 100%; }
+.hand-steps { list-style: none; margin: 48px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.hand-step { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 28px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-lg); transition: opacity var(--dur-base) var(--ease-out); }
+.hand-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.hand-n { font-size: var(--text-small); color: var(--accent-ink); }
+.hand-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 12px; border-radius: var(--radius-pill); font: 700 var(--text-small)/1 var(--font-ui); }
+.hand-chip.ok { background: var(--success-bg); color: var(--success); }
+.hand-chip.info { background: var(--info-bg); color: var(--info); }
+.hand-chip.bad { background: var(--danger-bg); color: var(--danger); }
+.hand-step h3 { margin: 6px 0 0; font: 700 var(--text-heading)/1.25 var(--font-ui); color: var(--ink); }
+.hand-step > p { margin: 0; font-size: var(--text-body); line-height: 1.55; color: var(--ink-2); }
+.hand-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hand-id { font-size: var(--text-small); color: var(--ink); }
+.hand-open { min-height: 44px; display: inline-flex; align-items: center; color: var(--primary); font-weight: 600; font-size: var(--text-body); text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
+.lp-handover[data-pinned] .hand-step[data-on="false"] { opacity: .42; }
 
-/* Final call to action: the vault surface. */
+/* Buyer check: the /key panel (app/key/key.css classes) beside its heading. The mock is labelled as an example. */
+.check-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 56px; align-items: start; }
+.check-grid .lp-h2 { max-width: 16ch; }
+.lp-mock { min-width: 0; padding: 24px; background: var(--sunken); border-radius: var(--radius-lg); }
+.lp-mock-tag { display: inline-block; margin: 0 0 16px; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--warn-bg); color: var(--warn); font: 600 var(--text-small)/1.2 var(--font-ui); }
+.lp-mock-card { margin: 0; padding: 24px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.lp-mock-card .kp-verdict { margin-bottom: 12px; }
+.lp-mock-card .kp-say { margin-bottom: 4px; }
+
+/* Trade anything: the 1Click count, the real token marks, one swap link. */
+.reach-row { list-style: none; margin: 40px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.reach-chip { display: inline-flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 18px 10px 10px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-pill); min-width: 0; }
+.reach-chip b { display: block; font: 700 var(--text-body)/1.2 var(--font-ui); color: var(--ink); }
+.reach-chip small { display: block; font-size: var(--text-small); color: var(--muted); }
+
+/* Private by design: two columns, what the enclave sees and what anyone else sees. */
+.priv-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 48px; }
+.priv-col { min-width: 0; padding: 28px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.priv-col h3 { margin: 0 0 16px; font: 700 var(--text-heading)/1.25 var(--font-ui); color: var(--ink); }
+.priv-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.priv-col li { position: relative; padding-left: 22px; font-size: var(--text-body); line-height: 1.55; color: var(--ink-2); overflow-wrap: anywhere; }
+.priv-col li::before { content: ""; position: absolute; left: 0; top: .55em; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+.priv-col--public li::before { background: var(--accent); }
+.priv-line { margin: 40px 0 0; padding-left: 20px; border-left: 3px solid var(--primary); font: 700 var(--text-heading)/1.3 var(--font-ui); color: var(--ink); }
+
+/* For judges: three commands in one code card, each with a copy button. */
+.code-card { margin-top: 40px; max-width: 880px; background: var(--vault); color: var(--vault-ink); border-radius: var(--radius-lg); overflow: hidden; }
+.code-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; min-width: 0; }
+.code-row + .code-row { border-top: 1px solid #F6F1E729; }
+.code-row code { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font: 500 var(--text-body)/1.5 var(--font-mono); color: var(--vault-ink); }
+.code-row .khm-copy { flex-shrink: 0; min-height: 40px; padding: 0 14px; border: 1px solid #F6F1E766; border-radius: var(--radius-pill); background: transparent; color: var(--vault-ink); font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer; }
+
+/* Collection, final call to action: the vault surface. */
 .lp-end { position: relative; overflow: hidden; margin: 0 24px; padding: 128px 56px 112px; border-radius: 32px; background: var(--vault); color: var(--vault-ink); text-align: center; }
 .lp-end h2 { color: var(--vault-ink); margin: 0 auto 28px; font-family: var(--font-display); font-weight: 700; font-size: var(--text-display); line-height: 1.02; max-width: 16ch; text-wrap: balance; }
-.lp-end h2 em { display: block; font-style: italic; color: var(--accent); }
 .lp-keys { display: flex; justify-content: center; gap: 26px; margin-bottom: 44px; }
 .lp-keys img { height: 200px; width: auto; }
 .lp-end .lp-cta { align-items: center; }
@@ -130,27 +105,21 @@
 
 /* Tablet */
 @media (max-width: 1180px) {
-  .lp-outs { grid-template-columns: minmax(0, 1fr); }
-  .lp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .how-node h3 { font-size: 18px; }
-  .how-node p { font-size: 15px; }
-  .how-node { padding: 16px; }
+  .hand-step h3 { font-size: 18px; }
+  .hand-step { padding: 22px; }
+  .reach-chip { min-height: 52px; }
   .ft-grid { grid-template-columns: 1fr 1fr; }
   .ft-brand { grid-column: 1 / -1; }
 }
 
-/* Phone: one column, 20 px gutter, no horizontal page scroll. The how-it-works moment is a plain stack. */
+/* Phone and small tablet: one column, 20 px gutter, no horizontal page scroll. The handover is a plain stack, never pinned. */
 @media (max-width: 860px) {
   .lp-sec { padding: 80px 20px; }
-  .lp-outs, .lp-grid { gap: 24px; }
-  .lp-how { height: auto; }
-  .lp-how-stick { position: static; height: auto; padding: 80px 20px; }
-  .how-stage { aspect-ratio: auto; margin-top: 32px; }
-  .how-lines { display: none; }
-  .how-nodes { position: static; display: flex; flex-direction: column; gap: 28px; }
-  .how-node { position: relative; top: auto; left: auto; width: 100%; height: auto; }
-  .how-node--1, .how-node--2, .how-node--3 { left: auto; }
-  .how-link { display: block; position: absolute; left: 36px; bottom: -28px; width: 2px; height: 28px; background: var(--line-strong); }
+  .lp-handover { min-height: 0; padding: 80px 20px; }
+  .hand-steps { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 40px; }
+  .hand-step { padding: 24px; }
+  .check-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .priv-cols { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .pf-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pf-stats > div:nth-child(3) { border-left: 0; padding-left: 0; }
   .pf-stats > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
@@ -161,7 +130,6 @@
 }
 
 @media (max-width: 560px) {
-  .lp-grid { grid-template-columns: minmax(0, 1fr); }
   .pf-stats > div { padding-right: 12px; }
   .pf-stats > div + div { padding-left: 16px; }
   .pf-stats > div:nth-child(3) { padding-left: 0; }
@@ -170,6 +138,8 @@
   .lp-keys { gap: 14px; }
   .lp-keys img { height: 150px; }
   .lp-cta .kh-btn, .pf-actions .kh-btn { width: 100%; }
+  .code-row { flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
+  .code-row .khm-copy { width: 100%; }
   .ft-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -178,13 +148,12 @@
   .lp .kh-btn { transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
   .lp .kh-btn:hover { transform: translateY(-1px); }
   .lp .kh-btn:active { transform: translateY(1px) scale(.985); }
-  .lp-card:hover { transform: translateY(-2px); }
-  .lp-card:hover .art img { transform: scale(1.02); }
+  .hand-open:hover, .hand-open:focus-visible { text-decoration: underline; }
   .pf-link:hover, .pf-link:focus-visible { background-size: 100% 1px; transition: background-size var(--dur-base) var(--ease-out); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp .kh-btn, .lp-card, .lp-card .art img, .how-node, .pf-link { transition: none !important; }
-  .lp .kh-btn:hover, .lp-card:hover, .lp-card:hover .art img { transform: none !important; }
+  .lp .kh-btn, .hand-step, .pf-link { transition: none !important; }
+  .lp .kh-btn:hover { transform: none !important; }
   .pf-link { background-size: 100% 1px; }
 }

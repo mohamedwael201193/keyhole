@@ -11,51 +11,59 @@ import { I18nProvider } from "@/lib/i18n";
 
 const src = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
 const withI18n = (el: ReturnType<typeof createElement>) => createElement(I18nProvider, null, el);
-const html = renderToStaticMarkup(withI18n(createElement(Landing, { supply: 12, hash: "f4768da8", tokens: [], tiers: [] })));
+const render = (reach: { tokens: number; chains: number; marks: never[] } | null) =>
+  renderToStaticMarkup(withI18n(createElement(Landing, { supply: 12, hash: "f4768da8", reach })));
+const html = render(null);
 
 describe("landing sections", () => {
-  it("keeps the order: hero, what you get, how a trade runs, proof, the collection, the closing band", () => {
-    const ids = ['id="top"', 'id="outcomes"', 'id="how"', 'id="proof"', 'id="keys"', 'id="cta"'];
+  it("keeps the order: hero, proof, the handover, buyer check, trade, private, judges, the closing band", () => {
+    const ids = ['id="top"', 'id="proof"', 'id="handover"', 'id="check"', 'id="trade"', 'id="private"', 'id="judge"', 'id="cta"'];
     const at = ids.map((id) => html.indexOf(id));
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
-    const heads = ["out-h", "how-h", "proof-h", "keys-h", "cta-h"].map((id) => html.indexOf(`id="${id}"`));
+    const heads = ["proof-h", "handover-h", "check-h", "trade-h", "private-h", "judge-h", "cta-h"].map((id) => html.indexOf(`id="${id}"`));
     expect(heads.every((i) => i > 0)).toBe(true);
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);
   });
 
-  it("the cut sections are gone: utility checks, agents, long proof list, chain medals, explore row, the attestation card", () => {
-    expect(html).not.toContain('id="util-h"');
-    expect(html).not.toContain('id="ag-h"');
-    expect(html).not.toContain('id="encl-h"');
-    expect(html).not.toContain('id="priv-h"');
-    expect(html).not.toContain('class="lp-chains"');
-    expect(html).not.toContain('class="lp-explore"');
-    expect(html).not.toContain("lp-more");
+  it("the cut sections are gone: the key collection, the three outcome cards, the old diagram and the attestation card", () => {
+    expect(html).not.toContain('id="keys"');
+    expect(html).not.toContain('id="outcomes"');
+    expect(html).not.toContain('class="lp-grid"');
+    expect(html).not.toContain("lp-track");
+    expect(html).not.toContain("kh-tilt");
+    expect(html).not.toContain('class="how-node');
     expect(html).not.toContain('class="attc"');
+    expect(html).not.toContain("lp-more");
   });
 
-  it("the hero's primary action launches the app and the secondary checks the proof", () => {
-    expect(html).toContain('data-testid="start-cta"');
+  it("the hero's primary action launches the app and the secondary scrolls to the handover", () => {
     expect(html).toMatch(/data-testid="start-cta"[^>]*href="\/dashboard"|href="\/dashboard"[^>]*data-testid="start-cta"/);
-    expect(html).toMatch(/href="\/verify"[^]*?Check the proof/);
+    expect(html).toMatch(/data-testid="handover-cta"[^>]*href="#handover"|href="#handover"[^>]*data-testid="handover-cta"/);
+    expect(html).toContain("Watch a real handover");
+    expect(html).toContain("Sell a trading account");
   });
 
-  it("what you get: three outcomes with real product UI (a live key, the swap card, the transfer calls)", () => {
-    expect(html.match(/class="lp-out"/g)?.length).toBe(3);
-    expect(html).toContain('data-testid="swap-now"');
-    expect(html).toContain('data-testid="transfer-now"');
-    expect(html).toContain('data-testid="own-key"'.length ? "ui-key" : "");
-    expect(html.match(/data-ok="(true|false)"/g)?.length).toBe(6);
+  it("the handover: three real steps with their ids and proofs, on the server so the page works without JavaScript", () => {
+    expect(html.match(/class="hand-step"/g)?.length).toBe(3);
+    expect(html).toContain('href="/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae"');
+    expect(html).toContain("https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD");
+    expect(html).toContain('href="/verify?call=e805f050-d416-4a04-9b12-270adbe02068"');
+    expect(html).toContain("not_owner");
+    expect(html).toContain("team test wallets");
   });
 
-  it("how a trade runs: three nodes on the server, so the page works without JavaScript", () => {
-    expect(html.match(/class="how-node /g)?.length).toBe(3);
-    expect(html).toContain('data-testid="sealed-line"');
-    expect(html).toContain("NFTs that do something.");
+  it("the buyer check is an example from /key, with the six checks the verdict reads", () => {
+    expect(html).toContain("Example from /key");
+    expect(html).toContain("Signature valid");
+    expect(html).toContain("Signer is the contract&#x27;s minter");
+    expect(html).toContain("Proof is for this key");
+    expect(html).toContain("Holder read from chain");
+    expect(html).toContain("Log head");
+    expect(html).toContain('href="/keys"');
   });
 
-  it("proof: the 37 browser checks, the worker and contract hashes, and the order count are final values in the server markup", () => {
+  it("proof: the 37 browser checks, the worker hash, the order count and the holder count are final values in the server markup", () => {
     expect(html).toContain('data-testid="checks-stat"');
     expect(html).toMatch(/data-testid="checks-stat"[^]*?>37</);
     expect(html).toContain('data-testid="hash-stat"');
@@ -65,12 +73,34 @@ describe("landing sections", () => {
     expect(html).toContain('data-testid="supply"');
   });
 
-  it("the collection is a grid: no carousel, no tilt, the previews labelled as not minted", () => {
-    expect(html).toContain('class="lp-grid"');
-    expect(html).not.toContain("lp-track");
-    expect(html).not.toContain("kh-tilt");
-    expect(html).toContain('data-testid="concept-banner"');
-    expect(html).toContain('data-testid="gallery-link"');
+  it("trade anything: with a count, it says the count and shows the marks; without one, no number is printed", () => {
+    const counted = render({ tokens: 216, chains: 39, marks: [] });
+    expect(counted).toContain("216 tokens on 39 chains");
+    expect(counted).toContain('href="/swap"');
+    expect(html).toContain("across tokens on many chains");
+    expect(html).not.toMatch(/\d+ tokens on \d+ chains/);
+  });
+
+  it("private by design: the two columns, the line about the keys, and the links to the proof", () => {
+    expect(html).toContain('data-testid="sees-enclave"');
+    expect(html).toContain('data-testid="sees-public"');
+    expect(html).toContain("Keys to the money never leave the enclave.");
+    expect(html).toMatch(/href="\/ask"/);
+  });
+
+  it("for judges: three commands in a code card, each with a copy button", () => {
+    expect(html).toContain('data-testid="judge-commands"');
+    expect(html).toContain("git clone https://github.com/mohamedwael201193/keyhole");
+    expect(html).toContain("node judge/verify-claims.mjs");
+    expect(html).toContain("open /verify");
+    expect(html.match(/class="khm-copy/g)?.length).toBe(3);
+  });
+
+  it("the closing band: get your key and read the proof", () => {
+    expect(html).toMatch(/data-testid="cta-get-key"[^>]*href="\/dashboard"|href="\/dashboard"[^>]*data-testid="cta-get-key"/);
+    expect(html).toMatch(/data-testid="cta-proof"[^>]*href="\/judge"|href="\/judge"[^>]*data-testid="cta-proof"/);
+    expect(html).toContain("Get your key");
+    expect(html).toContain("Read the proof");
   });
 });
 
@@ -101,13 +131,14 @@ describe("removed noise", () => {
     expect(m).toContain("(prefers-reduced-motion: no-preference)");
     expect(m).toContain("?static");
     expect(m).toContain("mm.revert()");
+    expect(m).toContain("st.kill(true)");
   });
 });
 
 describe("public top bar and footer", () => {
   const nav = src("../components/Nav.tsx");
   it("the top bar holds How it works, Proof, For judges and Launch app, and no wallet control", () => {
-    expect(nav).toContain('href: "/#how"');
+    expect(nav).toContain('href: "/#handover"');
     expect(nav).toContain('href: "/verify"');
     expect(nav).toContain('href: "/judge"');
     expect(nav).toContain('"/dashboard"');
