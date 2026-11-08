@@ -4,8 +4,11 @@ import QRCode from "qrcode";
 import { CopyButton, QRFrame } from "./motion";
 import { FundAnyChain } from "./FundAnyChain";
 
-/** Deposit address with copy, a QR code, and the amount in human units. */
-export function DepositQr({ address, amount, evm }: { address: string; amount: string; evm?: string | null }) {
+/**
+ * Deposit address with copy, a QR code, and the amount in human units. `otherChain` (default on) adds the older
+ * "coming from Base" section; the vault passes false because its sheet has a "From another chain" tab of its own.
+ */
+export function DepositQr({ address, amount, evm, otherChain = true }: { address: string; amount: string; evm?: string | null; otherChain?: boolean }) {
   const [svg, setSvg] = useState("");
   useEffect(() => { QRCode.toString(address, { type: "svg", margin: 1, width: 168 }).then(setSvg).catch(() => setSvg("")); }, [address]);
   return (
@@ -15,7 +18,7 @@ export function DepositQr({ address, amount, evm }: { address: string; amount: s
         <p>Send <b data-testid="deposit-amount">{amount}</b> on the NEAR chain to:</p>
         <div className="vbox ro"><span className="v addr" data-testid="deposit-address">{address}</span><CopyButton value={address} /></div>
         <p className="vhelp">From any NEAR wallet or an exchange that withdraws on NEAR.</p>
-        <details className="fanyc-d" open={!!evm} data-testid="fund-other-chain"><summary>Coming from Base, Arbitrum or Solana?</summary><FundAnyChain recipient={address} evm={evm} /></details>
+        {otherChain && <details className="fanyc-d" open={!!evm} data-testid="fund-other-chain"><summary>Coming from Base, Arbitrum or Solana?</summary><FundAnyChain recipient={address} evm={evm} /></details>}
       </div>
     </div>
   );

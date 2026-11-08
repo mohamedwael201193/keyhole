@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { FUND_ORIGINS, FUND_MAX, FUND_STEPS, fundsStep, statusOf, toUnits, refundOk } from "@/lib/oneclick";
+import { FUND_ORIGINS, FUND_MAX, FUND_STEPS, fundsStep, isTerminalStatus, statusOf, toUnits, refundOk } from "@/lib/oneclick";
 import { Spinner } from "./ui";
 import { CopyButton, QRFrame } from "./motion";
 
@@ -26,13 +26,16 @@ export function FundAnyChain({ recipient, evm }: { recipient: string; evm?: stri
   useEffect(() => {
     if (!q) return;
     let stop = false;
+    let id: ReturnType<typeof setInterval> | undefined;
+    const halt = () => { if (id !== undefined) { clearInterval(id); id = undefined; } };
     const tick = async () => {
       const r = await fetch(`/api/oneclick?depositAddress=${encodeURIComponent(q.depositAddress)}`).then((x) => x.json()).catch(() => null);
-      if (!stop && r?.ok) setSt(r);
+      if (stop) return;
+      if (r?.ok) { setSt(r); if (isTerminalStatus(r.status)) halt(); }
     };
     void tick();
-    const id = setInterval(tick, 10_000);
-    return () => { stop = true; clearInterval(id); };
+    id = setInterval(() => void tick(), 10_000);
+    return () => { stop = true; halt(); };
   }, [q]);
   const get = async () => {
     if (!units || tooBig || !refundValid) return;
