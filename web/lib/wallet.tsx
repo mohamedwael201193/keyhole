@@ -404,7 +404,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem(PENDING, JSON.stringify({ message, nonce, ctx, callbackUrl }));
     let res;
     try {
-      res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: nonceBytes as unknown as Buffer, callbackUrl });
+      // wallet-selector core rejects anything but a real Buffer (Buffer.isBuffer), so a bare Uint8Array failed every
+      // selector wallet (Meteor first) with "Invalid nonce" before any window opened.
+      res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: Buffer.from(nonceBytes), callbackUrl });
     } catch (e) {
       sessionStorage.removeItem(PENDING);
       const m = walletErrorText(e);
