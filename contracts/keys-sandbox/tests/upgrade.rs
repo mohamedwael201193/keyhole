@@ -9,6 +9,7 @@ const V2_0: &str = "../keys/release/v2/keyhole_keys.wasm";
 const V2_1: &str = "../keys/release/v2.1/keyhole_keys.wasm";
 const V2: &str = "../keys/release/v2.2/keyhole_keys.wasm";
 const V2_3: &str = "../keys/release/v2.3/keyhole_keys.wasm";
+const V2_4: &str = "../keys/release/v2.4/keyhole_keys.wasm";
 const MAINNET_OWNER: &str = "keyhole-devmo.near";
 
 fn fixture() -> Vec<Value> {
@@ -419,5 +420,56 @@ async fn v2_3_approval_cap_one_key_and_transfers_work_after_upgrade() -> anyhow:
     // the 5 mainnet tokens and the supply are untouched by all of this
     assert_eq!(view(&s.e.c, "nft_total_supply", json!({})).await, "7");
     for (t, o) in &s.e.ids { assert_eq!(view(&s.e.c, "nft_token", json!({"token_id": t})).await["owner_id"], o.as_str()); }
+    Ok(())
+}
+
+/// v2.4 (code only, on top of v2.3). The mainnet path: v1 -> v2.2 (+migrate) -> v2.3 -> v2.4, state built on each step.
+/// The raise is minter-only and upward-only; the state snapshot is identical before and after the code-only deploy.
+#[tokio::test]
+async fn v2_4_set_tier_is_code_only_and_minter_only() -> anyhow::Result<()> {
+    let e = v1_like_mainnet().await?;
+    upgrade(&e).await?;
+    e.c.as_account().deploy(&std::fs::read(V2_3)?).await?.into_result()?;
+    let before = snapshot(&e).await;
+    assert_eq!(before["supply"], "5");
+
+    e.c.as_account().deploy(&std::fs::read(V2_4)?).await?.into_result()?;
+    assert_eq!(before, snapshot(&e).await, "every token, owner, tier, holder, config and metadata value is unchanged");
+    let src = view(&e.c, "contract_source_metadata", json!({})).await;
+    assert_eq!(src["version"], "2.4.0");
+    let stds: Vec<String> = src["standards"].as_array().unwrap().iter().map(|x| x["standard"].as_str().unwrap().to_string()).collect();
+    assert_eq!(stds, ["nep171", "nep177", "nep178", "nep181", "nep199", "nep330"], "standards list unchanged");
+
+    let (t, o) = e.ids[0].clone();
+    assert_eq!(view(&e.c, "nft_tier", json!({"token_id": t})).await, json!(1));
+
+    // a non-minter, the contract's own account (owner and treasury) included, cannot raise a tier
+    let r = e.root.call(e.c.id(), "nft_set_tier").args_json(json!({"token_id": t, "tier": 2})).transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("only minter"));
+    let r = e.c.as_account().call(e.c.id(), "nft_set_tier").args_json(json!({"token_id": t, "tier": 2})).transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("only minter"));
+
+    // the minter raises 1 -> 2; the event names the token; holder_tier follows
+    let r = e.minter.call(e.c.id(), "nft_set_tier").args_json(json!({"token_id": t, "tier": 2})).max_gas().transact().await?.into_result()?;
+    let ev: Vec<&str> = r.logs().into_iter().filter(|l| l.contains("nft_metadata_update")).collect();
+    assert_eq!(ev, vec![format!(r#"EVENT_JSON:{{"standard":"nep171","version":"1.2.0","event":"nft_metadata_update","data":[{{"token_ids":["{t}"]}}]}}"#)], "one metadata update for the token");
+    assert_eq!(view(&e.c, "nft_tier", json!({"token_id": t})).await, json!(2));
+    assert_eq!(view(&e.c, "holder_tier", json!({"account_id": o})).await, json!(2));
+
+    // upward only, bounded, token must exist; refused calls change nothing
+    for (tier, want) in [(2, "tier only goes up"), (1, "tier only goes up"), (0, "bad tier"), (4, "bad tier")] {
+        let r = e.minter.call(e.c.id(), "nft_set_tier").args_json(json!({"token_id": t, "tier": tier})).transact().await?;
+        assert!(format!("{:?}", r.into_result().unwrap_err()).contains(want), "tier {tier}");
+    }
+    let r = e.minter.call(e.c.id(), "nft_set_tier").args_json(json!({"token_id": "no-such-key", "tier": 2})).transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("no token"));
+    assert_eq!(view(&e.c, "nft_tier", json!({"token_id": t})).await, json!(2));
+
+    // a second key goes to 3; supply and beats do not move
+    let (t2, _) = e.ids[1].clone();
+    e.minter.call(e.c.id(), "nft_set_tier").args_json(json!({"token_id": t2, "tier": 3})).transact().await?.into_result()?;
+    assert_eq!(view(&e.c, "nft_tier", json!({"token_id": t2})).await, json!(3));
+    assert_eq!(view(&e.c, "nft_total_supply", json!({})).await, "5");
+    assert_eq!(view(&e.c, "config", json!({})).await["beats"], "2", "a tier raise is not a beat");
     Ok(())
 }
