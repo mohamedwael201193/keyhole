@@ -8,6 +8,7 @@ import "./ui.css";
 import "./landing.css";
 import "./app-shell.css";
 import "./app-pages.css";
+import "./overview.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";

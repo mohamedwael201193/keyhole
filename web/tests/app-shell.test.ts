@@ -123,6 +123,20 @@ describe("AppNav markup", () => {
   });
 });
 
+describe("Mint a key in the sidebar", () => {
+  const html = (mint?: boolean) => renderToStaticMarkup(createElement(AppNav, { pathname: "/keys", hash: "", mint }));
+
+  it("is not in the fixed sidebar list, and shows after Keys only when the key store says there is no key", () => {
+    expect(APP_NAV.flatMap((g) => g.items).map((i) => i.id)).not.toContain("mint");
+    expect(html()).not.toContain('data-testid="app-nav-mint"');
+    const m = html(true);
+    expect(m).toContain('data-testid="app-nav-mint"');
+    expect(m).toContain('href="/mint"');
+    expect(m.indexOf('data-testid="app-nav-keys"')).toBeLessThan(m.indexOf('data-testid="app-nav-mint"'));
+    expect(m.indexOf('data-testid="app-nav-mint"')).toBeLessThan(m.indexOf('data-testid="app-nav-activity"'));
+  });
+});
+
 describe("AppTabs (phones)", () => {
   const html = (pathname: string | null) => renderToStaticMarkup(createElement(AppTabs, { pathname, hash: "", onMore: () => {}, moreOpen: false }));
 
