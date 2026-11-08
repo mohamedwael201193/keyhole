@@ -18,7 +18,7 @@ type RawBalances = Parameters<typeof assetRows>[0];
  * Nothing here adds a new auth path; the wallet and session logic is lib/wallet.tsx and lib/useSigned.ts.
  */
 export function DashboardView() {
-  const { accountId, restoring, session } = useWallet();
+  const { accountId, restoring, session, connect } = useWallet();
   const [attempt, setAttempt] = useState(0);
   const myKeys = useMyKeys(accountId, attempt);
   const balance = useSigned("balance");
@@ -84,6 +84,7 @@ export function DashboardView() {
       keys={keysView}
       balance={balanceView}
       activity={activityView}
+      onConnect={connect}
     />
   );
 }

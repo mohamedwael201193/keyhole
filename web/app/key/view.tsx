@@ -55,7 +55,7 @@ export function KeyHistoryView() {
       </form>
       <p className="vhelp" data-testid="key-help">Paste a key id, for example <span className="mono">k5f4750858f328940</span> or <span className="mono">0</span>.</p>
       {busy && !body && <p className="note" data-testid="key-loading"><Spinner label="Loading" /> Reading the book from the enclave and checking every link…</p>}
-      {err && <p className="note" role="alert" data-testid="key-error" style={{ color: "var(--coral)" }}>{err}</p>}
+      {err && <p className="note key-error" role="alert" data-testid="key-error">{err}</p>}
       {legacy !== null && (
         <section className="card" data-testid="key-legacy">
           <h2>KEYHOLE Key #{legacy}</h2>

@@ -129,10 +129,6 @@
 .start .dots li::before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid currentColor}
 .start .dots li[data-state=done]::before{background:currentColor}
 .start .dots li[data-state=now]{color:var(--ink,#1d2b2a);font-weight:600}
-.wchoose{position:fixed;inset:0;z-index:9000;background:#1A2A2C66;display:flex;align-items:center;justify-content:center;padding:16px}
-.wchoose-card{background:#F6F1E7;color:#1A2A2C;border:1px solid #B8893E;border-radius:24px;padding:24px;width:min(420px,100%);display:grid;gap:12px}
-.wchoose-card h2{font-family:var(--serif);margin:0;color:#1F4B4F}
-.wchoose-card small{display:block;font-weight:400;opacity:.85}
 .sess .btn{margin:0}
 .start .vfield{display:grid;gap:6px;margin:12px 0}
 .start .vbox,.depqr .vbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line,#d9d2c3);border-radius:10px;padding:8px 12px;background:#FBF8F2;min-width:0}
@@ -263,3 +259,31 @@
   .kh-toast { animation: none; }
   .kh-tab { transition: none; }
 }
+
+/* Sign-in sheet (components/SignInModal.tsx): one list of methods, each a 44px+ button with its own mark and a plain line. */
+.signin-lead { margin: 0; color: var(--ink-2); font-size: var(--text-body); }
+.signin-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.signin-opt { width: 100%; min-height: 56px; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+.signin-opt:hover { border-color: var(--primary); transform: translateY(-1px); }
+.signin-opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.signin-ico { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--raised); border: 1px solid var(--line); color: var(--primary-ink); }
+.signin-ico img { display: block; }
+.signin-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.signin-txt b { font-size: var(--text-body); font-weight: 700; }
+.signin-txt small { font-size: var(--text-small); color: var(--muted); line-height: 1.4; }
+.signin-note { margin: 0; font-size: var(--text-small); color: var(--muted); }
+.signin-foot { display: flex; justify-content: flex-end; }
+.signin-foot .kh-btn { min-height: 44px; }
+@media (prefers-reduced-motion: reduce) { .signin-opt { transition: none; } .signin-opt:hover { transform: none; } }
+
+/* Mint and Keys (V3-D). Tokens only; the key art and its card stay as they are. */
+.mint-lead { margin-top: var(--space-4); }
+.mint-tg { grid-template-columns: 1fr 1fr; margin-top: var(--space-5); }
+.mint-caps { margin-top: var(--space-4); font-size: var(--text-small); color: var(--muted); }
+.mint-next { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
+.gal-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-4) 0; }
+.gal-bar .note { margin: 0; }
+
+/* Key history and PnL (V3-D polish, no logic change). */
+.key-error { color: var(--danger); margin-top: var(--space-3); font-size: var(--text-small); }
+.pnl-raw { white-space: pre-wrap; overflow-wrap: anywhere; }

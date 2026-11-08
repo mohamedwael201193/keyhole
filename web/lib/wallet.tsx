@@ -10,6 +10,7 @@ import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearCo
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
 import { PRIVY_FLAG, privyEnabled, privyResume, stripPrivyOauth, hasPrivyOauth, type PrivyNear } from "./privy";
+import { SignInModal, SIGN_NOTE } from "@/components/SignInModal";
 
 const PrivyBridge = dynamic(() => import("./privyBridge"), { ssr: false });
 
@@ -74,7 +75,6 @@ export type OpResume =
 const CONNECTING = "Confirm the connection in the extension window";
 const CONNECTING_NEXT = "Confirm the connection in the extension window. It may open in the MetaMask side panel or the toolbar icon.";
 const NET_HELP = "MetaMask will ask to add the NEAR Protocol network — approve it to continue.";
-const SIGN_NOTE = "Connecting and minting ask only for a signature. A deposit is a normal transfer you approve in your wallet.";
 const ETH_MODAL_CSS = `
 .ethereum-wallet-modal-backdrop {
   position: fixed; inset: 0; background: #1A2A2C55 !important;
@@ -421,7 +421,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [pending, finishSession]);
   const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<WalletChooser />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
@@ -447,25 +447,6 @@ export function ethMismatch(connected: string, ethAccounts: unknown): string | n
   if (!/^0x[0-9a-f]{40}$/i.test(connected) || !Array.isArray(ethAccounts) || ethAccounts.length === 0) return null;
   const cur = String(ethAccounts[0]).toLowerCase();
   return /^0x[0-9a-f]{40}$/.test(cur) && cur !== connected.toLowerCase() ? cur : null;
-}
-
-/** In-site chooser (not a wallet popup). */
-function WalletChooser() {
-  const c = useContext(Ctx);
-  if (!c?.choosing) return null;
-  return (
-    <div className="wchoose" role="dialog" aria-modal="true" aria-label="Connect your wallet" data-testid="wallet-chooser" onClick={(e) => { if (e.target === e.currentTarget) c.closeChooser(); }}>
-      <div className="wchoose-card">
-        <h2>Connect your wallet</h2>
-        <p className="kh-sign-note">{SIGN_NOTE}</p>
-        {c.socialEnabled && <button type="button" className="btn b1" data-testid="choose-social" onClick={() => c.connectSocial("google")}>Continue with Google <small>no wallet needed</small></button>}
-        {c.socialEnabled && <button type="button" className="btn b2" data-testid="choose-email" onClick={() => c.connectSocial("email")}>Continue with email code <small>we email you a one-time code</small></button>}
-        <button type="button" className="btn b1" data-testid="choose-near" onClick={() => void c.connectNear()}>NEAR wallet <small>connect and unlock in one popup</small></button>
-        <button type="button" className="btn b2" data-testid="choose-other" onClick={() => void c.connectOther()}>MetaMask / Ethereum wallet, or another wallet</button>
-        <button type="button" className="btn b2" data-testid="choose-cancel" onClick={c.closeChooser}>Cancel</button>
-      </div>
-    </div>
-  );
 }
 
 export function useWallet() { const c = useContext(Ctx); if (!c) throw new Error("WalletProvider missing"); return c; }
