@@ -517,6 +517,10 @@
    "You declined the signature.",
    "Nothing happened. Sign when ready."
   ],
+  "wallet_popup_blocked": [
+   "Your browser blocked the wallet window.",
+   "Allow pop-ups for this site (the icon at the right of the address bar), then try again."
+  ],
   "unknown": [
    "Something went wrong.",
    "Try again."

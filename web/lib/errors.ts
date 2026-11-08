@@ -5,7 +5,7 @@ export const WORKER_ERROR_CODES = [
   "op_mismatch", "over_cap_daily", "wrong_recipient", "empty", "policy_denied", "signer", "still_minter", "tx_failed", "over_cap_per_tx", "replay", "rng", "mint_quota", "busy", "quote_moved", "chainsig_quota", "rpc", "storage", "unknown_op", "upstream",
   "bad_session", "session_cap", "session_expired", "session_revoked", "session_scope", "session_token", "session_too_long", "session_unknown",
   // gateway-side codes
-  "rate_limited", "service_unfunded", "too_large", "bad_op", "gateway", "wallet_no_sign_message", "wallet_rejected", "metamask_next_enclave", "network",
+  "rate_limited", "service_unfunded", "too_large", "bad_op", "gateway", "wallet_no_sign_message", "wallet_rejected", "wallet_popup_blocked", "metamask_next_enclave", "network",
 ] as const;
 export type ErrorCode = (typeof WORKER_ERROR_CODES)[number];
 export const isKnownCode = (c: string): c is ErrorCode => (WORKER_ERROR_CODES as readonly string[]).includes(c);
