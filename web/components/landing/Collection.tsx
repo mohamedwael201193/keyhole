@@ -9,6 +9,7 @@ import { FoilCard } from "@/components/FoilCard";
 import { KeyArt } from "@/components/Art";
 import { KeyCard } from "@/components/KeyCard";
 import { Button } from "@/components/ui/button";
+import { LANDING_KEYS } from "@/lib/config";
 import { useI18n } from "@/lib/i18n";
 import { formatTradePrice } from "@/lib/price";
 import { CAPS, type Finish } from "@/lib/traits";
@@ -16,7 +17,8 @@ import type { Token } from "@/lib/near";
 
 /** Finishes shown as labelled previews only. Silver and Gold are not mintable today (README: only Bronze). */
 const PREVIEWS: { name: Finish; art: number }[] = [{ name: "Silver", art: 4 }, { name: "Gold", art: 2 }];
-const SHOWN = 4;
+/** The server (lib/landing.ts) reads exactly LANDING_KEYS keys and tiers; the grid shows that same set. */
+const SHOWN = LANDING_KEYS;
 
 export function SupplyStat({ initial }: { initial: number | null }) {
   const [n, setN] = useState(initial);
