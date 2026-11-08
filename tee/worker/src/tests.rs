@@ -466,6 +466,64 @@ fn seller_lock_binds_only_the_owner_who_set_it() {
     assert!(active_lock(lock_value("a|b.near", 5).as_bytes(), "a|b.near", 1).is_some());
 }
 
+// Sale listing (nft_listing). A listed key refuses every value move; reads are never refused.
+const VALUE_OPS: [&str; 4] = ["withdraw", "swap", "copy", "chain_sign"];
+const NON_MOVING_OPS: [&str; 10] = ["balance", "history", "pnl", "dashboard", "account", "prove", "status", "provenance", "quote", "lock"];
+const NOT_FOUND: &str = "wasm execution failed with error: FunctionCallError(MethodResolveError(MethodNotFound))";
+
+#[test]
+fn listed_key_refuses_every_value_move() {
+    let listed = serde_json::json!({"token_id": "k0000000000000001", "seller": "alice.near", "price": "1000"});
+    for op in VALUE_OPS {
+        let e = listing_blocks(op, Ok(&listed)).unwrap_err();
+        assert_eq!(e.code, "listed", "{op}");
+        assert_eq!(e.message, "This key is listed for sale; unlist it to move funds.", "{op}");
+    }
+}
+
+#[test]
+fn unlisted_key_passes_every_value_move() {
+    for op in VALUE_OPS {
+        assert!(listing_blocks(op, Ok(&serde_json::Value::Null)).is_ok(), "{op}");
+    }
+}
+
+#[test]
+fn method_not_found_counts_as_not_listed() {
+    // A v2.3 keys contract has no nft_listing: the worker must keep selling and moving funds on it.
+    for raw in [NOT_FOUND, "MethodNotFound", "contract method not found: nft_listing", "method_not_found"] {
+        for op in VALUE_OPS {
+            assert!(listing_blocks(op, Err(raw)).is_ok(), "{op} / {raw}");
+        }
+    }
+}
+
+#[test]
+fn other_listing_errors_fail_closed() {
+    // Anything that is not a method miss, including a plain "not found" (no such account), refuses with `rpc`.
+    for raw in ["", "AccountDoesNotExist", "account not found", "request timed out", "HANDLER_ERROR"] {
+        for op in VALUE_OPS {
+            let e = listing_blocks(op, Err(raw)).unwrap_err();
+            assert_eq!(e.code, "rpc", "{op} / {raw}");
+        }
+    }
+    // An answer that is neither null nor a listing object is not treated as unlisted.
+    for odd in [serde_json::json!("x"), serde_json::json!([1]), serde_json::json!(7), serde_json::json!(true)] {
+        assert_eq!(listing_blocks("withdraw", Ok(&odd)).unwrap_err().code, "rpc", "{odd}");
+    }
+}
+
+#[test]
+fn reads_are_never_refused_for_a_listing() {
+    let listed = serde_json::json!({"token_id": "k0000000000000001", "seller": "alice.near", "price": "1000"});
+    for op in NON_MOVING_OPS {
+        assert!(listing_blocks(op, Ok(&listed)).is_ok(), "{op}");
+        assert!(listing_blocks(op, Err("AccountDoesNotExist")).is_ok(), "{op} is not checked, so an RPC error does not refuse it");
+    }
+    assert!(!is_value_move("balance") && !is_value_move("prove") && !is_value_move("dashboard"));
+    assert!(VALUE_OPS.iter().all(|op| is_value_move(op)));
+}
+
 #[test]
 fn balance_proof_names_a_threshold_and_verifies() {
     let bals = serde_json::json!([{"token": "nep141:usdc", "amount": "40000"}, {"token": "nep141:usdc", "amount": "5"}, {"token": "x", "amount": "9"}]);

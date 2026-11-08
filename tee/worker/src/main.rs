@@ -94,6 +94,22 @@ mod host {
         Ok(owner_is(tok.get("owner_id").and_then(|t| t.as_str()), account))
     }
 
+    /// `nft_listing(token_id)` read live with finality final: the parsed answer, or the RPC error text.
+    /// Not `view()`, which hides the error text that `listing_blocks` needs to tell a missing method apart.
+    fn listing_read(token: &str) -> Result<Value, String> {
+        let (r, e) = rpc::view(&keys_contract(), "nft_listing", &json!({"token_id": token}).to_string(), "final");
+        if !e.is_empty() { return Err(e); }
+        serde_json::from_str(&r).map_err(|_| "listing answer is not JSON".to_string())
+    }
+
+    /// Refuses a value-moving op while the key is listed for sale. Called before any spend is held.
+    /// Reads never reach the RPC call.
+    fn assert_not_listed(op: &str, token: &str) -> Result<(), Error> {
+        if !is_value_move(op) { return Ok(()); }
+        let read = listing_read(token);
+        listing_blocks(op, read.as_ref().map_err(String::as_str))
+    }
+
     fn yocto_of(v: &Value) -> u128 {
         v.pointer("/amount").or(v.pointer("/result/amount"))
             .and_then(|n| n.as_str().map(|s| s.to_string()).or_else(|| n.as_u64().map(|u| u.to_string())))
@@ -512,6 +528,8 @@ mod host {
         let (key, id) = c.wallet()?;
         let usd = usd_of(&tin, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
+        // A key listed for sale is frozen for value moves until it is sold or unlisted (before any spend is held).
+        assert_not_listed(op, &c.token_id())?;
         // The floor the wallet must respect. Without one from the caller, it comes from a fresh quote.
         let min_out = match client_min {
             Some(m) => m,
@@ -557,6 +575,7 @@ mod host {
         let (key, id) = c.wallet()?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
+        assert_not_listed("withdraw", &c.token_id())?;
         // Holds the spend; every refusal before the send gives it back (see charge_spend).
         let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
         if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
@@ -853,6 +872,8 @@ mod host {
         let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms)?;
+        // Signing for the key's address can move the funds held there on other chains, so it is frozen too.
+        assert_not_listed("chain_sign", &tid)?;
         let qk = tkey(&tid, &format!("chainsig/{}", c.now_ms / 86_400_000));
         // Check room now, count only after a signature that recovers to this key (P1-2): a failed MPC call costs no quota.
         assert_quota_room(&mut Host, &qk, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;

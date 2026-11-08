@@ -836,6 +836,36 @@ pub fn assert_unlocked(raw: &[u8], owner: &str, now_ms: u64) -> Result<(), Error
     }
 }
 
+/// Refusal text for a value move while the key is listed for sale (code `listed`).
+pub const LISTED_MSG: &str = "This key is listed for sale; unlist it to move funds.";
+
+/// Ops that move value out of the key's account, or sign for it. They are refused while the key is listed.
+/// Reads (balance, history, pnl, dashboard, account, prove, ...) are not here and are never refused for a listing.
+pub fn is_value_move(op: &str) -> bool {
+    matches!(op, "withdraw" | "swap" | "copy" | "chain_sign")
+}
+
+/// True for the NEAR RPC error of a view on a method the contract does not have (a v2.3 keys contract has no `nft_listing`).
+/// Compared with letters and digits only, so `MethodNotFound` and `method not found` both match.
+fn is_method_not_found(rpc_error: &str) -> bool {
+    let norm: String = rpc_error.chars().filter(|c| c.is_ascii_alphanumeric()).collect::<String>().to_ascii_lowercase();
+    norm.contains("methodnotfound")
+}
+
+/// The listing decision for one op. `listing` is the `nft_listing` answer: `Ok` with `null` when the key is not
+/// listed, an object when it is, or `Err` with the RPC error text. A missing method counts as not listed, so a
+/// v2.3 keys contract keeps working. Any other error, or an answer that is neither null nor an object, fails closed.
+pub fn listing_blocks(op: &str, listing: Result<&serde_json::Value, &str>) -> Result<(), Error> {
+    if !is_value_move(op) { return Ok(()); }
+    match listing {
+        Err(e) if is_method_not_found(e) => Ok(()),
+        Err(e) => Err(err("rpc", format!("could not read the sale listing, nothing was sent: {}", e.chars().take(200).collect::<String>()))),
+        Ok(serde_json::Value::Null) => Ok(()),
+        Ok(v) if v.is_object() => Err(err("listed", LISTED_MSG)),
+        Ok(_) => Err(err("rpc", "could not read the sale listing, nothing was sent: unexpected answer")),
+    }
+}
+
 /// Amount of `asset` in a custody balance list (`[{token, amount}]` or `[{token, balance}]`).
 pub fn balance_of(balances: &serde_json::Value, asset: &str) -> u128 {
     balances.as_array().into_iter().flatten()
