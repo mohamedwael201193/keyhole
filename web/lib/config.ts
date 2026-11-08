@@ -1,6 +1,8 @@
 /** Public, non-secret configuration. Every value is real mainnet state. */
 import { IDENTITY } from "./identity.gen";
 export const KEYS_CONTRACT = "keyhole-devmo.near";
+/** Keys the landing collection shows. The page reads exactly this many keys and their tiers. */
+export const LANDING_KEYS = 4;
 export const NEP413_RECIPIENT = "keyhole";
 export const RPC_URL = "https://rpc.mainnet.near.org";
 export const OUTLAYER_API = "https://api.outlayer.ai";

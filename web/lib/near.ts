@@ -1,17 +1,17 @@
 import { KEYS_CONTRACT } from "./config";
-import { nearView } from "./rpc";
+import { nearView, type ViewOpts } from "./rpc";
 
 export interface TokenMetadata { title: string | null; description: string | null; expires_at: string | null; issued_at: string | null }
 export interface Token { token_id: string; owner_id: string; metadata: TokenMetadata | null }
 export interface Config { owner: string; minter: string; treasury: string; royalty_bps: number; beats: string }
 
-export function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
-  return nearView<T>(method, args, contract);
+export function view<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT, opts?: ViewOpts): Promise<T> {
+  return nearView<T>(method, args, contract, opts);
 }
 
-export const nftTokens = (from = 0, limit = 50) => view<Token[]>("nft_tokens", { from_index: String(from), limit });
+export const nftTokens = (from = 0, limit = 50, opts?: ViewOpts) => view<Token[]>("nft_tokens", { from_index: String(from), limit }, KEYS_CONTRACT, opts);
 export const nftToken = (id: string) => view<Token | null>("nft_token", { token_id: id });
-export const nftTier = (id: string) => view<number | null>("nft_tier", { token_id: id });
+export const nftTier = (id: string, opts?: ViewOpts) => view<number | null>("nft_tier", { token_id: id }, KEYS_CONTRACT, opts);
 export const nftSupply = () => view<string>("nft_total_supply");
 export const contractConfig = () => view<Config>("config");
 export const tokensFor = (account_id: string, limit = 10) => view<Token[]>("nft_tokens_for_owner", { account_id, from_index: "0", limit });

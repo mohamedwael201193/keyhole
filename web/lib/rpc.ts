@@ -11,11 +11,14 @@ export function isHolderRead(method: string, args: Record<string, unknown>): boo
   return method === "nft_tokens_for_owner" || Object.prototype.hasOwnProperty.call(args, "account_id");
 }
 
-async function callOne<T>(url: string, method: string, args: Record<string, unknown>, contract: string, share: boolean): Promise<T> {
+/** `shared` reuses a public read for 60 s (fetch cache and in-memory map); `timeoutMs` bounds each RPC attempt. */
+export interface ViewOpts { shared?: boolean; timeoutMs?: number }
+
+async function callOne<T>(url: string, method: string, args: Record<string, unknown>, contract: string, share: boolean, timeoutMs: number): Promise<T> {
   const args_base64 = typeof btoa === "function" ? btoa(JSON.stringify(args)) : Buffer.from(JSON.stringify(args)).toString("base64");
   const r = await fetch(url, {
     method: "POST", headers: { "content-type": "application/json" },
-    signal: AbortSignal.timeout(8_000),
+    signal: AbortSignal.timeout(timeoutMs),
     ...(share ? { next: { revalidate: 60 } } : { cache: "no-store" as const }),
     body: JSON.stringify({
       jsonrpc: "2.0", id: "kh", method: "query",
@@ -27,9 +30,10 @@ async function callOne<T>(url: string, method: string, args: Record<string, unkn
   return JSON.parse(new TextDecoder().decode(new Uint8Array(j.result.result))) as T;
 }
 
-/** Public contract reads are reused for a minute. Holder reads always hit the chain. */
-export async function nearView<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT): Promise<T> {
-  const share = !isHolderRead(method, args);
+/** Public contract reads are reused for a minute. Holder reads always hit the chain unless the caller passes `shared: true`. */
+export async function nearView<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT, opts: ViewOpts = {}): Promise<T> {
+  const share = opts.shared ?? !isHolderRead(method, args);
+  const timeoutMs = opts.timeoutMs ?? 8_000;
   const key = JSON.stringify([contract, method, args]);
   if (share) {
     const hit = cache.get(key);
@@ -41,7 +45,7 @@ export async function nearView<T>(method: string, args: Record<string, unknown> 
     let last: unknown;
     for (const url of NEAR_RPCS) {
       try {
-        const value = await callOne<T>(url, method, args, contract, share);
+        const value = await callOne<T>(url, method, args, contract, share, timeoutMs);
         if (share) cache.set(key, { at: Date.now(), value });
         return value;
       } catch (e) { last = e; }
