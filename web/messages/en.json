@@ -429,6 +429,10 @@
    "This key is locked for sale.",
    "Swap and withdraw resume when the lock ends or the key is transferred."
   ],
+  "listed": [
+   "This key is listed for sale.",
+   "Unlist it to move funds."
+  ],
   "not_owner": [
    "Only the current key holder can do this.",
    "The key moved before this request settled. Nothing was sent."
