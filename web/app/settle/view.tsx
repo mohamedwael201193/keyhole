@@ -4,34 +4,36 @@ import { OC_ASSETS, statusOf, toUnits, assetById, fundsStep } from "@/lib/onecli
 import { SETTLEMENTS, RECORDED_FAILED, VAULT_TRADE, type Settlement } from "@/lib/settlements";
 import { tx, txAlt, intentTx } from "@/lib/config";
 import { AgentPanel } from "./agent";
-import { Badge as UBadge, Button, Proof, Purpose, Skeleton, Spinner, type ProofRow, type Tone } from "@/components/ui";
-import { TokenIcon } from "@/components/TokenIcon";
+import { AmountInput, Badge, Button, Card, Proof, Purpose, Skeleton, Spinner, Stepper, TokenSelect, type ProofRow, type StepItem, type TokenOption, type Tone } from "@/components/ui";
+import "./settle.css";
 
 type Dry = { amountInFormatted: string; amountInUsd: string; amountOutFormatted: string; amountOutUsd: string; timeEstimate: number };
 type St = { status: string; updatedAt?: string; details: { depositedAmountFormatted: string | null; amountOutFormatted: string | null; refundedAmountFormatted: string | null; nearTxHashes: string[]; intentHashes: string[] } };
 
 const TONE: Record<string, Tone> = { ok: "ok", bad: "bad", wait: "wait", info: "info", warn: "warn" };
-function Badge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: string }) {
   const s = statusOf(status);
-  return <UBadge tone={TONE[s.tone] ?? "info"} testid="st-badge" status={status}>{s.label}</UBadge>;
+  return <Badge tone={TONE[s.tone] ?? "info"} testid="st-badge" status={status}>{s.label}</Badge>;
 }
 
 const PROG = ["Deposit sent", "Intent matched", "Settled", "Funds here"] as const;
-/** Four plain steps across the card; the last one says "Refunded" when the funds went back. */
+/** Four plain steps. The last one says "Refunded to sender" when the funds went back. */
 function Progress({ status }: { status: string }) {
   const f = fundsStep(status);
   if (!f) return null;
+  const steps: StepItem[] = PROG.map((label, i) => ({
+    label: i === 3 && f.refund ? "Refunded to sender" : label,
+    state: i < f.step ? "done" : i === f.step ? (f.step === 3 && !f.refund ? "done" : "current") : "todo",
+  }));
   return (
-    <ol className="oprog" data-testid="funds-path" data-step={f.step} data-refund={f.refund ? "1" : "0"} aria-label="Order progress">
-      {PROG.map((label, i) => {
-        const cls = i < f.step ? "done" : i === f.step ? (f.refund ? "here refund" : f.step === 3 ? "done" : "here") : "";
-        return <li key={label} className={cls}>{i === 3 && f.refund ? "Refunded to sender" : label}</li>;
-      })}
-    </ol>
+    <div data-testid="funds-path" data-step={f.step} data-refund={f.refund ? "1" : "0"} className="st-path">
+      <Stepper label="Order progress" steps={steps} />
+    </div>
   );
 }
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo" }) + " (UTC+2)";
 
+/** One real order. Its status is read live from 1Click; a status that cannot be read says so. */
 function Row({ s }: { s: Settlement }) {
   const [st, setSt] = useState<St | null>(null);
   const [err, setErr] = useState(false);
@@ -49,18 +51,18 @@ function Row({ s }: { s: Settlement }) {
     ...(s.destTx ? [{ label: "destination tx", value: s.destTx.hash, href: s.destTx.url }] : []),
   ];
   return (
-    <article className="ocard" data-testid="settlement" data-deposit={s.depositAddress}>
-      <div className="ohead">
-        <h3 className="oroute">{s.label}</h3>
-        {st ? <Badge status={st.status} /> : err ? <UBadge tone="warn">Status unavailable</UBadge> : <span data-testid="st-loading"><Spinner label="Reading live status" /></span>}
+    <Card as="article" className="st-order" testid="settlement" data-deposit={s.depositAddress}>
+      <div className="st-orderhead">
+        <h3>{s.label}</h3>
+        {st ? <StatusBadge status={st.status} /> : err ? <Badge tone="warn">Status unavailable</Badge> : <span data-testid="st-loading"><Spinner label="Reading live status" /></span>}
       </div>
-      <p className="oamt">{s.quote}{st?.details.amountOutFormatted ? <> · <b>received {st.details.amountOutFormatted}</b></> : null}{st?.details.refundedAmountFormatted && st.details.refundedAmountFormatted !== "0" ? <> · <b>refunded {st.details.refundedAmountFormatted}</b></> : null}</p>
+      <p className="st-amt">{s.quote}{st?.details.amountOutFormatted ? <> · <b>received {st.details.amountOutFormatted}</b></> : null}{st?.details.refundedAmountFormatted && st.details.refundedAmountFormatted !== "0" ? <> · <b>refunded {st.details.refundedAmountFormatted}</b></> : null}</p>
       {st ? <Progress status={st.status} /> : !err && <Skeleton lines={1} />}
-      {info && <p className="owhere"><b>Where the funds are:</b> {info.where}</p>}
-      {s.note && <p className="note" style={{ margin: 0 }}>{s.note}</p>}
-      {st?.updatedAt && <p className="note" style={{ margin: 0 }}>Live from 1Click, updated <span data-testid="st-updated">{when(st.updatedAt)}</span></p>}
+      {info && <p className="st-where"><b>Where the funds are:</b> {info.where}</p>}
+      {s.note && <p className="st-note">{s.note}</p>}
+      {st?.updatedAt && <p className="st-note">Live from 1Click, updated <span data-testid="st-updated">{when(st.updatedAt)}</span></p>}
       <Proof rows={rows} />
-    </article>
+    </Card>
   );
 }
 
@@ -73,21 +75,11 @@ const human = (code?: string, message?: string) => {
   return (code && M[code]) || message || "No quote came back. Try again in a moment.";
 };
 
-/** A token picker: the real token mark (or monogram) beside a native select, so the choice is readable and keyboard-operable. */
-function AssetSelect({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
-  const a = assetById(value);
-  return (
-    <label className="pick" htmlFor={id}>
-      <span className="pick-l">{label}</span>
-      <span className="pick-row">
-        <TokenIcon assetId={a?.id} symbol={a?.label.split(" · ")[0]} chain={a?.chain} size="sm" />
-        <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
-          {OC_ASSETS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
-        </select>
-      </span>
-    </label>
-  );
-}
+/** The 1Click assets, as token options. The label is "SYMBOL · chain". */
+const OPTIONS: TokenOption[] = OC_ASSETS.map((a) => {
+  const [symbol, chain] = a.label.split(" · ");
+  return { id: a.id, symbol, name: chain, assetId: a.id, chain: a.chain };
+});
 
 export function SettleView() {
   const [origin, setOrigin] = useState<string>(OC_ASSETS[2].id);
@@ -97,9 +89,11 @@ export function SettleView() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const outRef = useRef<HTMLDivElement>(null);
+  const o = assetById(origin);
+  const d = assetById(dest);
+  const units = o ? toUnits(amount, o.decimals) : null;
   async function run() {
     setDry(null); setMsg(null);
-    const o = assetById(origin); const units = o ? toUnits(amount, o.decimals) : null;
     if (!units || origin === dest) { setMsg("Pick two different assets and a positive amount."); return; }
     setBusy(true);
     try {
@@ -107,62 +101,75 @@ export function SettleView() {
       if (j.ok) setDry(j.quote); else setMsg(human(j.error?.code, j.error?.message));
     } catch { setMsg("Could not reach 1Click. Check your connection and try again."); } finally { setBusy(false); requestAnimationFrame(() => outRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })); }
   }
+  const sym = (x: typeof o) => x?.label.split(" · ")[0] ?? "";
   return (
     <div className="page settle">
       <Purpose eyebrow="NEAR Intents · 1Click · mainnet" title={<>Real quotes. <em>Real settlements.</em></>}
-        line={<>Get a live cross-chain price with no wallet, then see every order KEYHOLE really settled: where the money is now, step by step, with proof one click away.</>} />
-      <section className="card dry" data-testid="dry">
-        <h2>1 · Get a live price (no wallet, nothing moves)</h2>
-        <p className="note">This asks 1Click solvers for a real price with <span className="mono">dry: true</span>. Nothing is signed and nothing executes.</p>
-        <form onSubmit={(e) => { e.preventDefault(); void run(); }} className="dform">
-          <AssetSelect id="oc-from" label="From" value={origin} onChange={setOrigin} />
-          <label className="pick-amt"><span className="pick-l">Amount</span><input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></label>
-          <AssetSelect id="oc-to" label="To" value={dest} onChange={setDest} />
-          <Button type="submit" loading={busy} loadingLabel="Asking solvers" testid="dry-btn">Get quote</Button>
+        line="Check a live cross-chain price with no wallet, then see every order KEYHOLE really settled: where its money is now, step by step, with proof one click away." />
+
+      <Card as="section" className="st-card st-dry" testid="dry" aria-labelledby="st-dry-h">
+        <div className="st-cardhead">
+          <h2 id="st-dry-h">Check a price</h2>
+          <Badge tone="info" testid="dry-badge">Price only · nothing moves</Badge>
+        </div>
+        <p className="st-note">A live price from 1Click solvers. Nothing is signed and nothing executes.</p>
+        <form className="st-form" onSubmit={(e) => { e.preventDefault(); void run(); }}>
+          <TokenSelect label="From" options={OPTIONS} value={origin} onChange={setOrigin} testid="oc-from" />
+          <AmountInput label="Amount" value={amount} onChange={setAmount} symbol={sym(o)} error={units ? null : "Enter an amount above zero."} testid="oc-amount" />
+          <TokenSelect label="To" options={OPTIONS} value={dest} onChange={setDest} testid="oc-to" />
+          <Button type="submit" loading={busy} loadingLabel="Asking solvers" testid="dry-btn">Get price</Button>
         </form>
-        <div ref={outRef} aria-live="polite">
-          {msg && <p className="note" role="alert" data-testid="dry-msg">{msg}</p>}
+        <div ref={outRef} aria-live="polite" className="st-out">
+          {msg && <p className="st-note st-alert" role="alert" data-testid="dry-msg">{msg}</p>}
           {dry && (
-            <article className="bestq" data-testid="dry-out" aria-label="Best quote">
-              <p className="bestq-tag">Best quote · dry run · nothing moves</p>
-              <p className="bestq-route">{assetById(origin)?.label} <span aria-hidden="true">→</span> {assetById(dest)?.label}</p>
-              <dl className="bestq-grid">
+            <article className="st-quote" data-testid="dry-out" aria-label="Price quote">
+              <Badge tone="info" testid="dry-tag">Price quote · dry run · nothing moves</Badge>
+              <p className="st-route">{o?.label} <span aria-hidden="true">→</span> {d?.label}</p>
+              <dl className="st-grid">
                 <div><dt>You send</dt><dd>{dry.amountInFormatted} <small>${Number(dry.amountInUsd).toFixed(4)}</small></dd></div>
                 <div><dt>You receive</dt><dd>{dry.amountOutFormatted} <small>${Number(dry.amountOutUsd).toFixed(4)}</small></dd></div>
                 <div><dt>Fee and spread</dt><dd>${(Number(dry.amountInUsd) - Number(dry.amountOutUsd)).toFixed(4)} <small>USD in minus USD out</small></dd></div>
                 <div><dt>Estimated time</dt><dd>about {dry.timeEstimate}s</dd></div>
               </dl>
-              <p className="note">The quote came from 1Click solvers. Nothing was signed and no funds moved.</p>
+              <p className="st-note">Quoted by 1Click solvers. Nothing was signed and no funds moved.</p>
             </article>
           )}
         </div>
-      </section>
+      </Card>
+
       <AgentPanel />
-      <h2 className="ush">2 · A private vault trade, end to end</h2>
-      <p className="usub">The holder signed one swap. The enclave checked the signature, the holder and the Bronze caps, then the key&apos;s sealed account swapped through NEAR Intents. Intel TDX attested the answer.</p>
-      <article className="ocard" data-testid="vault-trade">
-        <div className="ohead"><h3 className="oroute">{VAULT_TRADE.amountIn}<span className="arr">→</span>{VAULT_TRADE.amountOut}</h3><UBadge tone="ok">Settled</UBadge></div>
-        <p className="oamt">Inside the vault of key {VAULT_TRADE.token} · build {VAULT_TRADE.build}</p>
-        <div className="uact"><Button variant="secondary" href={`/verify?call=${VAULT_TRADE.callId}`} testid="vault-trade-verify">Verify the enclave call</Button></div>
+
+      <h2 className="st-section">A private vault trade, end to end</h2>
+      <p className="st-sub">The holder signed one swap. The enclave checked the signature, the holder and the Bronze caps, then the key&apos;s sealed account swapped through NEAR Intents. Intel TDX attested the answer.</p>
+      <Card as="article" className="st-order" testid="vault-trade">
+        <div className="st-orderhead">
+          <h3>{VAULT_TRADE.amountIn} <span aria-hidden="true">→</span> {VAULT_TRADE.amountOut}</h3>
+          <Badge tone="ok">Settled</Badge>
+        </div>
+        <p className="st-note">Inside the vault of key {VAULT_TRADE.token} · build {VAULT_TRADE.build}</p>
+        <div className="st-actions"><Button variant="secondary" href={`/verify?call=${VAULT_TRADE.callId}`} testid="vault-trade-verify">Verify the enclave call</Button></div>
         <Proof rows={[
           { label: "enclave call", value: VAULT_TRADE.callId, href: `/verify?call=${VAULT_TRADE.callId}`, internal: true },
           { label: "intent hash", value: VAULT_TRADE.intentHash, href: intentTx(VAULT_TRADE.intentHash) },
           { label: "account", value: VAULT_TRADE.account },
           { label: "evidence file", value: VAULT_TRADE.file },
         ]} />
-      </article>
-      <h2 className="ush">3 · 1Click orders executed on mainnet</h2>
-      <p className="usub">Each card reads its status live from 1Click. Refunded orders are shown, not hidden.</p>
-      <div className="ogrid">{SETTLEMENTS.map((s) => <Row key={s.depositAddress} s={s} />)}</div>
-      <h2 className="ush">Example only: the shape of a failed order</h2>
-      <article className="ocard rec" data-testid="recorded-failed">
-        <div className="ohead"><h3 className="oroute">{RECORDED_FAILED.label}</h3><Badge status={RECORDED_FAILED.status} /></div>
-        <p className="owhere"><b>Where the funds are:</b> {statusOf("FAILED").where}</p>
-        <p className="note">{RECORDED_FAILED.note}</p>
-      </article>
-      <details className="card legend">
-        <summary><h2 style={{ display: "inline" }}>What each status means</h2></summary>
-        <ul>{(["PENDING_DEPOSIT", "KNOWN_DEPOSIT_TX", "INCOMPLETE_DEPOSIT", "PROCESSING", "SUCCESS", "REFUNDED", "FAILED"] as const).map((k) => <li key={k}><Badge status={k} /><span>{statusOf(k).where}</span></li>)}</ul>
+      </Card>
+
+      <h2 className="st-section">1Click orders executed on mainnet</h2>
+      <p className="st-sub">Each card reads its status live from 1Click. Refunded orders are shown, not hidden.</p>
+      <div className="st-orders">{SETTLEMENTS.map((s) => <Row key={s.depositAddress} s={s} />)}</div>
+
+      <h2 className="st-section">Example only: the shape of a failed order</h2>
+      <Card as="article" className="st-order st-recorded" testid="recorded-failed">
+        <div className="st-orderhead"><h3>{RECORDED_FAILED.label}</h3><StatusBadge status={RECORDED_FAILED.status} /></div>
+        <p className="st-where"><b>Where the funds are:</b> {statusOf("FAILED").where}</p>
+        <p className="st-note">{RECORDED_FAILED.note}</p>
+      </Card>
+
+      <details className="st-card st-legend">
+        <summary>What each status means</summary>
+        <ul>{(["PENDING_DEPOSIT", "KNOWN_DEPOSIT_TX", "INCOMPLETE_DEPOSIT", "PROCESSING", "SUCCESS", "REFUNDED", "FAILED"] as const).map((k) => <li key={k}><StatusBadge status={k} /><span>{statusOf(k).where}</span></li>)}</ul>
       </details>
     </div>
   );

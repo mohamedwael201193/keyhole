@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, CopyBtn } from "@/components/ui";
 import { SuccessCheck } from "@/components/motion";
+import { intentTx } from "@/lib/config";
 import { TxLink } from "./TxLink";
 
 /**
@@ -19,10 +20,12 @@ const TITLE: Record<TxState, string> = {
   failed: "Not completed",
 };
 
-export function TxResult({ state, hash, callId, title, reason, children, testid }: {
+export function TxResult({ state, hash, intentHash, callId, title, reason, children, testid }: {
   state: TxState;
   /** NEAR transaction hash. Links to NEAR Blocks, with the second explorer beside it. */
   hash?: string;
+  /** NEAR Intents hash (a swap's intent or deposit). Links to the intents explorer. */
+  intentHash?: string;
   /** Attested call id from the enclave. Links to /verify. */
   callId?: string;
   title?: ReactNode;
@@ -49,6 +52,13 @@ export function TxResult({ state, hash, callId, title, reason, children, testid 
           <span>Transaction</span>
           <TxLink hash={hash} />
           <CopyBtn value={hash} label="Copy hash" />
+        </div>
+      )}
+
+      {intentHash && (
+        <div className="kh-tx-row" data-testid="tx-intent-row">
+          <span>Intents</span>
+          <a href={intentTx(intentHash)} target="_blank" rel="noreferrer">View on the intents explorer ↗</a>
         </div>
       )}
 
