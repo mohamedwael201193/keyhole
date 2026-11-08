@@ -24,6 +24,7 @@ import { keyState, shortAccount, shortKeyId } from "@/lib/near";
 import { acct, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { minutesLeft } from "@/lib/session";
 import { DepositQr } from "@/components/DepositQr";
+import { FundFromChain } from "@/components/FundFromChain";
 import { assetRows, formatUsdMicro, isImplicitAccount, totalOf, withdrawSummary, type PriceBook } from "@/lib/amount";
 import { copyText } from "@/lib/copyText";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
@@ -36,6 +37,7 @@ import "./vault.css";
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
 type Tab = "limits" | "session" | "lock";
+type DepTab = "direct" | "chain";
 type DoneWithdraw = { amount: string; to: string };
 
 const ASSET_KEYS = Object.keys(ASSETS) as AssetKey[];
@@ -84,6 +86,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const [wOpen, setWOpen] = useState(false);
   const [fundAsset, setFundAsset] = useState<AssetKey>("usdc");
   const [fundAmt, setFundAmt] = useState("1");
+  const [depTab, setDepTab] = useState<DepTab>("direct");
+  const [fundedFor, setFundedFor] = useState<string | null>(null);
   const [wAsset, setWAsset] = useState<AssetKey>("usdc");
   const [wAmt, setWAmt] = useState("0.05");
   const [doneWithdraw, setDoneWithdraw] = useState<DoneWithdraw | null>(null);
@@ -95,6 +99,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const [unlocking, setUnlocking] = useState(false);
   const [unlockErr, setUnlockErr] = useState<string | null>(null);
   const fundUnits = toBaseUnits(fundAmt, ASSETS[fundAsset].decimals);
+  // The vault's deposit target for the amount on screen. A target read for another asset or amount is stale and is not used.
+  const fundKey = `${fundAsset}:${fundUnits ?? ""}`;
+  const fundedDeposit = account.res?.output?.ok && fundedFor === fundKey && typeof account.res.output.deposit?.deposit_address === "string" ? String(account.res.output.deposit.deposit_address) : null;
   const wUnits = toBaseUnits(wAmt, ASSETS[wAsset].decimals);
   const utcReset = (() => { const d = new Date(); d.setUTCHours(24, 0, 0, 0); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); })();
 
@@ -490,33 +497,64 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             <TokenSelect label={t("vault.asset")} options={TOKEN_OPTIONS} value={ASSETS[fundAsset].id} onChange={(id) => setFundAsset(keyOfId(id))} testid="fund-asset" />
           </div>
           <AmountInput label={t("vault.amount")} value={fundAmt} onChange={setFundAmt} symbol={ASSETS[fundAsset].symbol} error={fundUnits ? null : t("vault.badAmount")} testid="fund-amt" />
-          <Button block testid="fund-btn" loading={account.busy} loadingLabel={account.label} disabled={!fundUnits || account.busy} onClick={() => { if (fundUnits && accountId) { clearOtherErrors(account); void account.run(fundParams(fundAsset, fundUnits)); } }}>
-            {account.busy ? account.label : t("vault.fundBtn")}
-          </Button>
-          {account.res?.output?.ok && typeof account.res.output.deposit?.deposit_address === "string" && (
-            <div className="vlt-stack" data-testid="deposit">
-              <span className="vlt-label">{t("vault.deposit")}</span>
-              <DepositQr evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
-              {typeof account.res.output.deposit.hint === "string" && <p className="vlt-sub">{String(account.res.output.deposit.hint)}</p>}
-              {typeof account.res.output.deposit.expires_at === "string" && <p className="vlt-sub">{t("vault.expires", { time: String(account.res.output.deposit.expires_at) })}</p>}
-            </div>
-          )}
-          {account.res?.error && <ErrorBox code={account.res.error.code} retryAfter={account.res.error.retry_after} />}
-          {account.res && <Attested r={account.res} />}
-          <div className="vlt-stack">
-            <span className="vlt-label">Vault address</span>
-            <div className="vlt-actions">
-              <Button variant="secondary" size="sm" testid="account-btn" onClick={() => { clearOtherErrors(account); void account.run({}); }}>{t("vault.open")}</Button>
-            </div>
-            {account.res?.output?.ok && account.res.output.confidential_id != null && (
-              <div className="vlt-field" data-testid="confidential-id">
-                <span className="vlt-label">{t("vault.sendTo")}</span>
-                <div className="vlt-box ro"><span className="v">{String(account.res.output.confidential_id)}</span>
-                  <Button variant="secondary" size="sm" onClick={() => { const id = String(account.res?.output?.confidential_id ?? ""); void copyText(id).then(() => { setCopiedConf(true); window.setTimeout(() => setCopiedConf(false), 1600); }); }}>{copiedConf ? t("nav.copied") : t("nav.copy")}</Button>
+          <Tabs id="dep" label="How to fund" value={depTab} onChange={(v) => setDepTab(v as DepTab)} testid="deposit-tabs" items={[
+            { id: "direct", label: "Direct" },
+            { id: "chain", label: "From another chain" },
+          ]} />
+          <div id="dep-panel" role="tabpanel" aria-labelledby={`dep-tab-${depTab}`} className="vlt-panel">
+            {depTab === "direct" && (
+              <>
+                <Button block testid="fund-btn" loading={account.busy} loadingLabel={account.label} disabled={!fundUnits || account.busy} onClick={() => { if (fundUnits && accountId) { clearOtherErrors(account); setFundedFor(fundKey); void account.run(fundParams(fundAsset, fundUnits)); } }}>
+                  {account.busy ? account.label : t("vault.fundBtn")}
+                </Button>
+                {account.res?.output?.ok && typeof account.res.output.deposit?.deposit_address === "string" && (
+                  <div className="vlt-stack" data-testid="deposit">
+                    <span className="vlt-label">{t("vault.deposit")}</span>
+                    <DepositQr otherChain={false} evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
+                    {typeof account.res.output.deposit.hint === "string" && <p className="vlt-sub">{String(account.res.output.deposit.hint)}</p>}
+                    {typeof account.res.output.deposit.expires_at === "string" && <p className="vlt-sub">{t("vault.expires", { time: String(account.res.output.deposit.expires_at) })}</p>}
+                  </div>
+                )}
+                <div className="vlt-stack">
+                  <span className="vlt-label">Vault address</span>
+                  <div className="vlt-actions">
+                    <Button variant="secondary" size="sm" testid="account-btn" onClick={() => { clearOtherErrors(account); void account.run({}); }}>{t("vault.open")}</Button>
+                  </div>
+                  {account.res?.output?.ok && account.res.output.confidential_id != null && (
+                    <div className="vlt-field" data-testid="confidential-id">
+                      <span className="vlt-label">{t("vault.sendTo")}</span>
+                      <div className="vlt-box ro"><span className="v">{String(account.res.output.confidential_id)}</span>
+                        <Button variant="secondary" size="sm" onClick={() => { const id = String(account.res?.output?.confidential_id ?? ""); void copyText(id).then(() => { setCopiedConf(true); window.setTimeout(() => setCopiedConf(false), 1600); }); }}>{copiedConf ? t("nav.copied") : t("nav.copy")}</Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              </>
+            )}
+            {depTab === "chain" && (
+              <>
+                <p className="vlt-sub">Pay from a chain you already hold. 1Click (NEAR Intents) swaps it into {ASSETS[fundAsset].symbol} and delivers it to your vault. Creating the quote moves no funds.</p>
+                {fundedDeposit ? (
+                  <FundFromChain recipient={fundedDeposit} dest={fundAsset === "wnear" ? "wnear" : "usdc"} destSymbol={ASSETS[fundAsset].symbol} units={fundUnits ?? ""} amount={fundAmt} evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} />
+                ) : live ? (
+                  <div className="vlt-stack" data-testid="fac-target-step">
+                    <p className="vlt-sub">Reads the vault&apos;s deposit address for {fundAmt} {ASSETS[fundAsset].symbol}. This is a signed read; no funds move.</p>
+                    <Button block testid="fac-target" loading={account.busy} loadingLabel={account.label} disabled={!fundUnits || account.busy || !accountId} onClick={() => { if (fundUnits && accountId) { clearOtherErrors(account); setFundedFor(fundKey); void account.run(fundParams(fundAsset, fundUnits)); } }}>
+                      Get vault deposit address
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="vlt-stack" data-testid="fac-unlock-step">
+                    <p className="vlt-sub">Unlock reads the vault&apos;s deposit address. It is the same unlock as the top bar; no funds move.</p>
+                    <Button block testid="fac-unlock" loading={unlocking} loadingLabel="Unlocking" disabled={!held || unlocking} onClick={() => void unlock()}>Unlock to read</Button>
+                    {unlockErr && <ErrorBox code={unlockErr} />}
+                  </div>
+                )}
+              </>
             )}
           </div>
+          {account.res?.error && <ErrorBox code={account.res.error.code} retryAfter={account.res.error.retry_after} />}
+          {account.res && <Attested r={account.res} />}
         </div>
       </Sheet>
 

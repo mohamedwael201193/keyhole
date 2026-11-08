@@ -134,3 +134,16 @@
   .vlt-log li { grid-template-columns: minmax(0, 1fr); }
   .vlt-log li small { grid-column: 1; }
 }
+
+/* Deposit sheet, "From another chain" tab (components/FundFromChain.tsx). Tokens only. */
+.vlt-fc { display: grid; gap: var(--space-3); min-width: 0; }
+.vlt-fc .kh-token-trigger { min-height: 48px; }
+.vlt-fc .depqr { display: grid; gap: var(--space-4); min-width: 0; }
+.vlt-fc-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.vlt-fc-steps li { position: relative; padding-left: var(--space-5); font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
+.vlt-fc-steps li::before { content: ""; position: absolute; left: 0; top: 4px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--raised); }
+.vlt-fc-steps li[data-state="done"] { color: var(--ink-2); }
+.vlt-fc-steps li[data-state="done"]::before { background: var(--success); border-color: var(--success); }
+.vlt-fc-steps li[data-state="now"] { color: var(--ink); font-weight: 600; }
+.vlt-fc-steps li[data-state="now"]::before { background: var(--primary); border-color: var(--primary); }
+.vlt-fc .vlt-actions .vlt-sub { flex: 1 1 200px; }

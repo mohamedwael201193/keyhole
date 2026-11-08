@@ -104,3 +104,36 @@ export function fundBody(r: FundReq, now = Date.now()): Record<string, unknown> 
     deadline: new Date(now + 60 * 60_000).toISOString(),
   };
 }
+
+/**
+ * Statuses that end a 1Click order (docs: SUCCESS, FAILED, REFUNDED, INCOMPLETE_DEPOSIT). Status polling stops on these;
+ * every other status, and an unknown one, keeps polling.
+ */
+export const TERMINAL_STATUSES: readonly string[] = ["SUCCESS", "FAILED", "REFUNDED", "INCOMPLETE_DEPOSIT"];
+export const isTerminalStatus = (s: string | null | undefined): boolean => !!s && TERMINAL_STATUSES.includes(s);
+
+/** Chains whose refund address is a 0x account. Other chains are checked by shape only; 1Click refuses a bad one. */
+const EVM_CHAINS: readonly string[] = ["eth", "base", "arb", "bsc", "op", "pol", "avax", "gnosis"];
+/** A refund address on the origin chain. Solana is base58, EVM is 0x. Other chains: a plain token-like string. */
+export function refundAddrOk(chain: string, a: string): boolean {
+  if (EVM_CHAINS.includes(chain)) return /^0x[0-9a-fA-F]{40}$/.test(a);
+  if (chain === "sol") return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a);
+  return /^[A-Za-z0-9._:+=/-]{8,128}$/.test(a);
+}
+
+export type DepositReq = { origin: string; originChain: string; dest: "usdc" | "wnear"; amount: string; recipient: string; refundTo: string };
+/**
+ * "Fund from another chain": an EXECUTABLE quote for ANY 1Click origin asset (not NEAR), EXACT_OUTPUT so the vault receives
+ * exactly `amount` (base units of the destination asset). `recipient` is the vault's deposit target read from the worker.
+ * The quote only names a deposit address. Nothing moves until the holder sends from their own wallet.
+ */
+export function depositQuoteBody(r: DepositReq, now = Date.now()): Record<string, unknown> | null {
+  const dest = FUND_DEST[r.dest];
+  if (!dest || r.originChain === "near" || !ANY_ASSET_ID.test(r.origin) || r.origin === dest) return null;
+  if (!/^[1-9]\d{0,39}$/.test(r.amount) || !isNearAccount(r.recipient) || !refundAddrOk(r.originChain, r.refundTo)) return null;
+  return {
+    dry: false, swapType: "EXACT_OUTPUT", slippageTolerance: 100, originAsset: r.origin, depositType: "ORIGIN_CHAIN",
+    destinationAsset: dest, amount: r.amount, refundTo: r.refundTo, refundType: "ORIGIN_CHAIN",
+    recipient: r.recipient, recipientType: "DESTINATION_CHAIN", deadline: new Date(now + 30 * 60_000).toISOString(),
+  };
+}
