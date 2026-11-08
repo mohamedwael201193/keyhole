@@ -274,7 +274,11 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await page.goto("/vault");
   const balanceCard = page.locator(".c").filter({ has: page.getByTestId("balance-btn") });
   await expect(page.getByTestId("balance-btn")).toBeVisible({ timeout: 20_000 });
+  // The wallet window opens (MyNearWallet signs in a popup); closing it unsigned is the decline.
+  await page.context().route("https://app.mynearwallet.com/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>wallet</title>" }));
+  const popup = page.waitForEvent("popup", { timeout: 20_000 });
   await page.getByTestId("balance-btn").click();
+  await (await popup).close();
   await expect(balanceCard.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
   await expect(balanceCard.getByText("You declined the signature.")).toBeVisible();
   await page.getByRole("button", { name: "History" }).click();
