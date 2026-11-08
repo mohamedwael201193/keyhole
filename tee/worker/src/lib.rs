@@ -622,7 +622,7 @@ pub const SESSION_MAX_USD_MICRO: u64 = 1_000_000_000;
 /// Ops a session may run. `limits` only lowers caps. Withdraw, raising limits, lock, prove, mint, chain_sign
 /// and the other custody moves always need a fresh wallet signature (NEP-413 or EIP-191), never a session token.
 /// A bearer token that can move funds out of the account would be a second key, so withdraw is not in scope.
-pub const SESSION_OPS: &[&str] = &["status", "quote", "account", "balance", "swap", "copy", "history", "pnl", "limits", "dashboard", "session_revoke"];
+pub const SESSION_OPS: &[&str] = &["status", "quote", "account", "balance", "swap", "copy", "history", "pnl", "limits", "dashboard", "level_up", "session_revoke"];
 
 /// `auth` for scheme "session".
 #[derive(Debug, Clone, Deserialize)]
@@ -1099,4 +1099,91 @@ pub fn after_move_status(status: &str, still_owner: bool) -> String {
 /// The keys contract owner from its `config` view (`{"owner": ...}`).
 pub fn config_owner(cfg: &serde_json::Value) -> Option<String> {
     cfg.get("owner").and_then(|o| o.as_str()).filter(|o| !o.is_empty()).map(|o| o.to_string())
+}
+
+// ---------- earned tiers: a key rises on its own settled history ----------
+
+/// Tier rules: (tier, min settled swaps and copies, min volume in USD micro). Both must be met.
+/// Bronze (tier 1) is the mint. A higher tier raises the caps (`limits_for_tier`), so it needs real history.
+pub const TIER_RULES: &[(u8, u32, u64)] = &[(2, 10, 5_000_000), (3, 40, 50_000_000)];
+/// Attached gas for `nft_set_tier` (a tier write and one metadata event). No deposit is attached.
+pub const LEVEL_UP_GAS: u64 = 10_000_000_000_000;
+
+/// The highest tier whose rule the counts meet. Never below `current`: tiers only rise.
+pub fn earned_tier(current: u8, settled_swaps: u32, volume_usd_micro: u64) -> u8 {
+    TIER_RULES
+        .iter()
+        .filter(|(_, n, v)| settled_swaps >= *n && volume_usd_micro >= *v)
+        .map(|(t, _, _)| *t)
+        .fold(current, u8::max)
+}
+
+/// Where a key stands against its next tier. At the top tier `next` is None and the targets are 0.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct TierProgress {
+    pub current: u8,
+    pub next: Option<u8>,
+    pub swaps: u32,
+    pub volume_usd_micro: u64,
+    pub swaps_needed: u32,
+    pub volume_needed_usd_micro: u64,
+    pub swaps_done: bool,
+    pub volume_done: bool,
+    pub met: bool,
+}
+
+/// Progress toward the lowest tier above `current`, from the counts the key has settled so far.
+pub fn tier_progress(current: u8, settled_swaps: u32, volume_usd_micro: u64) -> TierProgress {
+    let rule = TIER_RULES.iter().filter(|(t, _, _)| *t > current).min_by_key(|(t, _, _)| *t);
+    let (next, swaps_needed, volume_needed_usd_micro) = match rule {
+        Some((t, n, v)) => (Some(*t), *n, *v),
+        None => (None, 0, 0),
+    };
+    let swaps_done = settled_swaps >= swaps_needed;
+    let volume_done = volume_usd_micro >= volume_needed_usd_micro;
+    TierProgress {
+        current,
+        next,
+        swaps: settled_swaps,
+        volume_usd_micro,
+        swaps_needed,
+        volume_needed_usd_micro,
+        swaps_done,
+        volume_done,
+        met: next.is_some() && swaps_done && volume_done,
+    }
+}
+
+/// Settled swaps and copies in a key's trade log, and the USD they cost. Only rows with status "success" count.
+/// A row without `usd_in_micro` counts as one swap at 0.
+pub fn level_counts(entries: &[serde_json::Value]) -> (u32, u64) {
+    let (mut n, mut usd) = (0u32, 0u64);
+    for e in entries {
+        let kind = e.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+        if !(kind == "swap" || kind == "copy") || e.get("status").and_then(|v| v.as_str()) != Some("success") { continue; }
+        n = n.saturating_add(1);
+        usd = usd.saturating_add(e.get("usd_in_micro").and_then(|v| v.as_u64()).unwrap_or(0));
+    }
+    (n, usd)
+}
+
+/// What a key's record shows: the verified chain head, the progress, and the tier it earns (never below `current`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct LevelAssessment {
+    pub log_head: String,
+    pub progress: TierProgress,
+    pub earned: u8,
+}
+
+/// Verifies the key's provenance chain, then counts its trade log. A chain that does not verify is refused
+/// with `bad_log` and nothing is counted. The trade log has no hash chain of its own, so it is read only
+/// through this check.
+pub fn assess_level(prov: &[ProvEvent], trades: &[serde_json::Value], current: u8) -> Result<LevelAssessment, Error> {
+    let log_head = verify_chain(prov)?;
+    let (swaps, volume) = level_counts(trades);
+    Ok(LevelAssessment {
+        log_head,
+        progress: tier_progress(current, swaps, volume),
+        earned: earned_tier(current, swaps, volume),
+    })
 }

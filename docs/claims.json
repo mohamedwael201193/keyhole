@@ -3117,17 +3117,17 @@
   },
   {
    "id": "src-gw-allow",
-   "claim": "Gateway allowlist: info, provenance, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, session, session_revoke",
+   "claim": "Gateway allowlist: info, provenance, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
    "where": "README.md:457",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
     "type": "grep",
     "path": "web/lib/gateway.ts",
-    "pattern": "ALLOWED_OPS = \\[\"info\", \"provenance\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"session\", \"session_revoke\"\\]"
+    "pattern": "ALLOWED_OPS = \\[\"info\", \"provenance\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
    },
    "expected": "exact list",
-   "verify": "grep -nE 'ALLOWED_OPS = \\[\"info\", \"provenance\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
+   "verify": "grep -nE 'ALLOWED_OPS = \\[\"info\", \"provenance\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
   },
   {
    "id": "src-gw-nocopy",
