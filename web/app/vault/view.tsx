@@ -136,7 +136,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const spent = s?.ok ? s.spent_today_usd_micro : null;
   const dayPct = Math.min(100, ((spent ?? 0) / dayCap) * 100);
   const idn = held ? keyIdentity(held.token.token_id, held.tier) : null;
-  const balances = balance.res?.output?.ok && live ? (balance.res.output.balances as Bal[]) : d ? (d.balances as Bal[]) : null;
+  // A read signed directly (a redirect wallet, no session) counts as much as a session read.
+  const balances = balance.res?.output?.ok && (live || balance.via === "signature") ? (balance.res.output.balances as Bal[]) : d ? (d.balances as Bal[]) : null;
   const rows = balances ? assetRows(balances, prices) : null;
   const totalKind = totalOf(rows);
   const entries = (history.res?.output?.ok ? history.res.output.entries as Hist[] : null);
