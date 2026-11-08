@@ -20,7 +20,7 @@ async fn view(c: &Contract, m: &str, a: Value) -> Value {
     c.view(m).args_json(a).await.unwrap().json().unwrap()
 }
 
-struct Env { c: Contract, minter: Account, root: Account, ids: Vec<(String, String)> }
+struct Env { c: Contract, minter: Account, root: Account, ids: Vec<(String, String)>, w: near_workspaces::Worker<near_workspaces::network::Sandbox> }
 
 /// v1 on chain, initialised and minted exactly like mainnet (owner = treasury = the contract).
 async fn v1_like_mainnet() -> anyhow::Result<Env> {
@@ -41,7 +41,7 @@ async fn v1_like_mainnet() -> anyhow::Result<Env> {
     for _ in 0..2 {
         minter.call(c.id(), "beat").args_json(json!({"token_ids": ids.iter().map(|x| x.0.clone()).collect::<Vec<_>>()})).transact().await?.into_result()?;
     }
-    Ok(Env { c, minter, root, ids })
+    Ok(Env { c, minter, root, ids, w })
 }
 
 async fn upgrade(e: &Env) -> anyhow::Result<()> {
@@ -293,7 +293,7 @@ async fn v22_with_state() -> anyhow::Result<V22> {
     }
     c.call("set_royalty").args_json(json!({"treasury": format!("royalty.{}", root.id()), "royalty_bps": 700}))
         .deposit(NearToken::from_yoctonear(1)).transact().await?.into_result()?;
-    Ok(V22 { e: Env { c, minter, root: root.clone(), ids }, root, seller, buyer, market, holder })
+    Ok(V22 { e: Env { c, minter, root: root.clone(), ids, w }, root, seller, buyer, market, holder })
 }
 
 /// Everything a holder or buyer can read, with approvals, payouts and holder state included.
@@ -471,5 +471,119 @@ async fn v2_4_set_tier_is_code_only_and_minter_only() -> anyhow::Result<()> {
     assert_eq!(view(&e.c, "nft_tier", json!({"token_id": t2})).await, json!(3));
     assert_eq!(view(&e.c, "nft_total_supply", json!({})).await, "5");
     assert_eq!(view(&e.c, "config", json!({})).await["beats"], "2", "a tier raise is not a beat");
+    Ok(())
+}
+
+/// NEAR credits the contract with a share of the gas burnt by its calls (gas rewards), so the contract's own balance
+/// is checked as "the deposit, less or plus at most this". The seller-side amounts in the sale are the exact checks.
+const GAS_REWARD_SLACK: u128 = 10u128.pow(21);
+
+/// Liquid balance of an account, read on chain.
+async fn bal(a: &Account) -> u128 {
+    a.view_account().await.unwrap().balance.as_yoctonear()
+}
+
+/// The NEP-297 payloads in a receipt's logs (EVENT_JSON: lines).
+fn event_json(logs: &[&str]) -> Vec<Value> {
+    logs.iter().filter_map(|l| l.strip_prefix("EVENT_JSON:")).map(|j| serde_json::from_str(j).unwrap()).collect()
+}
+
+/// v2.4 (code only, on top of v2.3): the built-in key sale on a real runtime. A key is listed, bought between two
+/// sandbox accounts and listed and unlisted again. Seller and treasury amounts are exact (neither signs the buy).
+/// The buyer pays the price plus gas. The contract's own balance moves by exactly the listing deposit.
+#[tokio::test]
+async fn v2_4_sale_settles_real_balances() -> anyhow::Result<()> {
+    let e = v1_like_mainnet().await?;
+    upgrade(&e).await?;
+    let root = e.root.clone();
+    let treasury = root.create_subaccount("treasury").initial_balance(NearToken::from_near(2)).transact().await?.into_result()?;
+    e.c.call("set_royalty").args_json(json!({"treasury": treasury.id(), "royalty_bps": 500}))
+        .deposit(NearToken::from_yoctonear(1)).transact().await?.into_result()?;
+    e.c.as_account().deploy(&std::fs::read(V2_3)?).await?.into_result()?;
+    let before = snapshot(&e).await;
+    e.c.as_account().deploy(&std::fs::read(V2_4)?).await?.into_result()?;
+    assert_eq!(before, snapshot(&e).await, "code only: every token, owner, tier, holder, config and metadata value is unchanged");
+
+    let (seller, buyer) = (mk(&root, "seller").await, mk(&root, "buyer").await);
+    let c = e.c.id().clone();
+    let price = NearToken::from_near(1).as_yoctonear();
+    let dep = NearToken::from_millinear(10).as_yoctonear(); // 0.01 NEAR: LIST_STORAGE_DEPOSIT
+    e.minter.call(&c, "nft_mint")
+        .args_json(json!({"token_id": "ksale", "receiver_id": seller.id(), "tier": 2, "metadata": fixture()[1]["metadata"]}))
+        .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+
+    // list: the contract holds exactly the deposit; the event and the view agree
+    let k0 = bal(e.c.as_account()).await;
+    let r = seller.call(&c, "nft_list").args_json(json!({"token_id": "ksale", "price": price.to_string()}))
+        .deposit(NearToken::from_yoctonear(dep)).max_gas().transact().await?.into_result()?;
+    // The unused prepaid gas of this call is refunded to the seller in a receipt that lands in the next block.
+    // Let it land before any balance is read, or the buy below would be credited with it.
+    e.w.fast_forward(2).await?;
+    let gained = bal(e.c.as_account()).await - k0;
+    assert!(gained >= dep && gained < dep + GAS_REWARD_SLACK, "the contract holds the listing deposit (plus its gas reward): {gained}");
+    let ev = event_json(&r.logs());
+    assert_eq!(ev.len(), 1, "{ev:?}");
+    assert_eq!(ev[0], json!({"standard": "keyhole", "version": "1.0.0", "event": "key_list",
+        "data": [{"token_id": "ksale", "seller": seller.id(), "price": price.to_string()}]}));
+    assert_eq!(view(&e.c, "nft_listing", json!({"token_id": "ksale"})).await,
+        json!({"token_id": "ksale", "seller": seller.id(), "price": price.to_string()}));
+    assert_eq!(view(&e.c, "nft_listings", json!({})).await.as_array().unwrap().len(), 1);
+
+    // buy with 1.2 NEAR: 1 NEAR price, 0.2 NEAR back to the buyer
+    let (s0, t0, b0, k1) = (bal(&seller).await, bal(&treasury).await, bal(&buyer).await, bal(e.c.as_account()).await);
+    let attached = price + price / 5;
+    let r = buyer.call(&c, "nft_buy").args_json(json!({"token_id": "ksale"}))
+        .deposit(NearToken::from_yoctonear(attached)).max_gas().transact().await?.into_result()?;
+    let (s1, t1, b1, k2) = (bal(&seller).await, bal(&treasury).await, bal(&buyer).await, bal(e.c.as_account()).await);
+    assert_eq!(s1 - s0, price - price / 20 + dep, "seller: price - 5% royalty + the listing deposit");
+    assert_eq!(t1 - t0, price / 20, "treasury: 5% royalty");
+    let moved = k1 - k2; // in 1.2, out 0.96 + 0.05 + 0.2: net -deposit, less the contract's gas reward
+    assert!(moved <= dep && moved + GAS_REWARD_SLACK > dep, "the contract pays out the listing deposit: {moved}");
+    let spent_beyond_price = (b0 as i128) - (b1 as i128) - (price as i128);
+    assert!(spent_beyond_price > 0 && spent_beyond_price < dep as i128, "buyer pays the price plus gas only: {spent_beyond_price}");
+    let ev = event_json(&r.logs());
+    let sale: Vec<&Value> = ev.iter().filter(|v| v["event"] == "key_sale").collect();
+    assert_eq!(sale.len(), 1, "{ev:?}");
+    assert_eq!(sale[0]["data"][0], json!({"token_id": "ksale", "seller": seller.id(), "buyer": buyer.id(),
+        "price": price.to_string(), "royalty": (price / 20).to_string()}));
+    let tr: Vec<&Value> = ev.iter().filter(|v| v["event"] == "nft_transfer").collect();
+    assert_eq!(tr.len(), 1, "one nft_transfer per sale");
+    assert_eq!(tr[0]["data"][0]["memo"], "sale");
+    assert!(tr[0]["data"][0].get("authorized_id").is_none(), "owner-listed sale names no approved account");
+
+    // the old owner's key is gone; the listing is gone
+    assert_eq!(view(&e.c, "nft_token", json!({"token_id": "ksale"})).await["owner_id"], buyer.id().as_str());
+    assert_eq!(view(&e.c, "nft_supply_for_owner", json!({"account_id": seller.id()})).await, "0");
+    assert_eq!(view(&e.c, "holder_tier", json!({"account_id": seller.id()})).await, Value::Null);
+    assert_eq!(view(&e.c, "holder_tier", json!({"account_id": buyer.id()})).await, json!(2));
+    assert_eq!(view(&e.c, "nft_listing", json!({"token_id": "ksale"})).await, Value::Null);
+    assert_eq!(view(&e.c, "nft_listings", json!({})).await, json!([]));
+
+    // the buyer, now the owner, lists again and unlists: the contract pays back exactly the deposit
+    buyer.call(&c, "nft_list").args_json(json!({"token_id": "ksale", "price": (2 * price).to_string()}))
+        .deposit(NearToken::from_yoctonear(dep)).max_gas().transact().await?.into_result()?;
+    let k3 = bal(e.c.as_account()).await;
+    let r = buyer.call(&c, "nft_unlist").args_json(json!({"token_id": "ksale"}))
+        .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    let out = k3 - bal(e.c.as_account()).await;
+    assert!(out <= dep && out + GAS_REWARD_SLACK > dep, "unlist refunds the deposit: {out}");
+    let ev = event_json(&r.logs());
+    assert!(ev.iter().any(|v| v["event"] == "key_unlist"), "{ev:?}");
+    assert_eq!(view(&e.c, "nft_listing", json!({"token_id": "ksale"})).await, Value::Null);
+
+    // a listing ends when the owner transfers the key: the deposit goes back to the seller who listed it
+    buyer.call(&c, "nft_list").args_json(json!({"token_id": "ksale", "price": price.to_string()}))
+        .deposit(NearToken::from_yoctonear(dep)).max_gas().transact().await?.into_result()?;
+    let k4 = bal(e.c.as_account()).await;
+    buyer.call(&c, "nft_transfer").args_json(json!({"receiver_id": seller.id(), "token_id": "ksale"}))
+        .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    let out = k4 - bal(e.c.as_account()).await;
+    assert!(out <= dep && out + GAS_REWARD_SLACK > dep, "the listing deposit goes back on transfer: {out}");
+    assert_eq!(view(&e.c, "nft_listing", json!({"token_id": "ksale"})).await, Value::Null);
+    assert_eq!(view(&e.c, "nft_token", json!({"token_id": "ksale"})).await["owner_id"], seller.id().as_str());
+
+    // the 5 mainnet tokens are untouched by the sale
+    assert_eq!(view(&e.c, "nft_total_supply", json!({})).await, "6");
+    for (t, o) in &e.ids { assert_eq!(view(&e.c, "nft_token", json!({"token_id": t})).await["owner_id"], o.as_str()); }
     Ok(())
 }

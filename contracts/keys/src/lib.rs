@@ -3,6 +3,8 @@
 //! v2: NEP-178 approvals, one key per account enforced on-chain, NEP-330 source metadata.
 //! v2.3: at most MAX_APPROVALS approvals per token (NEP-178 gas bound); no state change.
 //! v2.4: nft_set_tier (minter only, upward only): a holder can earn a higher tier. No state change.
+//! v2.4: built-in key sale. nft_list / nft_unlist / nft_buy sell a key from the contract itself. Listings live under
+//! their own storage prefixes (not a field of Contract), so the v2.3 layout is unchanged and no migrate is needed.
 use near_contract_standards::non_fungible_token::approval::NonFungibleTokenApproval;
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
@@ -24,6 +26,16 @@ pub const MAX_BEAT_BATCH: usize = 50;
 /// marketplace fan-out. Re-approving an account already on the list does not count as a new approval.
 pub const MAX_APPROVALS: usize = 10;
 pub const ERR_ONE_KEY: &str = "one key per account: receiver already holds a KEYHOLE key";
+/// v2.4 key sale. Prices in yoctoNEAR: 0.1 NEAR minimum, 100 000 NEAR cap (keeps price * bps far from u128 overflow).
+pub const MIN_LIST_PRICE: u128 = 10u128.pow(23); // 0.1 NEAR
+pub const MAX_LIST_PRICE: u128 = 100_000 * 10u128.pow(24); // 100 000 NEAR
+/// Held by the contract while a key is listed, returned to the seller when the listing ends. 0.01 NEAR covers the
+/// listing's own storage (about 0.005 NEAR even for 64-character ids and account names).
+pub const LIST_STORAGE_DEPOSIT: u128 = 10u128.pow(22); // 0.01 NEAR
+/// nft_listings page size cap.
+pub const MAX_LISTINGS_PAGE: u64 = 100;
+const KEYHOLE_EVENT_STANDARD: &str = "keyhole";
+const KEYHOLE_EVENT_VERSION: &str = "1.0.0";
 
 #[derive(BorshStorageKey)]
 #[near]
@@ -49,6 +61,80 @@ pub struct Config {
     pub treasury: AccountId,
     pub royalty_bps: u32,
     pub beats: near_sdk::json_types::U64,
+}
+
+/// v2.4 key listing. Stored in `listings()` (its own prefix), never as a field of Contract, so the stored layout is unchanged.
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [borsh, json])]
+pub struct Listing {
+    pub seller: AccountId,
+    pub price: U128,
+    /// Storage deposit the contract holds for this listing. Returned to the seller when the listing ends.
+    pub deposit: U128,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [json])]
+pub struct ListingView {
+    pub token_id: TokenId,
+    pub seller: AccountId,
+    pub price: U128,
+}
+
+/// Listings by token id: raw keys are b"L" + borsh(token_id). The prefix byte 'L' (0x4C) differs from the Key enum
+/// variant bytes (0..=5), from the NEP-178 approval keys (5 + "n"), from the "pending/" markers ('p') and from the
+/// index prefix b"M".
+fn listings() -> LookupMap<TokenId, Listing> {
+    LookupMap::new(b"L")
+}
+
+/// Index of listed token ids for nft_listings, kept by hand. A collection's length lives in memory and is only persisted
+/// through the struct that owns it, so a collection built on demand (UnorderedSet::new) would always see length 0.
+/// Here: the count is a raw key, slots (position -> token id) and positions (token id -> position) are LookupMaps.
+/// Removal swaps the last slot into the freed one. Prefixes "Mc", "Ms", "Mq" do not collide with "L" or the others.
+const INDEX_COUNT: &[u8] = b"Mc";
+
+fn index_count() -> u64 {
+    env::storage_read(INDEX_COUNT).map(|v| u64::from_le_bytes(v.try_into().unwrap_or([0; 8]))).unwrap_or(0)
+}
+
+fn index_slots() -> LookupMap<u64, TokenId> {
+    LookupMap::new(&b"Ms"[..])
+}
+
+fn index_pos() -> LookupMap<TokenId, u64> {
+    LookupMap::new(&b"Mq"[..])
+}
+
+fn index_add(token_id: &TokenId) {
+    let n = index_count();
+    index_slots().insert(&n, token_id);
+    index_pos().insert(token_id, &n);
+    env::storage_write(INDEX_COUNT, &(n + 1).to_le_bytes());
+}
+
+fn index_remove(token_id: &TokenId) {
+    let Some(p) = index_pos().get(token_id) else { return };
+    let last = index_count() - 1;
+    if p != last {
+        let moved = index_slots().get(&last).unwrap_or_else(|| env::panic_str("inconsistent listing index"));
+        index_slots().insert(&p, &moved);
+        index_pos().insert(&moved, &p);
+    }
+    index_slots().remove(&last);
+    index_pos().remove(token_id);
+    env::storage_write(INDEX_COUNT, &last.to_le_bytes());
+}
+
+fn yocto(v: u128) -> near_sdk::NearToken {
+    near_sdk::NearToken::from_yoctonear(v)
+}
+
+/// NEP-297 event (standard "keyhole", version "1.0.0"); data holds one object.
+fn emit_key_event(event: &str, data: near_sdk::serde_json::Value) {
+    env::log_str(&format!(
+        "EVENT_JSON:{{\"standard\":\"{KEYHOLE_EVENT_STANDARD}\",\"version\":\"{KEYHOLE_EVENT_VERSION}\",\"event\":\"{event}\",\"data\":[{data}]}}"
+    ));
 }
 
 #[near(contract_state, contract_metadata(
@@ -220,6 +306,161 @@ impl Contract {
         ));
     }
 
+    /// Removes a listing from both maps and returns it. The caller decides where its deposit goes.
+    fn take_listing(&mut self, token_id: &TokenId) -> Option<Listing> {
+        let listing = listings().get(token_id)?;
+        listings().remove(token_id);
+        index_remove(token_id);
+        Some(listing)
+    }
+
+    /// Ends a token's listing, if any: the deposit goes back to the seller. Every path that moves a key calls this
+    /// (transfer_key, nft_transfer, nft_transfer_call, nft_resolve_transfer), so a listing never outlives its owner.
+    fn end_listing(&mut self, token_id: &TokenId) {
+        if let Some(listing) = self.take_listing(token_id) {
+            Promise::new(listing.seller.clone()).transfer(yocto(listing.deposit.0));
+            emit_key_event("key_unlist", near_sdk::serde_json::json!({"token_id": token_id, "seller": listing.seller}));
+        }
+    }
+
+    /// After the library's nft_resolve_transfer, a listing whose seller no longer owns the key is stale: the key went
+    /// back to the sender of nft_transfer_call while the receiver had listed it. End that listing.
+    fn clear_stale_listing(&mut self, token_id: &TokenId) {
+        if let Some(listing) = listings().get(token_id) {
+            if self.tokens.owner_by_id.get(token_id).as_ref() != Some(&listing.seller) {
+                self.end_listing(token_id);
+            }
+        }
+    }
+
+    /// The one place a key changes hands except the library's nft_transfer / nft_transfer_call / nft_resolve_transfer
+    /// (their callers end the listing first). Ends the listing, clears approvals (their storage goes back to the
+    /// previous owner), moves the key and emits ONE nft_transfer event. Schedules no payout; only the approval refund.
+    fn transfer_key(&mut self, token_id: &TokenId, receiver_id: &AccountId, authorized: Option<&AccountId>, memo: Option<&str>) -> AccountId {
+        self.end_listing(token_id);
+        let prev_owner = self.tokens.owner_by_id.get(token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        require!(prev_owner != *receiver_id, "Current and next owner must differ");
+        let approved = self.tokens.approvals_by_id.as_mut().map(|m| m.remove(token_id).unwrap_or_default()).unwrap_or_default();
+        self.tokens.internal_transfer_unguarded(token_id, &prev_owner, receiver_id);
+        near_contract_standards::non_fungible_token::events::NftTransfer {
+            old_owner_id: &prev_owner,
+            new_owner_id: receiver_id,
+            token_ids: &[token_id.as_str()],
+            authorized_id: authorized.map(|v| &**v),
+            memo,
+        }
+        .emit();
+        if !approved.is_empty() {
+            near_contract_standards::non_fungible_token::refund_approved_account_ids(prev_owner.clone(), &approved);
+        }
+        prev_owner
+    }
+
+    /// v2.4 key sale. The owner lists a key at a price. The contract holds LIST_STORAGE_DEPOSIT until the listing
+    /// ends. A listing's price can be changed by its seller with exactly 1 yoctoNEAR (the deposit stays).
+    #[payable]
+    pub fn nft_list(&mut self, token_id: TokenId, price: U128) {
+        let caller = env::predecessor_account_id();
+        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("unknown token"));
+        require!(owner == caller, "only the owner can list");
+        require!(price.0 >= MIN_LIST_PRICE, "price below the 0.1 NEAR minimum");
+        require!(price.0 <= MAX_LIST_PRICE, "price above the 100000 NEAR cap");
+        match listings().get(&token_id) {
+            Some(mut listing) => {
+                require!(listing.seller == caller, "only the seller can change a listing");
+                assert_one_yocto();
+                listing.price = price;
+                listings().insert(&token_id, &listing);
+            }
+            None => {
+                let attached = env::attached_deposit().as_yoctonear();
+                require!(attached >= LIST_STORAGE_DEPOSIT, "attach at least 0.01 NEAR for listing storage");
+                // State first; only LIST_STORAGE_DEPOSIT is kept, the rest goes back now.
+                let listing = Listing { seller: caller.clone(), price, deposit: U128(LIST_STORAGE_DEPOSIT) };
+                listings().insert(&token_id, &listing);
+                index_add(&token_id);
+                if attached > LIST_STORAGE_DEPOSIT {
+                    Promise::new(caller.clone()).transfer(yocto(attached - LIST_STORAGE_DEPOSIT));
+                }
+            }
+        }
+        emit_key_event("key_list", near_sdk::serde_json::json!({"token_id": token_id, "seller": caller, "price": price}));
+    }
+
+    /// The seller, or the current owner, ends a listing. The deposit goes back to the seller. Requires 1 yoctoNEAR.
+    #[payable]
+    pub fn nft_unlist(&mut self, token_id: TokenId) {
+        assert_one_yocto();
+        let caller = env::predecessor_account_id();
+        let listing = listings().get(&token_id).unwrap_or_else(|| env::panic_str("no listing"));
+        let owner = self.tokens.owner_by_id.get(&token_id);
+        require!(caller == listing.seller || owner.as_ref() == Some(&caller), "only the seller or the owner can unlist");
+        self.end_listing(&token_id);
+    }
+
+    /// Buys a listed key. The attached deposit must cover the price (the excess is refunded). The key moves through
+    /// transfer_key with memo "sale". The royalty goes to the treasury. The seller gets price - royalty plus the
+    /// listing deposit. If the listing is stale (the key no longer belongs to the seller), the listing is removed,
+    /// its deposit goes back to the seller, the buyer's attachment is refunded, a "key_listing_stale" event is logged,
+    /// and the call returns without panicking (so the stale listing is cleaned up in the same transaction).
+    #[payable]
+    pub fn nft_buy(&mut self, token_id: TokenId) {
+        let buyer = env::predecessor_account_id();
+        let attached = env::attached_deposit().as_yoctonear();
+        let listing = listings().get(&token_id).unwrap_or_else(|| env::panic_str("no listing"));
+        let owner = self.tokens.owner_by_id.get(&token_id);
+        if owner.as_ref() != Some(&listing.seller) {
+            self.take_listing(&token_id);
+            Promise::new(listing.seller.clone()).transfer(yocto(listing.deposit.0));
+            if attached > 0 {
+                Promise::new(buyer.clone()).transfer(yocto(attached));
+            }
+            emit_key_event(
+                "key_listing_stale",
+                near_sdk::serde_json::json!({"token_id": token_id, "seller": listing.seller, "owner": owner}),
+            );
+            return;
+        }
+        let seller = listing.seller.clone();
+        let price = listing.price.0;
+        require!(buyer != seller, "the seller cannot buy its own key");
+        require!(attached >= price, "attached deposit is below the listing price");
+        self.assert_no_key(&buyer);
+        // State first: the listing is gone, then the key moves. Promises are created only after this.
+        self.take_listing(&token_id);
+        self.transfer_key(&token_id, &buyer, None, Some("sale"));
+        let royalty = price * self.royalty_bps as u128 / 10_000;
+        emit_key_event(
+            "key_sale",
+            near_sdk::serde_json::json!({"token_id": token_id, "seller": seller, "buyer": buyer, "price": U128(price), "royalty": U128(royalty)}),
+        );
+        if attached > price {
+            Promise::new(buyer.clone()).transfer(yocto(attached - price));
+        }
+        if royalty > 0 {
+            Promise::new(self.treasury.clone()).transfer(yocto(royalty));
+        }
+        Promise::new(seller).transfer(yocto(price - royalty + listing.deposit.0));
+    }
+
+    /// The listing of a token, if it is listed.
+    pub fn nft_listing(&self, token_id: TokenId) -> Option<ListingView> {
+        listings().get(&token_id).map(|l| ListingView { token_id, seller: l.seller, price: l.price })
+    }
+
+    /// Listed keys in index order, paged like NEP-181. limit defaults to MAX_LISTINGS_PAGE and is capped at it.
+    pub fn nft_listings(&self, from_index: Option<U128>, limit: Option<u64>) -> Vec<ListingView> {
+        let from = from_index.map(|v| usize::try_from(v.0).unwrap_or(usize::MAX)).unwrap_or(0);
+        let limit = limit.unwrap_or(MAX_LISTINGS_PAGE);
+        require!(limit > 0, "limit must be positive");
+        let take = limit.min(MAX_LISTINGS_PAGE) as usize;
+        let end = (from as u64).saturating_add(take as u64).min(index_count());
+        (from as u64..end)
+            .filter_map(|i| index_slots().get(&i))
+            .filter_map(|t| self.nft_listing(t))
+            .collect()
+    }
+
     #[payable]
     pub fn set_minter(&mut self, minter: AccountId) {
         assert_one_yocto();
@@ -283,29 +524,18 @@ impl Contract {
         self.assert_no_key(&receiver_id);
         let payout = self.nft_payout(token_id.clone(), balance, max_len_payout);
         let sender = env::predecessor_account_id();
-        // Same checks as near-contract-standards' internal_transfer, but with ONE nft_transfer event
+        // Same checks as near-contract-standards' internal_transfer (see transfer_key), with ONE nft_transfer event
         // that names the approved account (the library's own event omits authorized_id).
         let prev_owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
-        let approved = self.tokens.approvals_by_id.as_mut().map(|m| m.remove(&token_id).unwrap_or_default()).unwrap_or_default();
         let authorized = if sender != prev_owner {
+            let approved = self.tokens.approvals_by_id.as_ref().and_then(|m| m.get(&token_id)).unwrap_or_default();
             let id = approved.get(&sender).unwrap_or_else(|| env::panic_str("Sender not approved"));
             require!(approval_id.is_none() || approval_id == Some(*id), "approval_id mismatch");
-            Some(&sender)
-        } else { None };
-        require!(prev_owner != receiver_id, "Current and next owner must differ");
-        self.tokens.internal_transfer_unguarded(&token_id, &prev_owner, &receiver_id);
-        near_contract_standards::non_fungible_token::events::NftTransfer {
-            old_owner_id: &prev_owner,
-            new_owner_id: &receiver_id,
-            token_ids: &[&token_id],
-            authorized_id: authorized.map(|v| &**v),
-            memo: memo.as_deref(),
-        }
-        .emit();
-        // NEP-178: approvals are cleared by the transfer; their storage goes back to the previous owner.
-        if !approved.is_empty() {
-            near_contract_standards::non_fungible_token::refund_approved_account_ids(prev_owner.clone(), &approved);
-        }
+            Some(sender)
+        } else {
+            None
+        };
+        self.transfer_key(&token_id, &receiver_id, authorized.as_ref(), memo.as_deref());
         payout
     }
 }
@@ -315,6 +545,8 @@ impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_transfer(&mut self, receiver_id: AccountId, token_id: TokenId, approval_id: Option<u64>, memo: Option<String>) {
         self.assert_no_key(&receiver_id);
+        // A panic in the library call reverts this too, so a refused transfer keeps its listing.
+        self.end_listing(&token_id);
         self.tokens.nft_transfer(receiver_id, token_id, approval_id, memo)
     }
     #[payable]
@@ -322,6 +554,7 @@ impl NonFungibleTokenCore for Contract {
         self.assert_no_key(&receiver_id);
         let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
         set_pending(&owner, pending_returns(&owner) + 1);
+        self.end_listing(&token_id);
         self.tokens.nft_transfer_call(receiver_id, token_id, approval_id, memo, msg)
     }
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
@@ -334,7 +567,10 @@ impl near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver
     #[private]
     fn nft_resolve_transfer(&mut self, previous_owner_id: AccountId, receiver_id: AccountId, token_id: TokenId, approved_account_ids: Option<HashMap<AccountId, u64>>) -> bool {
         set_pending(&previous_owner_id, pending_returns(&previous_owner_id).saturating_sub(1));
-        self.tokens.nft_resolve_transfer(previous_owner_id, receiver_id, token_id, approved_account_ids)
+        let returned = self.tokens.nft_resolve_transfer(previous_owner_id, receiver_id, token_id.clone(), approved_account_ids);
+        // The key may have gone back to the sender: a listing the receiver made meanwhile is now stale.
+        self.clear_stale_listing(&token_id);
+        returned
     }
 }
 
@@ -1293,5 +1529,364 @@ mod v24 {
         assert_eq!((before.owner_id, before.metadata), (after.owner_id, after.metadata));
         assert_eq!(c.nft_total_supply(), U128(1));
         assert_eq!(c.config().beats.0, 0, "a tier raise is not a beat");
+    }
+}
+
+/// v2.4 key sale: nft_list / nft_unlist / nft_buy, the listing clean-ups on every transfer path, stale listings,
+/// the views and the tier rules. Unit tests read the transfers the contract schedules from the mock receipts.
+#[cfg(test)]
+mod v24_sale {
+    use super::*;
+    use near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver;
+    use near_sdk::mock::MockAction;
+    use near_sdk::serde_json::{json, Value};
+    use near_sdk::test_utils::{get_created_receipts, get_logs, VMContextBuilder};
+    use near_sdk::{testing_env, NearToken, PromiseResult};
+
+    const NEAR: u128 = 10u128.pow(24);
+    const LIST: u128 = LIST_STORAGE_DEPOSIT;
+
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn y(v: u128) -> NearToken { NearToken::from_yoctonear(v) }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", y(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
+    fn mint_tier(c: &mut Contract, id: &str, to: &str, tier: u8) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
+    fn mint(c: &mut Contract, id: &str, to: &str) { mint_tier(c, id, to, 2) }
+    fn list(c: &mut Contract, who: &str, id: &str, price: u128, dep: u128) { ctx(who, y(dep)); c.nft_list(id.into(), U128(price)); }
+    fn buy(c: &mut Contract, who: &str, id: &str, dep: u128) { ctx(who, y(dep)); c.nft_buy(id.into()); }
+    fn listing(c: &Contract, id: &str) -> Option<ListingView> { c.nft_listing(id.into()) }
+    fn index_len() -> u64 { index_count() }
+    /// Every (receiver, yocto) transfer the last call scheduled, in creation order.
+    fn transfers() -> Vec<(String, u128)> {
+        let mut out = vec![];
+        for r in get_created_receipts() {
+            for a in r.actions.iter() {
+                if let MockAction::Transfer { deposit, .. } = a { out.push((r.receiver_id.to_string(), deposit.as_yoctonear())); }
+            }
+        }
+        out
+    }
+    fn paid(to: &str) -> u128 { transfers().iter().filter(|(r, _)| r == to).map(|(_, v)| *v).sum() }
+    /// The EVENT_JSON payloads of the last call with this event name.
+    fn events(name: &str) -> Vec<Value> {
+        get_logs().iter().filter_map(|l| l.strip_prefix("EVENT_JSON:"))
+            .map(|j| near_sdk::serde_json::from_str::<Value>(j).unwrap())
+            .filter(|v| v["event"] == name).collect()
+    }
+    fn keyhole(event: &str, data: Value) -> Value {
+        json!({"standard": "keyhole", "version": "1.0.0", "event": event, "data": [data]})
+    }
+    fn resolve(c: &mut Contract, from: &str, to: &str, id: &str, ret: &[u8]) -> bool {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
+            near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Successful(ret.to_vec())]);
+        c.nft_resolve_transfer(acc(from), acc(to), id.into(), None)
+    }
+
+    // ---- nft_list ----
+    #[test] fn list_by_owner_stores_the_listing_and_emits_key_list() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        assert_eq!(listing(&c, "k1"), Some(ListingView { token_id: "k1".into(), seller: acc("alice.near"), price: U128(NEAR) }));
+        assert_eq!(listings().get(&"k1".to_string()), Some(Listing { seller: acc("alice.near"), price: U128(NEAR), deposit: U128(LIST) }));
+        assert_eq!(index_len(), 1);
+        assert_eq!(events("key_list"), vec![keyhole("key_list", json!({"token_id": "k1", "seller": "alice.near", "price": NEAR.to_string()}))]);
+        assert_eq!(c.nft_tier("k1".into()), Some(2), "listing does not touch the tier");
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"), "listing does not move the key");
+    }
+    #[test] #[should_panic(expected = "only the owner can list")]
+    fn list_by_non_owner_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "mallory.near", "k1", NEAR, LIST);
+    }
+    #[test] #[should_panic(expected = "unknown token")]
+    fn list_unknown_token_is_refused() {
+        let mut c = setup(); list(&mut c, "alice.near", "nope", NEAR, LIST);
+    }
+    #[test] #[should_panic(expected = "price below the 0.1 NEAR minimum")]
+    fn price_below_minimum_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", MIN_LIST_PRICE - 1, LIST);
+    }
+    #[test]
+    fn minimum_price_is_accepted() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", MIN_LIST_PRICE, LIST);
+        assert_eq!(listing(&c, "k1").unwrap().price, U128(MIN_LIST_PRICE));
+        assert_eq!(MIN_LIST_PRICE, 10u128.pow(23));
+    }
+    #[test] #[should_panic(expected = "price above the 100000 NEAR cap")]
+    fn price_above_cap_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", MAX_LIST_PRICE + 1, LIST);
+    }
+    #[test] #[should_panic(expected = "attach at least 0.01 NEAR for listing storage")]
+    fn new_listing_needs_the_storage_deposit() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST - 1);
+    }
+    #[test]
+    fn excess_storage_deposit_is_refunded_and_only_the_storage_amount_is_kept() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, 5 * LIST);
+        assert_eq!(transfers(), vec![("alice.near".to_string(), 4 * LIST)], "excess over LIST_STORAGE_DEPOSIT goes back now");
+        assert_eq!(listings().get(&"k1".to_string()).unwrap().deposit, U128(LIST), "the stored deposit is the storage amount, not the attachment");
+    }
+    #[test]
+    fn price_update_with_one_yocto_keeps_the_deposit() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        list(&mut c, "alice.near", "k1", 2 * NEAR, 1);
+        assert_eq!(listings().get(&"k1".to_string()), Some(Listing { seller: acc("alice.near"), price: U128(2 * NEAR), deposit: U128(LIST) }));
+        assert!(transfers().is_empty(), "no refund and no second deposit");
+        assert_eq!(events("key_list"), vec![keyhole("key_list", json!({"token_id": "k1", "seller": "alice.near", "price": (2 * NEAR).to_string()}))]);
+        assert_eq!(index_len(), 1);
+    }
+    #[test] #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+    fn price_update_without_one_yocto_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        list(&mut c, "alice.near", "k1", 2 * NEAR, 0);
+    }
+
+    // ---- nft_unlist ----
+    #[test] fn unlist_refunds_the_deposit_and_clears_the_index() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("alice.near", y(1)); c.nft_unlist("k1".into());
+        assert_eq!(listing(&c, "k1"), None);
+        assert_eq!(index_len(), 0);
+        assert_eq!(transfers(), vec![("alice.near".to_string(), LIST)]);
+        assert_eq!(events("key_unlist"), vec![keyhole("key_unlist", json!({"token_id": "k1", "seller": "alice.near"}))]);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"));
+    }
+    #[test] #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+    fn unlist_needs_one_yocto() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("alice.near", y(0)); c.nft_unlist("k1".into());
+    }
+    #[test] #[should_panic(expected = "only the seller or the owner can unlist")]
+    fn unlist_by_a_stranger_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("mallory.near", y(1)); c.nft_unlist("k1".into());
+    }
+    #[test] #[should_panic(expected = "no listing")]
+    fn unlist_without_a_listing_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); c.nft_unlist("k1".into());
+    }
+
+    // ---- nft_buy ----
+    #[test] fn buy_moves_the_key_pays_the_split_and_refunds_the_excess() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        buy(&mut c, "bob.near", "k1", NEAR + NEAR / 5);
+        // key and listing
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+        assert_eq!(listing(&c, "k1"), None);
+        assert_eq!(index_len(), 0);
+        assert_eq!(c.holder_tier(acc("bob.near")), Some(2));
+        assert_eq!(c.holder_tier(acc("alice.near")), None);
+        // money: treasury 5 %, seller price - royalty + the listing deposit, buyer the 0.2 NEAR excess
+        assert_eq!(transfers().len(), 3, "exactly three transfers: {:?}", transfers());
+        assert_eq!(paid("treasury.near"), NEAR / 20);
+        assert_eq!(paid("alice.near"), NEAR - NEAR / 20 + LIST);
+        assert_eq!(paid("bob.near"), NEAR / 5);
+        // one nft_transfer, memo sale, no authorized_id (the owner listed it, nobody was approved)
+        let tr = events("nft_transfer");
+        assert_eq!(tr.len(), 1);
+        assert_eq!(tr[0]["data"][0]["memo"], "sale");
+        assert_eq!(tr[0]["data"][0]["old_owner_id"], "alice.near");
+        assert_eq!(tr[0]["data"][0]["new_owner_id"], "bob.near");
+        assert!(tr[0]["data"][0].get("authorized_id").is_none());
+        assert!(events("key_unlist").is_empty(), "a sale ends the listing inside key_sale");
+        // the sale event, exact content
+        assert_eq!(events("key_sale"), vec![keyhole("key_sale", json!({
+            "token_id": "k1", "seller": "alice.near", "buyer": "bob.near",
+            "price": NEAR.to_string(), "royalty": (NEAR / 20).to_string(),
+        }))]);
+    }
+    #[test] fn exact_price_sends_no_refund_and_no_royalty_when_royalty_is_zero() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("owner.near", y(1)); c.set_royalty(acc("treasury.near"), 0);
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        buy(&mut c, "bob.near", "k1", NEAR);
+        assert_eq!(transfers(), vec![("alice.near".to_string(), NEAR + LIST)], "seller gets the whole price and the deposit");
+    }
+    #[test] fn buy_clears_approvals_and_refunds_their_storage_to_the_seller() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", NearToken::from_millinear(10)); c.nft_approve("k1".into(), acc("market.near"), None);
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        buy(&mut c, "bob.near", "k1", NEAR);
+        let tok = c.nft_token("k1".into()).unwrap();
+        assert_eq!(tok.approved_account_ids, Some(HashMap::new()), "approvals cleared");
+        assert!(!c.nft_is_approved("k1".into(), acc("market.near"), None));
+        assert!(paid("alice.near") > NEAR - NEAR / 20 + LIST, "the seller also gets the approval storage back");
+        assert_eq!(events("nft_transfer")[0]["data"][0].get("authorized_id"), None);
+    }
+    #[test] #[should_panic(expected = "attached deposit is below the listing price")]
+    fn buy_with_too_little_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        buy(&mut c, "bob.near", "k1", NEAR - 1);
+    }
+    #[test] #[should_panic(expected = "the seller cannot buy its own key")]
+    fn seller_cannot_buy_its_own_key() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        buy(&mut c, "alice.near", "k1", NEAR);
+    }
+    #[test] #[should_panic(expected = "one key per account")]
+    fn a_buyer_who_already_holds_a_key_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); mint(&mut c, "k2", "bob.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        buy(&mut c, "bob.near", "k1", NEAR);
+    }
+    #[test] #[should_panic(expected = "no listing")]
+    fn buy_without_a_listing_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        buy(&mut c, "bob.near", "k1", NEAR);
+    }
+    #[test] fn stale_listing_is_removed_refunded_and_the_buyer_gets_the_attachment_back() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        // The key leaves alice without the listing ending. No public path does this (every path ends the listing),
+        // so the test moves the key with the library's raw transfer.
+        c.tokens.internal_transfer_unguarded(&"k1".to_string(), &acc("alice.near"), &acc("bob.near"));
+        buy(&mut c, "carol.near", "k1", NEAR);
+        assert_eq!(listing(&c, "k1"), None);
+        assert_eq!(index_len(), 0);
+        assert_eq!(transfers(), vec![("alice.near".to_string(), LIST), ("carol.near".to_string(), NEAR)]);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"), "no transfer happened");
+        assert!(events("key_sale").is_empty());
+        assert!(events("nft_transfer").is_empty());
+        assert_eq!(events("key_listing_stale"), vec![keyhole("key_listing_stale", json!({"token_id": "k1", "seller": "alice.near", "owner": "bob.near"}))]);
+    }
+
+    // ---- every other transfer path ends the listing ----
+    #[test] fn plain_transfer_ends_the_listing_and_refunds_the_deposit() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, Some("gift".into()));
+        assert_eq!(listing(&c, "k1"), None);
+        assert_eq!(index_len(), 0);
+        assert_eq!(transfers(), vec![("alice.near".to_string(), LIST)]);
+        assert_eq!(events("key_unlist").len(), 1);
+        assert_eq!(events("nft_transfer").len(), 1, "still exactly one nft_transfer");
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+    }
+    #[test] fn transfer_call_ends_the_listing_and_refunds_the_deposit() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("alice.near", y(1)); let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "".into());
+        assert_eq!(listing(&c, "k1"), None);
+        assert_eq!(index_len(), 0);
+        assert_eq!(paid("alice.near"), LIST);
+        assert_eq!(c.pending_return_count(acc("alice.near")), 1);
+    }
+    #[test] fn approved_market_transfer_payout_ends_the_listing() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", NearToken::from_millinear(10)); c.nft_approve("k1".into(), acc("market.near"), None);
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("market.near", y(1));
+        let p = c.nft_transfer_payout(acc("bob.near"), "k1".into(), Some(1), Some("sale".into()), U128(NEAR), Some(10)).payout;
+        assert_eq!(p[&acc("treasury.near")], U128(NEAR / 20));
+        assert_eq!(listing(&c, "k1"), None);
+        assert_eq!(index_len(), 0);
+        assert!(paid("alice.near") >= LIST, "the listing deposit goes back to the seller");
+        assert_eq!(events("key_unlist").len(), 1);
+        let tr = events("nft_transfer");
+        assert_eq!(tr.len(), 1, "one nft_transfer for the payout transfer");
+        assert_eq!(tr[0]["data"][0]["authorized_id"], "market.near");
+    }
+    #[test] fn key_returned_by_resolve_ends_a_listing_the_receiver_made() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "".into());
+        // bob owns k1 while the call is in flight, and lists it
+        list(&mut c, "bob.near", "k1", NEAR, LIST);
+        assert_eq!(listing(&c, "k1").unwrap().seller, acc("bob.near"));
+        // nft_on_transfer asked for the key back: resolve returns it to alice (resolve gives false)
+        assert!(!resolve(&mut c, "alice.near", "bob.near", "k1", b"true"));
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"));
+        assert_eq!(listing(&c, "k1"), None, "the listing ended with the move");
+        assert_eq!(index_len(), 0);
+        assert_eq!(paid("bob.near"), LIST, "bob gets his listing deposit back");
+        assert_eq!(c.pending_return_count(acc("alice.near")), 0);
+    }
+    #[test] fn resolve_that_keeps_the_key_keeps_the_listing() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "".into());
+        list(&mut c, "bob.near", "k1", NEAR, LIST);
+        assert!(resolve(&mut c, "alice.near", "bob.near", "k1", b"false"));
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+        assert_eq!(listing(&c, "k1").unwrap().seller, acc("bob.near"));
+        assert_eq!(index_len(), 1);
+    }
+
+    // ---- views ----
+    #[test] fn nft_listings_pages_and_follows_every_exit() {
+        let mut c = setup();
+        for i in 0..5 { mint(&mut c, &format!("k{i}"), &format!("o{i}.near")); }
+        for i in 0..5 { list(&mut c, &format!("o{i}.near"), &format!("k{i}"), NEAR, LIST); }
+        let ids = |v: Vec<ListingView>| v.into_iter().map(|l| l.token_id).collect::<Vec<_>>().join(",");
+        assert_eq!(ids(c.nft_listings(None, None)), "k0,k1,k2,k3,k4");
+        assert_eq!(ids(c.nft_listings(Some(U128(1)), Some(2))), "k1,k2");
+        assert_eq!(ids(c.nft_listings(Some(U128(5)), None)), "", "past the end is empty");
+        assert_eq!(ids(c.nft_listings(None, Some(1))), "k0");
+        // unlist k1, sell k2, transfer k3 away
+        ctx("o1.near", y(1)); c.nft_unlist("k1".into());
+        buy(&mut c, "buyer.near", "k2", NEAR);
+        ctx("o3.near", y(1)); c.nft_transfer(acc("new.near"), "k3".into(), None, None);
+        let mut left: Vec<ListingView> = c.nft_listings(None, None);
+        left.sort_by(|a, b| a.token_id.cmp(&b.token_id));
+        assert_eq!(left.iter().map(|l| l.token_id.as_str()).collect::<Vec<_>>(), vec!["k0", "k4"]);
+        for l in left {
+            assert_eq!(c.nft_token(l.token_id.clone()).unwrap().owner_id, l.seller, "every listing's seller owns its key");
+            assert_eq!(c.nft_listing(l.token_id.clone()), Some(l));
+        }
+        assert_eq!(index_len(), 2);
+        assert_eq!(listing(&c, "k2"), None);
+    }
+    #[test] #[should_panic(expected = "limit must be positive")]
+    fn zero_page_is_refused() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near"); list(&mut c, "alice.near", "k1", NEAR, LIST);
+        c.nft_listings(None, Some(0));
+    }
+    #[test] fn views_for_an_unlisted_key_are_empty() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        assert_eq!(listing(&c, "k1"), None);
+        assert!(c.nft_listings(None, None).is_empty());
+    }
+
+    // ---- tiers and the rest of v2.4 ----
+    #[test] fn a_listed_key_can_still_earn_a_tier_and_the_buyer_holds_it() {
+        let mut c = setup(); mint_tier(&mut c, "k1", "alice.near", 1);
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("minter.near", y(0)); c.nft_set_tier("k1".into(), 3);
+        assert_eq!(c.holder_tier(acc("alice.near")), Some(3));
+        assert_eq!(listing(&c, "k1").unwrap().price, U128(NEAR), "a raise does not change the listing");
+        buy(&mut c, "bob.near", "k1", NEAR);
+        assert_eq!(c.holder_tier(acc("bob.near")), Some(3));
+        assert_eq!(c.nft_tier("k1".into()), Some(3));
+    }
+    #[test] #[should_panic(expected = "only minter")]
+    fn the_seller_cannot_raise_a_listed_tier() {
+        let mut c = setup(); mint_tier(&mut c, "k1", "alice.near", 1);
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        ctx("alice.near", y(0)); c.nft_set_tier("k1".into(), 2);
+    }
+    #[test] fn sale_leaves_supply_and_config_alone() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        let cfg = near_sdk::serde_json::to_string(&c.config()).unwrap();
+        list(&mut c, "alice.near", "k1", NEAR, LIST);
+        buy(&mut c, "bob.near", "k1", NEAR);
+        assert_eq!(c.nft_total_supply(), U128(1));
+        assert_eq!(near_sdk::serde_json::to_string(&c.config()).unwrap(), cfg);
     }
 }
