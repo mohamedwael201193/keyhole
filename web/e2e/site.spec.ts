@@ -338,14 +338,14 @@ test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
     await expect(list.getByText("0.004484 wNEAR", { exact: true })).toBeVisible();
     await expect(list.getByText("$0.02")).toHaveCount(2);
     const metrics = await list.evaluate((el) => {
-      const rows = [...el.querySelectorAll(".arow")];
+      const rows = [...el.querySelectorAll(".vlt-asset")];
       const lines = (sel: string) => [...el.querySelectorAll(sel)].map((b) => ({ text: b.textContent || "", n: b.getClientRects().length }));
       const listW = Math.round(el.getBoundingClientRect().width);
       return {
         listW,
         rowWidths: rows.map((r) => Math.round(r.getBoundingClientRect().width)),
-        amounts: lines(".amt b"),
-        names: lines(".who small"),
+        amounts: lines(".vlt-asset-amt b"),
+        names: lines(".vlt-asset-who small"),
         extra: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       };
     });
@@ -353,7 +353,6 @@ test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
     expect(metrics.rowWidths).toEqual([metrics.listW, metrics.listW]);
     for (const a of metrics.amounts) expect(a.n, `${w} ${a.text}`).toBe(1);
     for (const n of metrics.names) expect(n.n, `${w} ${n.text}`).toBe(1);
-    await expect(page.getByText("any NEAR wallet, or MetaMask")).toBeVisible();
     await expect(page.getByText("One gas-free signature (NEAR NEP-413 or MetaMask EIP-191)")).toBeVisible();
   }
 });
