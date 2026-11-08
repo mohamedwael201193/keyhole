@@ -10,7 +10,7 @@ describe("/vault v3 layout", () => {
     expect(v).toContain('testid="balance-card"');
     expect(v).toContain('t("vault.sealed")');
     expect(v).toContain('testid="balance-btn"');
-    expect(v).toContain('"Unseal"');
+    expect(v).toContain('"Unlock to read"');
   });
 
   it("keeps the asset list, deposit and withdraw as sheets", () => {
@@ -29,7 +29,9 @@ describe("/vault v3 layout", () => {
     expect(v).toContain('testid="settings-card"');
     expect(v).toContain('<Tabs id="vset"');
     for (const tab of ["limits", "session", "lock"]) expect(v).toContain(`id: "${tab}"`);
-    expect(v).toContain("<SessionCard tokenId={held.token.token_id} />");
+    expect(v).toContain('data-testid="vault-session"');
+    expect(v).toContain('"session-unlock"');
+    expect(v).not.toContain("<SessionCard");
   });
 
   it("trading is a link to /swap, not a form on the vault", () => {
@@ -56,5 +58,20 @@ describe("/vault v3 layout", () => {
 describe("/swap is the trade screen", () => {
   it("the sidebar Swap goes to /swap", () => {
     expect(src("../components/app/AppShell.tsx")).toContain('href: "/swap"');
+  });
+});
+
+describe("/vault uses the shared key store and the tokens-only design", () => {
+  it("reads the holder key from the store, not its own lookup", () => {
+    const v = src("../app/vault/view.tsx");
+    expect(v).toContain("useKeyStore()");
+    expect(v).toContain("heldFrom(store, accountId)");
+    expect(v).not.toContain("useHeldKey");
+    expect(v).not.toContain("tokensFor(");
+  });
+  it("the vault stylesheet uses no !important and no literal colours (tokens only)", () => {
+    const css = src("../app/vault/vault.css");
+    expect(css).not.toContain("!important");
+    expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   });
 });

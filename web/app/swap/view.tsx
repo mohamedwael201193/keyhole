@@ -12,10 +12,11 @@ import { shortAccount } from "@/lib/near";
 import { tx } from "@/lib/config";
 import { assetByToken, formatAmount, formatUsdMicro, fromBaseUnits, priceToMicro, shortTokenId, tradeSummary, valueMicro, type PriceBook, type RawBalance, type TokenPrice } from "@/lib/amount";
 import { SETTLEMENTS } from "@/lib/settlements";
-import { useHeldKey } from "@/lib/useHeldKey";
+import { heldFrom, useKeyStore } from "@/lib/keyStore";
 import { useLogVerified } from "@/lib/useLogVerified";
 import { swapStep, SWAP_LABEL } from "@/lib/swapFlow";
 import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/tokens";
+import { minutesLeft } from "@/lib/session";
 import "./swap.css";
 
 type Quote = { amountInFormatted?: string; amountOutFormatted?: string; amountInUsd?: string; amountOutUsd?: string; minAmountOut?: string; timeEstimate?: number };
@@ -59,7 +60,8 @@ function rawFor(bal: RawBalance[] | null, id: string): string {
  */
 export function SwapView() {
   const { accountId, connect, session, startSession, pending } = useWallet();
-  const { held, keyMiss, lookingUp } = useHeldKey(accountId);
+  const store = useKeyStore();
+  const { held, keyMiss, lookingUp, failed } = heldFrom(store, accountId);
   const quote = useSigned("quote");
   const swap = useSigned("swap");
   const balance = useSigned("balance");
@@ -89,7 +91,7 @@ export function SwapView() {
   const units = toBaseUnits(amount, from.decimals);
   const tradeKey = `${fromId}:${toId}:${units ?? ""}`;
   const samePair = fromId === toId;
-  const sessionLive = !!(session && held && session.token_id === held.token.token_id);
+  const sessionLive = !!(session && held && session.account === accountId && session.token_id === held.token.token_id && minutesLeft(session) > 0);
   const quoteFresh = !!quoted && quoted.key === tradeKey;
   const swapDone = !!(swap.res?.output?.ok && swap.res.output.op === "swap" && done);
 
@@ -119,6 +121,7 @@ export function SwapView() {
   const usdSrc = qq ?? dq;
   const spread = usdSrc && usdSrc.amountInUsd != null && usdSrc.amountOutUsd != null ? Number(usdSrc.amountInUsd) - Number(usdSrc.amountOutUsd) : null;
   const eta = qq?.timeEstimate ?? dq?.timeEstimate ?? null;
+  const outUsd = usdSrc?.amountOutUsd != null ? Number(usdSrc.amountOutUsd) : null;
   const minOutText = quoteFresh && quoted?.minOut ? `${fromBaseUnits(quoted.minOut, to.decimals, 6)} ${to.symbol}` : null;
 
   // The public price book for the USD lines. The page works without it.
@@ -169,10 +172,23 @@ export function SwapView() {
   }, [pending]);
   useEffect(() => { if (swap.res) sessionStorage.removeItem(OP_CTX); }, [swap.res]);
   const readBalance = balance.run;
+  const runHistory = history.run;
   useEffect(() => {
     if (!swap.res?.output?.ok || swap.res.output.op !== "swap" || !session) return;
     void readBalance({}, { quiet: true });
   }, [swap.res, readBalance, session]);
+
+  // With a live session the balance and the history read by themselves, once per session (no popup). Guarded so it cannot loop.
+  const heldId = held?.token.token_id ?? null;
+  const autoFor = useRef("");
+  useEffect(() => {
+    if (!sessionLive || !accountId || !heldId) { autoFor.current = ""; return; }
+    const k = `${accountId}:${heldId}:${session?.token ?? ""}`;
+    if (autoFor.current === k) return;
+    autoFor.current = k;
+    void readBalance({}, { quiet: true });
+    void runHistory({}, { quiet: true });
+  }, [sessionLive, accountId, heldId, session, readBalance, runHistory]);
 
   const step = swapStep({
     signedIn: !!accountId, lookingUp, keyMiss, hasKey: !!held, sessionLive,
@@ -257,9 +273,15 @@ export function SwapView() {
           />
           {!balanceText && accountId && (
             <div className="sw-hint">
-              <Button variant="ghost" size="sm" loading={balance.busy} loadingLabel="Reading your balance" onClick={() => void balance.run({})} testid="swap-balance-btn">
-                {sessionLive ? "Read balance (session, no popup)" : "Sign to see balance"}
-              </Button>
+              {sessionLive ? (
+                <Button variant="ghost" size="sm" loading={balance.busy} loadingLabel="Reading your balance" onClick={() => void balance.run({})} testid="swap-balance-btn">
+                  Read balance (session, no popup)
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" loading={unlocking} loadingLabel="Waiting for your wallet" onClick={() => void unlock()} testid="swap-balance-btn">
+                  Unlock to read balance
+                </Button>
+              )}
             </div>
           )}
           {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
@@ -277,9 +299,12 @@ export function SwapView() {
             {dryBusy && !estimate && !accountId ? <span className="sw-busy" role="status">Checking price…</span> : !accountId && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
           </div>
           <div className="sw-recv-row">
-            <output className={`sw-amt${estimate ? "" : " empty"}`} aria-labelledby="sw-recv-label" data-testid="swap-receive">
-              {estimate ? formatAmount(estimate) : "—"}
-            </output>
+            <div className="sw-amt-col">
+              <output className={`sw-amt${estimate ? "" : " is-empty"}`} aria-labelledby="sw-recv-label" data-testid="swap-receive">
+                {estimate ? formatAmount(estimate) : "—"}
+              </output>
+              {outUsd != null && Number.isFinite(outUsd) && <small className="sw-amt-usd">about {formatUsdMicro(Math.max(0, Math.round(outUsd * 1e6)))}</small>}
+            </div>
             <TokenSelect label="Receive in" options={options} value={toId} onChange={pickTo} testid="swap-to" notice={notice} />
           </div>
           {dryMsg && !accountId && <p className="sw-note" role="alert" data-testid="dry-msg">{dryMsg}</p>}
@@ -310,6 +335,11 @@ export function SwapView() {
 
         {!accountId && <p className="sw-note">Connect a wallet to swap. Checking a price needs no wallet and moves nothing.</p>}
         {accountId && held && <p className="sw-note">Signed in as <span className="mono">{shortAccount(accountId)}</span>. Your key is held.</p>}
+        {failed && (
+          <p className="sw-note" role="alert">
+            Could not read your key from NEAR mainnet just now. <Button variant="ghost" size="sm" onClick={store.refresh} testid="swap-key-retry">Try again</Button>
+          </p>
+        )}
         {unlockErr && <ErrorBox code={unlockErr} />}
         {quote.res?.error && <ErrorBox code={quote.res.error.code} retryAfter={quote.res.error.retry_after} />}
         {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} />}
@@ -325,11 +355,15 @@ export function SwapView() {
       <Card as="section" className="sw-recent" testid="swap-recent" aria-labelledby="sw-recent-h">
         <div className="sw-recent-head">
           <h2 id="sw-recent-h">{hist ? "Your recent swaps" : "Recent public orders"}</h2>
-          {accountId && !history.res && (
+          {accountId && !history.res && (sessionLive ? (
             <Button variant="secondary" size="sm" loading={history.busy} loadingLabel="Reading your history" onClick={() => void history.run({})} testid="history-btn">
               Read my history
             </Button>
-          )}
+          ) : (
+            <Button variant="secondary" size="sm" loading={unlocking} loadingLabel="Waiting for your wallet" onClick={() => void unlock()} testid="history-btn">
+              Unlock to read
+            </Button>
+          ))}
         </div>
         {hist && historyOk === null && <p className="sw-note">Checking the log…</p>}
         {hist && historyOk === false && <p className="sw-note" data-testid="swap-log-hidden">Not shown: the log did not verify.</p>}

@@ -23,11 +23,12 @@
 
 /* ---- Key hero ---- */
 .ov-hero {
-  display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: var(--space-6); align-items: start;
+  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--space-6); align-items: start;
   min-width: 0; padding: var(--space-6); border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
 }
-.ov-art { margin: 0; min-width: 0; justify-self: start; }
-.ov-art img { display: block; width: 180px; height: auto; max-width: 100%; }
+/* The key artwork sits in a fixed box, centred, and is scaled to fit (never cropped). 200 x 260 on desktop, 140 x 180 on phones. */
+.ov-art { margin: 0; min-width: 0; justify-self: start; width: 200px; height: 260px; display: grid; place-items: center; }
+.ov-art img { display: block; width: 100%; height: 100%; max-width: 100%; object-fit: contain; object-position: center; }
 .ov-hero-body { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
 .ov-hero-wide { grid-column: 1 / -1; }
 .ov-vault {
@@ -171,7 +172,6 @@
   .app-main .ov { padding: var(--space-5) var(--space-4) var(--space-7); gap: var(--space-4); }
   .ov-hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: var(--space-5); }
   .ov-art { justify-self: center; }
-  .ov-art img { width: 150px; }
   .ov-title { font-size: 30px; }
   .ov-name { font-size: 28px; }
   .ov-amount { font-size: 28px; }
@@ -179,6 +179,7 @@
 }
 @media (max-width: 419px) {
   .app-main .ov { padding: var(--space-4) var(--space-4) var(--space-7); }
+  .ov-art { width: 140px; height: 180px; }
   .ov-hero, .ov-card { padding: var(--space-4); }
   .ov-out { margin-top: var(--space-4); }
   .ov-signin { padding: var(--space-4); }

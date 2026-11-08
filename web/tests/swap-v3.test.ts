@@ -71,3 +71,15 @@ describe("/swap screen wiring", () => {
     expect(src("../app/swap/page.tsx")).toContain("SwapView");
   });
 });
+
+describe("/swap receive field (production QA)", () => {
+  it("the empty amount does not use the .empty class (design2.css paints .empty as a gradient panel)", () => {
+    const v = src("../app/swap/view.tsx");
+    expect(v).not.toContain('" empty"');
+    expect(v).toContain('" is-empty"');
+    expect(src("../app/swap/swap.css")).toContain(".sw-amt.is-empty");
+  });
+  it("the receive field shows a small USD line like the pay field", () => {
+    expect(src("../app/swap/view.tsx")).toContain('className="sw-amt-usd"');
+  });
+});
