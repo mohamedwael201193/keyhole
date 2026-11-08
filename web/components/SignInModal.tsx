@@ -91,11 +91,8 @@ const GOOGLE_G = (
 );
 const NEAR_MARK = <Image src="/logos/near.svg" alt="" width={20} height={20} unoptimized />;
 const EVM_MARK = <Image src="/logos/eth.svg" alt="" width={20} height={20} unoptimized />;
-const METEOR_MARK = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false">
-    <path d="M3.5 20.5 13 11" /><circle cx="16.5" cy="7.5" r="3.5" />
-  </svg>
-);
+// The mark @near-wallet-selector/meteor-wallet ships (assets/meteor-icon.png), the same one its wallet list shows.
+const METEOR_MARK = <Image src="/logos/meteor.png" alt="" width={20} height={20} unoptimized />;
 
 export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, onNear, onMeteor, onOther }: SignInModalProps) {
   const [last, setLast] = useState<SignInMethod | null>(null);
