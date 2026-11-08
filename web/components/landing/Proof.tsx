@@ -7,7 +7,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CountUp } from "@/components/motion";
 import { useI18n } from "@/lib/i18n";
 
 export function SupplyStat({ initial }: { initial: number | null }) {
@@ -43,7 +42,7 @@ export function ProofStrip({ supply, checks, hash, orders }: {
         </div>
         <div>
           <dt>{t("home.stChecks")}</dt>
-          <dd><Link href="/verify" className="pf-link" data-testid="checks-stat"><CountUp value={checks} /></Link></dd>
+          <dd><Link href="/verify" className="pf-link" data-testid="checks-stat">{checks}</Link></dd>
         </div>
         <div>
           <dt>{t("home.stOrders")}</dt>
