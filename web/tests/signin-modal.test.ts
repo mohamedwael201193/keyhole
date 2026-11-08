@@ -73,7 +73,7 @@ describe("the popup-blocked hint", () => {
     expect(popupBlockedHint("open popup")).toBe(POPUP_BLOCKED_HINT);
   });
   it("says what to do, in plain words", () => {
-    expect(POPUP_BLOCKED_HINT).toBe("Your browser blocked the wallet window. Allow pop-ups for this site (the icon at the right of the address bar), then try again.");
+    expect(POPUP_BLOCKED_HINT).toBe("Your browser or an ad blocker stopped the wallet window. Allow pop-ups for this site and pause the ad blocker here, then try again.");
   });
   it("leaves other errors and empty text alone", () => {
     expect(popupBlockedHint("User rejected the request")).toBeNull();

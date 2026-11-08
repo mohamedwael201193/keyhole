@@ -32,7 +32,7 @@ function rememberMethod(m: SignInMethod) {
 export const SIGN_NOTE = "Connecting and minting ask only for a signature. A deposit is a normal transfer you approve in your wallet.";
 
 /** Shown when the browser blocked the wallet's own window (Meteor opens one to sign in and to sign). */
-export const POPUP_BLOCKED_HINT = "Your browser blocked the wallet window. Allow pop-ups for this site (the icon at the right of the address bar), then try again.";
+export const POPUP_BLOCKED_HINT = "Your browser or an ad blocker stopped the wallet window. Allow pop-ups for this site and pause the ad blocker here, then try again.";
 const POPUP_BLOCKED = /open popup|popup.*block|POPUP_WINDOW_OPEN_FAILED/i;
 
 /** The hint for a sign-in or sign error whose text says the wallet window was blocked, else null. Pure. */
