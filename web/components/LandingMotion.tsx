@@ -4,7 +4,7 @@
  * and without JavaScript; the animation only starts after hydration. Everything is off under prefers-reduced-motion and when the
  * page is opened with ?static (the same switch as HomeMotion). matchMedia reverts every ScrollTrigger on unmount.
  */
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -48,48 +48,47 @@ export function HeroIntro({ children, className }: { children: ReactNode; classN
 }
 
 /**
- * The how-it-works moment. The section is two screens tall; its stage sticks inside it (CSS), and a ScrollTrigger scrubs the
- * pulses along the lines and lights each node as the pulse reaches it. No pin, no scroll-jacking, nothing else moves.
- * Pulses are `[data-pulse]` circles on a `[data-path]` line, running from `data-from` to `data-to` of the scroll; nodes are
- * `[data-node]` lit at `data-at`. Phones and tablets keep the still diagram (no pulses are drawn there).
+ * The handover, the one dealt moment. On desktop the section is pinned for one viewport of scroll and its three steps are
+ * reached in turn: the step the scroll is on is lit, the others rest dimmed (`data-on` on each `[data-step]`). Phones, tablets
+ * and reduced motion get the plain stack with every step at full strength; nothing is pinned there.
+ *
+ * The pin is set up in a layout effect so it is undone before React removes the section from the DOM (a pin wraps the
+ * section in a spacer). Undoing it in a passive effect would leave the section inside the spacer when the page unmounts.
  */
-export function HowMoment({ children, className, labelledBy }: { children: ReactNode; className?: string; labelledBy?: string }) {
+export function HandoverMoment({ children, className, id, labelledBy }: { children: ReactNode; className?: string; id?: string; labelledBy?: string }) {
   const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = ref.current;
     if (!root) return;
     register();
     const mm = gsap.matchMedia();
     mm.add(`${DESKTOP} and ${MOTION_OK}`, () => {
       if (motionOff()) return;
-      const pulses = Array.from(root.querySelectorAll<SVGCircleElement>("[data-pulse]")).flatMap((el) => {
-        const path = root.querySelector<SVGPathElement>(`#${CSS.escape(el.dataset.path ?? "")}`);
-        if (!path) return [];
-        return [{ el, path, len: path.getTotalLength(), from: Number(el.dataset.from), to: Number(el.dataset.to) }];
-      });
-      const nodes = Array.from(root.querySelectorAll<HTMLElement>("[data-node]")).map((el) => ({ el, at: Number(el.dataset.at) }));
+      const steps = Array.from(root.querySelectorAll<HTMLElement>("[data-step]"));
+      const light = (p: number) => {
+        const active = Math.min(steps.length - 1, Math.floor(p * steps.length));
+        steps.forEach((el, i) => { el.dataset.on = i <= active ? "true" : "false"; });
+      };
+      root.dataset.pinned = "true";
+      light(0);
       const st = ScrollTrigger.create({
         trigger: root,
         start: "top top",
-        end: "bottom bottom",
+        end: () => `+=${window.innerHeight}`,
+        pin: true,
         scrub: 0.6,
-        onUpdate: (self) => {
-          const p = self.progress;
-          for (const { el, path, len, from, to } of pulses) {
-            const local = gsap.utils.clamp(0, 1, (p - from) / (to - from));
-            const pt = path.getPointAtLength(local * len);
-            el.setAttribute("cx", pt.x.toFixed(1));
-            el.setAttribute("cy", pt.y.toFixed(1));
-            el.style.opacity = p < from || p > to ? "0" : "1";
-          }
-          for (const n of nodes) n.el.classList.toggle("is-lit", p >= n.at);
-        },
+        invalidateOnRefresh: true,
+        onUpdate: (self) => light(self.progress),
       });
-      // Fonts and images change the layout after first paint; re-measure so the scroll range lines up.
+      // Fonts change the layout after first paint; re-measure so the pin length matches the screen.
       void document.fonts?.ready.then(() => ScrollTrigger.refresh());
-      return () => st.kill();
+      return () => {
+        st.kill(true);
+        delete root.dataset.pinned;
+        steps.forEach((el) => { delete el.dataset.on; });
+      };
     });
     return () => mm.revert();
   }, []);
-  return <section ref={ref} id="how" className={className} aria-labelledby={labelledBy}>{children}</section>;
+  return <section ref={ref} id={id} className={className} aria-labelledby={labelledBy}>{children}</section>;
 }

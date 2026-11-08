@@ -641,11 +641,12 @@ test("verify: one flipped byte of the TD report fails Intel DCAP while the bindi
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "false");
 });
 
-test("landing: says each key holds sealed credentials and links to the mainnet proof", async ({ page }) => {
+test("landing: the handover shows the real withdraw, transfer and refused call, each with its proof", async ({ page }) => {
   await page.goto("/?static");
-  const l = page.getByTestId("sealed-line");
-  await expect(l).toContainText("NFTs that do something.");
-  await expect(l.getByRole("link")).toHaveAttribute("href", "/judge");
+  await expect(page.getByTestId("handover-step-3")).toContainText("not_owner");
+  await expect(page.getByTestId("handover-link-1")).toHaveAttribute("href", "/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae");
+  await expect(page.getByTestId("handover-link-2")).toHaveAttribute("href", "https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD");
+  await expect(page.getByTestId("handover-link-3")).toHaveAttribute("href", "/verify?call=e805f050-d416-4a04-9b12-270adbe02068");
 });
 
 test("verify: Intel revocation lists, TCB Info and QE identity are checked live and the status is shown as Intel reports it", async ({ page }) => {
@@ -722,11 +723,10 @@ test("gallery: every live card shows its token id and links to its history", asy
   await expect(card.getByTestId("key-link")).toHaveAttribute("href", `/key?id=${encodeURIComponent(tid)}`);
 });
 
-test("home: the preview keys are labelled not minted, and the final banner leads to a live quote", async ({ page }) => {
+test("home: the final band leads to the app and to the proof", async ({ page }) => {
   await page.goto("/?static");
-  await expect(page.getByTestId("concept-banner")).toContainText("not minted tokens");
-  await expect(page.getByTestId("concept-banner").locator('a[href="/gallery"]')).toBeVisible();
-  await expect(page.getByTestId("chain-settle")).toHaveAttribute("href", "/settle");
+  await expect(page.getByTestId("cta-get-key")).toHaveAttribute("href", "/dashboard");
+  await expect(page.getByTestId("cta-proof")).toHaveAttribute("href", "/judge");
   await expect(page.getByText("Eight assets.")).toHaveCount(0);
 });
 

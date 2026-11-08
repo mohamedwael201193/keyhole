@@ -1,36 +1,52 @@
 "use client";
 /**
- * "Proof you can check": the numbers are real. The checks count is the browser checks on /verify (TOTAL_CHECKS); the two hashes
- * come from the build identity (lib/config.ts); the order count is the evidence file (lib/settlements.ts).
+ * "Proof, not promises": four live numbers, each a link to the place it can be checked. The holder count is read on the server
+ * (lib/landing.ts); when the server could not read it, SupplyStat polls /api/supply for a short while. The order count is the
+ * evidence file (lib/settlements.ts).
  */
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CountUp } from "@/components/motion";
 import { useI18n } from "@/lib/i18n";
-import { SETTLEMENTS } from "@/lib/settlements";
 
-export function ProofStrip({ checks, workerHash, workerFull, contractHash, contractFull }: {
-  checks: number; workerHash: string; workerFull: string; contractHash: string; contractFull: string;
+export function SupplyStat({ initial }: { initial: number | null }) {
+  const [n, setN] = useState(initial);
+  useEffect(() => {
+    if (initial != null) return;
+    let cancel = false;
+    const tick = () => fetch("/api/supply").then((r) => r.json()).then((j) => {
+      if (!cancel && Number.isInteger(j?.supply)) setN(j.supply);
+    }).catch(() => {});
+    tick();
+    const id = window.setInterval(tick, 3_000);
+    const stop = window.setTimeout(() => window.clearInterval(id), 12_000);
+    return () => { cancel = true; window.clearInterval(id); window.clearTimeout(stop); };
+  }, [initial]);
+  return <span data-testid="supply">{n == null ? "—" : n}</span>;
+}
+
+export function ProofStrip({ supply, checks, hash, orders }: {
+  supply: number | null; checks: number; hash: string; orders: number;
 }) {
   const { t } = useI18n();
   return (
     <div className="pf">
       <dl className="pf-stats">
         <div>
-          <dt>{t("home.stChecks")}</dt>
-          <dd><Link href="/verify" className="pf-link" data-testid="checks-stat"><CountUp value={checks} /></Link></dd>
+          <dt>{t("home.supplyLabel")}</dt>
+          <dd><Link href="/keys" className="pf-link" data-testid="keys-stat"><SupplyStat initial={supply} /></Link></dd>
         </div>
         <div>
           <dt>{t("home.stHash")}</dt>
-          <dd><Link href="/judge" className="pf-link mono" data-testid="hash-stat" title={workerFull}>{workerHash}</Link></dd>
+          <dd><Link href="/judge" className="pf-link mono" data-testid="hash-stat">{hash}</Link></dd>
         </div>
         <div>
-          <dt>{t("home.stContract")}</dt>
-          <dd><Link href="/verify" className="pf-link mono" title={contractFull}>{contractHash}</Link></dd>
+          <dt>{t("home.stChecks")}</dt>
+          <dd><Link href="/verify" className="pf-link" data-testid="checks-stat">{checks}</Link></dd>
         </div>
         <div>
           <dt>{t("home.stOrders")}</dt>
-          <dd data-testid="orders-stat">{SETTLEMENTS.length}</dd>
+          <dd><Link href="/settle" className="pf-link" data-testid="orders-stat">{orders}</Link></dd>
         </div>
       </dl>
       <div className="pf-actions">

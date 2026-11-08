@@ -4,15 +4,16 @@ import { HomeMotion } from "./HomeMotion";
 import { KeyArt } from "./Art";
 import { HeroDust } from "./HeroDust";
 import { CHAINS, Medal } from "./Medal";
-import { HeroIntro, HowMoment } from "./LandingMotion";
+import { HeroIntro, HandoverMoment } from "./LandingMotion";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/motion";
 import { useI18n } from "@/lib/i18n";
-import { CONTRACT_CODE_HASH, WORKER_WASM_SHA256 } from "@/lib/config";
-import type { Token } from "@/lib/near";
-import { KeyNow, SwapNow, TransferNow } from "./landing/Outcomes";
-import { HowDiagram } from "./landing/HowDiagram";
+import { SETTLEMENTS } from "@/lib/settlements";
+import type { TokenReach } from "@/lib/landing";
 import { ProofStrip } from "./landing/Proof";
-import { Collection } from "./landing/Collection";
+import { Handover } from "./landing/Handover";
+import { BuyerCheck } from "./landing/BuyerCheck";
+import { Reach } from "./landing/Reach";
 
 const ORBIT = CHAINS.map(([id, name], i) => {
   const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
@@ -22,12 +23,12 @@ const ORBIT = CHAINS.map(([id, name], i) => {
 /** The browser checks on /verify (TOTAL_CHECKS in app/verify/view.tsx). */
 const BROWSER_CHECKS = 37;
 
-/** Short forms of the two build hashes, full value on hover. */
-const WORKER_FULL = WORKER_WASM_SHA256[0];
+/** The three commands for a judge. The README and judge/ hold the same steps. */
+const CMD_CLONE = "git clone https://github.com/mohamedwael201193/keyhole && cd keyhole";
+const CMD_VERIFY = "node judge/verify-claims.mjs";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://keyhole.vercel.app";
 
-export function Landing({ supply, hash, tokens, tiers }: {
-  supply: number | null; hash: string; tokens: Token[]; tiers: (number | null)[];
-}) {
+export function Landing({ supply, hash, reach }: { supply: number | null; hash: string; reach: TokenReach | null }) {
   const { t } = useI18n();
   return (
     <div className="lp">
@@ -44,7 +45,7 @@ export function Landing({ supply, hash, tokens, tiers }: {
           <p className="lead lp-reveal">{t("land.lead")}</p>
           <div className="lp-cta lp-reveal">
             <Button href="/dashboard" size="lg" testid="start-cta">{t("home.launch")}</Button>
-            <Button href="/verify" size="lg" variant="secondary">{t("home.checkProof")}</Button>
+            <Button href="#handover" size="lg" variant="secondary" testid="handover-cta">{t("lp.watchHandover")}</Button>
           </div>
         </HeroIntro>
         <div className="stage-slot">
@@ -67,77 +68,95 @@ export function Landing({ supply, hash, tokens, tiers }: {
         </div>
       </section>
 
-      {/* 2. What you get: three outcomes, each drawn with real product UI from live data. */}
-      <section className="lp-sec" id="outcomes" aria-labelledby="out-h">
-        <div className="lp-wrap">
-          <h2 id="out-h" className="lp-h2">{t("home.outH")}</h2>
-          <div className="lp-outs">
-            <article className="lp-out">
-              <p className="lp-out-n mono" aria-hidden="true">01</p>
-              <h3>{t("home.out1t")}</h3>
-              <p>{t("home.out1d")}</p>
-              <div className="lp-out-vis"><KeyNow token={tokens[0] ?? null} tier={tiers[0] ?? null} /></div>
-            </article>
-            <article className="lp-out">
-              <p className="lp-out-n mono" aria-hidden="true">02</p>
-              <h3>{t("home.out2t")}</h3>
-              <p>{t("home.out2d")}</p>
-              <div className="lp-out-vis"><SwapNow /></div>
-            </article>
-            <article className="lp-out">
-              <p className="lp-out-n mono" aria-hidden="true">03</p>
-              <h3>{t("home.out3t")}</h3>
-              <p>{t("home.out3d")}</p>
-              <div className="lp-out-vis"><TransferNow /></div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. How a trade runs: the one dealt moment. Two screens tall; the diagram sticks inside it and the pulses run with the scroll. */}
-      <HowMoment className="lp-how" labelledBy="how-h">
-        <div className="lp-how-stick">
-          <div className="lp-wrap">
-            <h2 id="how-h" className="lp-h2">{t("home.howH")}</h2>
-            <p className="lp-lead" data-testid="sealed-line"><b>{t("land.sealedB")}</b> {t("land.sealedD")} <Link href="/judge" className="lp-link">{t("land.sealedLink")}</Link></p>
-            <HowDiagram />
-          </div>
-        </div>
-      </HowMoment>
-
-      {/* 4. Proof you can check: real numbers and a link to each way of checking. */}
+      {/* 2. Proof, not promises: four live numbers, each a link to where it is checked. */}
       <section className="lp-sec" id="proof" aria-labelledby="proof-h">
         <div className="lp-wrap">
-          <h2 id="proof-h" className="lp-h2">{t("home.proofH")}</h2>
-          <p className="lp-lead">{t("home.proofLead")}</p>
-          <ProofStrip
-            checks={BROWSER_CHECKS}
-            workerHash={hash}
-            workerFull={WORKER_FULL}
-            contractHash={CONTRACT_CODE_HASH.slice(0, 8)}
-            contractFull={CONTRACT_CODE_HASH}
-          />
+          <h2 id="proof-h" className="lp-h2">{t("lp.proofH")}</h2>
+          <p className="lp-lead">{t("lp.proofLead")}</p>
+          <ProofStrip supply={supply} checks={BROWSER_CHECKS} hash={hash} orders={SETTLEMENTS.length} />
         </div>
       </section>
 
-      {/* 5. The collection: a grid of real keys, then the labelled previews. */}
-      <section className="lp-sec" id="keys" aria-labelledby="keys-h">
+      {/* 3. The handover: the one dealt moment. Pinned on desktop, a plain stack elsewhere (LandingMotion.tsx). */}
+      <HandoverMoment className="lp-sec lp-handover" id="handover" labelledBy="handover-h">
         <div className="lp-wrap">
-          <Collection supply={supply} tokens={tokens} tiers={tiers} />
+          <h2 id="handover-h" className="lp-h2">{t("lp.handH")}</h2>
+          <p className="lp-lead">{t("lp.handLead")}</p>
+          <Handover />
+          <p className="lp-note">{t("lp.handNote")}</p>
+        </div>
+      </HandoverMoment>
+
+      {/* 4. Check a key before you buy it: the buyer panel, drawn with the /key styles and labelled as an example. */}
+      <section className="lp-sec" id="check" aria-labelledby="check-h">
+        <div className="lp-wrap">
+          <BuyerCheck />
         </div>
       </section>
 
-      {/* 6. Final call to action on the vault surface. The key artwork is the picture. */}
+      {/* 5. Trade anything, from anywhere: the 1Click count and real token marks, read when the page renders. */}
+      <section className="lp-sec" id="trade" aria-labelledby="trade-h">
+        <div className="lp-wrap">
+          <h2 id="trade-h" className="lp-h2">{t("lp.tradeH")}</h2>
+          <Reach reach={reach} />
+        </div>
+      </section>
+
+      {/* 6. Private by design: what the enclave sees and what anyone else sees. */}
+      <section className="lp-sec" id="private" aria-labelledby="private-h">
+        <div className="lp-wrap">
+          <h2 id="private-h" className="lp-h2">{t("lp.privH")}</h2>
+          <p className="lp-lead">{t("lp.privLead")}</p>
+          <div className="priv-cols">
+            <div className="priv-col" data-testid="sees-enclave">
+              <h3>{t("lp.encT")}</h3>
+              <ul>
+                <li>{t("lp.enc1")}</li>
+                <li>{t("lp.enc2")}</li>
+                <li>{t("lp.enc3")}</li>
+              </ul>
+            </div>
+            <div className="priv-col priv-col--public" data-testid="sees-public">
+              <h3>{t("lp.pubT")}</h3>
+              <ul>
+                <li>{t("lp.pub1")}</li>
+                <li>{t("lp.pub2")}</li>
+                <li>{t("lp.pub3")}</li>
+              </ul>
+            </div>
+          </div>
+          <p className="priv-line">{t("lp.privLine")}</p>
+          <div className="lp-cta">
+            <Button href="/verify" variant="secondary">{t("lp.verifyCall")}</Button>
+            <Link href="/ask" className="lp-link lp-cta-link">{t("lp.askLink")}</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. For judges: three commands, each with a copy button. */}
+      <section className="lp-sec" id="judge" aria-labelledby="judge-h">
+        <div className="lp-wrap">
+          <h2 id="judge-h" className="lp-h2">{t("lp.judgeH")}</h2>
+          <p className="lp-lead">{t("lp.judgeLead")}</p>
+          <div className="code-card" data-testid="judge-commands">
+            <div className="code-row"><code>{CMD_CLONE}</code><CopyButton value={CMD_CLONE} /></div>
+            <div className="code-row"><code>{CMD_VERIFY}</code><CopyButton value={CMD_VERIFY} /></div>
+            <div className="code-row"><code>open /verify</code><CopyButton value={`${SITE}/verify`} /></div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. Final call to action on the vault surface. The key artwork is the picture. */}
       <section className="lp-end" id="cta" aria-labelledby="cta-h" data-dark>
         <div className="lp-keys" aria-hidden="true">
           <KeyArt n={5} alt="" width={415} height={1077} />
           <KeyArt n={7} alt="" width={469} height={1097} />
           <KeyArt n={9} alt="" width={496} height={1090} />
         </div>
-        <h2 id="cta-h">{t("land.ctaH")}<em>{t("land.ctaEm")}</em></h2>
+        <h2 id="cta-h">{t("lp.ctaH")}</h2>
         <div className="lp-cta lp-center">
-          <Button href="/dashboard" size="lg" variant="banner">{t("home.ctaLaunch")}</Button>
-          <Button href="/settle" variant="ghost" className="lp-end-link" testid="chain-settle">{t("home.ctaSettle")} →</Button>
+          <Button href="/dashboard" size="lg" variant="banner" testid="cta-get-key">{t("lp.getKey")}</Button>
+          <Button href="/judge" variant="ghost" className="lp-end-link" testid="cta-proof">{t("lp.readProof")}</Button>
         </div>
       </section>
     </div>
