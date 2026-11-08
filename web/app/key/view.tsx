@@ -8,6 +8,7 @@ import { Button, CopyBtn, Spinner } from "@/components/ui";
 import { TxResult } from "@/components/TxResult";
 import { useKeyChain } from "./useKeyChain";
 import { BeforeYouBuy, BuyerProof, ProofPanel } from "./buyer";
+import { SaleCard } from "./sale";
 import "./key.css";
 
 /** New ids are k + hex; the first keys were minted with plain numbers (0, 1, 2…). */
@@ -74,6 +75,7 @@ export function KeyHistoryView() {
         </section>
       )}
       {proof && <ProofPanel raw={proof} id={active} owner={chain.owner} minter={chain.minter} />}
+      {active && <SaleCard id={active} owner={chain.owner} royaltyBps={chain.royaltyBps} onChanged={chain.refresh} />}
       {active && legacy === null && <BuyerProof id={active} owner={chain.owner} />}
       {body && ck && (
         <>

@@ -64,3 +64,49 @@ export function entryDetail(e: HistEntry): string {
   if (e.kind === "withdraw" && e.chain) return `${amountText(e.amount, e.token)} to ${e.chain}`;
   return amountText(e.amount, e.token);
 }
+
+/**
+ * Earned-tier progress as the enclave reports it (worker `tier_progress`, tee/worker/src/lib.rs). Every field is a real
+ * number from the verified record; nothing here is estimated. `next` is null at the top tier.
+ */
+export type TierProgressRead = {
+  current: number;
+  next: number | null;
+  swaps: number;
+  volume_usd_micro: number;
+  swaps_needed: number;
+  volume_needed_usd_micro: number;
+  swaps_done: boolean;
+  volume_done: boolean;
+  met: boolean;
+};
+
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** The progress from a dashboard or level_up output, or null when any field is missing or not a number (nothing is guessed). */
+export function progressOf(raw: unknown): TierProgressRead | null {
+  const p = raw as Partial<Record<keyof TierProgressRead, unknown>> | null | undefined;
+  if (!p || typeof p !== "object") return null;
+  const next = p.next === null ? null : isNum(p.next) ? p.next : undefined;
+  if (next === undefined) return null;
+  if (!isNum(p.current) || !isNum(p.swaps) || !isNum(p.volume_usd_micro) || !isNum(p.swaps_needed) || !isNum(p.volume_needed_usd_micro)) return null;
+  if (typeof p.swaps_done !== "boolean" || typeof p.volume_done !== "boolean" || typeof p.met !== "boolean") return null;
+  return {
+    current: p.current, next, swaps: p.swaps, volume_usd_micro: p.volume_usd_micro, swaps_needed: p.swaps_needed,
+    volume_needed_usd_micro: p.volume_needed_usd_micro, swaps_done: p.swaps_done, volume_done: p.volume_done, met: p.met,
+  };
+}
+
+/** A bar's fill for `done` of `needed`, 0 to 100. A target of 0 is already met. */
+export function meterPct(done: number, needed: number): number {
+  if (!(needed > 0)) return 100;
+  return Math.max(0, Math.min(100, Math.floor((done / needed) * 100)));
+}
+
+/** The result of a level_up call that raised the tier (it sends nft_set_tier); null when nothing was raised. */
+export function levelUpOf(raw: unknown): { tierBefore: number; tierAfter: number; txHash: string } | null {
+  const o = raw as { tier_before?: unknown; tier_after?: unknown; tx_hash?: unknown } | null | undefined;
+  if (!o || typeof o.tx_hash !== "string" || o.tx_hash.length === 0) return null;
+  if (!isNum(o.tier_before) || !isNum(o.tier_after)) return null;
+  return { tierBefore: o.tier_before, tierAfter: o.tier_after, txHash: o.tx_hash };
+}

@@ -430,8 +430,8 @@
    "Swap and withdraw resume when the lock ends or the key is transferred."
   ],
   "listed": [
-   "This key is listed for sale.",
-   "Unlist it to move funds."
+   "This key is listed for sale, so the enclave has frozen swaps and withdrawals on it.",
+   "Unlist the key to swap or withdraw again. Nothing was sent."
   ],
   "not_owner": [
    "Only the current key holder can do this.",

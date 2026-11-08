@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Overview, type ActivityView, type BalanceView, type KeysView, type UnlockView } from "@/components/dashboard/Overview";
+import { Overview, type ActivityView, type BalanceView, type KeysView, type TierView, type UnlockView } from "@/components/dashboard/Overview";
 import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { useKeyStore } from "@/lib/keyStore";
 import { useLogCheck } from "@/lib/useLogCheck";
 import { assetRows, totalOf, type PriceBook } from "@/lib/amount";
 import { minutesLeft } from "@/lib/session";
-import type { HistEntry } from "@/lib/dashboard";
+import { levelUpOf, progressOf, type HistEntry } from "@/lib/dashboard";
 
 type RawBalances = Parameters<typeof assetRows>[0];
 
@@ -25,18 +25,23 @@ export function DashboardView() {
   const tokenId = store.primary?.token_id ?? null;
   const balance = useSigned("balance");
   const history = useSigned("history");
+  const dash = useSigned("dashboard");
+  const levelUp = useSigned("level_up");
   const [prices, setPrices] = useState<PriceBook>({});
   const { run: runBalance, reset: resetBalance } = balance;
   const { run: runHistory, reset: resetHistory } = history;
+  const { run: runDash, reset: resetDash } = dash;
+  const { run: runLevel, reset: resetLevel } = levelUp;
+  const { refresh: refreshKeys } = store;
   const [unlocking, setUnlocking] = useState(false);
   const [unlockErr, setUnlockErr] = useState<string | null>(null);
 
   // A read belongs to one account: switching or disconnecting clears what was read for the previous one.
-  useEffect(() => { resetBalance(); resetHistory(); }, [accountId, resetBalance, resetHistory]);
+  useEffect(() => { resetBalance(); resetHistory(); resetDash(); resetLevel(); }, [accountId, resetBalance, resetHistory, resetDash, resetLevel]);
 
   const live = !!(session && tokenId && session.account === accountId && session.token_id === tokenId && minutesLeft(session) > 0);
 
-  // With a live session the two signed reads load by themselves, once per session. A failure is shown with a retry; it
+  // With a live session the signed reads load by themselves, once per session. A failure is shown with a retry; it
   // never re-runs by itself, so a bad read cannot loop.
   const autoFor = useRef<string | null>(null);
   useEffect(() => {
@@ -46,7 +51,8 @@ export function DashboardView() {
     autoFor.current = key;
     void runBalance({});
     void runHistory({});
-  }, [live, tokenId, accountId, runBalance, runHistory]);
+    void runDash({});
+  }, [live, tokenId, accountId, runBalance, runHistory, runDash]);
 
   const balances = balance.res?.output?.ok ? (balance.res.output.balances as RawBalances) : null;
   const hasBalances = !!balances;
@@ -63,6 +69,19 @@ export function DashboardView() {
   const callId = history.res?.output?.ok ? history.res.call_id : null;
   const logOk = useLogCheck(callId);
   const entries = history.res?.output?.ok ? (history.res.output.entries as HistEntry[]) : null;
+
+  // Tier progress: the enclave's own numbers from the signed dashboard read. A null progress means the record did not verify.
+  const dashOut = dash.res?.output?.ok ? dash.res.output : null;
+  const progress = dashOut ? progressOf(dashOut.progress) : null;
+  // A level up that raised the tier: the chain now holds it, so the key store and the progress are read again.
+  const levelOut = levelUp.res?.output?.ok ? levelUp.res.output : null;
+  const levelled = levelUpOf(levelOut);
+  const levelHash = levelled?.txHash ?? null;
+  useEffect(() => {
+    if (!levelHash) return;
+    refreshKeys();
+    void runDash({});
+  }, [levelHash, refreshKeys, runDash]);
 
   const unlock = async () => {
     if (!tokenId) return;
@@ -108,6 +127,21 @@ export function DashboardView() {
     error: history.res?.error ?? null,
     onRead: () => { void runHistory({}); },
   };
+  const tierView: TierView = {
+    read: !!dashOut,
+    busy: dash.busy,
+    busyLabel: dash.label || "Working…",
+    progress,
+    unverifiable: !!dashOut && progress === null,
+    error: dash.res?.error ?? null,
+    onRead: () => { void runDash({}); },
+    levelBusy: levelUp.busy,
+    levelLabel: levelUp.label || "Working…",
+    levelError: levelUp.res?.error ?? null,
+    levelled,
+    noRaise: !!levelOut && !levelled,
+    onLevelUp: () => { void runLevel({}); },
+  };
 
   return (
     <Overview
@@ -117,6 +151,7 @@ export function DashboardView() {
       unlock={unlockView}
       balance={balanceView}
       activity={activityView}
+      tier={tierView}
       signIn={{
         socialEnabled,
         onGoogle: () => connectSocial("google"),

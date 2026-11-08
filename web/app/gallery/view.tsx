@@ -8,22 +8,25 @@ import { useWallet } from "@/lib/wallet";
 import { KEY_LIST_LIMIT, useKeyStore } from "@/lib/keyStore";
 import { nftTier, type Token } from "@/lib/near";
 import { Button, Skeleton } from "@/components/ui";
+import { ForSale } from "./sale";
 
-export function GalleryView({ tokens, tiers, mine = false }: { tokens: Token[]; tiers: (number | null)[]; mine?: boolean }) {
+export function GalleryView({ tokens, tiers, mine = false, sale = false }: { tokens: Token[]; tiers: (number | null)[]; mine?: boolean; sale?: boolean }) {
   const { t } = useI18n();
   const { accountId, connect } = useWallet();
+  const all = !mine && !sale;
   return (
-    <div className="page gal" data-testid={mine ? "gallery-mine" : "gallery-all"}>
+    <div className="page gal" data-testid={sale ? "gallery-sale" : mine ? "gallery-mine" : "gallery-all"}>
       <p className="eb">{t("gallery.eyebrow")}</p>
       <h1>{t("gallery.h1a")}<em>{t("gallery.h1b")}</em></h1>
       <p className="lead">{t("gallery.lead")}</p>
 
       <nav className="gal-filter" aria-label="Which keys to show">
-        <Link href="/gallery" className={`gal-tab${mine ? "" : " on"}`} aria-current={mine ? undefined : "page"} data-testid="gallery-filter-all">All keys</Link>
+        <Link href="/gallery" className={`gal-tab${all ? " on" : ""}`} aria-current={all ? "page" : undefined} data-testid="gallery-filter-all">All keys</Link>
         <Link href="/gallery?mine=1" className={`gal-tab${mine ? " on" : ""}`} aria-current={mine ? "page" : undefined} data-testid="gallery-filter-mine">My keys</Link>
+        <Link href="/gallery?sale=1" className={`gal-tab${sale ? " on" : ""}`} aria-current={sale ? "page" : undefined} data-testid="gallery-filter-sale">For sale</Link>
       </nav>
       <div className="gal-bar">
-        <p className="note gal-count-top">{mine ? "Keys this wallet holds, read from NEAR mainnet." : "Every key minted on NEAR mainnet."}</p>
+        <p className="note gal-count-top">{sale ? "Keys listed for sale right now, read from NEAR mainnet." : mine ? "Keys this wallet holds, read from NEAR mainnet." : "Every key minted on NEAR mainnet."}</p>
         <Button href="/mint" testid="keys-mint">Mint a key</Button>
       </div>
 
@@ -37,7 +40,7 @@ export function GalleryView({ tokens, tiers, mine = false }: { tokens: Token[]; 
         </dl>
       </details>
 
-      {mine ? <MineKeys accountId={accountId} connect={connect} /> : (
+      {sale ? <ForSale /> : mine ? <MineKeys accountId={accountId} connect={connect} /> : (
         tokens.length === 0 ? <p className="note">{t("gallery.empty")}</p> : (
           <div className="gg" data-testid="gallery">
             {tokens.map((tk, i) => <KeyCard key={tk.token_id} token={tk} tier={tiers[i]} viewer={accountId} displayIndex={i + 1} />)}

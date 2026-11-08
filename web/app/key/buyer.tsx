@@ -98,7 +98,7 @@ export function BeforeYouBuy({ id, body, callId, owner }: { id: string; body: Ke
   } else buildLine = "No build in the attestation.";
 
   return (
-    <Card as="section" className="kb-card" testid="before-buy" aria-labelledby="before-buy-h">
+    <Card as="section" className="kb-card" testid="before-buy" id="before-buy" aria-labelledby="before-buy-h">
       <p className="eb">Before you buy · public, no wallet</p>
       <h2 id="before-buy-h">Check a key before you buy it.</h2>
       <dl className="kb-grid">
