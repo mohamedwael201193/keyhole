@@ -1,6 +1,6 @@
 import { clientIp } from "@/lib/verifyScore";
 import { NextResponse } from "next/server";
-import { dryBody, isAddr, QUOTE_PER_MIN, STATUS_PER_MIN } from "@/lib/oneclick";
+import { dryAnyBody, dryBody, isAddr, QUOTE_PER_MIN, STATUS_PER_MIN } from "@/lib/oneclick";
 import { createLimiter } from "@/lib/ratelimit";
 
 // Dry-run quotes and status reads only. This route never creates an executable quote.
@@ -15,7 +15,9 @@ export async function POST(req: Request) {
   if (!limit(ip(req)).ok) return no("rate_limited", 429);
   let b: { origin?: string; dest?: string; amount?: string };
   try { b = await req.json(); } catch { return no("bad_params", 400); }
-  const body = dryBody({ origin: String(b.origin ?? ""), dest: String(b.dest ?? ""), amount: String(b.amount ?? "") });
+  const dreq = { origin: String(b.origin ?? ""), dest: String(b.dest ?? ""), amount: String(b.amount ?? "") };
+  // The fixed OC_ASSETS pairs keep their chain-specific placeholders; any other listed asset gets the intents dry quote.
+  const body = dryBody(dreq) ?? dryAnyBody(dreq);
   if (!body || body.dry !== true) return no("bad_params", 400);
   try {
     const r = await fetch(`${OC}/quote`, { method: "POST", headers: headers(), body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(20_000) });

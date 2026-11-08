@@ -206,7 +206,7 @@ export function StartView() {
               <h2>{idx + 1} · Fund</h2>
               <p>Choose an amount. The enclave gives you a deposit address; nothing moves until you send.</p>
               <div className="vfield"><label htmlFor="st-amt">Amount</label><div className="vbox sg-amount"><input id="st-amt" inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value)} />
-                <TokenIcon assetId={ASSETS[asset].id} symbol={ASSETS[asset].symbol} size="sm" />
+                <TokenIcon assetId={ASSETS[asset].id} symbol={ASSETS[asset].symbol} size={20} />
                 <select aria-label="Asset" value={asset} onChange={(e) => setAsset(e.target.value as AssetKey)}>{(Object.keys(ASSETS) as AssetKey[]).map((k) => <option key={k} value={k}>{ASSETS[k].symbol}</option>)}</select></div></div>
               <div className="sg-actions">
                 <Button variant="primary" disabled={!units} loading={account.busy} loadingLabel={account.label} testid="start-fund" onClick={() => units && void account.run(fundParams(asset, units))}>Get deposit address</Button>

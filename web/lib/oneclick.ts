@@ -32,6 +32,22 @@ export function dryBody(r: DryReq, now = Date.now()): Record<string, unknown> | 
   };
 }
 
+/** Any 1Click asset id (the swap screen lists the whole token list). Charset only; 1Click decides whether it exists. */
+const ANY_ASSET_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,139}$/;
+
+/**
+ * Dry quote for any listed asset. Both legs use intents deposits, so the only address is a NEAR placeholder that never
+ * receives funds (a dry quote moves nothing). Used when the pair is not one of OC_ASSETS.
+ */
+export function dryAnyBody(r: DryReq, now = Date.now()): Record<string, unknown> | null {
+  if (!ANY_ASSET_ID.test(r.origin) || !ANY_ASSET_ID.test(r.dest) || r.origin === r.dest || !/^\d{1,40}$/.test(r.amount)) return null;
+  return {
+    dry: true, swapType: "EXACT_INPUT", slippageTolerance: 100, originAsset: r.origin, depositType: "INTENTS", destinationAsset: r.dest,
+    amount: r.amount, refundTo: DRY_ADDR.near, refundType: "INTENTS", recipient: DRY_ADDR.near, recipientType: "INTENTS",
+    deadline: new Date(now + 30 * 60_000).toISOString(),
+  };
+}
+
 export type OcStatus = "PENDING_DEPOSIT" | "KNOWN_DEPOSIT_TX" | "INCOMPLETE_DEPOSIT" | "PROCESSING" | "SUCCESS" | "REFUNDED" | "FAILED";
 export const STATUS: Record<OcStatus, { tone: "wait" | "ok" | "warn" | "bad"; label: string; where: string }> = {
   PENDING_DEPOSIT: { tone: "wait", label: "Waiting for deposit", where: "Funds are still in your wallet." },

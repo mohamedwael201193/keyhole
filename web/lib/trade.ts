@@ -11,9 +11,14 @@ import { ASSETS, type AssetKey } from "./assets";
  * whose default is the symbol `"USDC"`.
  */
 export function swapParams(from: AssetKey, to: AssetKey, amountIn: string, minAmountOut?: string) {
+  return swapParamsById(ASSETS[from].id, ASSETS[to].id, amountIn, minAmountOut);
+}
+
+/** The swap for any two 1Click asset ids (the swap screen offers the whole token list). Amounts are base units. */
+export function swapParamsById(fromId: string, toId: string, amountIn: string, minAmountOut?: string) {
   return {
-    token_in: ASSETS[from].id,
-    token_out: ASSETS[to].id,
+    token_in: fromId,
+    token_out: toId,
     amount_in: amountIn,
     // Only a positive integer is a floor. Zero would be refused by the enclave, so it is left out (the enclave then derives one).
     ...(minAmountOut && /^[1-9]\d*$/.test(minAmountOut) ? { min_amount_out: minAmountOut } : {}),

@@ -42,12 +42,13 @@ describe("/swap screen wiring", () => {
     expect(view).toContain('useSigned("quote")');
     expect(view).toContain('useSigned("swap")');
     expect(view).toContain("execute: false");
-    expect(view).toContain("swapParams(from, to, units, quoted.minOut)");
+    expect(view).toContain("swapParamsById(fromId, toId, units, quoted.minOut)");
     expect(view).toContain("startSession(held.token.token_id)");
     expect(view).toContain('"/api/oneclick"');
   });
-  it("offers only the two assets the trade supports", () => {
-    expect(view).toContain("Object.keys(ASSETS)");
+  it("offers the whole 1Click token list, with the vault two as the fallback", () => {
+    expect(view).toContain("useTokenList()");
+    expect(view).toContain("fallbackTokens()");
     expect(view).not.toMatch(/symbol: "(ETH|SOL|BTC)"/);
   });
   it("labels the no-wallet price as price only", () => {

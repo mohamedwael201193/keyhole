@@ -62,7 +62,7 @@ export function SwapNow() {
       <div className="ui-leg">
         <span className="ui-leg-label">{t("home.payLabel")}</span>
         <div className="ui-leg-row">
-          <TokenIcon symbol={pay.symbol} chain={pay.chain} size="lg" />
+          <TokenIcon symbol={pay.symbol} chain={pay.chain} size={32} />
           <span className="ui-amount mono">{pay.amount}</span>
           <span className="ui-asset">{pay.symbol}<small>{pay.chain}</small></span>
         </div>
@@ -71,7 +71,7 @@ export function SwapNow() {
       <div className="ui-leg">
         <span className="ui-leg-label">{t("home.getLabel")}</span>
         <div className="ui-leg-row">
-          <TokenIcon symbol={get.symbol} chain={get.chain} size="lg" />
+          <TokenIcon symbol={get.symbol} chain={get.chain} size={32} />
           <span className="ui-amount mono">{received}</span>
           <span className="ui-asset">{get.symbol}<small>{get.chain}</small></span>
         </div>

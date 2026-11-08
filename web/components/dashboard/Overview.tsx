@@ -159,7 +159,7 @@ export function Overview(p: OverviewProps) {
               <div className="dash-assets" data-testid="dash-asset-list">
                 {balance.rows.map((row) => (
                   <div className="dash-row" key={row.key} data-token={row.symbol}>
-                    <TokenIcon assetId={row.known ? row.key : null} symbol={row.symbol} size="md" />
+                    <TokenIcon assetId={row.known ? row.key : null} symbol={row.symbol} size={24} />
                     <div className="who"><b>{row.symbol}</b>{row.name ? <small>{row.name}</small> : null}</div>
                     <div className="amt"><b>{row.amountLabel}</b>{row.usdMicro != null ? <small>{formatUsdMicro(row.usdMicro)}</small> : null}</div>
                   </div>
