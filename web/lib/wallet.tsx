@@ -9,6 +9,7 @@ import { callWorker } from "./worker";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
+import { Buffer } from "buffer";
 import { PRIVY_FLAG, privyEnabled, privyResume, stripPrivyOauth, hasPrivyOauth, type PrivyNear } from "./privy";
 import { SignInModal, SIGN_NOTE, popupBlockedHint, walletErrorText } from "@/components/SignInModal";
 
