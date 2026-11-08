@@ -59,7 +59,11 @@ describe("the one sign-in sheet", () => {
   it("Meteor signs in through the selector module directly (no modal), and closes the sheet only on success", () => {
     const w = readFileSync(new URL("../lib/wallet.tsx", import.meta.url), "utf8");
     expect(w).toContain("r.selector.wallet(id).then((w) => (w as unknown as InjectedSignIn).signIn({}))");
-    expect(w).toContain("return started.then(() => { setChoosing(false); });");
+    expect(w).toContain("return started.then(() => {");
+    expect(w).toContain("setChoosing(false);");
+    // A NEAR Connect record from an older Meteor attempt is dropped on load and after a selector sign-in.
+    expect(w).toContain("if (localStorage.getItem(NC_WALLET_KEY) === METEOR_NEAR_CONNECT_ID) localStorage.removeItem(NC_WALLET_KEY);");
+    expect(w).toMatch(/if \(owner\.current === "nc"\) \{\s+localStorage\.removeItem\(NC_WALLET_KEY\);/);
     expect(w).toMatch(/const started = ref\.current \? go\(ref\.current\) : ensure\(\)/);
   });
 });
