@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Badge, Button, Card, Skeleton } from "@/components/ui";
 import { KeyArt } from "@/components/Art";
-import { TokenIcon } from "@/components/TokenIcon";
+import { TokenMark } from "@/components/TokenMark";
 import { ErrorBox } from "@/components/Result";
 import { TxLink } from "@/components/TxLink";
 import { SignInOptions, type SignInOptionsProps } from "@/components/SignInModal";
@@ -235,7 +235,7 @@ export function Overview(p: OverviewProps) {
               <div className="ov-assets" data-testid="dash-asset-list">
                 {balance.rows.map((row) => (
                   <div className="ov-row" key={row.key} data-token={row.symbol}>
-                    <TokenIcon assetId={row.known ? row.key : null} symbol={row.symbol} size={24} />
+                    <TokenMark assetId={row.known ? row.key : null} symbol={row.symbol} chain="near" size={24} />
                     <div className="ov-row-who"><b>{row.symbol}</b>{row.name ? <small>{row.name}</small> : null}</div>
                     <div className="ov-row-amt"><b>{row.amountLabel}</b>{row.usdMicro != null ? <small>{formatUsdMicro(row.usdMicro)}</small> : null}</div>
                   </div>

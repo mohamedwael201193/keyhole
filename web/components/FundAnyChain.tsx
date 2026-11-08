@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { FUND_ORIGINS, FUND_MAX, FUND_STEPS, fundsStep, isTerminalStatus, statusOf, toUnits, refundOk } from "@/lib/oneclick";
 import { Spinner } from "./ui";
+import { TokenMark } from "./TokenMark";
 import { CopyButton, QRFrame } from "./motion";
 
 type Q = { depositAddress: string; amountInFormatted: string | null; amountOutFormatted: string | null; timeEstimate: number | null; deadline: string | null };
@@ -50,7 +51,7 @@ export function FundAnyChain({ recipient, evm }: { recipient: string; evm?: stri
     <div className="fanyc" data-testid="fund-any-chain">
       <p className="vhelp">Send from {chain} instead: 1Click (NEAR Intents) swaps it to USDC and delivers to your vault deposit address. Up to about $5.</p>
       <div className="fanyc-row">
-        <label>From <select value={origin} onChange={(e) => { setOrigin(e.target.value); setQ(null); }} data-testid="fac-origin">{FUND_ORIGINS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
+        <label>From <TokenMark symbol={sym} chain={o.chain} assetId={o.id} size={24} /> <select value={origin} onChange={(e) => { setOrigin(e.target.value); setQ(null); }} data-testid="fac-origin">{FUND_ORIGINS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</select></label>
         <label>Amount <input inputMode="decimal" value={amt} onChange={(e) => { setAmt(e.target.value); setQ(null); }} data-testid="fac-amount" /> {sym}</label>
       </div>
       <label className="fanyc-ref">Refund address on {chain} (if the swap can&apos;t fill) <input value={refund} onChange={(e) => setRefund(e.target.value)} placeholder={o.chain === "sol" ? "Solana address" : "0x…"} data-testid="fac-refund" /></label>

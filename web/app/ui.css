@@ -215,45 +215,62 @@
 .kh-modal--sheet .kh-modal-panel { width: 100%; max-height: 88vh; border-radius: var(--radius-xl) var(--radius-xl) 0 0; padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 720px) { .kh-modal--sheet { place-items: center; padding: var(--space-4); } .kh-modal--sheet .kh-modal-panel { width: min(480px, 100%); border-radius: var(--radius-xl); } }
 
-/* Token select */
-/* Token mark: a plain circle at 20, 24 or 32 px. No ring, no medallion (components/TokenIcon.tsx). */
-.kh-tkicon { --tk: 24px; flex: none; display: inline-grid; place-items: center; width: var(--tk); height: var(--tk); border-radius: 50%; overflow: hidden; background: var(--raised); box-shadow: inset 0 0 0 1px var(--line); }
-.kh-tkicon--20 { --tk: 20px; }
-.kh-tkicon--24 { --tk: 24px; }
-.kh-tkicon--32 { --tk: 32px; }
-.kh-tkicon img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.kh-tkicon .tkicon-mono { width: 100%; height: 100%; display: grid; place-items: center; border-radius: 50%; background: var(--sunken); color: var(--ink-2); font: 700 calc(var(--tk) * .36)/1 var(--font-ui); letter-spacing: .02em; }
+/* Token marks (components/TokenMark.tsx): a round mark, with the chain badge at its bottom right. Sizes 20, 24, 32, 40. */
+.kh-tmark { --tm: 24px; position: relative; flex: none; display: inline-block; width: var(--tm); height: var(--tm); }
+.kh-tmark-disc { display: block; width: 100%; height: 100%; border-radius: 999px; overflow: hidden; background: var(--sunken); box-shadow: inset 0 0 0 1px var(--line); }
+.kh-tmark-disc img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.kh-tmark-glyph { width: 100%; height: 100%; display: grid; place-items: center; color: var(--ink-2); font: 700 max(13px, calc(var(--tm) * .4))/1 var(--font-ui); letter-spacing: .02em; }
+.kh-netmark { display: inline-grid; place-items: center; flex: none; border-radius: 999px; overflow: hidden; background: var(--raised); }
+.kh-netmark img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.kh-netmark-glyph { font: 700 8px/1 var(--font-ui); color: var(--ink-2); letter-spacing: .02em; }
+.kh-netmark.kh-tmark-net { position: absolute; right: -3px; bottom: -3px; box-shadow: 0 0 0 2px var(--raised); }
 
-.kh-token-trigger { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-3) 0 var(--space-1); border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); cursor: pointer; text-align: start; }
-.kh-token-id { display: grid; min-width: 0; line-height: 1.2; }
-.kh-token-id b { font-size: var(--text-small); font-weight: 700; }
-.kh-token-id small { font-size: 12px; color: var(--muted); }
+/* Token picker (components/ui/token-select.tsx): a pill trigger, and a 440 px dialog that is a full-screen sheet on phones. */
+.kh-token-trigger { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 48px; max-width: 100%; padding: 4px var(--space-3) 4px 4px; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: inherit; text-align: start; cursor: pointer; flex: none; }
+.kh-token-trigger:hover { border-color: var(--primary); }
+.kh-token-trigger:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.kh-token-id { display: grid; min-width: 0; line-height: 1.25; }
+.kh-token-id b { font: 700 16px/1.2 var(--font-ui); color: var(--ink); }
+.kh-token-id small { font: 500 var(--text-small)/1.3 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.kh-token-none { font: 600 var(--text-small)/1.2 var(--font-ui); color: var(--ink-2); padding: 0 var(--space-2); }
+.kh-token-caret { display: inline-grid; color: var(--muted); flex: none; }
+.kh-modal--sheet .kh-modal-panel.kh-token-panel { width: min(440px, 100%); max-height: min(720px, 100%); padding: var(--space-5); border-radius: var(--radius-xl); }
+@media (max-width: 719px) {
+  .kh-modal--sheet .kh-modal-panel.kh-token-panel { width: 100%; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; padding: var(--space-4); padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); border-radius: 0; }
+}
+.kh-token-search { position: relative; }
+.kh-token-search > svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.kh-token-search input { width: 100%; min-height: 48px; padding: 0 var(--space-4) 0 44px; border-radius: var(--radius-md); border: 1px solid var(--field); background: var(--raised); color: var(--ink); font: 500 var(--text-body)/1.4 var(--font-ui); }
+.kh-token-search input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.kh-token-pop { display: grid; gap: var(--space-2); min-width: 0; }
+.kh-token-sub { font: 700 var(--text-small)/1.2 var(--font-ui); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.kh-token-poprow { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.kh-token-popchip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3) 0 var(--space-2); border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer; }
+.kh-token-popchip:hover { border-color: var(--primary); background: var(--primary-soft); }
+.kh-token-popchip.on { border-color: var(--primary); background: var(--primary-tint); }
+.kh-token-popchip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .kh-token-chips { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-1); scrollbar-width: thin; }
-.kh-token-chip { flex: none; min-height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink-2); font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer; }
+.kh-token-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3) 0 var(--space-2); border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink-2); font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer; }
 .kh-token-chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--raised); }
+.kh-token-chip[aria-pressed="true"] .kh-netmark { box-shadow: 0 0 0 1px var(--raised); }
 .kh-token-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .kh-token-notice { margin: 0; font-size: var(--text-small); color: var(--ink-2); }
-.kh-token-retry { min-height: 36px; margin-inline-start: var(--space-2); padding: 0 var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer; }
-.kh-token-count { margin: 0; font: 500 12px/1.4 var(--font-mono); color: var(--muted); letter-spacing: .02em; }
-.kh-token-end { display: grid; justify-items: end; gap: 2px; flex: none; }
-.kh-token-price { font: 600 var(--text-small)/1.2 var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
-.kh-token-row.is-active { background: var(--primary-soft); }
-.kh-token-trigger:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.kh-token-trigger span b { display: block; font-size: var(--text-body); }
-.kh-token-trigger small, .kh-token-meta small { display: block; font-size: var(--text-small); color: var(--muted); }
-.kh-token-none { font-weight: 600; color: var(--ink-2); }
-.kh-token-caret { color: var(--muted); }
-.kh-token-search input { width: 100%; min-height: 48px; padding: 0 var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--field); background: var(--raised); color: var(--ink); font: 500 var(--text-body)/1.4 var(--font-ui); }
-.kh-token-search input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.kh-token-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
-.kh-token-row { width: 100%; min-height: 56px; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); border: 1px solid transparent; background: transparent; color: var(--ink); text-align: start; cursor: pointer; }
-.kh-token-row:hover { background: var(--primary-soft); }
+.kh-token-retry { min-height: 40px; padding: 0 var(--space-3); border-radius: var(--radius-pill); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer; }
+.kh-token-retry:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.kh-token-count { margin: 0; font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
+.kh-token-empty { display: grid; justify-items: start; gap: var(--space-2); padding: var(--space-3) 0; min-width: 0; }
+.kh-token-empty p { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.kh-token-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.kh-token-row { width: 100%; min-height: 56px; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); border: 1px solid transparent; background: transparent; color: var(--ink); font: inherit; text-align: start; cursor: pointer; }
+.kh-token-row:hover, .kh-token-row.is-active { background: var(--primary-soft); }
 .kh-token-row.on { border-color: var(--primary); }
 .kh-token-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.kh-token-meta { flex: 1; min-width: 0; }
-.kh-token-meta b { display: block; }
-.kh-token-bal { font: 500 var(--text-small)/1 var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.kh-token-empty { margin: 0; color: var(--muted); }
+.kh-token-meta { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.kh-token-meta b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
+.kh-token-meta small { font: 500 var(--text-small)/1.3 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.kh-token-end { display: grid; justify-items: end; gap: 2px; flex: none; min-width: 0; text-align: end; }
+.kh-token-price { font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; }
+.kh-token-bal { font: 500 var(--text-small)/1.3 var(--font-ui); color: var(--ink-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 
 /* Toasts */
 .kh-toasts { position: fixed; z-index: 95; right: var(--space-4); bottom: var(--space-4); display: grid; gap: var(--space-2); width: min(360px, calc(100vw - 32px)); pointer-events: none; }

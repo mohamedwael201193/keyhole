@@ -1,6 +1,6 @@
 /**
  * One map from asset ids, symbols and chain names to the self-hosted marks in public/tokens (sources: public/tokens/SOURCES.md).
- * Used by components/TokenIcon.tsx (and through it TokenPick and the asset rows). Unknown inputs return null, and the caller draws a monogram.
+ * Used by lib/tokenMarks.ts (the self-hosted mark, first in every TokenMark). Unknown inputs return null, and the caller draws a monogram.
  */
 export const TOKEN_ICON_FILES = {
   near: "/tokens/near.svg",

@@ -1,32 +1,35 @@
 "use client";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { TokenIcon } from "@/components/TokenIcon";
+import { ChainMark, TokenMark } from "@/components/TokenMark";
 import { formatTokenPrice } from "@/lib/amount";
 import { chainName, chainRank } from "@/lib/tokens";
 import { Modal } from "./modal";
 
 /**
- * Token picker: a trigger showing the chosen token (24 px mark, symbol, chain), and a dialog with a search box, chain filter
- * chips, a row per token (mark, symbol, chain, USD price) and arrow-key navigation. Escape closes the picker only.
- * Styles: app/ui.css (.kh-token-*).
+ * Token picker: a pill showing the chosen token (32 px mark with its chain badge, symbol, chain name), and a 440 px dialog (a full
+ * screen sheet on phones) with a search box, a row of popular tokens, a scrollable chain filter, and one 56 px row per token.
+ * Arrow keys move, Enter picks, Escape closes the picker only. Styles: app/ui.css (.kh-token-*).
  */
 export type TokenOption = {
   id: string;
   symbol: string;
   name: string;
-  /** NEAR asset id, used for the real mark. */
+  /** NEAR asset id, used for the self-hosted mark. */
   assetId?: string;
   /** 1Click chain id ("near", "eth", ...). Enables the chain filter when two or more chains are listed. */
   chain?: string;
   /** Display name of the chain. Derived from `chain` when not given. */
   chainName?: string;
-  /** Contract address, searchable. */
+  /** Contract address, searchable, and used for the token's mark. */
   contract?: string | null;
-  /** USD price of one token. Shown as a column when the key is present; null shows a dash. */
+  /** USD price of one token. Shown as a column when given; null shows a dash. */
   price?: number | null;
   /** Formatted balance. Shown only when given. */
   balance?: string;
 };
+
+/** The chips in the "Popular" row, in this order. Only the ones the live list has are shown. */
+export const POPULAR_SYMBOLS = ["USDC", "USDT", "wNEAR", "ETH", "BTC", "SOL"] as const;
 
 /** Case-insensitive match on symbol, name, chain, chain name, asset id and contract. An empty query keeps everything. Pure, so it is unit-tested. */
 export function filterTokens(options: TokenOption[], query: string, chain?: string | null): TokenOption[] {
@@ -44,6 +47,20 @@ export function chainChips(options: TokenOption[]): { id: string; label: string 
   return [...seen].map(([id, label]) => ({ id, label })).sort((a, b) => chainRank(a.id) - chainRank(b.id) || a.label.localeCompare(b.label));
 }
 
+/** One option per popular symbol, the one on the best-ranked chain (NEAR first). Symbols the list does not have are left out. Pure. */
+export function popularOptions(options: TokenOption[]): TokenOption[] {
+  const out: TokenOption[] = [];
+  for (const sym of POPULAR_SYMBOLS) {
+    const hit = options
+      .filter((o) => o.symbol.toLowerCase() === sym.toLowerCase())
+      .sort((a, b) => chainRank(a.chain ?? "") - chainRank(b.chain ?? ""))[0];
+    if (hit) out.push(hit);
+  }
+  return out;
+}
+
+const chainLabel = (o: TokenOption) => o.chainName ?? (o.chain ? chainName(o.chain) : o.name);
+
 export function TokenSelect({ label, options, value, onChange, testid, notice }: {
   label: string;
   options: TokenOption[];
@@ -60,8 +77,10 @@ export function TokenSelect({ label, options, value, onChange, testid, notice }:
   const listId = useId();
   const current = options.find((o) => o.id === value) ?? null;
   const chips = useMemo(() => chainChips(options), [options]);
+  const popular = useMemo(() => popularOptions(options), [options]);
   const shown = useMemo(() => filterTokens(options, query, chain), [options, query, chain]);
   const rows = useRef<(HTMLButtonElement | null)[]>([]);
+  const filtering = query.trim() !== "" || chain !== null;
 
   const close = () => { setOpen(false); setQuery(""); setChain(null); setActive(0); };
   const pick = (id: string) => { onChange(id); close(); };
@@ -91,15 +110,16 @@ export function TokenSelect({ label, options, value, onChange, testid, notice }:
       <button type="button" className="kh-token-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} data-testid={testid}>
         {current ? (
           <>
-            <TokenIcon assetId={current.assetId} symbol={current.symbol} size={24} />
-            <span className="kh-token-id"><b>{current.symbol}</b><small>{current.chainName ?? (current.chain ? chainName(current.chain) : current.name)}</small></span>
+            <TokenMark symbol={current.symbol} contract={current.contract} chain={current.chain} assetId={current.assetId} size={32} />
+            <span className="kh-token-id"><b>{current.symbol}</b><small>{chainLabel(current)}</small></span>
           </>
         ) : <span className="kh-token-none">Choose a token</span>}
-        <span className="kh-token-caret" aria-hidden="true">▾</span>
+        <svg className="kh-token-caret" width="12" height="8" viewBox="0 0 12 8" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1.5 6 6.5 11 1.5" /></svg>
         <span className="sr-only">{label}</span>
       </button>
-      <Modal open={open} onClose={close} title={label} testid={testid ? `${testid}-dialog` : undefined}>
+      <Modal open={open} onClose={close} title={label} variant="sheet" panelClassName="kh-token-panel" testid={testid ? `${testid}-dialog` : undefined}>
         <div className="kh-token-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           <input
             type="search"
             data-autofocus
@@ -117,18 +137,37 @@ export function TokenSelect({ label, options, value, onChange, testid, notice }:
             spellCheck={false}
           />
         </div>
+        {popular.length > 0 && !filtering && (
+          <div className="kh-token-pop" role="group" aria-label="Popular tokens">
+            <span className="kh-token-sub">Popular</span>
+            <div className="kh-token-poprow">
+              {popular.map((o) => (
+                <button key={o.id} type="button" className={`kh-token-popchip${o.id === value ? " on" : ""}`} onClick={() => pick(o.id)} aria-current={o.id === value ? "true" : undefined} data-testid={testid ? `${testid}-popular-${o.symbol}` : undefined}>
+                  <TokenMark symbol={o.symbol} contract={o.contract} chain={o.chain} assetId={o.assetId} size={20} />
+                  <span>{o.symbol}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {chips.length > 0 && (
           <div className="kh-token-chips" role="group" aria-label="Filter by chain">
             <button type="button" className="kh-token-chip" aria-pressed={chain === null} onClick={() => { setChain(null); setActive(0); }}>All</button>
             {chips.map((c) => (
-              <button key={c.id} type="button" className="kh-token-chip" aria-pressed={chain === c.id} onClick={() => { setChain(chain === c.id ? null : c.id); setActive(0); }}>{c.label}</button>
+              <button key={c.id} type="button" className="kh-token-chip" aria-pressed={chain === c.id} onClick={() => { setChain(chain === c.id ? null : c.id); setActive(0); }}>
+                <ChainMark chain={c.id} size={16} />
+                <span>{c.label}</span>
+              </button>
             ))}
           </div>
         )}
         {notice && <p className="kh-token-notice" role="status">{notice}</p>}
         <p className="kh-token-count" aria-live="polite">{shown.length === options.length ? `${options.length} tokens` : `${shown.length} of ${options.length} tokens`}</p>
         {shown.length === 0 ? (
-          <p className="kh-token-empty">No token matches “{query.trim()}”.</p>
+          <div className="kh-token-empty" role="status">
+            <p>{query.trim() ? `No token matches “${query.trim()}”.` : "No tokens to choose from."}</p>
+            {filtering && <button type="button" className="kh-token-retry" onClick={() => { setQuery(""); setChain(null); setActive(0); }}>Clear search</button>}
+          </div>
         ) : (
           <ul id={listId} className="kh-token-list" role="list">
             {shown.map((o, i) => (
@@ -143,8 +182,8 @@ export function TokenSelect({ label, options, value, onChange, testid, notice }:
                   onClick={() => pick(o.id)}
                   data-testid={testid ? `${testid}-option-${o.id}` : undefined}
                 >
-                  <TokenIcon assetId={o.assetId} symbol={o.symbol} size={24} />
-                  <span className="kh-token-meta"><b>{o.symbol}</b><small>{o.chainName ?? (o.chain ? chainName(o.chain) : o.name)}</small></span>
+                  <TokenMark symbol={o.symbol} contract={o.contract} chain={o.chain} assetId={o.assetId} size={32} />
+                  <span className="kh-token-meta"><b>{o.symbol}</b><small>{chainLabel(o)}</small></span>
                   <span className="kh-token-end">
                     {o.balance && <span className="kh-token-bal">{o.balance}</span>}
                     {o.price !== undefined && <span className="kh-token-price">{formatTokenPrice(o.price)}</span>}

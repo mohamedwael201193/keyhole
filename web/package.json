@@ -35,6 +35,7 @@
     "@tanstack/react-query": "^5.62.8",
     "@wagmi/connectors": "^5.8.5",
     "@wagmi/core": "^2.17.3",
+    "@web3icons/common": "0.11.53",
     "bs58": "^6.0.0",
     "buffer": "6.0.3",
     "gsap": "3.12.5",
