@@ -418,7 +418,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               <Card as="section" className="vlt-card" testid="key-card" aria-labelledby="vlt-key-h">
                 <div className="vlt-cardhead">
                   <h2 id="vlt-key-h">Your key</h2>
-                  {idn && held ? <span className="vlt-state ok" data-state={keyState(held.token, held.tier, accountId)}><i />{t(`gallery.${keyState(held.token, held.tier, accountId)}`)}</span> : null}
+                  {/* "Unlocked" here meant "you hold it", which read as the session state next to the top-bar pill. */}
+                  {idn && held ? <span className="vlt-state ok" data-state={keyState(held.token, held.tier, accountId)}><i />{keyState(held.token, held.tier, accountId) === "unlocked" ? "You hold it" : t(`gallery.${keyState(held.token, held.tier, accountId)}`)}</span> : null}
                 </div>
                 {idn && held ? (
                   <>
