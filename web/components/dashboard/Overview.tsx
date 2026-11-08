@@ -5,11 +5,12 @@ import { KeyArt } from "@/components/Art";
 import { TokenMark } from "@/components/TokenMark";
 import { ErrorBox } from "@/components/Result";
 import { TxLink } from "@/components/TxLink";
+import { TxResult } from "@/components/TxResult";
 import { SignInOptions, type SignInOptionsProps } from "@/components/SignInModal";
 import { useHealth } from "@/lib/useHealth";
 import { formatUsdMicro, type AssetRow, type Total } from "@/lib/amount";
-import { shortAccount, shortKeyId, type Token } from "@/lib/near";
-import { capsOf, entryDetail, keyCountText, kindLabel, settledOrders, type HistEntry } from "@/lib/dashboard";
+import { shortAccount, shortKeyId, tierName, type Token } from "@/lib/near";
+import { capsOf, entryDetail, keyCountText, kindLabel, meterPct, settledOrders, type HistEntry, type TierProgressRead } from "@/lib/dashboard";
 import { KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { keyIdentity } from "@/lib/traits";
 import type { KeyStatus } from "@/lib/keyStore";
@@ -69,6 +70,30 @@ export type ActivityView = {
   onRead: () => void;
 };
 
+/**
+ * Earned-tier progress for the held key. `progress` comes only from the signed dashboard read; `levelled` only from a
+ * level_up call that sent nft_set_tier. Nothing is shown as a number before that read.
+ */
+export type TierView = {
+  /** The signed dashboard read succeeded for this session. */
+  read: boolean;
+  busy: boolean;
+  busyLabel: string;
+  progress: TierProgressRead | null;
+  /** The read answered, but the key's record did not verify, so there is no progress to show. */
+  unverifiable: boolean;
+  error: ErrorInfo | null;
+  onRead: () => void;
+  levelBusy: boolean;
+  levelLabel: string;
+  levelError: ErrorInfo | null;
+  /** The tier this call raised the key to, with the NEAR transaction. Null until a level up succeeds. */
+  levelled: { tierBefore: number; tierAfter: number; txHash: string } | null;
+  /** The level up ran and the record earns no higher tier yet. */
+  noRaise: boolean;
+  onLevelUp: () => void;
+};
+
 export type OverviewProps = {
   accountId: string | null;
   restoring: boolean;
@@ -76,6 +101,8 @@ export type OverviewProps = {
   unlock: UnlockView;
   balance: BalanceView;
   activity: ActivityView;
+  /** Earned-tier progress and the level up. Optional: the card is shown only for a held key with this view. */
+  tier?: TierView;
   /** The sign-in handlers for the signed-out card (the same rows as the sign-in sheet). */
   signIn: SignInOptionsProps;
 };
@@ -214,6 +241,8 @@ export function Overview(p: OverviewProps) {
         <ProofCard callId={activity.callId} />
       </div>
 
+      {held && p.tier && <TierCard tier={p.tier} unlock={unlock} />}
+
       {held && (
         <div className="ov-grid">
           <section className="ov-card kh-card" aria-labelledby="dash-assets-h" data-testid="dash-assets">
@@ -299,6 +328,73 @@ function UnlockLine({ unlock, label }: { unlock: UnlockView; label: string }) {
       </button>
       {unlock.via === "privy" && !unlock.busy && <span className="ov-muted"> Signed in-page. No popup.</span>}
     </p>
+  );
+}
+
+/** One progress bar: the label and the real figures on the row above it. The fill is `done` of `needed`. */
+function Meter({ label, done, needed, text, testid }: { label: string; done: number; needed: number; text: string; testid: string }) {
+  const pct = meterPct(done, needed);
+  return (
+    <div className="ov-meter" data-testid={testid}>
+      <div className="ov-meter-head"><span>{label}</span><b>{text}</b></div>
+      <div className="ov-meter-track" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+        <span style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Earned tiers for the held key: the two targets for the next tier, from the signed dashboard read, and the level up that
+ * sends the tier on chain once both are met. Locked: one line that starts the same unlock as the rest of the page.
+ */
+function TierCard({ tier, unlock }: { tier: TierView; unlock: UnlockView }) {
+  const p = tier.progress;
+  const next = p?.next ?? null;
+  return (
+    <section className="ov-card kh-card ov-tier" aria-labelledby="ov-tier-h" data-testid="tier-progress">
+      <div className="ov-card-head">
+        <h2 id="ov-tier-h">Tier progress</h2>
+        {p && <span className="ov-fact">Earned tier <b>{tierName(p.current)}</b></span>}
+      </div>
+      {!unlock.live ? (
+        <UnlockLine unlock={unlock} label="Unlock to see progress" />
+      ) : !tier.read && tier.error ? (
+        <div className="ov-actions">
+          <ErrorBox code={tier.error.code} retryAfter={tier.error.retry_after} />
+          <Button variant="secondary" size="sm" onClick={tier.onRead} testid="tier-retry">Try again</Button>
+        </div>
+      ) : !tier.read ? (
+        <p className="ov-muted">{tier.busy ? tier.busyLabel : "Reading your key’s record…"}</p>
+      ) : tier.unverifiable || !p ? (
+        <p className="ov-muted" data-testid="tier-unverifiable">The key’s record does not verify, so no progress is counted.</p>
+      ) : next === null ? (
+        <p className="ov-tier-say" data-testid="tier-top">{tierName(p.current)} is the top tier.</p>
+      ) : (
+        <>
+          <p className="ov-tier-say">Next tier: <b data-testid="tier-next">{tierName(next)}</b>. Both targets must be met.</p>
+          <Meter label="Settled swaps and copies" done={p.swaps} needed={p.swaps_needed} text={`${p.swaps} of ${p.swaps_needed}`} testid="tier-swaps" />
+          <Meter label="Settled volume" done={p.volume_usd_micro} needed={p.volume_needed_usd_micro} text={`${formatUsdMicro(p.volume_usd_micro)} of ${formatUsdMicro(p.volume_needed_usd_micro)}`} testid="tier-volume" />
+          {p.met && (
+            <div className="ov-actions">
+              <Button variant="primary" onClick={tier.onLevelUp} loading={tier.levelBusy} loadingLabel={tier.levelLabel} testid="level-up">
+                {`Level up to ${tierName(next)}`}
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+      {tier.levelError && <ErrorBox code={tier.levelError.code} retryAfter={tier.levelError.retry_after} />}
+      {tier.noRaise && <p className="ov-muted" data-testid="level-none">No higher tier is earned yet.</p>}
+      {tier.levelled && (
+        <TxResult
+          state="confirmed"
+          hash={tier.levelled.txHash}
+          title={`Tier raised: ${tierName(tier.levelled.tierBefore)} to ${tierName(tier.levelled.tierAfter)}`}
+          testid="level-result"
+        />
+      )}
+    </section>
   );
 }
 

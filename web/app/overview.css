@@ -160,6 +160,17 @@
   font: 600 var(--text-small)/1 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px;
 }
 
+/* ---- Tier progress (the held key): two targets, one bar each, and the level up ---- */
+.ov-tier { gap: var(--space-4); }
+.ov-tier-say { margin: 0; font: 500 var(--text-body)/1.5 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+.ov-tier-say b { font-weight: 700; color: var(--ink); }
+.ov-meter { display: grid; gap: var(--space-2); min-width: 0; }
+.ov-meter-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-2) var(--space-3); min-width: 0; }
+.ov-meter-head span { font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
+.ov-meter-head b { font: 700 var(--text-body)/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ov-meter-track { position: relative; height: 10px; border-radius: var(--radius-pill); background: var(--sunken); border: 1px solid var(--line); overflow: hidden; }
+.ov-meter-track > span { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--primary); transition: width var(--dur-base) var(--ease-out); }
+
 /* ---- Mint call to action in the sidebar (shown only when the key store says there is no key) ---- */
 .app-link-cta { color: var(--primary); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .app-link-cta svg { color: var(--primary); }
