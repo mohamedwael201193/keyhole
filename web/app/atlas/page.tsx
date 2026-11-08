@@ -27,7 +27,7 @@ export default function Atlas() {
           return (
             <li key={a.chain} className={`pp-mark pp-mark--${a.kind}`} data-kind={a.kind}>
               <div className="pp-mark-head">
-                {a.kind !== "none" && <TokenIcon symbol={a.name} chain={a.chain} size="lg" />}
+                {a.kind !== "none" && <TokenIcon symbol={a.name} chain={a.chain} size={32} />}
                 <div className="pp-mark-name">
                   <h2>{a.name}</h2>
                   <Badge tone={k.tone}>{k.label}</Badge>

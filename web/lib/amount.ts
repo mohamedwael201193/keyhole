@@ -119,6 +119,27 @@ export function withdrawSummary(amount: string, to: string): string {
   return `Withdrawn ${amount} to ${to}`;
 }
 
+/**
+ * A token amount for display: thousands separators, at most six decimals, never exponent notation.
+ * Values under one millionth read "<0.000001". A decimal string is taken as written; anything not a number reads "—".
+ */
+export function formatAmount(value: string | number | null | undefined): string {
+  if (value == null || value === "") return "—";
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "—";
+  if (n === 0) return "0";
+  if (Math.abs(n) < 1e-6) return n < 0 ? "-<0.000001" : "<0.000001";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 6, useGrouping: true }).format(n);
+}
+
+/** USD price of one token for the picker. Two decimals from a dollar up, four significant digits below. Never exponent notation. */
+export function formatTokenPrice(price: number | null | undefined): string {
+  if (price == null || !Number.isFinite(price) || price < 0) return "—";
+  if (price >= 1) return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
+  if (price === 0) return "$0.00";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumSignificantDigits: 4 }).format(price);
+}
+
 /** Dollars from millionths. Two fraction digits, rounded; under one cent, four digits so it is not shown as zero. */
 export function formatUsdMicro(micro: number): string {
   const usd = micro / 1e6;

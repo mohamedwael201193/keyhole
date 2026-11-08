@@ -310,7 +310,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <div className="assets" data-testid="asset-list">
                     {rows.map((b) => (
                       <div className="arow" key={b.key} data-token={b.symbol}>
-                        <TokenIcon assetId={b.known ? b.key : null} symbol={b.symbol} size="md" />
+                        <TokenIcon assetId={b.known ? b.key : null} symbol={b.symbol} size={24} />
                         <div className="who"><b>{b.symbol}</b>{b.name ? <small>{b.name}</small> : null}</div>
                         <div className="amt"><b>{b.amountLabel}</b>{b.usdMicro != null ? <small>{formatUsdMicro(b.usdMicro)}</small> : null}</div>
                       </div>

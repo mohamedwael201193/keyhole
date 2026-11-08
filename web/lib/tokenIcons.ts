@@ -25,7 +25,7 @@ const BY_ASSET_ID: Record<string, TokenIconKey> = {
 const BY_SYMBOL: Record<string, TokenIconKey> = {
   near: "near", wnear: "near",
   usdc: "usdc", usdt: "usdt",
-  eth: "eth", sol: "sol", btc: "btc", base: "base",
+  eth: "eth", weth: "eth", sol: "sol", btc: "btc", wbtc: "btc", base: "base",
   arb: "arb", arbitrum: "arb",
   zec: "zec", zcash: "zec",
 };

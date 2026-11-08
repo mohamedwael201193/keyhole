@@ -40,7 +40,8 @@ export function Modal({ open, onClose, title, children, variant = "dialog", test
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const items = () => (panel.current ? [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)] : []);
-    (items()[0] ?? panel.current)?.focus();
+    // A child marked data-autofocus (for example a search box) takes focus first; otherwise the first control does.
+    (panel.current?.querySelector<HTMLElement>("[data-autofocus]") ?? items()[0] ?? panel.current)?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { e.preventDefault(); closer.current(); return; }
       if (e.key !== "Tab") return;

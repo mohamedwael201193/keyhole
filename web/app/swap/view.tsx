@@ -1,30 +1,34 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AmountInput, Badge, Button, Card, Purpose, TokenSelect, type TokenOption } from "@/components/ui";
 import { TxStatus as TxResult } from "@/components/ui/tx-status";
 import { Attested, ErrorBox } from "@/components/Result";
 import { useWallet, OP_CTX, type OpResume } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
-import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
-import { swapParams } from "@/lib/trade";
+import { ASSETS, toBaseUnits } from "@/lib/assets";
+import { swapParamsById } from "@/lib/trade";
 import { shortAccount } from "@/lib/near";
 import { tx } from "@/lib/config";
-import { assetByToken, formatUsdMicro, fromBaseUnits, shortTokenId, tradeSummary, valueMicro, type PriceBook, type RawBalance } from "@/lib/amount";
+import { assetByToken, formatAmount, formatUsdMicro, fromBaseUnits, priceToMicro, shortTokenId, tradeSummary, valueMicro, type PriceBook, type RawBalance, type TokenPrice } from "@/lib/amount";
 import { SETTLEMENTS } from "@/lib/settlements";
 import { useHeldKey } from "@/lib/useHeldKey";
 import { useLogVerified } from "@/lib/useLogVerified";
 import { swapStep, SWAP_LABEL } from "@/lib/swapFlow";
+import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/tokens";
 import "./swap.css";
 
 type Quote = { amountInFormatted?: string; amountOutFormatted?: string; amountInUsd?: string; amountOutUsd?: string; minAmountOut?: string; timeEstimate?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string };
 type Done = { give: string; decimals: number; symbol: string };
 
-const KEYS = Object.keys(ASSETS) as AssetKey[];
-const keyOfId = (id: string) => KEYS.find((k) => ASSETS[k].id === id) ?? null;
-/** The two assets the vault trade supports. No other token is offered. */
-const OPTIONS: TokenOption[] = KEYS.map((k) => ({ id: ASSETS[k].id, symbol: ASSETS[k].symbol, name: ASSETS[k].name, assetId: ASSETS[k].id, chain: "near" }));
+/** The vault's own two assets. They are the pair on first paint and the only choice when the full token list cannot load. */
+const FALLBACK = fallbackTokens();
+
+function toOption(t: Token, balance?: string): TokenOption {
+  const name = chainName(t.blockchain);
+  return { id: t.assetId, symbol: t.symbol, name, assetId: t.assetId, chain: t.blockchain, chainName: name, contract: t.contractAddress, price: t.price, balance };
+}
 
 /** Plain words for a refused price check. The raw code is never shown to the user. */
 function humanDry(code?: string) {
@@ -36,13 +40,22 @@ function humanDry(code?: string) {
   return (code && M[code]) || "No price came back. Try again in a moment.";
 }
 
-function quoteParams(acct: string, f: AssetKey, t: AssetKey, u: string) {
-  return { origin_asset: ASSETS[f].id, destination_asset: ASSETS[t].id, amount: u, refund_to: acct, recipient: acct, refund_type: "INTENTS", recipient_type: "INTENTS", deposit_type: "INTENTS", confidentiality: "basic", execute: false };
+function quoteParams(acct: string, fromId: string, toId: string, u: string) {
+  return { origin_asset: fromId, destination_asset: toId, amount: u, refund_to: acct, recipient: acct, refund_type: "INTENTS", recipient_type: "INTENTS", deposit_type: "INTENTS", confidentiality: "basic", execute: false };
+}
+
+/** Raw base units the holder has of one asset, from a signed balance read. "0" when the asset is not in it. */
+function rawFor(bal: RawBalance[] | null, id: string): string {
+  if (!bal) return "0";
+  const b = bal.find((x) => (x.token || x.symbol || "").trim().toLowerCase() === id.toLowerCase());
+  const raw = b ? String(b.amount ?? b.balance ?? "") : "0";
+  return /^\d+$/.test(raw) ? raw : "0";
 }
 
 /**
  * The swap screen. It runs the same paths as the vault had: the enclave quote (execute: false) and the signed swap, both through
  * useSigned, and the key and session from useWallet. With no wallet it shows a dry 1Click price, labelled as a price only.
+ * Any token in the 1Click list can be picked; the default pair is USDC to wNEAR.
  */
 export function SwapView() {
   const { accountId, connect, session, startSession, pending } = useWallet();
@@ -52,9 +65,14 @@ export function SwapView() {
   const balance = useSigned("balance");
   const history = useSigned("history");
   const historyOk = useLogVerified(history.res);
+  const list = useTokenList();
 
-  const [from, setFrom] = useState<AssetKey>("usdc");
-  const [to, setTo] = useState<AssetKey>("wnear");
+  // The picker's tokens: the full list once it loads, the vault's two assets until then or when it fails.
+  const tokens = useMemo<Token[]>(() => (list.status === "ready" && list.tokens.length > 0 ? list.tokens : FALLBACK), [list.status, list.tokens]);
+  const findToken = (id: string): Token | null => tokens.find((t) => t.assetId === id) ?? FALLBACK.find((t) => t.assetId === id) ?? null;
+
+  const [from, setFrom] = useState<Token>(FALLBACK[0]);
+  const [to, setTo] = useState<Token>(FALLBACK[1]);
   const [amount, setAmount] = useState("0.05");
   const [quoted, setQuoted] = useState<{ key: string; minOut?: string } | null>(null);
   const [done, setDone] = useState<Done | null>(null);
@@ -66,27 +84,31 @@ export function SwapView() {
   const [unlockErr, setUnlockErr] = useState<string | null>(null);
   const quoteKey = useRef("");
 
-  const units = toBaseUnits(amount, ASSETS[from].decimals);
-  const tradeKey = `${from}:${to}:${units ?? ""}`;
-  const samePair = from === to;
+  const fromId = from.assetId;
+  const toId = to.assetId;
+  const units = toBaseUnits(amount, from.decimals);
+  const tradeKey = `${fromId}:${toId}:${units ?? ""}`;
+  const samePair = fromId === toId;
   const sessionLive = !!(session && held && session.token_id === held.token.token_id);
   const quoteFresh = !!quoted && quoted.key === tradeKey;
   const swapDone = !!(swap.res?.output?.ok && swap.res.output.op === "swap" && done);
 
   // Balances come only from the holder's signed read. Nothing is guessed.
   const bal = balance.res?.output?.ok ? (balance.res.output.balances as RawBalance[]) : null;
-  const rawOf = (k: AssetKey): string => {
-    const b = bal?.find((x) => (x.token || x.symbol || "").trim().toLowerCase() === ASSETS[k].id.toLowerCase());
-    const raw = b ? String(b.amount ?? b.balance ?? "") : "0";
-    return /^\d+$/.test(raw) ? raw : "0";
-  };
-  const fromRaw = bal ? rawOf(from) : null;
-  const balanceText = fromRaw != null ? `${fromBaseUnits(fromRaw, ASSETS[from].decimals)} ${ASSETS[from].symbol}` : null;
+  const fromRaw = bal ? rawFor(bal, fromId) : null;
+  const balanceText = fromRaw != null ? `${fromBaseUnits(fromRaw, from.decimals)} ${from.symbol}` : null;
   const overBalance = fromRaw != null && !!units && BigInt(units) > BigInt(fromRaw);
   const amountError = amount !== "" && !units ? "Enter an amount above zero." : overBalance ? "That is more than your balance." : null;
 
-  const priceOf = (k: AssetKey) => prices[ASSETS[k].id.toLowerCase()];
-  const payUsd = units && priceOf(from) ? valueMicro(units, ASSETS[from].decimals, priceOf(from).priceMicro) : null;
+  // USD of the pay side: the public price book when it has the token, otherwise the price from the token list.
+  const priceOf = (t: Token): TokenPrice | undefined => {
+    const book = prices[t.assetId.toLowerCase()];
+    if (book) return book;
+    const m = t.price != null ? priceToMicro(t.price) : null;
+    return m != null ? { priceMicro: m } : undefined;
+  };
+  const fromPrice = priceOf(from);
+  const payUsd = units && fromPrice ? valueMicro(units, from.decimals, fromPrice.priceMicro) : null;
 
   const q = quote.res?.output;
   const qq: Quote | null = quoteFresh && q?.ok ? ((q.quote as Quote | undefined) ?? null) : null;
@@ -97,7 +119,7 @@ export function SwapView() {
   const usdSrc = qq ?? dq;
   const spread = usdSrc && usdSrc.amountInUsd != null && usdSrc.amountOutUsd != null ? Number(usdSrc.amountInUsd) - Number(usdSrc.amountOutUsd) : null;
   const eta = qq?.timeEstimate ?? dq?.timeEstimate ?? null;
-  const minOutText = quoteFresh && quoted?.minOut ? `${fromBaseUnits(quoted.minOut, ASSETS[to].decimals, 6)} ${ASSETS[to].symbol}` : null;
+  const minOutText = quoteFresh && quoted?.minOut ? `${fromBaseUnits(quoted.minOut, to.decimals, 6)} ${to.symbol}` : null;
 
   // The public price book for the USD lines. The page works without it.
   useEffect(() => {
@@ -113,14 +135,14 @@ export function SwapView() {
     const id = setTimeout(async () => {
       setDryBusy(true); setDryMsg(null);
       try {
-        const j = await (await fetch("/api/oneclick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: ASSETS[from].id, dest: ASSETS[to].id, amount: units }) })).json();
+        const j = await (await fetch("/api/oneclick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: fromId, dest: toId, amount: units }) })).json();
         if (cancel) return;
         if (j.ok) setDry(j.quote); else { setDry(null); setDryMsg(humanDry(j.error?.code)); }
       } catch { if (!cancel) { setDry(null); setDryMsg("Could not reach 1Click. Check your connection and try again."); } }
       finally { setDryBusy(false); }
     }, 700);
     return () => { cancel = true; clearTimeout(id); };
-  }, [accountId, samePair, units, from, to]);
+  }, [accountId, samePair, units, fromId, toId]);
 
   // With a live session a quote costs no popup, so it is re-run (debounced) when the trade changes.
   const runQuote = quote.run;
@@ -128,10 +150,10 @@ export function SwapView() {
     if (!sessionLive || !units || !accountId || samePair || quoteKey.current === tradeKey) return;
     const id = setTimeout(() => {
       quoteKey.current = tradeKey;
-      void runQuote(quoteParams(accountId, from, to, units), { quiet: true });
+      void runQuote(quoteParams(accountId, fromId, toId, units), { quiet: true });
     }, 800);
     return () => clearTimeout(id);
-  }, [sessionLive, units, accountId, from, to, samePair, tradeKey, runQuote]);
+  }, [sessionLive, units, accountId, fromId, toId, samePair, tradeKey, runQuote]);
 
   useEffect(() => {
     if (!quote.res) return;
@@ -162,14 +184,14 @@ export function SwapView() {
     if (!units || !accountId || samePair) return;
     quoteKey.current = tradeKey;
     swap.reset();
-    void quote.run(quoteParams(accountId, from, to, units));
+    void quote.run(quoteParams(accountId, fromId, toId, units));
   }
   function confirm() {
     if (!units || !quoted || quoted.key !== tradeKey || !accountId) return;
-    const ctx: OpResume = { op: "swap", give: `${amount} ${ASSETS[from].symbol}`, decimals: ASSETS[to].decimals, symbol: ASSETS[to].symbol };
+    const ctx: OpResume = { op: "swap", give: `${amount} ${from.symbol}`, decimals: to.decimals, symbol: to.symbol };
     sessionStorage.setItem(OP_CTX, JSON.stringify(ctx));
     setDone({ give: ctx.give, decimals: ctx.decimals, symbol: ctx.symbol });
-    void swap.run(swapParams(from, to, units, quoted.minOut));
+    void swap.run(swapParamsById(fromId, toId, units, quoted.minOut));
   }
   async function unlock() {
     if (!held) return;
@@ -189,19 +211,27 @@ export function SwapView() {
     else if (step === "done") again();
   }
   function flip() { setFrom(to); setTo(from); }
-  function pickFrom(id: string) { const k = keyOfId(id); if (!k) return; if (k === to) setTo(from); setFrom(k); }
-  function pickTo(id: string) { const k = keyOfId(id); if (!k) return; if (k === from) setFrom(to); setTo(k); }
+  function pickFrom(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === toId) setTo(from); setFrom(t); }
+  function pickTo(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === fromId) setFrom(to); setTo(t); }
 
-  // Each option carries its balance once the holder has read it.
-  const options: TokenOption[] = OPTIONS.map((o) => {
-    const k = keyOfId(o.id)!;
-    return bal ? { ...o, balance: `${fromBaseUnits(rawOf(k), ASSETS[k].decimals)} ${ASSETS[k].symbol}` } : o;
-  });
+  // Each option carries its balance once the holder has read it (only when it is not zero).
+  const options = useMemo<TokenOption[]>(() => tokens.map((t) => {
+    const raw = rawFor(bal, t.assetId);
+    return toOption(t, bal && raw !== "0" ? `${fromBaseUnits(raw, t.decimals)} ${t.symbol}` : undefined);
+  }), [tokens, bal]);
+
+  const notice = list.status === "loading"
+    ? "Loading every token NEAR Intents can swap…"
+    : list.status === "error"
+      ? <>Could not load the full token list. Only {ASSETS.usdc.symbol} and {ASSETS.wnear.symbol} are offered for now. <button type="button" className="kh-token-retry" onClick={list.retry}>Try again</button></>
+      : null;
 
   const hist = history.res?.output?.ok ? ((history.res.output.entries as Hist[] | undefined) ?? []) : null;
   const mine = hist ? [...hist].reverse().filter((e) => e.kind === "swap").slice(0, 6) : [];
   const human = (raw?: string, tok?: string) => {
-    const a = tok ? assetByToken(tok) : null;
+    const t = tok ? findToken(tok) : null;
+    const a = !t && tok ? assetByToken(tok) : null;
+    if (t && raw) return `${fromBaseUnits(raw, t.decimals)} ${t.symbol}`;
     if (a && raw) return `${fromBaseUnits(raw, a.decimals)} ${a.symbol}`;
     return `${raw ?? ""} ${tok ? shortTokenId(tok) : ""}`.trim();
   };
@@ -217,13 +247,13 @@ export function SwapView() {
             label="You pay"
             value={amount}
             onChange={setAmount}
-            symbol={ASSETS[from].symbol}
+            symbol={from.symbol}
             balance={balanceText ?? undefined}
             usd={payUsd != null ? `about ${formatUsdMicro(payUsd)}` : undefined}
-            onMax={fromRaw && fromRaw !== "0" ? () => setAmount(fromBaseUnits(fromRaw, ASSETS[from].decimals, ASSETS[from].decimals)) : undefined}
+            onMax={fromRaw && fromRaw !== "0" ? () => setAmount(fromBaseUnits(fromRaw, from.decimals, from.decimals)) : undefined}
             error={amountError}
             testid="swap-amount"
-            end={<TokenSelect label="Pay with" options={options} value={ASSETS[from].id} onChange={pickFrom} testid="swap-from" />}
+            end={<TokenSelect label="Pay with" options={options} value={fromId} onChange={pickFrom} testid="swap-from" notice={notice} />}
           />
           {!balanceText && accountId && (
             <div className="sw-hint">
@@ -236,7 +266,7 @@ export function SwapView() {
         </div>
 
         <div className="sw-flip">
-          <button type="button" onClick={flip} aria-label={`Switch: pay ${ASSETS[to].symbol}, receive ${ASSETS[from].symbol}`} data-testid="swap-flip">
+          <button type="button" onClick={flip} aria-label={`Switch: pay ${to.symbol}, receive ${from.symbol}`} data-testid="swap-flip">
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16M3 16l4 4 4-4" /><path d="M17 20V4M13 8l4-4 4 4" /></svg>
           </button>
         </div>
@@ -244,20 +274,20 @@ export function SwapView() {
         <div className="sw-recv">
           <div className="sw-recv-top">
             <span className="sw-label" id="sw-recv-label">You receive</span>
-            {!accountId && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
+            {dryBusy && !estimate && !accountId ? <span className="sw-busy" role="status">Checking price…</span> : !accountId && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
           </div>
           <div className="sw-recv-row">
             <output className={`sw-amt${estimate ? "" : " empty"}`} aria-labelledby="sw-recv-label" data-testid="swap-receive">
-              {dryBusy && !estimate ? "Checking…" : estimate ? Number(estimate).toPrecision(6) : "—"}
+              {estimate ? formatAmount(estimate) : "—"}
             </output>
-            <TokenSelect label="Receive in" options={options} value={ASSETS[to].id} onChange={pickTo} testid="swap-to" />
+            <TokenSelect label="Receive in" options={options} value={toId} onChange={pickTo} testid="swap-to" notice={notice} />
           </div>
           {dryMsg && !accountId && <p className="sw-note" role="alert" data-testid="dry-msg">{dryMsg}</p>}
         </div>
 
         <dl className="sw-facts" data-testid="swap-facts">
           <div><dt>Route</dt><dd>NEAR Intents, via 1Click</dd></div>
-          <div><dt>Rate</dt><dd>{rate != null ? `1 ${ASSETS[from].symbol} ≈ ${Number(rate.toPrecision(4))} ${ASSETS[to].symbol}` : "Shown after you review"}</dd></div>
+          <div><dt>Rate</dt><dd>{rate != null ? `1 ${from.symbol} ≈ ${formatAmount(rate)} ${to.symbol}` : "Shown after you review"}</dd></div>
           <div><dt>Fee and spread</dt><dd>{spread != null ? `about ${formatUsdMicro(Math.max(0, Math.round(spread * 1e6)))}` : "Shown after you review"}</dd></div>
           <div><dt>Max slippage</dt><dd>1%</dd></div>
           <div><dt>Minimum received</dt><dd>{minOutText ?? "Shown after you review"}</dd></div>

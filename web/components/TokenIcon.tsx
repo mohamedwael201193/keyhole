@@ -3,15 +3,18 @@ import { useState } from "react";
 import { monogram, tokenIcon } from "@/lib/tokenIcons";
 
 /**
- * Official mark inside the brass medallion (.medal). Falls back to a monogram when the asset has no mark, or the file fails to load.
+ * A token mark: a plain circle at 20, 24 or 32 px (default 24). The official mark from /tokens when one is mapped, otherwise
+ * a neutral monogram chip. No brass ring or medallion. Styles: app/ui.css (.kh-tkicon).
  * Pass `label` only when the icon stands alone; beside its symbol text it stays decorative (alt="").
  */
-export function TokenIcon({ assetId, symbol, chain, size = "md", label, className }: {
-  assetId?: string | null; symbol?: string | null; chain?: string | null; size?: "sm" | "md" | "lg"; label?: string; className?: string;
+export type TokenIconSize = 20 | 24 | 32;
+
+export function TokenIcon({ assetId, symbol, chain, size = 24, label, className }: {
+  assetId?: string | null; symbol?: string | null; chain?: string | null; size?: TokenIconSize; label?: string; className?: string;
 }) {
   const icon = tokenIcon({ assetId, symbol, chain });
   const [failed, setFailed] = useState(false);
-  const wrap = ["medal", "tkicon", className].filter(Boolean).join(" ");
+  const wrap = ["kh-tkicon", `kh-tkicon--${size}`, className].filter(Boolean).join(" ");
 
   if (!icon || failed) {
     return (
@@ -23,7 +26,7 @@ export function TokenIcon({ assetId, symbol, chain, size = "md", label, classNam
   return (
     <span className={wrap} data-icon={icon.key} aria-hidden={label ? undefined : true}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={icon.src} alt={label ?? ""} data-logo={icon.key} width={38} height={38} onError={() => setFailed(true)} />
+      <img src={icon.src} alt={label ?? ""} data-logo={icon.key} width={size} height={size} onError={() => setFailed(true)} />
     </span>
   );
 }
