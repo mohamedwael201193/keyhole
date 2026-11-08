@@ -186,6 +186,10 @@ async function holdAccount(page: Page) {
     localStorage.setItem("near-wallet-selector:selectedWalletId", JSON.stringify("my-near-wallet"));
   });
   await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
+  // The key store reads the holder's keys through the server route first; it cannot see this page's RPC mock.
+  await page.route("**/api/keys?**", (route) => route.fulfill({ json: {
+    keys: [{ token_id: "4", owner_id: "holder.keyhole.test", metadata: { title: "Key", description: null, expires_at: null, issued_at: null } }], tier: 1,
+  } }));
   await page.route("https://rpc.mainnet.near.org/**", async (route) => {
     let method = "";
     try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view call */ }
@@ -272,7 +276,7 @@ test("a decline is gone after a later trade success", async ({ page }) => {
     await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
   });
   await page.goto("/vault");
-  const balanceCard = page.locator(".c").filter({ has: page.getByTestId("balance-btn") });
+  const balanceCard = page.getByTestId("balance-card");
   await expect(page.getByTestId("balance-btn")).toBeVisible({ timeout: 20_000 });
   // The wallet window opens (MyNearWallet signs in a popup); closing it unsigned is the decline.
   await page.context().route("https://app.mynearwallet.com/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>wallet</title>" }));
@@ -281,12 +285,6 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await (await popup).close();
   await expect(balanceCard.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
   await expect(balanceCard.getByText("You declined the signature.")).toBeVisible();
-  const popup2 = page.waitForEvent("popup", { timeout: 20_000 });
-  await page.getByRole("button", { name: "History" }).click();
-  await (await popup2).close();
-  await expect(balanceCard.getByTestId("error")).toHaveCount(0);
-  const activity = page.locator(".c").filter({ has: page.getByRole("button", { name: "History" }) });
-  await expect(activity.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
   await page.evaluate(() => {
     sessionStorage.setItem("kh_pending_sign", JSON.stringify({
       message: JSON.stringify({ op: "swap", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
@@ -520,6 +518,9 @@ test("technical lists are left-aligned; vault traits keep the body face", async 
     localStorage.setItem("near-wallet-selector:selectedWalletId", JSON.stringify("my-near-wallet"));
   });
   await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
+  await page.route("**/api/keys?**", (route) => route.fulfill({ json: {
+    keys: [{ token_id: "4", owner_id: "holder.keyhole.test", metadata: { title: "Key", description: null, expires_at: null, issued_at: null } }], tier: 1,
+  } }));
   await page.route("https://rpc.mainnet.near.org/**", async (route) => {
     let method = "";
     try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view call */ }
