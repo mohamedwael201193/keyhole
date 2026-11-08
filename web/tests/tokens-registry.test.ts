@@ -18,9 +18,34 @@ describe("chain names", () => {
     expect(chainName("ton")).toBe("TON");
   });
 
-  it("title-cases a chain it does not know, and orders the main chains first", () => {
+  it("names the chains the 1Click list adds (zec, doge, xrp, hood, hypercore, ...)", () => {
+    expect(chainName("zec")).toBe("Zcash");
+    expect(chainName("doge")).toBe("Dogecoin");
+    expect(chainName("ltc")).toBe("Litecoin");
+    expect(chainName("bch")).toBe("Bitcoin Cash");
+    expect(chainName("xrp")).toBe("XRP Ledger");
+    expect(chainName("cardano")).toBe("Cardano");
     expect(chainName("stellar")).toBe("Stellar");
+    expect(chainName("starknet")).toBe("Starknet");
+    expect(chainName("hood")).toBe("Robinhood Chain");
+    expect(chainName("xlayer")).toBe("X Layer");
+    expect(chainName("abs")).toBe("Abstract");
+    expect(chainName("bera")).toBe("Berachain");
+    expect(chainName("monad")).toBe("Monad");
+    expect(chainName("plasma")).toBe("Plasma");
+    expect(chainName("hypercore")).toBe("Hyperliquid");
+    expect(chainName("aleo")).toBe("Aleo");
+    expect(chainName("miden")).toBe("Miden");
+    expect(chainName("movement")).toBe("Movement");
+    expect(chainName("scroll")).toBe("Scroll");
+    expect(chainName("gnosis")).toBe("Gnosis");
+    expect(chainName("dash")).toBe("Dash");
+    expect(chainName("fogo")).toBe("Fogo");
+  });
+
+  it("title-cases a chain it does not know, and orders the main chains first", () => {
     expect(chainName("xrp-ledger")).toBe("Xrp Ledger");
+    expect(chainName("some-new-chain")).toBe("Some New Chain");
     expect(chainRank("near")).toBeLessThan(chainRank("eth"));
     expect(chainRank("eth")).toBeLessThan(chainRank("base"));
     expect(chainRank("stellar")).toBeGreaterThan(chainRank("gnosis"));
@@ -62,6 +87,13 @@ describe("amounts never use exponent notation", () => {
     expect(formatTokenPrice(0.000012345)).toMatch(/^\$0\.0000123/);
     expect(formatTokenPrice(0.000012345)).not.toMatch(/e/i);
     expect(formatTokenPrice(null)).toBe("—");
+  });
+
+  it("a zero or missing price shows a dash, never $0.00", () => {
+    expect(formatTokenPrice(0)).toBe("—");
+    expect(formatTokenPrice(undefined)).toBe("—");
+    expect(formatTokenPrice(Number.NaN)).toBe("—");
+    expect(formatTokenPrice(-1)).toBe("—");
   });
 });
 

@@ -1,7 +1,7 @@
 "use client";
 /**
- * "Proof, not promises": four live numbers, each a link to the place it can be checked. The holder count is read on the server
- * (lib/landing.ts); when the server could not read it, SupplyStat polls /api/supply for a short while. The order count is the
+ * "Proof, not promises": four live numbers, each a link to the place it can be checked. The key count is read on the server
+ * (lib/landing.ts, the contract's nft_total_supply); when the server could not read it, SupplyStat polls /api/supply for a short while. The order count is the
  * evidence file (lib/settlements.ts).
  */
 import Link from "next/link";

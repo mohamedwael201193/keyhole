@@ -134,9 +134,8 @@ export function formatAmount(value: string | number | null | undefined): string 
 
 /** USD price of one token for the picker. Two decimals from a dollar up, four significant digits below. Never exponent notation. */
 export function formatTokenPrice(price: number | null | undefined): string {
-  if (price == null || !Number.isFinite(price) || price < 0) return "—";
+  if (price == null || !Number.isFinite(price) || price <= 0) return "—";
   if (price >= 1) return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
-  if (price === 0) return "$0.00";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumSignificantDigits: 4 }).format(price);
 }
 

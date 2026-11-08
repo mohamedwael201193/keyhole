@@ -4,7 +4,7 @@
 .lp ::selection { background: var(--accent); color: var(--ink); }
 .lp :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
 
-.lp-sec { position: relative; padding: 120px 56px; }
+.lp-sec { position: relative; padding: 56px 56px; }
 .lp-wrap { max-width: 1328px; margin: 0 auto; }
 .lp-h2 { font-family: var(--font-display); font-weight: 700; font-size: var(--text-title); line-height: 1.08; color: var(--ink); margin: 0 0 18px; max-width: 24ch; text-wrap: balance; }
 .lp-lead { font-size: var(--text-lead); line-height: 1.55; color: var(--ink-2); max-width: 60ch; margin: 0; }
@@ -34,7 +34,7 @@
 .pf-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 
 /* The handover: the one dealt moment. On desktop the section is pinned (LandingMotion.tsx) and its steps are reached in turn. */
-.lp-handover { min-height: 100svh; box-sizing: border-box; display: flex; align-items: center; padding: 96px 56px; background: var(--sunken); }
+.lp-handover { min-height: 100svh; box-sizing: border-box; display: flex; align-items: center; padding: 56px 56px; background: var(--sunken); }
 .lp-handover .lp-wrap { width: 100%; }
 .hand-steps { list-style: none; margin: 48px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .hand-step { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 28px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-lg); transition: opacity var(--dur-base) var(--ease-out); }
@@ -114,8 +114,8 @@
 
 /* Phone and small tablet: one column, 20 px gutter, no horizontal page scroll. The handover is a plain stack, never pinned. */
 @media (max-width: 860px) {
-  .lp-sec { padding: 80px 20px; }
-  .lp-handover { min-height: 0; padding: 80px 20px; }
+  .lp-sec { padding: 36px 20px; }
+  .lp-handover { min-height: 0; padding: 36px 20px; }
   .hand-steps { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 40px; }
   .hand-step { padding: 24px; }
   .check-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }

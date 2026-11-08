@@ -110,7 +110,7 @@
   "mintFirst": "Mint your key",
   "account": "Your confidential account",
   "accountD": "One private wallet per key, created and held inside the TEE. Whoever holds the key operates it. Balances are read with your signature; nothing is published on-chain.",
-  "open": "Open my account",
+  "open": "Show vault address",
   "balance": "Read balance",
   "history": "History",
   "empty": "Nothing yet",
@@ -869,7 +869,7 @@
     "stContract": "Contract code hash",
     "stOrders": "Orders on record",
     "collLead": "Each key has its own art, traits and bit cipher.",
-    "supplyLabel": "Keys held on mainnet",
+    "supplyLabel": "Keys held by users",
     "verifyBtn": "Verify it yourself",
     "ctaSettle": "See real settled and refunded orders",
     "ctaLaunch": "Launch app"

@@ -498,6 +498,10 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
       )}
 
       <Sheet open={depOpen} onClose={() => setDepOpen(false)} title="Deposit" testid="deposit-sheet">
+        <Tabs id="dep" label="How to fund" value={depTab} onChange={(v) => setDepTab(v as DepTab)} testid="deposit-tabs" items={[
+          { id: "direct", label: "Direct" },
+          { id: "chain", label: "From another chain" },
+        ]} />
         {fo.order && <FundOrderCard order={fo.order} status={fo.status} statusErr={fo.statusErr} terminal={fo.terminal} onClear={fo.clear} />}
         <p className="vlt-sub">{t("vault.fundLead")}</p>
         <div className="vlt-stack">
@@ -506,10 +510,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             <TokenSelect label={t("vault.asset")} options={TOKEN_OPTIONS} value={ASSETS[fundAsset].id} onChange={(id) => setFundAsset(keyOfId(id))} testid="fund-asset" />
           </div>
           <AmountInput label={t("vault.amount")} value={fundAmt} onChange={setFundAmt} symbol={ASSETS[fundAsset].symbol} error={fundUnits ? null : t("vault.badAmount")} testid="fund-amt" />
-          <Tabs id="dep" label="How to fund" value={depTab} onChange={(v) => setDepTab(v as DepTab)} testid="deposit-tabs" items={[
-            { id: "direct", label: "Direct" },
-            { id: "chain", label: "From another chain" },
-          ]} />
           <div id="dep-panel" role="tabpanel" aria-labelledby={`dep-tab-${depTab}`} className="vlt-panel">
             {depTab === "direct" && (
               <>
