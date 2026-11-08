@@ -671,8 +671,12 @@ fn invariant_holder_limits_never_exceed_tier_and_raises_wait_a_day() {
     }
 }
 
+/// Predicate test over `admit_request` (owner at authorization) and `settle_if_owner`
+/// (owner at settlement). It does not start a send, so it does not cover a payout that is
+/// already in flight when the key moves. The mainnet run in docs/evidence/mid-payout shows
+/// that case: the payout completed to the holder who signed it.
 #[test]
-fn invariant_transfer_mid_payout_never_settles_for_the_old_holder() {
+fn invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle() {
     let mut r = Rng(1234);
     for _ in 0..5000 {
         let signer = if r.below(2) == 0 { "alice" } else { "bob" };

@@ -3643,14 +3643,14 @@
    "verify": "node judge/verify-claims.mjs --only test-invariant_lock_binds_only_its_owner_and_only_until_it_ends"
   },
   {
-   "id": "test-invariant_transfer_mid_payout_never_settles_for_the_old_holder",
-   "claim": "Named test or symbol `invariant_transfer_mid_payout_never_settles_for_the_old_holder` exists in the source",
+   "id": "test-invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle",
+   "claim": "Named test or symbol `invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle` exists in the source",
    "where": "README.md:359",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
     "type": "symbol",
-    "name": "invariant_transfer_mid_payout_never_settles_for_the_old_holder",
+    "name": "invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle",
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
@@ -3660,8 +3660,8 @@
      "cli/src"
     ]
    },
-   "expected": "`invariant_transfer_mid_payout_never_settles_for_the_old_holder` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-invariant_transfer_mid_payout_never_settles_for_the_old_holder"
+   "expected": "`invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle"
   },
   {
    "id": "test-is_full_access",

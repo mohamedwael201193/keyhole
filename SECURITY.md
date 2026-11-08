@@ -48,7 +48,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 | A transfer cooldown binds only the latest transferee | `invariant_cooldown_binds_only_the_latest_transferee` |
 | A lock binds only its owner and ends on time | `invariant_lock_binds_only_its_owner_and_only_until_it_ends` |
 | Holder limits stay inside the tier; raises wait a day | `invariant_holder_limits_never_exceed_tier_and_raises_wait_a_day` |
-| A payout in flight when the key moves never settles for the old holder twice or for the new holder wrongly | `invariant_transfer_mid_payout_never_settles_for_the_old_holder`, `random_transfer_and_withdraw_never_pays_the_previous_holder`; mainnet run in `docs/evidence/mid-payout` |
+| A payout already in flight when the key moves completes to the holder who signed it while owning the key; that holder's later requests are refused `not_owner`. A key moved before the send aborts the send | `invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle`, `random_transfer_and_withdraw_never_pays_the_previous_holder`; mainnet run in `docs/evidence/mid-payout` |
 | NEP-199 payout always adds up to the sale balance | contract `nep199_payout_conserves_balance` |
 | A holder's best tier follows the token on transfer | contract `holder_tier_is_best_and_follows_transfer` |
 

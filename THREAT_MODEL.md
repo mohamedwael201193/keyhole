@@ -32,6 +32,8 @@ Proof: the `assert_withdraw_to` cases in [`tee/worker/src/tests.rs`](tee/worker/
 
 After the quote and the caps, and immediately before the custody wallet is told to move funds, the worker reads `nft_token.owner_id` again. If the key moved in between, the send is aborted with `not_owner`, the day's cap is rolled back, and the funds stay in the key's account for the new owner. The remaining window is one RPC read. A seller `lock` (below) closes it fully.
 
+What this check does not cover: a send that is already in flight when the key moves. It is not recalled. The payout completes to the holder who signed it while owning the key. Every later request from that holder is refused `not_owner`, and the new holder sees the remaining balance. This happened on mainnet ([docs/evidence/mid-payout](docs/evidence/mid-payout/README.md), 2026-11-01).
+
 Proof: `transfer_while_withdraw_is_pending_does_not_send` and `random_transfer_and_withdraw_never_pays_the_previous_holder`.
 
 ## Seller empties the account just before the sale
