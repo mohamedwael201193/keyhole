@@ -9,10 +9,10 @@ import { Badge, Sheet } from "@/components/ui";
  * session and signing logic in lib/wallet.tsx and lib/privyBridge.tsx is untouched.
  * The last method used is remembered on this device (localStorage) and marked "Last used".
  */
-export type SignInMethod = "google" | "email" | "near" | "evm";
+export type SignInMethod = "google" | "email" | "near" | "meteor" | "evm";
 
 const LAST_KEY = "kh_signin_last";
-const METHODS: readonly SignInMethod[] = ["google", "email", "near", "evm"];
+const METHODS: readonly SignInMethod[] = ["google", "email", "near", "meteor", "evm"];
 
 /** The method used last on this device, or null. Storage can be blocked, so every access is guarded. */
 export function readLastMethod(): SignInMethod | null {
@@ -31,6 +31,21 @@ function rememberMethod(m: SignInMethod) {
 /** The note the wallet selector and this sheet both show, so the signing rule is said the same way everywhere. */
 export const SIGN_NOTE = "Connecting and minting ask only for a signature. A deposit is a normal transfer you approve in your wallet.";
 
+/** Shown when the browser blocked the wallet's own window (Meteor opens one to sign in and to sign). */
+export const POPUP_BLOCKED_HINT = "Your browser blocked the wallet window. Allow pop-ups for this site (the icon at the right of the address bar), then try again.";
+const POPUP_BLOCKED = /open popup|popup.*block|POPUP_WINDOW_OPEN_FAILED/i;
+
+/** The hint for a sign-in or sign error whose text says the wallet window was blocked, else null. Pure. */
+export function popupBlockedHint(message: string | null | undefined): string | null {
+  return message && POPUP_BLOCKED.test(message) ? POPUP_BLOCKED_HINT : null;
+}
+
+/** The text a wallet error carries: its message, and the Meteor SDK's endTag (e.g. POPUP_WINDOW_OPEN_FAILED) when it has one. */
+export function walletErrorText(e: unknown): string {
+  const x = e as { message?: unknown; endTag?: unknown } | null;
+  return [x?.message, x?.endTag].filter((v): v is string => typeof v === "string" && v !== "").join(" ") || String(e);
+}
+
 export type SignInModalProps = {
   open: boolean;
   onClose: () => void;
@@ -39,6 +54,8 @@ export type SignInModalProps = {
   onGoogle: () => void;
   onEmail: () => void;
   onNear: () => void;
+  /** Meteor directly through the wallet selector (no chooser). The sheet stays open until it resolves or fails. */
+  onMeteor: () => Promise<void>;
   onOther: () => void;
 };
 
@@ -48,8 +65,16 @@ type Option = {
   title: string;
   sub: string;
   icon: ReactNode;
-  run: () => void;
+  /** Runs at once in the click. A returned promise keeps the sheet open until it settles. */
+  run: () => unknown;
 };
+
+type Failure = { text: string; detail: string | null };
+function failureOf(e: unknown): Failure {
+  const msg = walletErrorText(e);
+  const hint = popupBlockedHint(msg);
+  return hint ? { text: hint, detail: null } : { text: "Sign-in did not finish. Try again.", detail: msg };
+}
 
 const MAIL = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true" focusable="false">
@@ -66,11 +91,19 @@ const GOOGLE_G = (
 );
 const NEAR_MARK = <Image src="/logos/near.svg" alt="" width={20} height={20} unoptimized />;
 const EVM_MARK = <Image src="/logos/eth.svg" alt="" width={20} height={20} unoptimized />;
+const METEOR_MARK = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" focusable="false">
+    <path d="M3.5 20.5 13 11" /><circle cx="16.5" cy="7.5" r="3.5" />
+  </svg>
+);
 
-export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, onNear, onOther }: SignInModalProps) {
+export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, onNear, onMeteor, onOther }: SignInModalProps) {
   const [last, setLast] = useState<SignInMethod | null>(null);
+  /** The option whose sign-in is still running (Meteor opens its own window), and the failure of the last one. */
+  const [busy, setBusy] = useState<SignInMethod | null>(null);
+  const [failed, setFailed] = useState<Failure | null>(null);
   // Read on open, not on mount, so a method chosen in another tab shows the next time the sheet opens.
-  useEffect(() => { if (open) setLast(readLastMethod()); }, [open]);
+  useEffect(() => { if (open) { setLast(readLastMethod()); setBusy(null); setFailed(null); } }, [open]);
 
   const options: Option[] = [
     ...(socialEnabled ? [
@@ -78,8 +111,20 @@ export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, o
       { method: "email" as const, testid: "choose-email", title: "Continue with email", sub: "We email you a one-time code", icon: MAIL, run: onEmail },
     ] : []),
     { method: "near", testid: "choose-near", title: "NEAR wallet", sub: "HOT, MyNearWallet, Intear, Here. Connect and unlock in one popup.", icon: NEAR_MARK, run: onNear },
-    { method: "evm", testid: "choose-other", title: "MetaMask and other EVM wallets", sub: "Opens the full wallet list, including Meteor", icon: EVM_MARK, run: onOther },
+    { method: "meteor", testid: "signin-meteor", title: "Meteor", sub: "Opens Meteor Web in a small window", icon: METEOR_MARK, run: onMeteor },
+    { method: "evm", testid: "choose-other", title: "MetaMask and other EVM wallets", sub: "Opens the full wallet list, including more NEAR wallets", icon: EVM_MARK, run: onOther },
   ];
+
+  /** Called from the click itself, so a wallet window can open while the user's click is still active. */
+  const start = (o: Option) => {
+    rememberMethod(o.method);
+    setFailed(null);
+    const run = o.run();
+    if (run instanceof Promise) {
+      setBusy(o.method);
+      run.then(() => setBusy(null), (e: unknown) => { setBusy(null); setFailed(failureOf(e)); });
+    }
+  };
 
   return (
     <Sheet open={open} onClose={onClose} title="Sign in" testid="wallet-chooser">
@@ -92,7 +137,9 @@ export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, o
               className="signin-opt"
               data-testid={o.testid}
               data-method={o.method}
-              onClick={() => { rememberMethod(o.method); o.run(); }}
+              disabled={busy !== null}
+              aria-busy={busy === o.method || undefined}
+              onClick={() => start(o)}
             >
               <span className="signin-ico" aria-hidden="true">{o.icon}</span>
               <span className="signin-txt">
@@ -104,6 +151,11 @@ export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, o
           </li>
         ))}
       </ul>
+      {failed && (
+        <div role="alert" className="errbox" data-testid="signin-error">
+          <p>{failed.text}</p>{failed.detail && <p className="note">{failed.detail}</p>}
+        </div>
+      )}
       <p className="signin-note">{SIGN_NOTE}</p>
       <div className="signin-foot">
         <button type="button" className="kh-btn kh-btn--ghost" data-testid="choose-cancel" onClick={onClose}>Cancel</button>

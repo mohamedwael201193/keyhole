@@ -10,7 +10,7 @@ import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearCo
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
 import { PRIVY_FLAG, privyEnabled, privyResume, stripPrivyOauth, hasPrivyOauth, type PrivyNear } from "./privy";
-import { SignInModal, SIGN_NOTE } from "@/components/SignInModal";
+import { SignInModal, SIGN_NOTE, popupBlockedHint, walletErrorText } from "@/components/SignInModal";
 
 const PrivyBridge = dynamic(() => import("./privyBridge"), { ssr: false });
 
@@ -169,6 +169,18 @@ function tuneWalletChrome() {
     p.textContent = NET_HELP;
     h2.insertAdjacentElement("afterend", p);
   });
+  // A selector alert (a failed Meteor window, for one) gets the same hint when the browser blocked the popup.
+  document.querySelectorAll("#near-wallet-selector-modal .alert-message").forEach((alert) => {
+    if (alert.querySelector("[data-kh-popup]")) return;
+    const hint = popupBlockedHint(alert.textContent);
+    if (!hint) return;
+    const p = document.createElement("p");
+    p.dataset.khPopup = "";
+    p.className = "kh-sign-note";
+    p.setAttribute("role", "alert");
+    p.textContent = hint;
+    alert.appendChild(p);
+  });
   if (!document.querySelector(".ethereum-wallet-modal")) return;
   let style = document.getElementById("kh-eth-modal");
   if (!style) {
@@ -298,7 +310,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [ensure]);
 
-  const connect = useCallback(() => { setChoosing(true); }, []);
+  // Opening the sheet is a click, so the wallet bundle loads now (not on the Meteor click): signIn then runs with no await.
+  const connect = useCallback(() => { setChoosing(true); void ensure().catch(() => {}); }, [ensure]);
   const connectSocial = useCallback((method?: "google" | "email") => { setChoosing(false); setSocialMethod(method === "email" ? "email" : null); setPrivyOn(true); setWantLogin((n) => n + 1); }, []);
   const connectOther = useCallback(() => {
     setChoosing(false);
@@ -317,6 +330,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       };
       tick();
     });
+  }, [ensure]);
+  /**
+   * Signs in with one wallet-selector module directly: the same wallet.signIn({}) the selector modal calls, without the
+   * modal. Called from the click, so when the bundle is already loaded signIn starts before any await. The sheet is
+   * closed only after a successful sign-in; the store subscription in ensure() then sets the account, as for connectOther.
+   */
+  const connectSelectorWallet = useCallback((id: string) => {
+    // Meteor is an injected wallet: its signIn takes only { contractId?, methodNames? }. The selector's union type asks
+    // for every wallet kind's params (hardware needs accounts), so the call is narrowed to the injected shape here.
+    type InjectedSignIn = { signIn: (p: { contractId?: string; methodNames?: string[] }) => Promise<unknown> };
+    const go = (r: { selector: WalletSelector }) => r.selector.wallet(id).then((w) => (w as unknown as InjectedSignIn).signIn({}));
+    const started = ref.current ? go(ref.current) : ensure().then(() => go(ref.current!));
+    return started.then(() => { setChoosing(false); });
   }, [ensure]);
   const disconnect = useCallback(async () => {
     setSession(null); stash.current = null; await revokeStored(accountId);
@@ -370,7 +396,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: nonceBytes as unknown as Buffer, callbackUrl });
     } catch (e) {
       sessionStorage.removeItem(PENDING);
-      const m = String((e as Error)?.message || e);
+      const m = walletErrorText(e);
+      if (popupBlockedHint(m)) throw new SignError("wallet_popup_blocked");
       throw new SignError(/not supported|not implemented|signMessage/i.test(m) ? "wallet_no_sign_message" : "wallet_rejected");
     }
     if (!res) { sessionStorage.removeItem(PENDING); throw new SignError("wallet_rejected"); } // redirect wallets navigate away before this line
@@ -427,7 +454,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [pending, finishSession]);
   const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {
