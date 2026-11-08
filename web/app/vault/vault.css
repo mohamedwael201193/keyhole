@@ -147,3 +147,9 @@
 .vlt-fc-steps li[data-state="now"] { color: var(--ink); font-weight: 600; }
 .vlt-fc-steps li[data-state="now"]::before { background: var(--primary); border-color: var(--primary); }
 .vlt-fc .vlt-actions .vlt-sub { flex: 1 1 200px; }
+
+/* Saved "from another chain" order: one line on the page, and a compact card at the top of the Deposit sheet. Tokens only. */
+.vlt-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--info-bg); color: var(--info); font: 500 var(--text-small)/1.4 var(--font-ui); overflow-wrap: anywhere; }
+.vlt-banner b { font-weight: 700; }
+.vlt-order { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--raised); }
+.vlt-order .vlt-cardhead b { font: 700 var(--text-small)/1.3 var(--font-ui); color: var(--ink); }

@@ -82,9 +82,14 @@ describe("/vault deposit sheet", () => {
     expect(view).toContain("onClick={() => void unlock()}");
   });
 
-  it("polls status through the existing route and stops on a terminal status", () => {
-    expect(chain).toContain("/api/oneclick?depositAddress=");
-    expect(chain).toContain("isTerminalStatus(r.status)");
-    expect(chain).toContain("halt()");
+  it("polls status through the existing route and stops on a terminal status (in the saved-order hook)", () => {
+    const hook = readFileSync(new URL("../lib/useFundOrder.ts", import.meta.url), "utf8");
+    expect(hook).toContain("/api/oneclick?depositAddress=");
+    expect(hook).toContain("isTerminalStatus(r.status)");
+    expect(hook).toContain("halt()");
+  });
+
+  it("says only what the quote supports about routing", () => {
+    expect(chain).toContain("Routed by NEAR Intents 1Click into this vault&apos;s deposit address. Small first? Try a small amount first.");
   });
 });

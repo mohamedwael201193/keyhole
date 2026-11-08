@@ -25,6 +25,9 @@ import { acct, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { minutesLeft } from "@/lib/session";
 import { DepositQr } from "@/components/DepositQr";
 import { FundFromChain } from "@/components/FundFromChain";
+import { FundOrderCard } from "@/components/FundOrderCard";
+import { FundOrderBanner } from "@/components/FundOrderBanner";
+import { useFundOrder } from "@/lib/useFundOrder";
 import { assetRows, formatUsdMicro, isImplicitAccount, totalOf, withdrawSummary, type PriceBook } from "@/lib/amount";
 import { copyText } from "@/lib/copyText";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
@@ -106,6 +109,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const utcReset = (() => { const d = new Date(); d.setUTCHours(24, 0, 0, 0); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); })();
 
   const heldId = held?.token.token_id ?? null;
+  // The saved "from another chain" order for this key: shown on the page banner and at the top of the Deposit sheet.
+  const fo = useFundOrder(accountId, heldId);
   // Live: a session for this account and this key that has not run out.
   const live = !!(session && heldId && session.account === accountId && session.token_id === heldId && minutesLeft(session) > 0);
   const sessionToken = live && session ? session.token : "";
@@ -300,6 +305,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         </div>
       </header>
 
+      {fo.order && !fo.terminal && <FundOrderBanner order={fo.order} status={fo.status} onOpen={() => setDepOpen(true)} />}
+
       {online === false ? (
         <div><OfflineState /><HowStrip /></div>
       ) : !accountId ? (
@@ -490,6 +497,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
       )}
 
       <Sheet open={depOpen} onClose={() => setDepOpen(false)} title="Deposit" testid="deposit-sheet">
+        {fo.order && <FundOrderCard order={fo.order} status={fo.status} statusErr={fo.statusErr} terminal={fo.terminal} onClear={fo.clear} />}
         <p className="vlt-sub">{t("vault.fundLead")}</p>
         <div className="vlt-stack">
           <div className="vlt-field">
@@ -535,7 +543,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               <>
                 <p className="vlt-sub">Pay from a chain you already hold. 1Click (NEAR Intents) swaps it into {ASSETS[fundAsset].symbol} and delivers it to your vault. Creating the quote moves no funds.</p>
                 {fundedDeposit ? (
-                  <FundFromChain recipient={fundedDeposit} dest={fundAsset === "wnear" ? "wnear" : "usdc"} destSymbol={ASSETS[fundAsset].symbol} units={fundUnits ?? ""} amount={fundAmt} evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} />
+                  <FundFromChain recipient={fundedDeposit} dest={fundAsset === "wnear" ? "wnear" : "usdc"} destSymbol={ASSETS[fundAsset].symbol} units={fundUnits ?? ""} amount={fundAmt} evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} order={fo.order} status={fo.status} statusErr={fo.statusErr} onSave={fo.save} />
                 ) : live ? (
                   <div className="vlt-stack" data-testid="fac-target-step">
                     <p className="vlt-sub">Reads the vault&apos;s deposit address for {fundAmt} {ASSETS[fundAsset].symbol}. This is a signed read; no funds move.</p>
