@@ -29,9 +29,11 @@ export type ModalProps = {
   children?: ReactNode;
   variant?: "dialog" | "sheet";
   testid?: string;
+  /** Extra class on the panel, for a screen that needs its own width or height (for example the token picker). */
+  panelClassName?: string;
 };
 
-export function Modal({ open, onClose, title, children, variant = "dialog", testid }: ModalProps) {
+export function Modal({ open, onClose, title, children, variant = "dialog", testid, panelClassName }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
   const closer = useRef(onClose);
   // Portals need the browser. The first (server) render is inline; once mounted, the dialog moves to document.body.
@@ -69,7 +71,7 @@ export function Modal({ open, onClose, title, children, variant = "dialog", test
   if (!open) return null;
   const dialog = (
     <div className={`kh-modal kh-modal--${variant}`} onMouseDown={(e) => { if (e.target === e.currentTarget) closer.current(); }} data-testid={testid}>
-      <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} className="kh-modal-panel" tabIndex={-1}>
+      <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} className={panelClassName ? `kh-modal-panel ${panelClassName}` : "kh-modal-panel"} tabIndex={-1}>
         <header className="kh-modal-head">
           <h2 id={titleId}>{title}</h2>
           <button type="button" className="kh-modal-close" aria-label="Close" onClick={() => closer.current()}>

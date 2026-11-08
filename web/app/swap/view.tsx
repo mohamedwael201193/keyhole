@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AmountInput, Badge, Button, Card, Purpose, TokenSelect, type TokenOption } from "@/components/ui";
+import { Badge, Button, Card, cleanAmount, TokenSelect, type TokenOption } from "@/components/ui";
 import { TxStatus as TxResult } from "@/components/ui/tx-status";
 import { Attested, ErrorBox } from "@/components/Result";
 import { useWallet, OP_CTX, type OpResume } from "@/lib/wallet";
@@ -25,6 +25,9 @@ type Done = { give: string; decimals: number; symbol: string };
 
 /** The vault's own two assets. They are the pair on first paint and the only choice when the full token list cannot load. */
 const FALLBACK = fallbackTokens();
+
+/** The quote and the swap both run at 1% max slippage. The enclave quote path takes no slippage parameter, so it cannot be set. */
+const SLIPPAGE_LABEL = "Max slippage 1%, fixed";
 
 function toOption(t: Token, balance?: string): TokenOption {
   const name = chainName(t.blockchain);
@@ -56,7 +59,7 @@ function rawFor(bal: RawBalance[] | null, id: string): string {
 /**
  * The swap screen. It runs the same paths as the vault had: the enclave quote (execute: false) and the signed swap, both through
  * useSigned, and the key and session from useWallet. With no wallet it shows a dry 1Click price, labelled as a price only.
- * Any token in the 1Click list can be picked; the default pair is USDC to wNEAR.
+ * Any token in the 1Click list can be picked; the default pair is USDC to wNEAR. Styles: ./swap.css.
  */
 export function SwapView() {
   const { accountId, connect, session, startSession, pending } = useWallet();
@@ -72,11 +75,15 @@ export function SwapView() {
   // The picker's tokens: the full list once it loads, the vault's two assets until then or when it fails.
   const tokens = useMemo<Token[]>(() => (list.status === "ready" && list.tokens.length > 0 ? list.tokens : FALLBACK), [list.status, list.tokens]);
   const findToken = (id: string): Token | null => tokens.find((t) => t.assetId === id) ?? FALLBACK.find((t) => t.assetId === id) ?? null;
+  const chainCount = useMemo(() => new Set(list.tokens.map((t) => t.blockchain)).size, [list.tokens]);
 
   const [from, setFrom] = useState<Token>(FALLBACK[0]);
   const [to, setTo] = useState<Token>(FALLBACK[1]);
+  const [turns, setTurns] = useState(0);
   const [amount, setAmount] = useState("0.05");
   const [quoted, setQuoted] = useState<{ key: string; minOut?: string } | null>(null);
+  const [quotedAt, setQuotedAt] = useState<number | null>(null);
+  const [ageS, setAgeS] = useState(0);
   const [done, setDone] = useState<Done | null>(null);
   const [prices, setPrices] = useState<PriceBook>({});
   const [dry, setDry] = useState<Quote | null>(null);
@@ -131,7 +138,7 @@ export function SwapView() {
     return () => { cancel = true; };
   }, []);
 
-  // No wallet: a live dry 1Click price for the same pair. It is labelled as a price only.
+  // No wallet: a live dry 1Click price for the same pair. It is labelled as a price only. Debounced, so typing does not hit the per-IP limit.
   useEffect(() => {
     if (accountId || samePair || !units) { setDry(null); setDryMsg(null); return; }
     let cancel = false;
@@ -143,7 +150,7 @@ export function SwapView() {
         if (j.ok) setDry(j.quote); else { setDry(null); setDryMsg(humanDry(j.error?.code)); }
       } catch { if (!cancel) { setDry(null); setDryMsg("Could not reach 1Click. Check your connection and try again."); } }
       finally { setDryBusy(false); }
-    }, 700);
+    }, 500);
     return () => { cancel = true; clearTimeout(id); };
   }, [accountId, samePair, units, fromId, toId]);
 
@@ -154,16 +161,25 @@ export function SwapView() {
     const id = setTimeout(() => {
       quoteKey.current = tradeKey;
       void runQuote(quoteParams(accountId, fromId, toId, units), { quiet: true });
-    }, 800);
+    }, 500);
     return () => clearTimeout(id);
   }, [sessionLive, units, accountId, fromId, toId, samePair, tradeKey, runQuote]);
 
   useEffect(() => {
     if (!quote.res) return;
-    if (!quote.res.output?.ok) { setQuoted(null); return; }
+    if (!quote.res.output?.ok) { setQuoted(null); setQuotedAt(null); return; }
     const min = (quote.res.output.quote as Quote | undefined)?.minAmountOut;
     setQuoted({ key: quoteKey.current, minOut: typeof min === "string" && /^\d+$/.test(min) ? min : undefined });
+    setQuotedAt(Date.now());
+    setAgeS(0);
   }, [quote.res]);
+
+  // The quote age in the rate row, counted once a second while a quote is shown.
+  useEffect(() => {
+    if (quotedAt == null) return;
+    const id = setInterval(() => setAgeS(Math.max(0, Math.round((Date.now() - quotedAt) / 1000))), 1000);
+    return () => clearInterval(id);
+  }, [quotedAt]);
 
   // A redirect wallet returns to this page with the swap pending: show the trade it was for.
   useEffect(() => {
@@ -217,7 +233,7 @@ export function SwapView() {
     if (!r.ok) setUnlockErr(r.code);
   }
   function again() {
-    swap.reset(); quote.reset(); quoteKey.current = ""; setQuoted(null); setDone(null);
+    swap.reset(); quote.reset(); quoteKey.current = ""; setQuoted(null); setQuotedAt(null); setDone(null);
   }
   function onCta() {
     if (step === "connect") void connect();
@@ -226,7 +242,7 @@ export function SwapView() {
     else if (step === "confirm") confirm();
     else if (step === "done") again();
   }
-  function flip() { setFrom(to); setTo(from); }
+  function flip() { setTurns((n) => n + 1); setFrom(to); setTo(from); }
   function pickFrom(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === toId) setTo(from); setFrom(t); }
   function pickTo(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === fromId) setFrom(to); setTo(t); }
 
@@ -255,69 +271,110 @@ export function SwapView() {
 
   return (
     <div className="page sw-page" data-testid="swap-page" data-step={step}>
-      <Purpose eyebrow="NEAR Intents · 1Click · mainnet" title="Swap" line="Check the price, then swap. Your swap runs inside your key's vault, from its own balance." />
+      <header className="sw-head">
+        <h1 className="sw-title">Swap</h1>
+        <p className="sw-lead">Runs inside your key&apos;s vault. Prices from NEAR Intents.</p>
+        <div className="sw-chips">
+          <span className="sw-chip sw-chip--live"><i aria-hidden="true" />Mainnet</span>
+          {list.tokens.length > 0 && <span className="sw-chip" data-testid="swap-count">{`${list.tokens.length} tokens · ${chainCount} chains`}</span>}
+        </div>
+      </header>
 
       <Card as="section" className="sw-card" testid="swap-card" aria-label="Swap">
-        <div className="sw-leg">
-          <AmountInput
-            label="You pay"
-            value={amount}
-            onChange={setAmount}
-            symbol={from.symbol}
-            balance={balanceText ?? undefined}
-            usd={payUsd != null ? `about ${formatUsdMicro(payUsd)}` : undefined}
-            onMax={fromRaw && fromRaw !== "0" ? () => setAmount(fromBaseUnits(fromRaw, from.decimals, from.decimals)) : undefined}
-            error={amountError}
-            testid="swap-amount"
-            end={<TokenSelect label="Pay with" options={options} value={fromId} onChange={pickFrom} testid="swap-from" notice={notice} />}
-          />
-          {!balanceText && accountId && (
-            <div className="sw-hint">
-              {sessionLive ? (
-                <Button variant="ghost" size="sm" loading={balance.busy} loadingLabel="Reading your balance" onClick={() => void balance.run({})} testid="swap-balance-btn">
-                  Read balance (session, no popup)
-                </Button>
-              ) : (
-                <Button variant="ghost" size="sm" loading={unlocking} loadingLabel="Waiting for your wallet" onClick={() => void unlock()} testid="swap-balance-btn">
-                  Unlock to read balance
-                </Button>
-              )}
-            </div>
-          )}
-          {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
+        <div className="sw-cardhead">
+          <h2 className="sw-cardtitle">Swap</h2>
+          <span className="sw-slip">{SLIPPAGE_LABEL}</span>
         </div>
 
-        <div className="sw-flip">
-          <button type="button" onClick={flip} aria-label={`Switch: pay ${to.symbol}, receive ${from.symbol}`} data-testid="swap-flip">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16M3 16l4 4 4-4" /><path d="M17 20V4M13 8l4-4 4 4" /></svg>
+        <section className="sw-panel" aria-labelledby="sw-pay-label" data-testid="swap-amount">
+          <div className="sw-panel-top">
+            <label id="sw-pay-label" htmlFor="sw-pay-input" className="sw-label">You pay</label>
+            <div className="sw-balance">
+              {balanceText ? (
+                <>
+                  <span>Balance <b className="sw-bal-num">{balanceText}</b></span>
+                  {fromRaw && fromRaw !== "0" && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button type="button" className="sw-textbtn" onClick={() => setAmount(fromBaseUnits(fromRaw, from.decimals, from.decimals))} data-testid="swap-amount-max">Max</button>
+                    </>
+                  )}
+                </>
+              ) : accountId && held ? (
+                sessionLive ? (
+                  <button type="button" className="sw-textbtn" disabled={balance.busy} onClick={() => void balance.run({})} data-testid="swap-balance-btn">
+                    {balance.busy ? "Reading your balance" : "Read balance"}
+                  </button>
+                ) : (
+                  <button type="button" className="sw-textbtn" disabled={unlocking} onClick={() => void unlock()} data-testid="swap-balance-btn">
+                    {unlocking ? "Waiting for your wallet" : "Unlock to see balance"}
+                  </button>
+                )
+              ) : null}
+            </div>
+          </div>
+          <div className="sw-panel-main">
+            <input
+              id="sw-pay-input"
+              className="sw-amt-input"
+              data-testid="swap-amount-input"
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="0"
+              value={amount}
+              aria-invalid={amountError ? true : undefined}
+              aria-describedby={amountError ? "sw-pay-error" : undefined}
+              onChange={(e) => setAmount(cleanAmount(e.target.value))}
+            />
+            <TokenSelect label="Pay with" options={options} value={fromId} onChange={pickFrom} testid="swap-from" notice={notice} />
+          </div>
+          <div className="sw-panel-foot">
+            {payUsd != null ? <span className="sw-usd">≈ {formatUsdMicro(payUsd)}</span> : <span className="sw-usd" aria-hidden="true">&nbsp;</span>}
+            {amountError && <p id="sw-pay-error" className="sw-error" role="alert">{amountError}</p>}
+          </div>
+          {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
+        </section>
+
+        <div className="sw-gap">
+          <button type="button" className="sw-flip" onClick={flip} aria-label={`Switch: pay ${to.symbol}, receive ${from.symbol}`} data-testid="swap-flip">
+            <span className="sw-flip-ico" style={{ transform: `rotate(${turns * 180}deg)` }} aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4v16M3 16l4 4 4-4" /><path d="M17 20V4M13 8l4-4 4 4" /></svg>
+            </span>
           </button>
         </div>
 
-        <div className="sw-recv">
-          <div className="sw-recv-top">
-            <span className="sw-label" id="sw-recv-label">You receive</span>
+        <section className="sw-panel" aria-labelledby="sw-recv-label">
+          <div className="sw-panel-top">
+            <span id="sw-recv-label" className="sw-label">You receive</span>
             {dryBusy && !estimate && !accountId ? <span className="sw-busy" role="status">Checking price…</span> : !accountId && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
           </div>
-          <div className="sw-recv-row">
-            <div className="sw-amt-col">
-              <output className={`sw-amt${estimate ? "" : " is-empty"}`} aria-labelledby="sw-recv-label" data-testid="swap-receive">
-                {estimate ? formatAmount(estimate) : "—"}
-              </output>
-              {outUsd != null && Number.isFinite(outUsd) && <small className="sw-amt-usd">about {formatUsdMicro(Math.max(0, Math.round(outUsd * 1e6)))}</small>}
-            </div>
+          <div className="sw-panel-main">
+            <output className={`sw-amt${estimate ? "" : " is-empty"}${quote.busy ? " is-busy" : ""}`} aria-labelledby="sw-recv-label" data-testid="swap-receive">
+              {estimate ? formatAmount(estimate) : "—"}
+            </output>
             <TokenSelect label="Receive in" options={options} value={toId} onChange={pickTo} testid="swap-to" notice={notice} />
           </div>
-          {dryMsg && !accountId && <p className="sw-note" role="alert" data-testid="dry-msg">{dryMsg}</p>}
+          <div className="sw-panel-foot">
+            {outUsd != null && Number.isFinite(outUsd) ? <small className="sw-amt-usd">≈ {formatUsdMicro(Math.max(0, Math.round(outUsd * 1e6)))}</small> : <span className="sw-usd" aria-hidden="true">&nbsp;</span>}
+            {dryMsg && !accountId && <p className="sw-error" role="alert" data-testid="dry-msg">{dryMsg}</p>}
+          </div>
+        </section>
+
+        <div className="sw-rate">
+          <span className="sw-rate-val" data-testid="swap-rate">{rate != null ? `1 ${from.symbol} = ${formatAmount(rate)} ${to.symbol}` : "Enter an amount to see the rate"}</span>
+          {quoteFresh && quotedAt != null && <span className="sw-age">Quoted {ageS}s ago</span>}
         </div>
 
-        <dl className="sw-facts" data-testid="swap-facts">
-          <div><dt>Route</dt><dd>NEAR Intents, via 1Click</dd></div>
-          <div><dt>Rate</dt><dd>{rate != null ? `1 ${from.symbol} ≈ ${formatAmount(rate)} ${to.symbol}` : "Shown after you review"}</dd></div>
-          <div><dt>Fee and spread</dt><dd>{spread != null ? `about ${formatUsdMicro(Math.max(0, Math.round(spread * 1e6)))}` : "Shown after you review"}</dd></div>
-          <div><dt>Max slippage</dt><dd>1%</dd></div>
-          <div><dt>Minimum received</dt><dd>{minOutText ?? "Shown after you review"}</dd></div>
-          <div><dt>Time</dt><dd>{eta != null ? `about ${eta}s` : "About a minute"}</dd></div>
-        </dl>
+        <details className="sw-details" data-testid="swap-details">
+          <summary>Details</summary>
+          <dl className="sw-facts" data-testid="swap-facts">
+            <div><dt>Route</dt><dd>NEAR Intents, via 1Click</dd></div>
+            <div><dt>Fee and spread</dt><dd>{spread != null ? `about ${formatUsdMicro(Math.max(0, Math.round(spread * 1e6)))}` : "—"}</dd></div>
+            <div><dt>Max slippage</dt><dd>1%, fixed by the vault</dd></div>
+            <div><dt>Minimum received</dt><dd>{minOutText ?? "—"}</dd></div>
+            <div><dt>Estimated time</dt><dd>{eta != null ? `about ${eta}s` : "—"}</dd></div>
+          </dl>
+        </details>
 
         {step === "get_key" ? (
           <Button href="/mint" block size="lg" testid="swap-cta">{cta.label}</Button>
@@ -332,6 +389,7 @@ export function SwapView() {
             {busyLabel}
           </Button>
         )}
+        <p className="sw-funds">Your funds stay in your key&apos;s vault on NEAR mainnet. A swap moves only the amount you enter, within the key&apos;s per-trade cap.</p>
 
         {!accountId && <p className="sw-note">Connect a wallet to swap. Checking a price needs no wallet and moves nothing.</p>}
         {accountId && held && <p className="sw-note">Signed in as <span className="mono">{shortAccount(accountId)}</span>. Your key is held.</p>}
@@ -352,48 +410,51 @@ export function SwapView() {
         {quote.res && !swapDone && <Attested r={quote.res} />}
       </Card>
 
-      <Card as="section" className="sw-recent" testid="swap-recent" aria-labelledby="sw-recent-h">
-        <div className="sw-recent-head">
-          <h2 id="sw-recent-h">{hist ? "Your recent swaps" : "Recent public orders"}</h2>
-          {accountId && !history.res && (sessionLive ? (
-            <Button variant="secondary" size="sm" loading={history.busy} loadingLabel="Reading your history" onClick={() => void history.run({})} testid="history-btn">
-              Read my history
-            </Button>
-          ) : (
-            <Button variant="secondary" size="sm" loading={unlocking} loadingLabel="Waiting for your wallet" onClick={() => void unlock()} testid="history-btn">
-              Unlock to read
-            </Button>
-          ))}
-        </div>
-        {hist && historyOk === null && <p className="sw-note">Checking the log…</p>}
-        {hist && historyOk === false && <p className="sw-note" data-testid="swap-log-hidden">Not shown: the log did not verify.</p>}
-        {hist && historyOk === true && mine.length === 0 && <p className="sw-note">No swaps in your history yet.</p>}
-        {hist && historyOk === true && mine.length > 0 && (
-          <ul className="sw-list" data-testid="swap-mine">
-            {mine.map((e, i) => (
-              <li key={i}>
-                <span>{human(e.amount_in, e.token_in)} → {human(e.amount_out, e.token_out)}</span>
-                <small>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</small>
-              </li>
+      {accountId && held && (
+        <Card as="section" className="sw-recent" testid="swap-recent" aria-labelledby="sw-recent-h">
+          <div className="sw-recent-head">
+            <h2 id="sw-recent-h">Your recent swaps</h2>
+            {!history.res && (sessionLive ? (
+              <Button variant="secondary" size="sm" loading={history.busy} loadingLabel="Reading your history" onClick={() => void history.run({})} testid="history-btn">
+                Read my history
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" loading={unlocking} loadingLabel="Waiting for your wallet" onClick={() => void unlock()} testid="history-btn">
+                Unlock to read
+              </Button>
             ))}
-          </ul>
-        )}
-        {!hist && (
-          <>
-            <p className="sw-note">Public 1Click orders on NEAR mainnet, not yours. {accountId ? "Read your history to see your own swaps." : ""}</p>
-            <ul className="sw-list" data-testid="swap-public">
-              {SETTLEMENTS.slice(0, 3).map((s) => (
-                <li key={s.depositAddress}>
-                  <span>{s.label}</span>
-                  <a href={s.depositTxUrl ?? tx(s.depositTx)} target="_blank" rel="noreferrer">Proof ↗</a>
+          </div>
+          {!hist && <p className="sw-note">Read your history with your session to see your own swaps. Nothing is read until you do.</p>}
+          {hist && historyOk === null && <p className="sw-note">Checking the log…</p>}
+          {hist && historyOk === false && <p className="sw-note" data-testid="swap-log-hidden">Not shown: the log did not verify.</p>}
+          {hist && historyOk === true && mine.length === 0 && <p className="sw-note">No swaps in your history yet.</p>}
+          {hist && historyOk === true && mine.length > 0 && (
+            <ul className="sw-list" data-testid="swap-mine">
+              {mine.map((e, i) => (
+                <li key={i}>
+                  <span>{human(e.amount_in, e.token_in)} → {human(e.amount_out, e.token_out)}</span>
+                  <small>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</small>
                 </li>
               ))}
             </ul>
-            <p className="sw-note"><Link href="/settle">See every order and where its funds are</Link></p>
-          </>
-        )}
-        {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
-      </Card>
+          )}
+          {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
+        </Card>
+      )}
+
+      <details className="sw-public" data-testid="swap-public-wrap">
+        <summary>Public orders</summary>
+        <p className="sw-note">Public 1Click orders on NEAR mainnet, not yours.</p>
+        <ul className="sw-list" data-testid="swap-public">
+          {SETTLEMENTS.slice(0, 3).map((s) => (
+            <li key={s.depositAddress}>
+              <span>{s.label}</span>
+              <a href={s.depositTxUrl ?? tx(s.depositTx)} target="_blank" rel="noreferrer">Proof ↗</a>
+            </li>
+          ))}
+        </ul>
+        <p className="sw-note"><Link href="/settle">See every order and where its funds are</Link></p>
+      </details>
     </div>
   );
 }

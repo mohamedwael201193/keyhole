@@ -6,6 +6,7 @@ import { Badge, BADGE_STATUS, badgeFor } from "@/components/ui";
 import { StatCard } from "@/components/ui/card";
 import { TokenIcon } from "@/components/TokenIcon";
 import { monogram, tokenIcon } from "@/lib/tokenIcons";
+import { localTokenMarkUrl } from "@/lib/tokenMarks";
 import { CountUp, FadeUp, GlowReveal, Parallax, Stagger, Tilt } from "@/components/motion";
 import { TxResult } from "@/components/TxResult";
 
@@ -117,11 +118,13 @@ describe("StatCard", () => {
   });
 });
 
-describe("TokenIcon", () => {
-  it("renders the self-hosted mark for a known asset id", () => {
-    const m = html(createElement(TokenIcon, { assetId: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", symbol: "USDC" }));
-    expect(m).toContain('src="/tokens/usdc.svg"');
-    expect(m).not.toContain("tkicon-mono");
+describe("TokenIcon (a wrapper over TokenMark)", () => {
+  it("first paint is the monogram; the self-hosted mark is the first candidate and is probed in the browser", () => {
+    const usdc = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+    const m = html(createElement(TokenIcon, { assetId: usdc, symbol: "USDC" }));
+    expect(m).not.toContain("<img");
+    expect(m).toContain('data-mark="monogram"');
+    expect(localTokenMarkUrl({ assetId: usdc, symbol: "USDC" })).toBe("/tokens/usdc.svg");
   });
 
   it("wNEAR uses the NEAR mark", () => {
@@ -131,7 +134,7 @@ describe("TokenIcon", () => {
   it("falls back to a monogram from the symbol when there is no mark", () => {
     const m = html(createElement(TokenIcon, { assetId: "nep141:unknown.near", symbol: "ZZZ" }));
     expect(m).not.toContain("<img");
-    expect(m).toContain('class="tkicon-mono"');
+    expect(m).toContain('class="kh-tmark-glyph"');
     expect(m).toContain(">ZZ<");
   });
 
@@ -148,10 +151,12 @@ describe("TokenIcon", () => {
   });
 
   it("standalone icon gets a role and label; beside text it stays decorative", () => {
-    expect(html(createElement(TokenIcon, { symbol: "USDT", label: "USDT" }))).toContain('alt="USDT"');
+    const labelled = html(createElement(TokenIcon, { symbol: "USDT", label: "USDT" }));
+    expect(labelled).toContain('role="img"');
+    expect(labelled).toContain('aria-label="USDT"');
     const deco = html(createElement(TokenIcon, { symbol: "USDT" }));
-    expect(deco).toContain('alt=""');
     expect(deco).toContain('aria-hidden="true"');
+    expect(deco).not.toContain('role="img"');
   });
 });
 

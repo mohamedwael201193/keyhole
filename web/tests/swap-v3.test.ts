@@ -55,8 +55,9 @@ describe("/swap screen wiring", () => {
     expect(view).toContain("Price only, nothing moves");
   });
   it("shows the balance only from a signed read, and offers Max only with one", () => {
-    expect(view).toContain("balanceText ?? undefined");
-    expect(view).toMatch(/onMax=\{fromRaw && fromRaw !== "0"/);
+    expect(view).toContain("balanceText ? (");
+    expect(view).toMatch(/fromRaw && fromRaw !== "0" && \(/);
+    expect(view).toContain('data-testid="swap-amount-max"');
   });
   it("the done state names the call and links to Verify through TxStatus", () => {
     expect(view).toContain('testid="trade-out"');
@@ -65,7 +66,8 @@ describe("/swap screen wiring", () => {
   });
   it("recent swaps come from the signed history only after the log verifies", () => {
     expect(view).toContain("useLogVerified(history.res)");
-    expect(view).toContain("Recent public orders");
+    expect(view).toContain("Your recent swaps");
+    expect(view).toContain("<summary>Public orders</summary>");
   });
   it("the page entry renders the view", () => {
     expect(src("../app/swap/page.tsx")).toContain("SwapView");

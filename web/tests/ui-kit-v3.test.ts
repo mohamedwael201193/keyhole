@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AmountInput, cleanAmount } from "@/components/ui/amount-input";
 import { TokenSelect, filterTokens, type TokenOption } from "@/components/ui/token-select";
 import { Modal, Sheet, trapIndex } from "@/components/ui/modal";
+import { localTokenMarkUrl } from "@/lib/tokenMarks";
 import { Tabs, nextTabIndex } from "@/components/ui/tabs";
 import { Stepper } from "@/components/ui/stepper";
 import { ToastList, ToastProvider, useToast, type ToastItem } from "@/components/ui/toast";
@@ -104,13 +105,15 @@ describe("TokenSelect", () => {
     expect(filterTokens(opts, "zzz")).toEqual([]);
   });
 
-  it("the closed trigger shows the chosen token with its real mark and a dialog hint", () => {
+  it("the closed trigger shows the chosen token (its mark loads after first paint) and a dialog hint", () => {
     const m = html(createElement(TokenSelect, { label: "Pay with", options: opts, value: "usdc", onChange: () => {}, testid: "pay" }));
     expect(m).toContain('data-testid="pay"');
     expect(m).toContain('aria-haspopup="dialog"');
     expect(m).toContain('aria-expanded="false"');
     expect(m).toContain("USDC");
-    expect(m).toContain('src="/tokens/usdc.svg"');
+    expect(m).toContain('data-mark="monogram"');
+    expect(m).toContain('kh-tmark-glyph">US<');
+    expect(localTokenMarkUrl({ symbol: "USDC", assetId: opts[0].assetId })).toBe("/tokens/usdc.svg");
   });
 
   it("with nothing chosen the trigger says so", () => {

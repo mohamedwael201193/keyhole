@@ -254,11 +254,6 @@ p .mono, li .mono, small .mono, p code, li code { display: inline; white-space: 
 .kh-empty-icon { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #1F4B4F12; color: var(--teal); margin-bottom: var(--space-3); }
 .kh-empty h2 { text-wrap: balance; }
 
-/* Token icons: the brass medallion from .medal, or a monogram when the mark is missing */
-.tkicon-mono { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: #1F4B4F; color: #FFFCF6; font: 600 13px/1 var(--sans); letter-spacing: .02em; }
-.tkicon-mono[data-size="sm"] { font-size: 11px; }
-.tkicon-mono[data-size="lg"] { font-size: 16px; }
-
 /* Transaction result: one state line, then the proof links */
 .kh-tx { display: grid; gap: var(--space-3); }
 .kh-tx-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }

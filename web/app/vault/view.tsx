@@ -10,7 +10,7 @@ import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
 import { Guilloche, Hallmark } from "@/components/Engraving";
 import { FoilCard } from "@/components/FoilCard";
-import { TokenIcon } from "@/components/TokenIcon";
+import { TokenMark } from "@/components/TokenMark";
 import { useI18n } from "@/lib/i18n";
 import { useWallet, OP_CTX, type OpResume } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
@@ -379,7 +379,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <div className="vlt-assets" data-testid="asset-list">
                     {rows.map((b) => (
                       <div className="vlt-asset" key={b.key} data-token={b.symbol}>
-                        <TokenIcon assetId={b.known ? b.key : null} symbol={b.symbol} size={24} />
+                        <TokenMark assetId={b.known ? b.key : null} symbol={b.symbol} chain="near" size={24} />
                         <div className="vlt-asset-who"><b>{b.symbol}</b><small>{b.name ? `${b.name} · NEAR` : "NEAR"}</small></div>
                         <div className="vlt-asset-amt"><b>{b.amountLabel}</b>{b.usdMicro != null ? <small>{formatUsdMicro(b.usdMicro)}</small> : null}</div>
                       </div>

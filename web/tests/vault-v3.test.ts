@@ -41,9 +41,9 @@ describe("/vault v3 layout", () => {
     expect(v).not.toContain('useSigned("swap")');
   });
 
-  it("uses the kit: Card, Button, Sheet, Tabs, AmountInput, TokenSelect, TokenIcon", () => {
+  it("uses the kit: Card, Button, Sheet, Tabs, AmountInput, TokenSelect, TokenMark", () => {
     expect(v).toContain('from "@/components/ui"');
-    expect(v).toContain("TokenIcon");
+    expect(v).toContain("TokenMark");
     expect(v).toContain("TokenSelect");
     expect(v).toContain("AmountInput");
   });
