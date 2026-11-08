@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Overview, type ActivityView, type BalanceView, type KeysView, type OverviewProps } from "@/components/dashboard/Overview";
+import { Overview, type ActivityView, type BalanceView, type KeysView, type OverviewProps, type UnlockView } from "@/components/dashboard/Overview";
+import type { SignInOptionsProps } from "@/components/SignInModal";
+import type { Token } from "@/lib/near";
 import { amountText, capsOf, entryDetail, finishOf, keyCountText, kindLabel, settledOrders, type HistEntry } from "@/lib/dashboard";
 import { assetRows, totalOf } from "@/lib/amount";
 import { ASSETS } from "@/lib/assets";
@@ -9,23 +12,38 @@ import { ASSETS } from "@/lib/assets";
 const ACCT = "holder.keyhole.test";
 const USDC = ASSETS.usdc.id;
 const html = (p: Partial<OverviewProps>) => renderToStaticMarkup(createElement(Overview, { ...BASE, ...p } as OverviewProps));
-/** The markup of one stat card, from its test id to the start of the next card. */
-const card = (m: string, id: string) => {
-  const from = m.indexOf(`data-testid="${id}"`);
-  expect(from, id).toBeGreaterThan(-1);
-  const next = m.indexOf('data-testid="stat-', from + 1);
-  return m.slice(from, next === -1 ? undefined : next);
-};
+const token = (id: string): Token => ({ token_id: id, owner_id: ACCT, metadata: null });
 
-const keysReady = (count: number, tier: number | null = 1, capped = false): KeysView => ({ status: "ready", count, capped, tier, onRetry: () => {} });
-const keysLoading: KeysView = { status: "loading", count: 0, capped: false, tier: null, onRetry: () => {} };
-const balanceUnread: BalanceView = { read: false, busy: false, busyLabel: "", sessionLive: false, total: null, rows: null, error: null, onSign: () => {} };
+const keysReady = (count: number, tier: number | null = 1, capped = false): KeysView => ({
+  status: "ready", count, capped, primary: count > 0 ? token("4") : null, tier, onRetry: () => {},
+});
+const keysLoading: KeysView = { status: "loading", count: 0, capped: false, primary: null, tier: null, onRetry: () => {} };
+const unlockOff: UnlockView = { live: false, minutes: 0, busy: false, busyLabel: "", via: null, error: null, onUnlock: () => {} };
+const unlockOn: UnlockView = { ...unlockOff, live: true, minutes: 27 };
+const balanceUnread: BalanceView = { read: false, busy: false, busyLabel: "", total: null, rows: null, error: null, onRead: () => {} };
 const activityUnread: ActivityView = { read: false, busy: false, busyLabel: "", entries: null, logOk: null, callId: null, error: null, onRead: () => {} };
-const BASE: OverviewProps = { accountId: ACCT, restoring: false, keys: keysReady(1), balance: balanceUnread, activity: activityUnread, onConnect: () => {} };
+const SIGN_IN: SignInOptionsProps = {
+  socialEnabled: true, onGoogle: () => {}, onEmail: () => {}, onNear: () => {}, onMeteor: () => Promise.resolve(), onOther: () => {},
+};
+const BASE: OverviewProps = {
+  accountId: ACCT, restoring: false, keys: keysReady(1), unlock: unlockOff, balance: balanceUnread, activity: activityUnread, signIn: SIGN_IN,
+};
 
 const usdcRows = (raw: string) => {
   const rows = assetRows([{ token: USDC, amount: raw }], {});
   return { rows, total: totalOf(rows) };
+};
+/** The opening tag of the element with this test id, so an href and a test id are checked on the same element. */
+const tagOf = (m: string, id: string) => {
+  const at = m.indexOf(`data-testid="${id}"`);
+  expect(at, id).toBeGreaterThan(-1);
+  return m.slice(m.lastIndexOf("<", at), m.indexOf(">", at) + 1);
+};
+/** The markup from one test id to the next top-level block, so an assertion stays inside its own card. */
+const from = (m: string, id: string) => {
+  const at = m.indexOf(`data-testid="${id}"`);
+  expect(at, id).toBeGreaterThan(-1);
+  return m.slice(at);
 };
 
 describe("pure helpers", () => {
@@ -66,122 +84,175 @@ describe("pure helpers", () => {
   });
 });
 
-describe("Overview: not connected", () => {
-  it("shows the calm hero with a 3D sign-in button and the judge link", () => {
+describe("Overview: signed out", () => {
+  it("is one centred card: the sign-in rows inline, and a way to explore without a wallet", () => {
     const m = html({ accountId: null });
-    expect(m).toContain("Sign in to see your keys");
-    expect(m).toMatch(/data-testid="dash-connect-cta"/);
-    expect(m).not.toMatch(/href="\/start"/);
-    expect(m).toMatch(/href="\/verify"[^>]*data-testid="dash-explore"|data-testid="dash-explore"[^>]*href="\/verify"/);
-    expect(m).toContain("kh-btn--primary");
-    expect(m).not.toContain('data-testid="stat-keys"');
+    expect(m).toContain("Open your key");
+    expect(m).toContain('data-testid="dash-connect"');
+    for (const id of ["choose-social", "choose-email", "choose-near", "signin-meteor", "choose-other"]) expect(m, id).toContain(`data-testid="${id}"`);
+    expect(tagOf(m, "dash-explore")).toContain('href="/judge"');
+    expect(m).not.toContain('data-testid="key-hero"');
+    expect(m).not.toContain('data-testid="stat-balance"');
+    expect(m).not.toContain("Sign to unseal");
   });
 
-  it("while the wallet is restoring it shows a neutral skeleton, not the connect hero", () => {
+  it("hides Google and email when Privy is not configured", () => {
+    const m = html({ accountId: null });
+    expect(m).toContain('data-testid="choose-social"');
+    const off = renderToStaticMarkup(createElement(Overview, { ...BASE, accountId: null, signIn: { ...SIGN_IN, socialEnabled: false } }));
+    expect(off).not.toContain('data-testid="choose-social"');
+    expect(off).toContain('data-testid="choose-near"');
+  });
+
+  it("while the wallet is restoring it shows a neutral skeleton, not the sign-in card", () => {
     const m = html({ accountId: null, restoring: true });
     expect(m).toContain('data-testid="dash-restoring"');
-    expect(m).not.toContain("Connect to see your keys");
+    expect(m).not.toContain("Open your key");
   });
 });
 
-describe("Overview: connected, keys still loading", () => {
-  it("names the wait and shows no number", () => {
+describe("Overview: signed in, keys still loading", () => {
+  it("names the wait and shows no number and no vault card", () => {
     const m = html({ keys: keysLoading });
-    expect(m).toContain("Looking up your keys…");
+    expect(m).toContain("Looking up your key");
     expect(m).toContain(ACCT);
-    expect(m).not.toContain('class="kh-stat-value"');
+    expect(m).not.toContain('data-testid="key-hero"');
     expect(m).not.toContain('data-testid="mint-banner"');
     expect(m).not.toContain('data-testid="dash-assets"');
-  });
-});
-
-describe("Overview: connected, no key", () => {
-  const m = html({ keys: keysReady(0, null) });
-
-  it("shows zero keys as a real count, and the mint banner", () => {
-    expect(card(m, "stat-keys")).toMatch(/kh-stat-value">0</);
-    expect(m).toContain('data-testid="mint-banner"');
-    expect(m).toContain("Mint your key");
-    expect(m).toMatch(/href="\/mint"/);
-    expect(m).toContain("only Bronze is mintable today.");
-  });
-
-  it("no tier, no caps and no vault prompt without a key", () => {
-    expect(card(m, "stat-tier")).toContain("No key yet");
-    expect(card(m, "stat-tier")).not.toContain("kh-stat-value");
-    expect(card(m, "stat-balance")).toContain("Mint a key to open a vault");
-    expect(card(m, "stat-balance")).not.toContain('data-testid="dash-unseal"');
-    expect(m).not.toContain('data-testid="stat-settled"');
-    expect(m).not.toContain('data-testid="dash-activity"');
-  });
-});
-
-describe("Overview: connected with a key", () => {
-  it("shows the tier and its published caps; the vault balance waits for a signature", () => {
-    const m = html({ keys: keysReady(1, 1) });
-    expect(card(m, "stat-keys")).toMatch(/kh-stat-value">1</);
-    expect(card(m, "stat-tier")).toMatch(/kh-stat-value">Bronze</);
-    expect(card(m, "stat-tier")).toContain("$1 a trade · $5 a day");
-    expect(card(m, "stat-balance")).not.toContain("kh-stat-value");
-    expect(card(m, "stat-balance")).toContain('data-testid="dash-unseal"');
-    expect(card(m, "stat-balance")).toContain("Sign to unseal");
-    expect(m).not.toContain('data-testid="mint-banner"');
-    expect(m).toContain('data-testid="dash-assets"');
-    expect(m).toContain("Assets appear here after you sign");
-    expect(m).toContain('data-testid="dash-activity"');
-    expect(m).toContain("Sign to read");
-  });
-
-  it("the settled count waits for the history read and says so", () => {
-    const m = html({ keys: keysReady(1, 1) });
-    expect(card(m, "stat-settled")).toContain("Read activity to count them");
-    expect(card(m, "stat-settled")).not.toContain("kh-stat-value");
-  });
-
-  it("a stored tier with a key reads as Gold for tier 3", () => {
-    expect(html({ keys: keysReady(1, 3) })).toMatch(/kh-stat-value">Gold</);
-  });
-
-  it("a key whose tier cannot be read shows no tier value", () => {
-    const m = html({ keys: keysReady(1, null) });
-    expect(card(m, "stat-tier")).toContain("Tier not readable right now");
-    expect(card(m, "stat-tier")).not.toContain("kh-stat-value");
+    expect(m).not.toContain("kh-stat-value");
   });
 
   it("a failed key lookup says so and offers a retry, never a zero", () => {
-    const m = html({ keys: { status: "error", count: 0, capped: false, tier: null, onRetry: () => {} } });
-    expect(card(m, "stat-keys")).toContain('data-testid="dash-keys-retry"');
-    expect(card(m, "stat-keys")).not.toContain("kh-stat-value");
+    const m = html({ keys: { status: "error", count: 0, capped: false, primary: null, tier: null, onRetry: () => {} } });
+    expect(m).toContain("Your keys did not load");
+    expect(m).toContain('data-testid="dash-keys-retry"');
     expect(m).not.toContain('data-testid="mint-banner"');
+    expect(m).not.toContain('data-testid="stat-keys"');
   });
 });
 
-describe("Overview: vault balance after a signed read", () => {
-  it("shows the USD total and the asset list with the token mark", () => {
+describe("Overview: signed in, no key", () => {
+  const m = html({ keys: keysReady(0, null) });
+
+  it("the hero is Mint: one primary action to /mint, and a sample artwork labelled as one", () => {
+    expect(m).toContain('data-testid="mint-banner"');
+    expect(m).toContain("Mint your key");
+    expect(tagOf(m, "dash-mint")).toContain('href="/mint"');
+    expect(m).toContain("Free. One signature. The enclave pays storage.");
+    expect(m).toContain("Only Bronze is mintable today");
+    expect(m).toContain('alt="Sample Bronze key artwork"');
+  });
+
+  it("the checklist names the key as the first open step, with its action", () => {
+    expect(from(m, "setup-checklist")).toContain('data-testid="setup-key-action"');
+    expect(tagOf(m, "setup-key-action")).toContain('href="/mint"');
+    expect(m).toContain('data-testid="setup-sign"');
+    expect(m).not.toContain('data-testid="setup-complete"');
+  });
+
+  it("shows no vault, no assets and no activity without a key", () => {
+    expect(m).not.toContain('data-testid="dash-assets"');
+    expect(m).not.toContain('data-testid="dash-activity"');
+    expect(m).not.toContain('data-testid="dash-unlock"');
+  });
+
+  it("still shows the proof card with the enclave status, the build and the contract", () => {
+    expect(m).toContain('data-testid="ov-proof"');
+    expect(m).toContain("Intel TDX");
+    expect(m).toContain("keyhole-devmo.near");
+    expect(tagOf(m, "ov-verify")).toContain('href="/verify"');
+  });
+});
+
+describe("Overview: signed in with a key, vault locked", () => {
+  const m = html({ keys: keysReady(1, 1) });
+
+  it("the key card names the key and its tier, with the one sentence and the caps from the tier table", () => {
+    expect(from(m, "key-hero")).toContain("Key #4");
+    expect(m).toContain('data-testid="stat-tier">Bronze<');
+    expect(m).toContain("Your NFT is the account: whoever holds the key controls the vault, and selling the key hands over the account.");
+    expect(m).toContain("Caps: $1 a trade · $5 a day");
+    expect(m).toMatch(/\/heirloom\/keys\/k(03|05|08)\.webp/);
+  });
+
+  it("the vault total is Locked, with one Unlock button that starts the session", () => {
+    expect(m).toContain('data-testid="stat-balance">Locked<');
+    expect(m).toContain('data-testid="dash-unlock"');
+    expect(m).toContain("One signature. 30 minutes.");
+    expect(m).not.toContain('data-testid="dash-asset-list"');
+  });
+
+  it("the hero offers Swap, Deposit and Withdraw, with Swap secondary while locked", () => {
+    expect(tagOf(m, "dash-swap")).toContain('href="/swap"');
+    expect(tagOf(m, "dash-deposit")).toContain('href="/vault"');
+    expect(tagOf(m, "dash-withdraw")).toContain('href="/vault"');
+  });
+
+  it("the assets and activity cards carry one muted unlock line each, and no sign-to button", () => {
+    expect(from(m, "dash-assets")).toContain('data-testid="dash-unlock-line"');
+    expect(from(m, "dash-activity")).toContain('data-testid="dash-unlock-line"');
+    expect(m).toContain("Unlock to read");
+    expect(m).not.toContain("Sign to read");
+    expect(m).not.toContain("Sign to unseal");
+    expect(m.match(/data-testid="dash-unlock-line"/g)?.length).toBe(2);
+  });
+
+  it("the checklist shows Unlock as the open step and the rest as not yet", () => {
+    expect(m).toContain('data-testid="setup-unlock-action"');
+    expect(m).toContain('data-testid="setup-fund" data-done="0"');
+    expect(m).toContain('data-testid="setup-swap" data-done="0"');
+  });
+
+  it("a tier that cannot be read shows no finish and no caps", () => {
+    const u = html({ keys: keysReady(1, null) });
+    expect(u).toContain("Tier not readable");
+    expect(u).toContain("Caps: not readable for this tier right now");
+    expect(u).not.toContain("$1 a trade");
+  });
+
+  it("Silver and Gold keys carry their own published caps", () => {
+    expect(html({ keys: keysReady(1, 2) })).toContain("Caps: $10 a trade · $50 a day");
+    expect(html({ keys: keysReady(1, 3) })).toContain("Caps: $100 a trade · $500 a day");
+  });
+
+  it("several keys say so, and the list full at the limit says 50 or more", () => {
+    expect(html({ keys: keysReady(3, 1) })).toContain("Showing the first.");
+    expect(html({ keys: keysReady(50, 1, true) })).toContain("50 or more");
+  });
+});
+
+describe("Overview: signed in with a key, session live", () => {
+  it("the vault total is the balance read, with the session label and no unlock button", () => {
     const { rows, total } = usdcRows("12340000");
-    const m = html({ balance: { ...balanceUnread, read: true, rows, total }, keys: keysReady(1, 1) });
-    expect(card(m, "stat-balance")).toMatch(/kh-stat-value">\$12\.34</);
+    const m = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, read: true, rows, total } });
+    expect(m).toContain('data-testid="stat-balance">$12.34<');
+    expect(m).not.toContain('data-testid="dash-unlock"');
+    expect(m).toContain("Read with your session. No popup.");
+    expect(tagOf(m, "dash-swap")).toContain('href="/swap"');
     expect(m).toContain('data-testid="dash-asset-list"');
     expect(m).toContain(`data-token="${ASSETS.usdc.symbol}"`);
-    expect(m).toContain('data-icon="usdc"');
     expect(m).toContain('data-testid="dash-balance-refresh"');
-    expect(m).not.toContain("Assets appear here after you sign");
+    expect(m).not.toContain('data-testid="dash-unlock-line"');
+  });
+
+  it("while the balance is read the vault says so, and a failed read is shown with its code and a retry", () => {
+    const reading = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, busy: true, busyLabel: "Enclave is checking" } });
+    expect(reading).toContain("Enclave is checking");
+    const failed = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, error: { code: "rate_limited", retry_after: 5 } } });
+    expect(failed).toContain('data-code="rate_limited"');
+    expect(failed).toContain('data-testid="dash-balance-retry"');
+    expect(failed).toContain('data-testid="stat-balance">Unavailable<');
   });
 
   it("an empty vault says it is empty, with no zero asset rows", () => {
-    const m = html({ balance: { ...balanceUnread, read: true, rows: [], total: { kind: "empty" } }, keys: keysReady(1, 1) });
+    const m = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, read: true, rows: [], total: { kind: "empty" } } });
     expect(m).toContain('data-testid="dash-assets-empty"');
     expect(m).not.toContain('data-testid="dash-asset-list"');
   });
 
-  it("a read error is shown with its code, not hidden", () => {
-    const m = html({ balance: { ...balanceUnread, error: { code: "rate_limited", retry_after: 5 } }, keys: keysReady(1, 1) });
-    expect(m).toContain('data-code="rate_limited"');
-  });
-
-  it("the session label replaces the signature label once a session is live", () => {
-    const m = html({ balance: { ...balanceUnread, sessionLive: true }, keys: keysReady(1, 1) });
-    expect(m).toContain("Unseal (session, no popup)");
+  it("an unlock error is shown with its code next to the Unlock button", () => {
+    const m = html({ keys: keysReady(1, 1), unlock: { ...unlockOff, error: "wallet_rejected" } });
+    expect(m).toContain('data-code="wallet_rejected"');
   });
 });
 
@@ -193,67 +264,82 @@ describe("Overview: recent activity from the signed history", () => {
   const readOk = (over: Partial<ActivityView> = {}): ActivityView => ({ ...activityUnread, read: true, entries, logOk: true, callId: "abcdef1234567890", ...over });
 
   it("lists the newest entries with status badges, counts the settled swap, and links the read to /verify", () => {
-    const m = html({ activity: readOk(), keys: keysReady(1, 1) });
-    expect(card(m, "stat-settled")).toMatch(/kh-stat-value">1</);
-    expect(m).toContain('data-testid="dash-feed"');
-    const feed = m.slice(m.indexOf('data-testid="dash-feed"'));
+    const m = html({ activity: readOk(), keys: keysReady(1, 1), unlock: unlockOn });
+    expect(m).toMatch(/data-testid="stat-settled">Settled orders <b>1<\/b>/);
+    const feed = from(m, "dash-feed");
     expect(feed.match(/<li /g)?.length).toBe(2);
     expect(feed).toContain("Success");
     expect(feed).toContain("Refunded");
     expect(feed).toContain("Withdraw");
     expect(m).toContain('href="/verify?call=abcdef1234567890"');
-    expect(m).toContain("call abcdef12");
+    expect(m).toContain("abcdef12");
   });
 
-  it("a log that does not verify shows no entries and does not count settled orders", () => {
-    const m = html({ activity: readOk({ logOk: false }), keys: keysReady(1, 1) });
+  it("a log that does not verify shows no entries and counts nothing", () => {
+    const m = html({ activity: readOk({ logOk: false }), keys: keysReady(1, 1), unlock: unlockOn });
     expect(m).toContain('data-testid="dash-log-hidden"');
     expect(m).not.toContain('data-testid="dash-feed"');
-    expect(card(m, "stat-settled")).toContain("Not counted: the log did not verify.");
+    expect(m).toMatch(/Settled orders <b>—<\/b>/);
   });
 
   it("while the log is checked it says so", () => {
-    const m = html({ activity: readOk({ logOk: null }), keys: keysReady(1, 1) });
+    const m = html({ activity: readOk({ logOk: null }), keys: keysReady(1, 1), unlock: unlockOn });
     expect(m).toContain("Checking the log…");
-    expect(card(m, "stat-settled")).toContain("Checking the log…");
   });
 
   it("an empty verified log is an honest empty state", () => {
-    const m = html({ activity: readOk({ entries: [] }), keys: keysReady(1, 1) });
+    const m = html({ activity: readOk({ entries: [] }), keys: keysReady(1, 1), unlock: unlockOn });
     expect(m).toContain('data-testid="dash-empty"');
     expect(m).toContain("No trades on this key yet.");
-    expect(card(m, "stat-settled")).toMatch(/kh-stat-value">0</);
+    expect(m).toMatch(/data-testid="stat-settled">Settled orders <b>0<\/b>/);
   });
 
   it("a read error is shown", () => {
-    const m = html({ activity: readOk({ error: { code: "session_expired" } }), keys: keysReady(1, 1) });
+    const m = html({ activity: readOk({ error: { code: "session_expired" } }), keys: keysReady(1, 1), unlock: unlockOn });
     expect(m).toContain('data-code="session_expired"');
   });
 });
 
-describe("Overview: one next step", () => {
-  it("a key with a sealed vault asks for one signature to unseal", () => {
-    const m = html({ keys: keysReady(1, 1) });
-    expect(m).toContain('data-testid="dash-next-unseal"');
-    expect(m).not.toContain('data-testid="dash-next-swap"');
+describe("Overview: setup checklist from real state", () => {
+  it("an empty funded-not-yet vault leaves Fund open and points to the vault", () => {
+    const m = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, read: true, rows: [], total: { kind: "empty" } } });
+    expect(m).toContain('data-testid="setup-fund" data-done="0"');
+    expect(tagOf(m, "setup-fund-action")).toContain('href="/vault"');
   });
 
-  it("a funded vault points to Swap, and only Swap", () => {
+  it("a funded vault marks Fund done", () => {
     const { rows, total } = usdcRows("2500000");
-    const m = html({ balance: { ...balanceUnread, read: true, rows, total }, keys: keysReady(1, 1) });
-    expect(m).toMatch(/href="\/swap"[^>]*data-testid="dash-next-swap"|data-testid="dash-next-swap"[^>]*href="\/swap"/);
-    expect(m).not.toContain('data-testid="dash-next-fund"');
+    const m = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, read: true, rows, total } });
+    expect(m).toContain('data-testid="setup-fund" data-done="1"');
+    expect(m).not.toContain('data-testid="setup-fund-action"');
   });
 
-  it("an empty vault points to funding it", () => {
-    const m = html({ balance: { ...balanceUnread, read: true, rows: [], total: { kind: "empty" } }, keys: keysReady(1, 1) });
-    expect(m).toContain('data-testid="dash-next-fund"');
-    expect(m).not.toContain('data-testid="dash-next-swap"');
+  it("all five done collapses the list to Setup complete, and the proof card stays", () => {
+    const { rows, total } = usdcRows("2500000");
+    const entries: HistEntry[] = [{ ts_ms: 1, kind: "swap", token_in: USDC, amount_in: "1", token_out: USDC, amount_out: "1", status: "success" }];
+    const m = html({
+      keys: keysReady(1, 1), unlock: unlockOn,
+      balance: { ...balanceUnread, read: true, rows, total },
+      activity: { ...activityUnread, read: true, entries, logOk: true, callId: "abcdef1234567890" },
+    });
+    expect(m).toContain('data-testid="setup-complete"');
+    expect(m).not.toMatch(/data-testid="setup-(key|unlock|fund|swap)-action"/);
+    expect(m).toContain('data-testid="ov-proof"');
+  });
+});
+
+describe("Overview: the page stays inside the design rules", () => {
+  it("the overview stylesheet uses no !important and no literal colours (tokens only)", () => {
+    const css = readFileSync(new URL("../app/overview.css", import.meta.url), "utf8");
+    expect(css).not.toContain("!important");
+    expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   });
 
-  it("no key still names Mint, and nothing else", () => {
-    const m = html({ keys: keysReady(0, null) });
-    expect(m).toContain('data-testid="mint-banner"');
-    expect(m).not.toContain('data-testid="next-step"');
+  it("the page uses the shared key store and the one signed read path, not its own key lookup", () => {
+    const v = readFileSync(new URL("../app/dashboard/view.tsx", import.meta.url), "utf8");
+    expect(v).toContain('import { useKeyStore } from "@/lib/keyStore"');
+    expect(v).not.toContain("useMyKeys");
+    expect(v).toContain('useSigned("balance")');
+    expect(v).toContain('useSigned("history")');
   });
 });

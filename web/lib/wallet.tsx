@@ -50,6 +50,8 @@ interface WalletCtx {
   connectNear: () => Promise<void>;
   /** The classic selector (MetaMask / Ethereum, and every other wallet). */
   connectOther: () => void;
+  /** Meteor through the wallet selector, directly (the same handler the sign-in sheet's Meteor row uses). */
+  connectMeteor: () => Promise<void>;
   /** Google / email through Privy (NEAR docs "Privy" tutorial); signs in-page, no wallet popups. `email` limits the Privy modal to the email code. */
   connectSocial: (method?: "google" | "email") => void;
   /** True when the Privy app is configured for this build. */
@@ -468,7 +470,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [pending, finishSession]);
   const revokeSession = useCallback(async () => { setSession(null); await revokeStored(accountId); }, [accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectMeteor: () => connectSelectorWallet("meteor-wallet"), connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {

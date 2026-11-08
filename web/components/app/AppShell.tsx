@@ -1,12 +1,15 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { KeyholeLogo } from "@/components/KeyholeLogo";
 import { AccountControl } from "@/components/AccountControl";
 import { TxLink } from "@/components/TxLink";
 import { KEYS_CONTRACT } from "@/lib/config";
 import { useI18n } from "@/lib/i18n";
+import { KeyStoreProvider, useKeyStore } from "@/lib/keyStore";
+import { useWallet } from "@/lib/wallet";
+import { SessionPill } from "./SessionPill";
 
 /**
  * The app shell for the holder routes. One top bar across the full width (logo, page title, network pill, account), then a
@@ -95,7 +98,7 @@ export function AppNavIcon({ name }: { name: AppIcon }) {
 }
 
 /** The sidebar list (and the phone menu, which is the same list). Pure of hooks, so markup and active state render alone. */
-export function AppNav({ pathname, hash, onNavigate }: { pathname: string | null | undefined; hash: string; onNavigate?: (href: string) => void }) {
+export function AppNav({ pathname, hash, mint = false, onNavigate }: { pathname: string | null | undefined; hash: string; mint?: boolean; onNavigate?: (href: string) => void }) {
   return (
     <nav aria-label="App navigation" className="app-nav">
       {APP_NAV.map((group) => (
@@ -104,18 +107,28 @@ export function AppNav({ pathname, hash, onNavigate }: { pathname: string | null
             {group.items.map((item) => {
               const on = isItemActive(item, pathname, hash);
               return (
-                <li key={item.id}>
-                  <Link
-                    href={item.href}
-                    className={`app-link${on ? " on" : ""}`}
-                    aria-current={on ? "page" : undefined}
-                    data-testid={`app-nav-${item.id}`}
-                    onClick={() => onNavigate?.(item.href)}
-                  >
-                    <AppNavIcon name={item.icon} />
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
+                <Fragment key={item.id}>
+                  <li>
+                    <Link
+                      href={item.href}
+                      className={`app-link${on ? " on" : ""}`}
+                      aria-current={on ? "page" : undefined}
+                      data-testid={`app-nav-${item.id}`}
+                      onClick={() => onNavigate?.(item.href)}
+                    >
+                      <AppNavIcon name={item.icon} />
+                      <span>{item.label}</span>
+                    </Link>
+                  </li>
+                  {mint && item.id === "keys" && (
+                    <li>
+                      <Link href="/mint" className="app-link app-link-cta" data-testid="app-nav-mint" onClick={() => onNavigate?.("/mint")}>
+                        <AppNavIcon name="key" />
+                        <span>Mint a key</span>
+                      </Link>
+                    </li>
+                  )}
+                </Fragment>
               );
             })}
           </ul>
@@ -150,9 +163,18 @@ export function AppTabs({ pathname, hash, onMore, moreOpen }: { pathname: string
 /** "/dashboard#activity" → "#activity"; a link without a hash → "". */
 export const hashOf = (href: string) => (href.includes("#") ? href.slice(href.indexOf("#")) : "");
 
+/** The shell with the shared key store mounted once for every app route (the store persists across client navigation). */
 export function AppShell({ children }: { children: ReactNode }) {
+  return <KeyStoreProvider><AppShellFrame>{children}</AppShellFrame></KeyStoreProvider>;
+}
+
+function AppShellFrame({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const pathname = usePathname();
+  const { accountId } = useWallet();
+  const keys = useKeyStore();
+  // Mint shows in the sidebar only when the key store has read this account and found no key.
+  const mint = !!accountId && keys.status === "ready" && keys.keys.length === 0;
   const [hash, setHash] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -183,13 +205,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <p className="app-title" data-testid="app-title">{pageTitle(pathname)}</p>
         <div className="app-top-end">
           <span className="app-net" data-testid="network-pill"><i aria-hidden="true" />NEAR mainnet</span>
+          <SessionPill />
           <AccountControl />
         </div>
       </header>
       <div className="app-body">
         <aside id="app-side" className={`app-side${open ? " open" : ""}`} aria-label="App">
           <Link href="/" className="app-back" data-testid="app-back">← Back to site</Link>
-          <AppNav pathname={pathname} hash={hash} onNavigate={(href) => { setHash(hashOf(href)); setOpen(false); }} />
+          <AppNav pathname={pathname} hash={hash} mint={mint} onNavigate={(href) => { setHash(hashOf(href)); setOpen(false); }} />
           <div className="app-foot">
             <p className="app-net-line"><i aria-hidden="true" />NEAR mainnet</p>
             <Link href="/verify" className="app-proof" data-testid="app-proof">Proof</Link>

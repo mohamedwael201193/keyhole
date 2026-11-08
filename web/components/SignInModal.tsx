@@ -8,6 +8,7 @@ import { Badge, Sheet } from "@/components/ui";
  * method; each option calls the function that already existed (connectSocial, connectNear, connectOther), so the auth,
  * session and signing logic in lib/wallet.tsx and lib/privyBridge.tsx is untouched.
  * The last method used is remembered on this device (localStorage) and marked "Last used".
+ * The rows themselves (SignInOptions) are also rendered inline by the signed-out Overview (components/dashboard/Overview.tsx).
  */
 export type SignInMethod = "google" | "email" | "near" | "meteor" | "evm";
 
@@ -46,17 +47,21 @@ export function walletErrorText(e: unknown): string {
   return [x?.message, x?.endTag].filter((v): v is string => typeof v === "string" && v !== "").join(" ") || String(e);
 }
 
-export type SignInModalProps = {
-  open: boolean;
-  onClose: () => void;
+/** The sign-in handlers. Each one is an existing function from useWallet() (or wallet.tsx's own Meteor handler). */
+export type SignInOptionsProps = {
   /** False when the Privy app is not configured for this build: Google and email are then hidden. */
   socialEnabled: boolean;
   onGoogle: () => void;
   onEmail: () => void;
   onNear: () => void;
-  /** Meteor directly through the wallet selector (no chooser). The sheet stays open until it resolves or fails. */
+  /** Meteor directly through the wallet selector (no chooser). The row stays busy until it resolves or fails. */
   onMeteor: () => Promise<void>;
   onOther: () => void;
+};
+
+export type SignInModalProps = SignInOptionsProps & {
+  open: boolean;
+  onClose: () => void;
 };
 
 type Option = {
@@ -65,7 +70,7 @@ type Option = {
   title: string;
   sub: string;
   icon: ReactNode;
-  /** Runs at once in the click. A returned promise keeps the sheet open until it settles. */
+  /** Runs at once in the click. A returned promise keeps the row busy until it settles. */
   run: () => unknown;
 };
 
@@ -94,13 +99,17 @@ const EVM_MARK = <Image src="/logos/eth.svg" alt="" width={20} height={20} unopt
 // The mark @near-wallet-selector/meteor-wallet ships (assets/meteor-icon.png), the same one its wallet list shows.
 const METEOR_MARK = <Image src="/logos/meteor.png" alt="" width={20} height={20} unoptimized />;
 
-export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, onNear, onMeteor, onOther }: SignInModalProps) {
+/**
+ * The sign-in rows: Google, email, NEAR wallets, Meteor and MetaMask / EVM. The sheet (SignInModal) and the signed-out
+ * Overview both render this, so the options and their wording are the same everywhere.
+ */
+export function SignInOptions({ socialEnabled, onGoogle, onEmail, onNear, onMeteor, onOther }: SignInOptionsProps) {
   const [last, setLast] = useState<SignInMethod | null>(null);
   /** The option whose sign-in is still running (Meteor opens its own window), and the failure of the last one. */
   const [busy, setBusy] = useState<SignInMethod | null>(null);
   const [failed, setFailed] = useState<Failure | null>(null);
-  // Read on open, not on mount, so a method chosen in another tab shows the next time the sheet opens.
-  useEffect(() => { if (open) { setLast(readLastMethod()); setBusy(null); setFailed(null); } }, [open]);
+  // Read on mount (the sheet mounts each time it opens), so a method chosen in another tab shows the next time.
+  useEffect(() => { setLast(readLastMethod()); }, []);
 
   const options: Option[] = [
     ...(socialEnabled ? [
@@ -124,8 +133,7 @@ export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, o
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Sign in" testid="wallet-chooser">
-      <p className="signin-lead">Choose how to sign in. You only sign a message to prove the account.</p>
+    <>
       <ul className="signin-list">
         {options.map((o) => (
           <li key={o.method}>
@@ -154,6 +162,15 @@ export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, o
         </div>
       )}
       <p className="signin-note">{SIGN_NOTE}</p>
+    </>
+  );
+}
+
+export function SignInModal({ open, onClose, socialEnabled, onGoogle, onEmail, onNear, onMeteor, onOther }: SignInModalProps) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Sign in" testid="wallet-chooser">
+      <p className="signin-lead">Choose how to sign in. You only sign a message to prove the account.</p>
+      <SignInOptions socialEnabled={socialEnabled} onGoogle={onGoogle} onEmail={onEmail} onNear={onNear} onMeteor={onMeteor} onOther={onOther} />
       <div className="signin-foot">
         <button type="button" className="kh-btn kh-btn--ghost" data-testid="choose-cancel" onClick={onClose}>Cancel</button>
       </div>
