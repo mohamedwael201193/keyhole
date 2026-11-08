@@ -9,6 +9,7 @@ import { callWorker } from "./worker";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
+import { Buffer } from "buffer";
 import { PRIVY_FLAG, privyEnabled, privyResume, stripPrivyOauth, hasPrivyOauth, type PrivyNear } from "./privy";
 import { SignInModal, SIGN_NOTE, popupBlockedHint, walletErrorText } from "@/components/SignInModal";
 
@@ -295,6 +296,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     const resume = privyEnabled() ? privyResume(location.search, Object.keys(localStorage)) : null;
     if (resume) { setRestoring(true); setPrivyOn(true); if (resume === "oauth") { setSocialFinishing(true); setTimeout(() => setSocialFinishing(false), 45_000); } return; }
+    // Meteor left NEAR Connect for the selector (popup shim bug). A NEAR Connect record from an older Meteor attempt would
+    // route signing to a connector that no longer lists Meteor, so it is dropped and the selector session restores instead.
+    if (localStorage.getItem(NC_WALLET_KEY) === METEOR_NEAR_CONNECT_ID) localStorage.removeItem(NC_WALLET_KEY);
     if (localStorage.getItem(NC_WALLET_KEY)) {
       setRestoring(true);
       void nearConnector().then((nc) => nc.getConnectedWallet()).then(({ accounts }) => {
@@ -342,7 +346,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     type InjectedSignIn = { signIn: (p: { contractId?: string; methodNames?: string[] }) => Promise<unknown> };
     const go = (r: { selector: WalletSelector }) => r.selector.wallet(id).then((w) => (w as unknown as InjectedSignIn).signIn({}));
     const started = ref.current ? go(ref.current) : ensure().then(() => go(ref.current!));
-    return started.then(() => { setChoosing(false); });
+    return started.then(() => {
+      // A selector sign-in owns the session from here, even if NEAR Connect restored an older wallet on load.
+      if (owner.current === "nc") {
+        localStorage.removeItem(NC_WALLET_KEY);
+        const a = ref.current?.selector.store.getState().accounts.find((x) => x.active)?.accountId ?? null;
+        owner.current = a ? "ws" : null; setVia(owner.current); setAccountId(a);
+      }
+      setChoosing(false);
+    });
   }, [ensure]);
   const disconnect = useCallback(async () => {
     setSession(null); stash.current = null; await revokeStored(accountId);
@@ -393,7 +405,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem(PENDING, JSON.stringify({ message, nonce, ctx, callbackUrl }));
     let res;
     try {
-      res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: nonceBytes as unknown as Buffer, callbackUrl });
+      // wallet-selector core rejects anything but a real Buffer (Buffer.isBuffer), so a bare Uint8Array failed every
+      // selector wallet (Meteor first) with "Invalid nonce" before any window opened.
+      res = await wallet.signMessage({ message, recipient: NEP413_RECIPIENT, nonce: Buffer.from(nonceBytes), callbackUrl });
     } catch (e) {
       sessionStorage.removeItem(PENDING);
       const m = walletErrorText(e);

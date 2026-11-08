@@ -274,13 +274,19 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await page.goto("/vault");
   const balanceCard = page.locator(".c").filter({ has: page.getByTestId("balance-btn") });
   await expect(page.getByTestId("balance-btn")).toBeVisible({ timeout: 20_000 });
+  // The wallet window opens (MyNearWallet signs in a popup); closing it unsigned is the decline.
+  await page.context().route("https://app.mynearwallet.com/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>wallet</title>" }));
+  const popup = page.waitForEvent("popup", { timeout: 20_000 });
   await page.getByTestId("balance-btn").click();
+  await (await popup).close();
   await expect(balanceCard.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
   await expect(balanceCard.getByText("You declined the signature.")).toBeVisible();
+  const popup2 = page.waitForEvent("popup", { timeout: 20_000 });
   await page.getByRole("button", { name: "History" }).click();
+  await (await popup2).close();
   await expect(balanceCard.getByTestId("error")).toHaveCount(0);
   const activity = page.locator(".c").filter({ has: page.getByRole("button", { name: "History" }) });
-  await expect(activity.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected");
+  await expect(activity.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
   await page.evaluate(() => {
     sessionStorage.setItem("kh_pending_sign", JSON.stringify({
       message: JSON.stringify({ op: "swap", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
