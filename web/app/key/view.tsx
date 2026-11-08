@@ -6,6 +6,9 @@ import { TEE_MINTER } from "@/lib/config";
 import { TxLink } from "@/components/TxLink";
 import { Button, CopyBtn, Spinner } from "@/components/ui";
 import { TxResult } from "@/components/TxResult";
+import { useKeyChain } from "./useKeyChain";
+import { BeforeYouBuy, BuyerProof, ProofPanel } from "./buyer";
+import "./key.css";
 
 /** New ids are k + hex; the first keys were minted with plain numbers (0, 1, 2…). */
 export const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;
@@ -20,9 +23,15 @@ export function KeyHistoryView() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [legacy, setLegacy] = useState<string | null>(null);
+  /** The key whose chain state is read (holder, minter). Set for every valid id, legacy included. */
+  const [active, setActive] = useState("");
+  /** The `proof` query value, when the page was opened with a share link. */
+  const [proof, setProof] = useState<string | null>(null);
+  const chain = useKeyChain(active);
 
   async function load(tid: string) {
     setErr(null); setBody(null); setCk(null); setCallId(null); setLegacy(null);
+    setActive(ID.test(tid) ? tid : "");
     if (!ID.test(tid)) { setErr("That is not a key id. Paste one from the gallery, like k5f4750858f328940 or 0."); return; }
     if (/^\d+$/.test(tid)) { setLegacy(tid); return; }
     setBusy(true);
@@ -36,8 +45,10 @@ export function KeyHistoryView() {
     finally { setBusy(false); }
   }
   useEffect(() => {
-    const q = new URLSearchParams(location.search).get("id") ?? "";
-    setId(q); if (q) void load(q);
+    const sp = new URLSearchParams(location.search);
+    const q = sp.get("id") ?? "";
+    setId(q); setProof(sp.get("proof") || null);
+    if (q) void load(q);
   }, []);
 
   const hs = body ? holders(body.events) : [];
@@ -48,7 +59,7 @@ export function KeyHistoryView() {
       <p className="eb">Key history · public</p>
       <h1>Every key has a <em>book.</em></h1>
       <p className="lead">Who held this key, and when it deposited, paid out and traded. This page re-checks every link in your browser; amounts stay sealed.</p>
-      <form className="field" onSubmit={(e) => { e.preventDefault(); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
+      <form className="field" onSubmit={(e) => { e.preventDefault(); setProof(null); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
         <label htmlFor="kid" className="sr-only">key id</label>
         <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
         <Button type="submit" loading={busy} loadingLabel="Opening" testid="key-load">Open</Button>
@@ -62,8 +73,11 @@ export function KeyHistoryView() {
           <p>An early key, minted before per-key history books existed. Its owner is still on chain: see <span className="mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
         </section>
       )}
+      {proof && <ProofPanel raw={proof} id={active} owner={chain.owner} minter={chain.minter} />}
+      {active && legacy === null && <BuyerProof id={active} owner={chain.owner} />}
       {body && ck && (
         <>
+          <BeforeYouBuy id={active} body={body} callId={callId} owner={chain.owner} />
           <div className="kpills" data-testid="key-verdict" data-ok={String(ok)}>
             {pill(ck.chain, `${body.events.length} events chain`, "k-chain")}
             {pill(ck.head, "head matches", "k-head")}
