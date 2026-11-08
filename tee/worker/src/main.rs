@@ -71,6 +71,13 @@ mod host {
         Ok(view(&keys_contract(), "holder_tier", json!({"account_id": account}))?.as_u64().map(|t| t as u8))
     }
 
+    /// The tier the keys contract holds for this key (`nft_tier`, read live with finality final).
+    fn nft_tier_of(token: &str) -> Result<u8, Error> {
+        view(&keys_contract(), "nft_tier", json!({"token_id": token}))?.as_u64()
+            .filter(|t| (1..=3).contains(t)).map(|t| t as u8)
+            .ok_or_else(|| err("no_key", "the keys contract reports no tier for this key"))
+    }
+
     /// The key this account holds now, confirmed with `nft_token.owner_id`. A key received by
     /// transfer has a token id that was derived from the minting account, not from this one.
     fn held_token(account: &str) -> Result<Option<String>, Error> {
@@ -727,6 +734,35 @@ mod host {
         Ok(json!({"ok": true, "op": "pnl", "statement": statement, "sig": sig, "minter": mid}))
     }
 
+    /// Earned tiers. The key's own settled swaps and volume, read from its verified provenance chain and trade log,
+    /// raise its tier on chain. Moves no funds, so a session may call it. The minter sends `nft_set_tier` only when
+    /// the record earns a higher tier than the one the contract holds now.
+    fn op_level_up(input: &Value) -> Result<Value, Error> {
+        let c = authenticate(input, "level_up", true)?;
+        let tid = c.token_id();
+        prov_sync_owner(&tid, &c.account, c.now_ms);
+        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        let trades: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let current = nft_tier_of(&tid)?;
+        // Refuses with bad_log when the provenance chain does not verify; nothing is counted then.
+        let a = assess_level(&evs, &trades, current)?;
+        if a.earned <= current {
+            let progress = serde_json::to_value(&a.progress).unwrap_or(Value::Null);
+            return Ok(json!({"ok": true, "op": "level_up", "account": c.account, "token_id": tid,
+                "tier": current, "earned": current, "progress": progress}));
+        }
+        if !owns(&tid, &c.account)? {
+            return Err(err("not_owner", "the key moved before this request settled; nothing was sent"));
+        }
+        let (mid, msk) = minter()?;
+        let args = json!({"token_id": tid, "tier": a.earned}).to_string();
+        let tx = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_set_tier", args: args.as_bytes(), gas: LEVEL_UP_GAS, deposit: 0 }])?;
+        prov_append(&tid, "level_up", &c.account, c.now_ms, &format!("level_up {current}->{} tx {tx}", a.earned));
+        let after = tier_progress(a.earned, a.progress.swaps, a.progress.volume_usd_micro);
+        Ok(json!({"ok": true, "op": "level_up", "account": c.account, "token_id": tid,
+            "tier_before": current, "tier_after": a.earned, "tx_hash": tx, "progress": after}))
+    }
+
     fn op_history(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "history", true)?;
         let _ = c.wallet()?; // runs the one-time migration, so a legacy log is found
@@ -753,11 +789,13 @@ mod host {
         let (_, b) = http("GET", &format!("{}/wallet/v1/confidential/balance", OL), Some(&key), None)?;
         let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
         let entries = history_for(&all, &c.account);
+        // Earned-tier progress from the same verified record as level_up. Null when that record does not verify.
+        let progress = assess_level(&evs, &all, c.tier.unwrap_or(1)).ok().and_then(|a| serde_json::to_value(a.progress).ok());
         let session = c.session.as_ref().map(|(id, g)| json!({"exp_ms": g.exp_ms, "max_usd_micro": g.max_usd_micro,
             "spent_usd_micro": Host.incr(&session_key(id, "spent"), 0).unwrap_or(0), "scope": g.scope}));
         Ok(json!({"ok": true, "op": "dashboard", "account": c.account, "token_id": tid, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
             "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent,
-            "confidential_id": id, "balances": b.get("balances").cloned().unwrap_or(json!([])), "entries": entries, "session": session}))
+            "confidential_id": id, "balances": b.get("balances").cloned().unwrap_or(json!([])), "entries": entries, "session": session, "progress": progress}))
     }
 
     /// Ends a session now: called with the session itself (Revoke button / sign out).
@@ -860,7 +898,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -891,9 +929,10 @@ mod host {
             "add_beat_key" => op_beat_key(&input, true),
             "del_beat_key" => op_beat_key(&input, false),
             "dashboard" => op_dashboard(&input),
+            "level_up" => op_level_up(&input),
             "session" => op_session(&input),
             "session_revoke" => op_session_revoke(&input),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, session, session_revoke")),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, level_up, session, session_revoke")),
         };
         let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.
