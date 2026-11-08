@@ -121,7 +121,8 @@ export function SwapView() {
 
   const q = quote.res?.output;
   const qq: Quote | null = quoteFresh && q?.ok ? ((q.quote as Quote | undefined) ?? null) : null;
-  const dq: Quote | null = accountId ? null : dry;
+  // Until a session is live (signed out, or signed in and locked) the screen shows the dry 1Click price.
+  const dq: Quote | null = sessionLive ? null : dry;
   const estimate = qq?.amountOutFormatted ?? dq?.amountOutFormatted ?? null;
   const inFormatted = qq?.amountInFormatted ?? dq?.amountInFormatted ?? amount;
   const rate = estimate && Number(inFormatted) > 0 ? Number(estimate) / Number(inFormatted) : null;
@@ -138,9 +139,9 @@ export function SwapView() {
     return () => { cancel = true; };
   }, []);
 
-  // No wallet: a live dry 1Click price for the same pair. It is labelled as a price only. Debounced, so typing does not hit the per-IP limit.
+  // No live session (no wallet, or signed in and locked): a live dry 1Click price for the same pair. It is labelled as a price only. Debounced, so typing does not hit the per-IP limit.
   useEffect(() => {
-    if (accountId || samePair || !units) { setDry(null); setDryMsg(null); return; }
+    if (sessionLive || samePair || !units) { setDry(null); setDryMsg(null); return; }
     let cancel = false;
     const id = setTimeout(async () => {
       setDryBusy(true); setDryMsg(null);
@@ -152,7 +153,7 @@ export function SwapView() {
       finally { setDryBusy(false); }
     }, 500);
     return () => { cancel = true; clearTimeout(id); };
-  }, [accountId, samePair, units, fromId, toId]);
+  }, [sessionLive, samePair, units, fromId, toId]);
 
   // With a live session a quote costs no popup, so it is re-run (debounced) when the trade changes.
   const runQuote = quote.run;
@@ -346,7 +347,7 @@ export function SwapView() {
         <section className="sw-panel" aria-labelledby="sw-recv-label">
           <div className="sw-panel-top">
             <span id="sw-recv-label" className="sw-label">You receive</span>
-            {dryBusy && !estimate && !accountId ? <span className="sw-busy" role="status">Checking price…</span> : !accountId && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
+            {dryBusy && !estimate && !sessionLive ? <span className="sw-busy" role="status">Checking price…</span> : !sessionLive && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
           </div>
           <div className="sw-panel-main">
             <output className={`sw-amt${estimate ? "" : " is-empty"}${quote.busy ? " is-busy" : ""}`} aria-labelledby="sw-recv-label" data-testid="swap-receive">
@@ -356,7 +357,7 @@ export function SwapView() {
           </div>
           <div className="sw-panel-foot">
             {outUsd != null && Number.isFinite(outUsd) ? <small className="sw-amt-usd">≈ {formatUsdMicro(Math.max(0, Math.round(outUsd * 1e6)))}</small> : <span className="sw-usd" aria-hidden="true">&nbsp;</span>}
-            {dryMsg && !accountId && <p className="sw-error" role="alert" data-testid="dry-msg">{dryMsg}</p>}
+            {dryMsg && !sessionLive && <p className="sw-error" role="alert" data-testid="dry-msg">{dryMsg}</p>}
           </div>
         </section>
 
