@@ -869,7 +869,7 @@
     "stContract": "Contract code hash",
     "stOrders": "Orders on record",
     "collLead": "Each key has its own art, traits and bit cipher.",
-    "supplyLabel": "Keys held on mainnet",
+    "supplyLabel": "Keys held by users",
     "verifyBtn": "Verify it yourself",
     "ctaSettle": "See real settled and refunded orders",
     "ctaLaunch": "Launch app"

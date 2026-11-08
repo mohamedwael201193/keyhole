@@ -1,6 +1,6 @@
 import { LANDING_KEYS } from "./config";
 import { nftTier, nftTokens, type Token } from "./near";
-import { readKeySupply } from "./supply";
+import { readHolderKeys } from "./supply";
 import { fetchTokenList, type Token as ListToken } from "./tokenList";
 
 /** Public reads only, cached 60 s, each attempt capped at 4 s. The landing is cached as a whole (ISR), so these run about once a minute. */
@@ -18,7 +18,7 @@ export interface LandingData { supply: number | null; tokens: Token[]; tiers: (n
  */
 export async function loadLanding(): Promise<LandingData> {
   const [supply, tokens] = await Promise.all([
-    readKeySupply(LANDING_READ),
+    readHolderKeys(LANDING_READ),
     nftTokens(0, LANDING_KEYS, LANDING_READ).catch((): Token[] => []),
   ]);
   const shown = tokens.slice(0, LANDING_KEYS);
