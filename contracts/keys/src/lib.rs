@@ -2,6 +2,7 @@
 //! confidential trading account; `tier` sets what the holder may see/copy.
 //! v2: NEP-178 approvals, one key per account enforced on-chain, NEP-330 source metadata.
 //! v2.3: at most MAX_APPROVALS approvals per token (NEP-178 gas bound); no state change.
+//! v2.4: nft_set_tier (minter only, upward only): a holder can earn a higher tier. No state change.
 use near_contract_standards::non_fungible_token::approval::NonFungibleTokenApproval;
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
@@ -51,7 +52,7 @@ pub struct Config {
 }
 
 #[near(contract_state, contract_metadata(
-    version = "2.3.0",
+    version = "2.4.0",
     link = "https://github.com/mohamedwael201193/keyhole",
     standard(standard = "nep171", version = "1.2.0"),
     standard(standard = "nep177", version = "2.0.0"),
@@ -199,6 +200,24 @@ impl Contract {
             ids
         ));
         self.beats
+    }
+
+    /// Minter only. Raises a key's tier (earned tiers): 1..=MAX_TIER, strictly above the current tier, never lowered.
+    /// Takes no deposit: the tiers entry already exists, so storage does not grow. Emits NEP-171 1.2.0
+    /// `nft_metadata_update` for the token (same event as `beat`). The tier is read from the holder's key,
+    /// so holder_tier and the TEE gate see the new tier at once, and it survives nft_transfer.
+    pub fn nft_set_tier(&mut self, token_id: TokenId, tier: u8) {
+        self.assert_minter();
+        require!(self.tokens.owner_by_id.get(&token_id).is_some(), "no token");
+        require!(tier >= 1 && tier <= MAX_TIER, "bad tier");
+        let current = self.tiers.get(&token_id).unwrap_or(0);
+        require!(tier > current, "tier only goes up");
+        self.tiers.insert(&token_id, &tier);
+        let ids = near_sdk::serde_json::to_string(&[&token_id]).unwrap();
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"nep171\",\"version\":\"1.2.0\",\"event\":\"nft_metadata_update\",\"data\":[{{\"token_ids\":{}}}]}}",
+            ids
+        ));
     }
 
     #[payable]
@@ -1196,5 +1215,83 @@ mod v23 {
         assert!(approved(&c, "k1").is_empty(), "transfer clears approvals");
         fill(&mut c, "bob.near", "k1", MAX_APPROVALS);
         assert_eq!(approved(&c, "k1").len(), 10);
+    }
+}
+
+/// v2.4: earned tiers. nft_set_tier raises a key's tier (minter only, 1..=MAX_TIER, strictly up).
+#[cfg(test)]
+mod v24 {
+    use super::*;
+    use near_sdk::test_utils::{get_logs, VMContextBuilder};
+    use near_sdk::{testing_env, NearToken};
+
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
+    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
+    fn set_tier(c: &mut Contract, id: &str, tier: u8) { ctx("minter.near", NearToken::from_yoctonear(0)); c.nft_set_tier(id.into(), tier); }
+
+    #[test] fn minter_raises_one_to_two_to_three() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        set_tier(&mut c, "k1", 2);
+        assert_eq!(c.nft_tier("k1".into()), Some(2));
+        assert_eq!(c.holder_tier(acc("alice.near")), Some(2), "holder_tier reflects the raise");
+        set_tier(&mut c, "k1", 3);
+        assert_eq!(c.nft_tier("k1".into()), Some(3));
+        assert_eq!(c.holder_tier(acc("alice.near")), Some(3));
+    }
+    #[test] #[should_panic(expected = "only minter")]
+    fn non_minter_cannot_set_tier() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        ctx("alice.near", NearToken::from_yoctonear(0)); c.nft_set_tier("k1".into(), 2);
+    }
+    #[test] #[should_panic(expected = "only minter")]
+    fn owner_cannot_set_tier() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        ctx("owner.near", NearToken::from_yoctonear(0)); c.nft_set_tier("k1".into(), 2);
+    }
+    #[test] #[should_panic(expected = "no token")]
+    fn unknown_token_refused() { let mut c = setup(); set_tier(&mut c, "nope", 2); }
+    #[test] #[should_panic(expected = "tier only goes up")]
+    fn same_tier_refused() { let mut c = setup(); mint(&mut c, "k1", "alice.near", 2); set_tier(&mut c, "k1", 2); }
+    #[test] #[should_panic(expected = "tier only goes up")]
+    fn lower_tier_refused() { let mut c = setup(); mint(&mut c, "k1", "alice.near", 2); set_tier(&mut c, "k1", 1); }
+    #[test] #[should_panic(expected = "bad tier")]
+    fn tier_zero_refused() { let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); set_tier(&mut c, "k1", 0); }
+    #[test] #[should_panic(expected = "bad tier")]
+    fn tier_four_refused() { let mut c = setup(); mint(&mut c, "k1", "alice.near", 1); set_tier(&mut c, "k1", MAX_TIER + 1); }
+    #[test] fn refused_raise_changes_nothing() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 2);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| set_tier(&mut c, "k1", 2)));
+        assert!(r.is_err());
+        assert_eq!(c.nft_tier("k1".into()), Some(2));
+    }
+    #[test] fn emits_metadata_update_with_exact_json() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        set_tier(&mut c, "k1", 2);
+        let logs = get_logs();
+        assert_eq!(logs, vec![r#"EVENT_JSON:{"standard":"nep171","version":"1.2.0","event":"nft_metadata_update","data":[{"token_ids":["k1"]}]}"#.to_string()]);
+    }
+    #[test] fn tier_survives_transfer() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        set_tier(&mut c, "k1", 3);
+        ctx("alice.near", NearToken::from_yoctonear(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        assert_eq!(c.nft_tier("k1".into()), Some(3));
+        assert_eq!(c.holder_tier(acc("bob.near")), Some(3));
+        assert_eq!(c.holder_tier(acc("alice.near")), None);
+    }
+    #[test] fn raise_does_not_touch_supply_owner_or_metadata() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near", 1);
+        let before = c.nft_token("k1".into()).unwrap();
+        set_tier(&mut c, "k1", 2);
+        let after = c.nft_token("k1".into()).unwrap();
+        assert_eq!((before.owner_id, before.metadata), (after.owner_id, after.metadata));
+        assert_eq!(c.nft_total_supply(), U128(1));
+        assert_eq!(c.config().beats.0, 0, "a tier raise is not a beat");
     }
 }
