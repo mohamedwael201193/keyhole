@@ -22,9 +22,9 @@ describe("landing is ISR with a bounded read", () => {
 
   const rpcResult = (v: unknown) => ({ jsonrpc: "2.0", id: "kh", result: { result: Array.from(new TextEncoder().encode(JSON.stringify(v))) } });
   const tokens = [0, 1, 2, 3].map((i) => ({ token_id: `k${i}`, owner_id: "a.near", metadata: null }));
-  const answers: Record<string, unknown> = { nft_total_supply: "10", nft_supply_for_owner: "1", nft_tokens: tokens, nft_tier: 1 };
+  const answers: Record<string, unknown> = { nft_total_supply: "10", nft_tokens: tokens, nft_tier: 1 };
 
-  it("reads 2 supply values, 1 key page and one tier per shown key (7 calls, not 15)", async () => {
+  it("reads the total supply, 1 key page and one tier per shown key (6 calls, not 15)", async () => {
     const calls: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: { body: string }) => {
       const method = JSON.parse(init.body).params.method_name as string;
@@ -34,8 +34,8 @@ describe("landing is ISR with a bounded read", () => {
     const { loadLanding } = await import("@/lib/landing");
     const data = await loadLanding();
     expect(calls.filter((m) => m === "nft_tier").length).toBe(4);
-    expect(calls.length).toBe(7);
-    expect(data.supply).toBe(9);
+    expect(calls.length).toBe(6);
+    expect(data.supply).toBe(10);
     expect(data.tokens.length).toBe(4);
     expect(data.tiers).toEqual([1, 1, 1, 1]);
   });

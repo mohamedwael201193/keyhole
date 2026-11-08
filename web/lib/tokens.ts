@@ -11,6 +11,10 @@ export type { Token } from "./tokenList";
 const CHAIN_NAMES: Record<string, string> = {
   near: "NEAR", eth: "Ethereum", sol: "Solana", base: "Base", arb: "Arbitrum", bsc: "BNB Chain", op: "Optimism", pol: "Polygon",
   btc: "Bitcoin", avax: "Avalanche", ton: "TON", tron: "TRON", sui: "Sui", aptos: "Aptos", gnosis: "Gnosis",
+  zec: "Zcash", doge: "Dogecoin", ltc: "Litecoin", bch: "Bitcoin Cash", xrp: "XRP Ledger", cardano: "Cardano", stellar: "Stellar",
+  starknet: "Starknet", hood: "Robinhood Chain", xlayer: "X Layer", abs: "Abstract", bera: "Berachain", monad: "Monad",
+  plasma: "Plasma", hypercore: "Hyperliquid", aleo: "Aleo", miden: "Miden", movement: "Movement", scroll: "Scroll", dash: "Dash",
+  fogo: "Fogo",
 };
 
 /** Chains shown first in the picker's filter, in this order. Others follow alphabetically. */

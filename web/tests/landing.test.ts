@@ -8,6 +8,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 import { Landing } from "@/components/Landing";
 import { Footer } from "@/components/Footer";
 import { I18nProvider } from "@/lib/i18n";
+import { curatedMarks } from "@/lib/landing";
 
 const src = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
 const withI18n = (el: ReturnType<typeof createElement>) => createElement(I18nProvider, null, el);
@@ -101,6 +102,22 @@ describe("landing sections", () => {
     expect(html).toMatch(/data-testid="cta-proof"[^>]*href="\/judge"|href="\/judge"[^>]*data-testid="cta-proof"/);
     expect(html).toContain("Get your key");
     expect(html).toContain("Read the proof");
+  });
+});
+
+describe("trade row: the curated marks", () => {
+  const tok = (assetId: string, symbol: string, blockchain: string) => ({ assetId, symbol, blockchain, decimals: 6, price: 1, contractAddress: null });
+
+  it("shows the listed tokens in the set order and leaves odd tickers out", () => {
+    const list = [
+      tok("a", "SSC1_PIT", "near"), tok("b", "USDC", "base"), tok("c", "wNEAR", "near"), tok("d", "USDC", "near"), tok("e", "ETH", "eth"),
+      tok("f", "USDT", "eth"), tok("g", "BTC", "btc"), tok("h", "ZEC", "zec"), tok("i", "ARB", "arb"), tok("j", "SOL", "sol"),
+    ];
+    expect(curatedMarks(list).map((t) => t.assetId)).toEqual(["c", "d", "f", "e", "g", "j", "h", "i", "b"]);
+  });
+
+  it("leaves out an entry the live list does not have", () => {
+    expect(curatedMarks([tok("a", "SSC1_PIT", "near"), tok("b", "ETH", "eth")]).map((t) => t.assetId)).toEqual(["b"]);
   });
 });
 

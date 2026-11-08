@@ -22,7 +22,7 @@ export type TokenOption = {
   chainName?: string;
   /** Contract address, searchable, and used for the token's mark. */
   contract?: string | null;
-  /** USD price of one token. Shown as a column when given; null shows a dash. */
+  /** USD price of one token. Always a column; a missing, null or zero price shows a dash. */
   price?: number | null;
   /** Formatted balance. Shown only when given. */
   balance?: string;
@@ -186,7 +186,7 @@ export function TokenSelect({ label, options, value, onChange, testid, notice }:
                   <span className="kh-token-meta"><b>{o.symbol}</b><small>{chainLabel(o)}</small></span>
                   <span className="kh-token-end">
                     {o.balance && <span className="kh-token-bal">{o.balance}</span>}
-                    {o.price !== undefined && <span className="kh-token-price">{formatTokenPrice(o.price)}</span>}
+                    <span className="kh-token-price">{formatTokenPrice(o.price)}</span>
                   </span>
                 </button>
               </li>
