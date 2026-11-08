@@ -9,7 +9,7 @@ import { useSigned } from "@/lib/useSigned";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { swapParams } from "@/lib/trade";
 import { shortAccount } from "@/lib/near";
-import { intentTx, tx } from "@/lib/config";
+import { tx } from "@/lib/config";
 import { assetByToken, formatUsdMicro, fromBaseUnits, shortTokenId, tradeSummary, valueMicro, type PriceBook, type RawBalance } from "@/lib/amount";
 import { SETTLEMENTS } from "@/lib/settlements";
 import { useHeldKey } from "@/lib/useHeldKey";
@@ -285,9 +285,8 @@ export function SwapView() {
         {swap.res?.error && <ErrorBox code={swap.res.error.code} retryAfter={swap.res.error.retry_after} />}
         {swap.busy && <TxResult state="pending" title="Signing and settling the swap" testid="trade-pending" />}
         {swapDone && done && swap.res?.output && (
-          <TxResult state="confirmed" testid="trade-out" title={tradeSummary(done.give, String(swap.res.output.amount_out ?? "0"), done.decimals, done.symbol)} callId={swap.res.call_id ?? undefined}>
+          <TxResult state="confirmed" testid="trade-out" title={tradeSummary(done.give, String(swap.res.output.amount_out ?? "0"), done.decimals, done.symbol)} callId={swap.res.call_id ?? undefined} intentHash={swap.res.output.intent_hash ? String(swap.res.output.intent_hash) : undefined}>
             <p className="sw-note">{String(swap.res.output.status ?? "")}</p>
-            {swap.res.output.intent_hash && <p><a href={intentTx(String(swap.res.output.intent_hash))} target="_blank" rel="noreferrer">Intents explorer ↗</a></p>}
           </TxResult>
         )}
         {quote.res && !swapDone && <Attested r={quote.res} />}

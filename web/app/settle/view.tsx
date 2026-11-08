@@ -123,6 +123,7 @@ export function SettleView() {
           {msg && <p className="st-note st-alert" role="alert" data-testid="dry-msg">{msg}</p>}
           {dry && (
             <article className="st-quote" data-testid="dry-out" aria-label="Price quote">
+              <Badge tone="info" testid="dry-tag">Price quote · dry run · nothing moves</Badge>
               <p className="st-route">{o?.label} <span aria-hidden="true">→</span> {d?.label}</p>
               <dl className="st-grid">
                 <div><dt>You send</dt><dd>{dry.amountInFormatted} <small>${Number(dry.amountInUsd).toFixed(4)}</small></dd></div>
