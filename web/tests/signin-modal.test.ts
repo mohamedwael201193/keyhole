@@ -16,8 +16,10 @@ describe("the one sign-in sheet", () => {
     }
     expect(m).toContain("Continue with Google");
     expect(m).toContain("Continue with email");
-    expect(m).toContain("Meteor, HOT, MyNearWallet, Intear, Here");
+    expect(m).toContain("HOT, MyNearWallet, Intear, Here");
+    expect(m).not.toContain("Meteor, HOT");
     expect(m).toContain("MetaMask and other EVM wallets");
+    expect(m).toContain("Opens the full wallet list, including Meteor");
     expect(m).toContain('role="dialog"');
     expect(m).toContain('aria-modal="true"');
   });
