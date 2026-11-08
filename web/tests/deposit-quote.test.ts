@@ -90,6 +90,6 @@ describe("/vault deposit sheet", () => {
   });
 
   it("says only what the quote supports about routing", () => {
-    expect(chain).toContain("Routed by NEAR Intents 1Click into this vault&apos;s deposit address. Small first? Try a small amount first.");
+    expect(chain).toContain("Routed by NEAR Intents 1Click into this vault&apos;s deposit address. First time? Send a small amount first.");
   });
 });
