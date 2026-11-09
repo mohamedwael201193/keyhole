@@ -903,7 +903,7 @@ Withdrawal cooldown is keyed by **contract + token + authoritative ownership epo
 (cd tee/worker && cargo test --locked ownership_sync && cargo clippy --locked --target wasm32-wasip2 -- -D warnings)
 # Full normal-release + labelled mock/fault integration:
 (cd contracts/keys && ./build.sh && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm)
-(cd contracts/keys-sandbox && cargo test --locked --test pledge)
+(cd contracts/keys-sandbox && cargo test --locked)
 python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
 ```
 
