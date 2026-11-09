@@ -46,3 +46,24 @@
 @media (max-width: 419px) {
   .ev-claim { font-size: 13px; }
 }
+
+/* Separate judge verdicts on /verify (extend CallVerifier, do not duplicate the page). */
+.vf-verdicts {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3);
+}
+.vf-verdicts li {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+  column-gap: 10px; row-gap: 2px; align-items: start;
+  padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-card);
+  background: var(--card, #fff); min-width: 0;
+}
+.vf-verdicts li .ok { grid-row: 1 / span 2; align-self: center; }
+.vf-verdicts b { font: 600 13px/1.3 var(--font-ui); color: var(--ink); }
+.vf-verdicts small { grid-column: 2; font: 400 12px/1.4 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+@media (max-width: 999px) {
+  .vf-verdicts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 519px) {
+  .vf-verdicts { grid-template-columns: minmax(0, 1fr); }
+}

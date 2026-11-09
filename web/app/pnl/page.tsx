@@ -1,3 +1,2 @@
-import { PnlView } from "./view";
-export const metadata = { title: "Signed PnL · KEYHOLE" };
-export default function Page() { return <PnlView />; }
+export const metadata = { title: "Signed swap log · KEYHOLE" };
+export { PnlView as default } from "./view";

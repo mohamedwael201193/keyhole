@@ -79,7 +79,7 @@ export function isItemActive(item: AppNavItem, pathname: string | null | undefin
 
 /** The title shown in the top bar for a route. Pure. */
 const TITLES: [string, string][] = [
-  ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Activity"], ["/vault", "Vault"], ["/pnl", "Vault statement"],
+  ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Activity"], ["/vault", "Vault"], ["/pnl", "Swap log"],
   ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"], ["/verify", "Proof"], ["/attack", "Attack"],
 ];
 export function pageTitle(path: string | null | undefined): string {

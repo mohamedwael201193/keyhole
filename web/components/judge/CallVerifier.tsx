@@ -114,6 +114,13 @@ export function CallVerifier({ initial }: { initial: string | null }) {
         </div>
         <Button variant="secondary" testid="verify-btn" loading={busy} loadingLabel="Checking" onClick={() => void go(id)}>{t("verify.again")}</Button>
       </div>
+      {/* Separate judge verdicts — one chip each, no combined PASS that hides a miss. */}
+      <ul className="vf-verdicts" data-testid="verify-verdicts" aria-label="Separate check verdicts">
+        <li data-testid="verdict-quote" data-ok={dcap ? String(dcap.ok && !!ck?.quote) : "wait"}><span className={`ok ${dcap ? (dcap.ok && ck?.quote ? "" : "bad") : "wait"}`}>{dcap ? (dcap.ok && ck?.quote ? "✓" : "✕") : "·"}</span><b>Quote validity</b><small>TDX quote + 19 Intel DCAP checks</small></li>
+        <li data-testid="verdict-binding" data-ok={ck?.binding ? String(ck.binding.match) : "wait"}><span className={`ok ${ck?.binding ? (ck.binding.match ? "" : "bad") : "wait"}`}>{ck?.binding ? (ck.binding.match ? "✓" : "✕") : "·"}</span><b>Output binding</b><small>report_data binds request hash / account / token</small></li>
+        <li data-testid="verdict-econ" data-ok={ck?.output ? String(ck.output.match) : (ck && ck.fastfs !== null ? "opt" : "wait")}><span className={`ok ${ck?.output ? (ck.output.match ? "" : "bad") : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? (ck.output.match ? "✓" : "✕") : ck && ck.fastfs !== null ? "○" : "·"}</span><b>Economic semantics</b><small>{ck?.output ? `Recorded outcome: ${ck.output.verdict}` : "Evidence / pasted output vs attestation"}</small></li>
+        <li data-testid="verdict-build" data-ok={ck ? String(ck.published && bi === 0) : "wait"}><span className={`ok ${ck ? (ck.published && bi === 0 ? "" : bi > 0 ? "opt" : "bad") : "wait"}`}>{ck ? (ck.published && bi === 0 ? "✓" : bi > 0 ? "prev" : "✕") : "·"}</span><b>Current-build identity</b><small>{a ? `executed ${a.executed_wasm_sha256.slice(0, 8)}… · current ${PUBLISHED_WASM_SHA256.slice(0, 8)}…` : "Wasm vs identity.json"}</small></li>
+      </ul>
       <div className="vg">
         <div className="seal"><Scene name="enclave" alt={t("land.enclAlt")} width={1152} height={864} /></div>
         <div className="card chk">

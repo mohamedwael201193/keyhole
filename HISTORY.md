@@ -1,3 +1,11 @@
+## 2026-11-09 — Harsh judge fixes (PR #186)
+- `/judge` Step 4: handover calls labelled build `a985fd87` (their real executed_wasm), not "Current build". Regression test added.
+- `/source/manifest.json` regenerated to current worker `d337e822` / contract `DEXHHyEM…`; CI hygiene checks tarball identity matches `identity.json`.
+- `/verify` CallVerifier: separate verdict chips (quote validity, output binding, economic semantics, current-build identity) — extends the existing 37 checks, no duplicate page.
+- "Signed PnL" renamed to honest **Signed swap log** (mark-to-market delta, not realized profit) across UI/README.
+- OG/metadata host default → `https://keyhole-seven.vercel.app`.
+- `/attack` already links each refusal to `/verify` and requires live attestation + evidence `error.code`.
+
 ## 2026-11-09 — Judge proof UX: live evidence pack + Attack desk (PR #186)
 - Harsh AI-judge pass: Attack PASS now requires live OutLayer attestation AND `/evidence/<call>.json` error.code match (not quote-only). Primary CTA re-runs checks.
 - `/verify` (app shell): live evidence table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) plus the existing 37 TEE checks.

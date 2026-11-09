@@ -147,7 +147,7 @@ export function KeyHistoryView() {
                 </div>
               ))}
             </div>
-            <p className="kg-note">Paid out counts withdraw events. USD totals are private to each holder; a holder can publish a signed total from the vault (<Link href="/pnl">signed PnL</Link>).</p>
+            <p className="kg-note">Paid out counts withdraw events. USD totals are private to each holder; a holder can publish a signed total from the vault (<Link href="/pnl">signed swap log</Link>).</p>
           </Card>
           <Card as="section" className="klog" labelledBy="log-h" testid="key-log-card">
             <span id="key-log" className="kd-anchor" />

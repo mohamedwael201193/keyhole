@@ -106,6 +106,21 @@ jobs:
       - name: no secrets or keys committed
         run: |
           ! git grep -nE 'wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|eyJhbGci[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE' -- . ':!cli/package-lock.json' ':!docs/evidence/oneclick-sol/*.json'
+      - name: source tarball identity matches identity.json (worker wasm + contract code hash)
+        run: |
+          python3 - <<'PY'
+          import json, gzip, io, tarfile
+          from pathlib import Path
+          live = json.loads(Path("identity.json").read_text())
+          man = json.loads(Path("web/public/source/manifest.json").read_text())
+          raw = gzip.open("web/public/source/keyhole-src.tar.gz", "rb").read()
+          tf = tarfile.open(fileobj=io.BytesIO(raw))
+          member = next(n for n in tf.getnames() if n.endswith("identity.json"))
+          packed = json.loads(tf.extractfile(member).read())
+          assert packed["worker"]["wasm_sha256"] == live["worker"]["wasm_sha256"], (packed["worker"]["wasm_sha256"], live["worker"]["wasm_sha256"])
+          assert packed["contract"]["code_hash"] == live["contract"]["code_hash"], (packed["contract"]["code_hash"], live["contract"]["code_hash"])
+          print(f"OK source@{man['commit'][:12]} worker={live['worker']['wasm_sha256'][:8]} contract={live['contract']['code_hash'][:8]}")
+          PY
   web:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository

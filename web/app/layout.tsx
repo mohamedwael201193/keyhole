@@ -26,7 +26,7 @@ const mono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--
 export const metadata: Metadata = {
   title: "KEYHOLE — the NFT is the viewing key",
   description: "An NFT that is the viewing key to a confidential trading account inside an attested TEE on NEAR. Hold the key, run the account. Sell it, and the account goes with it.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://keyhole.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://keyhole-seven.vercel.app"),
   openGraph: { title: "KEYHOLE", description: "Nothing on the chain. Everything in the key.", images: [{ url: "/og.png", width: 1200, height: 630 }] },
   icons: { icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }], apple: "/apple-icon.png" },
 };
