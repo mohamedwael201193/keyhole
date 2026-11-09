@@ -45,19 +45,19 @@ test("verify: the previous-build verdict says so, and the current call links its
   await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
   await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
-  await expect(page.locator('a[href*="A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG"]').first()).toBeVisible();
+  await expect(page.locator('a[href*="Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6"]').first()).toBeVisible();
   await expect(page.locator('a[href*="MG7pGVSN"]')).toHaveCount(0);
   await expect(page.locator('a[href*="EA7S1TeV"]')).toHaveCount(0);
 });
 
-test("verify: the default page checks the published a985fd87 info call", async ({ page }) => {
+test("verify: the default page checks the published cc8d2fa8 info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("246e4a7a-f138-4459-8548-350dd9960751");
+  await expect(page.locator("#cid")).toHaveValue("f21fbb59-13f7-41f4-a89e-a612cf6bdca5");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8").first()).toBeVisible();
+  await expect(page.getByText("cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c").first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
   await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓");
@@ -190,7 +190,7 @@ async function holdAccount(page: Page) {
   await page.route("**/api/keys?**", (route) => route.fulfill({ json: {
     keys: [{ token_id: "4", owner_id: "holder.keyhole.test", metadata: { title: "Key", description: null, expires_at: null, issued_at: null } }], tier: 1,
   } }));
-  await page.route("https://rpc.mainnet.near.org/**", async (route) => {
+  await page.route("https://rpc.mainnet.fastnear.com/**", async (route) => {
     let method = "";
     try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view call */ }
     const payload = method === "nft_tokens_for_owner"
@@ -389,7 +389,7 @@ test("a connected wallet with no key cannot open the vault", async ({ page }) =>
     localStorage.setItem("near-wallet-selector:selectedWalletId", JSON.stringify("my-near-wallet"));
   });
   await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
-  await page.route("https://rpc.mainnet.near.org/**", async (route) => {
+  await page.route("https://rpc.mainnet.fastnear.com/**", async (route) => {
     let method = "";
     try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view */ }
     if (method !== "nft_tokens_for_owner") return route.continue();
@@ -520,7 +520,7 @@ test("technical lists are left-aligned; vault traits keep the body face", async 
   await page.route("**/api/keys?**", (route) => route.fulfill({ json: {
     keys: [{ token_id: "4", owner_id: "holder.keyhole.test", metadata: { title: "Key", description: null, expires_at: null, issued_at: null } }], tier: 1,
   } }));
-  await page.route("https://rpc.mainnet.near.org/**", async (route) => {
+  await page.route("https://rpc.mainnet.fastnear.com/**", async (route) => {
     let method = "";
     try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view call */ }
     const payload = method === "nft_tokens_for_owner"

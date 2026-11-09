@@ -15,7 +15,7 @@ export function pairCheck(tokenId: string, r: PairRead, readBlocks: number[]): P
   return { ok: reasons.length === 0, reasons };
 }
 
-const RPC = "https://rpc.mainnet.near.org";
+const RPC = "https://rpc.mainnet.fastnear.com";
 async function view(contract: string, method: string, args: object, block: number, f: typeof fetch) {
   const r = await f(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { request_type: "call_function", block_id: block, account_id: contract, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") } }) });
   const j = await r.json();

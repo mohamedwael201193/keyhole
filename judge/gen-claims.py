@@ -19,12 +19,12 @@ def where(doc, needle):
 ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
 # ---------------- contract (live RPC) ----------------
-add("contract-code-hash", "On-chain code_hash 8YP8Mr2c…WwLG of keyhole-devmo.near (contract v2.3, live since 2026-11-07) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
-    {"type":"code_hash","account":"keyhole-devmo.near","wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":K["code_hash"]}, "code_hash == base58(sha256(wasm)) == Fe79rQUH…", "./judge/1-contract.sh")
-add("contract-wasm-sha", "Deployed contract wasm is 210,474 bytes with sha256 700bd51f…e09d", where(RD,"210,474 bytes"), "file", "contracts/keys/deployed/keyhole_keys.wasm",
-    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":K["wasm_sha256"],"bytes":210474}, "sha256 700bd51f…e09d, 210474 bytes", "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm")
-add("contract-source-version", "NEP-330 contract_source_metadata of keyhole-devmo.near reports version 2.3.0 (live since 2026-11-07)", where(RD,"version `2.3.0`"), "mainnet view", "keyhole-devmo.near contract_source_metadata()",
-    {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":"2.3.0"}, "version == 2.3.0")
+add("contract-code-hash", "On-chain code_hash DEXHHyEM…SiZZ of keyhole-devmo.near (contract v2.4, live since 2026-11-08) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
+    {"type":"code_hash","account":"keyhole-devmo.near","wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":K["code_hash"]}, "code_hash == base58(sha256(wasm)) == DEXHHyEM…SiZZ", "./judge/1-contract.sh")
+add("contract-wasm-sha", "Deployed contract wasm is 241,621 bytes with sha256 b5c30849…1a1e5c", where(RD,"241,621 bytes"), "file", "contracts/keys/deployed/keyhole_keys.wasm",
+    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":K["wasm_sha256"],"bytes":241621}, "sha256 b5c30849…1a1e5c, 241621 bytes", "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm")
+add("contract-source-version", "NEP-330 contract_source_metadata of keyhole-devmo.near reports version 2.4.0 (live since 2026-11-08)", where(RD,"version `2.4.0`"), "mainnet view", "keyhole-devmo.near contract_source_metadata()",
+    {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":"2.4.0"}, "version == 2.4.0")
 cfg = {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}
 for k,v in cfg.items():
     add(f"config-{k}", f"Contract config.{k} is {v}", where(RD,'"royalty_bps":500'), "mainnet view", "keyhole-devmo.near config()",
@@ -59,13 +59,13 @@ add("key-beat-scoped", "Beat key 9FiNXX2M… on the minter: FunctionCall to keyh
     {"type":"access_key","account":cfg["minter"],"prefix":"ed25519:9FiNXX2M","receiver":"keyhole-devmo.near","methods":["beat"],"max_allowance":"50000000000000000000000"}, "FunctionCall keyhole-devmo.near [beat], allowance <= 0.05 NEAR")
 # ---------------- worker build ----------------
 DEP = open("tee/worker/DEPLOYED_SHA256").read().strip()
-add("worker-deployed", "The live worker build is a985fd87…e4f8 (tee/worker/DEPLOYED_SHA256)", where(RD,"build **`a985fd87…e4f8`**"), "file", "tee/worker/DEPLOYED_SHA256",
-    {"type":"grep","path":"tee/worker/DEPLOYED_SHA256","pattern":"^"+W["wasm_sha256"]+"\\s*$"}, "a985fd87866c4a58…28b9e4f8")
-add("worker-fastfs", "The a985fd87 wasm (745180 bytes) is on FastFS and hashes to DEPLOYED_SHA256", where(RD,"(745180 bytes)"), "OutLayer call", f"https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm",
-    {"type":"fastfs","sha256":DEP,"bytes":745180}, "sha256 == DEPLOYED_SHA256, 745180 bytes",
+add("worker-deployed", "The live worker build is cc8d2fa8…ec4c (tee/worker/DEPLOYED_SHA256)", where(RD,"`cc8d2fa8` (755,751 bytes)"), "file", "tee/worker/DEPLOYED_SHA256",
+    {"type":"grep","path":"tee/worker/DEPLOYED_SHA256","pattern":"^"+W["wasm_sha256"]+"\\s*$"}, "cc8d2fa8e2e4cc3b…6270ec4c")
+add("worker-fastfs", "The cc8d2fa8 wasm (755751 bytes) is on FastFS and hashes to DEPLOYED_SHA256", where(RD,"`cc8d2fa8` (755,751 bytes)"), "OutLayer call", f"https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm",
+    {"type":"fastfs","sha256":DEP,"bytes":755751}, "sha256 == DEPLOYED_SHA256, 755751 bytes",
     f"curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/{DEP}.wasm | sha256sum")
 # ---------------- attestations ----------------
-builds = {"246e4a7a-f138-4459-8548-350dd9960751":"a985fd87","5650a6b7-b7de-410c-b206-e189171bad15":"ebeb6a34","ecb0d1d6-90e3-4522-852a-578ca50fdeb6":"94c355ff","643a012d-0389-44d7-9c78-efb5d7835e80":"cff9fd3c","b0a6eadb-cee9-400e-8eca-8b0f4df7bcec":"a55ebb14","2896d0ad-aa27-4e21-b4a1-0cf2d3755d56":"09d481a5","54207d9e-b4f0-438b-9a74-cdba33de80d9":"f7217ae2","7882f97a-06e5-46d3-9e58-5fe6428fb187":"452df1fd","f4768da8-2e87-4622-8654-d1e67f6cd1f0":"6367401a","0f0bf448-1b66-4200-b6de-7cf095aead54":"67c5cd77","763812bc-0012-4528-a45d-66a3ce17cae9":"38bd67b9","9d19bceb-986b-4745-9bf9-91f7dcb62b6e":"b3fa1a39","cefbc64e-6c08-4bfe-a165-1667d9f5f25b":"f13efe92","09d58c09-c1e9-48b6-bebb-485f5ae79539":"f13efe92"}
+builds = {"f21fbb59-13f7-41f4-a89e-a612cf6bdca5":"cc8d2fa8","b6787f80-339e-4de3-8f6d-dc46898d6e6d":"cc8d2fa8","246e4a7a-f138-4459-8548-350dd9960751":"a985fd87","5650a6b7-b7de-410c-b206-e189171bad15":"ebeb6a34","ecb0d1d6-90e3-4522-852a-578ca50fdeb6":"94c355ff","643a012d-0389-44d7-9c78-efb5d7835e80":"cff9fd3c","b0a6eadb-cee9-400e-8eca-8b0f4df7bcec":"a55ebb14","2896d0ad-aa27-4e21-b4a1-0cf2d3755d56":"09d481a5","54207d9e-b4f0-438b-9a74-cdba33de80d9":"f7217ae2","7882f97a-06e5-46d3-9e58-5fe6428fb187":"452df1fd","f4768da8-2e87-4622-8654-d1e67f6cd1f0":"6367401a","0f0bf448-1b66-4200-b6de-7cf095aead54":"67c5cd77","763812bc-0012-4528-a45d-66a3ce17cae9":"38bd67b9","9d19bceb-986b-4745-9bf9-91f7dcb62b6e":"b3fa1a39","cefbc64e-6c08-4bfe-a165-1667d9f5f25b":"f13efe92","09d58c09-c1e9-48b6-bebb-485f5ae79539":"f13efe92"}
 for c,b in builds.items():
     add(f"att-{c[:8]}-build", f"Call {c[:8]} executed worker build {b}", where(RD,c), "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}",
         {"type":"attestation","call":c,"wasm_prefix":b,"project":"keyhole-devmo.near/keyhole"}, f"executed_wasm_sha256 starts {b}, == wasm_hash, TDX quote present", f"./verify.sh {c}")
@@ -166,7 +166,7 @@ for h,v in [("strict-transport-security","max-age=63072000; includeSubDomains; p
     add(f"site-hdr-{h}",f"Site sends {h}: …{v}",where(RD,"CSP, HSTS (2 years, preload)"),"live site",SITE,{"type":"header","url":SITE+"/","header":h,"contains":v},f"{h} contains {v}","curl -sI "+SITE)
 add("site-supply-live","Home page key count equals nft_total_supply minus the contract-held test key",where(RD,"The home page key count is `nft_total_supply` minus the test key the contract holds"),"live site",SITE,{"type":"site_vs_chain","field":"supply","method":"nft_total_supply"},"home count == total - contract-held")
 add("site-beats-live","Home page heartbeats equal config.beats",where(RD,"`nft_total_supply`, `config`"),"live site",SITE,{"type":"site_vs_chain","field":"beats","method":"config"},"home beats == chain beats")
-add("site-hash","Home page names the live build a985fd87",where(RD,"The enclave serving the site is build `a985fd87`"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"a985fd87"},"home carries a985fd87")
+add("site-hash","Home page names the live build cc8d2fa8",where(RD,"KEYHOLE worker cc8d2fa8"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"cc8d2fa8"},"home carries cc8d2fa8")
 import glob
 for f in sorted(glob.glob("web/app/**/*.tsx",recursive=True)+glob.glob("web/lib/**/*.ts",recursive=True)+glob.glob("web/components/**/*.tsx",recursive=True)+glob.glob("docs/evidence/**/README.md",recursive=True)):
     for i,l in enumerate(open(f,encoding="utf8"),1):

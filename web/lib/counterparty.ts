@@ -17,7 +17,7 @@ export const ALLOWLIST: readonly string[] = [
   "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
 ];
 /** Current-state RPC first, then a second public node. */
-export const RPC_NEAR: readonly string[] = ["https://rpc.mainnet.near.org", "https://rpc.mainnet.fastnear.com"];
+export const RPC_NEAR: readonly string[] = ["https://rpc.mainnet.fastnear.com", "https://rpc.mainnet.near.org"];
 /** Historical reads (code 1 day and 7 days back). rpc.mainnet.near.org keeps about 120k blocks (under a day). */
 export const RPC_ARCHIVAL: readonly string[] = ["https://archival-rpc.mainnet.fastnear.com", "https://archival-rpc.mainnet.near.org"];
 export const NEARBLOCKS = "https://api.nearblocks.io";

@@ -304,6 +304,16 @@
     "executed_wasm_sha256": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8",
     "input_hash": "b178a361d660e91ab33b0dd0fe445e0d1c71fa55bb0a8b5252f5270ff7563ec9"
   },
+  "b6787f80-339e-4de3-8f6d-dc46898d6e6d": {
+    "output_hash": "118e30b81e356ba34c37475b6d3ac63c4ad6bb2bd28ce2c76974db85011f3d30",
+    "executed_wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+    "input_hash": "d6f6537240914a0739f4d838b75cb3a5f8e74df3506946c35634847c7ec2330b"
+  },
+  "f21fbb59-13f7-41f4-a89e-a612cf6bdca5": {
+    "output_hash": "7d7a3d4bfa21e3a9e31b47e365db8556dee716ab7300ae7c4041a6eb4131d28b",
+    "executed_wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+    "input_hash": "b178a361d660e91ab33b0dd0fe445e0d1c71fa55bb0a8b5252f5270ff7563ec9"
+  },
   "5650a6b7-b7de-410c-b206-e189171bad15": {
     "output_hash": "d81005b5926c748bbd6ee8c7b5110bbb0dfff12696f7bfb905d4198f35036d91",
     "executed_wasm_sha256": "ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b",

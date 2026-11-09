@@ -6,38 +6,38 @@
  "claims": [
   {
    "id": "contract-code-hash",
-   "claim": "On-chain code_hash 8YP8Mr2c…WwLG of keyhole-devmo.near (contract v2.3, live since 2026-11-07) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
-   "where": "README.md:355",
+   "claim": "On-chain code_hash DEXHHyEM…SiZZ of keyhole-devmo.near (contract v2.4, live since 2026-11-08) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
+   "where": "README.md:370",
    "evidence_type": "script",
    "evidence": "judge/1-contract.sh",
    "check": {
     "type": "code_hash",
     "account": "keyhole-devmo.near",
     "wasm": "contracts/keys/deployed/keyhole_keys.wasm",
-    "code_hash": "8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG"
+    "code_hash": "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ"
    },
-   "expected": "code_hash == base58(sha256(wasm)) == Fe79rQUH…",
+   "expected": "code_hash == base58(sha256(wasm)) == DEXHHyEM…SiZZ",
    "verify": "./judge/1-contract.sh"
   },
   {
    "id": "contract-wasm-sha",
-   "claim": "Deployed contract wasm is 210,474 bytes with sha256 700bd51f…e09d",
-   "where": "README.md:587",
+   "claim": "Deployed contract wasm is 241,621 bytes with sha256 b5c30849…1a1e5c",
+   "where": "README.md:370",
    "evidence_type": "file",
    "evidence": "contracts/keys/deployed/keyhole_keys.wasm",
    "check": {
     "type": "sha256",
     "path": "contracts/keys/deployed/keyhole_keys.wasm",
-    "sha256": "700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d",
-    "bytes": 210474
+    "sha256": "b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c",
+    "bytes": 241621
    },
-   "expected": "sha256 700bd51f…e09d, 210474 bytes",
+   "expected": "sha256 b5c30849…1a1e5c, 241621 bytes",
    "verify": "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm"
   },
   {
    "id": "contract-source-version",
-   "claim": "NEP-330 contract_source_metadata of keyhole-devmo.near reports version 2.3.0 (live since 2026-11-07)",
-   "where": "README.md:108",
+   "claim": "NEP-330 contract_source_metadata of keyhole-devmo.near reports version 2.4.0 (live since 2026-11-08)",
+   "where": "README.md:379",
    "evidence_type": "mainnet view",
    "evidence": "keyhole-devmo.near contract_source_metadata()",
    "check": {
@@ -46,9 +46,9 @@
     "args": {},
     "path": "version",
     "op": "eq",
-    "value": "2.3.0"
+    "value": "2.4.0"
    },
-   "expected": "version == 2.3.0",
+   "expected": "version == 2.4.0",
    "verify": "node judge/verify-claims.mjs --only contract-source-version"
   },
   {
@@ -262,7 +262,7 @@
   },
   {
    "id": "token-k5f4750858f328940-owner",
-   "claim": "Token k5f4750858f328940 is held by 0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228 (table read 2026-11-07)",
+   "claim": "Token k5f4750858f328940 is held by 3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447 (bought from 0705fdc1 on 2026-11-09; read 2026-11-09)",
    "where": "README.md:355",
    "evidence_type": "mainnet view",
    "evidence": "nft_token(k5f4750858f328940)",
@@ -274,14 +274,14 @@
     },
     "path": "owner_id",
     "op": "eq",
-    "value": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
+    "value": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447"
    },
-   "expected": "owner_id == 0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+   "expected": "owner_id == 3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
    "verify": "node judge/verify-claims.mjs --only token-k5f4750858f328940-owner"
   },
   {
    "id": "token-k5f4750858f328940-tier",
-   "claim": "Token k5f4750858f328940 is tier 1",
+   "claim": "Token k5f4750858f328940 is tier 2 (raised by level_up on 2026-11-09)",
    "where": "README.md:355",
    "evidence_type": "mainnet view",
    "evidence": "nft_tier(k5f4750858f328940)",
@@ -292,9 +292,9 @@
      "token_id": "k5f4750858f328940"
     },
     "op": "eq",
-    "value": 1
+    "value": 2
    },
-   "expected": "1",
+   "expected": "2",
    "verify": "node judge/verify-claims.mjs --only token-k5f4750858f328940-tier"
   },
   {
@@ -535,31 +535,31 @@
   },
   {
    "id": "worker-deployed",
-   "claim": "The live worker build is a985fd87…e4f8 (tee/worker/DEPLOYED_SHA256)",
-   "where": "README.md:587",
+   "claim": "The live worker build is cc8d2fa8…ec4c (tee/worker/DEPLOYED_SHA256)",
+   "where": "README.md:391",
    "evidence_type": "file",
    "evidence": "tee/worker/DEPLOYED_SHA256",
    "check": {
     "type": "grep",
     "path": "tee/worker/DEPLOYED_SHA256",
-    "pattern": "^a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8\\s*$"
+    "pattern": "^cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c\\s*$"
    },
-   "expected": "a985fd87866c4a58…28b9e4f8",
+   "expected": "cc8d2fa8e2e4cc3b…6270ec4c",
    "verify": "node judge/verify-claims.mjs --only worker-deployed"
   },
   {
    "id": "worker-fastfs",
-   "claim": "The a985fd87 wasm (745180 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
-   "where": "README.md:587",
+   "claim": "The cc8d2fa8 wasm (755751 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
+   "where": "README.md:391",
    "evidence_type": "OutLayer call",
-   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8.wasm",
+   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c.wasm",
    "check": {
     "type": "fastfs",
-    "sha256": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8",
-    "bytes": 745180
+    "sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+    "bytes": 755751
    },
-   "expected": "sha256 == DEPLOYED_SHA256, 745180 bytes",
-   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8.wasm | sha256sum"
+   "expected": "sha256 == DEPLOYED_SHA256, 755751 bytes",
+   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c.wasm | sha256sum"
   },
   {
    "id": "att-246e4a7a-build",
@@ -4442,17 +4442,17 @@
   },
   {
    "id": "e2e-verify: the default page checks the publ",
-   "claim": "e2e test named 'verify: the default page checks the published a985fd87 info call' exists",
+   "claim": "e2e test named 'verify: the default page checks the published cc8d2fa8 info call' exists",
    "where": "README.md:355",
    "evidence_type": "test file",
    "evidence": "web/e2e/site.spec.ts",
    "check": {
     "type": "grep",
     "path": "web/e2e/site.spec.ts",
-    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ a985fd87\\ info\\ call"
+    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ cc8d2fa8\\ info\\ call"
    },
    "expected": "test name found",
-   "verify": "grep -n \"verify: the default page checks the published a985fd87 info call\" web/e2e/site.spec.ts"
+   "verify": "grep -n \"verify: the default page checks the published cc8d2fa8 info call\" web/e2e/site.spec.ts"
   },
   {
    "id": "e2e-settle: the real SOL→NEAR order reads SU",
@@ -6396,17 +6396,17 @@
   },
   {
    "id": "site-hash",
-   "claim": "Home page names the live build a985fd87",
-   "where": "README.md:519",
+   "claim": "Home page names the live build cc8d2fa8",
+   "where": "README.md:116",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
     "type": "http",
     "url": "https://keyhole-seven.vercel.app/",
     "status": 200,
-    "contains": "a985fd87"
+    "contains": "cc8d2fa8"
    },
-   "expected": "home carries a985fd87",
+   "expected": "home carries cc8d2fa8",
    "verify": "node judge/verify-claims.mjs --only site-hash"
   },
   {
@@ -7235,6 +7235,260 @@
    },
    "expected": "conclusion == success",
    "verify": "node judge/verify-claims.mjs --only ci-41731806624"
+  },
+  {
+   "id": "att-f21fbb59-build",
+   "claim": "Call f21fbb59 (info) executed worker build cc8d2fa8",
+   "where": "README.md:27",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/f21fbb59-13f7-41f4-a89e-a612cf6bdca5",
+   "check": {
+    "type": "attestation",
+    "call": "f21fbb59-13f7-41f4-a89e-a612cf6bdca5",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh f21fbb59-13f7-41f4-a89e-a612cf6bdca5"
+  },
+  {
+   "id": "att-b6787f80-build",
+   "claim": "Call b6787f80 (status) executed worker build cc8d2fa8",
+   "where": "README.md:75",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/b6787f80-339e-4de3-8f6d-dc46898d6e6d",
+   "check": {
+    "type": "attestation",
+    "call": "b6787f80-339e-4de3-8f6d-dc46898d6e6d",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh b6787f80-339e-4de3-8f6d-dc46898d6e6d"
+  },
+  {
+   "id": "tx-84zVBikU",
+   "claim": "Mainnet transaction 84zVBikU… (deploy of keys contract v2.4) succeeded",
+   "where": "README.md:74",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn",
+   "check": {
+    "type": "tx",
+    "hash": "84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-84zVBikU"
+  },
+  {
+   "id": "tx-Epaz3aMA",
+   "claim": "Mainnet transaction Epaz3aMA… (add_version of worker cc8d2fa8) succeeded",
+   "where": "README.md:75",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6",
+   "check": {
+    "type": "tx",
+    "hash": "Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6",
+    "expect": "success",
+    "receiver": "outlayer.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-Epaz3aMA"
+  },
+  {
+   "id": "att-02a4e30d-build",
+   "claim": "Call 02a4e30d (level_up by the seller, tier 1 to 2) executed worker build cc8d2fa8",
+   "where": "README.md:85",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/02a4e30d-8e75-4587-9507-56a247751fc5",
+   "check": {
+    "type": "attestation",
+    "call": "02a4e30d-8e75-4587-9507-56a247751fc5",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh 02a4e30d-8e75-4587-9507-56a247751fc5"
+  },
+  {
+   "id": "att-61c6f3ad-build",
+   "claim": "Call 61c6f3ad (seller withdraw refused while listed) executed worker build cc8d2fa8",
+   "where": "README.md:85",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/61c6f3ad-e1fc-495c-8435-27fd3382c3df",
+   "check": {
+    "type": "attestation",
+    "call": "61c6f3ad-e1fc-495c-8435-27fd3382c3df",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh 61c6f3ad-e1fc-495c-8435-27fd3382c3df"
+  },
+  {
+   "id": "att-c791779a-build",
+   "claim": "Call c791779a (seller swap refused while listed) executed worker build cc8d2fa8",
+   "where": "README.md:85",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/c791779a-7948-4614-abe0-5376916edeb0",
+   "check": {
+    "type": "attestation",
+    "call": "c791779a-7948-4614-abe0-5376916edeb0",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh c791779a-7948-4614-abe0-5376916edeb0"
+  },
+  {
+   "id": "att-314e34ca-build",
+   "claim": "Call 314e34ca (seller balance read allowed while listed) executed worker build cc8d2fa8",
+   "where": "README.md:330",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/314e34ca-8868-445b-b62b-bf53621c8068",
+   "check": {
+    "type": "attestation",
+    "call": "314e34ca-8868-445b-b62b-bf53621c8068",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh 314e34ca-8868-445b-b62b-bf53621c8068"
+  },
+  {
+   "id": "att-eeb03a55-build",
+   "claim": "Call eeb03a55 (old owner refused after the sale) executed worker build cc8d2fa8",
+   "where": "README.md:85",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/eeb03a55-6df0-4ef3-af5b-3e9df3331f4e",
+   "check": {
+    "type": "attestation",
+    "call": "eeb03a55-6df0-4ef3-af5b-3e9df3331f4e",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh eeb03a55-6df0-4ef3-af5b-3e9df3331f4e"
+  },
+  {
+   "id": "att-d5077866-build",
+   "claim": "Call d5077866 (buyer dashboard after the sale) executed worker build cc8d2fa8",
+   "where": "README.md:333",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/d5077866-7353-4e4d-b5e3-4c932beb8845",
+   "check": {
+    "type": "attestation",
+    "call": "d5077866-7353-4e4d-b5e3-4c932beb8845",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh d5077866-7353-4e4d-b5e3-4c932beb8845"
+  },
+  {
+   "id": "att-2a1aed5b-build",
+   "claim": "Call 2a1aed5b (buyer withdraw refused by cooldown after the sale) executed worker build cc8d2fa8",
+   "where": "README.md:85",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/2a1aed5b-d4e2-45d2-8915-14a5e61a8b12",
+   "check": {
+    "type": "attestation",
+    "call": "2a1aed5b-d4e2-45d2-8915-14a5e61a8b12",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh 2a1aed5b-d4e2-45d2-8915-14a5e61a8b12"
+  },
+  {
+   "id": "tx-Ff4nibRd",
+   "claim": "Mainnet transaction Ff4nibRd… (level_up tier change (nft_set_tier)) succeeded",
+   "where": "README.md:85",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/Ff4nibRd3XMdEgRXwGyDteLFXRdXwqEmY6FJqo2PsNvs",
+   "check": {
+    "type": "tx",
+    "hash": "Ff4nibRd3XMdEgRXwGyDteLFXRdXwqEmY6FJqo2PsNvs",
+    "expect": "success",
+    "receiver": "keyhole-devmo.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-Ff4nibRd"
+  },
+  {
+   "id": "tx-4kQnM9Fj",
+   "claim": "Mainnet transaction 4kQnM9Fj… (seller lists the key (nft_list)) succeeded",
+   "where": "README.md:85",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/4kQnM9FjEKvXXEtenePc7LfdTtyLNbFirx5X8ytnvm1h",
+   "check": {
+    "type": "tx",
+    "hash": "4kQnM9FjEKvXXEtenePc7LfdTtyLNbFirx5X8ytnvm1h",
+    "expect": "success",
+    "receiver": "keyhole-devmo.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-4kQnM9Fj"
+  },
+  {
+   "id": "tx-BbTs3JZa",
+   "claim": "Mainnet transaction BbTs3JZa… (buyer buys the key (nft_buy)) succeeded",
+   "where": "README.md:85",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp",
+   "check": {
+    "type": "tx",
+    "hash": "BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp",
+    "expect": "success",
+    "receiver": "keyhole-devmo.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-BbTs3JZa"
+  },
+  {
+   "id": "tx-EAfYB19N",
+   "claim": "Mainnet transaction EAfYB19N… (wNEAR deposit funding the seller vault) succeeded",
+   "where": "docs/evidence/earned-tier-and-sale/README.md:13",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/EAfYB19NK5YUJEDnLWQ91BEiDbLvDo2dE2ARRebQ1HHR",
+   "check": {
+    "type": "tx",
+    "hash": "EAfYB19NK5YUJEDnLWQ91BEiDbLvDo2dE2ARRebQ1HHR",
+    "expect": "success",
+    "receiver": "wrap.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-EAfYB19N"
+  },
+  {
+   "id": "tx-8nVr98N2",
+   "claim": "Mainnet transaction 8nVr98N2… (nft_list 100 NEAR on key 0 from the Meteor UI) succeeded",
+   "where": "docs/evidence/earned-tier-and-sale/README.md:40",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/8nVr98N2vYeTAaNiMtGWvge9fiAfoDSSBQL1wnSaTCwH",
+   "check": {
+    "type": "tx",
+    "hash": "8nVr98N2vYeTAaNiMtGWvge9fiAfoDSSBQL1wnSaTCwH",
+    "expect": "success",
+    "receiver": "keyhole-devmo.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-8nVr98N2"
+  },
+  {
+   "id": "tx-2v6Nw9Ww",
+   "claim": "Mainnet transaction 2v6Nw9Ww… (nft_unlist of key 0 from the Meteor UI) succeeded",
+   "where": "docs/evidence/earned-tier-and-sale/README.md:41",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/2v6Nw9WwkbGCoG6PCT2wBRh5bfikLNtoQ6PcHGnbnPQ9",
+   "check": {
+    "type": "tx",
+    "hash": "2v6Nw9WwkbGCoG6PCT2wBRh5bfikLNtoQ6PcHGnbnPQ9",
+    "expect": "success",
+    "receiver": "keyhole-devmo.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-2v6Nw9Ww"
   }
  ]
 }
