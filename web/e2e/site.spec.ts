@@ -691,10 +691,16 @@ test("settle: the real SOL→NEAR order reads SUCCESS live from 1Click and the N
   await page.goto("/settle");
   const ok = page.locator('[data-deposit="6pvcZZ2xMUhDpQmySGaVR2Cm9e3Aixx5QUQUPS7RAcha"]');
   await expect(ok.locator('[data-status="SUCCESS"]')).toBeVisible({ timeout: 30_000 });
-  await ok.getByTestId("proof").locator("summary").click();
-  await expect(ok.locator('a[href="https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh"]').first()).toBeVisible();
-  await expect(ok.getByTestId("st-updated")).toContainText("2026");
-  await expect(page.locator('[data-deposit="5sESFfrM4Tk6L5euDCTjjMxVAs5xmbZpj4i3V29s3KJ"] [data-status="REFUNDED"]')).toBeVisible({ timeout: 30_000 });
+  // The list row selects the order; its details panel carries the status, the proof and the update time.
+  await ok.getByTestId("act-row").click();
+  const details = page.getByTestId("order-details");
+  await expect(details.locator('[data-status="SUCCESS"]')).toBeVisible();
+  await details.getByTestId("proof").locator("summary").click();
+  await expect(details.locator('a[href="https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh"]').first()).toBeVisible();
+  await expect(details.getByTestId("st-updated")).toContainText("2026");
+  await page.getByTestId("act-filters-refunded").click();
+  const rf = page.locator('[data-deposit="5sESFfrM4Tk6L5euDCTjjMxVAs5xmbZpj4i3V29s3KJ"]');
+  await expect(rf.locator('[data-status="REFUNDED"]')).toBeVisible({ timeout: 30_000 });
 });
 
 test("settle: dry-run quote and every 1Click status, including REFUNDED and FAILED", async ({ page }) => {
@@ -707,9 +713,10 @@ test("settle: dry-run quote and every 1Click status, including REFUNDED and FAIL
   await expect(page.getByTestId("dry-out")).toContainText("dry run");
   await expect(page.locator('[data-testid="settlement"] [data-status="SUCCESS"]').first()).toBeVisible();
   await expect(page.locator('[data-testid="settlement"] [data-status="REFUNDED"]').first()).toBeVisible();
-  await expect(page.getByText("0.6 USDC on Base → SOL on Solana (MetaMask)")).toBeVisible();
-  await expect(page.getByText("0.004 SOL on Solana → USDC on NEAR (MetaMask)")).toBeVisible();
-  await expect(page.getByText("Refund path: 0.001 SOL on Solana → USDC on NEAR, refunded for NO_LIQUIDITY")).toBeVisible();
+  await expect(page.getByTestId("act-row").filter({ hasText: "0.6 USDC on Base → SOL on Solana (MetaMask)" })).toBeVisible();
+  await expect(page.getByTestId("act-row").filter({ hasText: "0.004 SOL on Solana → USDC on NEAR (MetaMask)" })).toBeVisible();
+  await page.getByTestId("act-filters-refunded").click();
+  await expect(page.getByTestId("act-row").filter({ hasText: "Refund path: 0.001 SOL on Solana → USDC on NEAR, refunded for NO_LIQUIDITY" })).toBeVisible();
   await expect(page.getByTestId("recorded-failed").locator('[data-status="FAILED"]')).toBeVisible();
 });
 

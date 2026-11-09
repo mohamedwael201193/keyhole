@@ -41,16 +41,20 @@ test("judge: stepper, in-browser build check, current calls first, previous coll
   await expect(run).toHaveAttribute("data-state", "pass", { timeout: 20_000 });
 });
 
-test("settle: order cards show route, a 4-step progress and collapsed proof", async ({ page }) => {
+test("settle: order details show a 3-step timeline, the note and a collapsed proof", async ({ page }) => {
   await page.goto("/settle");
   const ok = page.locator('[data-deposit="6pvcZZ2xMUhDpQmySGaVR2Cm9e3Aixx5QUQUPS7RAcha"]');
-  await expect(ok.getByTestId("funds-path").locator("li")).toHaveCount(4, { timeout: 30_000 });
-  await expect(ok.getByTestId("funds-path")).toHaveAttribute("data-step", "3");
-  await expect(ok.getByTestId("proof")).not.toHaveAttribute("open", "");
-  await expect(ok.getByTestId("st-updated")).toContainText("(UTC+2)");
+  await ok.getByTestId("act-row").click();
+  const details = page.getByTestId("order-details");
+  await expect(details.getByTestId("funds-path").locator("li")).toHaveCount(3, { timeout: 30_000 });
+  await expect(details.getByTestId("funds-path")).toHaveAttribute("data-step", "3");
+  await expect(details.getByTestId("proof")).not.toHaveAttribute("open", "");
+  await expect(details.getByTestId("st-updated")).toContainText("(UTC+2)");
+  await page.getByTestId("act-filters-refunded").click();
   const rf = page.locator('[data-deposit="5sESFfrM4Tk6L5euDCTjjMxVAs5xmbZpj4i3V29s3KJ"]');
-  await expect(rf.getByTestId("funds-path")).toContainText("Refunded to sender", { timeout: 30_000 });
-  await expect(rf).toContainText("network fees");
+  await rf.getByTestId("act-row").click();
+  await expect(details.getByTestId("funds-path")).toContainText("Refunded to sender", { timeout: 30_000 });
+  await expect(details).toContainText("network fees");
 });
 
 test("settle: a refused quote reads as a sentence, not a code", async ({ page }) => {

@@ -6,6 +6,7 @@
  */
 import { intentTx, tx, txAlt } from "@/lib/config";
 import { STATUS, assetById, fundsStep, statusOf, type OcAsset } from "@/lib/oneclick";
+import { amountText, entryDetail, kindLabel, type HistEntry } from "@/lib/dashboard";
 import { SETTLEMENTS, VAULT_TRADE, type Settlement } from "@/lib/settlements";
 
 export type VaultTrade = typeof VAULT_TRADE;
@@ -29,12 +30,19 @@ export type LiveStatus = {
 };
 
 /** Where one order's read stands. "recorded" is the vault trade, whose record lives in lib/settlements.ts. */
-export type OrderRead = { state: "loading" } | { state: "error" } | { state: "ok"; live: LiveStatus } | { state: "recorded" };
+export type OrderRead =
+  | { state: "loading" }
+  | { state: "error" }
+  | { state: "ok"; live: LiveStatus }
+  | { state: "recorded" }
+  /** One entry of the holder's signed history for this key, from the attested call `callId`. */
+  | { state: "signed"; entry: HistEntry; callId: string };
 
 export type OrderRow = {
   /** Selection key: the 1Click deposit address, or the enclave call id of the vault trade. */
   id: string;
-  kind: "live" | "vault";
+  /** "mine": an entry of the holder's own signed history (the "Your vault" source). */
+  kind: "live" | "vault" | "mine";
   title: string;
   settlement: Settlement | null;
   read: OrderRead;
@@ -99,6 +107,7 @@ export const liveOf = (row: OrderRow): LiveStatus | null => (row.read.state === 
 /** Settled, refunded, failed (the three filters), open (a known status still moving), unread (not read, or not a known word). */
 export type Bucket = "settled" | "refunded" | "failed" | "open" | "unread";
 export function bucketOf(row: OrderRow): Bucket {
+  if (row.read.state === "signed") return mineWordOf(row.read.entry)?.bucket ?? "unread";
   switch (row.status) {
     case "SUCCESS": return "settled";
     case "REFUNDED": return "refunded";
@@ -155,6 +164,10 @@ export function shareText(part: number, read: number): string | null {
 export type ChipTone = "success" | "warn" | "error" | "info" | "neutral";
 /** The status chip: the 1Click word and its tone, or the honest state while the order is not read. */
 export function chipOf(row: OrderRow): { tone: ChipTone; label: string } {
+  if (row.read.state === "signed") {
+    const e = row.read.entry;
+    return { tone: TONE_BY_BUCKET[bucketOf(row)], label: mineWordOf(e)?.label ?? (e.status ? String(e.status) : "No status") };
+  }
   if (row.status) {
     const s = statusOf(row.status);
     const tone: ChipTone = s.tone === "ok" ? "success" : s.tone === "bad" ? "error" : s.tone === "warn" ? "warn" : "info";
@@ -185,6 +198,7 @@ export function assetParts(a: OcAsset | null): { symbol: string; chainName: stri
 
 /** The sub line of a list row. Words come from the live read or the recorded quote; nothing is estimated. */
 export function subOf(row: OrderRow): string {
+  if (row.read.state === "signed") return entryDetail(row.read.entry);
   if (row.kind === "vault") return "Swapped inside the key's sealed account";
   if (row.read.state === "loading") return "Reading the live status from 1Click";
   if (row.read.state === "error") return "Live status unavailable. Open the order to try again.";
@@ -200,6 +214,10 @@ export function subOf(row: OrderRow): string {
 
 /** The time of a live read (its last status change), or null when there is none. The recorded vault trade has no time. */
 export function timeOf(row: OrderRow): number | null {
+  if (row.read.state === "signed") {
+    const t = row.read.entry.ts_ms;
+    return typeof t === "number" && Number.isFinite(t) && t > 0 ? t : null;
+  }
   const live = liveOf(row);
   if (!live?.updatedAt) return null;
   const t = Date.parse(live.updatedAt);
@@ -218,6 +236,10 @@ export function whenLong(iso: string): string {
 
 /** The meta line on the right of a list row: the read time, "Recorded" for the vault trade, nothing while unread. */
 export function metaOf(row: OrderRow): string {
+  if (row.read.state === "signed") {
+    const t = timeOf(row);
+    return t === null ? "" : whenShort(new Date(t).toISOString());
+  }
   if (row.kind === "vault") return "Recorded";
   const live = liveOf(row);
   return timeOf(row) !== null && live?.updatedAt ? whenShort(live.updatedAt) : "";
@@ -288,6 +310,11 @@ export function filterOrders(rows: readonly OrderRow[], q: Query): OrderRow[] {
 
 /** Everything a search can match: the labels, the hashes, the amounts and the 1Click words. */
 export function searchTextOf(row: OrderRow): string {
+  if (row.read.state === "signed") {
+    const e = row.read.entry;
+    const parts = [row.title, chipOf(row).label, e.kind, e.token_in, e.token_out, e.token, e.chain, e.status, e.amount_in, e.amount_out, e.amount, subOf(row), row.read.callId];
+    return parts.filter((p) => p !== null && p !== undefined && String(p) !== "").map(String).join(" ").toLowerCase();
+  }
   const s = row.settlement;
   const live = liveOf(row);
   const d = live?.details;
@@ -336,6 +363,16 @@ export function summaryOf(row: OrderRow): {
 } {
   const from = assetParts(row.from);
   const to = assetParts(row.to);
+  if (row.read.state === "signed") {
+    const e = row.read.entry;
+    const t = timeOf(row);
+    return {
+      from: null, to: null,
+      received: e.amount_out != null && e.amount_out !== "" ? amountText(e.amount_out, e.token_out) : "Not recorded in the entry",
+      updatedLabel: "Time",
+      updated: t === null ? "Time not recorded" : whenLong(new Date(t).toISOString()),
+    };
+  }
   if (row.kind === "vault") {
     return {
       from: from && { ...from, amount: VAULT_TRADE.amountIn.split(" ")[0] ?? null },
@@ -369,6 +406,7 @@ export function summaryOf(row: OrderRow): {
 
 /** "Where the funds are": the 1Click explanation for the status, or the honest state while it is not read. */
 export function whereOf(row: OrderRow): string {
+  if (row.read.state === "signed") return "Recorded in your key's signed history. Verify the call to see its attestation.";
   if (row.kind === "vault") return "Settled inside the key's vault. Intel TDX attested the answer.";
   if (row.status) return statusOf(row.status).where;
   if (row.read.state === "loading") return "Reading the live status from 1Click.";
@@ -394,6 +432,8 @@ export type Timeline = { step: number; refund: boolean; steps: TimelineStep[] };
  * "skipped" means the order never reached it (no intent hash came back). The vault trade is settled by its recorded evidence.
  */
 export function timelineOf(row: OrderRow): Timeline {
+  // A history entry has no 1Click route; its details panel shows the entry instead (see OrderDetails).
+  if (row.read.state === "signed") return { step: -1, refund: false, steps: [] };
   if (row.kind === "vault") {
     return {
       step: 3, refund: false,
@@ -472,6 +512,7 @@ export type ProofItem = { label: string; value: string; href?: string; alt?: str
 
 /** Every hash and id of an order, with its explorer. Duplicates are dropped (the list keys on label and value). */
 export function proofRowsOf(row: OrderRow): ProofItem[] {
+  if (row.read.state === "signed") return [{ label: "enclave call", value: row.read.callId, href: `/verify?call=${row.read.callId}`, internal: true }];
   if (row.kind === "vault") {
     return [
       { label: "enclave call", value: VAULT_TRADE.callId, href: `/verify?call=${VAULT_TRADE.callId}`, internal: true },
@@ -504,6 +545,7 @@ export function proofRowsOf(row: OrderRow): ProofItem[] {
 
 /** The "View proof" target: the internal enclave call for the vault trade; otherwise the first intent, then any hash link. */
 export function proofHrefOf(row: OrderRow): { href: string; internal: boolean } | null {
+  if (row.read.state === "signed") return { href: `/verify?call=${row.read.callId}`, internal: true };
   if (row.kind === "vault") return { href: `/verify?call=${VAULT_TRADE.callId}`, internal: true };
   const items = proofRowsOf(row);
   const pick = items.find((r) => r.label === "intent" && r.href) ?? items.find((r) => r.href);
@@ -512,6 +554,7 @@ export function proofHrefOf(row: OrderRow): { href: string; internal: boolean } 
 
 /** The explorer behind the header's external-link icon: the intent when there is one, otherwise the first hash link. */
 export function explorerHrefOf(row: OrderRow): string | null {
+  if (row.read.state === "signed") return null;
   if (row.kind === "vault") return intentTx(VAULT_TRADE.intentHash);
   const p = proofHrefOf(row);
   return p && !p.internal ? p.href : null;
@@ -519,7 +562,76 @@ export function explorerHrefOf(row: OrderRow): string | null {
 
 /** The raw JSON the "Raw data" button shows: the status read exactly as the page received it, or the recorded vault record. */
 export function rawJsonOf(row: OrderRow): string {
+  if (row.read.state === "signed") return JSON.stringify({ callId: row.read.callId, entry: row.read.entry }, null, 2);
   if (row.kind === "vault") return JSON.stringify(VAULT_TRADE, null, 2);
   if (row.read.state === "ok") return JSON.stringify({ depositAddress: row.id, ...row.read.live }, null, 2);
   return JSON.stringify({ depositAddress: row.id, status: null, read: row.read.state }, null, 2);
+}
+
+/* ---------- The holder's own trades: the signed history of this key ---------- */
+
+/** The entry kinds the page merges into "Your vault": swaps, copy trades, withdrawals and deposits. Other kinds are not merged. */
+export const HISTORY_KINDS = ["swap", "copy", "withdraw", "deposit"] as const;
+
+/** The worker's status words for a history entry, with the bucket each one counts in. Any other word is "Not recognised". */
+const MINE_WORD: Record<string, { bucket: Bucket; label: string }> = {
+  success: { bucket: "settled", label: "Settled" },
+  completed: { bucket: "settled", label: "Completed" },
+  refunded: { bucket: "refunded", label: "Refunded" },
+  failed: { bucket: "failed", label: "Failed" },
+  pending: { bucket: "open", label: "Pending" },
+  expired: { bucket: "open", label: "Expired" },
+};
+export function mineWordOf(entry: HistEntry): { bucket: Bucket; label: string } | null {
+  const w = typeof entry.status === "string" ? entry.status.toLowerCase() : "";
+  return w && Object.hasOwn(MINE_WORD, w) ? MINE_WORD[w] : null;
+}
+
+const TONE_BY_BUCKET: Record<Bucket, ChipTone> = { settled: "success", refunded: "warn", failed: "error", open: "info", unread: "neutral" };
+
+/**
+ * The rows of the holder's own trades, newest first. Only entries of HISTORY_KINDS are merged. Each row keeps its entry and the
+ * attested call it came from. Call this only once the call's log has verified (see mineStateOf): an unverified log is never listed.
+ */
+export function historyRows(entries: readonly HistEntry[] | null | undefined, callId: string | null | undefined): OrderRow[] {
+  if (!entries || !callId) return [];
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => (HISTORY_KINDS as readonly string[]).includes(entry.kind ?? ""))
+    .sort((a, b) => (b.entry.ts_ms ?? 0) - (a.entry.ts_ms ?? 0) || b.index - a.index)
+    .map(({ entry, index }): OrderRow => ({
+      id: `${callId}:${index}`,
+      kind: "mine",
+      title: kindLabel(entry.kind),
+      settlement: null,
+      read: { state: "signed", entry, callId },
+      status: null,
+      from: null,
+      to: null,
+    }));
+}
+
+/**
+ * Where the "Your vault" source stands. Pure: the caller reads the session, the key, the signed history and the log check.
+ * Only "ready" lists entries; every other state says what is missing, and nothing is counted.
+ */
+export type MineState = "signed-out" | "keys-loading" | "no-key" | "locked" | "reading" | "error" | "checking" | "unverified" | "ready";
+export function mineStateOf(i: {
+  signedIn: boolean; keysReady: boolean; hasKey: boolean; live: boolean; busy: boolean; read: boolean; failed: boolean; logOk: boolean | null;
+}): MineState {
+  if (!i.signedIn) return "signed-out";
+  if (!i.keysReady) return "keys-loading";
+  if (!i.hasKey) return "no-key";
+  if (!i.live) return "locked";
+  if (i.busy) return "reading";
+  if (i.failed) return "error";
+  if (!i.read) return "reading";
+  if (i.logOk === null) return "checking";
+  if (i.logOk === false) return "unverified";
+  return "ready";
+}
+
+/** The source shown until the reader picks one: "Your vault" when the verified history has entries, otherwise the public orders. */
+export function defaultSourceOf(mineCount: number): "mine" | "public" {
+  return mineCount > 0 ? "mine" : "public";
 }

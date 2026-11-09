@@ -1,14 +1,23 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { statusOf } from "@/lib/oneclick";
 import { RECORDED_FAILED } from "@/lib/settlements";
-import { Card, CardHeader, FilterChips, Icon, PageHeader, StatusChip, type FilterItem } from "@/components/v7";
+import { inSession, loadSession, minutesLeft } from "@/lib/session";
+import { useWallet } from "@/lib/wallet";
+import { useKeyStore } from "@/lib/keyStore";
+import { useSigned } from "@/lib/useSigned";
+import { useLogVerified } from "@/lib/useLogVerified";
+import { errorText } from "@/lib/i18n";
+import type { HistEntry } from "@/lib/dashboard";
+import { Card, CardHeader, FilterChips, Icon, PageHeader, Segmented, StatusChip, type FilterItem } from "@/components/v7";
 import { ActivityList } from "@/components/activity/ActivityList";
 import { ActivityStats } from "@/components/activity/ActivityStats";
+import { MineGate } from "@/components/activity/MineGate";
 import { OrderDetails } from "@/components/activity/OrderDetails";
 import { useOrderReads } from "@/components/activity/useOrderReads";
 import {
-  buildOrders, countsOf, filterOrders, pageSlice, RANGES, timeOf, type ChipTone, type FilterId, type RangeId,
+  buildOrders, countsOf, defaultSourceOf, filterOrders, historyRows, mineStateOf, pageSlice, RANGES, timeOf,
+  type ChipTone, type FilterId, type MineState, type RangeId,
 } from "@/components/activity/orders";
 import { AgentPanel } from "./agent";
 import { PriceCheck } from "./price";
@@ -25,10 +34,74 @@ const FILTER_EMPTY: Record<Exclude<FilterId, "all">, { title: string; body: stri
   failed: { title: "No failed orders", body: "No live 1Click order has failed. The recorded example below shows what a failed order looks like." },
 };
 
+/** The two sources the page lists: the holder's own signed trades ("Mine") and the public 1Click orders ("Public"). */
+type Source = "mine" | "public";
+
+/** What the stat tiles say while "Mine" cannot be read yet. Shown instead of figures, so a locked source never reads as zero. */
+const MINE_NOT_READY: Record<Exclude<MineState, "ready">, string> = {
+  "signed-out": "Sign in to read",
+  "keys-loading": "Looking up your key",
+  "no-key": "No key yet",
+  locked: "Unlock to read",
+  reading: "Reading your trades",
+  error: "Could not read",
+  checking: "Checking the log",
+  unverified: "Log did not verify",
+};
+
 export function SettleView() {
   const { reads, retry } = useOrderReads();
-  const rows = useMemo(() => buildOrders(reads), [reads]);
+
+  // The holder's own trades: the signed history of the first key, read only under a live session (no wallet popup).
+  const wallet = useWallet();
+  const store = useKeyStore();
+  const tokenId = store.primary?.token_id ?? null;
+  const history = useSigned("history");
+  const { run: runHistory, reset: resetHistory } = history;
+  const { accountId, session } = wallet;
+  const live = !!(session && tokenId && session.account === accountId && session.token_id === tokenId && minutesLeft(session) > 0);
+  const entries = history.res?.output?.ok ? (history.res.output.entries as HistEntry[]) : null;
+  const callId = history.res?.output?.ok ? history.res.call_id : null;
+  const logOk = useLogVerified(history.res);
+  const readFailed = !!history.res && !history.res.output?.ok;
+  const keyFailed = store.status === "error";
+  const mineState: MineState = keyFailed ? "error" : mineStateOf({
+    signedIn: !!accountId, keysReady: store.status === "ready", hasKey: !!tokenId, live, busy: history.busy, read: !!entries, failed: readFailed, logOk,
+  });
+  const readError = keyFailed ? "Your key could not be read. Try again."
+    : readFailed ? (history.res?.error ? errorText(history.res.error.code).join(" ") : "The enclave did not answer. Try again in a moment.")
+    : null;
+  const mineRows = useMemo(() => (mineState === "ready" ? historyRows(entries, callId) : []), [mineState, entries, callId]);
+  const [pick, setPick] = useState<Source | null>(null);
+  const source: Source = pick ?? defaultSourceOf(mineRows.length);
+  const publicRows = useMemo(() => buildOrders(reads), [reads]);
+  const rows = useMemo(() => (source === "mine" ? mineRows : publicRows), [source, mineRows, publicRows]);
   const counts = useMemo(() => countsOf(rows), [rows]);
+  const mineGated = source === "mine" && mineState !== "ready";
+
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockErr, setUnlockErr] = useState<string | null>(null);
+  const unlock = async () => {
+    if (!tokenId) return;
+    setUnlocking(true); setUnlockErr(null);
+    const r = await wallet.startSession(tokenId);
+    setUnlocking(false);
+    if (!r.ok) setUnlockErr(errorText(r.code).join(" "));
+  };
+  const retryMine = () => { if (keyFailed) store.refresh(); else void runHistory({}); };
+
+  // A read belongs to one account: switching accounts clears it. With a live session the history loads by itself, once per
+  // session, and only when the session covers the op, so it never opens a wallet popup.
+  const autoFor = useRef<string | null>(null);
+  useEffect(() => { resetHistory(); autoFor.current = null; }, [accountId, resetHistory]);
+  useEffect(() => {
+    if (!live || !tokenId || !accountId || !session) { autoFor.current = null; return; }
+    if (!(inSession("history") && loadSession(accountId))) return;
+    const key = `${accountId}:${tokenId}:${session.exp_ms}`;
+    if (autoFor.current === key) return;
+    autoFor.current = key;
+    void runHistory({});
+  }, [live, tokenId, accountId, session, runHistory]);
 
   const [filter, setFilter] = useState<FilterId>("all");
   const [range, setRange] = useState<RangeId>("all");
@@ -45,7 +118,9 @@ export function SettleView() {
   const pending = counts.loading + counts.unavailable;
 
   let empty: { title: string; body: string; clear: boolean } | null = null;
-  if (matched.length === 0) {
+  if (matched.length === 0 && source === "mine" && !filtersOn) {
+    empty = { title: "No trades on this key yet", body: "Swaps, withdrawals and deposits on this key show here once they are recorded.", clear: false };
+  } else if (matched.length === 0) {
     const note = pending ? " Orders that are not read yet are not counted here." : "";
     if (filter !== "all" && range === "all" && query.trim() === "") {
       empty = { ...FILTER_EMPTY[filter], body: FILTER_EMPTY[filter].body + note, clear: true };
@@ -61,6 +136,7 @@ export function SettleView() {
     { id: "failed", label: "Failed", count: counts.failed },
   ];
 
+  const pickSource = (s: Source) => { setPick(s); setSelected(null); setPage(1); };
   const pickFilter = (f: FilterId) => { setFilter(f); setPage(1); };
   const pickRange = (r: RangeId) => { setRange(r); setPage(1); setNow(Date.now()); };
   const typeQuery = (q: string) => { setQuery(q); setPage(1); };
@@ -74,6 +150,16 @@ export function SettleView() {
         lead="Each order below was run by KEYHOLE on NEAR mainnet. Its status is read live from 1Click, and its proof is one click away."
         testid="act-head"
       />
+
+      <div className="act-source">
+        <Segmented<Source>
+          options={[{ value: "mine", label: "Mine" }, { value: "public", label: "Public" }]}
+          value={source}
+          onChange={pickSource}
+          label="Show orders from"
+          testid="act-source"
+        />
+      </div>
 
       <div className="act-toolbar">
         <FilterChips items={chips} value={filter} onChange={pickFilter} label="Filter orders by status" testid="act-filters" />
@@ -97,8 +183,20 @@ export function SettleView() {
         </div>
       )}
 
-      <ActivityStats counts={counts} />
+      <ActivityStats counts={counts} ready={!mineGated} notReadText={mineGated ? MINE_NOT_READY[mineState as Exclude<MineState, "ready">] : undefined} />
 
+      {mineGated && (
+        <MineGate
+          state={mineState}
+          unlocking={unlocking}
+          unlockError={unlockErr}
+          readError={readError}
+          onUnlock={() => { void unlock(); }}
+          onConnect={() => wallet.connect()}
+          onRetry={retryMine}
+        />
+      )}
+      {!mineGated && (
       <div className="act-split">
         <ActivityList
           items={slice.items}
@@ -115,6 +213,7 @@ export function SettleView() {
         />
         {current && <OrderDetails key={current.id} row={current} onRetry={retry} />}
       </div>
+      )}
 
       <section className="act-extra">
         <RecordedFailed />

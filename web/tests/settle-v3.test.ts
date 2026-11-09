@@ -3,15 +3,22 @@ import { readFileSync } from "node:fs";
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 
-describe("/settle v3: public settlements on the kit", () => {
-  const v = src("../app/settle/view.tsx");
+describe("/settle (Activity): public settlements on the v7 system", () => {
+  // The page is split across the route files and components/activity; the testids and copy live in these.
+  const v = [
+    "../app/settle/view.tsx", "../app/settle/price.tsx", "../components/activity/ActivityList.tsx",
+    "../components/activity/OrderDetails.tsx", "../components/activity/ActivityStats.tsx", "../components/activity/useOrderReads.ts",
+  ].map(src).join("\n");
 
-  it("keeps the testids the e2e flows read", () => {
-    for (const id of ["dry", "dry-btn", "dry-msg", "dry-out", "settlement", "funds-path", "st-updated", "st-badge", "vault-trade", "vault-trade-verify", "recorded-failed"]) {
+  it("keeps the testids the e2e flows and the unit tests read", () => {
+    for (const id of [
+      "dry", "dry-btn", "dry-msg", "dry-out", "dry-badge", "dry-tag", "settlement", "funds-path", "st-updated", "st-badge",
+      "vault-trade", "vault-trade-verify", "recorded-failed", "act-row", "act-filters", "act-range", "act-search", "act-list",
+    ]) {
       expect(v, id).toContain(`"${id}"`);
     }
-    expect(v).toContain("data-deposit={s.depositAddress}");
-    expect(v).toContain('data-step={f.step}');
+    expect(v).toContain('data-deposit={row.kind === "live" ? row.id : undefined}');
+    expect(v).toContain("data-step={tl.step}");
   });
 
   it("the dry-quote card is honest: a price only, labelled, and built from the kit", () => {
@@ -20,6 +27,15 @@ describe("/settle v3: public settlements on the kit", () => {
     expect(v).toContain("AmountInput");
     expect(v).toContain('"/api/oneclick"');
     expect(v).toContain("Nothing was signed and no funds moved.");
+  });
+
+  it("reads each listed order's live status from 1Click, one read per order", () => {
+    expect(v).toContain("/api/oneclick?depositAddress=");
+  });
+
+  it("filters are All, Settled, Refunded and Failed, with counts from the rows", () => {
+    for (const label of ["All activity", "Settled", "Refunded", "Failed"]) expect(v, label).toContain(`label: "${label}"`);
+    expect(v).toContain("count: counts.settled");
   });
 
   it("the swap entry in the sidebar goes to /swap, and Activity goes to /settle", () => {

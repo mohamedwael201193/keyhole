@@ -4,16 +4,18 @@ import { TokenMark } from "@/components/TokenMark";
 import { Button, Proof } from "@/components/ui";
 import { Card, CardHeader, CopyButton, Icon, Skeleton, StatusChip } from "@/components/v7";
 import {
-  chipOf, explorerHrefOf, markOf, proofHrefOf, proofRowsOf, rawJsonOf, shortHash, whereOf, summaryOf, timeOf, timelineOf,
+  chipOf, explorerHrefOf, markOf, proofHrefOf, proofRowsOf, rawJsonOf, shortHash, subOf, whereOf, summaryOf, timeOf, timelineOf,
   type StepState, type Timeline, type TimelineLink, type OrderRow,
 } from "./orders";
 
 /**
- * The Order details card for one order (or the vault trade). The parent keys it by order id, so the raw view resets on a new
- * selection. Everything on it comes from the order's row: the live read, the recorded record and the timeline rules.
+ * The Order details card for one order, one vault trade or one entry of "Your vault". The parent keys it by order id, so the raw
+ * view resets on a new selection. Everything on it comes from the row: the live read, the recorded record, the signed history
+ * entry, and the timeline rules.
  */
 export function OrderDetails({ row, onRetry }: { row: OrderRow; onRetry: (address: string) => void }) {
   const [raw, setRaw] = useState(false);
+  if (row.read.state === "signed") return <HistoryDetails row={row} />;
   const vault = row.kind === "vault";
   const chip = chipOf(row);
   const mark = markOf(row);
@@ -51,6 +53,7 @@ export function OrderDetails({ row, onRetry }: { row: OrderRow; onRetry: (addres
       </div>
 
       <p className="act-where"><b>Where the funds are:</b> {whereOf(row)}</p>
+      {row.settlement?.note && <p className="act-note">{row.settlement.note}</p>}
 
       {row.read.state === "loading" && <Skeleton lines={1} label="Reading the live status from 1Click" testid="act-loading" />}
       {row.read.state === "error" && (
@@ -145,5 +148,66 @@ function LinkPill({ link }: { link: TimelineLink }) {
       <Icon name="external" size={13} />
       <span className="v7-sr-only"> (opens in a new tab)</span>
     </a>
+  );
+}
+
+/** A history entry of "Your vault": the entry's own fields, the verify link to its attested call, and its raw JSON. */
+function HistoryDetails({ row }: { row: OrderRow }) {
+  const [raw, setRaw] = useState(false);
+  const chip = chipOf(row);
+  const mark = markOf(row);
+  const sum = summaryOf(row);
+  const e = row.read.state === "signed" ? row.read.entry : null;
+  const callId = row.read.state === "signed" ? row.read.callId : "";
+  return (
+    <Card as="section" labelledBy="act-det-h" testid="mine-details" className="act-details">
+      <CardHeader
+        title="Order details"
+        id="act-det-h"
+        action={<CopyButton value={callId} label="Copy call ID" testid="act-copy" />}
+      />
+
+      <div className="act-det-order">
+        <span className={`act-det-ico tone-${mark.tone}`} aria-hidden="true"><Icon name={mark.icon} size={20} /></span>
+        <div className="act-det-titles">
+          <p className="act-det-title">{row.title} <span className="act-tag">Your vault</span></p>
+          <p className="act-det-id">Call ID <code title={callId}>{shortHash(callId, 10, 6)}</code></p>
+        </div>
+        <span data-status={e?.status ?? "UNREAD"}>
+          <StatusChip tone={chip.tone} testid="st-badge">{chip.label}</StatusChip>
+        </span>
+      </div>
+
+      <p className="act-where"><b>About this entry:</b> {whereOf(row)}</p>
+
+      <dl className="act-kv">
+        <div>
+          <dt>Amount</dt>
+          <dd data-testid="mine-amount">{subOf(row)}</dd>
+        </div>
+        {e?.chain && (
+          <div>
+            <dt>Chain</dt>
+            <dd>{e.chain}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Status</dt>
+          <dd>{e?.status ? String(e.status) : "No status recorded"}</dd>
+        </div>
+        <div>
+          <dt>{sum.updatedLabel}</dt>
+          <dd data-testid={timeOf(row) !== null ? "st-updated" : undefined}>{sum.updated}</dd>
+        </div>
+      </dl>
+
+      <div className="act-actions">
+        <Button variant="primary" href={`/verify?call=${callId}`} testid="mine-verify" icon={<Icon name="shield" size={16} />}>Verify the call</Button>
+        <Button variant="secondary" aria-expanded={raw} aria-controls="act-raw" onClick={() => setRaw((v) => !v)} testid="act-raw-toggle" icon={<Icon name="more" size={16} />}>
+          {raw ? "Hide raw data" : "Raw data"}
+        </Button>
+      </div>
+      <pre id="act-raw" className="act-raw" data-testid="act-raw" hidden={!raw}>{rawJsonOf(row)}</pre>
+    </Card>
   );
 }

@@ -314,7 +314,7 @@ describe("Overview: setup checklist from real state", () => {
     expect(m).not.toContain('data-testid="setup-fund-action"');
   });
 
-  it("all five done collapses the list to Setup complete, and the proof card stays", () => {
+  it("all five done keeps the five steps listed as done (no collapse), with no actions, and the proof card stays", () => {
     const { rows, total } = usdcRows("2500000");
     const entries: HistEntry[] = [{ ts_ms: 1, kind: "swap", token_in: USDC, amount_in: "1", token_out: USDC, amount_out: "1", status: "success" }];
     const m = html({
@@ -322,7 +322,10 @@ describe("Overview: setup checklist from real state", () => {
       balance: { ...balanceUnread, read: true, rows, total },
       activity: { ...activityUnread, read: true, entries, logOk: true, callId: "abcdef1234567890" },
     });
-    expect(m).toContain('data-testid="setup-complete"');
+    expect(m).not.toContain('data-testid="setup-complete"');
+    for (const id of ["sign", "key", "unlock", "fund", "swap"]) expect(m).toContain(`data-testid="setup-${id}" data-done="1"`);
+    expect(m).toContain('data-testid="setup-count">5 of 5');
+    expect(m).toContain("Swap done. Read from your signed activity.");
     expect(m).not.toMatch(/data-testid="setup-(key|unlock|fund|swap)-action"/);
     expect(m).toContain('data-testid="ov-proof"');
   });

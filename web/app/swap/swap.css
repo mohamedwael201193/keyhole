@@ -5,7 +5,7 @@
 /* Two columns from 1000px: the swap card on the left, the About card and the recent swaps on the right. */
 .sw-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; min-width: 0; }
 .sw-grid > * { min-width: 0; }
-.sw-side { display: grid; gap: var(--space-4); align-content: start; min-width: 0; }
+.sw-side { display: grid; gap: var(--space-4); grid-template-rows: auto minmax(0, 1fr); min-width: 0; }
 
 /* The swap card. */
 .sw-card { display: grid; gap: var(--space-3); align-content: start; animation: sw-in var(--dur-slow) var(--ease-out) both; }

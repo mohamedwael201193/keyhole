@@ -17,7 +17,7 @@
 .act-note { margin: 0; font: 400 14px/1.55 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
 .act-alert { color: var(--danger-ink); font-weight: 600; }
 .act-where { margin: 0 0 var(--space-4); font: 500 14px/1.5 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
-.act-where b { color: var(--ink); font-weight: 600; }
+.act-where b { font: 600 14px/1.5 var(--font-ui); color: var(--ink); }
 
 /* ---------- Toolbar: status chips and the date range ---------- */
 .act-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); min-width: 0; }
@@ -129,8 +129,8 @@
 .act-tl-step.todo .act-tl-body b, .act-tl-step.skipped .act-tl-body b { color: var(--muted); font-weight: 500; }
 .act-tl-body small { font: 400 13px/1.45 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
 .act-tl-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; min-width: 0; }
-.act-tl-end { display: grid; justify-items: end; min-width: 0; max-width: 46%; text-align: end; }
-.act-tl-amt { font: 600 14px/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.act-tl-end { display: grid; justify-items: end; min-width: 0; text-align: end; }
+.act-tl-amt { font: 600 14px/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .act-pill-static { cursor: default; color: var(--ink-2); }
 
 /* From, To, Received, last update. */
@@ -202,7 +202,7 @@
   .act-stat-ico { width: 36px; height: 36px; }
   .act-stat-value { font-size: 36px; }
   .act-kv > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .act-tl-end { max-width: 100%; }
+  .act-tl-amt { white-space: normal; }
   .act-item .v7-row-end { max-width: 40%; }
   .act-det-order { grid-template-columns: auto minmax(0, 1fr); }
   .act-det-order > span:last-child { grid-column: 2; justify-self: start; }
@@ -212,3 +212,21 @@
 @media (prefers-reduced-motion: reduce) {
   .act > *, .act-page-btn { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Source toggle, "Your vault" tag and the gate card (holder's own trades) ---------- */
+.act-source { display: flex; flex-wrap: wrap; align-items: center; min-width: 0; }
+.act-tag {
+  display: inline-flex; align-items: center; min-height: 22px; margin-left: 8px; padding: 0 9px; border-radius: var(--radius-pill);
+  background: var(--primary-tint); color: var(--primary); font: 600 12px/1 var(--font-ui); letter-spacing: .02em; vertical-align: middle; white-space: nowrap;
+}
+.act-gate {
+  display: grid; justify-items: start; gap: var(--space-2); min-width: 0; padding: var(--space-5); border-radius: var(--radius-lg);
+  background: var(--raised); border: 1px dashed var(--line-strong); box-shadow: var(--shadow-1);
+}
+.act-gate-ico {
+  display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--primary-tint); color: var(--primary); margin-bottom: 4px;
+}
+.act-gate-title { margin: 0; font: 600 22px/1.2 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
+.act-gate-body { margin: 0; max-width: 60ch; font: 400 15px/1.55 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+.act-gate-action { margin-top: var(--space-2); }
+.act-gate .act-note { margin-top: var(--space-1); }

@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { KeyArt } from "@/components/Art";
 import { useI18n } from "@/lib/i18n";
-import { keyState, nearText, shortAccount, shortKeyId, type Token } from "@/lib/near";
+import { keyState, shortAccount, shortKeyId, type Token } from "@/lib/near";
+import { nearText } from "@/lib/sale";
 import { CAPS, keyIdentity } from "@/lib/traits";
 import { formatTradePrice } from "@/lib/price";
 import { StatusChip, TierChip } from "@/components/v7";

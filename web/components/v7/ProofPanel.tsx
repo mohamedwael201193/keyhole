@@ -1,9 +1,9 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { TxLink } from "@/components/TxLink";
 import { Card, CardHeader } from "./Card";
 import { CopyButton } from "./CopyButton";
 import { StatusChip } from "./StatusChip";
+import { TxLinkPill } from "./TxLinkPill";
 
 /**
  * The proof card: enclave status, hardware, worker build (short, with copy), the contract on the explorer, the TEE
@@ -62,7 +62,7 @@ export function ProofPanel({
           <dd>
             {workerBuild ? (
               <>
-                <span className="v7-mono" title={workerBuild}>{`${workerBuild.slice(0, 10)}…`}</span>
+                <span className="v7-mono v7-proof-hash" title={workerBuild}>{`${workerBuild.slice(0, 10)}…`}</span>
                 <CopyButton value={workerBuild} label="Copy worker build" />
               </>
             ) : <span className="v7-muted">Not published</span>}
@@ -70,7 +70,7 @@ export function ProofPanel({
         </div>
         <div>
           <dt>Contract</dt>
-          <dd>{contract ? <TxLink account={contract} /> : <span className="v7-muted">Not set</span>}</dd>
+          <dd>{contract ? <TxLinkPill account={contract} testid="proof-contract" /> : <span className="v7-muted">Not set</span>}</dd>
         </div>
         <div>
           <dt>TEE attestation</dt>
@@ -81,7 +81,7 @@ export function ProofPanel({
           <dd>
             {lastCall ? (
               <>
-                <span className="v7-mono" title={lastCall}>{`${lastCall.slice(0, 8)}…`}</span>
+                <span className="v7-mono v7-proof-hash" title={lastCall}>{`${lastCall.slice(0, 8)}…`}</span>
                 <CopyButton value={lastCall} label="Copy call id" />
               </>
             ) : <span className="v7-muted">None yet</span>}

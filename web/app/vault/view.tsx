@@ -5,10 +5,8 @@ import { Attested, ErrorBox, OfflineState, capFrom } from "@/components/Result";
 import { TxLink } from "@/components/TxLink";
 import { loadMintTx } from "@/lib/mintTx";
 import { HowStrip } from "@/components/HowStrip";
-import { EmptyState } from "@/components/EmptyState";
 import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
-import { Guilloche, Hallmark } from "@/components/Engraving";
 import { FoilCard } from "@/components/FoilCard";
 import { TokenMark } from "@/components/TokenMark";
 import { useI18n } from "@/lib/i18n";
@@ -35,20 +33,32 @@ import { copyText } from "@/lib/copyText";
 import { CAPS, keyIdentity, serialOf, type Finish } from "@/lib/traits";
 import { traitLabel } from "@/components/KeyCard";
 import { KeyLog } from "@/components/KeyLog";
-import { AmountInput, Button, Busy, Card, Sheet, Spinner, Tabs, TokenSelect, type TokenOption } from "@/components/ui";
+import { entryDetail, kindLabel, settledOrders, type HistEntry } from "@/lib/dashboard";
+import type { WorkerResult } from "@/lib/worker";
+import { AmountInput, Button, Busy, Sheet, Tabs, TokenSelect, type TokenOption } from "@/components/ui";
 import { TxStatus } from "@/components/ui/tx-status";
+import { Card, CardHeader, CopyButton, EmptyState, Icon, ListRow, PageHeader, ProofPanel, SetupProgress, Skeleton, StatusChip, TierChip, VaultHero, type IconName, type SetupItem } from "@/components/v7";
 import "./vault.css";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
-type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; usd_in_micro?: number; token?: string; amount?: string; chain?: string; status?: string };
-type Tab = "limits" | "session" | "lock";
 type DepTab = "direct" | "chain";
 type DoneWithdraw = { amount: string; to: string };
+type Panel = "limits" | "session";
 
 const ASSET_KEYS = Object.keys(ASSETS) as AssetKey[];
 const keyOfId = (id: string): AssetKey => ASSET_KEYS.find((k) => ASSETS[k].id === id) ?? "usdc";
 /** The vault holds and withdraws the two assets the trade supports. */
 const TOKEN_OPTIONS: TokenOption[] = ASSET_KEYS.map((k) => ({ id: ASSETS[k].id, symbol: ASSETS[k].symbol, name: ASSETS[k].name, assetId: ASSETS[k].id, chain: "near" }));
+
+/** Icon, tone and one plain line for each kind of vault entry. The kind comes from the signed, verified history. */
+const ENTRY_ICON: Record<string, IconName> = { deposit: "arrow-down", withdraw: "arrow-up", swap: "arrow-swap", copy: "swap" };
+const ENTRY_TONE: Record<string, "success" | "warn" | "neutral"> = { deposit: "success", withdraw: "warn", swap: "neutral", copy: "neutral" };
+const ENTRY_SUB: Record<string, string> = {
+  deposit: "Funds added to the vault",
+  withdraw: "Funds withdrawn from the vault",
+  swap: "Private swap inside the vault",
+  copy: "Copy trade inside the vault",
+};
 
 /** A labelled meter. The bar is drawn only when there is a real percentage to show. */
 function Meter({ label, value, pct, note, testid }: { label: string; value: ReactNode; pct?: number; note?: string; testid?: string }) {
@@ -63,11 +73,59 @@ function Meter({ label, value, pct, note, testid }: { label: string; value: Reac
   );
 }
 
+/** The refresh mark for the balance pill (the v7 icon set has no refresh glyph). */
+function RefreshGlyph() {
+  return (
+    <svg className="vlt-pill-icon" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
+    </svg>
+  );
+}
+
+/** The call behind a read: its id, the attestation link when the enclave gave one, and Verify. Small, muted and mono. */
+function CallLine({ r }: { r: WorkerResult }) {
+  if (!r.call_id) return null;
+  return (
+    <p className="vlt-callline">
+      <span>Call: {r.call_id.slice(0, 8)}</span>
+      {r.attestation_url && <a className="v7-pill-link" href={r.attestation_url} target="_blank" rel="noreferrer"><span>Attestation</span><Icon name="external" size={14} /></a>}
+      <Link className="v7-pill-link" href={`/verify?call=${encodeURIComponent(r.call_id)}`}><span>Verify</span></Link>
+      {r.time_ms != null && <span>TEE time: {r.time_ms} ms</span>}
+    </p>
+  );
+}
+
+/** One row of the settings list. A row with `open` is a disclosure (it shows or hides a panel); without it, the row acts. */
+function SettingRow({ testid, iconName, title, sub, tail, open, onClick }: {
+  testid: string; iconName: IconName; title: string; sub: ReactNode; tail?: ReactNode; open?: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="v7-row vlt-set-row"
+      data-testid={testid}
+      aria-expanded={open === undefined ? undefined : open}
+      aria-controls={open === undefined ? undefined : "vlt-set-panel"}
+      onClick={onClick}
+    >
+      <span className="v7-row-icon" aria-hidden="true"><Icon name={iconName} size={18} /></span>
+      <span className="v7-row-body">
+        <span className="v7-row-title">{title}</span>
+        <span className="v7-row-sub">{sub}</span>
+      </span>
+      {tail}
+      <Icon name={open ? "chevron-down" : "chevron-right"} size={18} className="v7-row-arrow" />
+    </button>
+  );
+}
+
 /**
  * The vault. Keys come from the shared key store (no lookup of its own). The vault is open only while the 30-minute session
  * for the holder's key is live: then the balance, the caps and the lock state read by themselves, once per session. With no
  * live session the page shows one "Unlock to read" action, which is the same unlock the top-bar pill uses. Deposit and
  * withdraw keep their own sheets; a withdrawal always asks the wallet for a fresh signature.
+ * Layout (mockup 18): the page title, the balance banner, then two columns: assets, proof and activity on the left; the key,
+ * setup progress and settings on the right. Every value is read from the enclave, the contract or the key store.
  */
 export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline: boolean; initialPrices?: PriceBook }) {
   const { t, fmtUsd } = useI18n();
@@ -84,7 +142,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const dash = useSigned("dashboard");
   const logVerified = useLogVerified(history.res);
 
-  const [tab, setTab] = useState<Tab>("limits");
+  const [panel, setPanel] = useState<Panel | null>(null);
   const [limTx, setLimTx] = useState("");
   const [limDay, setLimDay] = useState("");
   const [depOpen, setDepOpen] = useState(false);
@@ -100,7 +158,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const [doneWithdraw, setDoneWithdraw] = useState<DoneWithdraw | null>(null);
   const [prices, setPrices] = useState(initialPrices);
   const [mintTx, setMintTx] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [copiedConf, setCopiedConf] = useState(false);
   const [slowKey, setSlowKey] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
@@ -122,10 +179,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const live = !!(session && heldId && session.account === accountId && session.token_id === heldId && minutesLeft(session) > 0);
   const sessionToken = live && session ? session.token : "";
 
-  // One automatic read per session: the balance and the dashboard (caps, lock state). Guarded by the session token, so it
-  // cannot loop; a failure shows a retry and never re-runs by itself.
+  // One automatic read per session: the balance, the dashboard (caps, lock state) and the signed history. Guarded by the
+  // session token, so it cannot loop; a failure shows a retry and never re-runs by itself.
   const runBalance = balance.run;
   const runDash = dash.run;
+  const runHistory = history.run;
   const autoFor = useRef("");
   useEffect(() => {
     if (!sessionToken) { autoFor.current = ""; return; }
@@ -133,7 +191,21 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     autoFor.current = sessionToken;
     void runBalance({}, { quiet: true });
     void runDash({}, { quiet: true });
-  }, [sessionToken, runBalance, runDash]);
+    void runHistory({}, { quiet: true });
+  }, [sessionToken, runBalance, runDash, runHistory]);
+
+  // The newest signed read on this page: each finished read that carries a call id becomes the last call.
+  const [lastRes, setLastRes] = useState<WorkerResult | null>(null);
+  const seenRes = useRef<(WorkerResult | null | undefined)[]>([]);
+  useEffect(() => {
+    const before = seenRes.current;
+    const now = [balance.res, account.res, history.res, withdraw.res, limits.res, pnl.res, dash.res];
+    seenRes.current = now;
+    const fresh = now.find((r, i) => !!r && r !== before[i] && !!r.call_id);
+    if (fresh) setLastRes(fresh);
+  }, [balance.res, account.res, history.res, withdraw.res, limits.res, pnl.res, dash.res]);
+  const lastCall = lastRes?.call_id ?? null;
+  const lastVerified = useLogVerified(lastRes);
 
   useEffect(() => { setMintTx(loadMintTx(accountId)); }, [accountId]);
   useEffect(() => { setSlowKey(false); if (!lookingUp) return; const id = setTimeout(() => setSlowKey(true), 12_000); return () => clearTimeout(id); }, [lookingUp]);
@@ -159,14 +231,14 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const balances = balance.res?.output?.ok && (live || balance.via === "signature") ? (balance.res.output.balances as Bal[]) : d ? (d.balances as Bal[]) : null;
   const rows = balances ? assetRows(balances, prices) : null;
   const totalKind = totalOf(rows);
-  const entries = (history.res?.output?.ok ? history.res.output.entries as Hist[] : null);
+  const entries = (history.res?.output?.ok ? history.res.output.entries as HistEntry[] : null);
   const lockUntil = s?.ok ? (s.locked_until_ms as number | null | undefined) : null;
   const hhmm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
-  const stateBadge = !s?.ok ? null : lockUntil
-    ? <span className="vlt-state lock" data-testid="state-badge" data-state="locked"><i />{t("vault.stLocked", { time: hhmm(lockUntil) })}</span>
+  const stateChip = !s?.ok ? null : lockUntil
+    ? <StatusChip tone="warn" testid="state-badge">{t("vault.stLocked", { time: hhmm(lockUntil) })}</StatusChip>
     : coolUntil
-      ? <span className="vlt-state cool" data-testid="state-badge" data-state="cooldown"><i />{t("vault.stCooldown", { time: hhmm(coolUntil) })}</span>
-      : <span className="vlt-state ok" data-testid="state-badge" data-state="open"><i />{t("vault.stOpen")}</span>;
+      ? <StatusChip tone="error" testid="state-badge">{t("vault.stCooldown", { time: hhmm(coolUntil) })}</StatusChip>
+      : <StatusChip tone="success" testid="state-badge">{t("vault.stOpen")}</StatusChip>;
 
   const clearOtherErrors = (keep: { clear: () => void }) => {
     for (const card of [account, balance, history, withdraw, limits, pnl, dash]) if (card !== keep) card.clear();
@@ -203,10 +275,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     setUnlocking(false);
     if (!r.ok) setUnlockErr(r.code);
   }
-  function copyAccount() {
-    if (!accountId) return;
-    void copyText(accountId).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1600); });
-  }
   function doWithdraw() {
     if (!wUnits || !accountId || !wDest.ok) return;
     const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(wAddr.trim()) };
@@ -218,6 +286,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
 
   const totalText = totalKind.kind === "unread" ? t("vault.sealed") : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : formatUsdMicro(totalKind.micro);
   const left = live && session ? minutesLeft(session) : 0;
+  const funded = !!balances && balances.some((b) => Number(b.amount ?? b.balance ?? 0) > 0);
+  const swapped = logVerified === true && !!entries && settledOrders(entries) > 0;
 
   /** The one unlock for a card that needs a read: the same action the top-bar pill starts. */
   const unlockButton = (testid: string) => (
@@ -283,145 +353,205 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     </div>
   );
 
-  const lockPanel = (
-    <div className="vlt-stack" data-testid="lock-panel">
-      {!s?.ok ? <p className="vlt-sub">Unlock to read the lock state.</p>
-        : lockUntil ? <p className="note-box" data-testid="lock-note">{t("vault.lockNote", { time: hhmm(lockUntil) })}</p>
-        : <p className="vlt-sub">No time lock is set on this vault.</p>}
-      {coolUntil ? <p className="vlt-sub" data-testid="lock-cooldown">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
-    </div>
+  // The hero keeps the two big buttons of the mockup (Deposit, Withdraw). Unlock, or refresh once live, is one small pill on
+  // the balance line: the same unlock and the same balance read as before (testid balance-btn).
+  const balancePill = live ? (
+    <button type="button" className="vlt-pill-btn" data-testid="balance-btn" aria-label="Refresh balance (session, no popup)" title="Refresh balance (session, no popup)" disabled={balance.busy} aria-busy={balance.busy || undefined} onClick={() => { clearOtherErrors(balance); void balance.run({}); }}>
+      <RefreshGlyph />
+      <span>{balance.busy ? balance.label : "Refresh"}</span>
+    </button>
+  ) : (
+    <button type="button" className="vlt-pill-btn" data-testid="balance-btn" disabled={unlocking} aria-busy={unlocking || undefined} onClick={() => void unlock()}>
+      {unlocking ? "Waiting for your wallet…" : "Unlock to read"}
+    </button>
+  );
+  const heroActions = (
+    <>
+      <Button variant="banner" testid="open-deposit" onClick={() => setDepOpen(true)}>Deposit</Button>
+      <Button variant="secondary" className="v7-on-vault" testid="open-withdraw" onClick={() => setWOpen(true)}>Withdraw</Button>
+    </>
+  );
+  const heroSub = (
+    <>
+      {!live
+        ? t("vault.sealedBook")
+        : balances
+          ? <>{(balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")}{totalKind.kind === "partial" && <span data-testid="unpriced"> {t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</span>}</>
+          : balance.res?.error ? "The balance read did not complete. Use Refresh to try again." : "Reading your balance with your session."}
+      {" "}{balancePill}
+    </>
   );
 
-  return (
-    <div className="page vlt" data-testid="vault-page">
-      <header className="vlt-head">
-        <div>
-          <p className="eb">{accountId ? t("vault.eyebrow", { account: shortAccount(accountId) }) : t("vault.eyebrowOff")}</p>
-          <h1 className="vlt-title">{t("vault.title")}</h1>
-          {accountId && (
-            <p className="vlt-acct">
-              <span className="id" data-testid="vault-account">{accountId}</span>
-              <button type="button" className="vlt-link" onClick={copyAccount}>{copied ? t("nav.copied") : t("nav.copy")}</button>
-            </p>
+  const keyLabel = held ? keyState(held.token, held.tier, accountId) : "locked";
+
+  const setupItems: SetupItem[] = [
+    { id: "sign", title: "Sign in", done: true, note: "Signed in." },
+    { id: "key", title: "Get key", done: !!held, note: held ? "Held on NEAR mainnet." : "Needs a key first." },
+    { id: "unlock", title: "Unlock", done: live, note: live ? `${left} min left on this session.` : "One signature. 30 minutes." },
+    { id: "fund", title: "Fund vault", done: funded, note: funded ? "Balance read from the vault." : live ? "A deposit is a transfer you approve in your wallet." : "Checked once you unlock." },
+    { id: "swap", title: "First swap", done: swapped, note: swapped ? "Read from your signed activity." : "Checked from your activity once you unlock." },
+  ];
+
+  const enclaveChip = online === true
+    ? <StatusChip tone="success">Enclave live</StatusChip>
+    : online === false
+      ? <StatusChip tone="error">Not reachable</StatusChip>
+      : <StatusChip tone="neutral" testid="enclave-checking">Checking the enclave</StatusChip>;
+
+  const proofAttestation = lastRes ? (lastVerified === true ? "verified" : lastVerified === false ? "not-verified" : "unread") : "unread";
+
+  let body: ReactNode;
+  if (online === false) {
+    body = <div><OfflineState /><HowStrip /></div>;
+  } else if (!accountId) {
+    body = (
+      <div>
+        <EmptyState
+          title={t("empty.vaultTitle")}
+          body={t("empty.vaultBody")}
+          action={(
+            <div className="vlt-actions">
+              <Button onClick={() => void connect()} testid="vault-connect">{t("nav.connect")}</Button>
+              <Button variant="ghost" href="/demo" testid="vault-demo-link">No wallet? See the demo vault</Button>
+            </div>
           )}
-        </div>
-        <div className="vlt-chips">
-          {stateBadge}
-          {online === true && <span className="vlt-chip"><i />{t("vault.live", { hash: WORKER_WASM_SHA256[0].slice(0, 8) })}</span>}
-          {online === null && <span className="vlt-chip wait" data-testid="enclave-checking"><i />{t("vault.checking")}</span>}
-        </div>
-      </header>
-
-      {fo.order && !fo.terminal && <FundOrderBanner order={fo.order} status={fo.status} onOpen={() => setDepOpen(true)} />}
-
-      {online === false ? (
-        <div><OfflineState /><HowStrip /></div>
-      ) : !accountId ? (
-        <div>
-          <EmptyState title={t("empty.vaultTitle")} body={t("empty.vaultBody")} testid="vault-empty">
-            <Button onClick={() => void connect()} testid="vault-connect">{t("nav.connect")}</Button>
-            <Button variant="secondary" href="/mint">{t("mint.title")}</Button>
-            <Button variant="secondary" href="/demo" testid="vault-demo-link">No wallet? See the demo vault</Button>
-          </EmptyState>
-          <HowStrip active={1} />
-        </div>
-      ) : lookingUp ? (
-        <p className="note" data-testid="key-loading"><Spinner label="Looking up your key" /> {t("vault.keyLoading")}{slowKey && <span data-testid="key-slow"> The NEAR RPC is slow right now. <button type="button" className="vlt-link" onClick={() => location.reload()}>Try again</button></span>}</p>
-      ) : failed ? (
-        <EmptyState title="NEAR mainnet did not answer" body="Your key could not be read just now. The rest of the page still works." testid="vault-key-error">
-          <Button variant="secondary" onClick={() => store.refresh()} testid="vault-key-retry">Try again</Button>
-        </EmptyState>
-      ) : keyMiss ? (
-        <div>
-          <EmptyState title={t("vault.holderOnly")} body={t("vault.holderOnlyBody")} testid="holder-only">
-            <Button href="/start" testid="vault-start">Start setup</Button>
-            <Button variant="secondary" href="/mint">{t("vault.mintFirst")}</Button>
-          </EmptyState>
-          <HowStrip active={1} />
-        </div>
-      ) : (
-        <>
-          {held && !session && <p className="vlt-note" data-testid="vault-setup"><Link href="/start">New here? Finish setup in 5 steps →</Link></p>}
-          {held && mintTx && <p className="vlt-note" data-testid="vault-mint-tx">Key minted · <TxLink hash={mintTx} /></p>}
-          {held && !mintTx && <p className="vlt-note" data-testid="vault-key-link">Your key: <Link href={`/key?id=${encodeURIComponent(held.token.token_id)}`}>full history</Link> · <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">key contract on NearBlocks ↗</a></p>}
-
-          <Card tone="banner" as="section" className="vlt-hero" testid="balance-card" aria-labelledby="vlt-hero-cap">
-            <div className="vlt-hero-top">
-              <p id="vlt-hero-cap" className="vlt-cap">Vault balance</p>
-              <span className="vlt-net" data-testid="vault-network"><i aria-hidden="true" />Mainnet</span>
+          testid="vault-empty"
+        />
+        <HowStrip active={1} />
+      </div>
+    );
+  } else if (lookingUp) {
+    body = (
+      <Card as="section" labelledBy="vlt-loading-h" testid="key-loading" className="vlt-loading">
+        <CardHeader title="Looking up your key" id="vlt-loading-h" icon="key" />
+        <Skeleton lines={3} />
+        {slowKey && <p className="vlt-sub" data-testid="key-slow">The NEAR RPC is slow right now. <button type="button" className="vlt-link" onClick={() => location.reload()}>Try again</button></p>}
+      </Card>
+    );
+  } else if (failed) {
+    body = (
+      <EmptyState
+        title="NEAR mainnet did not answer"
+        body="Your key could not be read just now. The rest of the page still works."
+        action={<Button variant="secondary" onClick={() => store.refresh()} testid="vault-key-retry">Try again</Button>}
+        testid="vault-key-error"
+      />
+    );
+  } else if (keyMiss) {
+    body = (
+      <div>
+        <EmptyState
+          title={t("vault.holderOnly")}
+          body={t("vault.holderOnlyBody")}
+          action={(
+            <div className="vlt-actions">
+              <Button href="/mint" testid="vault-mint">{t("vault.mintFirst")}</Button>
+              <Button variant="ghost" href="/start" testid="vault-start">Start setup</Button>
             </div>
-            <p className="vlt-total" data-testid="vault-total">{totalText}</p>
-            {totalKind.kind === "partial" && <p className="vlt-src" data-testid="unpriced">{t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</p>}
-            <div className="vlt-status">
-              <span className="vlt-src">{balances ? ((balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")) : t("vault.sealedBook")}</span>
-              {live ? (
-                <Button variant="secondary" size="sm" testid="balance-btn" loading={balance.busy} loadingLabel={balance.label} onClick={() => { clearOtherErrors(balance); void balance.run({}); }}>
-                  {balance.busy ? balance.label : "Refresh balance (session, no popup)"}
-                </Button>
-              ) : (
-                <Button variant="secondary" size="sm" testid="balance-btn" loading={unlocking} loadingLabel="Waiting for your wallet" onClick={() => void unlock()}>
-                  {unlocking ? "Waiting for your wallet…" : "Unlock to read"}
-                </Button>
+          )}
+          testid="holder-only"
+        />
+        <HowStrip active={1} />
+      </div>
+    );
+  } else {
+    body = (
+      <>
+        <div className="vlt-hero-wrap" data-testid="balance-card">
+          <VaultHero
+            value={totalText}
+            sealed={totalKind.kind === "unread"}
+            sub={heroSub}
+            actions={heroActions}
+            chip={<span data-testid="vault-network">Mainnet</span>}
+            valueTestId="vault-total"
+            testid="vault-hero"
+          />
+          {lockUntil && <p className="vlt-notice" data-testid="lock-note">{t("vault.lockNote", { time: hhmm(lockUntil) })}</p>}
+          {coolUntil ? <p className="vlt-notice" data-testid="lock-cooldown">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
+          {unlockErr && <ErrorBox code={unlockErr} />}
+          {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
+          {balance.res && <CallLine r={balance.res} />}
+        </div>
+
+        <div className="vlt-cols">
+          <div className="vlt-col vlt-col-a">
+            <Card as="section" labelledBy="vlt-assets-h" testid="assets-card" className="vlt-card" style={{ order: 1 }}>
+              <CardHeader
+                title="Your assets"
+                id="vlt-assets-h"
+                icon="layers"
+                meta={balances ? t("vault.assets", { n: balances.length }) : <span className="vlt-total-sealed">Total (sealed) <Icon name="eye-off" size={15} /></span>}
+              />
+              {!balances && <p className="vlt-sub">{live ? "Reading your balance with your session." : "Unlock to read your assets."}</p>}
+              {balances && balances.length === 0 && <p className="vlt-sub">{t("vault.empty")}</p>}
+              {rows && rows.length > 0 && (
+                <div className="vlt-assets" data-testid="asset-list">
+                  {rows.map((b) => (
+                    <div className="vlt-asset" key={b.key} data-token={b.symbol}>
+                      <TokenMark assetId={b.known ? b.key : null} symbol={b.symbol} chain="near" size={24} />
+                      <div className="vlt-asset-who"><b>{b.symbol}</b><small>{b.name ? `${b.name} · NEAR` : "NEAR"}</small></div>
+                      <div className="vlt-asset-amt"><b>{b.amountLabel}</b>{b.usdMicro != null ? <small>{formatUsdMicro(b.usdMicro)}</small> : null}</div>
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
-            {unlockErr && <ErrorBox code={unlockErr} />}
-            <div className="vlt-hero-actions">
-              <Button variant="banner" testid="open-deposit" onClick={() => setDepOpen(true)}>Deposit</Button>
-              <Button variant="secondary" testid="open-withdraw" onClick={() => setWOpen(true)}>Withdraw</Button>
-            </div>
-            {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
-            {balance.res && <Attested r={balance.res} />}
-          </Card>
+              <div className="vlt-foot">
+                <p className="vlt-sub">Trade USDC and wNEAR from this vault on the Swap page. The price check there needs no wallet.</p>
+                <div className="vlt-actions"><Button href="/swap" variant="secondary" size="sm" testid="vault-swap-link">Open swap</Button></div>
+              </div>
+            </Card>
 
-          <div className="vlt-grid">
-            <div className="vlt-main">
-              <Card as="section" className="vlt-card" testid="assets-card" aria-labelledby="vlt-assets-h">
-                <div className="vlt-cardhead">
-                  <h2 id="vlt-assets-h">Assets</h2>
-                  {balances && <span className="vlt-cap">{t("vault.assets", { n: balances.length })}</span>}
-                </div>
-                {!balances && <p className="vlt-sub">{live ? "Reading your balance with your session." : "Unlock to read your assets."}</p>}
-                {balances && balances.length === 0 && <p className="vlt-sub">{t("vault.empty")}</p>}
-                {rows && rows.length > 0 && (
-                  <div className="vlt-assets" data-testid="asset-list">
-                    {rows.map((b) => (
-                      <div className="vlt-asset" key={b.key} data-token={b.symbol}>
-                        <TokenMark assetId={b.known ? b.key : null} symbol={b.symbol} chain="near" size={24} />
-                        <div className="vlt-asset-who"><b>{b.symbol}</b><small>{b.name ? `${b.name} · NEAR` : "NEAR"}</small></div>
-                        <div className="vlt-asset-amt"><b>{b.amountLabel}</b>{b.usdMicro != null ? <small>{formatUsdMicro(b.usdMicro)}</small> : null}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
+            <div className="vlt-proof-wrap" style={{ order: 3 }}>
+              <ProofPanel
+                headingId="vlt-proof-h"
+                enclave={online === null ? "checking" : online ? "live" : "down"}
+                workerBuild={WORKER_WASM_SHA256[0] || null}
+                contract={KEYS_CONTRACT}
+                attestation={proofAttestation}
+                lastCall={lastCall}
+                verifyHref={lastCall ? `/verify?call=${encodeURIComponent(lastCall)}` : "/verify"}
+                verifyTestId="vault-verify"
+                testid="vault-proof"
+              />
+            </div>
 
-              <Card as="section" className="vlt-card" testid="activity-card" aria-labelledby="vlt-activity-h">
-                <div className="vlt-cardhead">
-                  <h2 id="vlt-activity-h">{t("vault.activity")}</h2>
-                  {live ? (
-                    <Button variant="secondary" size="sm" loading={history.busy} loadingLabel={history.label} onClick={() => { clearOtherErrors(history); void history.run({}); }}>{t("vault.history")}</Button>
-                  ) : !history.res && unlockButton("history-unlock")}
+            <Card as="section" labelledBy="vlt-activity-h" testid="activity-card" className="vlt-card" style={{ order: 5 }}>
+              <CardHeader
+                title="Recent vault activity"
+                id="vlt-activity-h"
+                icon="activity"
+                action={<Link href="/settle" className="v7-card-link" data-testid="vault-activity-all">View all <Icon name="arrow-up-right" size={16} /></Link>}
+              />
+              {!history.res && <p className="vlt-sub">{live ? "Read your recent trades and withdrawals with your session." : "Unlock to read your recent trades and withdrawals."}</p>}
+              {history.res?.output?.ok && logVerified === null && <p className="vlt-sub">{t("vault.checking")}</p>}
+              {logVerified === false && <p className="vlt-sub" data-testid="vault-log-hidden">{t("vault.hiddenLog")}</p>}
+              {logVerified === true && <StatusChip tone="success" testid="vault-verified">{t("vault.verified")}</StatusChip>}
+              {logVerified === true && entries && entries.length === 0 && <p className="vlt-sub">{t("vault.empty")}</p>}
+              {logVerified === true && entries && entries.length > 0 && (
+                <div className="vlt-feed" data-testid="vault-feed">
+                  {[...entries].reverse().slice(0, 8).map((e, i) => (
+                    <ListRow
+                      key={`${e.ts_ms ?? i}-${i}`}
+                      iconName={ENTRY_ICON[e.kind ?? ""] ?? "activity"}
+                      tone={ENTRY_TONE[e.kind ?? ""] ?? "neutral"}
+                      title={`${kindLabel(e.kind)} · ${entryDetail(e)}`}
+                      sub={ENTRY_SUB[e.kind ?? ""] ?? "Vault activity"}
+                      meta={e.ts_ms ? new Date(e.ts_ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Time not recorded"}
+                    />
+                  ))}
                 </div>
-                {!history.res && <p className="vlt-sub">{live ? "Read your recent trades and withdrawals with your session." : "Unlock to read your recent trades and withdrawals."}</p>}
-                {history.res?.output?.ok && logVerified === null && <p className="vlt-sub">{t("vault.checking")}</p>}
-                {logVerified === false && <p className="vlt-sub" data-testid="vault-log-hidden">{t("vault.hiddenLog")}</p>}
-                {logVerified === true && <p><span className="vlt-state ok" data-testid="vault-verified"><i />{t("vault.verified")}</span></p>}
-                {logVerified === true && entries && entries.length === 0 && <p className="vlt-sub">{t("vault.empty")}</p>}
-                {logVerified === true && entries && entries.length > 0 && (
-                  <ul className="vlt-log">
-                    {[...entries].reverse().slice(0, 8).map((e, i) => (
-                      <li key={i}>
-                        <span className="op">{e.kind || "—"}</span>
-                        <span>{e.token_in ? `${e.amount_in ?? ""} ${e.token_in} → ${e.amount_out ?? ""} ${e.token_out ?? ""}` : `${e.amount ?? ""} ${e.token ?? ""}`}</span>
-                        <small>{e.ts_ms ? new Date(e.ts_ms).toLocaleString() : ""}</small>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
-                {history.res && <Attested r={history.res} />}
+              )}
+              {history.res?.error && <ErrorBox code={history.res.error.code} retryAfter={history.res.error.retry_after} />}
+              {history.res && <CallLine r={history.res} />}
+              <div className="vlt-foot">
                 <p className="vlt-sub">{t("vault.pnlHelp")}</p>
                 <div className="vlt-actions">
+                  {live ? (
+                    <Button variant="secondary" size="sm" loading={history.busy} loadingLabel={history.label} testid="history-btn" onClick={() => { clearOtherErrors(history); void history.run({}); }}>
+                      {history.res ? "Refresh history" : "Read history"}
+                    </Button>
+                  ) : (!history.res && unlockButton("history-unlock"))}
                   {live ? (
                     <Button variant="secondary" size="sm" loading={pnl.busy} loadingLabel={pnl.label} testid="pnl-btn" onClick={() => { clearOtherErrors(pnl); void pnl.run({}); }}>{t("vault.pnlBtn")}</Button>
                   ) : unlockButton("pnl-unlock")}
@@ -432,77 +562,130 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   return <p className="vlt-sub" data-testid="pnl-link"><Link href={href}>{t("vault.pnlOpen")}</Link></p>;
                 })()}
                 {pnl.res?.error && <ErrorBox code={pnl.res.error.code} retryAfter={pnl.res.error.retry_after} />}
-              </Card>
-            </div>
-
-            <div className="vlt-side">
-              <Card as="section" className="vlt-card" testid="key-card" aria-labelledby="vlt-key-h">
-                <div className="vlt-cardhead">
-                  <h2 id="vlt-key-h">Your key</h2>
-                  {/* "Unlocked" here meant "you hold it", which read as the session state next to the top-bar pill. */}
-                  {idn && held ? <span className="vlt-state ok" data-state={keyState(held.token, held.tier, accountId)}><i />{keyState(held.token, held.tier, accountId) === "unlocked" ? "You hold it" : t(`gallery.${keyState(held.token, held.tier, accountId)}`)}</span> : null}
-                </div>
-                {idn && held ? (
-                  <>
-                    <div className="vlt-key">
-                      <FoilCard finish={idn.finish}>
-                        <div className="top">
-                          <span className="tier">{t(`finish.${idn.finish}`)}</span>
-                          <span className="oo">{t("land.oneOfOne")}</span>
-                        </div>
-                        <div className="art">
-                          <Guilloche seed={idn.seedHex} />
-                          <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
-                        </div>
-                        <Hallmark bits={idn.bits} serial={serialOf(idn.seedHex)} />
-                        <h3 title={held.token.token_id} data-testid="key-title">{t("gallery.key", { id: shortKeyId(held.token.token_id) })}</h3>
-                      </FoilCard>
-                      <dl className="vlt-kv" data-testid="vault-traits">
-                        <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>
-                        <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, idn.filigree)}</dd>
-                        <dt>{t("field.enamel")}</dt><dd>{traitLabel(t, idn.enamel)}</dd>
-                        <dt>{t("field.gem")}</dt><dd>{traitLabel(t, idn.gem)}</dd>
-                        <dt>{t("field.cipher")}</dt><dd><Cipher bits={idn.bits} /></dd>
-                        <dt>{t("proof.contract")}</dt><dd className="mono">{KEYS_CONTRACT}</dd>
-                      </dl>
-                    </div>
-                    <KeyLog tokenId={held.token.token_id} />
-                  </>
-                ) : (
-                  <p className="vlt-sub">{t("vault.nokey")} <Link href="/mint">{t("vault.mintFirst")}</Link></p>
-                )}
-              </Card>
-
-              <Card as="section" className="vlt-card" testid="settings-card" aria-labelledby="vlt-set-h">
-                <div className="vlt-cardhead">
-                  <h2 id="vlt-set-h">Settings</h2>
-                  {pendingLim ? <span className="vlt-state pend" data-testid="pending-badge"><i />{t("vault.stPending")}</span> : null}
-                </div>
-                <Tabs id="vset" label="Vault settings" value={tab} onChange={(v) => setTab(v as Tab)} testid="settings-tabs" items={[
-                  { id: "limits", label: "Limits" },
-                  { id: "session", label: "Session" },
-                  { id: "lock", label: "Lock" },
-                ]} />
-                <div id="vset-panel" role="tabpanel" aria-labelledby={`vset-tab-${tab}`} className="vlt-panel">
-                  {tab === "limits" && limitsPanel}
-                  {tab === "session" && sessionPanel}
-                  {tab === "lock" && lockPanel}
-                </div>
-              </Card>
-
-              <Card as="section" className="vlt-card" testid="vault-swap-card" aria-labelledby="vlt-swap-h">
-                <div className="vlt-cardhead"><h2 id="vlt-swap-h">Swap</h2></div>
-                <p className="vlt-sub">Trade USDC and wNEAR from this vault on the Swap page. The price check there needs no wallet.</p>
-                <div className="vlt-actions">
-                  <Button href="/swap" variant="secondary" testid="vault-swap-link">Open swap</Button>
-                </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
           </div>
 
-          <HowStrip active={2} />
-        </>
-      )}
+          <div className="vlt-col vlt-col-b">
+            <Card as="section" labelledBy="vlt-key-h" testid="key-card" className="vlt-card" style={{ order: 2 }}>
+              <CardHeader
+                title="Your key"
+                id="vlt-key-h"
+                icon="key"
+                action={idn && held ? <StatusChip tone={keyLabel === "unlocked" ? "success" : "neutral"} testid="key-state">{keyLabel === "unlocked" ? "You hold it" : t(`gallery.${keyLabel}`)}</StatusChip> : undefined}
+              />
+              {idn && held ? (
+                <>
+                  <div className="vlt-key-row">
+                    <div className="vlt-key-art">
+                      <FoilCard finish={idn.finish}>
+                        <KeyArt n={idn.art} alt={held.token.token_id} width={433} height={1080} />
+                      </FoilCard>
+                    </div>
+                    <div className="vlt-key-meta">
+                      <TierChip tier={t(`finish.${idn.finish}`)} />
+                      <h3 title={held.token.token_id} data-testid="key-title">{t("gallery.key", { id: shortKeyId(held.token.token_id) })}</h3>
+                      <p className="vlt-serial"><span className="v7-mono">{`#${serialOf(idn.seedHex).toUpperCase()}`}</span></p>
+                      <p className="vlt-sub">Whoever holds this key operates the vault. The keys to the money never leave the enclave.</p>
+                      <Link href={`/key?id=${encodeURIComponent(held.token.token_id)}`} className="v7-card-link vlt-key-link" aria-label="Open the key history">
+                        Key history <Icon name="arrow-right" size={16} />
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="vlt-key-foot">
+                    <p className="vlt-acct">
+                      <span>Account</span>
+                      <span className="v7-mono" data-testid="vault-account">{accountId}</span>
+                      <CopyButton value={accountId ?? ""} label="Copy account" />
+                    </p>
+                    {mintTx
+                      ? <p className="vlt-note" data-testid="vault-mint-tx">Key minted · <TxLink hash={mintTx} /></p>
+                      : <p className="vlt-note" data-testid="vault-key-link">Your key: <Link href={`/key?id=${encodeURIComponent(held.token.token_id)}`}>full history</Link> · <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">key contract on NearBlocks ↗</a></p>}
+                  </div>
+                  <details className="vlt-details">
+                    <summary>Key traits and log</summary>
+                    <dl className="vlt-kv" data-testid="vault-traits">
+                      <dt>{t("field.head")}</dt><dd>{traitLabel(t, idn.head)}</dd>
+                      <dt>{t("field.filigree")}</dt><dd>{traitLabel(t, idn.filigree)}</dd>
+                      <dt>{t("field.enamel")}</dt><dd>{traitLabel(t, idn.enamel)}</dd>
+                      <dt>{t("field.gem")}</dt><dd>{traitLabel(t, idn.gem)}</dd>
+                      <dt>{t("field.cipher")}</dt><dd><Cipher bits={idn.bits} /></dd>
+                      <dt>{t("proof.contract")}</dt><dd className="mono">{KEYS_CONTRACT}</dd>
+                    </dl>
+                    <KeyLog tokenId={held.token.token_id} />
+                  </details>
+                </>
+              ) : (
+                <p className="vlt-sub">{t("vault.nokey")} <Link href="/mint">{t("vault.mintFirst")}</Link></p>
+              )}
+            </Card>
+
+            <Card as="section" labelledBy="vlt-setup-h" testid="vault-setup-card" className="vlt-card" style={{ order: 4 }}>
+              <SetupProgress items={setupItems} variant="horizontal" title="Setup progress" headingId="vlt-setup-h" doneText="Setup complete" testid="vault-setup-steps" />
+              {held && !session && <p className="vlt-note" data-testid="vault-setup"><Link href="/start">New here? Finish setup in 5 steps →</Link></p>}
+            </Card>
+
+            <Card as="section" labelledBy="vlt-set-h" testid="settings-card" className="vlt-card" style={{ order: 6 }}>
+              <CardHeader title="Vault settings" id="vlt-set-h" icon="shield" meta={stateChip} />
+              <div className="vlt-set-list">
+                <SettingRow
+                  testid="settings-limits"
+                  iconName="tag"
+                  title="Your limits"
+                  sub={s?.ok ? `Per trade ${fmtUsd(perCap)} · ${fmtUsd(dayCap)} a day` : live ? "Reading with your session." : "Unlock to read your caps."}
+                  tail={pendingLim ? <StatusChip tone="warn" testid="pending-badge">{t("vault.stPending")}</StatusChip> : undefined}
+                  open={panel === "limits"}
+                  onClick={() => setPanel(panel === "limits" ? null : "limits")}
+                />
+                <SettingRow
+                  testid="settings-session"
+                  iconName={live ? "unlock" : "lock"}
+                  title="Session"
+                  sub={live ? `Unlocked · ${left} min left` : "Locked. One signature for 30 minutes."}
+                  open={panel === "session"}
+                  onClick={() => setPanel(panel === "session" ? null : "session")}
+                />
+                <SettingRow
+                  testid="settings-withdraw"
+                  iconName="arrow-up"
+                  title="Withdraw to any chain"
+                  sub="Your wallet signs each withdrawal, to any address you choose."
+                  onClick={() => setWOpen(true)}
+                />
+                <SettingRow
+                  testid="settings-fund-chain"
+                  iconName="arrow-swap"
+                  title="Fund from another chain"
+                  sub="1Click (NEAR Intents) swaps a token you hold into your vault."
+                  onClick={() => { setDepTab("chain"); setDepOpen(true); }}
+                />
+              </div>
+              {panel && (
+                <div id="vlt-set-panel" role="region" aria-label={panel === "limits" ? "Your limits" : "Session"} className="vlt-panel">
+                  {panel === "limits" && limitsPanel}
+                  {panel === "session" && sessionPanel}
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="page vlt" data-testid="vault-page">
+      <PageHeader
+        eyebrow="Vault"
+        title={<>Your <em>confidential</em> vault</>}
+        lead="Run, store, and withdraw assets inside your key's enclave."
+        actions={enclaveChip}
+        testid="vault-head"
+      />
+
+      {fo.order && !fo.terminal && <FundOrderBanner order={fo.order} status={fo.status} onOpen={() => setDepOpen(true)} />}
+
+      {body}
 
       <Sheet open={depOpen} onClose={() => setDepOpen(false)} title="Deposit" testid="deposit-sheet">
         <Tabs id="dep" label="How to fund" value={depTab} onChange={(v) => setDepTab(v as DepTab)} testid="deposit-tabs" items={[
@@ -617,3 +800,4 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     </div>
   );
 }
+

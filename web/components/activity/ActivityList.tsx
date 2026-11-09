@@ -72,7 +72,7 @@ function ActivityItem({ row, on, onSelect }: { row: OrderRow; on: boolean; onSel
       <ListRow
         icon={<Icon name={mark.icon} size={18} />}
         tone={mark.tone}
-        title={<>{row.title}{on && <span className="v7-sr-only"> (selected)</span>}</>}
+        title={<>{row.title}{row.kind === "mine" && <span className="act-tag">Your vault</span>}{on && <span className="v7-sr-only"> (selected)</span>}</>}
         sub={subOf(row)}
         value={<span data-status={row.status ?? "UNREAD"}><StatusChip tone={chip.tone}>{chip.label}</StatusChip></span>}
         meta={metaOf(row) || undefined}

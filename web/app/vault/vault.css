@@ -1,73 +1,52 @@
 /*
- * /vault: the balance hero, the asset list, Deposit and Withdraw, and one settings card. Same visual language as overview.css:
- * tokens only (app/tokens.css), 16px cards with one card shadow, tabular figures for amounts, display serif for the title only.
- * Markup: app/vault/view.tsx. Cards and buttons come from components/ui (kh-card, kh-btn).
+ * /vault (mockup 18): the balance banner, two columns of cards (assets, proof and activity on the left; the key, setup
+ * progress and settings on the right), and the Deposit and Withdraw sheets. Tokens only (app/tokens.css): no literal colours,
+ * no important overrides. Shared cards, chips, rows and the hero: components/v7/v7.css. Markup: app/vault/view.tsx.
  */
 
 .vlt { display: grid; gap: var(--space-5); min-width: 0; color: var(--ink); }
-.vlt-title { margin: 0; font: 600 var(--text-title)/1.08 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
+.app-main .vlt { padding: var(--space-6) var(--space-6) var(--space-7); max-width: none; }
+.vlt > * { min-width: 0; }
+.vlt > *, .vlt-col > .v7-card, .vlt-proof-wrap { animation: v7-rise var(--dur-slow) var(--ease-out) both; }
 
-.vlt-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; min-width: 0; }
-.vlt-acct { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: var(--space-2) 0 0; font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
-.vlt-acct .id { font: 500 var(--text-small)/1.4 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
-.vlt-link { border: 0; background: none; padding: 0; min-height: 44px; display: inline-flex; align-items: center; font: 600 var(--text-small)/1 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.vlt-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
-.vlt-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.vlt-note { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
-
-.vlt-state, .vlt-chip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; padding: 0 var(--space-3); border-radius: var(--radius-pill); font: 600 var(--text-small)/1.2 var(--font-ui); border: 1px solid transparent; max-width: 100%; }
-.vlt-state i, .vlt-chip i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
-.vlt-state.ok { background: var(--success-bg); color: var(--success); }
-.vlt-state.lock { background: var(--warn-bg); color: var(--warn); }
-.vlt-state.cool { background: var(--danger-bg); color: var(--danger); }
-.vlt-state.pend { background: var(--primary-tint); color: var(--primary); }
-.vlt-chip { background: var(--raised); color: var(--ink-2); border-color: var(--line-strong); }
-.vlt-chip.wait { color: var(--warn); }
-
-/* Balance hero: the one dark surface on this page. */
-.vlt .vlt-hero {
-  display: grid; gap: var(--space-4); padding: var(--space-6); min-width: 0;
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-1); border-color: transparent;
-  background: var(--vault); color: var(--vault-ink);
+.vlt-hero-wrap { display: grid; gap: var(--space-3); min-width: 0; }
+.vlt-hero-wrap .v7-hero-value { font-variant-numeric: lining-nums tabular-nums; }
+.vlt-notice {
+  margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--warn-bg); color: var(--warn-ink);
+  font: 600 var(--text-small)/1.5 var(--font-ui); overflow-wrap: anywhere;
 }
-.vlt-hero-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.vlt .vlt-hero .vlt-cap { color: var(--vault-ink); }
-.vlt-net {
-  display: inline-flex; align-items: center; gap: var(--space-2); min-height: 28px; padding: 0 var(--space-3);
-  border-radius: var(--radius-pill); background: var(--primary-tint); color: var(--primary); font: 600 var(--text-small)/1 var(--font-ui);
-}
-.vlt-net i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex: none; }
-.vlt-total {
-  margin: 0; font: 700 var(--text-display)/1 var(--font-ui); color: var(--vault-ink);
-  font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
-}
-.vlt .vlt-hero .vlt-src { margin: 0; font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--vault-ink); overflow-wrap: anywhere; }
-.vlt-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); min-width: 0; }
-.vlt-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-.vlt-hero-actions .kh-btn, .vlt-status .kh-btn { min-height: 44px; }
-.vlt .vlt-hero .kh-btn--secondary { background: transparent; color: var(--vault-ink); border-color: var(--vault-ink); box-shadow: none; }
-.vlt .vlt-hero .kh-btn--secondary:hover:not(:disabled) { background: var(--primary); }
-.vlt .vlt-hero .kh-err, .vlt .vlt-hero .errbox { background: var(--raised); color: var(--ink); }
 
-/* Two columns: assets and activity on the left, the key and settings on the right. */
-.vlt-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: var(--space-5); align-items: start; min-width: 0; }
-.vlt-main, .vlt-side { display: grid; gap: var(--space-5); min-width: 0; align-content: start; }
+/* Two columns from 1024px; one column below, in the order each card sets inline (display: contents flattens the columns). */
+.vlt-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); align-items: start; min-width: 0; }
+.vlt-col { display: contents; }
+@media (min-width: 1024px) {
+  .vlt-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .vlt-col { display: grid; gap: var(--space-5); align-content: start; min-width: 0; }
+}
 
-.vlt .vlt-card { display: grid; gap: var(--space-4); align-content: start; padding: var(--space-5); min-width: 0; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
-.vlt-cardhead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; min-width: 0; }
-.vlt .vlt-card h2 { margin: 0; font: 700 var(--text-heading)/1.2 var(--font-ui); color: var(--ink); }
-.vlt-cap { margin: 0; font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink-2); }
-.vlt-sub { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+.vlt .vlt-card { display: grid; gap: var(--space-4); align-content: start; min-width: 0; }
+/* The proof card keeps one row per value (label, then value on the same line); the shared panel decides the columns. */
+.vlt-proof-wrap { container-type: inline-size; min-width: 0; }
+
+.vlt-sub { margin: 0; font: 500 var(--text-small)/1.55 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
 .vlt-small { margin: 0; font: 500 var(--text-small)/1.5 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
+.vlt-cap { margin: 0; font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink-2); }
 .vlt-label { font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink); }
-.vlt-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.vlt-note { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.vlt-note a, .vlt-sub a { color: var(--primary); text-underline-offset: 3px; }
+.vlt-link { border: 0; background: none; padding: 0; min-height: 44px; display: inline-flex; align-items: center; font: 600 var(--text-small)/1 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.vlt-link:focus-visible, .vlt-note a:focus-visible, .vlt-sub a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.vlt-total-sealed { display: inline-flex; align-items: center; gap: 6px; font: 500 var(--text-small)/1 var(--font-ui); color: var(--muted); }
+.vlt-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-width: 0; }
 .vlt-actions .kh-btn { min-height: 44px; }
 .vlt-stack { display: grid; gap: var(--space-3); min-width: 0; }
 .vlt-field { display: grid; gap: var(--space-2); min-width: 0; }
 .vlt-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .vlt-form { display: grid; gap: var(--space-3); }
-.vlt-panel { display: grid; gap: var(--space-3); min-width: 0; }
+.vlt-panel { display: grid; gap: var(--space-3); min-width: 0; padding-top: var(--space-4); border-top: 1px solid var(--line); }
 .vlt-session { display: grid; gap: var(--space-3); justify-items: start; min-width: 0; }
+.vlt-foot { display: grid; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--line); min-width: 0; }
+.vlt-loading { display: grid; gap: var(--space-4); }
 
 /* Fields: one bordered box, the unit inside, the value in mono. */
 .vlt-box { display: flex; align-items: center; gap: var(--space-2); min-height: 48px; padding: 0 var(--space-4); border-radius: var(--radius-md); background: var(--raised); border: 1px solid var(--field); min-width: 0; }
@@ -78,64 +57,65 @@
 .vlt-box.ro { background: var(--sunken); }
 .vlt-box.ro .v { font: 500 var(--text-small)/1.4 var(--font-mono); color: var(--ink); overflow-wrap: anywhere; min-width: 0; flex: 1; padding: var(--space-2) 0; }
 
-/* Meters. The bar is drawn only from a real percentage; the label and the number always print. */
-.vlt-meter { display: grid; gap: var(--space-2); }
-.vlt-meter-top { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0; font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink); }
-.vlt-meter-top span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.vlt-track { height: 8px; border-radius: var(--radius-pill); background: var(--primary-soft); overflow: hidden; }
-.vlt-track i { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
-.vlt-meter.warn .vlt-track i { background: var(--accent); }
-.vlt-meter.full .vlt-track i { background: var(--danger); }
-.vlt-meter small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
-
-.vlt .note-box { margin: 0; font: 600 var(--text-small)/1.5 var(--font-ui); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--warn-bg); color: var(--warn); }
-
-/* Assets: symbol and chain on the left, amount and USD on the right. */
+/* Assets: token and name on the left; amount and USD on the right. */
 .vlt-assets { display: grid; min-width: 0; }
 .vlt-asset {
-  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
   padding: var(--space-3) 0; border-bottom: 1px solid var(--line); min-width: 0;
 }
 .vlt-asset:last-child { border-bottom: 0; }
 .vlt-asset-who { display: grid; min-width: 0; }
-.vlt-asset-who b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
-.vlt-asset-who small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
-.vlt-asset-amt { display: grid; justify-items: end; text-align: right; min-width: 0; }
-.vlt-asset-amt b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.vlt-asset-amt small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
+.vlt-asset-who b { font: 600 15px/1.35 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
+.vlt-asset-who small { font: 400 13px/1.4 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.vlt-asset-amt { display: grid; justify-items: end; text-align: end; min-width: 0; }
+.vlt-asset-amt b { font: 600 15px/1.35 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vlt-asset-amt small { font: 400 13px/1.4 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
 
-/* Activity log */
-.vlt-log { list-style: none; margin: 0; padding: 0; display: grid; }
-.vlt-log li {
-  display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: baseline;
-  padding: var(--space-3) 0; border-top: 1px solid var(--line); font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--ink); overflow-wrap: anywhere;
+/* Key card: the art on a warm box, the name and serial beside it, the account and the links below. */
+.vlt-key-row { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: var(--space-4); align-items: center; min-width: 0; }
+.vlt-key-art { display: grid; place-items: center; min-width: 0; padding: var(--space-3); border-radius: var(--radius-md); background: linear-gradient(160deg, var(--surface-warm) 0%, var(--sunken) 100%); }
+.vlt-key-art .foil-card { width: 100%; max-width: 168px; margin: 0 auto; }
+.vlt-key-art img { display: block; width: 100%; height: auto; }
+.vlt-key-meta { display: grid; gap: var(--space-2); justify-items: start; min-width: 0; }
+.vlt-key-meta h3 { margin: var(--space-1) 0 0; font: 600 26px/1.15 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
+.vlt-serial { margin: 0; }
+.vlt-serial .v7-mono {
+  display: inline-flex; align-items: center; min-height: 26px; padding: 0 12px; border-radius: var(--radius-pill);
+  background: var(--sunken); color: var(--ink-2); font-size: 13px; letter-spacing: .08em;
 }
-.vlt-log li small { grid-column: 2; color: var(--muted); font-family: var(--font-mono); }
-.vlt-log .op { font: 600 var(--text-small)/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); }
-
-/* Key card */
-.vlt-key { display: grid; gap: var(--space-4); }
-.vlt-key .foil-card { max-width: 240px; margin: 0 auto; width: 100%; }
+.vlt-key-link { margin-top: var(--space-1); }
+.vlt-key-foot { display: grid; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--line); min-width: 0; }
+.vlt-acct { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0; font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
+.vlt-acct .v7-mono { color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
+.vlt-details { border-top: 1px solid var(--line); padding-top: var(--space-3); min-width: 0; }
+.vlt-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font: 600 15px/1.2 var(--font-ui); color: var(--primary); }
+.vlt-details summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.vlt-details[open] > *:not(summary) { margin-top: var(--space-3); }
 .vlt-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); margin: 0; font: 500 var(--text-small)/1.4 var(--font-ui); }
 .vlt-kv dt { font-weight: 600; color: var(--ink-2); }
 .vlt-kv dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; text-align: end; font-weight: 600; }
 .vlt-kv dd.mono { font-family: var(--font-mono); font-weight: 500; }
 
-.vlt-link:disabled { cursor: progress; color: var(--muted); }
+/* Activity: the verified log rows come from ListRow (components/v7). */
+.vlt-feed { display: grid; min-width: 0; }
 
-@media (max-width: 960px) {
-  .vlt-grid { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 480px) {
-  .vlt .vlt-hero { padding: var(--space-5); }
-  .vlt-total { font-size: 48px; }
-  .vlt .vlt-card { padding: var(--space-4); }
-  .vlt-pair { grid-template-columns: minmax(0, 1fr); }
-  .vlt-log li { grid-template-columns: minmax(0, 1fr); }
-  .vlt-log li small { grid-column: 1; }
-}
+/* Settings: four rows, two of which open a panel under the list. */
+.vlt-set-list { display: grid; min-width: 0; }
+.vlt-set-row { width: 100%; border: 0; background: transparent; text-align: start; font: inherit; color: var(--ink); cursor: pointer; }
+.vlt-set-row .v7-row-icon { flex: none; }
+.vlt-set-row:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* Deposit sheet, "From another chain" tab (components/FundFromChain.tsx). Tokens only. */
+/* Deposit sheet: the QR block. */
+.vlt .depqr { display: grid; gap: var(--space-4); min-width: 0; }
+
+/* Saved "from another chain" order: one line on the page, and a compact card at the top of the Deposit sheet. */
+.vlt-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--info-bg); color: var(--info); font: 500 var(--text-small)/1.4 var(--font-ui); overflow-wrap: anywhere; }
+.vlt-banner b { font-weight: 700; }
+.vlt-order { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--raised); }
+.vlt-order .vlt-cardhead b { font: 700 var(--text-small)/1.3 var(--font-ui); color: var(--ink); }
+.vlt-cardhead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; min-width: 0; }
+
+/* "From another chain" tab (components/FundFromChain.tsx). */
 .vlt-fc { display: grid; gap: var(--space-3); min-width: 0; }
 .vlt-fc .kh-token-trigger { min-height: 48px; }
 .vlt-fc .depqr { display: grid; gap: var(--space-4); min-width: 0; }
@@ -148,8 +128,55 @@
 .vlt-fc-steps li[data-state="now"]::before { background: var(--primary); border-color: var(--primary); }
 .vlt-fc .vlt-actions .vlt-sub { flex: 1 1 200px; }
 
-/* Saved "from another chain" order: one line on the page, and a compact card at the top of the Deposit sheet. Tokens only. */
-.vlt-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--info-bg); color: var(--info); font: 500 var(--text-small)/1.4 var(--font-ui); overflow-wrap: anywhere; }
-.vlt-banner b { font-weight: 700; }
-.vlt-order { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--raised); }
-.vlt-order .vlt-cardhead b { font: 700 var(--text-small)/1.3 var(--font-ui); color: var(--ink); }
+/* Meters in the limits panel. The bar is drawn only from a real percentage. */
+.vlt-meter { display: grid; gap: var(--space-2); }
+.vlt-meter-top { display: flex; justify-content: space-between; gap: var(--space-3); margin: 0; font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink); }
+.vlt-meter-top span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.vlt-track { height: 8px; border-radius: var(--radius-pill); background: var(--primary-tint); overflow: hidden; }
+.vlt-track i { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+.vlt-meter.warn .vlt-track i { background: var(--accent); }
+.vlt-meter.full .vlt-track i { background: var(--danger); }
+.vlt-meter small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
+
+.vlt .note-box { margin: 0; font: 600 var(--text-small)/1.5 var(--font-ui); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--warn-bg); color: var(--warn-ink); overflow-wrap: anywhere; }
+
+/* Phones: the key art stacks above its details; the field pairs go to one column. */
+@media (max-width: 560px) {
+  .vlt-key-row { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .vlt-key-meta { justify-items: center; text-align: center; }
+  .vlt-key-art .foil-card { max-width: 200px; }
+  .vlt-pair { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vlt > *, .vlt-col > .v7-card, .vlt-proof-wrap { animation: none; }
+}
+
+/* Hero buttons may wrap on a phone. */
+.vlt-hero-wrap .v7-hero-actions .kh-btn { max-width: 100%; height: auto; white-space: normal; text-align: center; padding-top: 10px; padding-bottom: 10px; }
+
+/* Unlock or refresh: one small pill on the balance line (balance-btn). Tokens only. */
+.vlt-pill-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin-left: var(--space-1); padding: 0 var(--space-3); vertical-align: middle;
+  border-radius: var(--radius-pill); border: 1px solid var(--vault-ink); background: transparent; color: var(--vault-ink);
+  font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out);
+}
+.vlt-pill-btn:hover:not(:disabled) { background: var(--primary-hover); }
+.vlt-pill-btn:focus-visible { outline: 2px solid var(--vault-ink); outline-offset: 2px; }
+.vlt-pill-btn:disabled { opacity: .7; cursor: progress; }
+.vlt-pill-icon { flex: none; }
+
+/* The call behind a read: small, muted, mono, one line where it fits. Aligned with the cards below. */
+.vlt-callline {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0;
+  font: 500 12px/1.4 var(--font-mono); color: var(--muted); overflow-wrap: anywhere;
+}
+.vlt-callline .v7-pill-link { min-height: 28px; padding: 0 10px; font: 600 12px/1 var(--font-ui); }
+.vlt-callline .v7-pill-link > span:first-child { min-width: 0; }
+
+/* Phones: the activity date sits under the title, not in a squeezed column beside it. */
+@media (max-width: 560px) {
+  .vlt-feed .v7-row { flex-wrap: wrap; align-items: flex-start; row-gap: 4px; }
+  .vlt-feed .v7-row-body { flex: 1 1 0; min-width: 0; }
+  .vlt-feed .v7-row-end { flex: 1 1 100%; justify-items: start; text-align: start; padding-left: 54px; }
+}

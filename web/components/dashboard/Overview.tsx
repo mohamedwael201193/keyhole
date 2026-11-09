@@ -8,9 +8,10 @@ import { TxResult } from "@/components/TxResult";
 import { SignInOptions, type SignInOptionsProps } from "@/components/SignInModal";
 import { Card, CardHeader, Icon, PageHeader, ProofPanel, SetupProgress, Skeleton, StatusChip, TierChip, VaultHero, type IconName, type SetupItem } from "@/components/v7";
 import { useHealth } from "@/lib/useHealth";
-import { formatUsdMicro, type AssetRow, type Total } from "@/lib/amount";
+import { assetByToken, formatUsdMicro, fromBaseUnits, type AssetRow, type Total } from "@/lib/amount";
+import { chainName, fallbackTokens, useTokenList, type Token as ListToken } from "@/lib/tokens";
 import { shortAccount, shortKeyId, tierName, type Token } from "@/lib/near";
-import { entryDetail, keyCountText, kindLabel, meterPct, settledOrders, type HistEntry, type TierProgressRead } from "@/lib/dashboard";
+import { keyCountText, kindLabel, meterPct, settledOrders, type HistEntry, type TierProgressRead } from "@/lib/dashboard";
 import { KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
 import { keyIdentity, serialOf } from "@/lib/traits";
 import type { KeyStatus } from "@/lib/keyStore";
@@ -382,8 +383,39 @@ function AssetsCard({ unlock, balance, unpriced }: { unlock: UnlockView; balance
   );
 }
 
+/** The words a token gets in a row when we cannot name it. A raw token id is never printed. */
+const OTHER_TOKEN = "another token";
+
+/**
+ * One row's words, from symbols only: "0.6 USDC → SOL" for a swap, "0.05 USDC to Base" for a withdrawal. The symbol comes from the
+ * 1Click token list (or the vault's own two assets), so an id like "unknown.near" is never shown.
+ */
+export function rowPair(e: HistEntry, tokens: ListToken[]): string {
+  const known = (id?: string) => {
+    if (!id) return null;
+    const t = tokens.find((x) => x.assetId.toLowerCase() === id.toLowerCase());
+    if (t) return { symbol: t.symbol, decimals: t.decimals };
+    const a = assetByToken(id);
+    return a ? { symbol: a.symbol, decimals: a.decimals } : null;
+  };
+  const amount = (raw: string | number | null | undefined, k: { decimals: number } | null) =>
+    raw != null && String(raw) !== "" && k ? fromBaseUnits(String(raw), k.decimals) : null;
+  if (e.token_in) {
+    const a = known(e.token_in);
+    const b = known(e.token_out);
+    const amt = amount(e.amount_in, a);
+    return `${amt ? `${amt} ` : ""}${a?.symbol ?? OTHER_TOKEN} → ${b?.symbol ?? OTHER_TOKEN}`;
+  }
+  const k = known(e.token);
+  const amt = amount(e.amount, k);
+  const what = `${amt ? `${amt} ` : ""}${k?.symbol ?? OTHER_TOKEN}`;
+  return e.kind === "withdraw" && e.chain ? `${what} to ${chainName(e.chain)}` : what;
+}
+
 /** Recent activity: the signed history, only when its attestation verifies. Locked until the session is live. */
 function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockView; activity: ActivityView; settled: number | null; recent: HistEntry[] }) {
+  const list = useTokenList();
+  const tokens = list.tokens.length > 0 ? list.tokens : fallbackTokens();
   return (
     <Card as="section" labelledBy="dash-activity-h" testid="dash-activity" className="ov-half">
       <div id="activity" className="ov-anchor" />
@@ -415,7 +447,7 @@ function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockVie
               <li key={`${e.ts_ms ?? i}-${i}`} data-kind={e.kind ?? ""} className="v7-row ov-feed-row">
                 <span className="v7-row-body">
                   <span className="v7-row-title">{kindLabel(e.kind)}</span>
-                  <span className="v7-row-sub">{entryDetail(e)}</span>
+                  <span className="v7-row-sub">{rowPair(e, tokens)}</span>
                   <span className="v7-row-sub">{e.ts_ms ? new Date(e.ts_ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Time not recorded"}</span>
                 </span>
                 {e.status ? <StatusChip tone={FEED_TONE[badge?.tone ?? ""] ?? "neutral"}>{badge?.label ?? e.status}</StatusChip> : null}
@@ -545,13 +577,13 @@ function SetupChecklist(p: {
     },
     {
       id: "swap", title: "First swap", done: swapped,
-      note: swapped ? "Read from your signed activity." : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
+      note: swapped ? "Swap done. Read from your signed activity." : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
       action: held && !swapped ? <Button href="/swap" variant="secondary" size="sm" testid="setup-swap-action">Swap</Button> : undefined,
     },
   ];
   return (
     <Card as="section" labelledBy="ov-setup-h" className="ov-setup">
-      <SetupProgress items={items} variant="vertical" title="Setup progress" headingId="ov-setup-h" doneText="Setup complete" testid="setup-checklist" />
+      <SetupProgress items={items} variant="vertical" title="Setup progress" headingId="ov-setup-h" testid="setup-checklist" />
     </Card>
   );
 }

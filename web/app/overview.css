@@ -70,7 +70,19 @@
 .ov-tile-label { text-align: center; overflow-wrap: anywhere; }
 
 /* ---- Assets and activity ---- */
-.ov-asset { padding: 12px 0; }
+/* An asset row in a narrow card: the symbol and its USD value on the first line, the amount on the second, the name on the third.
+   The body and end wrappers are dissolved (display: contents) so each line is one grid cell. Every line stays on one line and
+   truncates with an ellipsis; no word breaks inside "USDC". .v7-row.ov-asset is used so it beats v7.css (loaded after this file). */
+.v7-row.ov-asset {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-rows: auto auto auto;
+  column-gap: var(--space-3); row-gap: 2px; align-items: center; padding: 12px 0;
+}
+.v7-row.ov-asset .v7-row-body, .v7-row.ov-asset .v7-row-end { display: contents; }
+.v7-row.ov-asset .ov-asset-mark { grid-column: 1; grid-row: 1 / span 3; }
+.v7-row.ov-asset .v7-row-title { grid-column: 2; grid-row: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.v7-row.ov-asset .v7-row-meta { grid-column: 3; grid-row: 1; justify-self: end; white-space: nowrap; }
+.v7-row.ov-asset .v7-row-value { grid-column: 2 / span 2; grid-row: 2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.v7-row.ov-asset .v7-row-sub { grid-column: 2 / span 2; grid-row: 3; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .ov-asset-mark {
   display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; overflow: hidden;
   background: var(--raised); border: 1px solid var(--card-edge);

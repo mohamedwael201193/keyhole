@@ -75,9 +75,9 @@ export function SessionPill() {
           data-state="unlocked"
         >
           <Icon name="unlock" size={16} />
-          <span>Unlocked</span>
+          <span className="sp-word">Unlocked</span>
           <span className="sp-sep" aria-hidden="true">·</span>
-          <span className="sp-time">{minutes} min</span>
+          <span className="sp-time">{minutes}<span className="sp-unit"> min</span></span>
         </button>
       ) : (
         <button
