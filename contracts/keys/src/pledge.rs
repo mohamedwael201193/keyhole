@@ -2,7 +2,8 @@
 //! New data uses isolated prefixes; the deployed v2.4 Contract layout is untouched.
 use crate::*;
 use near_sdk::json_types::{Base64VecU8, U64};
-use near_sdk::{Gas, PromiseResult};
+use near_sdk::Gas;
+#[cfg(test)] use near_sdk::PromiseResult;
 
 pub const RECOVERY_UNLOCK_NS: u64 = 1_796_169_600_000_000_000;
 pub const LOAN_STORAGE_DEPOSIT: u128 = 50_000_000_000_000_000_000_000;
@@ -21,6 +22,8 @@ pub struct PledgeConfig {
     pub recovery_account: AccountId,
     pub recovery_unlock_ns: U64,
     pub attestor_public_key: Base64VecU8,
+    /// Independent finalized-receipt verifier; must not reuse the floor-certificate signing key.
+    pub terminal_attestor_public_key: Base64VecU8,
     pub custody_contract: AccountId,
     pub network: String,
     /// New offers and funding only. Repayments/credits/defaults never depend on this switch.
@@ -40,12 +43,57 @@ fn save_config(c: &PledgeConfig) {
     env::storage_write(CONFIG_KEY, &near_sdk::borsh::to_vec(c).expect("config encoding"));
 }
 fn config_required() -> PledgeConfig { pledge_config().expect("pledge migration required") }
-pub(crate) fn transfer_calls() -> LookupMap<TokenId, (AccountId, AccountId)> { LookupMap::new(b"Pt".as_slice()) }
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct PendingTransfer {
+    pub previous_owner: AccountId, pub receiver: AccountId, pub epoch: U64,
+    pub approvals: Option<HashMap<AccountId, u64>>,
+}
+pub(crate) fn transfer_calls() -> LookupMap<TokenId, PendingTransfer> { LookupMap::new(b"Pt".as_slice()) }
+/// Inspect result length in the VM register BEFORE copying bytes into WASM or parsing.
+/// Some SDK helpers eagerly allocate/deserialize arbitrary receiver-controlled bytes.
+pub(crate) fn bounded_result(max_bytes: u64) -> Option<Vec<u8>> {
+    const REGISTER: u64 = 12_345;
+    if unsafe { near_sdk::sys::promise_result(0, REGISTER) } != 1 { return None; }
+    if env::register_len(REGISTER)? > max_bytes { return None; }
+    env::read_register(REGISTER)
+}
+fn result_success() -> bool {
+    // Financial callbacks only need terminal success, never arbitrary returned bytes.
+    unsafe { near_sdk::sys::promise_result(0, 12_345) == 1 }
+}
 pub(crate) fn loans() -> LookupMap<TokenId, Loan> { LookupMap::new(b"Pl".as_slice()) }
 fn collateral() -> LookupMap<TokenId, CollateralBinding> { LookupMap::new(b"Pb".as_slice()) }
 fn bound_wallets() -> LookupMap<String, TokenId> { LookupMap::new(b"Pw".as_slice()) }
 fn credits() -> LookupMap<AccountId, u128> { LookupMap::new(b"Pc".as_slice()) }
 fn pending_payouts() -> LookupMap<AccountId, PendingPayout> { LookupMap::new(b"Pp".as_slice()) }
+
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct PendingRegistration {
+    pub nonce: U64, pub payer: AccountId, pub forwarded: U128, pub store_succeeded: Option<bool>,
+}
+fn registrations() -> LookupMap<TokenId, PendingRegistration> { LookupMap::new(b"Pr".as_slice()) }
+/// Trusted terminal-receipt oracle, NOT a NEAR light-client proof. Relaying is permissionless.
+/// success means actual delivered native transfer / accepted NFT / successful provider receipt.
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct TerminalAttestation {
+    pub domain: String, pub network: String, pub contract: AccountId, pub kind: String,
+    pub token_id: TokenId, pub nonce: U64, pub sequence: U64, pub account_id: AccountId,
+    pub amount: U128, pub success: bool, pub receipt_id: Base64VecU8,
+    pub observed_at_ns: U64, pub expires_at_ns: U64,
+}
+fn verify_terminal(a: &TerminalAttestation, signature: Base64VecU8) -> PledgeConfig {
+    let c = config_required(); let now = env::block_timestamp();
+    require!(a.domain == "KEYHOLE_TERMINAL_RECOVERY_V1" && a.network == c.network && a.contract == env::current_account_id(), "wrong recovery domain");
+    require!(a.kind.len() <= 16 && a.token_id.len() <= 64 && a.receipt_id.0.len() == 32, "bad recovery reference");
+    require!(a.observed_at_ns.0 <= now && now < a.expires_at_ns.0 && a.expires_at_ns.0 <= a.observed_at_ns.0.saturating_add(300 * SECOND), "stale recovery proof");
+    let sig: [u8; 64] = signature.0.try_into().unwrap_or_else(|_| env::panic_str("bad recovery signature length"));
+    let pk: [u8; 32] = c.terminal_attestor_public_key.0.clone().try_into().expect("bad terminal attestor key");
+    require!(env::ed25519_verify(&sig, &near_sdk::borsh::to_vec(a).expect("recovery encoding"), &pk), "invalid recovery signature");
+    c
+}
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers = [borsh, json])]
@@ -122,13 +170,14 @@ pub struct LoanCertificate {
 #[serde(crate = "near_sdk::serde")]
 struct PolicyView { owner: AccountId, encrypted_data: String, frozen: bool, version: u64, locked: bool }
 
+pub(crate) fn callback_failure_fixture() {
+    #[cfg(feature = "callback-failure-fixture")]
+    env::panic_str("TEST FIXTURE: injected callback failure");
+}
 fn private_callback() { require!(env::predecessor_account_id() == env::current_account_id(), "callback is private"); }
-fn promise_succeeded() -> bool { matches!(env::promise_result(0), PromiseResult::Successful(_)) }
+fn promise_succeeded() -> bool { result_success() }
 fn policy_result() -> Option<PolicyView> {
-    match env::promise_result(0) {
-        PromiseResult::Successful(v) => near_sdk::serde_json::from_slice(&v).ok(),
-        _ => None,
-    }
+    bounded_result(32_768).and_then(|v| near_sdk::serde_json::from_slice(&v).ok())
 }
 fn policy_matches(p: &PolicyView, b: &CollateralBinding) -> bool {
     p.owner == env::current_account_id() && p.locked && p.version == b.policy_version.0
@@ -165,17 +214,18 @@ impl Contract {
     /// One-time, self-call initialization for deployed v2.4. No implicit attribution of existing native balance.
     /// Legacy migrate() remains available for the historical v1 -> v2 approval map migration only.
     #[init(ignore_state)]
-    pub fn migrate_pledge(recovery_account: AccountId, attestor_public_key: Base64VecU8, custody_contract: AccountId, network: String) -> Self {
+    pub fn migrate_pledge(recovery_account: AccountId, attestor_public_key: Base64VecU8, terminal_attestor_public_key: Base64VecU8, custody_contract: AccountId, network: String) -> Self {
         require!(env::predecessor_account_id() == env::current_account_id(), "migrate is private");
         require!(pledge_config().is_none(), "pledge already migrated");
         require!(attestor_public_key.0.len() == 32, "attestor must be 32-byte Ed25519");
+        require!(terminal_attestor_public_key.0.len() == 32 && terminal_attestor_public_key != attestor_public_key, "independent 32-byte terminal attestor required");
         require!(!network.is_empty() && network.len() <= 32, "bad network domain");
         require!(recovery_account != env::current_account_id(), "recovery must be an external account");
         require!(custody_contract != env::current_account_id(), "invalid custody contract");
         let c: Contract = env::state_read().expect("no state");
         require!(c.tokens.approvals_by_id.is_some(), "run legacy migrate first");
         save_config(&PledgeConfig {
-            recovery_account, recovery_unlock_ns: U64(RECOVERY_UNLOCK_NS), attestor_public_key, custody_contract, network,
+            recovery_account, recovery_unlock_ns: U64(RECOVERY_UNLOCK_NS), attestor_public_key, terminal_attestor_public_key, custody_contract, network,
             lending_enabled: false, next_loan_nonce: U64(0), next_payout_nonce: U64(0),
             treasury_available: U128(0), user_liabilities: U128(0), treasury_pending: None,
         });
@@ -201,46 +251,68 @@ impl Contract {
     pub fn register_collateral(&mut self, token_id: TokenId, wallet_pubkey: String, encrypted_data: String,
         wallet_signature: String, version: u64, valid_until: u64) -> Promise {
         enough_gas(); self.assert_minter(); self.assert_can_change_owner(&token_id);
-        let c = config_required();
+        let mut c = config_required();
         require!(self.tokens.owner_by_id.get(&token_id).is_some(), "unknown token");
         require!(listings().get(&token_id).is_none(), "unlist first");
         let hex = wallet_pubkey.strip_prefix("ed25519:").expect("only Ed25519 collateral");
         require!(hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)), "canonical wallet key required");
-        require!(collateral().get(&token_id).is_none() && bound_wallets().get(&wallet_pubkey).is_none(), "collateral already bound");
         require!(!encrypted_data.is_empty() && encrypted_data.len() <= 4096, "bad policy payload");
         require!(wallet_signature.len() == 128 && wallet_signature.bytes().all(|b| b.is_ascii_hexdigit()), "bad wallet signature");
         require!(version > 0 && valid_until >= env::block_timestamp() / SECOND, "stale policy");
         let dep = env::attached_deposit().as_yoctonear();
         require!(dep > COLLATERAL_STORAGE_DEPOSIT, "attach policy deposit plus 0.02 NEAR permanent binding storage");
+        if let Some(old) = collateral().get(&token_id) {
+            let r = registrations().get(&token_id).expect("collateral already bound");
+            require!(!old.ready && old.wallet_pubkey == wallet_pubkey && r.store_succeeded == Some(false), "collateral already bound or receipt unknown");
+            // Corrected artifact for SAME not-yet-eligible wallet, only after definite failed action.
+            // New global nonce invalidates any old in-flight read. Original bond becomes backed pull credit.
+            add_credit(&r.payer, COLLATERAL_STORAGE_DEPOSIT);
+            collateral().remove(&token_id); bound_wallets().remove(&wallet_pubkey); registrations().remove(&token_id);
+        }
+        require!(bound_wallets().get(&wallet_pubkey).is_none(), "wallet already bound");
         let b = CollateralBinding { wallet_pubkey: wallet_pubkey.clone(), encrypted_policy_hash: Base64VecU8(env::sha256(encrypted_data.as_bytes())), policy_version: U64(version), ready: false };
         collateral().insert(&token_id, &b); bound_wallets().insert(&wallet_pubkey, &token_id);
+        c.next_payout_nonce = U64(c.next_payout_nonce.0.checked_add(1).expect("registration nonce overflow"));
+        let nonce = c.next_payout_nonce;
+        registrations().insert(&token_id, &PendingRegistration { nonce, payer: env::predecessor_account_id(), forwarded: U128(dep - COLLATERAL_STORAGE_DEPOSIT), store_succeeded: None });
+        change_liabilities(&mut c, dep, 0); save_config(&c);
         call(c.custody_contract, "store_wallet_policy", near_sdk::serde_json::json!({
             "wallet_pubkey": wallet_pubkey, "encrypted_data": encrypted_data, "wallet_signature": wallet_signature,
             "version": version, "locked": true, "valid_until": valid_until, "storage_refund_to": self.minter,
         }), dep - COLLATERAL_STORAGE_DEPOSIT, 35)
-            .then(callback("on_collateral_stored", near_sdk::serde_json::json!({"token_id": token_id}), 65))
+            .then(callback("on_collateral_stored", near_sdk::serde_json::json!({"token_id": token_id, "nonce": nonce}), 65))
     }
 
     #[private]
-    pub fn on_collateral_stored(&mut self, token_id: TokenId) -> Promise {
-        private_callback();
-        // Even failure may mean a pre-existing matching policy: read, never infer state from HTTP/UI.
-        self.check_collateral(token_id)
+    pub fn on_collateral_stored(&mut self, token_id: TokenId, nonce: U64) -> PromiseOrValue<bool> {
+        private_callback(); callback_failure_fixture(); self.settle_collateral_store(token_id, nonce, promise_succeeded())
     }
+    pub fn get_pending_registration(&self, token_id: TokenId) -> Option<PendingRegistration> { registrations().get(&token_id) }
 
     pub fn check_collateral(&self, token_id: TokenId) -> Promise {
         let c = config_required(); let b = collateral().get(&token_id).expect("unbound collateral");
+        let nonce = registrations().get(&token_id).map(|r| r.nonce).unwrap_or(U64(0));
         call(c.custody_contract, "get_wallet_policy", near_sdk::serde_json::json!({"wallet_pubkey": b.wallet_pubkey}), 0, 15)
-            .then(callback("on_collateral_checked", near_sdk::serde_json::json!({"token_id": token_id}), 30))
+            .then(callback("on_collateral_checked", near_sdk::serde_json::json!({"token_id": token_id, "nonce": nonce}), 30))
     }
 
     #[private]
-    pub fn on_collateral_checked(&mut self, token_id: TokenId) -> bool {
+    pub fn on_collateral_checked(&mut self, token_id: TokenId, nonce: U64) -> bool {
         private_callback();
+        let Some(r) = registrations().get(&token_id) else { return false; };
+        if r.nonce != nonce || r.store_succeeded.is_none() { return false; }
         let Some(mut b) = collateral().get(&token_id) else { return false; };
-        if let Some(p) = policy_result() {
-            // Never overwrite an established ready binding from a stale callback; funding still checks signed state.
-            if policy_matches(&p, &b) { b.ready = true; collateral().insert(&token_id, &b); return true; }
+        let Some(v) = bounded_result(32_768) else { return false; };
+        let Ok(policy) = near_sdk::serde_json::from_slice::<Option<PolicyView>>(&v) else { return false; };
+        let mut c = config_required();
+        if policy.as_ref().is_some_and(|p| policy_matches(p, &b)) {
+            b.ready = true; collateral().insert(&token_id, &b); registrations().remove(&token_id);
+            change_liabilities(&mut c, 0, COLLATERAL_STORAGE_DEPOSIT); save_config(&c); return true;
+        }
+        if policy.is_none() && r.store_succeeded == Some(false) {
+            // Both original provider receipt and authoritative absence are known. No unknown action can rebind later.
+            collateral().remove(&token_id); bound_wallets().remove(&b.wallet_pubkey); registrations().remove(&token_id);
+            add_credit(&r.payer, COLLATERAL_STORAGE_DEPOSIT); // forwarded amount was already restored exactly once
         }
         false
     }
@@ -298,12 +370,7 @@ impl Contract {
 
     #[private]
     pub fn on_policy_action(&mut self, token_id: TokenId, nonce: U64, sequence: U64) -> PromiseOrValue<bool> {
-        private_callback();
-        let Some(mut l) = loans().get(&token_id) else { return PromiseOrValue::Value(false); };
-        if l.nonce != nonce || l.policy_sequence != sequence || !l.policy_busy { return PromiseOrValue::Value(false); }
-        // A failed action may mean it was already frozen/thawed. Its receipt is now terminal; verify exact state.
-        l.policy_call_complete = true; loans().insert(&token_id, &l);
-        PromiseOrValue::Promise(self.read_loan_policy(token_id, l))
+        private_callback(); callback_failure_fixture(); self.settle_policy_action(token_id, nonce, sequence)
     }
 
     /// Read-only reconciliation is allowed after the provider receipt callback recorded terminal completion.
@@ -351,6 +418,8 @@ impl Contract {
         let mut l = load_loan(&token_id, nonce);
         require!(l.state == LoanState::Offered && !l.policy_busy, "loan not fundable");
         require!(env::predecessor_account_id() == l.terms.lender, "only named lender");
+        // The certificate-bound lender is the initial default receiver; seizure may redirect and rechecks eligibility.
+        self.assert_no_key(&l.terms.lender);
         require!(env::attached_deposit().as_yoctonear() == l.terms.principal.0, "attach exact principal");
         require!(self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&l.borrower), "borrower no longer owner");
         require!(self.nft_settlement_epoch(token_id.clone()) == l.owner_epoch && self.pending_ops(&token_id) == 0 && transfer_calls().get(&token_id).is_none(), "control state changed");
@@ -370,21 +439,7 @@ impl Contract {
 
     #[private]
     pub fn on_principal_paid(&mut self, token_id: TokenId, nonce: U64) -> PromiseOrValue<bool> {
-        private_callback();
-        let Some(mut l) = loans().get(&token_id) else { return PromiseOrValue::Value(false); };
-        if l.nonce != nonce || l.state != LoanState::FundingPending { return PromiseOrValue::Value(false); }
-        let mut c = config_required();
-        if promise_succeeded() {
-            change_liabilities(&mut c, 0, l.terms.principal.0); save_config(&c);
-            l.state = LoanState::Active;
-            l.due_ns = U64(env::block_timestamp().checked_add(l.terms.duration_sec.0 * SECOND).expect("due overflow"));
-            loans().insert(&token_id, &l); PromiseOrValue::Value(true)
-        } else {
-            // Native transfer refund is backed; no debt was created for the borrower.
-            add_credit(&l.terms.lender, l.terms.principal.0);
-            l.state = LoanState::UnlockPending; l.resolution = Some("principal_failed".into()); loans().insert(&token_id, &l);
-            PromiseOrValue::Promise(self.start_policy_action(token_id, false))
-        }
+        private_callback(); callback_failure_fixture(); self.settle_principal(token_id, nonce, promise_succeeded())
     }
 
     #[payable]
@@ -440,13 +495,7 @@ impl Contract {
 
     #[private]
     pub fn on_payout(&mut self, account_id: AccountId, nonce: U64) -> bool {
-        private_callback();
-        let Some(p) = pending_payouts().get(&account_id) else { return false; };
-        if p.nonce != nonce { return false; }
-        pending_payouts().remove(&account_id);
-        if promise_succeeded() {
-            let mut c = config_required(); change_liabilities(&mut c, 0, p.amount.0); save_config(&c); true
-        } else { add_credit(&account_id, p.amount.0); false }
+        private_callback(); callback_failure_fixture(); self.settle_payout(account_id, nonce, promise_succeeded())
     }
 
     /// Explicit new operational capital. Old balance/user bonds never reclassified; future self-royalties are tracked separately.
@@ -483,10 +532,95 @@ impl Contract {
 
     #[private]
     pub fn on_treasury_recovered(&mut self, nonce: U64) -> bool {
-        private_callback();
+        private_callback(); callback_failure_fixture(); self.settle_treasury(nonce, promise_succeeded())
+    }
+    /// No timeouts, balance guesses, arbitrary clear-lock, payment resend, or admin override.
+    /// The pinned attestor MUST verify finalized exact action receipts (including native refund on failure).
+    pub fn reconcile_terminal_outcome(&mut self, attestation: TerminalAttestation, signature: Base64VecU8) -> PromiseOrValue<bool> {
+        enough_gas(); let a = attestation; let c = verify_terminal(&a, signature);
+        emit_key_event("terminal_reconcile", near_sdk::serde_json::json!({"kind":a.kind,"token_id":a.token_id,"nonce":a.nonce,"sequence":a.sequence,"receipt_id":a.receipt_id,"success":a.success}));
+        match a.kind.as_str() {
+            "transfer_call" => {
+                let p = transfer_calls().get(&a.token_id).expect("no pending transfer");
+                require!(a.nonce == p.epoch && a.sequence.0 == 0 && a.account_id == p.receiver && a.amount.0 == 0, "transfer recovery mismatch");
+                PromiseOrValue::Value(self.settle_transfer_call(a.token_id, a.nonce, !a.success))
+            }
+            "registration" => {
+                let r = registrations().get(&a.token_id).expect("no pending registration");
+                require!(a.nonce == r.nonce && a.sequence.0 == 0 && a.account_id == c.custody_contract && a.amount == r.forwarded && r.store_succeeded.is_none(), "registration recovery mismatch");
+                self.settle_collateral_store(a.token_id, a.nonce, a.success)
+            }
+            "policy_action" => {
+                let l = load_loan(&a.token_id, a.nonce);
+                require!(l.policy_busy && !l.policy_call_complete && a.sequence == l.policy_sequence && a.account_id == c.custody_contract && a.amount.0 == 0, "policy recovery mismatch");
+                self.settle_policy_action(a.token_id, a.nonce, a.sequence)
+            }
+            "principal" => {
+                let l = load_loan(&a.token_id, a.nonce);
+                require!(l.state == LoanState::FundingPending && a.sequence.0 == 0 && a.account_id == l.borrower && a.amount == l.terms.principal, "principal recovery mismatch");
+                self.settle_principal(a.token_id, a.nonce, a.success)
+            }
+            "payout" => {
+                let p = pending_payouts().get(&a.account_id).expect("no pending payout");
+                require!(a.token_id.is_empty() && a.nonce == p.nonce && a.sequence.0 == 0 && a.amount == p.amount, "payout recovery mismatch");
+                PromiseOrValue::Value(self.settle_payout(a.account_id, a.nonce, a.success))
+            }
+            "treasury" => {
+                let p = c.treasury_pending.expect("no pending treasury");
+                require!(a.token_id.is_empty() && a.account_id == c.recovery_account && a.nonce == p.nonce && a.sequence.0 == 0 && a.amount == p.amount, "treasury recovery mismatch");
+                PromiseOrValue::Value(self.settle_treasury(a.nonce, a.success))
+            }
+            _ => env::panic_str("unknown recovery kind"),
+        }
+    }
+
+}
+
+impl Contract {
+    fn settle_collateral_store(&mut self, token_id: TokenId, nonce: U64, success: bool) -> PromiseOrValue<bool> {
+        let Some(mut r) = registrations().get(&token_id) else { return PromiseOrValue::Value(false); };
+        if r.nonce != nonce || r.store_succeeded.is_some() { return PromiseOrValue::Value(false); }
+        let mut c = config_required(); r.store_succeeded = Some(success);
+        if success { change_liabilities(&mut c, 0, r.forwarded.0); }
+        else { add_credit(&r.payer, r.forwarded.0); }
+        registrations().insert(&token_id, &r); save_config(&c);
+        PromiseOrValue::Promise(self.check_collateral(token_id))
+    }
+    fn settle_policy_action(&mut self, token_id: TokenId, nonce: U64, sequence: U64) -> PromiseOrValue<bool> {
+        let Some(mut l) = loans().get(&token_id) else { return PromiseOrValue::Value(false); };
+        if l.nonce != nonce || l.policy_sequence != sequence || !l.policy_busy { return PromiseOrValue::Value(false); }
+        // A failed action may mean it was already frozen/thawed. Its receipt is now terminal; verify exact state.
+        l.policy_call_complete = true; loans().insert(&token_id, &l);
+        PromiseOrValue::Promise(self.read_loan_policy(token_id, l))
+    }
+    fn settle_principal(&mut self, token_id: TokenId, nonce: U64, success: bool) -> PromiseOrValue<bool> {
+        let Some(mut l) = loans().get(&token_id) else { return PromiseOrValue::Value(false); };
+        if l.nonce != nonce || l.state != LoanState::FundingPending { return PromiseOrValue::Value(false); }
+        let mut c = config_required();
+        if success {
+            change_liabilities(&mut c, 0, l.terms.principal.0); save_config(&c);
+            l.state = LoanState::Active;
+            l.due_ns = U64(env::block_timestamp().checked_add(l.terms.duration_sec.0 * SECOND).expect("due overflow"));
+            loans().insert(&token_id, &l); PromiseOrValue::Value(true)
+        } else {
+            // Native transfer refund is backed; no debt was created for the borrower.
+            add_credit(&l.terms.lender, l.terms.principal.0);
+            l.state = LoanState::UnlockPending; l.resolution = Some("principal_failed".into()); loans().insert(&token_id, &l);
+            PromiseOrValue::Promise(self.start_policy_action(token_id, false))
+        }
+    }
+    fn settle_payout(&mut self, account_id: AccountId, nonce: U64, success: bool) -> bool {
+        let Some(p) = pending_payouts().get(&account_id) else { return false; };
+        if p.nonce != nonce { return false; }
+        pending_payouts().remove(&account_id);
+        if success {
+            let mut c = config_required(); change_liabilities(&mut c, 0, p.amount.0); save_config(&c); true
+        } else { add_credit(&account_id, p.amount.0); false }
+    }
+    fn settle_treasury(&mut self, nonce: U64, success: bool) -> bool {
         let mut c = config_required(); let Some(p) = c.treasury_pending.clone() else { return false; };
         if p.nonce != nonce { return false; }
-        let success = promise_succeeded(); c.treasury_pending = None;
+        c.treasury_pending = None;
         if !success { c.treasury_available = U128(c.treasury_available.0.checked_add(p.amount.0).expect("treasury overflow")); }
         save_config(&c); success
     }

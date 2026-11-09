@@ -7,6 +7,7 @@ const NOW: u64 = 1_794_000_000_000_000_000;
 const N: u128 = 1_000_000_000_000_000_000_000_000;
 fn a(s: &str) -> AccountId { s.parse().unwrap() }
 fn sk() -> SigningKey { SigningKey::from_bytes(&[7; 32]) }
+fn terminal_sk() -> SigningKey { SigningKey::from_bytes(&[8; 32]) }
 fn context(who: &str, amount: u128, now: u64) -> near_sdk::VMContext {
     VMContextBuilder::new().current_account_id(a("keys.near")).predecessor_account_id(a(who))
         .signer_account_id(a(who)).account_balance(yocto(1000 * N)).storage_usage(200_000)
@@ -28,7 +29,7 @@ fn setup() -> Contract {
     ctx("minter.near", N / 10, NOW);
     c.nft_mint("k1".into(), a("alice.near"), 2, TokenMetadata { title: Some("Key".into()), ..Default::default() });
     env::state_write(&c); ctx("keys.near", 0, NOW);
-    let c = Contract::migrate_pledge(a("recovery.near"), Base64VecU8(sk().verifying_key().to_bytes().to_vec()), a("custody.near"), "sandbox".into());
+    let c = Contract::migrate_pledge(a("recovery.near"), Base64VecU8(sk().verifying_key().to_bytes().to_vec()), Base64VecU8(terminal_sk().verifying_key().to_bytes().to_vec()), a("custody.near"), "sandbox".into());
     let mut cfg = config_required(); cfg.lending_enabled = true; save_config(&cfg);
     collateral().insert(&"k1".into(), &CollateralBinding { wallet_pubkey: format!("ed25519:{}", "ab".repeat(32)), encrypted_policy_hash: Base64VecU8(env::sha256(b"sealed-policy")), policy_version: U64(1), ready: true });
     c
@@ -56,7 +57,7 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
     assert_eq!(cfg.treasury_available.0, 0); assert_eq!(cfg.recovery_unlock_ns.0, RECOVERY_UNLOCK_NS);
     assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, a("alice.near"));
     ctx("keys.near", 0, NOW);
-    rejected(|| { Contract::migrate_pledge(a("evil.near"), Base64VecU8(vec![9;32]), a("custody.near"), "sandbox".into()); });
+    rejected(|| { Contract::migrate_pledge(a("evil.near"), Base64VecU8(vec![9;32]), Base64VecU8(vec![10;32]), a("custody.near"), "sandbox".into()); });
     assert_eq!(config_required().recovery_account, a("recovery.near"));
 }
 #[test] fn lending_switch_does_not_disable_repayment_or_credit() {
@@ -119,8 +120,7 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
     ctx("bob.near",N/100,NOW); rejected(||{let _=c.nft_approve("k1".into(),a("market.near"),None);});
     ctx("minter.near",N/100,NOW); rejected(||c.begin_value_op("k1".into(),U64(1),"1:op".into(),"hash".into(), a("alice.near")));
     result(PromiseResult::Successful(b"true".to_vec()),NOW);
-    use near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver;
-    assert!(!c.nft_resolve_transfer(a("alice.near"),a("bob.near"),"k1".into(),Some(HashMap::new())));
+    assert!(!c.resolve_transfer_call("k1".into(), c.nft_settlement_epoch("k1".into())));
     assert!(!c.get_control_state("k1".into()).transfer_pending);
     assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
 }
@@ -274,4 +274,163 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
  let mut c=setup();ctx("minter.near",N/100,NOW);
  rejected(||c.begin_value_op("k1".into(),U64(0),"1:action".into(),"hash".into(),a("bob.near")));
  assert_eq!(c.pending_value_op_count("k1".into()).0,0);
+}
+
+
+fn recovery(kind:&str,token:&str,nonce:U64,sequence:U64,who:&str,amount:u128,success:bool)->TerminalAttestation {
+    TerminalAttestation{domain:"KEYHOLE_TERMINAL_RECOVERY_V1".into(),network:"sandbox".into(),contract:a("keys.near"),kind:kind.into(),
+        token_id:token.into(),nonce,sequence,account_id:a(who),amount:U128(amount),success,receipt_id:Base64VecU8(vec![9;32]),observed_at_ns:U64(NOW),expires_at_ns:U64(NOW+30*SECOND)}
+}
+fn relay(c:&mut Contract,proof:TerminalAttestation) { relay_at(c,proof,NOW); }
+fn relay_at(c:&mut Contract,proof:TerminalAttestation,now:u64) {
+    let sig=Base64VecU8(terminal_sk().sign(&near_sdk::borsh::to_vec(&proof).unwrap()).to_bytes().to_vec());
+    ctx("anyone.near",0,now);let _=c.reconcile_terminal_outcome(proof,sig);
+}
+fn registration(c:&mut Contract)->U64 {
+    ctx("minter.near",N/10,NOW);
+    let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60);
+    registrations().get(&"k1".into()).unwrap().nonce
+}
+#[test]fn unknown_token_control_view_is_not_unlocked(){let c=setup();rejected(||{c.get_control_state("missing".into());});}
+#[test]fn funding_checks_certificate_bound_initial_default_receiver_eligibility(){
+    let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);
+    ctx("minter.near",N/10,NOW);c.nft_mint("other".into(),a("lender.near"),2,TokenMetadata::default());
+    let cert=cert(&c);let sig=signed(&c,&cert);ctx("lender.near",N,NOW);
+    rejected(||{let _=c.fund_loan("k1".into(),U64(1),cert,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test]fn failed_registration_refunds_exact_deposit_and_corrected_retry_is_nonce_safe(){
+    let mut c=setup();collateral().remove(&"k1".into());let old=registration(&mut c);
+    assert_eq!(config_required().user_liabilities.0,N/10);
+    result(PromiseResult::Failed,NOW);let _=c.on_collateral_stored("k1".into(),old);
+    assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10-COLLATERAL_STORAGE_DEPOSIT);
+    result(PromiseResult::Successful(b"null".to_vec()),NOW);assert!(!c.on_collateral_checked("k1".into(),old));
+    assert!(c.get_collateral_binding("k1".into()).is_none());assert!(bound_wallets().get(&format!("ed25519:{}","ab".repeat(32))).is_none());
+    assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10);assert_eq!(config_required().user_liabilities.0,N/10);
+    let new=registration(&mut c);assert_ne!(old,new);
+    result(PromiseResult::Successful(vec![]),NOW);let _=c.on_collateral_stored("k1".into(),old);
+    result(policy(false),NOW);assert!(!c.on_collateral_checked("k1".into(),old));
+    assert!(registrations().get(&"k1".into()).unwrap().store_succeeded.is_none());
+    result(PromiseResult::Successful(vec![]),NOW);let _=c.on_collateral_stored("k1".into(),new);
+    result(policy(false),NOW);assert!(c.on_collateral_checked("k1".into(),new));
+    assert_eq!(config_required().user_liabilities.0,N/10);assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10);
+}
+#[test]fn failed_store_with_already_matching_policy_refunds_forwarded_only_and_keeps_ready_binding(){
+    let mut c=setup();collateral().remove(&"k1".into());let n=registration(&mut c);
+    result(PromiseResult::Failed,NOW);let _=c.on_collateral_stored("k1".into(),n);
+    result(policy(false),NOW);assert!(c.on_collateral_checked("k1".into(),n));
+    assert!(c.get_collateral_binding("k1".into()).unwrap().ready);
+    assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10-COLLATERAL_STORAGE_DEPOSIT);
+    assert_eq!(config_required().user_liabilities,c.get_payout_credit(a("minter.near")));
+    ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60);});
+}
+#[test]fn unknown_registration_receipt_never_unbinds_or_refunds_even_with_absent_read(){
+    let mut c=setup();collateral().remove(&"k1".into());let n=registration(&mut c);
+    result(PromiseResult::Successful(b"null".to_vec()),NOW);assert!(!c.on_collateral_checked("k1".into(),n));
+    assert_eq!(c.get_payout_credit(a("minter.near")).0,0);assert!(c.get_collateral_binding("k1".into()).is_some());
+    relay(&mut c,recovery("registration","k1",n,U64(0),"custody.near",N/10-COLLATERAL_STORAGE_DEPOSIT,false));
+    result(PromiseResult::Successful(b"null".to_vec()),NOW);assert!(!c.on_collateral_checked("k1".into(),n));
+    assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10);
+    result(PromiseResult::Failed,NOW);let _=c.on_collateral_stored("k1".into(),n);assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10);
+}
+#[test]fn missing_first_stage_policy_callback_recovery_requires_terminal_proof_then_real_policy_read(){
+    let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();
+    ctx("anyone.near",0,NOW);rejected(||{let _=c.reconcile_loan_policy("k1".into(),l.nonce);});
+    relay(&mut c,recovery("policy_action","k1",l.nonce,l.policy_sequence,"custody.near",0,true));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Freezing);
+    result(policy(true),NOW);assert!(c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test]fn missing_successful_principal_callback_recovers_without_resending_and_late_callback_is_noop(){
+    let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::FundingPending);
+    relay(&mut c,recovery("principal","k1",U64(1),U64(0),"alice.near",N,true));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);assert_eq!(config_required().user_liabilities.0,LOAN_STORAGE_DEPOSIT);
+    result(PromiseResult::Failed,NOW);let _=c.on_principal_paid("k1".into(),U64(1));assert_eq!(c.get_payout_credit(a("lender.near")).0,0);
+    ctx("alice.near",terms().repayment.0,NOW);let _=c.repay_loan("k1".into(),U64(1));settle_policy(&mut c,false,NOW);assert!(c.get_loan("k1".into()).is_none());
+}
+#[test]fn missing_failed_principal_callback_restores_exact_credit_never_creates_debt(){
+    let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
+    relay(&mut c,recovery("principal","k1",U64(1),U64(0),"alice.near",N,false));
+    assert_eq!(c.get_payout_credit(a("lender.near")).0,N);assert_eq!(config_required().user_liabilities.0,N+LOAN_STORAGE_DEPOSIT);
+    result(PromiseResult::Successful(vec![]),NOW);let _=c.on_principal_paid("k1".into(),U64(1));assert_eq!(c.get_payout_credit(a("lender.near")).0,N);
+    settle_policy(&mut c,false,NOW);assert!(c.get_loan("k1".into()).is_none());
+}
+#[test]fn payout_terminal_recovery_success_and_failure_conserve_liability_and_reject_old_nonce(){
+    let mut c=setup();active(&mut c);ctx("alice.near",terms().repayment.0,NOW);let _=c.repay_loan("k1".into(),U64(1));
+    ctx("lender.near",1,NOW);let _=c.claim_payout();let old=c.get_pending_payout(a("lender.near")).unwrap();
+    relay(&mut c,recovery("payout","",old.nonce,U64(0),"lender.near",old.amount.0,false));
+    assert_eq!(c.get_payout_credit(a("lender.near")),old.amount);assert_eq!(config_required().user_liabilities.0,old.amount.0+LOAN_STORAGE_DEPOSIT);
+    ctx("lender.near",1,NOW);let _=c.claim_payout();let next=c.get_pending_payout(a("lender.near")).unwrap();
+    rejected(||relay(&mut c,recovery("payout","",old.nonce,U64(0),"lender.near",old.amount.0,false)));
+    relay(&mut c,recovery("payout","",next.nonce,U64(0),"lender.near",next.amount.0,true));
+    result(PromiseResult::Failed,NOW);assert!(!c.on_payout(a("lender.near"),next.nonce));assert_eq!(c.get_payout_credit(a("lender.near")).0,0);assert_eq!(config_required().user_liabilities.0,LOAN_STORAGE_DEPOSIT);
+}
+#[test]fn treasury_terminal_recovery_never_changes_destination_or_spends_user_liabilities(){
+    let mut c=setup();ctx("owner.near",2*N,RECOVERY_UNLOCK_NS);c.fund_treasury();ctx("recovery.near",1,RECOVERY_UNLOCK_NS);let _=c.recover_treasury(U128(N));
+    let p=config_required().treasury_pending.unwrap();let mut proof=recovery("treasury","",p.nonce,U64(0),"recovery.near",N,false);proof.observed_at_ns=U64(RECOVERY_UNLOCK_NS);proof.expires_at_ns=U64(RECOVERY_UNLOCK_NS+30*SECOND);
+    let mut bad=proof.clone();bad.account_id=a("other.near");rejected(||relay_at(&mut c,bad,RECOVERY_UNLOCK_NS));
+    relay_at(&mut c,proof,RECOVERY_UNLOCK_NS);assert_eq!(config_required().treasury_available.0,2*N);assert_eq!(config_required().user_liabilities.0,0);
+    result(PromiseResult::Failed,RECOVERY_UNLOCK_NS);assert!(!c.on_treasury_recovered(p.nonce));assert_eq!(config_required().treasury_available.0,2*N);
+}
+#[test]fn signed_recovery_rejects_tampered_nonce_amount_contract_network_account_and_expiry(){
+    let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
+    let good=recovery("principal","k1",U64(1),U64(0),"alice.near",N,true);
+    let original_signature=Base64VecU8(terminal_sk().sign(&near_sdk::borsh::to_vec(&good).unwrap()).to_bytes().to_vec());
+    for i in 0..8 {let mut bad=good.clone();match i{0=>bad.nonce=U64(2),1=>bad.amount=U128(N+1),2=>bad.contract=a("other.near"),3=>bad.network="mainnet".into(),4=>bad.account_id=a("other.near"),5=>bad.expires_at_ns=U64(NOW),6=>bad.sequence=U64(1),_=>bad.token_id="other".into()};
+        let changed=bad.clone();let signature=original_signature.clone();ctx("anyone.near",0,NOW);rejected(||{let _=c.reconcile_terminal_outcome(bad,signature);});rejected(||relay(&mut c,changed));
+        assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::FundingPending);
+    }
+    let mut wrong=good.clone();wrong.amount=U128(N+1);rejected(||relay(&mut c,wrong));
+    let sig=Base64VecU8(sk().sign(&near_sdk::borsh::to_vec(&good).unwrap()).to_bytes().to_vec());ctx("anyone.near",0,NOW);rejected(||{let _=c.reconcile_terminal_outcome(good,sig);});
+}
+#[test]fn bounded_resolver_handles_malformed_oversized_and_padded_acceptance_fail_closed(){
+    let mut c=setup();for bytes in [b"garbage".to_vec(),[vec![b' ';100_000],b"false".to_vec()].concat(),vec![b'[';64]] {
+        ctx("alice.near",1,NOW);let _=c.nft_transfer_call(a("receiver.near"),"k1".into(),None,None,"".into());let epoch=c.nft_settlement_epoch("k1".into());
+        result(PromiseResult::Successful(bytes),NOW);assert!(!c.resolve_transfer_call("k1".into(),epoch));assert_eq!(c.pending_return_count(a("alice.near")),0);assert!(!c.get_control_state("k1".into()).transfer_pending);
+    }
+}
+#[test]fn permissionless_transfer_recovery_is_proof_bound_and_cannot_clear_newer_transfer(){
+    let mut c=setup();ctx("alice.near",N/100,NOW);let _=c.nft_approve("k1".into(),a("market.near"),None);
+    ctx("alice.near",1,NOW);let _=c.nft_transfer_call(a("receiver.near"),"k1".into(),None,None,"".into());let old=c.nft_settlement_epoch("k1".into());
+    relay(&mut c,recovery("transfer_call","k1",old,U64(0),"receiver.near",0,false));
+    assert_eq!(c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap().len(),1);assert_eq!(c.pending_return_count(a("alice.near")),0);
+    ctx("alice.near",1,NOW);let _=c.nft_transfer_call(a("receiver.near"),"k1".into(),None,None,"".into());let new=c.nft_settlement_epoch("k1".into());
+    result(PromiseResult::Successful(b"false".to_vec()),NOW);assert!(c.resolve_transfer_call("k1".into(),old));assert!(c.get_control_state("k1".into()).transfer_pending);
+    rejected(||relay(&mut c,recovery("transfer_call","k1",old,U64(0),"receiver.near",0,true)));
+    relay(&mut c,recovery("transfer_call","k1",new,U64(0),"receiver.near",0,true));assert!(!c.get_control_state("k1".into()).transfer_pending);assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("receiver.near"));
+}
+
+#[test]fn corrected_same_wallet_retry_after_failed_store_and_mismatched_read_never_replays_old_callback(){
+    let mut c=setup();collateral().remove(&"k1".into());let old=registration(&mut c);
+    result(PromiseResult::Failed,NOW);let _=c.on_collateral_stored("k1".into(),old);
+    result(PromiseResult::Successful(br#"{"owner":"keys.near","encrypted_data":"old-policy","version":1,"locked":false,"frozen":false}"#.to_vec()),NOW);
+    assert!(!c.on_collateral_checked("k1".into(),old));let new=registration(&mut c);assert_ne!(old,new);
+    assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10);assert_eq!(config_required().user_liabilities.0,N/5);
+    result(policy(false),NOW);assert!(!c.on_collateral_checked("k1".into(),old));
+    result(PromiseResult::Successful(vec![]),NOW);let _=c.on_collateral_stored("k1".into(),new);
+    result(policy(false),NOW);assert!(c.on_collateral_checked("k1".into(),new));assert_eq!(config_required().user_liabilities.0,N/10);
+}
+#[test]fn unresolved_registration_cannot_replace_wallet_or_reissue_external_action(){
+    let mut c=setup();collateral().remove(&"k1".into());let n=registration(&mut c);
+    rejected(||{registration(&mut c);});assert_eq!(registrations().get(&"k1".into()).unwrap().nonce,n);
+    result(PromiseResult::Failed,NOW);let _=c.on_collateral_stored("k1".into(),n);
+    ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","cd".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60);});
+    assert_eq!(registrations().get(&"k1".into()).unwrap().nonce,n);
+}
+
+#[test]fn terminal_attestation_matches_canonical_independent_key_test_vector(){
+    let p=recovery("principal","k1",U64(1),U64(0),"alice.near",N,true);let bytes=near_sdk::borsh::to_vec(&p).unwrap();
+    let vector=near_sdk::serde_json::json!({"warning":"TEST-ONLY fixture; independent terminal key, never a production attestation","attestation":p,"borsh_hex":bytes.iter().map(|b|format!("{b:02x}")).collect::<String>(),"public_key":Base64VecU8(terminal_sk().verifying_key().to_bytes().to_vec()),"signature":Base64VecU8(terminal_sk().sign(&bytes).to_bytes().to_vec())});
+    let file=std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../protocol/terminal-recovery-v1.json");
+    if std::env::var_os("KH_UPDATE_RECOVERY_FIXTURE").is_some(){std::fs::write(&file,format!("{}\n",near_sdk::serde_json::to_string_pretty(&vector).unwrap())).unwrap();}
+    let expected:near_sdk::serde_json::Value=near_sdk::serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();assert_eq!(vector,expected);
+}
+
+#[test]fn bounded_policy_read_covers_worst_json_expansion_of_maximum_admitted_payload(){
+    let mut c=setup();collateral().remove(&"k1".into());let nonce=registration(&mut c);
+    let mut b=collateral().get(&"k1".into()).unwrap();let payload="\0".repeat(4096);b.encrypted_policy_hash=Base64VecU8(env::sha256(payload.as_bytes()));collateral().insert(&"k1".into(),&b);
+    result(PromiseResult::Successful(vec![]),NOW);let _=c.on_collateral_stored("k1".into(),nonce);
+    let bytes=near_sdk::serde_json::to_vec(&near_sdk::serde_json::json!({"owner":"keys.near","encrypted_data":payload,"version":1,"locked":true,"frozen":false})).unwrap();assert!(bytes.len()>16_384&&bytes.len()<32_768);
+    result(PromiseResult::Successful(bytes),NOW);assert!(c.on_collateral_checked("k1".into(),nonce));assert!(c.get_collateral_binding("k1".into()).unwrap().ready);
 }

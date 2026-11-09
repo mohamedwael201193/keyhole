@@ -539,6 +539,7 @@ impl Contract {
 
     /// Control plane for handover safety: epoch, pending value-ops, listing flag.
     pub fn get_control_state(&self, token_id: TokenId) -> ControlState {
+        require!(self.tokens.owner_by_id.get(&token_id).is_some(), "unknown token");
         ControlState {
             token_id: token_id.clone(),
             owner_epoch: near_sdk::json_types::U64(owner_epochs().get(&token_id).unwrap_or(0)),
@@ -694,13 +695,22 @@ impl NonFungibleTokenCore for Contract {
     fn nft_transfer_call(&mut self, receiver_id: AccountId, token_id: TokenId, approval_id: Option<u64>, memo: Option<String>, msg: String) -> PromiseOrValue<bool> {
         self.assert_no_key(&receiver_id);
         self.assert_can_change_owner(&token_id);
-        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
-        transfer_calls().insert(&token_id, &(owner.clone(), receiver_id.clone()));
-        set_pending(&owner, pending_returns(&owner) + 1);
+        assert_one_yocto();
+        require!(env::prepaid_gas() >= near_sdk::Gas::from_tgas(100), "attach at least 100 Tgas");
+        require!(msg.len() <= 16_384, "receiver message exceeds 16 KiB");
+        let sender = env::predecessor_account_id();
         self.end_listing(&token_id);
-        // Ownership moves outbound now; bump. A return bumps again in resolve. Barrier already held until settle.
+        let (owner, approvals) = self.tokens.internal_transfer(&sender, &receiver_id, &token_id, approval_id, memo);
         bump_owner_epoch(&token_id);
-        self.tokens.nft_transfer_call(receiver_id, token_id, approval_id, memo, msg)
+        let epoch = self.nft_settlement_epoch(token_id.clone());
+        transfer_calls().insert(&token_id, &PendingTransfer { previous_owner: owner.clone(), receiver: receiver_id.clone(), epoch, approvals });
+        set_pending(&owner, pending_returns(&owner).checked_add(1).expect("reservation overflow"));
+        // Reserve 50 Tgas for bounded resolution plus 25 Tgas for outbound wrapper/storage.
+        Promise::new(receiver_id).function_call("nft_on_transfer".into(), near_sdk::serde_json::json!({
+            "sender_id":sender,"previous_owner_id":owner,"token_id":token_id,"msg":msg
+        }).to_string().into_bytes(), yocto(0), env::prepaid_gas().saturating_sub(near_sdk::Gas::from_tgas(75)))
+            .then(Promise::new(env::current_account_id()).function_call("resolve_transfer_call".into(),
+                near_sdk::serde_json::json!({"token_id":token_id,"epoch":epoch}).to_string().into_bytes(), yocto(0), near_sdk::Gas::from_tgas(50))).into()
     }
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
         self.tokens.nft_token(token_id)
@@ -708,22 +718,37 @@ impl NonFungibleTokenCore for Contract {
 }
 
 #[near]
-impl near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver for Contract {
+impl Contract {
     #[private]
-    fn nft_resolve_transfer(&mut self, previous_owner_id: AccountId, receiver_id: AccountId, token_id: TokenId, approved_account_ids: Option<HashMap<AccountId, u64>>) -> bool {
-        // No new action may have been admitted on the intermediate receiver.
-        // Match the marker so an obsolete callback cannot clear a newer lock.
-        if let Some((from, to)) = transfer_calls().get(&token_id) {
-            if from == previous_owner_id && to == receiver_id { transfer_calls().remove(&token_id); }
-        }
-        set_pending(&previous_owner_id, pending_returns(&previous_owner_id).saturating_sub(1));
-        // NEP-171: true = kept by receiver; false = returned to previous_owner.
-        let kept = self.tokens.nft_resolve_transfer(previous_owner_id, receiver_id, token_id.clone(), approved_account_ids);
+    pub fn resolve_transfer_call(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64) -> bool {
+        require!(env::predecessor_account_id() == env::current_account_id(), "callback is private");
+        pledge::callback_failure_fixture();
+        // Unbounded/malformed output is receiver failure, never a partially parsed acceptance.
+        let must_return = pledge::bounded_result(32).and_then(|v| near_sdk::serde_json::from_slice::<bool>(&v).ok()).unwrap_or(true);
+        self.settle_transfer_call(token_id, epoch, must_return)
+    }
+    pub fn get_pending_transfer(&self, token_id: TokenId) -> Option<PendingTransfer> { transfer_calls().get(&token_id) }
+}
+impl Contract {
+    fn settle_transfer_call(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64, must_return: bool) -> bool {
+        use near_contract_standards::non_fungible_token::refund_approved_account_ids;
+        let Some(p) = transfer_calls().get(&token_id) else { return true; };
+        if p.epoch != epoch { return true; } // Old callback/proof may never settle a newer transfer.
+        let mut kept = true;
+        if must_return && self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&p.receiver) {
+            self.tokens.internal_transfer_unguarded(&token_id, &p.receiver, &p.previous_owner);
+            if let Some(by_id) = &mut self.tokens.approvals_by_id {
+                if let Some(receiver_approvals) = by_id.remove(&token_id) { refund_approved_account_ids(p.receiver.clone(), &receiver_approvals); }
+                if let Some(old) = p.approvals { by_id.insert(&token_id, &old); }
+            }
+            near_contract_standards::non_fungible_token::events::NftTransfer {
+                old_owner_id: &p.receiver, new_owner_id: &p.previous_owner, token_ids: &[&token_id], authorized_id: None, memo: None
+            }.emit();
+            bump_owner_epoch(&token_id); kept = false;
+        } else if let Some(old) = p.approvals { refund_approved_account_ids(p.previous_owner.clone(), &old); }
+        transfer_calls().remove(&token_id);
+        set_pending(&p.previous_owner, pending_returns(&p.previous_owner).checked_sub(1).expect("missing return reservation"));
         self.clear_stale_listing(&token_id);
-        if !kept {
-            // Return is a second ownership change; barrier must already be clear (asserted on outbound).
-            bump_owner_epoch(&token_id);
-        }
         kept
     }
 }
@@ -1053,14 +1078,13 @@ mod tests {
     fn nep171_resolve_transfer_table() {
         use near_sdk::test_utils::VMContextBuilder as B;
         use near_sdk::PromiseResult;
-        use near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver;
         for (id, ret, from, to, want_owner, want_bool) in [("r1", b"false".to_vec(), "a.near", "b.near", "b.near", true), ("r2", b"true".to_vec(), "c.near", "d.near", "c.near", false)] {
             let mut c = setup();
             mint(&mut c, id, from, 1);
-            ctx(from, NearToken::from_yoctonear(1)); c.nft_transfer(acc(to), id.into(), None, None);
+            ctx(from, NearToken::from_yoctonear(1)); let _ = c.nft_transfer_call(acc(to), id.into(), None, None, "".into());
             testing_env!(B::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
                 near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Successful(ret)]);
-            assert_eq!(c.nft_resolve_transfer(acc(from), acc(to), id.into(), None), want_bool);
+            assert_eq!(c.resolve_transfer_call(id.into(), c.nft_settlement_epoch(id.into())), want_bool);
             assert_eq!(c.nft_token(id.into()).unwrap().owner_id.as_str(), want_owner);
         }
     }
@@ -1438,7 +1462,6 @@ mod v2 {
 #[cfg(test)]
 mod race {
     use super::*;
-    use near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver;
     use near_sdk::test_utils::VMContextBuilder;
     use near_sdk::{testing_env, NearToken, PromiseResult};
     fn acc(s: &str) -> AccountId { s.parse().unwrap() }
@@ -1451,10 +1474,10 @@ mod race {
     fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
     fn mint(c: &mut Contract, id: &str, to: &str) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
     fn send_call(c: &mut Contract, from: &str, to: &str, id: &str) { ctx(from, NearToken::from_yoctonear(1)); let _ = c.nft_transfer_call(acc(to), id.into(), None, None, "".into()); }
-    fn resolve(c: &mut Contract, from: &str, to: &str, id: &str, ret: &[u8]) -> bool {
+    fn resolve(c: &mut Contract, _from: &str, _to: &str, id: &str, ret: &[u8]) -> bool {
         testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
             near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Successful(ret.to_vec())]);
-        c.nft_resolve_transfer(acc(from), acc(to), id.into(), None)
+        c.resolve_transfer_call(id.into(), c.nft_settlement_epoch(id.into()))
     }
 
     #[test] fn transfer_call_marks_sender_pending_until_resolve() {
@@ -1500,7 +1523,7 @@ mod race {
         send_call(&mut c, "alice.near", "bob.near", "k1");
         testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
             near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Failed]);
-        assert!(!c.nft_resolve_transfer(acc("alice.near"), acc("bob.near"), "k1".into(), None));
+        assert!(!c.resolve_transfer_call("k1".into(), c.nft_settlement_epoch("k1".into())));
         assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"));
         assert_eq!(c.pending_return_count(acc("alice.near")), 0);
     }
@@ -1692,7 +1715,6 @@ mod v24 {
 #[cfg(test)]
 mod v24_sale {
     use super::*;
-    use near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver;
     use near_sdk::mock::MockAction;
     use near_sdk::serde_json::{json, Value};
     use near_sdk::test_utils::{get_created_receipts, get_logs, VMContextBuilder};
@@ -1736,10 +1758,10 @@ mod v24_sale {
     fn keyhole(event: &str, data: Value) -> Value {
         json!({"standard": "keyhole", "version": "1.0.0", "event": event, "data": [data]})
     }
-    fn resolve(c: &mut Contract, from: &str, to: &str, id: &str, ret: &[u8]) -> bool {
+    fn resolve(c: &mut Contract, _from: &str, _to: &str, id: &str, ret: &[u8]) -> bool {
         testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
             near_sdk::test_vm_config(), near_sdk::RuntimeFeesConfig::test(), Default::default(), vec![PromiseResult::Successful(ret.to_vec())]);
-        c.nft_resolve_transfer(acc(from), acc(to), id.into(), None)
+        c.resolve_transfer_call(id.into(), c.nft_settlement_epoch(id.into()))
     }
 
     // ---- nft_list ----
