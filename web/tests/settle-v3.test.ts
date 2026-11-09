@@ -35,7 +35,9 @@ describe("/settle (Activity): public settlements on the v7 system", () => {
 
   it("filters are All, Settled, Refunded and Failed, with counts from the rows", () => {
     for (const label of ["All activity", "Settled", "Refunded", "Failed"]) expect(v, label).toContain(`label: "${label}"`);
-    expect(v).toContain("count: counts.settled");
+    // Counts come from the rows, and a status count waits until no order is still loading (the intent of the old check).
+    expect(v).toContain("count: reading ? undefined : counts.settled");
+    expect(v).toContain("count: counts.total");
   });
 
   it("the swap entry in the sidebar goes to /swap, and Activity goes to /settle", () => {

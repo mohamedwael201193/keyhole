@@ -129,11 +129,13 @@ export function SettleView() {
     }
   }
 
+  // A status count is hidden while any order's live status is still loading: a partial count would read as final.
+  const reading = counts.loading > 0;
   const chips: FilterItem<FilterId>[] = [
     { id: "all", label: "All activity", count: counts.total },
-    { id: "settled", label: "Settled", count: counts.settled },
-    { id: "refunded", label: "Refunded", count: counts.refunded },
-    { id: "failed", label: "Failed", count: counts.failed },
+    { id: "settled", label: "Settled", count: reading ? undefined : counts.settled },
+    { id: "refunded", label: "Refunded", count: reading ? undefined : counts.refunded },
+    { id: "failed", label: "Failed", count: reading ? undefined : counts.failed },
   ];
 
   const pickSource = (s: Source) => { setPick(s); setSelected(null); setPage(1); };

@@ -55,8 +55,9 @@
 
   /* Key tiers: the chip colour for each finish. */
   --tier-bronze: #8A4B2A;
-  --tier-silver: #6F7782;
-  --tier-gold: #B08A2E;
+  /* Silver and Gold are darkened from the mockup so cream 12px tier labels reach AA (4.5:1). */
+  --tier-silver: #5E6670;
+  --tier-gold: #8A6A1E;
   --tier-legendary: #8C1D3F;
 
   /* Vault: the one dark surface, for hero moments only. */

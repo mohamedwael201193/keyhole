@@ -100,6 +100,9 @@ export function SwapView() {
   const [done, setDone] = useState<Done | null>(null);
   const [prices, setPrices] = useState<PriceBook>({});
   const [dry, setDry] = useState<Quote | null>(null);
+  /** When the shown dry quote came back from 1Click, so the rate row can say how old it is. */
+  const [dryAt, setDryAt] = useState<number | null>(null);
+  const [dryAgeS, setDryAgeS] = useState(0);
   const [dryMsg, setDryMsg] = useState<string | null>(null);
   const [dryBusy, setDryBusy] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
@@ -168,15 +171,15 @@ export function SwapView() {
 
   // No live session (no wallet, or signed in and locked): a live dry 1Click price for the same pair. It is labelled as a price only. Debounced, so typing does not hit the per-IP limit.
   useEffect(() => {
-    if (sessionLive || samePair || !units) { setDry(null); setDryMsg(null); return; }
+    if (sessionLive || samePair || !units) { setDry(null); setDryAt(null); setDryMsg(null); return; }
     let cancel = false;
     const id = setTimeout(async () => {
       setDryBusy(true); setDryMsg(null);
       try {
         const j = await (await fetch("/api/oneclick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: fromId, dest: toId, amount: units }) })).json();
         if (cancel) return;
-        if (j.ok) setDry(j.quote); else { setDry(null); setDryMsg(humanDry(j.error?.code)); }
-      } catch { if (!cancel) { setDry(null); setDryMsg("Could not reach 1Click. Check your connection and try again."); } }
+        if (j.ok) { setDry(j.quote); setDryAt(Date.now()); setDryAgeS(0); } else { setDry(null); setDryAt(null); setDryMsg(humanDry(j.error?.code)); }
+      } catch { if (!cancel) { setDry(null); setDryAt(null); setDryMsg("Could not reach 1Click. Check your connection and try again."); } }
       finally { setDryBusy(false); }
     }, 500);
     return () => { cancel = true; clearTimeout(id); };
@@ -208,6 +211,14 @@ export function SwapView() {
     const id = setInterval(() => setAgeS(Math.max(0, Math.round((Date.now() - quotedAt) / 1000))), 1000);
     return () => clearInterval(id);
   }, [quotedAt]);
+  // The same count for the signed-out dry price, from the moment 1Click answered.
+  useEffect(() => {
+    if (dryAt == null) return;
+    const tick = () => setDryAgeS(Math.max(0, Math.round((Date.now() - dryAt) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [dryAt]);
 
   // A redirect wallet returns to this page with the swap pending: show the trade it was for.
   useEffect(() => {
@@ -476,7 +487,8 @@ export function SwapView() {
               )}
               <div className="sw-rate">
                 <span className="sw-rate-val" data-testid="swap-rate">{rate != null ? `1 ${from.symbol} = ${formatAmount(rate)} ${to.symbol}` : "Enter an amount to see the rate"}</span>
-                {quoteFresh && quotedAt != null && <span className="sw-age">Quoted {ageS}s ago</span>}
+                {quoteFresh && quotedAt != null ? <span className="sw-age">Quoted {ageS}s ago</span>
+                  : !sessionLive && dry && dryAt != null ? <span className="sw-age" data-testid="swap-dry-age">Quoted {dryAgeS}s ago</span> : null}
               </div>
 
               <details className="sw-details" data-testid="swap-details">

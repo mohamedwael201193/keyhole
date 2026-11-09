@@ -91,7 +91,8 @@
   .app-brand { width: auto; padding: 0 var(--space-3); border-right: 0; }
   .app-title { padding-inline-start: var(--space-3); font-size: 15px; }
   .app-top-end { gap: 8px; padding-inline-end: var(--space-3); }
-  .app-top .cw { height: 40px; padding: 0 12px; font-size: 14px; max-width: 124px; overflow: hidden; text-overflow: ellipsis; }
+  .app-top .cw { height: 40px; padding: 0 12px; font-size: 14px; white-space: nowrap; }
+  .app-top .acct .cw { max-width: 124px; overflow: hidden; text-overflow: ellipsis; }
   .app-brand .kh-logo { --kh: 1.9rem; }
   .app-body { display: block; min-height: calc(100dvh - 60px); padding-bottom: 84px; }
   .app-side {
@@ -109,7 +110,7 @@
 }
 @media (max-width: 419px) {
   .app-title { display: none; }
-  .app-top .cw { max-width: 112px; padding: 0 10px; }
+  .app-top .cw { padding: 0 12px; }
   .app-net { display: none; }
 }
 

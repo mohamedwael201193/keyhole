@@ -254,7 +254,8 @@ for (const kind of ["swap", "withdraw"] as const) {
     if (kind === "swap") {
       await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
       await expect(page.getByTestId("trade-out")).toContainText("success");
-      await expect(page.getByRole("link", { name: /intents explorer/ })).toHaveAttribute("href", "https://explorer.near-intents.org/transactions/4qAnExample");
+      // The redesigned swap result labels its pill "Intents explorer" (sentence case).
+      await expect(page.getByRole("link", { name: /intents explorer/i })).toHaveAttribute("href", "https://explorer.near-intents.org/transactions/4qAnExample");
       await expect(page.getByTestId("error")).toHaveCount(0);
     } else {
       await expect(page.getByTestId("withdraw-out")).toContainText("Withdrawn 0.01 USDC to holder.keyhole.test", { timeout: 20_000 });
@@ -353,7 +354,9 @@ test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
     expect(metrics.rowWidths).toEqual([metrics.listW, metrics.listW]);
     for (const a of metrics.amounts) expect(a.n, `${w} ${a.text}`).toBe(1);
     for (const n of metrics.names) expect(n.n, `${w} ${n.text}`).toBe(1);
-    await expect(page.getByText("One gas-free signature (NEAR NEP-413 or MetaMask EIP-191)")).toBeVisible();
+    // The redesigned signed-in vault no longer repeats the sign-once explainer (it lives on Mint and Overview), so the test
+    // checks the vault's own sections instead.
+    await expect(page.getByTestId("vault-total")).toBeVisible();
   }
 });
 
@@ -439,7 +442,8 @@ test("navbar: full lockup shown and every page fits the viewport", async ({ page
   expect(box!.height).toBeLessThanOrEqual(48);
   const logo = await page.getByRole("img", { name: "KEYHOLE" }).first().boundingBox();
   expect(logo!.width / logo!.height).toBeGreaterThan(3.5);
-  expect(logo!.height).toBeGreaterThanOrEqual(30);
+  // Phones use a 1.6rem lockup (app-shell.css) so the signed-in top bar fits at 375; the lockup must still be legible.
+  expect(logo!.height).toBeGreaterThanOrEqual(24);
   await expect(page.getByText(/CC0/)).toHaveCount(0);
 });
 
@@ -531,6 +535,8 @@ test("technical lists are left-aligned; vault traits keep the body face", async 
     await route.fulfill({ json: { jsonrpc: "2.0", id: "kh", result: { result: bytes } } });
   });
   await page.goto("/vault");
+  // The redesigned vault keeps the traits behind a "Key traits and log" disclosure, closed by default.
+  await page.locator("details.vlt-details > summary").click({ timeout: 30_000 });
   const kv = page.getByTestId("vault-traits");
   await expect(kv).toBeVisible({ timeout: 30_000 });
   const head = kv.locator("dd").nth(0);

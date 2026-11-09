@@ -159,7 +159,8 @@
 }
 @media (max-width: 560px) {
   .sw-panel { padding: var(--space-3) var(--space-4); }
-  .sw-amt-input, .sw-amt { font-size: 34px; }
+  .sw-amt-input, .sw-amt { font-size: 30px; }
+  .sw-amt { white-space: nowrap; }
   .sw-phase-title { font-size: 24px; }
   .sw-about { min-height: 0; }
   .sw-about-body { max-width: 100%; }

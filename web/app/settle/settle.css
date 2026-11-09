@@ -6,7 +6,8 @@
  */
 
 /* ---------- Page ---------- */
-.act { display: grid; gap: var(--space-5); min-width: 0; color: var(--ink); }
+/* heirloom.css still has a framed card rule for .act (2px ink border, padding, radius, fill). The page is not framed: reset it here. */
+.act { display: grid; gap: var(--space-5); min-width: 0; width: 100%; height: auto; padding: 0; border: 0; border-radius: 0; background: transparent; align-items: stretch; text-align: start; cursor: auto; color: var(--ink); }
 .app-main .act { padding: var(--space-6) var(--space-6) var(--space-7); }
 .act > * { animation: v7-rise var(--dur-slow) var(--ease-out) both; }
 .act > :nth-child(2) { animation-delay: 40ms; }
@@ -60,7 +61,7 @@
   width: 100%; min-height: 44px; padding: 0 var(--space-4) 0 44px; border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong); background: var(--sunken); color: var(--ink); font: 500 15px/1.2 var(--font-ui);
 }
-.act-search input::placeholder { color: var(--faint); }
+.act-search input::placeholder { color: var(--muted); }
 .act-search input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; background: var(--raised); }
 
 .act-list { list-style: none; margin: 0; padding: 0; display: grid; min-width: 0; }
@@ -123,7 +124,7 @@
 }
 .act-tl-step.done .act-tl-mark { background: var(--success); border-color: var(--success); color: var(--raised); }
 .act-tl-step.current .act-tl-mark { border: 2px solid var(--primary); color: var(--primary); }
-.act-tl-step.skipped .act-tl-mark { border-style: dashed; color: var(--faint); }
+.act-tl-step.skipped .act-tl-mark { border-style: dashed; color: var(--muted); }
 .act-tl-body { display: grid; gap: 4px; min-width: 0; }
 .act-tl-body b { font: 600 15px/1.3 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
 .act-tl-step.todo .act-tl-body b, .act-tl-step.skipped .act-tl-body b { color: var(--muted); font-weight: 500; }
