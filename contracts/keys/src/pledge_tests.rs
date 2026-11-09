@@ -82,7 +82,7 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
 }
 #[test] fn all_four_pledge_phases_block_title_listing_approval_and_admission() {
     let mut c=setup(); open(&mut c); let mut l=c.get_loan("k1".into()).unwrap();
-    for state in [LoanState::Freezing,LoanState::Offered,LoanState::Active,LoanState::UnlockPending] {
+    for state in [LoanState::Freezing,LoanState::Offered,LoanState::DisbursementPending,LoanState::Active,LoanState::UnlockPending] {
         l.state=state; loans().insert(&"k1".into(),&l);
         ctx("alice.near",1,NOW); rejected(||c.nft_transfer(a("bob.near"),"k1".into(),None,None));
         ctx("alice.near",1,NOW); rejected(||{let _=c.nft_transfer_call(a("bob.near"),"k1".into(),None,None,"".into());});
@@ -122,17 +122,37 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
     assert!(!c.get_control_state("k1".into()).transfer_pending);
     assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
 }
-#[test] fn funded_principal_is_atomic_backed_credit_and_debt_without_push_callback() {let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
- assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
- assert_eq!(c.get_payout_credit(a("alice.near")).0,N);assert_eq!(config_required().user_liabilities.0,N+LOAN_STORAGE_DEPOSIT);
- assert!(get_created_receipts().is_empty(),"funding is atomic credit, not a push");
- result(PromiseResult::Failed,NOW);
+#[test] fn funded_principal_is_backed_credit_without_debt_clock_before_native_cashout() {
+ let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
+ assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::DisbursementPending);
+ assert_eq!(c.get_loan("k1".into()).unwrap().due_ns.0,0);
  assert_eq!(c.get_payout_credit(a("alice.near")).0,N);
+ assert_eq!(config_required().user_liabilities.0,N+LOAN_STORAGE_DEPOSIT);
+ assert!(get_created_receipts().is_empty());
+ ctx("lender.near",1,NOW+31*86400*SECOND);rejected(||{let _=c.claim_default("k1".into(),U64(1),a("lender.near"));});
 }
-#[test] fn retired_principal_callback_cannot_erase_debt_or_mint_lender_credit() {let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
- result(PromiseResult::Failed,NOW);
- assert_eq!(c.get_payout_credit(a("lender.near")).0,0);assert_eq!(c.get_payout_credit(a("alice.near")).0,N);
- assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+#[test] fn principal_clock_waits_for_real_native_success_and_failed_cashout_can_retry() {
+ let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
+ ctx("alice.near",1,NOW+600*SECOND);let _=c.claim_payout();let old=c.get_pending_payout(a("alice.near")).unwrap();
+ result(PromiseResult::Failed,NOW+700*SECOND);assert!(!c.on_payout(a("alice.near"),old.nonce));
+ assert_eq!(c.get_loan("k1".into()).unwrap().due_ns.0,0);
+ assert_eq!(c.get_payout_credit(a("alice.near")).0,N);
+ ctx("alice.near",1,NOW+800*SECOND);let _=c.claim_payout();let pending=c.get_pending_payout(a("alice.near")).unwrap();
+ result(PromiseResult::Successful(vec![]),NOW+900*SECOND);assert!(!c.on_payout(a("alice.near"),old.nonce));
+ assert!(c.on_payout(a("alice.near"),pending.nonce));
+ let l=c.get_loan("k1".into()).unwrap();assert_eq!(l.state,LoanState::Active);assert_eq!(l.due_ns.0,NOW+960*SECOND);
+ assert!(c.get_principal_delivery(a("alice.near")).is_none());
+ assert!(!c.on_payout(a("alice.near"),pending.nonce));
+}
+#[test] fn unrelated_earlier_cashout_does_not_activate_principal_and_unknown_stays_frozen() {
+ let mut c=setup();ctx("alice.near",0,NOW);add_credit(&a("alice.near"),N/100);let mut cfg=config_required();change_liabilities(&mut cfg,N/100,0);save_config(&cfg);
+ ctx("alice.near",1,NOW);let _=c.claim_payout();let unrelated=c.get_pending_payout(a("alice.near")).unwrap();
+ open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
+ result(PromiseResult::Successful(vec![]),NOW+100*SECOND);assert!(c.on_payout(a("alice.near"),unrelated.nonce));assert_eq!(c.get_loan("k1".into()).unwrap().due_ns.0,0);
+ ctx("alice.near",1,NOW+200*SECOND);let _=c.claim_payout();let pending=c.get_pending_payout(a("alice.near")).unwrap();
+ ctx("lender.near",1,NOW+40*86400*SECOND);rejected(||{let _=c.claim_default("k1".into(),U64(1),a("lender.near"));});
+ assert_eq!(c.get_pending_payout(a("alice.near")).unwrap(),pending);
+ assert_eq!(c.get_principal_delivery(a("alice.near")).unwrap().payout_nonce,Some(pending.nonce));
 }
 #[test] fn repaid_credit_remains_backed_across_failed_pull_payout_and_unlock() {
     let mut c=setup(); active(&mut c); ctx("alice.near",terms().repayment.0,NOW);
@@ -318,7 +338,7 @@ fn registration(c:&mut Contract)->U64 {
  assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
 }
 #[test]fn principal_credit_never_requires_a_delivery_oracle(){let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
- assert_eq!(c.get_payout_credit(a("alice.near")).0,N);assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+ assert_eq!(c.get_payout_credit(a("alice.near")).0,N);assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::DisbursementPending);
  result(PromiseResult::Successful(vec![]),NOW);assert_eq!(c.get_payout_credit(a("alice.near")).0,N);
 }
 #[test]fn principal_credit_cannot_be_reassigned_by_a_false_failure_claim(){let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
@@ -397,7 +417,7 @@ include!("pledge_review_round2_tests.rs");
  let mut c=setup();let limits=c.get_loan_limits();assert_eq!(limits.storage_bond.0,9*N/1000);
  assert_eq!(limits.min_duration_sec.0,1);assert_eq!(limits.max_duration_sec.0,30*86400);
  let mut t=terms();t.duration_sec=U64(7200);t.grace_sec=U64(900);
- ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW);let _=c.open_loan("k1".into(),t);settle_policy(&mut c,true,NOW);fund(&mut c);
+ ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW);let _=c.open_loan("k1".into(),t);settle_policy(&mut c,true,NOW);fund(&mut c);ctx("alice.near",1,NOW);let _=c.claim_payout();result(PromiseResult::Successful(vec![]),NOW);assert!(c.on_payout(a("alice.near"),config_required().next_payout_nonce));
  assert_eq!(c.get_loan("k1".into()).unwrap().due_ns.0,NOW+7200*SECOND);
  ctx("alice.near",terms().repayment.0,NOW+8100*SECOND);let _=c.repay_loan("k1".into(),U64(1));
  ctx("lender.near",1,NOW+8100*SECOND+1);rejected(||{let _=c.claim_default("k1".into(),U64(1),a("lender.near"));});
