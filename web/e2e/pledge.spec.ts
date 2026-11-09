@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { join } from "node:path";
 
-const SHOTS = process.env.PLEDGE_SHOTS || "/workspace/near_hackathon/shots_pledge";
+/** Local box can set PLEDGE_SHOTS=/workspace/near_hackathon/shots_pledge; CI uses test-results. */
+const SHOTS = process.env.PLEDGE_SHOTS || join(process.cwd(), "test-results", "pledge-shots");
 
 async function shot(page: import("@playwright/test").Page, name: string) {
   mkdirSync(SHOTS, { recursive: true });
@@ -22,7 +23,6 @@ test.describe("Pledge dashboard", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/Borrow NEAR without publishing/);
     await expect(page.getByTestId("pledge-caps")).toContainText(/exit caps/);
     await expect(page.getByTestId("pledge-float-key")).toBeVisible();
-    // No page scroll needed: document scrollHeight within viewport (+ small chrome slack).
     const metrics = await page.evaluate(() => {
       const el = document.scrollingElement || document.documentElement;
       return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth };
