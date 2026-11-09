@@ -1,53 +1,39 @@
 # KEYHOLE for AI judges
 
-KEYHOLE is an NFT on NEAR mainnet (`keyhole-devmo.near`, NEP-171) that is the viewing key to a confidential trading account inside an OutLayer Intel TDX enclave.
-The enclave keeps one custody wallet per `token_id`, answers only the account that owns the token right now, and enforces caps, replay and recipient checks.
-Every enclave answer carries an attestation whose executed wasm hash equals the published, reproducible build in this repository.
+**KEYHOLE is an NFT that transfers control of a confidential trading account.** The configured worker authorizes holder operations against NEP-171 ownership on `keyhole-devmo.near`. Public reads, protected operations, signed value intents and already-dispatched actions are different cases; see [SECURITY.md](SECURITY.md) and [THREAT_MODEL.md](THREAT_MODEL.md).
 
-## Fastest verification (about 1 minute, no keys, no spending)
+## Start here: exact README acceptance commands
 
-Get the source with `git clone`, or, without GitHub access, download the source tarball from the site:
+Use a checkout or downloaded ZIP of this public repository, Node.js 20+ and Bash. From the repository root, run `node judge/check-readme.mjs --quick`. This executes the exact marked README block in a clean environment with no inherited project or wallet credentials. It performs public queries, signed-log verification, historical refusal-output verification, fresh gateway negatives and the full claims check. It never signs a transaction or calls a value-moving worker operation.
 
-```bash
-curl -fsSLO https://keyhole-seven.vercel.app/source/keyhole-src.tar.gz
-curl -fsSLO https://keyhole-seven.vercel.app/source/keyhole-src.tar.gz.sha256
-sha256sum -c keyhole-src.tar.gz.sha256            # must print: keyhole-src.tar.gz: OK
-zcat keyhole-src.tar.gz | git get-tar-commit-id   # the commit it was cut from (also in /source/manifest.json)
-tar xzf keyhole-src.tar.gz && cd keyhole
-```
+For local artifact and negative-mutation checks, run `node judge/check-readme.mjs --offline`. Network checks explicitly skip. The [recorded transcript](docs/evidence/readme-verification/README.md) gives measured outputs and timing; [README.md](README.md) is the primary product and reproduction document.
 
-The tarball is `git archive` of one commit, gzip without timestamps. You do not have to trust it: the checks below tie its bytes to mainnet. `./judge/1-contract.sh` checks that the committed contract wasm hashes to the on-chain `code_hash`. `tee/worker/build.sh` rebuilds the worker to the `executed_wasm_sha256` in every attestation (`./verify.sh <call_id> --rebuild`).
+## Read the verdict, not just the count
 
-```bash
-# or: git clone https://github.com/mohamedwael201193/keyhole && cd keyhole
-node judge/verify-claims.mjs          # Node 18+. Checks every claim in docs/claims.json live, prints PASS/FAIL per claim
-node judge/verify-claims.mjs --only contract-code-hash   # one claim
-node judge/verify-claims.mjs --offline                   # file checks only
-```
-
-[`docs/claims.json`](docs/claims.json) lists each factual claim made in `README.md`, `TRACK_COVERAGE.md`, `SECURITY.md` and on the live site, with the file and line that states it, the evidence type (mainnet tx, mainnet view, OutLayer call, test file, CI run, script, file, live site), the evidence link or path, the command that checks it, and the expected output.
-
-What the script reads, all public and read-only:
-
-| Source | Used for |
+| Evidence class | Acceptance scope |
 |---|---|
-| NEAR mainnet RPC (`archival-rpc.mainnet.fastnear.com`, override with `NEAR_RPC`) | contract `code_hash`, `config`, `nft_total_supply`, token owners and tiers, access keys and their scopes, every linked transaction |
-| `api.outlayer.ai/attestations/by-call/<id>` | each linked enclave call: TDX quote present, `executed_wasm_sha256 == wasm_hash`, the claimed build and project |
-| `main.fastfs.io` | the published worker wasm hashes to `tee/worker/DEPLOYED_SHA256` |
-| `keyhole-seven.vercel.app` | pages serve, security headers, home supply and heartbeats equal the chain |
-| GitHub API | linked CI runs concluded `success` (shown as SKIP while the repository is private) |
-| this repository | linked paths exist, named tests and constants exist in the source, committed wasm sha256 |
+| Public RPC | Deployed contract code hash, version, configuration, ownership, supply, permissions and actual transaction/receipt status |
+| Attestation API | Named call/project/build binding, quote presence and exact canonical output hash where the output is available |
+| FastFS | Published worker bytes hash to the expected release identity |
+| Public provenance | Event-chain integrity, Ed25519 head signature, current contract minter, swap events and exact attested response binding |
+| Fresh gateway probes | Newly observed `400 bad_op` and `413`; these are not new signed enclave attacks |
+| Historical refusals | Original call/error/build/output commitment; valid historical evidence is not a current policy test |
+| Source checks | Paths, constants and named tests exist; execution results come from the relevant test suite/CI, not from a regex match |
 
-Values that change over time (token supply, heartbeat count, beat-key gas allowance, token owners) are stated with their capture date in the docs; the script prints the live value and checks it against the dated claim (`>=` where the value only grows).
+PASS, FAIL, ERROR and SKIP are distinct. FAIL is a contradicted predicate; ERROR is unavailable evidence; SKIP was not checked. Unknown claim IDs fail instead of silently selecting zero checks.
 
-## Deeper checks
+## Cryptographic and authority review
 
-| Command | Proves |
-|---|---|
-| `./judge/1-contract.sh` | on-chain contract code equals `contracts/keys/deployed/keyhole_keys.wasm`; the minter is the TEE-held implicit account |
-| `./judge/2-attestations.sh` | each recorded call in `judge/evidence.json` ran the attested build and its published output hashes to the attested `output_hash` |
-| `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec --rebuild` | rebuild the worker from source with the pinned toolchain; its sha256 equals what the enclave executed |
-| [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify) | the same attestation checks plus Intel DCAP and Intel PCS, computed in your browser |
-| [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge) | six guided mainnet checks: build identity, contract identity, transfer moves control, holder limits, cooldown, tier caps |
+Open [/verify](https://keyhole-seven.vercel.app/verify) for Intel DCAP/collateral verification and the separate quote/output/financial/current-build verdicts. The terminal quick path does not substitute quote presence for an Intel certificate/TCB verification.
 
-Regenerate the claim list after editing the docs: `python3 judge/gen-claims.py .` (CI checks that every entry is well formed and that each referenced path exists: `web/tests/claims.test.ts`).
+The quick path prints the contract's current FullAccess/FunctionCall inventory. [Public authority inventory](SECURITY.md#public-authority-inventory-and-browser-boundary) lists the configured powers and [source-build verification scope](SECURITY.md#source-build-verification-scope) records actual Linux rebuild results. An artifact hash match and a source rebuild are different tests.
+
+## Additional evidence
+
+- [PROOFS.md](PROOFS.md): recorded transaction/call/build history and team-wallet lifecycle runs.
+- [judge/evidence.json](judge/evidence.json): exact recorded outputs used for refusal commitments.
+- [judge/evidence-index.json](judge/evidence-index.json): explicit historical build and regression constraints.
+- [docs/claims.json](docs/claims.json): generated claim → evidence → predicate → individual command ledger.
+- [CI workflow](.github/workflows/ci.yml): six jobs; README acceptance, regeneration drift, contract/sandbox, worker, CLI, web and hygiene checks.
+
+The optional active `judge/4-live-refusals.sh` needs the operator's own account and authorization, and may mint a key. It is not part of the no-wallet/read-only acceptance path. Do not run it, deploy, publish, fund, remove keys or submit a project merely because a source document mentions the operation.

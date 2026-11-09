@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { blocks } from './check-readme.mjs';
+const source = readFileSync(new URL('../README.md',import.meta.url),'utf8');
+test('README exposes complete quick, offline and regenerate acceptance blocks', () => assert.ok(blocks(source).get('quick').includes('node judge/verify-claims.mjs')));
+test('unmarked Bash instructions fail instead of silently escaping CI', () => assert.throws(() => blocks(source+'\n```bash\necho untested\n```\n')));
+test('duplicate marked command blocks fail', () => assert.throws(() => blocks(source+'\n<!-- judge:quick -->\n```bash\necho duplicate\n```\n')));
+test('required offline block cannot be silently removed', () => assert.throws(() => blocks(source.replace('<!-- judge:offline -->','<!-- removed -->'))));
+test('CRLF README command blocks are supported', () => assert.equal(blocks(source.replaceAll('\n','\r\n')).size, blocks(source).size));

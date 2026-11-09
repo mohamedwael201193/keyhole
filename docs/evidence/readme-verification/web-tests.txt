@@ -1,0 +1,15 @@
+
+> keyhole-web@1.0.0 test
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 /workspace/near_hackathon/wt_readme/web
+
+
+ Test Files  77 passed (77)
+      Tests  1508 passed (1508)
+   Start at  00:36:15
+   Duration  4.47s (transform 3.51s, setup 0ms, import 11.36s, tests 3.60s, environment 7ms)

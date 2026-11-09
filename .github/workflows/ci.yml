@@ -95,8 +95,16 @@ jobs:
         with: { node-version: 20 }
       - name: identity.json is the single source of build identities (generated files in sync, wasm sha + base58 code hash agree)
         run: node scripts/gen-identity.mjs --check
-      - name: claims.json file checks (paths, named tests, constants, committed wasm)
-        run: node judge/verify-claims.mjs --offline
+      - name: README verifier rejects tampered evidence and untested command blocks
+        run: node --test judge/readme-verify.test.mjs judge/check-readme.test.mjs
+      - name: README offline copy-paste commands (clean environment)
+        run: node judge/check-readme.mjs --offline
+      - name: README public mainnet copy-paste commands (clean environment, no secrets)
+        run: node judge/check-readme.mjs --quick
+      - name: claim ledger regenerates without drift
+        run: |
+          node judge/check-readme.mjs --generate
+          git diff --exit-code -- docs/claims.json
   hygiene:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository

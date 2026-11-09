@@ -3,9 +3,14 @@
 # usage: python3 judge/gen-claims.py .
 import re, json, os, sys
 R = sys.argv[1] if len(sys.argv) > 1 else "."; os.chdir(R)
-DOCS = ["README.md", "TRACK_COVERAGE.md", "SECURITY.md"]
+DOCS = ["README.md", "PROOFS.md", "TRACK_COVERAGE.md", "SECURITY.md"]
 C = []; seen = set()
 SITE = "https://keyhole-seven.vercel.app"
+EXPECTED_FAILED_TXS = {
+    "9kmr1tsbbXwdr3y8VcwmBGW5zE44MCcwsSANa7S8C4LY",  # second migration refused
+    "H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV",  # one-key guard refused
+}
+
 def add(id, claim, where, etype, evidence, check, expected, verify=None):
     if id in seen: return
     seen.add(id)
@@ -13,8 +18,9 @@ def add(id, claim, where, etype, evidence, check, expected, verify=None):
                   check=check, expected=expected,
                   verify=verify or f"node judge/verify-claims.mjs --only {id}"))
 def where(doc, needle):
-    for i, l in enumerate(open(doc, encoding="utf8"), 1):
-        if needle in l: return f"{doc}:{i}"
+    for source in [doc] + [d for d in DOCS if d != doc]:
+        for i, l in enumerate(open(source, encoding="utf8"), 1):
+            if needle in l: return f"{source}:{i}"
     raise SystemExit(f"not found in {doc}: {needle}")
 ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
@@ -37,12 +43,13 @@ add("metadata-symbol", "NEP-177 metadata is KEYHOLE / KEY", where(RD,"(`KEYHOLE`
     {"type":"view","method":"nft_metadata","args":{},"path":"symbol","op":"eq","value":"KEY"}, "symbol == KEY")
 add("metadata-name", "NEP-177 metadata name is KEYHOLE", where(RD,"(`KEYHOLE` / `KEY`)"), "mainnet view", "nft_metadata()",
     {"type":"view","method":"nft_metadata","args":{},"path":"name","op":"eq","value":"KEYHOLE"}, "name == KEYHOLE")
-toks = {"0":"keyhole-devmo.near","k857b6b68facc0f94":"a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da","k5f4750858f328940":"0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228","k0642e7964b2fb515":"476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8","k102a806df6867547":"0xf76e6b0920e9332ff4410f6dd53f01722abc71a3"}
+toks = {"0":"keyhole-devmo.near","k857b6b68facc0f94":"a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da","k5f4750858f328940":"3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447","k0642e7964b2fb515":"476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8","k102a806df6867547":"0xf76e6b0920e9332ff4410f6dd53f01722abc71a3"}
 for t,o in toks.items():
     add(f"token-{t}-owner", f"Token {t} is held by {o} (table read {'2026-11-07' if t == 'k5f4750858f328940' else '2026-11-03'})", where(RD,f"| `{t}`"), "mainnet view", f"nft_token({t})",
         {"type":"view","method":"nft_token","args":{"token_id":t},"path":"owner_id","op":"eq","value":o}, f"owner_id == {o}")
-    add(f"token-{t}-tier", f"Token {t} is tier 1", where(RD,f"| `{t}`"), "mainnet view", f"nft_tier({t})",
-        {"type":"view","method":"nft_tier","args":{"token_id":t},"op":"eq","value":1}, "1")
+    tier = 2 if t == "k5f4750858f328940" else 1
+    add(f"token-{t}-tier", f"Token {t} is tier {tier}", where(RD,f"| `{t}`"), "mainnet view", f"nft_tier({t})",
+        {"type":"view","method":"nft_tier","args":{"token_id":t},"op":"eq","value":tier}, str(tier))
 add("token-k102-media", "Token k102a806df6867547 (MetaMask mint) carries media on-chain", where(RD,"carries `media` on-chain"), "mainnet view", "nft_token(k102a806df6867547)",
     {"type":"view","method":"nft_token","args":{"token_id":"k102a806df6867547"},"path":"metadata.media","op":"nonempty"}, "metadata.media is a non-empty URL")
 for t in ["0","k0642e7964b2fb515","k5f4750858f328940","k857b6b68facc0f94"]:
@@ -99,9 +106,9 @@ for d in DOCS:
 for d in DOCS:
     for i,l in enumerate(open(d,encoding="utf8"),1):
         for h in re.findall(r"nearblocks\.io/txns/([1-9A-HJ-NP-Za-km-z]{43,44})", l):
-            exp = "exists" if "revert" in l else "success"
-            add(f"tx-{h[:8]}", f"Mainnet transaction {h[:8]}… linked from {d} ({'expected revert' if exp=='exists' else 'succeeded'})", f"{d}:{i}", "mainnet tx", f"https://nearblocks.io/txns/{h}",
-                {"type":"tx","hash":h,"expect":exp}, "transaction found on mainnet" + ("" if exp=="exists" else " with no failed receipt"))
+            exp = "failure" if h in EXPECTED_FAILED_TXS or "revert" in l.lower() else "success"
+            add(f"tx-{h[:8]}", f"Mainnet transaction {h[:8]}… linked from {d} ({'expected refusal' if exp=='failure' else 'succeeded'})", f"{d}:{i}", "mainnet tx", f"https://nearblocks.io/txns/{h}",
+                {"type":"tx","hash":h,"expect":exp}, "transaction found on mainnet" + (" with a failed receipt (expected refusal)" if exp=="failure" else " with no failed receipt"))
 add("tx-7P9VFx4p", "Chain Signatures: one real MPC signature for the key's derived address (v1.signer.sign tx 7P9VFx4p…)", where(TC,"7P9VFx4p"), "mainnet tx", "https://nearblocks.io/txns/7P9VFx4pz5oxyXpXkyDVE6SheDuTqHgQcEM2vgKFUAfK",
     {"type":"tx","hash":"7P9VFx4pz5oxyXpXkyDVE6SheDuTqHgQcEM2vgKFUAfK","expect":"success","receiver":"v1.signer"}, "tx succeeded, a receipt executed on v1.signer")
 # ---------------- accounts ----------------
@@ -119,7 +126,7 @@ G("src-cooldown","10-minute withdraw cooldown after a transfer (TRANSFER_COOLDOW
 G("src-ai-model","/ask uses Qwen/Qwen3.6-35B-A3B-FP8",where(RD,"`Qwen/Qwen3.6-35B-A3B-FP8`"),"web/lib/ai.ts",r"Qwen/Qwen3\.6-35B-A3B-FP8","model id found")
 G("src-gw-8kb","Gateway rejects bodies over 8 KB with 413",where(RD,"bodies over 8 KB are rejected with 413"),"web/app/api/worker/route.ts",r"len > 8192.*status: 413","8192 / 413")
 G("src-gw-ip","Gateway allows 20 calls a minute per IP",where(RD,"Each IP gets 20 calls a minute"),"web/app/api/worker/route.ts",r"createLimiter\(20, 60_000\)","20 per 60 s")
-G("src-gw-allow","Gateway allowlist: info, provenance, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"\]',"exact list")
+G("src-gw-allow","Gateway allowlist: info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "record", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"\]',"exact list")
 G("src-gw-nocopy","copy and sweep_minter are not in the gateway allowlist (bad_op)",where(RD,"Both refusals are `bad_op`"),"web/lib/gateway.ts",r'code: "bad_op"',"bad_op for any other op")
 G("src-limits-t1","Tier 1: $1 per trade, $5 per day, 6/min",where(RD,"| 1 Bronze | $1 | $5 | 6 |"),"docs/evidence/mainnet-e2e/01_info.json",r'"daily_usd_micro": ?5000000',"in attested info")
 G("src-global","Global limits 120/min and 25 free mints per day",where(RD,"Global limits: 120 requests per minute and 25 free mints per day"),"docs/evidence/mainnet-e2e/01_info.json",r'"global_mints_per_day": ?25',"25 in attested info")
@@ -165,14 +172,13 @@ add("site-ar-redirect","/ar/… redirects to the same path without the prefix an
 for h,v in [("strict-transport-security","max-age=63072000; includeSubDomains; preload"),("x-content-type-options","nosniff"),("content-security-policy","frame-ancestors 'none'"),("referrer-policy","strict-origin-when-cross-origin"),("permissions-policy","camera=()")]:
     add(f"site-hdr-{h}",f"Site sends {h}: …{v}",where(RD,"CSP, HSTS (2 years, preload)"),"live site",SITE,{"type":"header","url":SITE+"/","header":h,"contains":v},f"{h} contains {v}","curl -sI "+SITE)
 add("site-supply-live","Home page key count equals nft_total_supply minus the contract-held test key",where(RD,"The home page key count is `nft_total_supply` minus the test key the contract holds"),"live site",SITE,{"type":"site_vs_chain","field":"supply","method":"nft_total_supply"},"home count == total - contract-held")
-add("site-beats-live","Home page heartbeats equal config.beats",where(RD,"`nft_total_supply`, `config`"),"live site",SITE,{"type":"site_vs_chain","field":"beats","method":"config"},"home beats == chain beats")
 add("site-hash","Home page names the live build d337e822",where(RD,"KEYHOLE worker d337e822"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"d337e822"},"home carries d337e822")
 import glob
 for f in sorted(glob.glob("web/app/**/*.tsx",recursive=True)+glob.glob("web/lib/**/*.ts",recursive=True)+glob.glob("web/components/**/*.tsx",recursive=True)+glob.glob("docs/evidence/**/README.md",recursive=True)):
     for i,l in enumerate(open(f,encoding="utf8"),1):
         for h in re.findall(r'(?:txns/|tx\(")([1-9A-HJ-NP-Za-km-z]{43,44})', l):
-            exp = "exists" if "revert" in l.lower() else "success"
-            add(f"tx-{h[:8]}", f"Mainnet transaction {h[:8]}… shown in {f}", f"{f}:{i}", "mainnet tx", f"https://nearblocks.io/txns/{h}", {"type":"tx","hash":h,"expect":exp}, "transaction found on mainnet" + ("" if exp=="exists" else " with no failed receipt"))
+            exp = "failure" if h in EXPECTED_FAILED_TXS or "revert" in l.lower() else "success"
+            add(f"tx-{h[:8]}", f"Mainnet transaction {h[:8]}… shown in {f}", f"{f}:{i}", "mainnet tx", f"https://nearblocks.io/txns/{h}", {"type":"tx","hash":h,"expect":exp}, "transaction found on mainnet" + (" with a failed receipt (expected refusal)" if exp=="failure" else " with no failed receipt"))
         if f.startswith("web/"):
             for c in re.findall(r"\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b", l):
                 add(f"att-{c[:8]}", f"Attested call {c[:8]} shown on the site ({f})", f"{f}:{i}", "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}", {"type":"attestation","call":c}, "attestation exists, executed == wasm_hash")
@@ -183,5 +189,10 @@ for d in DOCS:
         for r in re.findall(r"actions/runs/(\d+)", l):
             add(f"ci-{r}", f"CI run {r} concluded success", f"{d}:{i}", "CI run", f"https://github.com/mohamedwael201193/keyhole/actions/runs/{r}",
                 {"type":"ci_run","repo":"mohamedwael201193/keyhole","run":r}, "conclusion == success")
+# Preserve explicit historical build constraints and negative-test pointers, not
+# only links that happen to appear in the concise README.
+for c in json.load(open("judge/evidence-index.json"))["claims"]:
+    add(c["id"], c["claim"], where("judge/evidence-index.json", '"id": "'+c["id"]+'"'),
+        c["evidence_type"], c["evidence"], c["check"], c["expected"], c["verify"])
 json.dump({"version":1,"generated":"see git log","repo":"mohamedwael201193/keyhole","rpc":"https://archival-rpc.mainnet.fastnear.com","claims":C}, open("docs/claims.json","w"), indent=1, ensure_ascii=False)
 print(len(C))

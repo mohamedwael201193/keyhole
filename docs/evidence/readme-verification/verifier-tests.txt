@@ -1,0 +1,125 @@
+TAP version 13
+# Subtest: README exposes complete quick, offline and regenerate acceptance blocks
+ok 1 - README exposes complete quick, offline and regenerate acceptance blocks
+  ---
+  duration_ms: 1.209028
+  ...
+# Subtest: unmarked Bash instructions fail instead of silently escaping CI
+ok 2 - unmarked Bash instructions fail instead of silently escaping CI
+  ---
+  duration_ms: 1.108218
+  ...
+# Subtest: duplicate marked command blocks fail
+ok 3 - duplicate marked command blocks fail
+  ---
+  duration_ms: 0.275412
+  ...
+# Subtest: required offline block cannot be silently removed
+ok 4 - required offline block cannot be silently removed
+  ---
+  duration_ms: 0.286248
+  ...
+# Subtest: CRLF README command blocks are supported
+ok 5 - CRLF README command blocks are supported
+  ---
+  duration_ms: 0.189034
+  ...
+# Subtest: real public swap log verifies 32 signed events and 10 swaps
+ok 6 - real public swap log verifies 32 signed events and 10 swaps
+  ---
+  duration_ms: 4.85341
+  ...
+# Subtest: rejects owner tamper
+ok 7 - rejects owner tamper
+  ---
+  duration_ms: 1.410921
+  ...
+# Subtest: rejects swap detail commitment tamper
+ok 8 - rejects swap detail commitment tamper
+  ---
+  duration_ms: 0.438643
+  ...
+# Subtest: rejects missing signature
+ok 9 - rejects missing signature
+  ---
+  duration_ms: 0.206153
+  ...
+# Subtest: rejects wrong signature
+ok 10 - rejects wrong signature
+  ---
+  duration_ms: 0.799969
+  ...
+# Subtest: rejects wrong token
+ok 11 - rejects wrong token
+  ---
+  duration_ms: 0.322495
+  ...
+# Subtest: rejects missing events
+ok 12 - rejects missing events
+  ---
+  duration_ms: 0.195631
+  ...
+# Subtest: rejects reordered events
+ok 13 - rejects reordered events
+  ---
+  duration_ms: 0.340551
+  ...
+# Subtest: rejects truncated log
+ok 14 - rejects truncated log
+  ---
+  duration_ms: 0.620654
+  ...
+# Subtest: rejects edited head
+ok 15 - rejects edited head
+  ---
+  duration_ms: 0.662239
+  ...
+# Subtest: rejects a valid log from a signer other than the current minter
+ok 16 - rejects a valid log from a signer other than the current minter
+  ---
+  duration_ms: 0.2178
+  ...
+# Subtest: canonical JSON recursively sorts keys, preserves array order
+ok 17 - canonical JSON recursively sorts keys, preserves array order
+  ---
+  duration_ms: 0.163302
+  ...
+# Subtest: attestation checks exact bytes and expected build
+ok 18 - attestation checks exact bytes and expected build
+  ---
+  duration_ms: 1.378137
+  ...
+# Subtest: attestation rejects wrong project
+ok 19 - attestation rejects wrong project
+  ---
+  duration_ms: 0.281737
+  ...
+# Subtest: attestation rejects wrong registered build
+ok 20 - attestation rejects wrong registered build
+  ---
+  duration_ms: 0.134528
+  ...
+# Subtest: attestation rejects absent quote
+ok 21 - attestation rejects absent quote
+  ---
+  duration_ms: 0.173963
+  ...
+# Subtest: attestation rejects edited output hash
+ok 22 - attestation rejects edited output hash
+  ---
+  duration_ms: 0.545734
+  ...
+# Subtest: attestation rejects an unexpected executed build even if internally consistent
+ok 23 - attestation rejects an unexpected executed build even if internally consistent
+  ---
+  duration_ms: 0.320802
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 138.884495

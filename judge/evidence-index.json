@@ -1,0 +1,909 @@
+{
+  "description": "Explicit historical build, receipt and regression checks retained when the README was condensed. Static evidence inputs; generated claims are still derived by gen-claims.py.",
+  "claims": [
+    {
+      "id": "att-c96f3729-build",
+      "claim": "E2E step call c96f3729 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/c96f3729-c266-4fec-a0df-73770915ab7a",
+      "check": {
+        "type": "attestation",
+        "call": "c96f3729-c266-4fec-a0df-73770915ab7a",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh c96f3729-c266-4fec-a0df-73770915ab7a"
+    },
+    {
+      "id": "att-a62c9d76-build",
+      "claim": "E2E step call a62c9d76 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/a62c9d76-81b2-47e8-865d-c2d1714d507e",
+      "check": {
+        "type": "attestation",
+        "call": "a62c9d76-81b2-47e8-865d-c2d1714d507e",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh a62c9d76-81b2-47e8-865d-c2d1714d507e"
+    },
+    {
+      "id": "att-a1bf58e8-build",
+      "claim": "E2E step call a1bf58e8 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/a1bf58e8-d3ba-4a77-ae86-9e31fe5b8523",
+      "check": {
+        "type": "attestation",
+        "call": "a1bf58e8-d3ba-4a77-ae86-9e31fe5b8523",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh a1bf58e8-d3ba-4a77-ae86-9e31fe5b8523"
+    },
+    {
+      "id": "att-44c12951-build",
+      "claim": "E2E step call 44c12951 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/44c12951-5cda-48b1-beba-0632e70dc98d",
+      "check": {
+        "type": "attestation",
+        "call": "44c12951-5cda-48b1-beba-0632e70dc98d",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 44c12951-5cda-48b1-beba-0632e70dc98d"
+    },
+    {
+      "id": "att-a523a6ea-build",
+      "claim": "E2E step call a523a6ea attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/a523a6ea-56ca-466d-99c3-7f7d4dccd3ad",
+      "check": {
+        "type": "attestation",
+        "call": "a523a6ea-56ca-466d-99c3-7f7d4dccd3ad",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh a523a6ea-56ca-466d-99c3-7f7d4dccd3ad"
+    },
+    {
+      "id": "att-9374b0ac-build",
+      "claim": "E2E step call 9374b0ac attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/9374b0ac-dcdf-4416-b162-2ebc8c13483d",
+      "check": {
+        "type": "attestation",
+        "call": "9374b0ac-dcdf-4416-b162-2ebc8c13483d",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 9374b0ac-dcdf-4416-b162-2ebc8c13483d"
+    },
+    {
+      "id": "att-a02613a2-build",
+      "claim": "E2E step call a02613a2 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533",
+      "check": {
+        "type": "attestation",
+        "call": "a02613a2-d503-45e2-83b8-ef71927c2533",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh a02613a2-d503-45e2-83b8-ef71927c2533"
+    },
+    {
+      "id": "att-85582544-build",
+      "claim": "E2E step call 85582544 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/85582544-8e08-4c9f-b3f0-ecad128201ab",
+      "check": {
+        "type": "attestation",
+        "call": "85582544-8e08-4c9f-b3f0-ecad128201ab",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 85582544-8e08-4c9f-b3f0-ecad128201ab"
+    },
+    {
+      "id": "att-ac289f04-build",
+      "claim": "E2E step call ac289f04 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab",
+      "check": {
+        "type": "attestation",
+        "call": "ac289f04-0df8-4161-9123-e872ab3b75ab",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh ac289f04-0df8-4161-9123-e872ab3b75ab"
+    },
+    {
+      "id": "att-b9c8cb4f-build",
+      "claim": "E2E step call b9c8cb4f attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/b9c8cb4f-e3aa-480f-bb47-70fc30a96d67",
+      "check": {
+        "type": "attestation",
+        "call": "b9c8cb4f-e3aa-480f-bb47-70fc30a96d67",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh b9c8cb4f-e3aa-480f-bb47-70fc30a96d67"
+    },
+    {
+      "id": "att-942b4cff-build",
+      "claim": "E2E step call 942b4cff attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/942b4cff-23c9-4e4d-8ebc-79bfa01cd029",
+      "check": {
+        "type": "attestation",
+        "call": "942b4cff-23c9-4e4d-8ebc-79bfa01cd029",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 942b4cff-23c9-4e4d-8ebc-79bfa01cd029"
+    },
+    {
+      "id": "att-7a703e8f-build",
+      "claim": "E2E step call 7a703e8f attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/7a703e8f-2678-4978-b6ce-4d291828141d",
+      "check": {
+        "type": "attestation",
+        "call": "7a703e8f-2678-4978-b6ce-4d291828141d",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 7a703e8f-2678-4978-b6ce-4d291828141d"
+    },
+    {
+      "id": "att-e7ac0627-build",
+      "claim": "E2E step call e7ac0627 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/e7ac0627-be6d-41e9-95d0-71dcc59aed43",
+      "check": {
+        "type": "attestation",
+        "call": "e7ac0627-be6d-41e9-95d0-71dcc59aed43",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh e7ac0627-be6d-41e9-95d0-71dcc59aed43"
+    },
+    {
+      "id": "att-750defed-build",
+      "claim": "E2E step call 750defed attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/750defed-2267-45b1-8a8c-74b528aa30ee",
+      "check": {
+        "type": "attestation",
+        "call": "750defed-2267-45b1-8a8c-74b528aa30ee",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 750defed-2267-45b1-8a8c-74b528aa30ee"
+    },
+    {
+      "id": "att-a516a457-build",
+      "claim": "E2E step call a516a457 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/a516a457-0be8-4805-acb1-4f3a9ad30ad3",
+      "check": {
+        "type": "attestation",
+        "call": "a516a457-0be8-4805-acb1-4f3a9ad30ad3",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh a516a457-0be8-4805-acb1-4f3a9ad30ad3"
+    },
+    {
+      "id": "att-f0cf9778-build",
+      "claim": "E2E step call f0cf9778 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/f0cf9778-1874-4c0b-b1a5-091218f9fcc6",
+      "check": {
+        "type": "attestation",
+        "call": "f0cf9778-1874-4c0b-b1a5-091218f9fcc6",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh f0cf9778-1874-4c0b-b1a5-091218f9fcc6"
+    },
+    {
+      "id": "att-d892ac43-build",
+      "claim": "E2E step call d892ac43 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd",
+      "check": {
+        "type": "attestation",
+        "call": "d892ac43-b786-4d5b-909a-764b6c92f6fd",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh d892ac43-b786-4d5b-909a-764b6c92f6fd"
+    },
+    {
+      "id": "att-1a88f79f-build",
+      "claim": "E2E step call 1a88f79f attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/1a88f79f-49dd-45fb-bcae-96b746f38423",
+      "check": {
+        "type": "attestation",
+        "call": "1a88f79f-49dd-45fb-bcae-96b746f38423",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 1a88f79f-49dd-45fb-bcae-96b746f38423"
+    },
+    {
+      "id": "att-6b992a3c-build",
+      "claim": "E2E step call 6b992a3c attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/6b992a3c-5909-4a75-a694-dd08918e33da",
+      "check": {
+        "type": "attestation",
+        "call": "6b992a3c-5909-4a75-a694-dd08918e33da",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 6b992a3c-5909-4a75-a694-dd08918e33da"
+    },
+    {
+      "id": "att-afc0f232-build",
+      "claim": "E2E step call afc0f232 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/afc0f232-7d93-4a0e-8768-f62f245c537e",
+      "check": {
+        "type": "attestation",
+        "call": "afc0f232-7d93-4a0e-8768-f62f245c537e",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh afc0f232-7d93-4a0e-8768-f62f245c537e"
+    },
+    {
+      "id": "att-a39fffd9-build",
+      "claim": "E2E step call a39fffd9 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/a39fffd9-201b-4af2-927f-94a90d54cbf5",
+      "check": {
+        "type": "attestation",
+        "call": "a39fffd9-201b-4af2-927f-94a90d54cbf5",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh a39fffd9-201b-4af2-927f-94a90d54cbf5"
+    },
+    {
+      "id": "att-3ef04098-build",
+      "claim": "E2E step call 3ef04098 attested to f13efe926132",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/3ef04098-f287-4527-a8f2-52511beaa9e3",
+      "check": {
+        "type": "attestation",
+        "call": "3ef04098-f287-4527-a8f2-52511beaa9e3",
+        "wasm_prefix": "f13efe926132"
+      },
+      "expected": "executed_wasm_sha256 starts f13efe926132",
+      "verify": "./verify.sh 3ef04098-f287-4527-a8f2-52511beaa9e3"
+    },
+    {
+      "id": "tx-krSpH895",
+      "claim": "Mainnet transaction krSpH895\u2026 linked from README.md (succeeded)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/krSpH895juhCnwP91CbXkePWEQvnu39fsnfJHGvmsee",
+      "check": {
+        "type": "tx",
+        "hash": "krSpH895juhCnwP91CbXkePWEQvnu39fsnfJHGvmsee",
+        "expect": "success"
+      },
+      "expected": "transaction found on mainnet with no failed receipt",
+      "verify": "node judge/verify-claims.mjs --only tx-krSpH895"
+    },
+    {
+      "id": "tx-A6E9JMRn",
+      "claim": "Mainnet transaction A6E9JMRn\u2026 linked from README.md (succeeded)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/A6E9JMRn4di5nYVgRRj4QsmWcNouuCQkDLEN2XLM6Hwn",
+      "check": {
+        "type": "tx",
+        "hash": "A6E9JMRn4di5nYVgRRj4QsmWcNouuCQkDLEN2XLM6Hwn",
+        "expect": "success"
+      },
+      "expected": "transaction found on mainnet with no failed receipt",
+      "verify": "node judge/verify-claims.mjs --only tx-A6E9JMRn"
+    },
+    {
+      "id": "tx-HZ3Srg1K",
+      "claim": "Mainnet transaction HZ3Srg1K\u2026 linked from README.md (succeeded)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/HZ3Srg1K2S2srBkBFTF6gGnTMdXYRdAjcgjooTwhv8eE",
+      "check": {
+        "type": "tx",
+        "hash": "HZ3Srg1K2S2srBkBFTF6gGnTMdXYRdAjcgjooTwhv8eE",
+        "expect": "success"
+      },
+      "expected": "transaction found on mainnet with no failed receipt",
+      "verify": "node judge/verify-claims.mjs --only tx-HZ3Srg1K"
+    },
+    {
+      "id": "tx-9pvby5e2",
+      "claim": "Mainnet transaction 9pvby5e2\u2026 linked from README.md (succeeded)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/9pvby5e2qFkHND3roKaaZvXtkD7wPu5rQjrqSBPSuExc",
+      "check": {
+        "type": "tx",
+        "hash": "9pvby5e2qFkHND3roKaaZvXtkD7wPu5rQjrqSBPSuExc",
+        "expect": "success"
+      },
+      "expected": "transaction found on mainnet with no failed receipt",
+      "verify": "node judge/verify-claims.mjs --only tx-9pvby5e2"
+    },
+    {
+      "id": "tx-8r5RMGJo",
+      "claim": "Mainnet transaction 8r5RMGJo\u2026 linked from README.md (expected revert)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x",
+      "check": {
+        "type": "tx",
+        "hash": "8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x",
+        "expect": "exists"
+      },
+      "expected": "transaction found on mainnet",
+      "verify": "node judge/verify-claims.mjs --only tx-8r5RMGJo"
+    },
+    {
+      "id": "tx-3PvLd4W1",
+      "claim": "Mainnet transaction 3PvLd4W1\u2026 linked from README.md (expected revert)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/3PvLd4W1yyjBkt2sfxZVkznuV4yZSndTRS5Cd8aYsmG2",
+      "check": {
+        "type": "tx",
+        "hash": "3PvLd4W1yyjBkt2sfxZVkznuV4yZSndTRS5Cd8aYsmG2",
+        "expect": "exists"
+      },
+      "expected": "transaction found on mainnet",
+      "verify": "node judge/verify-claims.mjs --only tx-3PvLd4W1"
+    },
+    {
+      "id": "tx-oGGRn6jW",
+      "claim": "Mainnet transaction oGGRn6jW\u2026 linked from README.md (expected revert)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF",
+      "check": {
+        "type": "tx",
+        "hash": "oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF",
+        "expect": "exists"
+      },
+      "expected": "transaction found on mainnet",
+      "verify": "node judge/verify-claims.mjs --only tx-oGGRn6jW"
+    },
+    {
+      "id": "tx-4Wz1EUh1",
+      "claim": "Mainnet transaction 4Wz1EUh1\u2026 linked from README.md (expected revert)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk",
+      "check": {
+        "type": "tx",
+        "hash": "4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk",
+        "expect": "exists"
+      },
+      "expected": "transaction found on mainnet",
+      "verify": "node judge/verify-claims.mjs --only tx-4Wz1EUh1"
+    },
+    {
+      "id": "tx-AvQNnkVt",
+      "claim": "Mainnet transaction AvQNnkVt\u2026 linked from README.md (expected revert)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ",
+      "check": {
+        "type": "tx",
+        "hash": "AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ",
+        "expect": "exists"
+      },
+      "expected": "transaction found on mainnet",
+      "verify": "node judge/verify-claims.mjs --only tx-AvQNnkVt"
+    },
+    {
+      "id": "tx-72P1YcuV",
+      "claim": "Mainnet transaction 72P1YcuV\u2026 linked from README.md (expected revert)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8",
+      "check": {
+        "type": "tx",
+        "hash": "72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8",
+        "expect": "exists"
+      },
+      "expected": "transaction found on mainnet",
+      "verify": "node judge/verify-claims.mjs --only tx-72P1YcuV"
+    },
+    {
+      "id": "tx-BLEWXFX8",
+      "claim": "Mainnet transaction BLEWXFX8\u2026 linked from README.md (succeeded)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/BLEWXFX8qdX8iAkytAT8pjYpY382PjzGP38S3vUMZPQx",
+      "check": {
+        "type": "tx",
+        "hash": "BLEWXFX8qdX8iAkytAT8pjYpY382PjzGP38S3vUMZPQx",
+        "expect": "success"
+      },
+      "expected": "transaction found on mainnet with no failed receipt",
+      "verify": "node judge/verify-claims.mjs --only tx-BLEWXFX8"
+    },
+    {
+      "id": "tx-ARt9BRAd",
+      "claim": "Mainnet transaction ARt9BRAd\u2026 linked from README.md (succeeded)",
+      "evidence_type": "mainnet tx",
+      "evidence": "https://nearblocks.io/txns/ARt9BRAdZDF3nipDD5swjTxL68Vt8uPEG9hQ4KvK8V7F",
+      "check": {
+        "type": "tx",
+        "hash": "ARt9BRAdZDF3nipDD5swjTxL68Vt8uPEG9hQ4KvK8V7F",
+        "expect": "success"
+      },
+      "expected": "transaction found on mainnet with no failed receipt",
+      "verify": "node judge/verify-claims.mjs --only tx-ARt9BRAd"
+    },
+    {
+      "id": "acct-015a025906a5",
+      "claim": "Account 015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443 holds a key (implicit account, exists once funded)",
+      "evidence_type": "mainnet view",
+      "evidence": "https://nearblocks.io/address/015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+      "check": {
+        "type": "holder",
+        "account": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443"
+      },
+      "expected": "nft_tokens_for_owner is non-empty",
+      "verify": "node judge/verify-claims.mjs --only acct-015a025906a5"
+    },
+    {
+      "id": "acct-0705fdc1581a",
+      "claim": "Account 0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228 holds a key (implicit account, exists once funded)",
+      "evidence_type": "mainnet view",
+      "evidence": "https://nearblocks.io/address/0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+      "check": {
+        "type": "holder",
+        "account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
+      },
+      "expected": "nft_tokens_for_owner is non-empty",
+      "verify": "node judge/verify-claims.mjs --only acct-0705fdc1581a"
+    },
+    {
+      "id": "test-code_changed_within_24h",
+      "claim": "Named test or symbol `code_changed_within_24h` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "code_changed_within_24h",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`code_changed_within_24h` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-code_changed_within_24h"
+    },
+    {
+      "id": "test-code_changed_within_7d",
+      "claim": "Named test or symbol `code_changed_within_7d` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "code_changed_within_7d",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`code_changed_within_7d` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-code_changed_within_7d"
+    },
+    {
+      "id": "test-executed_wasm_sha256",
+      "claim": "Named test or symbol `executed_wasm_sha256` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "executed_wasm_sha256",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`executed_wasm_sha256` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-executed_wasm_sha256"
+    },
+    {
+      "id": "test-invalid_account_id",
+      "claim": "Named test or symbol `invalid_account_id` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "invalid_account_id",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`invalid_account_id` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-invalid_account_id"
+    },
+    {
+      "id": "test-nft_is_approved",
+      "claim": "Named test or symbol `nft_is_approved` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "nft_is_approved",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`nft_is_approved` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-nft_is_approved"
+    },
+    {
+      "id": "test-nft_on_approve",
+      "claim": "Named test or symbol `nft_on_approve` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "nft_on_approve",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`nft_on_approve` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-nft_on_approve"
+    },
+    {
+      "id": "test-nft_revoke_all",
+      "claim": "Named test or symbol `nft_revoke_all` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "nft_revoke_all",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`nft_revoke_all` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-nft_revoke_all"
+    },
+    {
+      "id": "test-no_prior_interactions",
+      "claim": "Named test or symbol `no_prior_interactions` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "no_prior_interactions",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`no_prior_interactions` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-no_prior_interactions"
+    },
+    {
+      "id": "test-over_cap_daily",
+      "claim": "Named test or symbol `over_cap_daily` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "over_cap_daily",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`over_cap_daily` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-over_cap_daily"
+    },
+    {
+      "id": "test-over_cap_daily_refused_and_rolled_back",
+      "claim": "Named test or symbol `over_cap_daily_refused_and_rolled_back` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "over_cap_daily_refused_and_rolled_back",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`over_cap_daily_refused_and_rolled_back` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-over_cap_daily_refused_and_rolled_back"
+    },
+    {
+      "id": "test-parse_usd_micro",
+      "claim": "Named test or symbol `parse_usd_micro` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "parse_usd_micro",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`parse_usd_micro` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-parse_usd_micro"
+    },
+    {
+      "id": "test-settle_after_transfer_is_refused",
+      "claim": "Named test or symbol `settle_after_transfer_is_refused` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "settle_after_transfer_is_refused",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`settle_after_transfer_is_refused` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-settle_after_transfer_is_refused"
+    },
+    {
+      "id": "test-settle_if_owner",
+      "claim": "Named test or symbol `settle_if_owner` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "settle_if_owner",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`settle_if_owner` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-settle_if_owner"
+    },
+    {
+      "id": "test-transfer_moves_the_confidential_account_to_the_new_holder",
+      "claim": "Named test or symbol `transfer_moves_the_confidential_account_to_the_new_holder` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "transfer_moves_the_confidential_account_to_the_new_holder",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`transfer_moves_the_confidential_account_to_the_new_holder` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-transfer_moves_the_confidential_account_to_the_new_holder"
+    },
+    {
+      "id": "test-transfer_while_withdraw_is_pending_does_not_send",
+      "claim": "Named test or symbol `transfer_while_withdraw_is_pending_does_not_send` exists in the source",
+      "evidence_type": "test file",
+      "evidence": "tee/worker/src, contracts/keys/src, web",
+      "check": {
+        "type": "symbol",
+        "name": "transfer_while_withdraw_is_pending_does_not_send",
+        "dirs": [
+          "tee/worker/src",
+          "contracts/keys/src",
+          "contracts/keys-sandbox/tests",
+          "web/lib",
+          "web/app",
+          "cli/src"
+        ]
+      },
+      "expected": "`transfer_while_withdraw_is_pending_does_not_send` found in source",
+      "verify": "node judge/verify-claims.mjs --only test-transfer_while_withdraw_is_pending_does_not_send"
+    },
+    {
+      "id": "e2e-verify: the default page checks the publ",
+      "claim": "e2e test named 'verify: the default page checks the published d337e822 info call' exists",
+      "evidence_type": "test file",
+      "evidence": "web/e2e/site.spec.ts",
+      "check": {
+        "type": "grep",
+        "path": "web/e2e/site.spec.ts",
+        "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ d337e822\\ info\\ call"
+      },
+      "expected": "test name found",
+      "verify": "grep -n \"verify: the default page checks the published d337e822 info call\" web/e2e/site.spec.ts"
+    },
+    {
+      "id": "ci-41677252319",
+      "claim": "CI run 41677252319 concluded success",
+      "evidence_type": "CI run",
+      "evidence": "https://github.com/mohamedwael201193/keyhole/actions/runs/41677252319",
+      "check": {
+        "type": "ci_run",
+        "repo": "mohamedwael201193/keyhole",
+        "run": "41677252319"
+      },
+      "expected": "conclusion == success",
+      "verify": "node judge/verify-claims.mjs --only ci-41677252319"
+    },
+    {
+      "id": "att-f21fbb59-build",
+      "claim": "Call f21fbb59 (info) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/f21fbb59-13f7-41f4-a89e-a612cf6bdca5",
+      "check": {
+        "type": "attestation",
+        "call": "f21fbb59-13f7-41f4-a89e-a612cf6bdca5",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh f21fbb59-13f7-41f4-a89e-a612cf6bdca5"
+    },
+    {
+      "id": "att-02a4e30d-build",
+      "claim": "Call 02a4e30d (level_up by the seller, tier 1 to 2) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/02a4e30d-8e75-4587-9507-56a247751fc5",
+      "check": {
+        "type": "attestation",
+        "call": "02a4e30d-8e75-4587-9507-56a247751fc5",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh 02a4e30d-8e75-4587-9507-56a247751fc5"
+    },
+    {
+      "id": "att-61c6f3ad-build",
+      "claim": "Call 61c6f3ad (seller withdraw refused while listed) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/61c6f3ad-e1fc-495c-8435-27fd3382c3df",
+      "check": {
+        "type": "attestation",
+        "call": "61c6f3ad-e1fc-495c-8435-27fd3382c3df",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh 61c6f3ad-e1fc-495c-8435-27fd3382c3df"
+    },
+    {
+      "id": "att-c791779a-build",
+      "claim": "Call c791779a (seller swap refused while listed) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/c791779a-7948-4614-abe0-5376916edeb0",
+      "check": {
+        "type": "attestation",
+        "call": "c791779a-7948-4614-abe0-5376916edeb0",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh c791779a-7948-4614-abe0-5376916edeb0"
+    },
+    {
+      "id": "att-314e34ca-build",
+      "claim": "Call 314e34ca (seller balance read allowed while listed) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/314e34ca-8868-445b-b62b-bf53621c8068",
+      "check": {
+        "type": "attestation",
+        "call": "314e34ca-8868-445b-b62b-bf53621c8068",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh 314e34ca-8868-445b-b62b-bf53621c8068"
+    },
+    {
+      "id": "att-eeb03a55-build",
+      "claim": "Call eeb03a55 (old owner refused after the sale) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/eeb03a55-6df0-4ef3-af5b-3e9df3331f4e",
+      "check": {
+        "type": "attestation",
+        "call": "eeb03a55-6df0-4ef3-af5b-3e9df3331f4e",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh eeb03a55-6df0-4ef3-af5b-3e9df3331f4e"
+    },
+    {
+      "id": "att-d5077866-build",
+      "claim": "Call d5077866 (buyer dashboard after the sale) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/d5077866-7353-4e4d-b5e3-4c932beb8845",
+      "check": {
+        "type": "attestation",
+        "call": "d5077866-7353-4e4d-b5e3-4c932beb8845",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh d5077866-7353-4e4d-b5e3-4c932beb8845"
+    },
+    {
+      "id": "att-2a1aed5b-build",
+      "claim": "Call 2a1aed5b (buyer withdraw refused by cooldown after the sale) executed worker build cc8d2fa8",
+      "evidence_type": "OutLayer call",
+      "evidence": "https://api.outlayer.ai/attestations/by-call/2a1aed5b-d4e2-45d2-8915-14a5e61a8b12",
+      "check": {
+        "type": "attestation",
+        "call": "2a1aed5b-d4e2-45d2-8915-14a5e61a8b12",
+        "wasm_prefix": "cc8d2fa8",
+        "project": "keyhole-devmo.near/keyhole"
+      },
+      "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+      "verify": "./verify.sh 2a1aed5b-d4e2-45d2-8915-14a5e61a8b12"
+    }
+  ]
+}

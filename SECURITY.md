@@ -16,9 +16,9 @@ Report a problem privately to the repository owner. Please do not open a public 
 
 ## Trust assumptions
 
-- Intel TDX and the OutLayer runtime run the published wasm. Anyone can check this per call: `/verify` re-runs 19 Intel DCAP checks and the report_data binding in the browser, and `./verify.sh <call_id> --rebuild` rebuilds the wasm.
+- Intel TDX and the OutLayer runtime run the published wasm. Anyone can check this per call: `/verify` re-runs 19 Intel DCAP checks and the report_data binding in the browser, and the quick path separately hashes the published Wasm bytes. Source-build verification scope is recorded below.
 - NEAR RPC returns the true owner of a token. The worker reads `nft_token` on every signed request.
-- Not trusted: this website, the gateway route, the browser, the agent that holds a key, and any text the AI is shown.
+- Holder authorization is checked by the worker rather than accepted from the website or an agent. The gateway relays plaintext requests/replies and session credentials; browser-delivered verifier code and its pinned expectations also require trust unless independently pinned and executed. Intel/OutLayer runtime and custody governance, public RPC, publisher/contract authority and service availability are distinct trust roots.
 
 ## STRIDE
 
@@ -67,8 +67,8 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 
 ## Scope notes, and why they fit the design
 
-- **The enclave is the custodian, by design.** The OutLayer operator runs the service, but balances and trades are sealed by Intel TDX, so the operator cannot read them. That is the privacy promise: the chain shows who holds the key, never what the account holds. Every reply carries a quote you can check in the browser on `/verify`.
-- **The key moves by plain transfer.** The contract has no NEP-178 approvals yet, so approval-based marketplaces cannot list a key. Transfers and `nft_transfer_payout` work, and ownership is re-read before every swap or withdraw, so the account always follows the NFT, even mid-payout ([evidence](docs/evidence/mid-payout/README.md)).
+- **The enclave is the custodian, by design.** The privacy boundary includes the Intel TDX worker, sealed application credentials, OutLayer custody/keystore infrastructure and its governance. Public ownership, funding traces and solver-visible trade data are outside that private ledger; do not interpret the private balance UI as universal transaction anonymity. Every reply carries a quote you can check in the browser on `/verify`.
+- **The key moves by plain transfer.** Contract v2.4 supports NEP-178 approvals (cleared on transfer) and built-in listing/buying. Transfers and `nft_transfer_payout` work, and ownership is re-read before every swap or withdraw, so the account always follows the NFT, even mid-payout ([evidence](docs/evidence/mid-payout/README.md)).
 - **Cross-chain legs are third parties, shown honestly.** 1Click and bridges are outside the enclave; `/settle` lists every real order with its final status, including refunds and failures.
 - **Two kinds of limits.** The tier's daily spend counter belongs to the key (`cap_id(token_id)`), so moving a key between accounts never resets the day's spend. Holder-set caps, the lock and the transfer cooldown are bound to the key and the holder who set them, so a buyer is not trapped by the seller's settings and a seller cannot dodge a cooldown by passing the key around and taking it back.
 - **Browser DCAP and Intel PCS scope.** `/verify` runs 19 Intel TDX DCAP checks on the quote (structure, signatures, QE binding, certificate chain to the pinned Intel root, validity dates, report_data) and 12 checks on Intel PCS collateral: the PCK and Root CA revocation lists, the TDX TCB Info for the machine's FMSPC, the TDX module identity and the TD Quoting Enclave identity, each signature verified in the browser against the pinned Intel root, with TCB levels matched by Intel's rules ([`web/lib/pcs.ts`](web/lib/pcs.ts), [tests](web/tests/pcs.test.ts)). Intel sends no CORS headers, so the bytes pass through `/api/pcs`, which forwards only fixed Intel URLs; it cannot change a result without breaking a signature. The status is shown as Intel reports it (UpToDate for the published call; the independent `dcap-qvl` verifier agrees: [`docs/evidence/pcs`](docs/evidence/pcs/dcap-qvl_7882f97a.json)).
@@ -98,7 +98,7 @@ Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel
 
 ## Chain Signatures (`chain_sign`)
 
-`chain_sign` asks `v1.signer` for a signature from the key's derived secp256k1 address (`keyhole/key/<token_id>`). The worker does not parse the 32-byte payload, so it cannot price it in USD and the tier caps do not apply. The guards that do apply, in the enclave (live since build `a55ebb14`; a locked key's `chain_sign` refused on mainnet, see `docs/evidence/publish-a55ebb14`): the holder must sign the request (full-access key or EIP-191), the key must not be locked for sale, the post-transfer cooldown must have passed, and each key can request at most 5 signatures per UTC day (each one costs the minter gas). The public gateway does not expose the op. The derived addresses hold no funds; treat any balance sent there as outside KEYHOLE's spend caps.
+`chain_sign` asks `v1.signer` for a signature from the key's derived secp256k1 address (`keyhole/key/<token_id>`). The worker does not parse the 32-byte payload, so it cannot price it in USD and the tier caps do not apply. The guards that do apply, in the enclave (live since build `a55ebb14`; a locked key's `chain_sign` refused on mainnet, see `docs/evidence/publish-a55ebb14`): the holder must sign the request (full-access key or EIP-191), the key must not be locked for sale, the post-transfer cooldown must have passed, and each key can request at most 5 signatures per UTC day (each one costs the minter gas). The public gateway does not expose the op. Balances sent to those derived addresses are outside KEYHOLE's ordinary custody spend caps.
 
 ## One key per account
 
@@ -174,15 +174,15 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 
 ### 2. No NEAR sub-account per key
 
-- **Decision.** Each `token_id` has one OutLayer confidential custody wallet, held inside the TEE. There is no NEAR sub-account.
-- **Why.** A NEAR sub-account would need an access key, and someone would hold that key. Here the keys never leave the enclave.
-- **Mitigation.** The holder cannot take the key out, and the account is not a NEAR account that a wallet can open directly. OutLayer runs the custody service, so it is a third-party custody API and part of the trust base. Keep balances small: the caps and locks are enforced inside the enclave, but they do not stop an attacker who runs outside it (see [README §8](README.md#8-security-model)).
+- **Decision.** Each `token_id` has one OutLayer confidential custody wallet, held inside the TEE. There is no NEAR sub-account per token in this implementation.
+- **Why.** This implementation uses OutLayer confidential custody and a private ledger. NEAR contracts can be keyless; a private key is not a requirement of a NEAR sub-account. Keyless on-chain accounts are a different valid architecture.
+- **Mitigation.** The holder cannot take the key out, and the account is not a NEAR account that a wallet can open directly. OutLayer runs the custody service, so it is a third-party custody API and part of the trust base. Keep balances small: the caps and locks are enforced inside the enclave, but they do not stop an attacker who runs outside it (see [public authority inventory](#public-authority-inventory-and-browser-boundary)).
 
 ### 3. The contract account is not locked
 
 - **Decision.** `keyhole-devmo.near` holds two full-access keys, and its owner can change the contract. There is no multisig and no timelock, and the account is not keyless.
 - **Why.** Each contract version so far is a code deploy signed by a full-access key (v1 to v2.4). The multisig and timelock are not built yet.
-- **Mitigation.** Every deployed version is in `contracts/keys/release` with its sha256. CI rebuilds the source, and `judge/1-contract.sh` compares the on-chain `code_hash` with the committed wasm. The key list and the purpose of each key are in [README §8](README.md#8-security-model).
+- **Mitigation.** Every deployed version is in `contracts/keys/release` with its sha256. CI rebuilds the source, and `judge/1-contract.sh` compares the on-chain `code_hash` with the committed wasm. The key list and the purpose of each key are in [public authority inventory](#public-authority-inventory-and-browser-boundary).
 
 ### 4. Intents solvers see the pair and amount
 
@@ -229,5 +229,63 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 ### 11. Operator keys
 
 - **Decision.** `keyhole-devmo.near` has two full-access keys (deploy key and the owner's Meteor wallet key) plus a function-call beat key that can call only `beat`. The minter account's full-access key is generated and kept inside the TEE. There is no timelock or multisig yet. Live count is re-checked on [/verify](https://keyhole-seven.vercel.app/verify).
-- **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [README §8](README.md#8-security-model).
+- **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [public authority inventory](#public-authority-inventory-and-browser-boundary).
 - **Mitigation.** The beat key is a function-call key that can call only `beat`, with a 0.05 NEAR allowance, and the owner revokes it with `del_beat_key`. The deploy key is described in the repository as kept offline and never on the website or in the worker.
+
+
+## Public authority inventory and browser boundary
+
+**What if TDX is broken.** An attestation proves which code ran only while the enclave is genuine. If an attacker broke Intel TDX, a forged quote could pass every check on this page. Then the attacker could read the sealed keys and act for any custody wallet. The blast radius is:
+
+- **Confidential balances in custody wallets.** These are the funds that are not on the NEAR chain. All of them would be exposed.
+- **Minting.** The minter key is sealed in the same enclave, so an attacker could mint keys.
+- **The contract account is the royalty treasury.** `config.treasury` is `keyhole-devmo.near`, which is the contract account itself. Royalties from built-in sales and from royalty payouts therefore accrue to the contract account, and so do the 0.01 NEAR listing deposits of open listings until they end. The owner can change the treasury and the rate with `set_royalty`, and that change applies at buy time to open listings too, because `nft_buy` reads the current treasury and rate.
+
+Caps and locks are enforced by the enclave, so they do not stop an attacker who runs outside it. The practical limit is to keep balances small. Custody is also run through OutLayer's custody API, so OutLayer is part of the trust base (see [SECURITY.md](SECURITY.md#design-decisions-and-trade-offs)).
+
+**Privacy**
+
+- **Balances and history** live in TEE encrypted storage under the holder's key. They are readable only by a signed request from the full-access key of the account that holds the key NFT.
+- **Swaps** use 1Click `confidentiality: basic | advanced`. The solvers still see the asset pair and amount of each quote. Cross-chain settlement works both ways it can end: 0.004 SOL became 0.367068 USDC at `keyhole-devmo.near`, and an order with no liquidity came back as a refund ([`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md)).
+- **No KYC and no region.** Three ways in: a NEAR wallet, MetaMask, or Google or email on [/start](https://keyhole-seven.vercel.app/start), which goes through Privy.
+- **The gateway keeps no record.** It does not log bodies, amounts or accounts.
+- **Read/login signatures and value intents are different.** A read/login signature does not transfer assets. A signed swap or withdrawal intent authorizes the worker to move the displayed value, potentially to any supported destination covered by that signature; inspect asset, amount, network, destination, minimum output, expiry and fees first.
+- **Public reads.** The website caches public contract reads for 60 seconds. `nft_tokens_for_owner` is not cached.
+
+**Browser and site.** [`web/next.config.ts`](web/next.config.ts) sets a Content-Security-Policy with `frame-ancestors 'none'`, HSTS (2 years, preload), `nosniff` and strict referrer and permissions policies. `curl -I https://keyhole-seven.vercel.app` shows them.
+
+**Agents.** Do not give an agent your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 hours), and lock the key while you are away. The worker then enforces, inside the TEE: holder authentication of the signed operation and destination, per-trade and per-day custody caps, one use per signature, the transfer cooldown, and the lock. A holder can sign a supported destination other than their own wallet. The MCP `copy` tool needs the operator's confirmation on their own terminal. The historical attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md) records specific refused inputs/builds. It is not a current destination firewall or a universal prompt-injection defense; a freshly signed, in-cap, well-formed malicious destination is not rejected merely for being malicious.
+
+**Function-call keys, precisely.**
+
+- The beat key `ed25519:9FiNXX2M…` on the minter (`015a0259…c443`) is a FunctionCall key. Its receiver is `keyhole-devmo.near`, its only method is `beat`, and its remaining allowance was 0.0498 NEAR on 2026-11-07 (read over RPC `view_access_key_list`).
+- It cannot transfer NEAR, attach a deposit, add or delete keys, or call any method except `beat`. A different method is refused with `MethodNameMismatch`. Its allowance is the only NEAR it can spend, as gas, and the owner revokes it with `del_beat_key`.
+- It is not the payment key. The worker refuses function-call keys for holder requests (`key_not_owned`), so `withdraw`, `quote --execute` and `copy` still need a holder's full-access key.
+
+**Operator keys on the contract account.** `keyhole-devmo.near` holds two full-access keys and one function-call key (RPC, 2026-11-09). The table lists each key and its stated purpose. The contract has no multisig and is not locked.
+
+| Account | Key | Permission | Stated purpose |
+|---|---|---|---|
+| `keyhole-devmo.near` (contract) | `ed25519:7N1fLo9M…` | FullAccess | Deploy and publish key. The earlier revision of this README says it is kept offline and never on the website or in the worker |
+| `keyhole-devmo.near` | `ed25519:8NP9x5eF…` | **FullAccess** | The owner's second wallet key: Meteor Wallet holds it for this account (it is the key Meteor lists for `keyhole-devmo.near` at sign-in). Same owner as the key above; an operator key, listed in [SECURITY.md](SECURITY.md#design-decisions-and-trade-offs) |
+| `keyhole-devmo.near` | `ed25519:FNe2aYtz…` | **FunctionCall** to `social`, methods `__fastdata_kv` and `__fastdata_fastfs`, 1 NEAR allowance | Uploads the worker wasm to FastFS. It cannot transfer NEAR, call the contract or add keys |
+| minter `015a0259…c443` (implicit) | `ed25519:6H1iG1oH…` | FullAccess | Generated and held inside the TEE (OutLayer secret). The minter signs mints, swap-log statements and log heads. The contract only lets this account mint |
+| minter `015a0259…c443` | `ed25519:9FiNXX2M…` (beat key) | **FunctionCall** to `keyhole-devmo.near`, method `beat` only, 0.05 NEAR allowance | Lets an off-enclave agent emit the per-key heartbeat. Added by the enclave on the owner's signed `add_beat_key` ([AddKey tx](https://nearblocks.io/txns/DXH756vmgj8GTDz6fUwnfgaUuC7vCi1vu6VaX5heoDww)). Remaining allowance 0.0498 NEAR on 2026-11-07 |
+
+The first full-access key is described in the repository as the deploy and publish key, kept offline and never on the website or in the worker.
+
+
+## Source-build verification scope
+
+The README quick path proves artifact identity (committed contract Wasm versus mainnet `code_hash`, and published worker bytes versus the attested hash). It does not equate the current main branch with a fresh byte-identical rebuild of the live worker.
+
+On 10 November 2026 (Africa/Cairo), a clean Linux run of the current `tee/worker/build.sh` produced `49f9e0a13f4deba449a4295ecb2232f8bda7813bb65835597a462b0edebef531`, not live `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41`. The packaged source archive produced that same Linux hash. Current source includes the settlement-epoch change after the last worker publication. A separate Linux build of publication commit `0b2df07d70140c6305b7df3907460ad0dbf21dce` produced `64816c13d811b3e20553214f69d372f1170355b1e391bf89dd3fa209e2a306fc`. Published Wasm strings contain Windows-style dependency/source separators, while the Linux output contains Linux-style separators. That observation is not proof that path separators are the only difference.
+
+Consequently the failed source-rebuild command is not offered as a guaranteed README acceptance command. A byte-identical source rebuild of the live worker remains unproven on this Linux environment. No deployment, source substitution or binary patching was performed to manufacture a match. The raw rebuild outputs are in [the README verification evidence](docs/evidence/readme-verification/).
+
+
+## Public event commitments and financial interpretation
+
+Legacy public provenance uses deterministic SHA256 commitments to event detail. A signature authenticates chain integrity, not information-theoretic secrecy: predictable low-entropy detail may permit inference from a public commitment. Public metadata, voluntarily published outputs and previous holders' knowledge cannot be erased by a new UI label. Private-endpoint authorization and hiding of public log commitments are separate properties. No secret-blinded replacement is described as deployed by this README change.
+
+Signed swap counts, gross volume, input costs and event heads are not complete PnL, net asset valuation, future returns, seller skill or evidence of independent demand. The public log verifier establishes integrity of the returned chain, not completeness of all provider-side financial activity. Historical team-wallet sales demonstrate mechanics, not an organic market or a wrapper premium. Ordinary tier/day caps, cooldown, royalties and provider fees also affect actual redemption.

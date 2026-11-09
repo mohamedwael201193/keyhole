@@ -1,18 +1,28 @@
-# Judge kit: verify KEYHOLE on NEAR mainnet yourself
+# Judge kit
 
-Needs `bash`, `curl`, `jq`, `sha256sum` (and Node 18+ for step 4). Nothing here uses our keys.
+The canonical safe entry point is [the root README](../README.md). Node.js 20+, Bash and network access are sufficient; no npm install, wallet or project secrets are needed.
 
-| step | command | what it proves |
-|---|---|---|
-| 1 | `./judge/1-contract.sh` | the keys NFT contract on `keyhole-devmo.near` runs exactly `contracts/keys/deployed/keyhole_keys.wasm` (on-chain `code_hash`), and its minter is the TEE-held account |
-| 2 | `./judge/2-attestations.sh` | each recorded refusal and trade was produced by the attested worker build; the published output hashes to the attested `output_hash` |
-| 3 | `./judge/3-verify.sh [call_id]` (same as `./verify.sh <call_id> --rebuild`) | rebuild the worker from source (pinned toolchain); the sha256 equals what the TEE executed |
-| 4 | `./judge/4-live-refusals.sh` | live, with your own NEAR account: replay and over-cap requests are refused by the TEE right now |
+- `node judge/check-readme.mjs --quick` executes the exact README public verification block in a clean environment.
+- `node judge/check-readme.mjs --offline` executes its artifact/mutation checks and explicitly skips network checks.
+- `node judge/check-readme.mjs --generate` executes the documentation-regeneration block. CI checks that it leaves docs/claims.json unchanged.
 
-`judge/evidence.json` lists the recorded mainnet calls (over-cap, replay, wrong recipient, tampered, stale, op mismatch, no auth, double mint, confidential swaps, MCP copy with confirmation, withdraws).
+## What each verifier checks
 
-Step 4 needs a NEAR account key (`KEYHOLE_ACCOUNT`, `KEYHOLE_PRIVATE_KEY`, or near-cli credentials) and a route (`OUTLAYER_PAYMENT_KEY` of your own, or `KEYHOLE_GATEWAY`). It mints you a free key if you have none (the TEE pays storage), then sends a replayed request and an over-cap request.
+| Script | Scope |
+|---|---|
+| `readme-verify.mjs` | Public contract/build identities, state and authority inventory; exact recorded refusal output hashes; fresh signed swap-log integrity and current minter; fresh gateway negatives |
+| `verify-claims.mjs` | Machine-readable evidence predicates in docs/claims.json; `--only <id>` selects one existing claim; `--offline` skips network predicates |
+| `1-contract.sh` | Committed contract Wasm versus public mainnet code hash and configuration; requires curl, jq, Python 3, sha256sum and Bash |
+| `2-attestations.sh` | Canonical output hashes of the recorded calls in evidence.json; original build labels are retained; requires curl, jq, sha256sum and Bash |
+| Root `verify.sh` | Recorded-call metadata, quote presence, registered/executed hashes and FastFS bytes; its optional source rebuild is a distinct check, scoped in SECURITY.md |
+| `4-live-refusals.sh` | Optional active signed requests with the operator's own account; can mint a key; excluded from the no-wallet path |
 
-## verify-claims statuses
+[Browser verification](https://keyhole-seven.vercel.app/verify) performs the Intel DCAP and collateral checks. Shell quote-presence/hash checks are not a replacement for those cryptographic checks.
 
-`node judge/verify-claims.mjs` prints PASS, FAIL, ERROR or SKIP per claim. FAIL means the source answered and contradicts the claim (exit 1). ERROR means no source could be reached: every RPC in the fallback list (FastNear, rpc.mainnet.near.org, then archival nodes) or the HTTP source was down (exit 2). It is not a failed claim. Set `NEAR_RPC` to put your own node first. The `claims-online` workflow runs the full online check daily and on demand.
+## Status semantics
+
+`verify-claims.mjs` prints PASS, FAIL, ERROR or SKIP. FAIL means a source contradicts a predicate (exit 1). ERROR means the source could not be reached after retries (exit 2). SKIP means not checked, including offline network predicates; it does not become PASS. Unknown claim IDs exit 1. Known expected-failure transactions must actually contain a failed receipt, rather than merely exist.
+
+All network inputs are public: NEAR RPC, OutLayer attestations, FastFS, the live site and public GitHub CI. NEAR_RPC can select another public node for the claims verifier. No tool here reads project wallet secrets by default. Historical re-fetches are not new attack executions.
+
+[Recorded command results](../docs/evidence/readme-verification/README.md) · [Trust and source-build scope](../SECURITY.md) · [Claim inputs](evidence-index.json)

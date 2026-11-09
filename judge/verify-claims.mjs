@@ -118,6 +118,7 @@ const checks = {
     const failed = [r.status, ...r.receipts_outcome.map((o) => o.outcome.status)].some((s) => s && s.Failure);
     if (c.receiver && !r.receipts_outcome.some((o) => o.outcome.executor_id === c.receiver)) return [false, `no receipt on ${c.receiver}`];
     if (c.expect === "exists") return [true, `found, signer ${r.transaction.signer_id}`];
+    if (c.expect === "failure") return [failed, failed ? "expected refusal: a receipt failed" : "expected refusal, but every receipt succeeded"];
     return [!failed, failed ? "a receipt failed" : `ok, signer ${r.transaction.signer_id}`];
   },
   async attestation(c) {
@@ -138,9 +139,9 @@ const checks = {
       const m = h.match(/"supply":(\d+)/);
       const total = Number(await view("nft_total_supply", {}));
       const own = Number(await view("nft_supply_for_owner", { account_id: "keyhole-devmo.near" }));
-      return [m && Number(m[1]) === total - own, `site ${m?.[1]} chain ${total} - contract-held ${own}`];
+      return [!!m && Number(m[1]) === total - own, `site ${m?.[1]} chain ${total} - contract-held ${own}`];
     }
-    const m = h.match(/"beats":"(\d+)"/); const live = (await view("config", {})).beats; return [m && m[1] === String(live), `site ${m?.[1]} chain ${live}`];
+    const m = h.match(/"beats":"(\d+)"/); const live = (await view("config", {})).beats; return [!!m && m[1] === String(live), `site ${m?.[1]} chain ${live}`];
   },
   async ci_run(c) {
     const r = await get(`https://api.github.com/repos/${c.repo}/actions/runs/${c.run}`, { headers: { "user-agent": "keyhole-judge" } });
@@ -151,6 +152,7 @@ const checks = {
 const LIVE = new Set(["code_hash", "view", "access_key", "account", "holder", "tx", "attestation", "fastfs", "http", "redirect", "header", "site_vs_chain", "ci_run"]);
 
 const list = doc.claims.filter((c) => !only || c.id === only);
+if (!list.length) { console.error(`FAIL no claims selected${only ? ` for ${only}` : ""}`); process.exit(1); }
 let pass = 0, fail = 0, skip = 0, errs = 0; const failed = [], errored = [];
 const results = new Array(list.length);
 let next = 0;
