@@ -1,0 +1,22 @@
+{
+  "scope": "NEAR sandbox runtime; custody provider is a labelled mock; no mainnet operations",
+  "normal_candidate_wasm_sha256": "81d8c80d0c37c97673ae71fcf28267c85343d01c8a5c6884874e39b0baadadeb",
+  "account_id_bytes": 64,
+  "token_id_bytes": 64,
+  "storage_byte_cost_yocto": "10000000000000000000",
+  "binding_bytes": 425,
+  "offer_bytes": 438,
+  "funded_with_principal_credit_bytes": 565,
+  "repay_thaw_pending_two_available_ledgers_bytes": 702,
+  "both_native_cashouts_callback_unknown_bytes": 750,
+  "peak_cost_near": "0.0075",
+  "new_refundable_bond_near": "0.009",
+  "new_refundable_bond_yocto": "9000000000000000000000",
+  "margin_bytes": 150,
+  "margin_percent_of_measured_peak": 20,
+  "completed_clean_cycles": 2,
+  "terminal_record_and_credit_ledger_return_to_baseline": true,
+  "measurement_test": "measured_max_identifier_loan_storage_and_terminal_cleanup",
+  "fixture_code_size_adjustment": "Code-size change is measured separately across fixture deployment; pending-ledger state delta is added to pre-fixture state delta.",
+  "command": "cd contracts/keys-sandbox && cargo test --locked --test pledge measured_max_identifier -- --nocapture"
+}

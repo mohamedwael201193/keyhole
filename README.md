@@ -878,3 +878,25 @@ See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.
 ```
 
 Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement/fencing proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+
+
+### Measured Pledge economics — source candidate
+
+The candidate exposes `get_loan_limits()` and `get_lender_offer(token_id)`. The public lender projection checks the named lender's empty key slot and provisional-return reservation before showing funding eligibility. `fund_loan` repeats admission and certificate checks. It contains immutable terms and a six-decimal raw USDC minimum, not holder balances/history.
+
+**Refundable loan bond: 0.009 NEAR.** In the actual sandbox runtime with 64-byte account/token IDs: offer **438 bytes**, funded with principal credit **565**, repayment/thaw pending **702**, both cashout callbacks lost **750 bytes (0.0075 NEAR)**. A 900-byte bond adds **150 bytes / 20%** to that measured peak. Two completed cycles remove loan and both credit records to the same baseline. Binding separately measured **425 bytes**. [Measurement](docs/pledge/storage-measurement.json).
+
+The ordinary ABI accepts a **7200-second term + 900-second grace**; repayment at the exact grace boundary excludes default in the same local receipt. Funding creates backed principal credit and starts debt before separate native cashout. Tests: `two_hour_term_and_fifteen_minute_grace_use_ordinary_abi`, `loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace`, `lender_projection_checks_no_key_and_never_exposes_holder_private_data`.
+
+```bash
+(cd contracts/keys && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains && ./build.sh)
+# Sandbox-only failure fixture, never a release binary:
+(cd contracts/keys && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm)
+(cd contracts/keys-sandbox && cargo test --locked)
+node --test scripts/pledge/plan.test.mjs
+node scripts/pledge/plan.mjs
+python3 judge/gen-claims.py .
+node judge/verify-claims.mjs --offline
+```
+
+[Two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).

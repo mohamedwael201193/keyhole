@@ -6,7 +6,9 @@ use near_sdk::Gas;
 #[cfg(test)] use near_sdk::PromiseResult;
 
 pub const RECOVERY_UNLOCK_NS: u64 = 1_796_169_600_000_000_000;
-pub const LOAN_STORAGE_DEPOSIT: u128 = 50_000_000_000_000_000_000_000;
+/// 900-byte budget: maximum-ID runtime lifecycle peak 750 bytes + 150 bytes (20%).
+/// Refundable liability; code storage/registration/operating capital are separate.
+pub const LOAN_STORAGE_DEPOSIT: u128 = 9_000_000_000_000_000_000_000;
 pub const COLLATERAL_STORAGE_DEPOSIT: u128 = 20_000_000_000_000_000_000_000;
 pub const OPERATING_RESERVE: u128 = 100_000_000_000_000_000_000_000;
 pub const COLLATERAL_ASSET: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
@@ -151,6 +153,25 @@ pub struct LoanCertificate {
     pub pending_value_ops: U64,
 }
 
+/// Public economic limits; clients read the contract rather than guessing deposits.
+#[derive(Clone, Debug)]
+#[near(serializers = [json])]
+pub struct LoanLimits {
+    pub storage_bond: U128, pub collateral_binding_deposit: U128,
+    pub min_duration_sec: U64, pub max_duration_sec: U64, pub max_grace_sec: U64,
+    pub certificate_max_age_ns: U64,
+    pub activation: String,
+}
+/// Public lender projection: no exact balance, history, private nonce or session.
+#[derive(Clone, Debug)]
+#[near(serializers = [json])]
+pub struct LenderOffer {
+    pub loan: Loan, pub asset: String, pub decimals: u8,
+    pub lender_has_no_key: bool, pub lender_has_no_return_reservation: bool,
+    pub lending_enabled: bool, pub owner_current: bool, pub funding_open: bool,
+    pub certificate_required: bool,
+}
+
 #[derive(near_sdk::serde::Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 struct PolicyView { owner: AccountId, encrypted_data: String, frozen: bool, version: u64, locked: bool, #[serde(default)] generation:u64, #[serde(default)] generation_supported:bool, #[serde(default)] registration_nonce:U64, #[serde(default)] registration_deposit:U128 }
@@ -220,6 +241,27 @@ impl Contract {
     pub fn get_payout_credit(&self, account_id: AccountId) -> U128 { U128(credit_ledgers().get(&account_id).map(|l|l.available).unwrap_or(0)) }
     pub fn get_pending_payout(&self, account_id: AccountId) -> Option<PendingPayout> { credit_ledgers().get(&account_id).and_then(|l|l.pending) }
     pub fn get_value_op(&self, token_id: TokenId, op_id: String) -> Option<ValueOp> { value_ops().get(&value_op_key(&token_id, &op_id)).filter(|op| op.op_id == op_id) }
+
+    pub fn get_loan_limits(&self) -> LoanLimits {
+        LoanLimits { storage_bond: U128(LOAN_STORAGE_DEPOSIT), collateral_binding_deposit: U128(COLLATERAL_STORAGE_DEPOSIT),
+            min_duration_sec: U64(1), max_duration_sec: U64(MAX_DURATION), max_grace_sec: U64(7 * 86_400),
+            certificate_max_age_ns: U64(CERTIFICATE_MAX_AGE_NS), activation: "backed_principal_credit_before_native_cashout".into() }
+    }
+
+    /// Snapshot only. fund_loan repeats checks and verifies a fresh signed certificate.
+    pub fn get_lender_offer(&self, token_id: TokenId) -> Option<LenderOffer> {
+        let l = loans().get(&token_id)?;
+        let lender_has_no_key = self.tokens.tokens_per_owner.as_ref().and_then(|m|m.get(&l.terms.lender)).map(|s|s.is_empty()).unwrap_or(true);
+        let lender_has_no_return_reservation = pending_returns(&l.terms.lender) == 0;
+        let owner_current = self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&l.borrower)
+            && self.nft_settlement_epoch(token_id.clone()) == l.owner_epoch;
+        let lending_enabled = config_required().lending_enabled;
+        let funding_open = lending_enabled && owner_current && lender_has_no_key && lender_has_no_return_reservation
+            && l.state == LoanState::Offered && !l.policy_busy && env::block_timestamp() <= l.terms.funding_deadline_ns.0
+            && self.pending_ops(&token_id) == 0 && transfer_calls().get(&token_id).is_none();
+        Some(LenderOffer { loan:l, asset:COLLATERAL_ASSET.into(), decimals:6, lender_has_no_key,
+            lender_has_no_return_reservation, lending_enabled, owner_current, funding_open, certificate_required:true })
+    }
 
     #[payable]
     pub fn set_lending_enabled(&mut self, enabled: bool) {
@@ -319,7 +361,7 @@ impl Contract {
         require!(env::predecessor_account_id() == borrower, "only borrower");
         require!(listings().get(&token_id).is_none(), "unlist first");
         require!(collateral().get(&token_id).is_some_and(|b| b.ready), "collateral confinement not ready");
-        require!(env::attached_deposit().as_yoctonear() == LOAN_STORAGE_DEPOSIT, "attach exact 0.05 NEAR refundable loan bond");
+        require!(env::attached_deposit().as_yoctonear() == LOAN_STORAGE_DEPOSIT, "attach exact 0.009 NEAR refundable loan bond");
         require!(terms.lender != borrower && terms.lender != env::current_account_id(), "distinct external lender required");
         require!(terms.principal.0 > 0 && terms.principal.0 <= MAX_LIST_PRICE, "bad principal");
         require!(terms.repayment.0 >= terms.principal.0 && terms.repayment.0 <= MAX_LIST_PRICE, "bad repayment");

@@ -392,3 +392,26 @@ include!("pledge_review_round2_tests.rs");
 #[test]fn lazy_loan_storage_is_paid_by_borrower_bond_not_preexisting_reserves(){let mut c=setup();let before=env::storage_usage();open(&mut c);let bytes=env::storage_usage().saturating_sub(before);assert!(bytes>0);assert!((bytes as u128)*env::storage_byte_cost().as_yoctonear()<=LOAN_STORAGE_DEPOSIT);assert_eq!(c.get_loan("k1".into()).unwrap().storage_bond.0,LOAN_STORAGE_DEPOSIT);}
 #[test]fn legacy_or_stale_policy_snapshot_cannot_unlock_a_fenced_generation(){let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();for supported in [true,false]{let raw=near_sdk::serde_json::json!({"owner":"keys.near","encrypted_data":"sealed-policy","version":1,"locked":true,"frozen":true,"generation_supported":supported,"generation":if supported{0}else{l.policy_sequence.0}});result(PromiseResult::Successful(raw.to_string().into_bytes()),NOW);assert!(!c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));assert!(c.get_loan("k1".into()).unwrap().policy_busy);}}
 #[test]fn maximum_ids_and_ten_approvals_survive_provisional_timeout(){let mut c=setup();let owner=format!("{}.near","a".repeat(59));let token="t".repeat(64);ctx("minter.near",N/10,NOW);c.nft_mint(token.clone(),a(&owner),2,TokenMetadata::default());for n in 0..10{ctx(&owner,N/100,NOW);let id=format!("x{}{}.near",n,"a".repeat(57));let _=c.nft_approve(token.clone(),a(&id),None);}ctx(&owner,1,NOW);let _=c.nft_transfer_call(a("receiver.near"),token.clone(),None,None,"".into());let epoch=c.nft_settlement_epoch(token.clone());ctx("anyone.near",0,NOW+TRANSFER_RESTORE_DELAY_NS);assert!(!c.restore_expired_transfer(token.clone(),epoch));assert_eq!(c.nft_token(token).unwrap().approved_account_ids.unwrap().len(),10);assert_eq!(c.pending_return_count(a(&owner)),0);}
+
+#[test] fn two_hour_term_and_fifteen_minute_grace_use_ordinary_abi() {
+ let mut c=setup();let limits=c.get_loan_limits();assert_eq!(limits.storage_bond.0,9*N/1000);
+ assert_eq!(limits.min_duration_sec.0,1);assert_eq!(limits.max_duration_sec.0,30*86400);
+ let mut t=terms();t.duration_sec=U64(7200);t.grace_sec=U64(900);
+ ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW);let _=c.open_loan("k1".into(),t);settle_policy(&mut c,true,NOW);fund(&mut c);
+ assert_eq!(c.get_loan("k1".into()).unwrap().due_ns.0,NOW+7200*SECOND);
+ ctx("alice.near",terms().repayment.0,NOW+8100*SECOND);let _=c.repay_loan("k1".into(),U64(1));
+ ctx("lender.near",1,NOW+8100*SECOND+1);rejected(||{let _=c.claim_default("k1".into(),U64(1),a("lender.near"));});
+}
+#[test] fn loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace() {
+ let mut c=setup(); for (duration,grace) in [(0,900),(30*86400+1,900),(7200,7*86400+1)] {
+  let mut t=terms();t.duration_sec=U64(duration);t.grace_sec=U64(grace);ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW);
+  rejected(||{let _=c.open_loan("k1".into(),t);});
+ }
+}
+#[test] fn lender_projection_checks_no_key_and_never_exposes_holder_private_data() {
+ let mut c=setup();open(&mut c);assert!(!c.get_lender_offer("k1".into()).unwrap().funding_open);settle_policy(&mut c,true,NOW);
+ assert!(c.get_lender_offer("k1".into()).unwrap().funding_open);
+ ctx("minter.near",N/10,NOW);c.nft_mint("k2".into(),a("lender.near"),2,TokenMetadata::default());
+ let offer=c.get_lender_offer("k1".into()).unwrap();assert!(!offer.lender_has_no_key);assert!(!offer.funding_open);
+ let json=near_sdk::serde_json::to_value(offer).unwrap();assert!(json.get("balance").is_none());assert!(json.get("history").is_none());
+}

@@ -3935,6 +3935,27 @@
    "verify": "node judge/verify-claims.mjs --only test-key_not_owned"
   },
   {
+   "id": "test-lender_projection_checks_no_key_and_never_exposes_holder_private_data",
+   "claim": "Named test or symbol `lender_projection_checks_no_key_and_never_exposes_holder_private_data` exists in the source",
+   "where": "README.md:889",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "lender_projection_checks_no_key_and_never_exposes_holder_private_data",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`lender_projection_checks_no_key_and_never_exposes_holder_private_data` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-lender_projection_checks_no_key_and_never_exposes_holder_private_data"
+  },
+  {
    "id": "test-limits_for_tier",
    "claim": "Named test or symbol `limits_for_tier` exists in the source",
    "where": "README.md:228",
@@ -3954,6 +3975,27 @@
    },
    "expected": "`limits_for_tier` found in source",
    "verify": "node judge/verify-claims.mjs --only test-limits_for_tier"
+  },
+  {
+   "id": "test-loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace",
+   "claim": "Named test or symbol `loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace` exists in the source",
+   "where": "README.md:889",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace"
   },
   {
    "id": "test-min_amount_out",
@@ -4584,6 +4626,27 @@
    },
    "expected": "`transfer_while_withdraw_is_pending_does_not_send` found in source",
    "verify": "node judge/verify-claims.mjs --only test-transfer_while_withdraw_is_pending_does_not_send"
+  },
+  {
+   "id": "test-two_hour_term_and_fifteen_minute_grace_use_ordinary_abi",
+   "claim": "Named test or symbol `two_hour_term_and_fifteen_minute_grace_use_ordinary_abi` exists in the source",
+   "where": "README.md:889",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "two_hour_term_and_fifteen_minute_grace_use_ordinary_abi",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`two_hour_term_and_fifteen_minute_grace_use_ordinary_abi` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-two_hour_term_and_fifteen_minute_grace_use_ordinary_abi"
   },
   {
    "id": "test-valid_signature_passes",
@@ -6335,6 +6398,32 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/pledge-oracle-free/README.md"
+  },
+  {
+   "id": "path-docs/pledge/storage-measurement.json",
+   "claim": "Linked repo path docs/pledge/storage-measurement.json exists",
+   "where": "README.md:887",
+   "evidence_type": "file",
+   "evidence": "docs/pledge/storage-measurement.json",
+   "check": {
+    "type": "path",
+    "path": "docs/pledge/storage-measurement.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/pledge/storage-measurement.json"
+  },
+  {
+   "id": "path-docs/pledge/TEAM_RUNBOOK.md",
+   "claim": "Linked repo path docs/pledge/TEAM_RUNBOOK.md exists",
+   "where": "README.md:902",
+   "evidence_type": "file",
+   "evidence": "docs/pledge/TEAM_RUNBOOK.md",
+   "check": {
+    "type": "path",
+    "path": "docs/pledge/TEAM_RUNBOOK.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/pledge/TEAM_RUNBOOK.md"
   },
   {
    "id": "path-contracts/keys",
