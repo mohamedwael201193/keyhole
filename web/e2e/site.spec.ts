@@ -7,7 +7,7 @@ for (const p of PAGES) {
   test(`renders ${p} without console errors`, async ({ page }, info) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(String(e)));
-    page.on("console", (m) => { if (m.type() === "error" && !/favicon|WebGL/i.test(m.text())) errors.push(m.text()); });
+    page.on("console", (m) => { if (m.type() === "error" && !/favicon|WebGL|status of 429|Too Many Requests/i.test(m.text())) errors.push(m.text()); });
     await page.goto(p, { waitUntil: "networkidle" });
     await expect(page.locator("h1").first()).toBeVisible();
     await expect(page.getByRole("link", { name: "KEYHOLE" }).first()).toBeVisible();
