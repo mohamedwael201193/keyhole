@@ -79,7 +79,7 @@ pub fn load<S:Store>(store:&mut S,contract:&str,token:&str)->Result<Vec<PrivateR
     validate(&rows,contract,token)?; Ok(rows)
 }
 #[derive(Clone,Copy)]
-pub struct EventInput<'a> { pub contract:&'a str,pub token:&'a str,pub kind:&'a str,pub owner:&'a str,pub owner_epoch:u64,pub ts_ms:u64,pub detail:&'a str }
+pub struct EventInput<'a> { pub operation_id:&'a str,pub contract:&'a str,pub token:&'a str,pub kind:&'a str,pub owner:&'a str,pub owner_epoch:u64,pub ts_ms:u64,pub detail:&'a str }
 pub fn append<S:Store,F:FnMut(&mut [u8;32])->Result<(),Error>>(store:&mut S,input:EventInput<'_>,mut entropy:F)->Result<String,Error> {
     // Pin the old array once. A still-reachable legacy writer cannot silently replace the
     // prefix of the new chain. Its retirement is separately required for protected finance.
@@ -91,11 +91,16 @@ pub fn append<S:Store,F:FnMut(&mut [u8;32])->Result<(),Error>>(store:&mut S,inpu
         validate(&rows,input.contract,input.token)?;
         write_once(store,&key,&old)?;
     }
-    // ID stays private; it is NOT a public low-entropy commitment. Its purpose is retry dedup.
-    let id=hex::encode(Sha256::digest(serde_json::to_vec(&(input.contract,input.token,input.kind,input.owner,input.owner_epoch,input.ts_ms,input.detail)).map_err(|_|err("bad_log","event id encoding"))?));
+    // Stable admitted operation identity (or ownership phase), NOT plaintext/timing equality.
+    // Distinct authenticated nonces must not collapse identical operations at the same timestamp.
+    if input.operation_id.is_empty(){return Err(err("bad_log","missing event operation identity"));}
+    let id=hex::encode(Sha256::digest(serde_json::to_vec(&(input.contract,input.token,input.kind,input.owner,input.owner_epoch,input.operation_id)).map_err(|_|err("bad_log","event id encoding"))?));
     for _ in 0..32 {
         let rows=load(store,input.contract,input.token)?;
-        if let Some(r)=rows.iter().find(|r|r.event_id==id) {return Ok(event_hash(&r.event));}
+        if let Some(r)=rows.iter().find(|r|r.event_id==id) {
+            if r.detail!=input.detail {return Err(err("bad_log","event operation identity reused with different detail"));}
+            return Ok(event_hash(&r.event));
+        }
         let mut nonce=[0u8;32]; entropy(&mut nonce)?;
         let mut ev=ProvEvent{i:rows.len() as u64,prev:rows.last().map(|r|event_hash(&r.event)).unwrap_or_else(||"0".repeat(64)),kind:input.kind.into(),token_id:input.token.into(),owner:input.owner.into(),ts_ms:input.ts_ms,detail_hash:String::new(),v:2,contract:input.contract.into(),owner_epoch:input.owner_epoch};
         ev.detail_hash=commitment(&ev,&nonce,input.detail);
@@ -117,9 +122,9 @@ mod tests {
             if self.m.contains_key(k){return Ok(false);}self.m.insert(k.into(),v.to_vec());if self.lost {self.lost=false;return Err(err("storage","lost"));}Ok(true)}
         fn incr(&mut self,_:&str,_:i64)->Result<i64,Error>{unreachable!()} fn remove(&mut self,_:&str)->Result<(),Error>{unreachable!()} fn list_prefix(&mut self,_:&str)->Result<Vec<String>,Error>{unreachable!()}
     }
-    fn input<'a>(detail:&'a str)->EventInput<'a>{EventInput{contract:"keys.near",token:"k1",kind:"withdraw",owner:"alice.near",owner_epoch:7,ts_ms:10,detail}}
+    fn input<'a>(detail:&'a str)->EventInput<'a>{EventInput{operation_id:"op1",contract:"keys.near",token:"k1",kind:"withdraw",owner:"alice.near",owner_epoch:7,ts_ms:10,detail}}
     fn put(m:&mut Mem,i:EventInput<'_>,n:u8)->String {append(m,i,|b|{*b=[n;32];Ok(())}).unwrap()}
-    #[test] fn repeated_plaintext_has_distinct_commitments(){let mut m=Mem::default();put(&mut m,input("1 USDC"),1);let mut i=input("1 USDC");i.ts_ms+=1;put(&mut m,i,2);let r=load(&mut m,"keys.near","k1").unwrap();assert_ne!(r[0].event.detail_hash,r[1].event.detail_hash);assert!(r.iter().all(PrivateRow::opening_valid));}
+    #[test] fn repeated_plaintext_has_distinct_commitments(){let mut m=Mem::default();put(&mut m,input("1 USDC"),1);let mut i=input("1 USDC");i.operation_id="op2";put(&mut m,i,2);let r=load(&mut m,"keys.near","k1").unwrap();assert_ne!(r[0].event.detail_hash,r[1].event.detail_hash);assert!(r.iter().all(PrivateRow::opening_valid));}
     #[test] fn authorized_exact_byte_opening_tamper(){let mut m=Mem::default();put(&mut m,input(" \u{00e9}\n"),9);let mut r=load(&mut m,"keys.near","k1").unwrap().remove(0);assert!(r.opening_valid());r.detail.push(' ');assert!(!r.opening_valid());r.detail.pop();r.event.owner_epoch+=1;assert!(!r.opening_valid());}
     #[test] fn public_and_new_holder_projection_has_no_opening(){let mut m=Mem::default();put(&mut m,input("secret amount"),12);let r=load(&mut m,"keys.near","k1").unwrap().remove(0);for viewer in [None,Some("bob.near")] {let v=r.project(viewer).to_string();assert!(!v.contains("blinding_nonce"));assert!(!v.contains("secret amount"));assert!(!v.contains("event_id"));}assert!(r.project(Some("alice.near")).get("blinding_nonce").is_some());}
     #[test] fn restart_dedup_and_lost_write_response(){let mut m=Mem::default();m.m.insert("p2/keys.near/k1/legacy".into(),b"[]".to_vec());m.lost=true;assert!(append(&mut m,input("x"),|b|{*b=[4;32];Ok(())}).is_err());let a=put(&mut m,input("x"),5);let b=put(&mut m,input("x"),6);assert_eq!(a,b);assert_eq!(load(&mut m,"keys.near","k1").unwrap().len(),1);assert_eq!(m.m.len(),2);}
@@ -143,7 +148,7 @@ mod tests {
             fn incr(&mut self,_:&str,_:i64)->Result<i64,Error>{unreachable!()} fn remove(&mut self,_:&str)->Result<(),Error>{unreachable!()} fn list_prefix(&mut self,_:&str)->Result<Vec<String>,Error>{unreachable!()}
         }
         let mut shared=Shared(Default::default());let barrier=std::sync::Arc::new(std::sync::Barrier::new(8));
-        let handles:Vec<_>=(0..8).map(|n|{let mut st=shared.clone();let b=barrier.clone();std::thread::spawn(move||{b.wait();let mut i=input("same plaintext");i.ts_ms+=n;append(&mut st,i,|out|{*out=[n as u8;32];Ok(())}).unwrap();})}).collect();
+        let handles:Vec<_>=(0..8).map(|n|{let mut st=shared.clone();let b=barrier.clone();std::thread::spawn(move||{b.wait();let mut i=input("same plaintext");let id=format!("op{n}");i.operation_id=&id;append(&mut st,i,|out|{*out=[n as u8;32];Ok(())}).unwrap();})}).collect();
         for h in handles{h.join().unwrap();}let rows=load(&mut shared,"keys.near","k1").unwrap();assert_eq!(rows.len(),8);assert!(rows.iter().all(PrivateRow::opening_valid));
     }
     #[test] fn storage_errors_cannot_echo_openings_or_private_row_contents(){
@@ -159,6 +164,12 @@ mod tests {
         for e in [load(&mut b,"keys.near","k1").err().unwrap(),write_once(&mut b,"row",b"secret").err().unwrap()]{
             assert!(!e.message.contains("PRIVATE"));assert!(!e.message.contains("salt"));assert!(!e.message.contains("secret"));
         }
+    }
+    #[test] fn stable_operation_retry_keeps_opening_but_cannot_change_detail(){
+        let mut m=Mem::default();let hash=put(&mut m,input("x"),5);
+        let mut retry=input("x");retry.ts_ms+=99;assert_eq!(put(&mut m,retry,6),hash);
+        assert!(append(&mut m,input("different private detail"),|b|{*b=[7;32];Ok(())}).is_err());
+        assert_eq!(load(&mut m,"keys.near","k1").unwrap().len(),1);
     }
     #[test] fn version_and_context_are_bound(){let mut m=Mem::default();put(&mut m,input("x"),5);let r=load(&mut m,"keys.near","k1").unwrap().remove(0);let mut e=r.event.clone();for f in 0..3 {match f {0=>e.contract="other.near".into(),1=>e.token_id="k2".into(),_=>e.i+=1};assert_ne!(commitment(&e,&[5;32],"x"),r.event.detail_hash);}let mut e=r.event.clone();e.v=3;assert!(verify_chain(&[e]).is_err());}
 }

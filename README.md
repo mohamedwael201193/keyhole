@@ -882,7 +882,7 @@ Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirem
 
 ## Source candidate: versioned event openings
 
-The worker source writes v2 event commitments with a fresh 32-byte secret nonce from WASI secure randomness. The exact UTF-8 detail and its nonce are stored together in encrypted, immutable compare-and-set rows before that commitment is returned. Public projections contain neither field. Holder-authorized history opens only that holder's rows. V1 canonical bytes and mixed-chain links are preserved; the browser and standalone verifier understand both versions.
+The worker source writes v2 event commitments with a fresh 32-byte secret nonce from WASI secure randomness. The exact UTF-8 detail and its nonce are stored together in encrypted, immutable compare-and-set rows before that commitment is returned. Public projections contain neither field. Holder-authorized history opens only that holder's rows. Private retry identities use admitted request nonces (or the exact ownership phase), so two distinct requests with identical details and timestamps remain two events. V1 canonical bytes and mixed-chain links are preserved; the browser and standalone verifier understand both versions.
 
 Run the no-key checks from the repository root:
 

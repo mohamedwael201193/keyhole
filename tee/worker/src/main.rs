@@ -135,7 +135,7 @@ mod host {
             .and_then(|s| s.parse().ok()).unwrap_or(0)
     }
 
-    struct Ctx { account: String, req: SignedRequest, now_ms: u64, tier: Option<u8>, token: Option<String>, session: Option<(String, SessionGrant)> }
+    struct Ctx { operation_id:String,account: String, req: SignedRequest, now_ms: u64, tier: Option<u8>, token: Option<String>, session: Option<(String, SessionGrant)> }
 
     impl Ctx {
         /// The key this request acts on: the key held now, else the id this account would mint.
@@ -187,7 +187,7 @@ mod host {
         // Nonce first: a replay is refused without spending the rate budget (P1-9).
         admit(&mut Host, &account, &lim, &nonce, now_ms)?;
         BIND.with(|b| *b.borrow_mut() = Some((account.clone(), token.clone())));
-        Ok(Ctx { account, req, now_ms, tier, token, session: None })
+        Ok(Ctx { operation_id:hex::encode(nonce),account, req, now_ms, tier, token, session: None })
     }
 
     /// Session call (docs.near.org/web3-apps/backend/backend pattern): the token the enclave issued after one NEP-413
@@ -210,7 +210,7 @@ mod host {
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         admit(&mut Host, &account, &lim, &nonce, now_ms)?;
         BIND.with(|b| *b.borrow_mut() = Some((account.clone(), Some(g.token_id.clone()))));
-        Ok(Ctx { account, req, now_ms, tier, token: Some(g.token_id.clone()), session: Some((id, g)) })
+        Ok(Ctx { operation_id:hex::encode(nonce),account, req, now_ms, tier, token: Some(g.token_id.clone()), session: Some((id, g)) })
     }
 
     /// Start a session: one NEP-413 / EIP-191 wallet signature over {op:"session", params:{max_usd_micro, ttl_ms?, scope?}}.
@@ -418,7 +418,7 @@ mod host {
             return Err(err("mint_failed", e.message));
         }
         let tx = r.unwrap();
-        prov_append(&tid, "mint", &c.account, c.now_ms, &format!("mint {tx}"))?;
+        prov_append(&tid, "mint", &c.account, c.now_ms, &format!("mint {tx}"), &c.operation_id)?;
         Ok(json!({"ok": true, "op": "mint", "account": c.account, "token_id": tid, "tier": 1, "tx": tx, "minter": mid}))
     }
 
@@ -519,7 +519,7 @@ mod host {
             let (st, j) = http("POST", &format!("{}/wallet/v1/confidential/deposit/cross-chain", OL), Some(&key), Some(&body))?;
             if st >= 300 { return Err(err("upstream", format!("deposit address failed ({})", st))); }
             out["deposit"] = json!({"deposit_address": j.get("deposit_address"), "amount": j.get("amount"), "expires_at": j.get("expires_at"), "hint": j.get("hint")});
-            prov_append(&c.token_id(), "deposit", &c.account, c.now_ms, &body.to_string())?;
+            prov_append(&c.token_id(), "deposit", &c.account, c.now_ms, &body.to_string(), &c.operation_id)?;
         }
         Ok(out)
     }
@@ -589,7 +589,7 @@ mod host {
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
             "usd_in_micro": usd, "status": status, "epoch": stamped, "source": p.get("source")}));
-        if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}"))?; }
+        if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}"), &c.operation_id)?; }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
             "min_amount_out": min_out.to_string(), "settlement_epoch": stamped, "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
     }
@@ -630,7 +630,7 @@ mod host {
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
         let status = after_move_status_epoch(&raw_status, still, stamped, epoch_of(&c.token_id()));
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status, "epoch": stamped}));
-        if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}"))?; }
+        if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}"), &c.operation_id)?; }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
         Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "request_id": r.get("request_id"),
@@ -644,9 +644,9 @@ mod host {
         let v=view(&keys_contract(),"nft_settlement_epoch",json!({"token_id":token}))?;
         v.as_u64().or_else(||v.as_str().and_then(|s|s.parse().ok())).ok_or_else(||err("rpc","missing owner epoch"))
     }
-    fn prov_append(token: &str, kind: &str, owner: &str, ts: u64, detail: &str) -> Result<(),Error> {
+    fn prov_append(token: &str, kind: &str, owner: &str, ts: u64, detail: &str, operation_id:&str) -> Result<(),Error> {
         let epoch=chain_owner_epoch(token)?;
-        provenance::append(&mut Host, provenance::EventInput{contract:&keys_contract(),token,kind,owner,owner_epoch:epoch,ts_ms:ts,detail},
+        provenance::append(&mut Host, provenance::EventInput{operation_id,contract:&keys_contract(),token,kind,owner,owner_epoch:epoch,ts_ms:ts,detail},
             |bytes| getrandom::fill(bytes).map_err(|_|err("entropy","secure event randomness unavailable")))?;
         Ok(())
     }
@@ -657,7 +657,7 @@ mod host {
         // An A->B->A roundtrip is still a new ownership phase. Token-wide caps are not reset.
         if last.owner==owner && last.v==2 && last.owner_epoch==epoch {return Ok(());}
         if last.owner==owner && last.v==1 && epoch==0 {return Ok(());}
-        prov_append(token,"transfer",owner,ts,&format!("transfer epoch {epoch}"))?;
+        prov_append(token,"transfer",owner,ts,&format!("transfer epoch {epoch}"), &format!("owner-phase:{epoch}"))?;
         set_epoch(token,epoch);
         Ok(())
     }
@@ -704,7 +704,7 @@ mod host {
         let cur = active_lock(&Host.get(&k), &c.account, c.now_ms).unwrap_or(0);
         let until = (c.now_ms + hours * 3_600_000).max(cur);
         Host.set(&k, lock_value(&c.account, until).as_bytes());
-        prov_append(&c.token_id(), "lock", &c.account, c.now_ms, &format!("lock until {until}"))?;
+        prov_append(&c.token_id(), "lock", &c.account, c.now_ms, &format!("lock until {until}"), &c.operation_id)?;
         Ok(json!({"ok": true, "op": "lock", "account": c.account, "token_id": c.token_id(), "locked_until_ms": until}))
     }
 
@@ -725,7 +725,7 @@ mod host {
             return Err(err("session_scope", "raising limits needs a fresh wallet signature"));
         }
         Host.set(&k, serde_json::to_string(&pol).unwrap_or_default().as_bytes());
-        prov_append(&c.token_id(), "limits", &c.account, c.now_ms, &format!("limits {pt}/{d} pending={}", pol.pending.is_some()))?;
+        prov_append(&c.token_id(), "limits", &c.account, c.now_ms, &format!("limits {pt}/{d} pending={}", pol.pending.is_some()), &c.operation_id)?;
         let eff = effective_limits(tier, Some(&pol), c.now_ms);
         Ok(json!({"ok": true, "op": "limits", "account": c.account, "token_id": c.token_id(), "holder_limits": pol, "limits": eff, "tier_limits": tier}))
     }
@@ -826,7 +826,7 @@ mod host {
         let (mid, msk) = minter()?;
         let args = json!({"token_id": tid, "tier": a.earned}).to_string();
         let tx = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_set_tier", args: args.as_bytes(), gas: LEVEL_UP_GAS, deposit: 0 }])?;
-        prov_append(&tid, "level_up", &c.account, c.now_ms, &format!("level_up {current}->{} tx {tx}", a.earned))?;
+        prov_append(&tid, "level_up", &c.account, c.now_ms, &format!("level_up {current}->{} tx {tx}", a.earned), &c.operation_id)?;
         let after = tier_progress(a.earned, a.progress.swaps, a.progress.volume_usd_micro);
         Ok(json!({"ok": true, "op": "level_up", "account": c.account, "token_id": tid,
             "tier_before": current, "tier_after": a.earned, "tx_hash": tx, "progress": after}))
@@ -940,7 +940,7 @@ mod host {
         let h: [u8; 32] = hex::decode(hx.trim_start_matches("0x")).ok().and_then(|v| v.try_into().ok()).ok_or_else(|| err("bad_params", "hash"))?;
         if !chainsig::recovers_to(&h, &sig, &child) { return Err(err("bad_signature", "signature does not recover to this key's address")); }
         bump_within(&mut Host, &qk, 1, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
-        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", hx))?;
+        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", hx), &c.operation_id)?;
         Ok(json!({"ok": true, "op": "chain_sign", "token_id": tid, "path": path, "tx": tx, "payload_hash": hx,
             "signature": sig, "evm_address": chainsig::evm_address(&child)}))
     }
