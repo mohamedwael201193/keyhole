@@ -3664,7 +3664,7 @@
   {
    "id": "test-failed_seller_cashout_restores_credit_once_without_reversing_title",
    "claim": "Named test or symbol `failed_seller_cashout_restores_credit_once_without_reversing_title` exists in the source",
-   "where": "README.md:917",
+   "where": "README.md:919",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4021,7 +4021,7 @@
   {
    "id": "test-lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds",
    "claim": "Named test or symbol `lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds` exists in the source",
-   "where": "README.md:917",
+   "where": "README.md:919",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
