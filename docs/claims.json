@@ -7,7 +7,7 @@
   {
    "id": "contract-code-hash",
    "claim": "On-chain code_hash DEXHHyEM…SiZZ of keyhole-devmo.near (contract v2.4, live since 2026-11-08) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
-   "where": "PROOFS.md:97",
+   "where": "README.md:13",
    "evidence_type": "script",
    "evidence": "judge/1-contract.sh",
    "check": {

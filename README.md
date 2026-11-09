@@ -10,8 +10,8 @@ KEYHOLE is an NFT that transfers control of a confidential trading account. Trad
 
 | Live component | Identity | Open the proof |
 |---|---|---|
-| NEAR mainnet NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near), v2.4; code hash from [identity.json](identity.json) | [Deployment transaction and receipts](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn) |
-| OutLayer Intel TDX worker | wasm sha256 from [identity.json](identity.json) | [Publish transaction BWQxEoSg](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) · [Recorded info attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| NEAR mainnet NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near), v2.4; code hash `DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ` from [identity.json](identity.json) | [Deployment transaction and receipts](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn) |
+| OutLayer Intel TDX worker | `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` from [identity.json](identity.json) | [Publish transaction BWQxEoSg](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) · [Recorded info attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
 | Web application | [`keyhole-seven.vercel.app`](https://keyhole-seven.vercel.app) | [/verify](https://keyhole-seven.vercel.app/verify) reads public evidence; [/key](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940) verifies signed account history |
 
 [identity.json](identity.json) is the single release-hash source (`node scripts/gen-identity.mjs --check`). [SECURITY.md](SECURITY.md) defines the privacy, custody, authority and verification boundaries.
