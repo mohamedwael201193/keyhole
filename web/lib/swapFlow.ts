@@ -9,6 +9,8 @@ export type SwapInput = {
   hasKey: boolean;
   sessionLive: boolean;
   amountOk: boolean;
+  /** The amount is more than the holder's known balance of the pay token. */
+  overBalance?: boolean;
   samePair: boolean;
   quoteFresh: boolean;
   quoting: boolean;
@@ -16,7 +18,7 @@ export type SwapInput = {
   swapDone: boolean;
 };
 
-export type SwapStep = "connect" | "checking" | "get_key" | "unlock" | "enter_amount" | "same_pair" | "quoting" | "review" | "confirm" | "pending" | "done";
+export type SwapStep = "connect" | "checking" | "get_key" | "unlock" | "enter_amount" | "short" | "same_pair" | "quoting" | "review" | "confirm" | "pending" | "done";
 
 export function swapStep(i: SwapInput): SwapStep {
   if (i.swapping) return "pending";
@@ -25,6 +27,7 @@ export function swapStep(i: SwapInput): SwapStep {
   if (i.lookingUp) return "checking";
   if (i.keyMiss || !i.hasKey) return "get_key";
   if (!i.sessionLive) return "unlock";
+  if (i.overBalance) return "short";
   if (!i.amountOk) return "enter_amount";
   if (i.samePair) return "same_pair";
   if (i.quoting) return "quoting";
@@ -39,6 +42,8 @@ export const SWAP_LABEL: Record<SwapStep, { label: string; enabled: boolean }> =
   get_key: { label: "Get your key", enabled: true },
   unlock: { label: "Unlock for 30 minutes", enabled: true },
   enter_amount: { label: "Enter an amount", enabled: false },
+  /** The label gets the token symbol at the call site: "Not enough USDC". */
+  short: { label: "Not enough", enabled: false },
   same_pair: { label: "Pick two different tokens", enabled: false },
   quoting: { label: "Getting your price", enabled: false },
   review: { label: "Review swap", enabled: true },

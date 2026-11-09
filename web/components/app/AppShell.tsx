@@ -50,11 +50,11 @@ export const APP_NAV: AppNavGroup[] = [
   {
     title: "Workspace",
     items: [
-      { id: "overview", label: "Overview", href: "/dashboard", icon: "home", match: ["/dashboard"], notHash: "#activity" },
-      { id: "swap", label: "Swap", href: "/swap", icon: "swap", match: ["/swap", "/settle"] },
+      { id: "overview", label: "Overview", href: "/dashboard", icon: "home", match: ["/dashboard"] },
+      { id: "swap", label: "Swap", href: "/swap", icon: "swap", match: ["/swap"] },
       { id: "vault", label: "Vault", href: "/vault", icon: "vault", match: ["/vault", "/pnl"] },
       { id: "keys", label: "Keys", href: "/keys", icon: "key", match: ["/keys", "/gallery", "/key", "/mint"] },
-      { id: "activity", label: "Activity", href: "/dashboard#activity", icon: "activity", match: ["/dashboard"], hash: "#activity" },
+      { id: "activity", label: "Activity", href: "/settle", icon: "activity", match: ["/settle"] },
     ],
   },
 ];
@@ -72,7 +72,7 @@ export function isItemActive(item: AppNavItem, pathname: string | null | undefin
 
 /** The title shown in the top bar for a route. Pure. */
 const TITLES: [string, string][] = [
-  ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Swap"], ["/vault", "Vault"], ["/pnl", "Vault statement"],
+  ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Activity"], ["/vault", "Vault"], ["/pnl", "Vault statement"],
   ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"],
 ];
 export function pageTitle(path: string | null | undefined): string {

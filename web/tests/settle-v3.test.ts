@@ -22,10 +22,10 @@ describe("/settle v3: public settlements on the kit", () => {
     expect(v).toContain("Nothing was signed and no funds moved.");
   });
 
-  it("the swap entry in the sidebar goes to /swap, and /settle is its history", () => {
+  it("the swap entry in the sidebar goes to /swap, and Activity goes to /settle", () => {
     const shell = src("../components/app/AppShell.tsx");
-    expect(shell).toContain('{ id: "swap", label: "Swap", href: "/swap"');
-    expect(shell).toContain('match: ["/swap", "/settle"]');
+    expect(shell).toContain('{ id: "swap", label: "Swap", href: "/swap", icon: "swap", match: ["/swap"] }');
+    expect(shell).toContain('{ id: "activity", label: "Activity", href: "/settle", icon: "activity", match: ["/settle"] }');
   });
 
   it("the settle page keeps the agent panel and the recorded-failed example", () => {

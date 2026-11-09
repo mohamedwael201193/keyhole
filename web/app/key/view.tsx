@@ -75,7 +75,7 @@ export function KeyHistoryView() {
         </section>
       )}
       {proof && <ProofPanel raw={proof} id={active} owner={chain.owner} minter={chain.minter} />}
-      {active && <SaleCard id={active} owner={chain.owner} royaltyBps={chain.royaltyBps} onChanged={chain.refresh} />}
+      {active && <SaleCard id={active} owner={chain.owner} royaltyBps={chain.royaltyBps} minter={chain.minter} onChanged={chain.refresh} />}
       {active && legacy === null && <BuyerProof id={active} owner={chain.owner} />}
       {body && ck && (
         <>

@@ -209,7 +209,7 @@ export function SwapView() {
 
   const step = swapStep({
     signedIn: !!accountId, lookingUp, keyMiss, hasKey: !!held, sessionLive,
-    amountOk: !!units && !overBalance, samePair, quoteFresh, quoting: quote.busy, swapping: swap.busy, swapDone,
+    amountOk: !!units && !overBalance, overBalance, samePair, quoteFresh, quoting: quote.busy, swapping: swap.busy, swapDone,
   });
   const cta = SWAP_LABEL[step];
 
@@ -268,7 +268,9 @@ export function SwapView() {
     if (a && raw) return `${fromBaseUnits(raw, a.decimals)} ${a.symbol}`;
     return `${raw ?? ""} ${tok ? shortTokenId(tok) : ""}`.trim();
   };
-  const busyLabel = step === "pending" ? swap.label || "Swapping" : step === "quoting" ? quote.label || "Getting your price" : unlocking ? "Waiting for your wallet" : cta.label;
+  // With a live session the swap runs without a wallet popup, so the last step says "Swap now". "Confirm and sign" stays for a wallet signature.
+  const ctaLabel = step === "short" ? `Not enough ${from.symbol}` : step === "confirm" && sessionLive ? "Swap now" : cta.label;
+  const busyLabel = step === "pending" ? swap.label || "Swapping" : step === "quoting" ? quote.label || "Getting your price" : unlocking ? "Waiting for your wallet" : ctaLabel;
 
   return (
     <div className="page sw-page" data-testid="swap-page" data-step={step}>
@@ -361,6 +363,9 @@ export function SwapView() {
           </div>
         </section>
 
+        {to.blockchain !== "near" && (
+          <p className="sw-note" data-testid="swap-lands">Lands in your vault as {to.symbol} on {chainName(to.blockchain)}. Withdraw it to any {chainName(to.blockchain)} address from the Vault.</p>
+        )}
         <div className="sw-rate">
           <span className="sw-rate-val" data-testid="swap-rate">{rate != null ? `1 ${from.symbol} = ${formatAmount(rate)} ${to.symbol}` : "Enter an amount to see the rate"}</span>
           {quoteFresh && quotedAt != null && <span className="sw-age">Quoted {ageS}s ago</span>}
@@ -390,6 +395,7 @@ export function SwapView() {
             {busyLabel}
           </Button>
         )}
+        {step === "confirm" && sessionLive && <p className="sw-note" data-testid="swap-session-note">Runs through your unlocked session. No wallet popup.</p>}
         <p className="sw-funds">Your funds stay in your key&apos;s vault on NEAR mainnet. A swap moves only the amount you enter, within the key&apos;s per-trade cap.</p>
 
         {!accountId && <p className="sw-note">Connect a wallet to swap. Checking a price needs no wallet and moves nothing.</p>}

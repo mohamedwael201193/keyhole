@@ -31,8 +31,9 @@ export async function POST(req: NextRequest) {
     const r = await fetch(`${OUTLAYER_API}/call/${OUTLAYER_OWNER}/${OUTLAYER_PROJECT}`, {
       method: "POST",
       headers: { "X-Payment-Key": key, "content-type": "application/json" },
+      // record: the client sends the key id at the top level (validated in checkBody); the enclave reads params.token_id.
       body: JSON.stringify({ input: c.op === "info" ? { op: "info" } : c.op === "provenance" ? { op: "provenance", token_id: (JSON.parse(raw) as { token_id?: string }).token_id }
-        : c.op === "record" ? { op: "record", params: { token_id: (JSON.parse(raw) as { params?: { token_id?: string } }).params?.token_id } } : { op: c.op, auth: c.auth }, async: false,
+        : c.op === "record" ? { op: "record", params: { token_id: (JSON.parse(raw) as { token_id?: string }).token_id } } : { op: c.op, auth: c.auth }, async: false,
         secrets_ref: { profile: "default", account_id: OUTLAYER_OWNER } }),
       signal: AbortSignal.timeout(55_000),
       cache: "no-store",
