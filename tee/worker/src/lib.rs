@@ -829,7 +829,7 @@ pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) 
 /// A spend held against the session cap (when the call runs in a session) and the key's daily cap.
 /// Every refusal before the send gives it back at once (`charge_spend`). A send that failed for good
 /// gives it back in `settle`. A send still pending or under review keeps it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Charge {
     day_key: String,
     session_id: Option<String>,
@@ -1348,3 +1348,5 @@ pub fn assess_level(prov: &[ProvEvent], trades: &[serde_json::Value], current: u
         earned: earned_tier(current, swaps, volume),
     })
 }
+
+pub mod guarded;
