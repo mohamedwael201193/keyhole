@@ -9,9 +9,11 @@ describe("gateway body checks", () => {
     expect(checkBody('{"op":"provenance","token_id":"kabc"}')).toMatchObject({ ok: true, op: "provenance" });
   });
   it("allows the public record without auth, and nothing else new", () => {
-    expect(checkBody('{"op":"record","params":{"token_id":"k5f4750858f328940"}}')).toMatchObject({ ok: true, op: "record" });
+    // The listing card sends the key id at the top level; the route forwards it to the enclave as params.token_id.
+    expect(checkBody('{"op":"record","token_id":"k5f4750858f328940"}')).toMatchObject({ ok: true, op: "record" });
     expect(ALLOWED_OPS as readonly string[]).toContain("record");
-    expect(checkBody(JSON.stringify({ op: "record", auth: auth("record") }))).toMatchObject({ ok: true, op: "record" });
+    expect(checkBody('{"op":"record"}')).toMatchObject({ ok: false, code: "bad_params" });
+    expect(checkBody('{"op":"record","token_id":"../x"}')).toMatchObject({ ok: false, code: "bad_params" });
   });
   it.each(["copy", "sweep_minter", "", "INFO"])("blocks op %s even with an auth object", (op) => expect(checkBody(JSON.stringify({ op, auth: auth(op || "swap") }))).toMatchObject({ ok: false, code: "bad_op" }));
   it("refuses unsigned or incomplete swap and withdraw", () => {
@@ -30,6 +32,14 @@ describe("gateway body checks", () => {
     expect(ALLOWED_OPS).toEqual(expect.arrayContaining(["swap", "withdraw"]));
     expect(ALLOWED_OPS as readonly string[]).not.toContain("copy");
     expect(ALLOWED_OPS as readonly string[]).not.toContain("sweep_minter");
+  });
+  it("allows the signed record of a key without auth, and only for a key id", () => {
+    expect(checkBody('{"op":"record","token_id":"k5f4750858f328940"}')).toEqual({ ok: true, op: "record" });
+    expect(checkBody('{"op":"record","token_id":"0"}')).toMatchObject({ ok: true, op: "record" });
+    for (const body of ['{"op":"record"}', '{"op":"record","token_id":"../x"}', '{"op":"record","token_id":""}', '{"op":"record","token_id":12}']) {
+      expect(checkBody(body), body).toMatchObject({ ok: false, code: "bad_params" });
+    }
+    expect(ALLOWED_OPS as readonly string[]).toContain("record");
   });
   it("requires all auth fields", () => expect(checkBody('{"op":"status","auth":{"account_id":"a"}}')).toMatchObject({ code: "no_auth" }));
   it("rejects op/message mismatch", () => expect(checkBody(JSON.stringify({ op: "mint", auth: auth("status") }))).toMatchObject({ code: "op_mismatch" }));

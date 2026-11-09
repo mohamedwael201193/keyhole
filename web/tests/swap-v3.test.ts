@@ -85,3 +85,24 @@ describe("/swap receive field (production QA)", () => {
     expect(src("../app/swap/view.tsx")).toContain('className="sw-amt-usd"');
   });
 });
+
+describe("swap CTA when the amount is more than the balance, and with a live session", () => {
+  it("reads Not enough <SYMBOL> (disabled) through the short step, not Enter an amount", () => {
+    expect(swapStep({ ...base, amountOk: false, overBalance: true })).toBe("short");
+    expect(swapStep({ ...base, amountOk: false, overBalance: false })).toBe("enter_amount");
+    expect(SWAP_LABEL.short).toEqual({ label: "Not enough", enabled: false });
+    expect(src("../app/swap/view.tsx")).toContain("`Not enough ${from.symbol}`");
+  });
+  it("labels the final step Swap now with a session, and keeps Confirm and sign without one", () => {
+    expect(SWAP_LABEL.confirm.label).toBe("Confirm and sign");
+    const v = src("../app/swap/view.tsx");
+    expect(v).toContain(`step === "confirm" && sessionLive ? "Swap now" : cta.label`);
+    expect(v).toContain("Runs through your unlocked session. No wallet popup.");
+    expect(v).toContain(`testid="swap-cta"`);
+  });
+  it("names the receive chain under the receive panel when it is not NEAR", () => {
+    const v = src("../app/swap/view.tsx");
+    expect(v).toContain(`to.blockchain !== "near"`);
+    expect(v).toContain("Lands in your vault as {to.symbol} on {chainName(to.blockchain)}. Withdraw it to any {chainName(to.blockchain)} address from the Vault.");
+  });
+});

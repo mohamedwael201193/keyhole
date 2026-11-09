@@ -185,7 +185,7 @@
   "asset": "Asset",
   "badAmount": "Enter an amount above 0.",
   "dest": "Destination",
-  "destHelp": "The enclave pays only the account you connected.",
+  "destHelp": "Your wallet signs this exact address.",
   "activityHint": "Sign a read to see your recent trades and withdrawals.",
   "pnlBtn": "Publish signed PnL",
   "pnlHelp": "Opt-in. The enclave signs totals only (trades, USD paid, outputs worth now). You choose whom to show the link to.",

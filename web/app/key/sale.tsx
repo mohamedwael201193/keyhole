@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Button, Skeleton } from "@/components/ui";
 import { Card } from "@/components/ui/card";
 import { TxResult } from "@/components/TxResult";
 import { TxLink } from "@/components/TxLink";
 import { useWallet } from "@/lib/wallet";
 import { useKeyStore } from "@/lib/keyStore";
-import { shortAccount, view, type Token } from "@/lib/near";
+import { shortAccount, tierName, view, type Token } from "@/lib/near";
+import { formatUsdMicro } from "@/lib/amount";
+import { ageLabel } from "@/lib/keyProof";
+import { fetchKeyRecord, verifyKeyRecord, type RecordFetch, type RecordReport } from "@/lib/keyRecord";
 import { KEYS_CONTRACT } from "@/lib/config";
 import { GAS_BUY, GAS_LIST, ONE_YOCTO, type KeysCall, type SendResult, type TxError } from "@/lib/keysTx";
 import { accountState } from "@/lib/nearAccount";
@@ -34,6 +37,8 @@ type Props = {
   owner: string | null | undefined;
   /** The contract's royalty in basis points, or undefined/null when not read. */
   royaltyBps: number | null | undefined;
+  /** The minter the contract names, read by the key page. undefined while reading, null when unavailable. */
+  minter: string | null | undefined;
   /** Re-reads the holder and the royalty (the key page owns those reads). */
   onChanged: () => void;
 };
@@ -44,7 +49,7 @@ type Props = {
  * a TxResult with its NEAR link, then the listing, the holder and the key store are read again. Feature detection hides the
  * actions on a contract that predates v2.4.
  */
-export function SaleCard({ id, owner, royaltyBps, onChanged }: Props) {
+export function SaleCard({ id, owner, royaltyBps, minter, onChanged }: Props) {
   const { accountId, connect, sendTx } = useWallet();
   const store = useKeyStore();
   const { support, retry: retrySupport } = useSaleSupport();
@@ -222,6 +227,8 @@ export function SaleCard({ id, owner, royaltyBps, onChanged }: Props) {
           </div>
         </dl>
 
+        <SignedRecord listing={listed} owner={owner} minter={minter} />
+
         {holder ? (
           <>
             {sellerIsMe ? (
@@ -325,5 +332,76 @@ export function SaleCard({ id, owner, royaltyBps, onChanged }: Props) {
       {result}
     </>,
     "Not for sale",
+  );
+}
+
+const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+const RECORD_HEAD: Record<RecordReport["verdict"], string> = { pass: "PASS", fail: "FAIL", pending: "Checking", unverified: "Not verified" };
+
+/**
+ * The enclave's signed record of a listed key: the holder's trades and the key's settled swaps, volume and tier. Asked for
+ * without a wallet. Every check runs here in the browser before a fact is shown; an unknown op says the record is not out yet.
+ */
+function SignedRecord({ listing, owner, minter }: { listing: Listing; owner: string | null | undefined; minter: string | null | undefined }) {
+  const [attempt, setAttempt] = useState(0);
+  const key = `${listing.token_id}:${listing.seller}:${listing.price}:${attempt}`;
+  /** The reply and the device time it arrived: the age is measured from that moment, not from each render. */
+  const [got, setGot] = useState<{ key: string; res: RecordFetch; at: number } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetchKeyRecord(listing.token_id).then((res) => { if (live) setGot({ key, res, at: Date.now() }); });
+    return () => { live = false; };
+  }, [listing.token_id, key]);
+
+  const cur = got && got.key === key ? got.res : null;
+  const at = got && got.key === key ? got.at : 0;
+  const report = useMemo<RecordReport | null>(() => (
+    cur?.kind === "ok"
+      ? verifyKeyRecord(cur.share, { tokenId: listing.token_id, chainOwner: owner, listedSeller: listing.seller, contractMinter: minter, nowMs: at })
+      : null
+  ), [cur, at, listing.token_id, listing.seller, owner, minter]);
+  const st = report?.statement ?? null;
+
+  return (
+    <section className="sale-record" data-testid="sale-record" aria-labelledby="sale-record-h">
+      <p className="eb">Signed record · enclave</p>
+      <h3 id="sale-record-h">Signed record</h3>
+      {cur === null && <p className="note" data-testid="sale-record-reading">Asking the enclave for the signed record.</p>}
+      {cur?.kind === "unavailable" && <p className="sale-say" data-testid="sale-record-unavailable">The signed record opens with the next enclave release.</p>}
+      {cur?.kind === "error" && (
+        <>
+          <p className="sale-say" data-testid="sale-record-error">The enclave did not return a signed record just now.</p>
+          <div className="sale-actions"><Button variant="secondary" size="sm" onClick={() => setAttempt((n) => n + 1)} testid="sale-record-retry">Try again</Button></div>
+        </>
+      )}
+      {report && (
+        <>
+          <p className={`kp-verdict ${report.verdict}`} data-testid="sale-record-verdict" data-verdict={report.verdict}>{RECORD_HEAD[report.verdict]}</p>
+          <p className="kp-say">Signed by the enclave; checked in your browser.</p>
+          {st && (
+            <dl className="kb-grid sale-facts" data-testid="sale-record-facts">
+              <div><dt>Tier</dt><dd data-testid="sale-record-tier">{tierName(st.tier)}</dd></div>
+              <div><dt>Settled swaps</dt><dd data-testid="sale-record-swaps">{st.settled_swaps}</dd></div>
+              <div><dt>Volume</dt><dd data-testid="sale-record-volume">{formatUsdMicro(st.volume_usd_micro)}</dd></div>
+              <div><dt>Holder&apos;s trades</dt><dd data-testid="sale-record-trades">{st.trades} · {formatUsdMicro(st.cost)} paid in</dd></div>
+              <div><dt>Since</dt><dd>{st.since > 0 ? when(st.since) : "No trades yet"}</dd></div>
+              <div><dt>PnL</dt><dd data-testid="sale-record-pnl">Not in this record: the signed statement does not value the holdings.</dd></div>
+              <div><dt>Signed</dt><dd>{when(st.ts_ms)} · {ageLabel(st.ts_ms, at)}</dd></div>
+            </dl>
+          )}
+          <ol className="kp-checks" data-testid="sale-record-checks">
+            {report.checks.map((c) => (
+              <li key={c.id} className="kp-check" data-testid={`sale-record-check-${c.id}`} data-pass={String(c.pass)}>
+                <span className={`kp-mark ${c.pass === true ? "ok" : c.pass === false ? "bad" : "wait"}`} aria-hidden="true">{c.pass === true ? "✓" : c.pass === false ? "✕" : "…"}</span>
+                <div>
+                  <h3>{c.label}</h3>
+                  <p>{c.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </section>
   );
 }

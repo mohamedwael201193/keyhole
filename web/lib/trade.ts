@@ -1,4 +1,5 @@
 import { ASSETS, type AssetKey } from "./assets";
+import { chainOfAsset } from "./destination";
 
 /**
  * Request params for the worker, matching the CLI in cli/src/cli.ts.
@@ -25,8 +26,9 @@ export function swapParamsById(fromId: string, toId: string, amountIn: string, m
   };
 }
 
-export function withdrawParams(accountId: string, asset: AssetKey, amount: string) {
-  return { chain: "near" as const, to: accountId, token: ASSETS[asset].id, amount };
+/** The payout: to the signed-in account on the token's own chain by default; `dest` names another address on that chain. */
+export function withdrawParams(accountId: string, asset: AssetKey, amount: string, dest?: { chain: string; to: string }) {
+  return { chain: dest?.chain ?? chainOfAsset(ASSETS[asset].id), to: dest?.to ?? accountId, token: ASSETS[asset].id, amount };
 }
 
 export function fundParams(asset: AssetKey, amount: string) {

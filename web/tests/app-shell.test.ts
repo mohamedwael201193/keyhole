@@ -40,21 +40,22 @@ describe("sidebar items", () => {
       ["Swap", "/swap"],
       ["Vault", "/vault"],
       ["Keys", "/keys"],
-      ["Activity", "/dashboard#activity"],
+      ["Activity", "/settle"],
     ]);
   });
 
   it("every link points at a real route", () => {
-    const known = ["/dashboard", "/swap", "/vault", "/keys"];
+    const known = ["/dashboard", "/swap", "/vault", "/keys", "/settle"];
     for (const i of APP_NAV.flatMap((g) => g.items)) expect(known).toContain(i.href.split("#")[0].split("?")[0]);
   });
 });
 
 describe("active state", () => {
-  it("Overview is active on /dashboard, and yields to Activity on #activity", () => {
+  it("Overview is active on /dashboard only; Activity is the settled and refunded orders page", () => {
     expect(isItemActive(item("overview"), "/dashboard", "")).toBe(true);
-    expect(isItemActive(item("overview"), "/dashboard", "#activity")).toBe(false);
-    expect(isItemActive(item("activity"), "/dashboard", "#activity")).toBe(true);
+    expect(isItemActive(item("overview"), "/settle", "")).toBe(false);
+    expect(isItemActive(item("activity"), "/settle", "")).toBe(true);
+    expect(isItemActive(item("activity"), "/dashboard", "#activity")).toBe(false);
     expect(isItemActive(item("activity"), "/dashboard", "")).toBe(false);
   });
 
@@ -63,9 +64,9 @@ describe("active state", () => {
     expect(isItemActive(item("keys"), "/vault", "")).toBe(false);
   });
 
-  it("Swap is active on /swap and on the settlements history", () => {
+  it("Swap is active on /swap only; the settlements history belongs to Activity", () => {
     expect(isItemActive(item("swap"), "/swap", "")).toBe(true);
-    expect(isItemActive(item("swap"), "/settle", "")).toBe(true);
+    expect(isItemActive(item("swap"), "/settle", "")).toBe(false);
     expect(isItemActive(item("swap"), "/vault", "")).toBe(false);
   });
 
@@ -93,6 +94,7 @@ describe("page titles", () => {
     expect(pageTitle("/keys")).toBe("Keys");
     expect(pageTitle("/key/12")).toBe("Key");
     expect(pageTitle("/keys/extra")).toBe("Keys");
+    expect(pageTitle("/settle")).toBe("Activity");
     expect(pageTitle("/nothing")).toBe("KEYHOLE");
     expect(pageTitle(null)).toBe("KEYHOLE");
   });
@@ -114,12 +116,13 @@ describe("AppNav markup", () => {
     for (const i of APP_NAV.flatMap((g) => g.items)) expect(m).toContain(`data-testid="app-nav-${i.id}"`);
   });
 
-  it("the activity link is current only with its hash", () => {
-    const m = html("/dashboard", "#activity");
+  it("the activity link is current on /settle and points there", () => {
+    const m = html("/settle");
     const act = m.split("<a ").find((seg) => seg.includes('data-testid="app-nav-activity"'))!;
     expect(act).toContain('aria-current="page"');
-    const ov = m.split("<a ").find((seg) => seg.includes('data-testid="app-nav-overview"'))!;
-    expect(ov).not.toContain('aria-current="page"');
+    expect(act).toContain('href="/settle"');
+    const sw = m.split("<a ").find((seg) => seg.includes('data-testid="app-nav-swap"'))!;
+    expect(sw).not.toContain('aria-current="page"');
   });
 });
 
