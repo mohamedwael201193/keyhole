@@ -39,16 +39,16 @@
 .ov-key { display: grid; gap: var(--space-3); align-content: start; justify-items: center; text-align: center; padding: var(--space-5) var(--space-4); }
 .ov-key-top { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; }
 .ov-art {
-  margin: var(--space-2) 0 0; width: 100%; height: 252px; min-width: 0; display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-md); overflow: hidden; background: linear-gradient(160deg, var(--surface-warm) 0%, var(--sunken) 100%);
+  margin: var(--space-2) 0 0; width: 100%; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md); overflow: visible; background: transparent;
+}
+.ov-art .ov-foil.foil-card,
+.ov-art .foil-card.ov-foil {
+  width: min(100%, 220px); aspect-ratio: 1 / 1.55; padding: 12px 12px 10px;
+  box-shadow: 0 12px 28px -18px rgba(26, 42, 44, .42);
 }
 .ov-art img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
-.ov-serial { margin: calc(var(--space-2) * -1) 0 0; }
-.ov-serial .v7-mono {
-  display: inline-flex; align-items: center; min-height: 26px; padding: 0 12px; border-radius: var(--radius-pill);
-  background: var(--sunken); color: var(--ink-2); font-size: 13px; letter-spacing: .08em;
-}
-.ov-key-name { margin: 0; font: 600 26px/1.15 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
+.ov-key-name { margin: 0; font: 600 22px/1.15 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
 .ov-key .ov-meta, .ov-key .ov-caps { text-align: center; }
 .ov-key-action { display: flex; justify-content: center; width: 100%; min-width: 0; }
 .ov-key-action .kh-btn { width: 100%; }
@@ -197,13 +197,72 @@
 @media (max-width: 899px) {
   .app-main .ov { padding: var(--space-5) var(--space-4) var(--space-7); gap: var(--space-4); }
   .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ov-art { height: 260px; }
   .ov-signin { padding: var(--space-5); }
 }
 @media (max-width: 419px) {
-  .ov-art { height: 220px; }
   .ov-key, .ov-sample { padding: var(--space-4); }
   .ov-signin { padding: var(--space-4); }
   .sp-pill { padding: 0 12px; }
   .sp-pill[data-state="locked"] .sp-word, .sp-pill[data-state="locked"] .sp-sep { display: none; }
+}
+
+/* ---- Density: fit Overview on 1440x900 / 1280x800 without vertical scroll; readable at 390px ---- */
+.app-main .ov { padding: var(--space-4) var(--space-5) var(--space-5); gap: var(--space-3); }
+.ov .v7-page-head { margin: 0 0 var(--space-3); gap: var(--space-2) var(--space-4); }
+.ov .v7-page-title { font-size: 36px; line-height: 1.05; }
+.ov .v7-page-lead { margin-top: 8px; font-size: 14px; line-height: 1.45; max-width: 56ch; }
+.ov .v7-eyebrow { margin-bottom: 8px; }
+.ov .v7-hero { min-height: 132px; padding: var(--space-4) var(--space-5); }
+.ov .v7-hero-value { font-size: 40px; gap: 10px; margin-top: 0; }
+.ov .v7-hero-label { font-size: 13px; }
+.ov .v7-hero-sub { font-size: 13px; margin-top: 2px; }
+.ov .v7-hero-actions { margin-top: var(--space-3); gap: var(--space-2); }
+.ov .v7-hero-chip { top: var(--space-3); right: var(--space-3); min-height: 28px; padding: 0 12px; font-size: 12px; }
+.ov .v7-card { padding: var(--space-4); }
+.ov .v7-card-head { margin-bottom: var(--space-3); }
+.ov .v7-card-h { font-size: 20px; }
+.ov-cols { gap: var(--space-3); grid-template-columns: 210px minmax(0, 1fr) 280px; }
+.ov-mid { gap: var(--space-3); }
+.ov-pair { gap: var(--space-3); }
+.ov-key { gap: var(--space-2); padding: var(--space-4) var(--space-3); }
+.ov-tiles { gap: var(--space-2); }
+.ov-tile { min-height: 72px; gap: 6px; padding: 10px 6px; font-size: 13px; }
+.ov-tile-icon { width: 30px; height: 30px; }
+.ov-steps { gap: var(--space-3); }
+.ov-steps-h { font-size: 22px; }
+.ov-steps-grid { gap: var(--space-3); }
+.ov-explain { gap: 8px; padding: var(--space-4); }
+.ov-explain-h { font-size: 18px; margin-top: 4px; }
+.ov-explain-body { font-size: 13px; line-height: 1.45; }
+.ov-tier { gap: var(--space-3); }
+.ov-tier-body { gap: var(--space-3); }
+.ov-tier-say { font-size: 13px; }
+.ov-signed-out { gap: var(--space-3); }
+.ov-signin { gap: var(--space-3); padding: var(--space-5); }
+.v7-row.ov-asset { padding: 8px 0; }
+.ov-setup .v7-setup-item { padding: 10px 0; }
+@media (max-width: 1359px) and (min-width: 1000px) {
+  .ov-cols { grid-template-columns: 200px minmax(0, 1fr); }
+}
+@media (max-width: 899px) {
+  .app-main .ov { padding: var(--space-4) var(--space-3) var(--space-5); gap: var(--space-3); }
+  .ov .v7-page-title { font-size: 32px; }
+  .ov .v7-hero { padding: var(--space-4); min-height: 0; }
+  .ov .v7-hero-value { font-size: 34px; }
+  .ov-art .ov-foil.foil-card { width: min(100%, 200px); }
+}
+@media (max-width: 419px) {
+  .ov .v7-page-title { font-size: 28px; }
+  .ov-art .ov-foil.foil-card { width: min(100%, 180px); }
+  .ov-key, .ov-sample { padding: var(--space-3); }
+}
+/* Hide the bottom "three steps" on short laptop heights so the main dashboard fits without scroll. */
+@media (min-width: 1000px) and (max-height: 920px) {
+  .ov-steps { display: none; }
+}
+@media (min-width: 1000px) and (max-height: 820px) {
+  .ov .v7-hero { min-height: 112px; padding: var(--space-3) var(--space-4); }
+  .ov .v7-hero-value { font-size: 34px; }
+  .ov-art .ov-foil.foil-card { width: min(100%, 180px); aspect-ratio: 1 / 1.45; }
+  .ov-tier { display: none; }
 }
