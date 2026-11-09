@@ -25,7 +25,7 @@ After the deploy, `view_account` at final finality returns code_hash `DEXHHyEMdF
 | `nft_listings` | method not found in v2.3 | `[]` (no key is listed) |
 | `nft_listings` with `from_index` `0`, `limit` `100` | not available | `[]` |
 
-The 6 tokens are token `0` (test key, held by `keyhole-devmo.near`) and five keys held by people. The owner table is in [`README.md` §5](../../../README.md#5-the-keys-nft-contract).
+The 6 tokens are token `0` (test key, held by `keyhole-devmo.near`) and five keys held by people. The owner table is in [`README.md` §9](../../../README.md#keys-on-the-contract).
 
 Re-check: `./judge/1-contract.sh` prints `OK   contract code matches the committed wasm`, with the v2.4 code hash.
 

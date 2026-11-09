@@ -13,7 +13,7 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 | History per NFT: earned, paid out, who held it | /key?id=…: holders with from/to, deposits, payouts, trades; hash-chained log signed by the TEE minter, re-verified in the browser; USD totals as signed PnL | [/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940), [/pnl](https://keyhole-seven.vercel.app/pnl), `tests/keylog.test.ts` | ✅ (USD per holder is private by design; holders publish it as signed PnL) |
 | Tests for the transfer path incl. a sale in the middle of a payout | 6 worker invariant tests; mainnet run where the key moved while a payout was in flight | `tee/worker/src/tests.rs`, [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md) | ✅ |
 | Threat model for the transfer | Every way a seller could keep the money, with the control that stops it | [THREAT_MODEL.md](THREAT_MODEL.md) | ✅ |
-| Sub-accounts / Top Level Accounts | Confidential per-key accounts live in the TEE (OutLayer), not NEAR sub-accounts | README §6 | 🟡 different shape |
+| Sub-accounts / Top Level Accounts | Confidential per-key accounts live in the TEE (OutLayer), not NEAR sub-accounts | README §5 | 🟡 different shape |
 
 ## Privacy & Private AI
 
@@ -46,9 +46,9 @@ Each official track prompt, line by line: what KEYHOLE ships for it, where the p
 | Attack demo: prompt-injected agent tries to pay a bad address, with a log | Six mainnet attack calls, all stopped; /ask shows the model ignoring a poisoned note | [docs/evidence/prompt-injection](docs/evidence/prompt-injection/README.md) | ✅ |
 | Counterparty check service (allow / warn / block) with signals, a shared blocklist and an agent wrapper | `cli/src/counterparty.ts` (identical copy in `web/lib/counterparty.ts`), served by `GET /api/check`; `guardedRun` on withdraw, quote --execute and MCP copy; blocklist in `security/blocklist.json` (one labelled demo entry, no real accusations); signed report format in `cli/src/report.ts`. Advisory only: not enforced in the TEE; the web route ships with the next site deploy | README "AI Security & Defense: counterparty check", [`cli/test/counterparty.test.ts`](cli/test/counterparty.test.ts), [`cli/test/guard.test.ts`](cli/test/guard.test.ts), [`web/tests/check.test.ts`](web/tests/check.test.ts) | 🟡 |
 | Attack demo on the guard: a scripted agent obeys an injected instruction, the guard refuses before signing | [`scripts/attack-demo.mts`](scripts/attack-demo.mts): the signer is a stub that throws, and the run asserts it was never called. Refusals only: the worker does not yet pay third parties | [log](docs/evidence/attack-demo/2026-11-07.log) | 🟡 |
-| TEE attestation | /verify, `verify.sh`, judge kit | README §8 | ✅ |
+| TEE attestation | /verify, `verify.sh`, judge kit | README §7 | ✅ |
 
-## Counts (reproduce in README §10)
+## Counts (reproduce in README §9)
 
 1551 passing tests at `d0305f2`: contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct (135 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
 
