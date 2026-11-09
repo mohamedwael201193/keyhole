@@ -231,3 +231,20 @@
 .act-gate-body { margin: 0; max-width: 60ch; font: 400 15px/1.55 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
 .act-gate-action { margin-top: var(--space-2); }
 .act-gate .act-note { margin-top: var(--space-1); }
+
+/* ---- Dashboard density: match Overview ---- */
+.app-main .act { padding: var(--space-4) var(--space-5) var(--space-5); }
+.act { gap: var(--space-3); }
+.act-stats { gap: var(--space-3); }
+.act-stat { padding: var(--space-4); gap: var(--space-2); }
+.act-stat-ico { width: 36px; height: 36px; }
+.act-stat-label { font-size: 14px; }
+.act-stat-value { font-size: 36px; }
+.act-split { gap: var(--space-3); }
+@media (max-width: 899px) {
+  .app-main .act { padding: var(--space-4) var(--space-3) var(--space-5); }
+  .act-stat-value { font-size: 32px; }
+}
+@media (max-width: 560px) {
+  .act-stat-value { font-size: 30px; }
+}

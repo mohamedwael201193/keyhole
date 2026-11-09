@@ -173,3 +173,18 @@
   .sw-flip-ico, .sw-details summary::after, .sw-public summary::after { transition: none; }
   .sw-amt.is-busy { animation: none; opacity: .6; }
 }
+
+/* ---- Dashboard density: match Overview ---- */
+.sw-page { gap: var(--space-3); }
+.sw-grid { gap: var(--space-3); }
+.sw-side { gap: var(--space-3); }
+.sw-card { gap: var(--space-2); }
+.sw-panel { padding: var(--space-3) var(--space-4); }
+.sw-amt-input, .sw-amt { font-size: 34px; }
+.sw-page .sw-cta.kh-btn { min-height: 48px; font-size: 16px; }
+.sw-features { padding: var(--space-3) var(--space-4); }
+.sw-feat { padding: var(--space-2) var(--space-3); gap: var(--space-2); }
+.sw-page .kh-token-trigger { min-height: 44px; }
+@media (max-width: 560px) {
+  .sw-amt-input, .sw-amt { font-size: 28px; }
+}

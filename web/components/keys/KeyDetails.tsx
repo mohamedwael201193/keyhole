@@ -2,6 +2,8 @@
 import { useRef } from "react";
 import { KeyArt } from "@/components/Art";
 import { Cipher } from "@/components/Cipher";
+import { Guilloche, Hallmark } from "@/components/Engraving";
+import { FoilCard } from "@/components/FoilCard";
 import { traitLabel } from "@/components/KeyCard";
 import { Button } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
@@ -48,7 +50,17 @@ export function KeyDetails({ tokenId, owner, tier, viewer, sale, proofHref, sale
   return (
     <Card as="section" className="kd-panel v7-rise" labelledBy="kd-h" testid="key-details">
       <div className="kd-art">
-        <KeyArt n={id.art} alt={title} width={430} height={1080} />
+        <FoilCard finish={id.finish} className="kd-foil">
+          <div className="top">
+            <span className="tier">{tier === null || tier === undefined ? "—" : id.finish}</span>
+            <span className="oo">{t("land.oneOfOne")}</span>
+          </div>
+          <div className="art">
+            <Guilloche seed={id.seedHex} />
+            <KeyArt n={id.art} alt={title} width={430} height={1080} />
+          </div>
+          <Hallmark bits={id.bits} serial={serial} />
+        </FoilCard>
         <IconButton label="Show the key larger" icon="maximize" onClick={() => dialog.current?.showModal?.()} testid="key-expand" />
       </div>
 
@@ -100,7 +112,13 @@ export function KeyDetails({ tokenId, owner, tier, viewer, sale, proofHref, sale
             <IconButton label="Close" icon="x" onClick={() => dialog.current?.close()} testid="key-expanded-close" />
           </div>
           <div className="kd-dialog-art">
-            <KeyArt n={id.art} alt={title} width={430} height={1080} />
+            <FoilCard finish={id.finish} className="kd-foil kd-foil--dialog">
+              <div className="art">
+                <Guilloche seed={id.seedHex} />
+                <KeyArt n={id.art} alt={title} width={430} height={1080} />
+              </div>
+              <Hallmark bits={id.bits} serial={serial} />
+            </FoilCard>
           </div>
         </div>
       </dialog>
