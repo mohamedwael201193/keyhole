@@ -1,4 +1,4 @@
-## 2026-11-09 — Dashboard density on every app page (PR pending)
+## 2026-11-09 — Dashboard density on every app page (PR #185)
 - Shared v7 density (page title/lead, cards, hero, rows, empty states) applies under `.app-main` so Swap, Vault, Keys/Mint, and Activity match the Overview ~80–90% zoom.
 - Page CSS padding/gaps tightened on `.sw-page`, `.vlt`, `.kp-root`, `.act`. Landing `/` unchanged. Foil key cards kept.
 
