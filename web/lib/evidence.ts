@@ -16,6 +16,10 @@ export const PUBLISHED_INFO_CALL: string = IDENTITY.worker.info_call;
 
 export const CALLS = [
   { label: `info · published build ${IDENTITY.worker.wasm_sha256.slice(0, 8)}`, id: PUBLISHED_INFO_CALL, outcome: "ok" },
+  { label: "info · previous build cc8d2fa8", id: "0847b924-df76-4cee-ab5a-a96c789d2983", outcome: "ok" },
+  { label: "record · build d337e822, signed statement for a listed key", id: "b5fbed71-d497-43fe-bbd4-6e28efc4dacf", outcome: "ok · attestation 1324462" },
+  { label: "balance · build d337e822, first signed call", id: "740191ec-48a4-4bbb-87f9-906b27c8116e", outcome: "ok · attestation 1324423" },
+  { label: "swap · build cc8d2fa8, site swap with no wallet popup", id: "9f76716e-b3d6-4081-b50f-fdff21a60f82", outcome: "attested · attestation 1323981" },
   { label: "info · previous build a985fd87", id: "246e4a7a-f138-4459-8548-350dd9960751", outcome: "ok · attestation 1306951" },
   { label: "status · build cc8d2fa8, first signed call", id: "b6787f80-339e-4de3-8f6d-dc46898d6e6d", outcome: "ok · attestation 1321946" },
   { label: "info · previous build ebeb6a34", id: "5650a6b7-b7de-410c-b206-e189171bad15", outcome: "ok · rolled back · attestation 1298844" },
