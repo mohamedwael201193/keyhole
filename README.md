@@ -10,13 +10,15 @@ KEYHOLE is an NFT that transfers control of a confidential trading account. Trad
 
 | Live component | Identity | Open the proof |
 |---|---|---|
-| NEAR mainnet NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near), v2.4; code hash `DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ` | [Deployment transaction and receipts](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn) |
-| OutLayer Intel TDX worker | `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` | [Publish transaction BWQxEoSg](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) · [Recorded info attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| NEAR mainnet NFT contract | [`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near), v2.4; code hash from [identity.json](identity.json) | [Deployment transaction and receipts](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn) |
+| OutLayer Intel TDX worker | wasm sha256 from [identity.json](identity.json) | [Publish transaction BWQxEoSg](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) · [Recorded info attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
 | Web application | [`keyhole-seven.vercel.app`](https://keyhole-seven.vercel.app) | [/verify](https://keyhole-seven.vercel.app/verify) reads public evidence; [/key](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940) verifies signed account history |
 
-[identity.json](identity.json) is the machine-readable release manifest. [SECURITY.md](SECURITY.md) defines the privacy, custody, authority and verification boundaries.
+[identity.json](identity.json) is the single release-hash source (`node scripts/gen-identity.mjs --check`). [SECURITY.md](SECURITY.md) defines the privacy, custody, authority and verification boundaries.
 
-## Verify it yourself in 5 minutes
+## Reproduce it yourself
+
+### Five-minute public path
 
 **Prerequisites:** a checkout or downloaded ZIP of this public repository, **Node.js 20+**, Bash, and internet access. Open a terminal in the repository root. **No npm install, wallet, project credentials, transaction or transfer is needed.**
 
@@ -63,9 +65,9 @@ The transferable asset is **control of a particular funded account**, not an exp
 | List and sell | Listing freezes swap/withdraw; purchase transfers title and retains the earned tier | [List → frozen → buy → old owner refused](docs/evidence/earned-tier-and-sale/README.md) (**previous build** `cc8d2fa8`) |
 | Verify a listed key | Read a minter-signed statement of tier, settled swaps, volume and log head | [Signed record, build `d337e822`](docs/evidence/signed-record/README.md) · [Browser verifier](web/lib/keyRecord.ts) |
 | Inspect history | Verify holder transitions, event commitments and the signed chain head | [Public key history](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940) · [Signed snapshot](docs/evidence/readme-verification/public-log.json) |
-| Set a bounded session | Sign once for scoped, capped access; withdraw still asks for a fresh wallet signature | [Session implementation and tests](tee/worker/src/session.rs) · [Session security model](SECURITY.md#sessions-one-signature-then-no-wallet-popups-for-30-minutes) |
+| Set a bounded session | Sign once for scoped, capped access; withdraw still asks for a fresh wallet signature | [Session implementation and tests](tee/worker/src/session.rs) · [Session checks](tee/worker/src/session.rs) |
 
-**Account value is grounded in its supported assets and rights.** Settled swaps and earned tiers describe behavior; the signed swap log records activity, rather than inventing a performance valuation. See [the record schema](tee/worker/src/lib.rs), [tier rules](tee/worker/src/level.rs) and [financial interpretation](SECURITY.md). A signed log result establishes integrity of the returned event chain.
+**Account value is grounded in its supported assets and rights.** Settled swaps and earned tiers describe behavior; the signed swap log records activity, rather than inventing a performance valuation. See [the record schema](tee/worker/src/lib.rs) and [tier rules](tee/worker/src/level.rs). Financial interpretation lives in SECURITY.md. A signed log result establishes integrity of the returned event chain.
 
 ## How control passes
 
@@ -98,7 +100,7 @@ Holder wallet ── signed intent ──► Gateway ──► OutLayer TDX work
 | [/demo](https://keyhole-seven.vercel.app/demo) | Labelled read-only replay |
 | [Sandbox transfer tests](contracts/keys-sandbox/tests/upgrade.rs), [local attack demo](docs/evidence/attack-demo/2026-11-07.log) | Local execution; not mainnet transactions |
 
-The [full proof reference](PROOFS.md) retains original call IDs, transaction links, build history and the 30-step recorded run. The [explicit evidence index](judge/evidence-index.json) retains historical build constraints and regression-test pointers independently of README length. [SECURITY.md](SECURITY.md) gives the interpretation of concurrency, payout timing, privacy and administrative authority.
+The [full proof reference](PROOFS.md) retains original call IDs, transaction links, build history and the 30-step recorded run. The [explicit evidence index](judge/evidence-index.json) retains historical build constraints and regression-test pointers independently of README length. Concurrency, payout timing, privacy and administrative authority are interpreted in SECURITY.md.
 
 ## NEAR is load-bearing
 
@@ -110,7 +112,7 @@ The [full proof reference](PROOFS.md) retains original call IDs, transaction lin
 | NEAR Intents / 1Click | Asset conversion and cross-chain settlement with terminal order status | [SUCCESS and REFUNDED receipts](docs/evidence/oneclick-sol/README.md) · [Activity](https://keyhole-seven.vercel.app/settle) |
 | OutLayer Intel TDX | Confidential worker execution, sealed application storage and per-call evidence | [Worker](tee/worker) · [Attestation verifier](https://keyhole-seven.vercel.app/verify) |
 
-This implements the NFT track's **“NFTs as accounts … ownership with behavior”**: token/resource binding, holder-gated actions, history, transfer tests and a written transfer threat model. [Official track prompt](https://github.com/nearai/near-hackathon-prompt-examples/blob/main/tracks/10-nfts.md) · [Official tracks/resources](https://nearhackathon.com/#tracks) · [NEAR contract-audit guidance](https://github.com/near/agent-skills/tree/main/skills/near-contract-audit)
+This implements the NFT track's **“NFTs as accounts … Ownership with behavior”**: token/resource binding, holder-gated actions, history, transfer tests and a written transfer threat model. [Official track prompt](https://github.com/nearai/near-hackathon-prompt-examples/blob/main/tracks/10-nfts.md) · [Official tracks/resources](https://nearhackathon.com/#tracks) · [NEAR contract-audit guidance](https://github.com/near/agent-skills/tree/main/skills/near-contract-audit)
 
 ## Use the account
 
@@ -153,7 +155,7 @@ python3 judge/gen-claims.py .
 node judge/verify-claims.mjs --offline
 ```
 
-[SECURITY.md](SECURITY.md) · [THREAT_MODEL.md](THREAT_MODEL.md) · [Transfer model](docs/TRANSFER_THREAT_MODEL.md) · [Contract review](docs/audit/keys-contract.md) · [Agent judge instructions](JUDGE_AGENT.md)
+[THREAT_MODEL.md](THREAT_MODEL.md) · [Transfer model](docs/TRANSFER_THREAT_MODEL.md) · [Contract review](docs/audit/keys-contract.md) · [Agent judge instructions](JUDGE_AGENT.md)
 
 ## Authorship and license
 

@@ -7,7 +7,7 @@
   {
    "id": "contract-code-hash",
    "claim": "On-chain code_hash DEXHHyEM…SiZZ of keyhole-devmo.near (contract v2.4, live since 2026-11-08) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm",
-   "where": "README.md:13",
+   "where": "PROOFS.md:97",
    "evidence_type": "script",
    "evidence": "judge/1-contract.sh",
    "check": {
@@ -609,7 +609,7 @@
   {
    "id": "att-9f76716e-build",
    "claim": "Call 9f76716e executed worker build cc8d2fa8",
-   "where": "README.md:61",
+   "where": "README.md:63",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9f76716e-b3d6-4081-b50f-fdff21a60f82",
    "check": {
@@ -1190,7 +1190,7 @@
   {
    "id": "att-9f76716e",
    "claim": "Attested call 9f76716e linked from README.md",
-   "where": "README.md:61",
+   "where": "README.md:63",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9f76716e-b3d6-4081-b50f-fdff21a60f82",
    "check": {
@@ -3161,7 +3161,7 @@
   {
    "id": "src-ci-6jobs",
    "claim": "CI has 6 jobs: contract, worker, cli, judge-kit, hygiene, web",
-   "where": "README.md:146",
+   "where": "README.md:148",
    "evidence_type": "file",
    "evidence": ".github/workflows/ci.yml",
    "check": {
@@ -4190,7 +4190,7 @@
   {
    "id": "path-identity.json",
    "claim": "Linked repo path identity.json exists",
-   "where": "README.md:17",
+   "where": "README.md:13",
    "evidence_type": "file",
    "evidence": "identity.json",
    "check": {
@@ -4216,7 +4216,7 @@
   {
    "id": "path-judge/check-readme.mjs",
    "claim": "Linked repo path judge/check-readme.mjs exists",
-   "where": "README.md:30",
+   "where": "README.md:32",
    "evidence_type": "file",
    "evidence": "judge/check-readme.mjs",
    "check": {
@@ -4229,7 +4229,7 @@
   {
    "id": "path-docs/evidence/readme-verification/README.md",
    "claim": "Linked repo path docs/evidence/readme-verification/README.md exists",
-   "where": "README.md:30",
+   "where": "README.md:32",
    "evidence_type": "file",
    "evidence": "docs/evidence/readme-verification/README.md",
    "check": {
@@ -4242,7 +4242,7 @@
   {
    "id": "path-docs/claims.json",
    "claim": "Linked repo path docs/claims.json exists",
-   "where": "README.md:39",
+   "where": "README.md:41",
    "evidence_type": "file",
    "evidence": "docs/claims.json",
    "check": {
@@ -4255,7 +4255,7 @@
   {
    "id": "path-web/components/judge/CallVerifier.tsx",
    "claim": "Linked repo path web/components/judge/CallVerifier.tsx exists",
-   "where": "README.md:41",
+   "where": "README.md:43",
    "evidence_type": "file",
    "evidence": "web/components/judge/CallVerifier.tsx",
    "check": {
@@ -4268,7 +4268,7 @@
   {
    "id": "path-judge/README.md",
    "claim": "Linked repo path judge/README.md exists",
-   "where": "README.md:53",
+   "where": "README.md:55",
    "evidence_type": "file",
    "evidence": "judge/README.md",
    "check": {
@@ -4281,7 +4281,7 @@
   {
    "id": "path-tee/worker/src/main.rs",
    "claim": "Linked repo path tee/worker/src/main.rs exists",
-   "where": "README.md:57",
+   "where": "README.md:59",
    "evidence_type": "file",
    "evidence": "tee/worker/src/main.rs",
    "check": {
@@ -4294,7 +4294,7 @@
   {
    "id": "path-contracts/keys/src/lib.rs",
    "claim": "Linked repo path contracts/keys/src/lib.rs exists",
-   "where": "README.md:57",
+   "where": "README.md:59",
    "evidence_type": "file",
    "evidence": "contracts/keys/src/lib.rs",
    "check": {
@@ -4307,7 +4307,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json exists",
-   "where": "README.md:61",
+   "where": "README.md:63",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json",
    "check": {
@@ -4320,7 +4320,7 @@
   {
    "id": "path-docs/evidence/signed-record/README.md",
    "claim": "Linked repo path docs/evidence/signed-record/README.md exists",
-   "where": "README.md:64",
+   "where": "README.md:66",
    "evidence_type": "file",
    "evidence": "docs/evidence/signed-record/README.md",
    "check": {
@@ -4333,7 +4333,7 @@
   {
    "id": "path-web/lib/keyRecord.ts",
    "claim": "Linked repo path web/lib/keyRecord.ts exists",
-   "where": "README.md:64",
+   "where": "README.md:66",
    "evidence_type": "file",
    "evidence": "web/lib/keyRecord.ts",
    "check": {
@@ -4346,7 +4346,7 @@
   {
    "id": "path-docs/evidence/readme-verification/public-log.json",
    "claim": "Linked repo path docs/evidence/readme-verification/public-log.json exists",
-   "where": "README.md:65",
+   "where": "README.md:67",
    "evidence_type": "file",
    "evidence": "docs/evidence/readme-verification/public-log.json",
    "check": {
@@ -4359,7 +4359,7 @@
   {
    "id": "path-tee/worker/src/session.rs",
    "claim": "Linked repo path tee/worker/src/session.rs exists",
-   "where": "README.md:66",
+   "where": "README.md:68",
    "evidence_type": "file",
    "evidence": "tee/worker/src/session.rs",
    "check": {
@@ -4372,7 +4372,7 @@
   {
    "id": "path-tee/worker/src/lib.rs",
    "claim": "Linked repo path tee/worker/src/lib.rs exists",
-   "where": "README.md:68",
+   "where": "README.md:70",
    "evidence_type": "file",
    "evidence": "tee/worker/src/lib.rs",
    "check": {
@@ -4385,7 +4385,7 @@
   {
    "id": "path-tee/worker/src/level.rs",
    "claim": "Linked repo path tee/worker/src/level.rs exists",
-   "where": "README.md:68",
+   "where": "README.md:70",
    "evidence_type": "file",
    "evidence": "tee/worker/src/level.rs",
    "check": {
@@ -4398,7 +4398,7 @@
   {
    "id": "path-docs/TRANSFER_THREAT_MODEL.md",
    "claim": "Linked repo path docs/TRANSFER_THREAT_MODEL.md exists",
-   "where": "README.md:74",
+   "where": "README.md:76",
    "evidence_type": "file",
    "evidence": "docs/TRANSFER_THREAT_MODEL.md",
    "check": {
@@ -4411,7 +4411,7 @@
   {
    "id": "path-THREAT_MODEL.md",
    "claim": "Linked repo path THREAT_MODEL.md exists",
-   "where": "README.md:74",
+   "where": "README.md:76",
    "evidence_type": "file",
    "evidence": "THREAT_MODEL.md",
    "check": {
@@ -4424,7 +4424,7 @@
   {
    "id": "path-tee/worker/verify-log.mjs",
    "claim": "Linked repo path tee/worker/verify-log.mjs exists",
-   "where": "README.md:76",
+   "where": "README.md:78",
    "evidence_type": "file",
    "evidence": "tee/worker/verify-log.mjs",
    "check": {
@@ -4437,7 +4437,7 @@
   {
    "id": "path-judge/readme-verify.test.mjs",
    "claim": "Linked repo path judge/readme-verify.test.mjs exists",
-   "where": "README.md:76",
+   "where": "README.md:78",
    "evidence_type": "file",
    "evidence": "judge/readme-verify.test.mjs",
    "check": {
@@ -4450,7 +4450,7 @@
   {
    "id": "path-docs/evidence/mid-payout/README.md",
    "claim": "Linked repo path docs/evidence/mid-payout/README.md exists",
-   "where": "README.md:95",
+   "where": "README.md:97",
    "evidence_type": "file",
    "evidence": "docs/evidence/mid-payout/README.md",
    "check": {
@@ -4463,7 +4463,7 @@
   {
    "id": "path-judge/readme-verify.mjs",
    "claim": "Linked repo path judge/readme-verify.mjs exists",
-   "where": "README.md:97",
+   "where": "README.md:99",
    "evidence_type": "file",
    "evidence": "judge/readme-verify.mjs",
    "check": {
@@ -4476,7 +4476,7 @@
   {
    "id": "path-contracts/keys-sandbox/tests/upgrade.rs",
    "claim": "Linked repo path contracts/keys-sandbox/tests/upgrade.rs exists",
-   "where": "README.md:99",
+   "where": "README.md:101",
    "evidence_type": "file",
    "evidence": "contracts/keys-sandbox/tests/upgrade.rs",
    "check": {
@@ -4489,7 +4489,7 @@
   {
    "id": "path-docs/evidence/attack-demo/2026-11-07.log",
    "claim": "Linked repo path docs/evidence/attack-demo/2026-11-07.log exists",
-   "where": "README.md:99",
+   "where": "README.md:101",
    "evidence_type": "file",
    "evidence": "docs/evidence/attack-demo/2026-11-07.log",
    "check": {
@@ -4502,7 +4502,7 @@
   {
    "id": "path-PROOFS.md",
    "claim": "Linked repo path PROOFS.md exists",
-   "where": "README.md:101",
+   "where": "README.md:103",
    "evidence_type": "file",
    "evidence": "PROOFS.md",
    "check": {
@@ -4515,7 +4515,7 @@
   {
    "id": "path-judge/evidence-index.json",
    "claim": "Linked repo path judge/evidence-index.json exists",
-   "where": "README.md:101",
+   "where": "README.md:103",
    "evidence_type": "file",
    "evidence": "judge/evidence-index.json",
    "check": {
@@ -4528,7 +4528,7 @@
   {
    "id": "path-docs/evidence/contract-v2-4/README.md",
    "claim": "Linked repo path docs/evidence/contract-v2-4/README.md exists",
-   "where": "README.md:107",
+   "where": "README.md:109",
    "evidence_type": "file",
    "evidence": "docs/evidence/contract-v2-4/README.md",
    "check": {
@@ -4541,7 +4541,7 @@
   {
    "id": "path-web/lib/nep413.ts",
    "claim": "Linked repo path web/lib/nep413.ts exists",
-   "where": "README.md:109",
+   "where": "README.md:111",
    "evidence_type": "file",
    "evidence": "web/lib/nep413.ts",
    "check": {
@@ -4554,7 +4554,7 @@
   {
    "id": "path-docs/evidence/oneclick-sol/README.md",
    "claim": "Linked repo path docs/evidence/oneclick-sol/README.md exists",
-   "where": "README.md:110",
+   "where": "README.md:112",
    "evidence_type": "file",
    "evidence": "docs/evidence/oneclick-sol/README.md",
    "check": {
@@ -4567,7 +4567,7 @@
   {
    "id": "path-tee/worker",
    "claim": "Linked repo path tee/worker exists",
-   "where": "README.md:111",
+   "where": "README.md:113",
    "evidence_type": "file",
    "evidence": "tee/worker",
    "check": {
@@ -4580,7 +4580,7 @@
   {
    "id": "path-web/app/vault",
    "claim": "Linked repo path web/app/vault exists",
-   "where": "README.md:117",
+   "where": "README.md:119",
    "evidence_type": "file",
    "evidence": "web/app/vault",
    "check": {
@@ -4593,7 +4593,7 @@
   {
    "id": "path-cli/README.md",
    "claim": "Linked repo path cli/README.md exists",
-   "where": "README.md:117",
+   "where": "README.md:119",
    "evidence_type": "file",
    "evidence": "cli/README.md",
    "check": {
@@ -4606,7 +4606,7 @@
   {
    "id": "path-skills/keyhole/SKILL.md",
    "claim": "Linked repo path skills/keyhole/SKILL.md exists",
-   "where": "README.md:117",
+   "where": "README.md:119",
    "evidence_type": "file",
    "evidence": "skills/keyhole/SKILL.md",
    "check": {
@@ -4619,7 +4619,7 @@
   {
    "id": "path-web/app/key/sale.tsx",
    "claim": "Linked repo path web/app/key/sale.tsx exists",
-   "where": "README.md:119",
+   "where": "README.md:121",
    "evidence_type": "file",
    "evidence": "web/app/key/sale.tsx",
    "check": {
@@ -4632,7 +4632,7 @@
   {
    "id": "path-web/app/page.tsx",
    "claim": "Linked repo path web/app/page.tsx exists",
-   "where": "README.md:126",
+   "where": "README.md:128",
    "evidence_type": "file",
    "evidence": "web/app/page.tsx",
    "check": {
@@ -4645,7 +4645,7 @@
   {
    "id": "path-web/app/mint",
    "claim": "Linked repo path web/app/mint exists",
-   "where": "README.md:128",
+   "where": "README.md:130",
    "evidence_type": "file",
    "evidence": "web/app/mint",
    "check": {
@@ -4658,7 +4658,7 @@
   {
    "id": "path-web/app/gallery",
    "claim": "Linked repo path web/app/gallery exists",
-   "where": "README.md:129",
+   "where": "README.md:131",
    "evidence_type": "file",
    "evidence": "web/app/gallery",
    "check": {
@@ -4671,7 +4671,7 @@
   {
    "id": "path-web/app/key",
    "claim": "Linked repo path web/app/key exists",
-   "where": "README.md:130",
+   "where": "README.md:132",
    "evidence_type": "file",
    "evidence": "web/app/key",
    "check": {
@@ -4684,7 +4684,7 @@
   {
    "id": "path-web/app/verify",
    "claim": "Linked repo path web/app/verify exists",
-   "where": "README.md:131",
+   "where": "README.md:133",
    "evidence_type": "file",
    "evidence": "web/app/verify",
    "check": {
@@ -4697,7 +4697,7 @@
   {
    "id": "path-web/components/judge/AttackBoard.tsx",
    "claim": "Linked repo path web/components/judge/AttackBoard.tsx exists",
-   "where": "README.md:132",
+   "where": "README.md:134",
    "evidence_type": "file",
    "evidence": "web/components/judge/AttackBoard.tsx",
    "check": {
@@ -4710,7 +4710,7 @@
   {
    "id": "path-web/app/judge",
    "claim": "Linked repo path web/app/judge exists",
-   "where": "README.md:133",
+   "where": "README.md:135",
    "evidence_type": "file",
    "evidence": "web/app/judge",
    "check": {
@@ -4723,7 +4723,7 @@
   {
    "id": "path-web/app/settle",
    "claim": "Linked repo path web/app/settle exists",
-   "where": "README.md:134",
+   "where": "README.md:136",
    "evidence_type": "file",
    "evidence": "web/app/settle",
    "check": {
@@ -4736,7 +4736,7 @@
   {
    "id": "path-web/app/pnl",
    "claim": "Linked repo path web/app/pnl exists",
-   "where": "README.md:135",
+   "where": "README.md:137",
    "evidence_type": "file",
    "evidence": "web/app/pnl",
    "check": {
@@ -4749,7 +4749,7 @@
   {
    "id": "path-web/app/ask",
    "claim": "Linked repo path web/app/ask exists",
-   "where": "README.md:136",
+   "where": "README.md:138",
    "evidence_type": "file",
    "evidence": "web/app/ask",
    "check": {
@@ -4762,7 +4762,7 @@
   {
    "id": "path-web/app/atlas",
    "claim": "Linked repo path web/app/atlas exists",
-   "where": "README.md:137",
+   "where": "README.md:139",
    "evidence_type": "file",
    "evidence": "web/app/atlas",
    "check": {
@@ -4775,7 +4775,7 @@
   {
    "id": "path-web/app/identity",
    "claim": "Linked repo path web/app/identity exists",
-   "where": "README.md:138",
+   "where": "README.md:140",
    "evidence_type": "file",
    "evidence": "web/app/identity",
    "check": {
@@ -4788,7 +4788,7 @@
   {
    "id": "path-contracts/keys/release/SHA256SUMS",
    "claim": "Linked repo path contracts/keys/release/SHA256SUMS exists",
-   "where": "README.md:144",
+   "where": "README.md:146",
    "evidence_type": "file",
    "evidence": "contracts/keys/release/SHA256SUMS",
    "check": {
@@ -4801,7 +4801,7 @@
   {
    "id": "path-web/public/source/manifest.json",
    "claim": "Linked repo path web/public/source/manifest.json exists",
-   "where": "README.md:144",
+   "where": "README.md:146",
    "evidence_type": "file",
    "evidence": "web/public/source/manifest.json",
    "check": {
@@ -4814,7 +4814,7 @@
   {
    "id": "path-.github/workflows/ci.yml",
    "claim": "Linked repo path .github/workflows/ci.yml exists",
-   "where": "README.md:144",
+   "where": "README.md:146",
    "evidence_type": "file",
    "evidence": ".github/workflows/ci.yml",
    "check": {
@@ -4827,7 +4827,7 @@
   {
    "id": "path-docs/audit/keys-contract.md",
    "claim": "Linked repo path docs/audit/keys-contract.md exists",
-   "where": "README.md:156",
+   "where": "README.md:158",
    "evidence_type": "file",
    "evidence": "docs/audit/keys-contract.md",
    "check": {
@@ -4840,7 +4840,7 @@
   {
    "id": "path-JUDGE_AGENT.md",
    "claim": "Linked repo path JUDGE_AGENT.md exists",
-   "where": "README.md:156",
+   "where": "README.md:158",
    "evidence_type": "file",
    "evidence": "JUDGE_AGENT.md",
    "check": {
@@ -4853,7 +4853,7 @@
   {
    "id": "path-CONTRIBUTIONS.md",
    "claim": "Linked repo path CONTRIBUTIONS.md exists",
-   "where": "README.md:160",
+   "where": "README.md:162",
    "evidence_type": "file",
    "evidence": "CONTRIBUTIONS.md",
    "check": {
@@ -4866,7 +4866,7 @@
   {
    "id": "path-LICENSE",
    "claim": "Linked repo path LICENSE exists",
-   "where": "README.md:160",
+   "where": "README.md:162",
    "evidence_type": "file",
    "evidence": "LICENSE",
    "check": {
@@ -5802,7 +5802,7 @@
   {
    "id": "site-/",
    "claim": "Live page / serves",
-   "where": "README.md:126",
+   "where": "README.md:128",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/",
    "check": {
@@ -5816,7 +5816,7 @@
   {
    "id": "site-/judge",
    "claim": "Live page /judge serves",
-   "where": "README.md:133",
+   "where": "README.md:135",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/judge",
    "check": {
@@ -5830,7 +5830,7 @@
   {
    "id": "site-/verify",
    "claim": "Live page /verify serves",
-   "where": "README.md:131",
+   "where": "README.md:133",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/verify",
    "check": {
@@ -5844,7 +5844,7 @@
   {
    "id": "site-/settle",
    "claim": "Live page /settle serves",
-   "where": "README.md:134",
+   "where": "README.md:136",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/settle",
    "check": {
@@ -5858,7 +5858,7 @@
   {
    "id": "site-/gallery",
    "claim": "Live page /gallery serves",
-   "where": "README.md:129",
+   "where": "README.md:131",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/gallery",
    "check": {
@@ -5872,7 +5872,7 @@
   {
    "id": "site-/mint",
    "claim": "Live page /mint serves",
-   "where": "README.md:128",
+   "where": "README.md:130",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/mint",
    "check": {
@@ -5886,7 +5886,7 @@
   {
    "id": "site-/vault",
    "claim": "Live page /vault serves",
-   "where": "README.md:127",
+   "where": "README.md:129",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/vault",
    "check": {
@@ -5900,7 +5900,7 @@
   {
    "id": "site-/ask",
    "claim": "Live page /ask serves",
-   "where": "README.md:136",
+   "where": "README.md:138",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/ask",
    "check": {
@@ -5914,7 +5914,7 @@
   {
    "id": "site-/atlas",
    "claim": "Live page /atlas serves",
-   "where": "README.md:137",
+   "where": "README.md:139",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/atlas",
    "check": {
@@ -5928,7 +5928,7 @@
   {
    "id": "site-/identity",
    "claim": "Live page /identity serves",
-   "where": "README.md:138",
+   "where": "README.md:140",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/identity",
    "check": {
@@ -5942,7 +5942,7 @@
   {
    "id": "site-/pnl",
    "claim": "Live page /pnl serves",
-   "where": "README.md:135",
+   "where": "README.md:137",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/pnl",
    "check": {
