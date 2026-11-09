@@ -346,3 +346,52 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
   .v7-setup--horizontal .v7-step { flex: 1 1 56px; }
   .v7-step-label { font-size: 12px; }
 }
+
+/* ---------- Dashboard density (all app pages; matches Overview ~80–90% zoom) ----------
+   Scope: .app-main only. Public landing (/) is outside .app-main and stays untouched.
+   Page roots keep their own layout; shared v7 chrome is tightened once here. */
+.app-main .v7-page-head { margin: 0 0 var(--space-3); gap: var(--space-2) var(--space-4); }
+.app-main .v7-page-title { font-size: 36px; line-height: 1.05; }
+.app-main .v7-page-lead { margin-top: 8px; font-size: 14px; line-height: 1.45; max-width: 56ch; }
+.app-main .v7-eyebrow { margin-bottom: 8px; }
+.app-main .v7-card { padding: var(--space-4); }
+.app-main .v7-card-head { margin-bottom: var(--space-3); }
+.app-main .v7-card-h { font-size: 20px; }
+.app-main .v7-hero { min-height: 132px; padding: var(--space-4) var(--space-5); }
+.app-main .v7-hero-value { font-size: 40px; gap: 10px; margin-top: 0; }
+.app-main .v7-hero-label { font-size: 13px; }
+.app-main .v7-hero-sub { font-size: 13px; margin-top: 2px; }
+.app-main .v7-hero-actions { margin-top: var(--space-3); gap: var(--space-2); }
+.app-main .v7-hero-chip { top: var(--space-3); right: var(--space-3); min-height: 28px; padding: 0 12px; font-size: 12px; }
+.app-main .v7-row { padding: 10px 0; gap: 12px; }
+.app-main .v7-row-icon { width: 34px; height: 34px; }
+.app-main .v7-row-title, .app-main .v7-row-value { font-size: 14px; }
+.app-main .v7-empty { padding: var(--space-4); gap: 6px; }
+.app-main .v7-empty-title { font-size: 20px; }
+.app-main .v7-empty-body { font-size: 14px; }
+.app-main .v7-setup-item { padding: 10px 0; gap: 12px; }
+.app-main .v7-setup-text b { font-size: 15px; }
+.app-main .page.sw-page { padding: var(--space-4) var(--space-5) var(--space-5); max-width: none; }
+.app-main .vlt,
+.app-main .kp-root,
+.app-main .act { padding: var(--space-4) var(--space-5) var(--space-5); }
+.app-main .vlt,
+.app-main .kp-root,
+.app-main .act,
+.app-main .sw-page { gap: var(--space-3); }
+@media (max-width: 899px) {
+  .app-main .v7-page-title { font-size: 32px; }
+  .app-main .v7-hero { padding: var(--space-4); min-height: 0; }
+  .app-main .v7-hero-value { font-size: 34px; }
+  .app-main .page.sw-page,
+  .app-main .vlt,
+  .app-main .kp-root,
+  .app-main .act { padding: var(--space-4) var(--space-3) var(--space-5); }
+}
+@media (max-width: 419px) {
+  .app-main .v7-page-title { font-size: 28px; }
+}
+@media (min-width: 1000px) and (max-height: 820px) {
+  .app-main .v7-hero { min-height: 112px; padding: var(--space-3) var(--space-4); }
+  .app-main .v7-hero-value { font-size: 34px; }
+}
