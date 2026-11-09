@@ -19,7 +19,7 @@ PASS recorded refusal already_holder: a516a457-0be8-4805-acb1-4f3a9ad30ad3, buil
 PASS recorded refusal rate_limited: d892ac43-b786-4d5b-909a-764b6c92f6fd, build f13efe92, exact output hash
 PASS recorded refusal rate_limited: 1a88f79f-49dd-45fb-bcae-96b746f38423, build f13efe92, exact output hash
 PASS recorded refusal over_cap_per_tx: 458541cb-ae80-4cae-9f3f-711e413e8b33, build 8136a3fd, exact output hash
-PASS fresh public signed swap log: 32 events, 10 swaps, minter matches mainnet, output bound to 1e426121-ec64-42a5-b3cb-aa18d2486fe0
+PASS fresh public signed swap log: 32 events, 10 swaps, minter matches mainnet, output bound to 54fb2156-4d77-4a90-875e-8d43b73b3bd9
 PASS fresh gateway refusal: HTTP 400 bad_op (not an enclave attack)
 PASS fresh gateway refusal: HTTP 413 oversized body (not an enclave attack)
 PASS live proof page /verify: HTTP 200
@@ -569,4 +569,4 @@ PASS att-d5077866-build  keyhole-devmo.near/keyhole cc8d2fa8e2e4  [judge/evidenc
 PASS att-2a1aed5b-build  keyhole-devmo.near/keyhole cc8d2fa8e2e4  [judge/evidence-index.json:895]
 
 541 claims: 541 PASS, 0 FAIL, 0 ERROR, 0 SKIP
-PASS README quick commands (61.6s)
+PASS README quick commands (243.6s)

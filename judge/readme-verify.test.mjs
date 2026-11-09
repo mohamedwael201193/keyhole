@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checkLog, checkAttestation, canonical, sha } from './readme-verify.mjs';
+import { fetchAttestation, checkLog, checkAttestation, canonical, sha } from './readme-verify.mjs';
 const output = JSON.parse(readFileSync(new URL('../docs/evidence/readme-verification/public-log.json', import.meta.url))).output;
 test('real public swap log verifies 32 signed events and 10 swaps', () => {
   assert.deepEqual(checkLog(output), { events: 32, swaps: 10, head: output.head });
@@ -29,3 +29,27 @@ for (const [name, patch] of [
   ['edited output hash', { output_hash:'f'.repeat(64) }],
 ]) test(`attestation rejects ${name}`, () => assert.throws(() => checkAttestation({ ...a, ...patch }, { build, output })));
 test('attestation rejects an unexpected executed build even if internally consistent', () => assert.throws(() => checkAttestation(a, { build:'c'.repeat(64) })));
+
+const freshCall = '12345678-1234-1234-1234-123456789abc';
+const mockReply = status => new Response(JSON.stringify({ call_id: freshCall }), { status });
+test('fresh attestation polls the same call through 404 and 202 then requires 200', async () => {
+  const urls = [], waits = [], statuses = [404, 202, 200];
+  const reply = await fetchAttestation(freshCall, { pending: true, get: async url => { urls.push(url); return mockReply(statuses.shift()); }, pause: async ms => { waits.push(ms); } });
+  assert.equal(reply.call_id, freshCall); assert.equal(urls.length, 3); assert.equal(new Set(urls).size, 1); assert.deepEqual(waits, [1000, 2000]);
+});
+test('historical missing attestation fails immediately', async () => {
+  let calls = 0;
+  await assert.rejects(fetchAttestation(freshCall, { get: async () => { calls++; return mockReply(404); } }), /HTTP 404/);
+  assert.equal(calls, 1);
+});
+test('fresh attestation indexing timeout fails closed', async () => {
+  let calls = 0;
+  await assert.rejects(fetchAttestation(freshCall, { pending: true, get: async () => { calls++; return mockReply(404); }, pause: async () => {} }), /HTTP 404 after indexing wait/);
+  assert.equal(calls, 12);
+});
+test('fresh attestation never treats a non-indexing error as evidence', async () => {
+  await assert.rejects(fetchAttestation(freshCall, { pending: true, get: async () => mockReply(403), pause: async () => { throw new Error('must not wait'); } }), /HTTP 403/);
+});
+test('invalid attestation call ID fails before network access', async () => {
+  await assert.rejects(fetchAttestation('invalid', { get: async () => { throw new Error('must not fetch'); } }), /match/);
+});

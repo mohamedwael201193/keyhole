@@ -2,124 +2,149 @@ TAP version 13
 # Subtest: README exposes complete quick, offline and regenerate acceptance blocks
 ok 1 - README exposes complete quick, offline and regenerate acceptance blocks
   ---
-  duration_ms: 1.209028
+  duration_ms: 1.446958
   ...
 # Subtest: unmarked Bash instructions fail instead of silently escaping CI
 ok 2 - unmarked Bash instructions fail instead of silently escaping CI
   ---
-  duration_ms: 1.108218
+  duration_ms: 1.304917
   ...
 # Subtest: duplicate marked command blocks fail
 ok 3 - duplicate marked command blocks fail
   ---
-  duration_ms: 0.275412
+  duration_ms: 0.291947
   ...
 # Subtest: required offline block cannot be silently removed
 ok 4 - required offline block cannot be silently removed
   ---
-  duration_ms: 0.286248
+  duration_ms: 0.403193
   ...
 # Subtest: CRLF README command blocks are supported
 ok 5 - CRLF README command blocks are supported
   ---
-  duration_ms: 0.189034
+  duration_ms: 0.324776
   ...
 # Subtest: real public swap log verifies 32 signed events and 10 swaps
 ok 6 - real public swap log verifies 32 signed events and 10 swaps
   ---
-  duration_ms: 4.85341
+  duration_ms: 4.969478
   ...
 # Subtest: rejects owner tamper
 ok 7 - rejects owner tamper
   ---
-  duration_ms: 1.410921
+  duration_ms: 1.59985
   ...
 # Subtest: rejects swap detail commitment tamper
 ok 8 - rejects swap detail commitment tamper
   ---
-  duration_ms: 0.438643
+  duration_ms: 0.447341
   ...
 # Subtest: rejects missing signature
 ok 9 - rejects missing signature
   ---
-  duration_ms: 0.206153
+  duration_ms: 0.218961
   ...
 # Subtest: rejects wrong signature
 ok 10 - rejects wrong signature
   ---
-  duration_ms: 0.799969
+  duration_ms: 0.734202
   ...
 # Subtest: rejects wrong token
 ok 11 - rejects wrong token
   ---
-  duration_ms: 0.322495
+  duration_ms: 0.264811
   ...
 # Subtest: rejects missing events
 ok 12 - rejects missing events
   ---
-  duration_ms: 0.195631
+  duration_ms: 0.216892
   ...
 # Subtest: rejects reordered events
 ok 13 - rejects reordered events
   ---
-  duration_ms: 0.340551
+  duration_ms: 0.337147
   ...
 # Subtest: rejects truncated log
 ok 14 - rejects truncated log
   ---
-  duration_ms: 0.620654
+  duration_ms: 0.717247
   ...
 # Subtest: rejects edited head
 ok 15 - rejects edited head
   ---
-  duration_ms: 0.662239
+  duration_ms: 0.710731
   ...
 # Subtest: rejects a valid log from a signer other than the current minter
 ok 16 - rejects a valid log from a signer other than the current minter
   ---
-  duration_ms: 0.2178
+  duration_ms: 0.239896
   ...
 # Subtest: canonical JSON recursively sorts keys, preserves array order
 ok 17 - canonical JSON recursively sorts keys, preserves array order
   ---
-  duration_ms: 0.163302
+  duration_ms: 0.160486
   ...
 # Subtest: attestation checks exact bytes and expected build
 ok 18 - attestation checks exact bytes and expected build
   ---
-  duration_ms: 1.378137
+  duration_ms: 1.299737
   ...
 # Subtest: attestation rejects wrong project
 ok 19 - attestation rejects wrong project
   ---
-  duration_ms: 0.281737
+  duration_ms: 0.326816
   ...
 # Subtest: attestation rejects wrong registered build
 ok 20 - attestation rejects wrong registered build
   ---
-  duration_ms: 0.134528
+  duration_ms: 0.151539
   ...
 # Subtest: attestation rejects absent quote
 ok 21 - attestation rejects absent quote
   ---
-  duration_ms: 0.173963
+  duration_ms: 0.201867
   ...
 # Subtest: attestation rejects edited output hash
 ok 22 - attestation rejects edited output hash
   ---
-  duration_ms: 0.545734
+  duration_ms: 0.716684
   ...
 # Subtest: attestation rejects an unexpected executed build even if internally consistent
 ok 23 - attestation rejects an unexpected executed build even if internally consistent
   ---
-  duration_ms: 0.320802
+  duration_ms: 0.352223
   ...
-1..23
-# tests 23
+# Subtest: fresh attestation polls the same call through 404 and 202 then requires 200
+ok 24 - fresh attestation polls the same call through 404 and 202 then requires 200
+  ---
+  duration_ms: 29.631667
+  ...
+# Subtest: historical missing attestation fails immediately
+ok 25 - historical missing attestation fails immediately
+  ---
+  duration_ms: 0.698463
+  ...
+# Subtest: fresh attestation indexing timeout fails closed
+ok 26 - fresh attestation indexing timeout fails closed
+  ---
+  duration_ms: 1.116633
+  ...
+# Subtest: fresh attestation never treats a non-indexing error as evidence
+ok 27 - fresh attestation never treats a non-indexing error as evidence
+  ---
+  duration_ms: 0.286883
+  ...
+# Subtest: invalid attestation call ID fails before network access
+ok 28 - invalid attestation call ID fails before network access
+  ---
+  duration_ms: 0.767436
+  ...
+1..28
+# tests 28
 # suites 0
-# pass 23
+# pass 28
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 138.884495
+# duration_ms 197.530715

@@ -82,7 +82,22 @@ async function rpc(params) {
 }
 const query = (request_type, extra = {}) => rpc({ request_type, finality: 'final', account_id: identity.contract.account, ...extra });
 const view = async (method_name, args = {}) => JSON.parse(Buffer.from((await query('call_function', { method_name, args_base64: Buffer.from(JSON.stringify(args)).toString('base64') })).result).toString());
-const att = async call => { assert.match(call, /^[0-9a-f-]{36}$/); return json(`${API}/attestations/by-call/${call}`); };
+// A completed public call can precede its attestation-index row. Poll the same
+// call ID; never substitute recorded evidence or skip the fresh output binding.
+export async function fetchAttestation(call, { pending = false, get = request, pause = ms => new Promise(r => setTimeout(r, ms)) } = {}) {
+  assert.match(call, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  const attempts = pending ? 12 : 1;
+  for (let i = 0; i < attempts; i++) {
+    const r = await get(`${API}/attestations/by-call/${call}`);
+    if (pending && [202, 404].includes(r.status) && i < attempts - 1) {
+      await pause(Math.min(1000 * (i + 1), 5000));
+      continue;
+    }
+    assert.equal(r.status, 200, `attestation ${call}: HTTP ${r.status}${pending ? ' after indexing wait' : ''}`);
+    return r.json();
+  }
+}
+const att = fetchAttestation;
 
 export async function main(args = []) {
   assert.ok(args.every(x => x === '--offline'), 'usage: node judge/readme-verify.mjs [--offline]');
@@ -133,7 +148,7 @@ export async function main(args = []) {
   }
   const fresh = await json(`${SITE}/api/worker`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ op: 'provenance', token_id: TOKEN }) });
   const live = checkLog(fresh.output, cfg.minter);
-  checkAttestation(await att(fresh.call_id), { build: identity.worker.wasm_sha256, output: fresh.output });
+  checkAttestation(await att(fresh.call_id, { pending: true }), { build: identity.worker.wasm_sha256, output: fresh.output });
   console.log(`PASS fresh public signed swap log: ${live.events} events, ${live.swaps} swaps, minter matches mainnet, output bound to ${fresh.call_id}`);
   for (const [body, status, code] of [
     [JSON.stringify({ op: 'copy' }), 400, 'bad_op'],

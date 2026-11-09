@@ -4,102 +4,127 @@ TAP version 13
 # Subtest: real public swap log verifies 32 signed events and 10 swaps
 ok 1 - real public swap log verifies 32 signed events and 10 swaps
   ---
-  duration_ms: 5.225444
+  duration_ms: 6.856635
   ...
 # Subtest: rejects owner tamper
 ok 2 - rejects owner tamper
   ---
-  duration_ms: 1.4723
+  duration_ms: 2.487054
   ...
 # Subtest: rejects swap detail commitment tamper
 ok 3 - rejects swap detail commitment tamper
   ---
-  duration_ms: 0.487922
+  duration_ms: 0.71541
   ...
 # Subtest: rejects missing signature
 ok 4 - rejects missing signature
   ---
-  duration_ms: 0.270956
+  duration_ms: 0.517842
   ...
 # Subtest: rejects wrong signature
 ok 5 - rejects wrong signature
   ---
-  duration_ms: 0.913949
+  duration_ms: 1.128476
   ...
 # Subtest: rejects wrong token
 ok 6 - rejects wrong token
   ---
-  duration_ms: 0.40879
+  duration_ms: 0.411694
   ...
 # Subtest: rejects missing events
 ok 7 - rejects missing events
   ---
-  duration_ms: 0.243723
+  duration_ms: 0.325888
   ...
 # Subtest: rejects reordered events
 ok 8 - rejects reordered events
   ---
-  duration_ms: 0.365142
+  duration_ms: 0.475162
   ...
 # Subtest: rejects truncated log
 ok 9 - rejects truncated log
   ---
-  duration_ms: 0.699277
+  duration_ms: 0.911221
   ...
 # Subtest: rejects edited head
 ok 10 - rejects edited head
   ---
-  duration_ms: 0.704639
+  duration_ms: 0.906076
   ...
 # Subtest: rejects a valid log from a signer other than the current minter
 ok 11 - rejects a valid log from a signer other than the current minter
   ---
-  duration_ms: 0.227833
+  duration_ms: 0.327686
   ...
 # Subtest: canonical JSON recursively sorts keys, preserves array order
 ok 12 - canonical JSON recursively sorts keys, preserves array order
   ---
-  duration_ms: 0.136049
+  duration_ms: 0.171219
   ...
 # Subtest: attestation checks exact bytes and expected build
 ok 13 - attestation checks exact bytes and expected build
   ---
-  duration_ms: 1.359107
+  duration_ms: 1.947872
   ...
 # Subtest: attestation rejects wrong project
 ok 14 - attestation rejects wrong project
   ---
-  duration_ms: 0.303686
+  duration_ms: 0.329894
   ...
 # Subtest: attestation rejects wrong registered build
 ok 15 - attestation rejects wrong registered build
   ---
-  duration_ms: 0.145699
+  duration_ms: 0.141903
   ...
 # Subtest: attestation rejects absent quote
 ok 16 - attestation rejects absent quote
   ---
-  duration_ms: 0.167733
+  duration_ms: 0.198256
   ...
 # Subtest: attestation rejects edited output hash
 ok 17 - attestation rejects edited output hash
   ---
-  duration_ms: 0.655354
+  duration_ms: 0.661612
   ...
 # Subtest: attestation rejects an unexpected executed build even if internally consistent
 ok 18 - attestation rejects an unexpected executed build even if internally consistent
   ---
-  duration_ms: 0.340088
+  duration_ms: 0.400406
   ...
-1..18
-# tests 18
+# Subtest: fresh attestation polls the same call through 404 and 202 then requires 200
+ok 19 - fresh attestation polls the same call through 404 and 202 then requires 200
+  ---
+  duration_ms: 30.850473
+  ...
+# Subtest: historical missing attestation fails immediately
+ok 20 - historical missing attestation fails immediately
+  ---
+  duration_ms: 0.774812
+  ...
+# Subtest: fresh attestation indexing timeout fails closed
+ok 21 - fresh attestation indexing timeout fails closed
+  ---
+  duration_ms: 1.32016
+  ...
+# Subtest: fresh attestation never treats a non-indexing error as evidence
+ok 22 - fresh attestation never treats a non-indexing error as evidence
+  ---
+  duration_ms: 0.321963
+  ...
+# Subtest: invalid attestation call ID fails before network access
+ok 23 - invalid attestation call ID fails before network access
+  ---
+  duration_ms: 0.844771
+  ...
+1..23
+# tests 23
 # suites 0
-# pass 18
+# pass 23
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 144.036269
+# duration_ms 198.926276
 PASS local release identities: contract b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c, worker d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41
 PASS recorded signed swap log: 32 events, 10 swaps, head 8ca259c26bca49f078547e6b2a82e9c411853d53b5b74a0e2fefc74520317ff0
 PASS mutation: edited log owner rejected
@@ -648,4 +673,4 @@ SKIP att-d5077866-build  offline (SKIP)  [judge/evidence-index.json:881]
 SKIP att-2a1aed5b-build  offline (SKIP)  [judge/evidence-index.json:895]
 
 541 claims: 204 PASS, 0 FAIL, 0 ERROR, 337 SKIP
-PASS README offline commands (0.6s)
+PASS README offline commands (0.7s)

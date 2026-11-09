@@ -8,15 +8,17 @@ These are actual executions, not an assurance about future network availability.
 
 | Block / log | Actual result |
 |---|---|
-| [Quick: identity, public verifier, claim ledger](quick.txt) | **541 PASS, 0 FAIL, 0 ERROR, 0 SKIP**; complete block **61.6 seconds** |
-| [Offline](offline.txt) | **204 PASS, 0 FAIL, 0 ERROR, 337 SKIP**; 18 verifier tests passed; 0.6 seconds |
+| [Quick: identity, public verifier, claim ledger](quick.txt) | **541 PASS, 0 FAIL, 0 ERROR, 0 SKIP**; complete block **243.6 seconds** |
+| [Offline](offline.txt) | **204 PASS, 0 FAIL, 0 ERROR, 337 SKIP**; 23 verifier tests passed; 0.7 seconds |
 | [Regenerate and check](generate.txt) | Generated **541** claims; **204 PASS, 0 FAIL, 0 ERROR, 337 SKIP** offline; 0.2 seconds |
-| [Proof mutation + README parser tests](verifier-tests.txt) | **23 tests passed**, 0 failed |
+| [Proof mutation + README parser tests](verifier-tests.txt) | **28 tests passed**, 0 failed |
 | [Web unit suite](web-tests.txt) | **1508 tests passed**, 77 files |
 
-The public quick path observed contract `DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ`, version `2.4.0`, supply `6`, two contract FullAccess keys and one scoped FunctionCall key. Published worker bytes: **765658**, SHA256 `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41`. Fresh public provenance call: [`1e426121-ec64-42a5-b3cb-aa18d2486fe0`](https://api.outlayer.ai/attestations/by-call/1e426121-ec64-42a5-b3cb-aa18d2486fe0). Its 32 events include 10 swaps; the signed head and current contract minter matched.
+The public quick path observed contract `DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ`, version `2.4.0`, supply `6`, two contract FullAccess keys and one scoped FunctionCall key. Published worker bytes: **765658**, SHA256 `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41`. Fresh public provenance call: [`54fb2156-4d77-4a90-875e-8d43b73b3bd9`](https://api.outlayer.ai/attestations/by-call/54fb2156-4d77-4a90-875e-8d43b73b3bd9). Its 32 events include 10 swaps; the signed head and current contract minter matched.
 
 The run re-fetched **11 historical refusal attestations**, checked exact canonical output commitments and printed each original build. Fresh unauthenticated gateway probes returned **400 bad_op** and **413 oversized body**. These are new gateway checks, not fresh enclave attacks. `/verify`, `/attack` and `/judge` returned HTTP 200. No value-moving operations were invoked.
+
+The claim checker memoizes identical call IDs and serializes unique public attestation reads with a 1.5-second gap (123 reads for 189 attestation assertions). Fresh call output is bound to that same call ID after a bounded indexing wait; persistent missing evidence fails. The five added indexing tests cover delayed 404/202 responses, exhaustion, historical missing evidence, other HTTP errors and malformed IDs. No recorded response substitutes for fresh evidence.
 
 ## Recorded public swap-log input
 

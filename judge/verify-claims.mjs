@@ -67,6 +67,20 @@ const b58 = (buf) => { const A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmn
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 function walk(d, out = []) { for (const f of readdirSync(d)) { const p = join(d, f); if (f === "node_modules" || f === "target" || f === ".next") continue; statSync(p).isDirectory() ? walk(p, out) : out.push(p); } return out; }
 const homeHtml = () => once("home", async () => (await get("https://keyhole-seven.vercel.app/")).text());
+// Build-binding rows and generic rows often reference the same call. Fetch each
+// public attestation once and serialize unique reads with a polite 1.5s gap.
+// Queue the entire retry interval too, so a 429 never launches parallel retries.
+let attestationQueue = Promise.resolve();
+const publicAttestation = (call) => once(`att:${call}`, () => {
+  const result = attestationQueue.then(async () => {
+    try {
+      const r = await get(`${OUTLAYER}/attestations/by-call/${call}`);
+      return { status: r.status, ok: r.ok, body: r.ok ? await r.json() : null };
+    } finally { await sleep(1500); }
+  });
+  attestationQueue = result.catch(() => {});
+  return result;
+});
 
 const checks = {
   async path(c) { return existsSync(join(ROOT, c.path)) ? [true, c.path] : [false, `missing ${c.path}`]; },
@@ -122,9 +136,9 @@ const checks = {
     return [!failed, failed ? "a receipt failed" : `ok, signer ${r.transaction.signer_id}`];
   },
   async attestation(c) {
-    const r = await get(`${OUTLAYER}/attestations/by-call/${c.call}`);
+    const r = await publicAttestation(c.call);
     if (!r.ok) return [false, `HTTP ${r.status}`];
-    const a = await r.json();
+    const a = r.body;
     const ok = a.executed_wasm_sha256 === a.wasm_hash && (a.tdx_quote || "").length > 100 && (!c.wasm_prefix || a.executed_wasm_sha256.startsWith(c.wasm_prefix)) && (!c.project || a.project_id === c.project);
     return [ok, `${a.project_id} ${a.executed_wasm_sha256?.slice(0, 12)}`];
   },
