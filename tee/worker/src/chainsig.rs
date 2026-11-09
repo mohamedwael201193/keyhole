@@ -47,13 +47,7 @@ pub fn derive(root: &AffinePoint, predecessor: &str, path: &str) -> AffinePoint 
 /// EIP-55 checksummed address of an uncompressed secp256k1 key.
 pub fn evm_address(p: &AffinePoint) -> String {
     let h = Keccak256::digest(&p.to_encoded_point(false).as_bytes()[1..]);
-    let lower = hex::encode(&h[12..]);
-    let ch = Keccak256::digest(lower.as_bytes());
-    let out: String = lower.chars().enumerate().map(|(i, c)| {
-        let nib = (ch[i / 2] >> if i % 2 == 0 { 4 } else { 0 }) & 0xf;
-        if c.is_ascii_alphabetic() && nib >= 8 { c.to_ascii_uppercase() } else { c }
-    }).collect();
-    format!("0x{out}")
+    format!("0x{}", crate::eip55(&hex::encode(&h[12..])))
 }
 
 /// Args for `v1.signer.sign`; payload must be a 32-byte hash (hex).

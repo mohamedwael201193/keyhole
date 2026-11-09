@@ -1,6 +1,6 @@
 //! KEYHOLE OutLayer worker (wasm32-wasip2). Reads one JSON request on stdin, prints one JSON reply.
-//! Ops: info | status | quote | mint | account | balance | swap | copy | withdraw | history | provenance | lock | prove | sweep_minter.
-//! All ops except `info` and `sweep_minter` require a NEP-413 signature by the holder.
+//! Ops: info | status | quote | mint | account | balance | swap | copy | withdraw | history | provenance | record | lock | prove | sweep_minter.
+//! All ops except `info`, `provenance`, `record` and `sweep_minter` require a NEP-413 signature by the holder.
 #[cfg(target_arch = "wasm32")]
 mod host {
     use keyhole_worker::*;
@@ -567,7 +567,9 @@ mod host {
         let lim = limits_now(&c)?;
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
-        assert_withdraw_to(&c.account, &to)?;
+        // `to` is checked for shape on `chain` only. The NEP-413 message signed above already contains params.to, so
+        // the holder has signed this destination explicitly.
+        assert_withdraw_to(&chain, &to)?;
         prov_sync_owner(&c.token_id(), &c.account, c.now_ms);
         let evs: Vec<ProvEvent> = load_prov(&c.token_id()).into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
@@ -753,6 +755,34 @@ mod host {
         Ok(json!({"ok": true, "op": "pnl", "statement": statement, "sig": sig, "minter": mid}))
     }
 
+    /// Public signed record of a key listed for sale. No signature: anyone may ask. It is answered only while the keys
+    /// contract lists the key now (`not_listed` otherwise), and only from a key log that verifies (`bad_log`, nothing
+    /// is written then). It covers every row of the key's log, from any holder, and is signed by the minter key as
+    /// `prove` and `pnl` are. The trade log keeps its last 100 rows (`log_push`), so the counts cover those rows.
+    fn op_record(input: &Value) -> Result<Value, Error> {
+        let tid = s(&input.get("params").cloned().unwrap_or_default(), "token_id").unwrap_or_default();
+        if chainsig::path_for(&tid).is_none() { return Err(err("bad_params", "params.token_id must be k + 16 hex")); }
+        let listing = record_listing(listing_read(&tid).as_ref().map_err(String::as_str))?;
+        let owner = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?
+            .get("owner_id").and_then(|o| o.as_str()).map(str::to_string)
+            .ok_or_else(|| err("rpc", "the keys contract names no owner for this key"))?;
+        let tier = nft_tier_of(&tid)?;
+        let now = chain_now_ms()?;
+        let stored: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        verify_chain(&stored)?;
+        // The same owner sync as provenance and level_up, so a transfer the log has not seen yet is in the head.
+        prov_sync_owner(&tid, &owner, now);
+        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        let head = verify_chain(&evs)?;
+        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let (settled, volume) = level_counts(&all);
+        let (trades, cost, outs, since) = pnl_aggregate(&all);
+        let statement = record_canonical(&tid, &owner, tier, &listing.seller, &listing.price_yocto, settled, volume, trades, cost, &outs, since, &head, now);
+        let (mid, msk) = minter()?;
+        let sig = sign_head(&minter_secret(&msk)?, &statement);
+        Ok(json!({"ok": true, "op": "record", "statement": statement, "sig": sig, "minter": mid, "token_id": tid}))
+    }
+
     /// Earned tiers. The key's settled swaps and volume, read from its verified provenance chain and trade log, raise its tier.
     /// The count is `level_counts` (lib.rs): swap and copy rows with status success, in the last 100 rows of the key's log, any holder.
     /// Moves no funds. The minter sends `nft_set_tier` only when the record earns a higher tier than the contract holds now.
@@ -919,7 +949,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -931,6 +961,7 @@ mod host {
         let r = match op {
             "info" => op_info(),
             "provenance" => op_provenance(&input),
+            "record" => op_record(&input),
             "lock" => op_lock(&input),
             "limits" => op_limits(&input),
             "prove" => op_prove(&input),
@@ -953,7 +984,7 @@ mod host {
             "level_up" => op_level_up(&input),
             "session" => op_session(&input),
             "session_revoke" => op_session_revoke(&input),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, level_up, session, session_revoke")),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, record, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, level_up, session, session_revoke")),
         };
         let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.

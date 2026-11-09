@@ -232,11 +232,11 @@ fmt! {
 }
 
 // ---------- who can be paid, who can mint ----------
-#[test] fn withdraw_to_signer_ok() { assert_eq!(code(assert_withdraw_to("a.near", "a.near")), "ok"); }
-#[test] fn withdraw_to_other_refused() { assert_eq!(code(assert_withdraw_to("a.near", "b.near")), "bad_params"); }
-#[test] fn withdraw_to_case_variant_refused() { assert_eq!(code(assert_withdraw_to("a.near", "A.near")), "bad_params"); }
-#[test] fn withdraw_to_empty_refused() { assert_eq!(code(assert_withdraw_to("a.near", "")), "bad_params"); }
-#[test] fn withdraw_to_sub_account_refused() { assert_eq!(code(assert_withdraw_to("a.near", "x.a.near")), "bad_params"); }
+#[test] fn withdraw_to_other_near_account_ok() { assert_eq!(code(assert_withdraw_to("near", "b.near")), "ok"); }
+#[test] fn withdraw_to_case_variant_refused() { assert_eq!(code(assert_withdraw_to("near", "A.near")), "bad_params"); }
+#[test] fn withdraw_to_empty_refused() { assert_eq!(code(assert_withdraw_to("near", "")), "bad_params"); }
+#[test] fn withdraw_to_unknown_chain_refused() { assert_eq!(code(assert_withdraw_to("doge", "b.near")), "bad_params"); }
+#[test] fn withdraw_to_checksummed_evm_address_on_near_refused() { assert_eq!(code(assert_withdraw_to("near", "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed")), "bad_params"); }
 #[test] fn minter_exact_minimum_can_mint() { assert!(minter_can_mint(MINT_DEPOSIT_YOCTO + MINT_FEE_BUFFER_YOCTO)); }
 #[test] fn minter_one_yocto_short_cannot_mint() { assert!(!minter_can_mint(MINT_DEPOSIT_YOCTO + MINT_FEE_BUFFER_YOCTO - 1)); }
 #[test] fn minter_empty_cannot_mint() { assert!(!minter_can_mint(0)); }

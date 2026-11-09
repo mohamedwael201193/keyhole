@@ -13,9 +13,10 @@ A WASI (wasm32-wasip2) program that runs inside an OutLayer Intel TDX enclave. E
 | `account` | NEP-413 + key | your own confidential account (an OutLayer custody wallet created inside the TEE for you; its API key never leaves the enclave). Optional `{chain, token, amount}` returns a cross-chain deposit address |
 | `balance` | NEP-413 + key | confidential balances |
 | `swap` / `copy` | NEP-413 + key | confidential swap `{token_in, token_out, amount_in, min_amount_out?}` within caps, logged privately. `min_amount_out` absent: the floor is 1% below a fresh quote (next build). `0` is `bad_params` |
-| `withdraw` | NEP-413 + key (never a session token in the next build) | `{chain, to, token, amount}` out of the confidential account, within caps. `to` must be the NEP-413 signer; any other account is `bad_params` and nothing is sent |
+| `withdraw` | NEP-413 + key (never a session token in the next build) | `{chain, to, token, amount}` out of the confidential account, within caps. `to` must be a well-formed address for `chain` (NEAR account for `near`; `0x` + 40 hex, EIP-55 when mixed case, for `eth` `base` `arb` `op` `bsc` `pol` `avax` `gnosis`; base58 of 32 bytes for `sol`). The holder's signature covers `to`. A malformed `to` or unknown `chain` is `bad_params` and nothing is sent |
 | `history` | NEP-413 or EIP-191 + key | private activity log, plus the full per-key provenance rows for the holder |
 | `provenance` | none | public owner chain and event hashes for `token_id`. No amounts. |
+| `record` | none | `{params: {token_id}}`: public, minter-signed record of a key listed for sale (`keyhole-record-v1`: owner, tier, listing price and seller, settled swaps, volume, PnL totals, log head). `not_listed` when the key is not listed, `bad_log` when its log does not verify |
 | `lock` | NEP-413 or EIP-191 + key | `{hours: 1..168}` refuse swap and withdraw until then; cannot be lifted early; a transfer ends it |
 | `prove` | NEP-413 or EIP-191 + key | `{token, min}` minter-signed statement that the key's account holds at least `min`; `node verify-log.mjs --proof` checks it |
 | `sweep_minter` | none | if this enclave is no longer the contract's minter, sends its NEAR to the current minter |

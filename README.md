@@ -137,8 +137,9 @@ flowchart LR
 | `account` | NEP-413 + key | the key's confidential custody wallet (one per `token_id`), created inside the TEE. It can optionally return a cross-chain deposit address |
 | `balance` | NEP-413 + key | confidential balances |
 | `swap` / `copy` | NEP-413 + key | confidential swap within caps, logged privately |
-| `withdraw` | NEP-413 + key | funds out of the confidential account, within caps. The enclave refuses any `to` other than the NEP-413 signer |
+| `withdraw` | NEP-413 + key | funds out of the confidential account, within caps. `to` must be a well-formed address for `chain`; the holder's signature covers it. The enclave refuses any other shape |
 | `history` | NEP-413 + key | the caller's own rows of the key's private log (last 100 entries), plus the key log chain |
+| `record` | none | public, enclave-signed record of a key that is listed for sale: owner, tier, listing price and seller, settled swaps, volume, PnL totals and the log head. Refused `not_listed` for any key not listed |
 | `lock` | NEP-413 + key | `{hours: 1..168}`: refuse swap and withdraw until then. Cannot be lifted early; ends on transfer |
 | `prove` | NEP-413 + key | `{token, min}`: enclave-signed statement that the key's account holds at least `min`. No exact amount |
 | `sweep_minter` | none | moves a retired minter's NEAR to the current minter ([sweep tx](https://nearblocks.io/txns/5Z7TktfcgeFrzRnz8NSpFSbTw77R5779d3PRsrEBPbYA), 0.0286 NEAR) |
@@ -159,7 +160,7 @@ Each refusal code below was produced on mainnet.
 | 8 | Replay. `(account, nonce)` is written with an atomic `set_if_absent` | `replay` | [`tee/worker/src/lib.rs:256`](tee/worker/src/lib.rs) | [`ac289f04`](https://api.outlayer.ai/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab) |
 | 9 | Caps. The USD value comes from the solver's quote (`amountInUsd`), never from the caller. Per trade and per UTC day | `over_cap_per_tx`, `over_cap_daily` | `limits_for_tier` [`tee/worker/src/lib.rs:285`](tee/worker/src/lib.rs). Nothing is sent when refused | [`a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533) |
 
-A refused swap or withdraw rolls back its daily spend. The enclave also refuses a withdraw whose `to` is not the signer (`assert_withdraw_to`, [`tee/worker/src/lib.rs:453`](tee/worker/src/lib.rs)).
+A refused swap or withdraw rolls back its daily spend. The enclave also refuses a withdraw whose `to` is not a well-formed address for its `chain` (`assert_withdraw_to`, [`tee/worker/src/lib.rs:456`](tee/worker/src/lib.rs)).
 
 ### Custody wallet per token
 

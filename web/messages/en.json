@@ -433,6 +433,10 @@
    "This key is listed for sale, so the enclave has frozen swaps and withdrawals on it.",
    "Unlist the key to swap or withdraw again. Nothing was sent."
   ],
+  "not_listed": [
+   "A key's record is public only while it is listed for sale.",
+   "Nothing was signed. Read the key's provenance instead, or wait for a listing."
+  ],
   "not_owner": [
    "Only the current key holder can do this.",
    "The key moved before this request settled. Nothing was sent."

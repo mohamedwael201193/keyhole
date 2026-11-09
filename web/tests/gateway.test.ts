@@ -8,6 +8,11 @@ describe("gateway body checks", () => {
     expect(checkBody('{"op":"info"}')).toMatchObject({ ok: true, op: "info" });
     expect(checkBody('{"op":"provenance","token_id":"kabc"}')).toMatchObject({ ok: true, op: "provenance" });
   });
+  it("allows the public record without auth, and nothing else new", () => {
+    expect(checkBody('{"op":"record","params":{"token_id":"k5f4750858f328940"}}')).toMatchObject({ ok: true, op: "record" });
+    expect(ALLOWED_OPS as readonly string[]).toContain("record");
+    expect(checkBody(JSON.stringify({ op: "record", auth: auth("record") }))).toMatchObject({ ok: true, op: "record" });
+  });
   it.each(["copy", "sweep_minter", "", "INFO"])("blocks op %s even with an auth object", (op) => expect(checkBody(JSON.stringify({ op, auth: auth(op || "swap") }))).toMatchObject({ ok: false, code: "bad_op" }));
   it("refuses unsigned or incomplete swap and withdraw", () => {
     for (const op of ["swap", "withdraw"]) {
