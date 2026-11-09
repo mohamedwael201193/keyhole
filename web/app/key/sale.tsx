@@ -28,7 +28,7 @@ const TITLE: Record<Act, string> = {
 };
 const BUSY: Record<Act, string> = { list: "Confirm the listing", update: "Confirm the new price", unlist: "Confirm the unlist", buy: "Confirm the purchase" };
 /** The one line the enclave's freeze is stated with, on every listed key. */
-const FREEZE_NOTE = "While listed, the enclave freezes withdrawals and swaps on this key.";
+const FREEZE_NOTE = "While listed, the enclave freezes withdrawals, swaps and executed quotes on this key.";
 
 type Props = {
   /** The key id (the contract's token id). */

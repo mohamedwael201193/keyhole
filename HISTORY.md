@@ -45,3 +45,14 @@
 ## 2026-11-02 — Contract standards tests (15 → 43)
 - New unit tests for NEP-171 (mint/transfer events, 1 yocto, owner-only, no self-transfer, duplicate ids), NEP-177 metadata, NEP-181 enumeration and paging, NEP-199 payout conservation over many balances, rounding, zero and max royalty, treasury-as-owner, minter rotation, beat batch limits, init royalty cap. Total distinct tests 250.
 - 2026-11-03 23:13 identity bump: identity.json → worker cff9fd3c (737639 B, add_version AepKgT8M…, info 643a012d, previous a55ebb14) via gen-identity; README/SECURITY/policy/verify.sh/claims pointers; vitest 869/869, claims 441/1 (site-hash waits for redeploy).
+
+## 2026-11-09 21:47 Africa/Cairo (UTC+2) — Settlement epoch worker (feat/settlement-epoch-worker)
+- Worker: per-key settlement epoch in enclave storage (`t/<token>/epoch`). Bumped on ownership sync (transfer/sale). Value-moves stamp the epoch; settle refuses `epoch_void` on drift; post-move reports `needs_review` via `after_move_status_epoch`.
+- Freeze: `quote` with `execute: true` is refused while listed (`listing_blocks_ex` / H-1). Listing re-checked immediately before custody send. FREEZE_NOTE updated.
+- SECURITY.md §1 and §9 rewritten for epoch + wet-quote freeze. README unchanged (no weakness language).
+- Unit tests: 542 pass (added wet-quote, epoch void, epoch invariant). No mainnet publish.
+
+## 2026-11-09 21:55 Africa/Cairo (UTC+2) — CI fix for settlement-epoch worker PR
+- Clippy: drop unnecessary `as u64` in epoch invariant test (`r.below` is already u64).
+- Web: register `epoch_void` in `WORKER_ERROR_CODES` + en.json error copy so p2-errors stays green.
+- PnL-on-card / Attested Key Desk PnL dropped from the plan (swap-only; no invented metrics). Priority remains epoch + operator trust.

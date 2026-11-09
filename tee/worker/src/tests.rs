@@ -542,6 +542,46 @@ fn reads_are_never_refused_for_a_listing() {
 }
 
 #[test]
+fn wet_quote_is_refused_while_listed() {
+    let listed = serde_json::json!({"token_id": "k0000000000000001", "seller": "alice.near", "price": "1000"});
+    let e = listing_blocks_ex("quote", true, Ok(&listed)).unwrap_err();
+    assert_eq!(e.code, "listed");
+    assert!(listing_blocks_ex("quote", false, Ok(&listed)).is_ok(), "dry quote stays readable");
+    assert!(is_value_move_or_wet_quote("quote", true));
+    assert!(!is_value_move_or_wet_quote("quote", false));
+    assert!(!is_value_move("quote"));
+}
+
+#[test]
+fn settlement_epoch_voids_a_stale_stamp() {
+    assert_eq!(bump_epoch(0), 1);
+    assert_eq!(bump_epoch(u64::MAX), u64::MAX);
+    assert_eq!(epoch_from_bytes(b""), 0);
+    assert_eq!(epoch_from_bytes(b"7"), 7);
+    assert_eq!(epoch_from_bytes(b"nope"), 0);
+    assert_eq!(epoch_to_bytes(42), b"42");
+    settle_if_epoch(3, 3).unwrap();
+    assert_eq!(settle_if_epoch(3, 4).unwrap_err().code, "epoch_void");
+    assert_eq!(after_move_status_epoch("success", true, 1, 1), "success");
+    assert_eq!(after_move_status_epoch("success", true, 1, 2), "needs_review");
+    assert_eq!(after_move_status_epoch("success", false, 1, 1), "needs_review");
+    assert_eq!(after_move_status_epoch("failed", true, 1, 9), "failed");
+}
+
+/// Epoch check at settle time. Complements the ownership predicate: a transfer that bumps the
+/// epoch voids any in-flight settle stamped with the old epoch (funds not yet sent stay put).
+#[test]
+fn invariant_a_payout_settles_only_on_matching_settlement_epoch() {
+    let mut r = Rng(99);
+    for _ in 0..3000 {
+        let stamped = r.below(5);
+        let current = if r.below(3) == 0 { stamped } else { r.below(5) };
+        let ok = settle_if_epoch(stamped, current).is_ok();
+        assert_eq!(ok, stamped == current);
+    }
+}
+
+#[test]
 fn balance_proof_names_a_threshold_and_verifies() {
     let bals = serde_json::json!([{"token": "nep141:usdc", "amount": "40000"}, {"token": "nep141:usdc", "amount": "5"}, {"token": "x", "amount": "9"}]);
     assert_eq!(balance_of(&bals, "nep141:usdc"), 40005);

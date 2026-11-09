@@ -584,6 +584,45 @@ pub fn settle_if_owner(still_owner: bool) -> Result<(), Error> {
     }
 }
 
+/// Per-key settlement epoch. Bumped when the enclave first sees a new owner (transfer or sale).
+/// A value-move stamped with epoch `E` must not settle if the key's epoch is no longer `E`.
+/// See https://docs.near.org/protocol/accounts-contracts/access-keys (ownership as the control plane)
+/// and the Track 10 mid-payout requirement.
+pub fn bump_epoch(current: u64) -> u64 {
+    current.saturating_add(1)
+}
+
+/// Parse an epoch stored as decimal ASCII bytes. Missing or empty storage is epoch 0.
+pub fn epoch_from_bytes(raw: &[u8]) -> u64 {
+    if raw.is_empty() { return 0; }
+    std::str::from_utf8(raw).ok().and_then(|s| s.parse().ok()).unwrap_or(0)
+}
+
+pub fn epoch_to_bytes(epoch: u64) -> Vec<u8> {
+    epoch.to_string().into_bytes()
+}
+
+/// Refuse to settle a value-move whose stamped epoch no longer matches the key's current epoch.
+/// Funds that have not yet left custody stay in the account.
+pub fn settle_if_epoch(stamped: u64, current: u64) -> Result<(), Error> {
+    if stamped == current {
+        Ok(())
+    } else {
+        Err(err(
+            "epoch_void",
+            "the key's settlement epoch moved before this request settled; aborted, funds stay in the account",
+        ))
+    }
+}
+
+/// After a custody move: ownership loss or an epoch bump both turn a success/pending into `needs_review`.
+pub fn after_move_status_epoch(status: &str, still_owner: bool, stamped: u64, current: u64) -> String {
+    let base = after_move_status(status, still_owner);
+    if base == "needs_review" { return base; }
+    let moved = matches!(status, "success" | "pending" | "processing" | "submitted");
+    if moved && stamped != current { "needs_review".into() } else { base }
+}
+
 fn zero_hash() -> String { "0".repeat(64) }
 
 /// One row of the per-key log. `detail_hash` commits to the private detail.
@@ -921,8 +960,15 @@ pub const LISTED_MSG: &str = "This key is listed for sale; unlist it to move fun
 
 /// Ops that move value out of the key's account, or sign for it. They are refused while the key is listed.
 /// Reads (balance, history, pnl, dashboard, account, prove, ...) are not here and are never refused for a listing.
+/// `quote` with `execute: true` is a value move too: see `is_value_move_or_wet_quote`.
 pub fn is_value_move(op: &str) -> bool {
     matches!(op, "withdraw" | "swap" | "copy" | "chain_sign")
+}
+
+/// True for every listing-frozen op, including a wet quote (`quote` with `execute: true`).
+/// A dry quote (`execute: false` or omitted) stays readable while listed.
+pub fn is_value_move_or_wet_quote(op: &str, execute: bool) -> bool {
+    is_value_move(op) || (op == "quote" && execute)
 }
 
 /// True for the NEAR RPC error of a view on a method the contract does not have (a v2.3 keys contract has no `nft_listing`).
@@ -936,7 +982,12 @@ fn is_method_not_found(rpc_error: &str) -> bool {
 /// listed, an object when it is, or `Err` with the RPC error text. A missing method counts as not listed, so a
 /// v2.3 keys contract keeps working. Any other error, or an answer that is neither null nor an object, fails closed.
 pub fn listing_blocks(op: &str, listing: Result<&serde_json::Value, &str>) -> Result<(), Error> {
-    if !is_value_move(op) { return Ok(()); }
+    listing_blocks_ex(op, false, listing)
+}
+
+/// Like `listing_blocks`, but a wet quote (`op == "quote"` and `execute`) is treated as a value move.
+pub fn listing_blocks_ex(op: &str, execute: bool, listing: Result<&serde_json::Value, &str>) -> Result<(), Error> {
+    if !is_value_move_or_wet_quote(op, execute) { return Ok(()); }
     match listing {
         Err(e) if is_method_not_found(e) => Ok(()),
         Err(e) => Err(err("rpc", format!("could not read the sale listing, nothing was sent: {}", e.chars().take(200).collect::<String>()))),

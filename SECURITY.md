@@ -166,11 +166,11 @@ Tests: `tee/worker/src/p2harden.rs`.
 
 Each entry gives the decision, the reason for it, and the mitigation. Each one is a limit that remains in the design. Nothing here is hidden elsewhere in the repository.
 
-### 1. A payout already in flight completes
+### 1. Settlement epoch voids a mid-flight settle that has not left custody
 
-- **Decision.** A withdraw signed before a sale is paid to the holder who signed it. The payout is not recalled by the transfer.
-- **Why.** The owner is re-read before the send, so a transfer that lands before the send stops it. Once the send has been made, a later transfer does not recall the money (see [THREAT_MODEL.md](THREAT_MODEL.md)).
-- **Mitigation.** A key moved before the send aborts the send and gives back the day's spend. The holder's next request is refused `not_owner`. The seller keeps only a payout already in flight. The mid-payout run on build `6367401a` (2026-11-01) is in [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md). Later source changes, such as the `needs_review` flag, are not in that run.
+- **Decision.** Every value-moving op is stamped with the key's settlement epoch. When the enclave first sees a new owner (transfer or sale), it bumps that epoch. A settle whose stamp no longer matches is refused `epoch_void` (or reported `needs_review` if the custody call already returned). Funds that have not left custody stay with the key.
+- **Why.** Track 10 asks for a sale in the middle of a payout. Ownership alone is re-read before the send; the epoch closes the same race for any concurrent settle stamped earlier (see [THREAT_MODEL.md](THREAT_MODEL.md)).
+- **Mitigation.** Owner check + epoch check run immediately before the send; listing is re-read then too. After the custody call, ownership or epoch drift becomes `needs_review` instead of a plain success. The historical mid-payout run on build `6367401a` (2026-11-01) in [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md) predates the epoch; a re-run on the epoch build is required before claiming the invariant on mainnet. A custody payout that OutLayer has already completed cannot be recalled on chain.
 
 ### 2. No NEAR sub-account per key
 
@@ -214,11 +214,11 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 - **Why.** The tier is computed from that log, so the key's own trades are the only input.
 - **Mitigation.** A tier can only rise: the contract refuses a lower value. A holder who trades back and forth to reach a tier pays fees and spread on each trip. The tier is real on-chain history, but it does not show that the trading was useful to anyone.
 
-### 9. The listing freeze is checked once per value move
+### 9. The listing freeze covers value moves and wet quotes
 
-- **Decision.** Before a value move, the enclave reads the key's listing once, as it reads the owner.
-- **Why.** One read per request, the same pattern as the owner check.
-- **Mitigation.** The window is one request. A listing made after the read, within the same move, is seen by the next request.
+- **Decision.** Before a value move (withdraw, swap, copy, chain_sign) or a `quote` with `execute: true`, the enclave reads the key's listing. A dry quote stays allowed while listed. The listing is re-read immediately before the custody send.
+- **Why.** A wet quote with an INTENTS deposit can move custody funds the same way a swap does.
+- **Mitigation.** The check-then-act window is one custody round-trip. A listing that appears after the second read is seen by the next request; an epoch bump from a sale voids the settle stamp.
 
 ### 10. Transfer events declare NEP-171 1.0.0
 
