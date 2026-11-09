@@ -93,10 +93,20 @@ pub fn uuid(s:&str)->bool{s.len()==36&&s.bytes().enumerate().all(|(i,b)|if [8,13
 #[derive(Debug,Clone,Serialize,Deserialize,PartialEq,Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Terminal {pub success:bool,pub refund_charge:bool,pub provider_id:String}
+/// A POST answer names a request, never settles it. A duplicate is HTTP 200, not 409.
+/// wallet_busy may name an unrelated in-flight operation: do not bind it to this journal.
+pub fn posted_request_id(status:u16,v:&Value)->Option<&str>{
+    if status!=200||v.get("error").is_some_and(|e|!e.is_null()&&e.as_str()!=Some("duplicate_idempotency_key")){
+        return None;
+    }
+    v.get("request_id").and_then(Value::as_str).filter(|id|uuid(id))
+}
 /// ONLY a fresh GET /requests/{id} with matching id/type is settlement evidence.
-/// A generic failed/error, partial result, HTTP status or needs_review is NOT evidence of no spend.
+/// Generic failure, partial result or HTTP status is NOT evidence of no spend.
 pub fn reconcile_status(v:&Value,id:&str)->Result<Option<Terminal>,Error>{
     if !uuid(id)||text(v,"request_id")?!=id||text(v,"type")?!="confidential"||v.get("error").is_some(){return Err(err("needs_review","provider request binding changed"));}
+    // Inconsistent approval-bearing rows cannot establish terminal custody settlement.
+    if v.get("approval_id").is_some_and(|a|!a.is_null()) {return Ok(None);}
     let terminal=match text(v,"status")?{
         "success"|"completed"=>Some((true,false)),
         // A refund may have fees; finish the terminal permit but conservatively keep the spend cap charged.
@@ -105,6 +115,41 @@ pub fn reconcile_status(v:&Value,id:&str)->Result<Option<Terminal>,Error>{
         _=>None,
     };
     Ok(terminal.map(|(success,refund_charge)|Terminal{success,refund_charge,provider_id:id.into()}))
+}
+
+
+/// Host boundary shared by WASI and native fault-injection tests. The driver is the
+/// production journal/idempotency state machine, not a second mock implementation.
+pub trait ProviderHost: Store {
+    fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>;
+    fn post(&mut self,j:&Journal,key:&str,path:&str)->Result<(u16,Value),Error>;
+    fn fetch(&mut self,key:&str,id:&str)->Result<(u16,Value),Error>;
+    fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>;
+}
+pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{
+    j.validate()?;
+    let raw=host.read(&format!("{}/terminal",j.key()))?;
+    if !raw.is_empty(){
+        let t:Terminal=serde_json::from_slice(&raw).map_err(|_|err("guard_journal","corrupt terminal"))?;
+        let done=host.finish(j,&t)?;
+        return Ok(json!({"status":if done{if t.success{"success"}else{"failed"}}else{"needs_review"},"value_op_id":j.op_id,"admission_finished":done}));
+    }
+    host.validate_dispatch(j,key)?;
+    let first=put_once(host,&format!("{}/dispatch",j.key()),b"1")?;
+    if !first&&!reconcile{return Err(err("replay","already dispatched; reconcile_value_op required"));}
+    let pk=format!("{}/provider",j.key());let raw=host.read(&pk)?;
+    let id=if raw.is_empty(){
+        if j.kind=="quote"{return Err(err("needs_review","quote outcome unknown; automatic resend/unlock unsupported"));}
+        let path=match j.kind.as_str(){"swap"|"copy"=>"swap","withdraw"=>"withdraw","transfer"=>"transfer",_=>return Err(err("guard_journal","unsupported kind"))};
+        let id=host.post(j,key,path).ok().and_then(|(status,v)|posted_request_id(status,&v).map(str::to_string));
+        let Some(id)=id else{return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"admission_finished":false}));};
+        put_once(host,&pk,id.as_bytes())?;id
+    }else{String::from_utf8(raw).map_err(|_|err("guard_journal","bad request id"))?};
+    if !uuid(&id){return Err(err("guard_journal","invalid provider id"));}
+    let mut value=match host.fetch(key,&id){Ok((200,v))=>v,_=>return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"request_id":id,"admission_finished":false}))};
+    let done=if let Some(t)=reconcile_status(&value,&id)?{host.finish(j,&t)?}else{false};
+    if !done&&!["pending_deposit","processing","pending_approval"].contains(&value["status"].as_str().unwrap_or("")){value["status"]=json!("needs_review");}
+    value["value_op_id"]=json!(j.op_id);value["admission_finished"]=json!(done);Ok(value)
 }
 
 #[derive(Debug,Clone,Deserialize,Serialize,PartialEq,Eq)]

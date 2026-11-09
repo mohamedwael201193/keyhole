@@ -61,6 +61,8 @@ jobs:
       - name: count passing tests
         run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings
+      - name: lint the WASI-only custody host (native cfg excludes it)
+        run: cargo clippy --locked --target wasm32-wasip2 -- -D warnings
       - name: reproducible wasm, compared with the deployed hash
         run: |
           got=$(./build.sh)

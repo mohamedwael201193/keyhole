@@ -147,7 +147,7 @@ mod host {
         fn cap(&self) -> String { cap_id(&self.token_id()) }
     }
 
-    /// Signature -> key ownership -> freshness -> op binding -> tier -> nonce (replay) -> rate limit.
+    // Signature -> key ownership -> freshness -> op binding -> tier -> nonce (replay) -> rate limit.
     thread_local! {
         // Account and key that passed authentication in this call, echoed in `bind`.
         static BIND: std::cell::RefCell<Option<(String, Option<String>)>> = const { std::cell::RefCell::new(None) };

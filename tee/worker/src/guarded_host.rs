@@ -55,29 +55,20 @@ fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{
     if t.refund_charge&&guarded::put_once(&mut Host,&format!("{}/refund_once",j.key()),b"1")?{if let Some(ch)=&j.charge{ch.release(&mut Host);}}
     Ok(true)
 }
-fn guard_provider(j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{
-    let raw=Store::read(&mut Host,&format!("{}/terminal",j.key()))?;
-    if !raw.is_empty(){let t:Terminal=serde_json::from_slice(&raw).map_err(|_|err("guard_journal","corrupt terminal"))?;let done=guard_finish(j,&t)?;return Ok(json!({"status":if done{if t.success{"success"}else{"failed"}}else{"needs_review"},"value_op_id":j.op_id,"admission_finished":done}));}
-    guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
-    let (canonical,id)=guarded_wallet(&j.token_id)?;if canonical!=key||id!=j.wallet_id{return Err(err("guard_journal","custody changed"));}
-    let first=guarded::put_once(&mut Host,&format!("{}/dispatch",j.key()),b"1")?;
-    if !first&&!reconcile{return Err(err("replay","already dispatched; reconcile_value_op required"));}
-    let pk=format!("{}/provider",j.key());let raw=Store::read(&mut Host,&pk)?;
-    let id=if raw.is_empty(){
-        if j.kind=="quote"{return Err(err("needs_review","quote outcome unknown; automatic resend/unlock unsupported"));}
-        let path=match j.kind.as_str(){"swap"|"copy"=>"swap","withdraw"=>"withdraw","transfer"=>"transfer",_=>return Err(err("guard_journal","unsupported kind"))};
-        // Official API reserves (wallet,key) BEFORE funds. Local journal freezes the body forever.
-        let posted=http_idempotent("POST",&format!("{OL}/wallet/v1/confidential/{path}"),Some(key),Some(&j.body),Some(&j.op_id));
-        let id=match posted{Ok((200,v))=>s(&v,"request_id").filter(|s|guarded::uuid(s)),_=>None};
-        let Some(id)=id else{return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"admission_finished":false}));};
-        guarded::put_once(&mut Host,&pk,id.as_bytes())?;id
-    }else{String::from_utf8(raw).map_err(|_|err("guard_journal","bad request id"))?};
-    if !guarded::uuid(&id){return Err(err("guard_journal","invalid provider id"));}
-    let mut value=match http("GET",&format!("{OL}/wallet/v1/requests/{id}"),Some(key),None){Ok((200,v))=>v,_=>return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"request_id":id,"admission_finished":false}))};
-    let done=if let Some(t)=guarded::reconcile_status(&value,&id)?{guard_finish(j,&t)?}else{false};
-    if !done&&!["pending_deposit","processing","pending_approval"].contains(&value["status"].as_str().unwrap_or("")){value["status"]=json!("needs_review");}
-    value["value_op_id"]=json!(j.op_id);value["admission_finished"]=json!(done);Ok(value)
+impl guarded::ProviderHost for Host {
+    fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>{
+        guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
+        let (canonical,id)=guarded_wallet(&j.token_id)?;
+        if canonical!=key||id!=j.wallet_id{return Err(err("guard_journal","custody changed"));}Ok(())
+    }
+    fn post(&mut self,j:&Journal,key:&str,path:&str)->Result<(u16,Value),Error>{
+        // Provider reserves (wallet,key) BEFORE funds. The journal freezes body and key forever.
+        http_idempotent("POST",&format!("{OL}/wallet/v1/confidential/{path}"),Some(key),Some(&j.body),Some(&j.op_id))
+    }
+    fn fetch(&mut self,key:&str,id:&str)->Result<(u16,Value),Error>{http("GET",&format!("{OL}/wallet/v1/requests/{id}"),Some(key),None)}
+    fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{guard_finish(j,t)}
 }
+fn guard_provider(j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{guarded::drive_provider(&mut Host,j,key,reconcile)}
 fn op_reconcile_value(input:&Value)->Result<Value,Error>{
     let c=authenticate(input,"reconcile_value_op",true)?;let id=s(&c.req.params,"value_op_id").ok_or_else(||err("bad_params","value_op_id required"))?;
     let key=guarded::journal_key(&keys_contract(),&c.token_id(),&id);
