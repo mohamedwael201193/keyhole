@@ -50,7 +50,7 @@ node judge/readme-verify.mjs --offline
 node judge/verify-claims.mjs --offline
 ```
 
-Offline checks verify the committed artifacts, recorded signed swap log and negative mutations. Network checks print **SKIP**. Full online verdicts distinguish **FAIL** (contradiction), **ERROR** (unreachable evidence) and **SKIP** (not checked); none means “passed.” See [judge/README.md](judge/README.md).
+Offline checks verify the committed artifacts, recorded signed swap log and negative mutations. Network checks print **SKIP**. The claim ledger distinguishes **FAIL** (contradiction), **ERROR** (unreachable evidence) and **SKIP** (not checked); none means “passed.” See [judge/README.md](judge/README.md).
 
 ## Why this NFT exists
 
