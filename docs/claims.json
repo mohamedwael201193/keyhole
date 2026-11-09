@@ -3473,27 +3473,6 @@
    "verify": "node judge/verify-claims.mjs --only test-add_beat_key"
   },
   {
-   "id": "test-admission_before_open_blocks_open_and_open_before_admission_blocks_admission",
-   "claim": "Named test or symbol `admission_before_open_blocks_open_and_open_before_admission_blocks_admission` exists in the source",
-   "where": "README.md:882",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "admission_before_open_blocks_open_and_open_before_admission_blocks_admission",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`admission_before_open_blocks_open_and_open_before_admission_blocks_admission` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-admission_before_open_blocks_open_and_open_before_admission_blocks_admission"
-  },
-  {
    "id": "test-assert_withdraw_to",
    "claim": "Named test or symbol `assert_withdraw_to` exists in the source",
    "where": "README.md:230",
@@ -3576,27 +3555,6 @@
    },
    "expected": "`code_changed_within_7d` found in source",
    "verify": "node judge/verify-claims.mjs --only test-code_changed_within_7d"
-  },
-  {
-   "id": "test-default_redirect_checks_one_key_before_title_and_keeps_unlock_lock",
-   "claim": "Named test or symbol `default_redirect_checks_one_key_before_title_and_keeps_unlock_lock` exists in the source",
-   "where": "README.md:882",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "default_redirect_checks_one_key_before_title_and_keeps_unlock_lock",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`default_redirect_checks_one_key_before_title_and_keeps_unlock_lock` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-default_redirect_checks_one_key_before_title_and_keeps_unlock_lock"
   },
   {
    "id": "test-del_beat_key",
@@ -3685,7 +3643,7 @@
   {
    "id": "test-finish_value_op",
    "claim": "Named test or symbol `finish_value_op` exists in the source",
-   "where": "README.md:888",
+   "where": "SECURITY.md:236",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3702,69 +3660,6 @@
    },
    "expected": "`finish_value_op` found in source",
    "verify": "node judge/verify-claims.mjs --only test-finish_value_op"
-  },
-  {
-   "id": "test-funding_rejects_each_tampered_binding_even_with_a_valid_attestor_signature",
-   "claim": "Named test or symbol `funding_rejects_each_tampered_binding_even_with_a_valid_attestor_signature` exists in the source",
-   "where": "README.md:882",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "funding_rejects_each_tampered_binding_even_with_a_valid_attestor_signature",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`funding_rejects_each_tampered_binding_even_with_a_valid_attestor_signature` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-funding_rejects_each_tampered_binding_even_with_a_valid_attestor_signature"
-  },
-  {
-   "id": "test-get_control_state",
-   "claim": "Named test or symbol `get_control_state` exists in the source",
-   "where": "README.md:888",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "get_control_state",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`get_control_state` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-get_control_state"
-  },
-  {
-   "id": "test-get_value_op",
-   "claim": "Named test or symbol `get_value_op` exists in the source",
-   "where": "README.md:888",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "get_value_op",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`get_value_op` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-get_value_op"
   },
   {
    "id": "test-global_rate_limit",
@@ -4502,111 +4397,6 @@
    "verify": "node judge/verify-claims.mjs --only test-rate_limit_per_holder"
   },
   {
-   "id": "test-reconcile_terminal_outcome",
-   "claim": "Named test or symbol `reconcile_terminal_outcome` exists in the source",
-   "where": "README.md:897",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "reconcile_terminal_outcome",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`reconcile_terminal_outcome` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-reconcile_terminal_outcome"
-  },
-  {
-   "id": "test-recovery_has_exact_timelock_immutable_destination_and_failed_transfer_restore",
-   "claim": "Named test or symbol `recovery_has_exact_timelock_immutable_destination_and_failed_transfer_restore` exists in the source",
-   "where": "README.md:882",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "recovery_has_exact_timelock_immutable_destination_and_failed_transfer_restore",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`recovery_has_exact_timelock_immutable_destination_and_failed_transfer_restore` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-recovery_has_exact_timelock_immutable_destination_and_failed_transfer_restore"
-  },
-  {
-   "id": "test-repaid_credit_remains_backed_across_failed_pull_payout_and_unlock",
-   "claim": "Named test or symbol `repaid_credit_remains_backed_across_failed_pull_payout_and_unlock` exists in the source",
-   "where": "README.md:882",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "repaid_credit_remains_backed_across_failed_pull_payout_and_unlock",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`repaid_credit_remains_backed_across_failed_pull_payout_and_unlock` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-repaid_credit_remains_backed_across_failed_pull_payout_and_unlock"
-  },
-  {
-   "id": "test-sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked",
-   "claim": "Named test or symbol `sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked` exists in the source",
-   "where": "README.md:882",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked"
-  },
-  {
-   "id": "test-sealed_loan_repay_unlock_and_native_credit_conservation",
-   "claim": "Named test or symbol `sealed_loan_repay_unlock_and_native_credit_conservation` exists in the source",
-   "where": "README.md:882",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "sealed_loan_repay_unlock_and_native_credit_conservation",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`sealed_loan_repay_unlock_and_native_credit_conservation` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-sealed_loan_repay_unlock_and_native_credit_conservation"
-  },
-  {
    "id": "test-seller_lock_binds_only_the_owner_who_set_it",
    "claim": "Named test or symbol `seller_lock_binds_only_the_owner_who_set_it` exists in the source",
    "where": "README.md:336",
@@ -4710,27 +4500,6 @@
    },
    "expected": "`tampered_message_fails` found in source",
    "verify": "node judge/verify-claims.mjs --only test-tampered_message_fails"
-  },
-  {
-   "id": "test-terminal_attestor_public_key",
-   "claim": "Named test or symbol `terminal_attestor_public_key` exists in the source",
-   "where": "SECURITY.md:274",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "terminal_attestor_public_key",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`terminal_attestor_public_key` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-terminal_attestor_public_key"
   },
   {
    "id": "test-transfer_call_race_is_closed_on_v2_2",
@@ -6529,17 +6298,43 @@
    "verify": "node judge/verify-claims.mjs --only path-LICENSE"
   },
   {
-   "id": "path-protocol/loan-certificate-v1.json",
-   "claim": "Linked repo path protocol/loan-certificate-v1.json exists",
+   "id": "path-protocol/loan-certificate-v2-credit.json",
+   "claim": "Linked repo path protocol/loan-certificate-v2-credit.json exists",
    "where": "README.md:859",
    "evidence_type": "file",
-   "evidence": "protocol/loan-certificate-v1.json",
+   "evidence": "protocol/loan-certificate-v2-credit.json",
    "check": {
     "type": "path",
-    "path": "protocol/loan-certificate-v1.json"
+    "path": "protocol/loan-certificate-v2-credit.json"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v1.json"
+   "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v2-credit.json"
+  },
+  {
+   "id": "path-protocol/README.md",
+   "claim": "Linked repo path protocol/README.md exists",
+   "where": "README.md:873",
+   "evidence_type": "file",
+   "evidence": "protocol/README.md",
+   "check": {
+    "type": "path",
+    "path": "protocol/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-protocol/README.md"
+  },
+  {
+   "id": "path-docs/evidence/pledge-oracle-free/README.md",
+   "claim": "Linked repo path docs/evidence/pledge-oracle-free/README.md exists",
+   "where": "README.md:873",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/pledge-oracle-free/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/pledge-oracle-free/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/pledge-oracle-free/README.md"
   },
   {
    "id": "path-contracts/keys",

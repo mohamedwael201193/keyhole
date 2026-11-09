@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: contracts/keys } }
-    # The committed release wasm embeds registry paths under /home/box/.cargo (where v2.2 and v2.3 were built).
-    # Building with the same CARGO_HOME keeps the byte-for-byte rebuild check exact on any machine.
+    # Retain the historical release toolchain home. v2.5 build.sh remaps registry/crate
+    # paths and omits optional embedded ABI; the off-chain ABI JSON is still generated.
     env:
       CARGO_HOME: /home/box/.cargo
     steps:
@@ -33,13 +33,13 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
       - name: source rebuilds to the committed v2.5 release wasm
         run: |
-          cargo near build non-reproducible-wasm >/dev/null
+          ./build.sh >/dev/null
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
           want=$(grep ' v2.5/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
       - name: build sandbox-only callback failure fixture (never deploy)
         run: |
-          cargo near build non-reproducible-wasm --features callback-failure-fixture >/dev/null
+          ./build.sh --features callback-failure-fixture >/dev/null
           cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm
       - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + sealed pledge state), NEP-178 cap, one key, royalty sale, minter-only tier raise
         working-directory: contracts/keys-sandbox
