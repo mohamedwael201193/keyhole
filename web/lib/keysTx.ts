@@ -50,7 +50,7 @@ export type TxRoute =
   | { kind: "privy"; accountId: string; signer: Signer }
   | { kind: "none" };
 
-export type TxErrorCode = "signed_out" | "unsupported_wallet" | "rejected" | "insufficient_balance" | "contract" | "bad_call" | "unknown";
+export type TxErrorCode = "signed_out" | "unsupported_wallet" | "rejected" | "insufficient_balance" | "contract" | "bad_call" | "stale_listing" | "unknown";
 export type TxError = { code: TxErrorCode; message: string };
 export type SendResult = { txHash: string } | { redirect: true } | { error: TxError };
 
