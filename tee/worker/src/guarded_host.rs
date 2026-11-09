@@ -30,7 +30,7 @@ fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->
     let action_hash=sha256_hex(&json!({"revision":guarded::REVISION,"contract":keys_contract(),"owner":c.account,"token_id":c.token_id(),"kind":kind,"body":body,
         "signed_message":input.pointer("/auth/message"),"signed_nonce":input.pointer("/auth/nonce")}).to_string());
     let nonce=control.nonce.checked_add(1).ok_or_else(||err("guard_state","nonce exhausted"))?;
-    let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,charge};
+    let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,charge,auth_scheme:input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413").to_owned()};
     j.create(&mut Host)?;guard_admit(&j)?;Ok(j)
 }
 impl guarded::AdmissionHost for Host {
@@ -76,7 +76,7 @@ fn op_reconcile_value(input:&Value)->Result<Value,Error>{
 
 fn op_transfer(input:&Value)->Result<Value,Error>{
     let c=authenticate(input,"transfer",true)?;guard_preflight(&c)?;
-    let p=&c.req.params;let to=s(p,"to").ok_or_else(||err("bad_params","to required"))?;
+    let p=&c.req.params;let to=self_withdraw_destination(&c.account,"near",s(p,"to").as_deref(),input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413"))?;
     if !is_valid_account_id(&to){return Err(err("bad_params","private transfer requires a NEAR account id"));}
     let token=s(p,"token").ok_or_else(||err("bad_params","token required"))?;let amount=digits(p,"amount")?;
     let (key,id)=guarded_wallet(&c.token_id())?;
@@ -128,7 +128,7 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     guarded::eligible(&Store::read(&mut Host,&tkey(token,"confinement_v1"))?,&cert)?;
     let (key,id)=guarded_wallet(token)?;
     let custody=guarded::text(&config,"custody_contract")?;
-    let policy=view(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?;guarded::frozen_policy(&cert,&policy)?;
+    let policy=view(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?;guarded::frozen_policy(&cert,&policy,guarded::u64_field(&binding,"policy_generation")?)?;
     certificate_inventory(&key)?;
     let balance=custody_get(&key,&format!("/wallet/v1/confidential/balance?token=nep141%3A{}",guarded::ASSET.trim_start_matches("nep141:")))?;
     guarded::fixed_floor(&cert,&balance,&id)?;

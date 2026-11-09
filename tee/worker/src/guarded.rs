@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 pub const REVISION: &str = "keyhole-guarded-custody-v1";
 pub const ASSET: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
-pub const DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V1";
+pub const DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V2_CREDIT";
 pub const PROJECT_ID: &str = "keyhole-devmo.near/keyhole";
 pub const PROJECT_UUID: &str = "p000000000000004b";
 pub const ADMISSION_DEPOSIT: u128 = 10_000_000_000_000_000_000_000;
@@ -40,6 +40,9 @@ impl Control {
     }
 }
 /// A previously signed request must not revive after title returns to the same owner.
+/// Title is provisional during transfer_call: not an authorization for sealed reads or sessions.
+pub fn private_access(c:&Control,is_owner:bool)->Result<(),Error>{if !is_owner{return Err(err("not_owner","current title changed"));}
+    if c.transfer_pending{return Err(err("transfer_pending","provisional receiver cannot access sealed data or establish control"));}Ok(())}
 pub fn signed_epoch(params:&Value,current:u64)->Result<(),Error>{
     if u64_field(params,"owner_epoch")?!=current{return Err(err("epoch_changed","sign again for the current owner epoch"));}Ok(())
 }
@@ -65,6 +68,7 @@ pub struct Journal {
     pub contract:String,pub token_id:String,pub owner:String,pub epoch:u64,pub nonce:u64,
     pub op_id:String,pub action_hash:String,pub kind:String,pub body:Value,pub wallet_id:String,
     pub charge:Option<Charge>,
+    #[serde(default)] pub auth_scheme:String,
 }
 impl Journal {
     pub fn key(&self)->String {journal_key(&self.contract,&self.token_id,&self.op_id)}
@@ -75,6 +79,9 @@ impl Journal {
         if self.op_id!=expected||!lower_hash(&self.action_hash)||self.nonce==0||!["swap","copy","withdraw","transfer","quote"].contains(&self.kind.as_str()){
             return Err(err("guard_journal","invalid immutable journal"));
         }Ok(())
+    }
+    pub fn validate_destination(&self)->Result<(),Error>{
+        if self.kind=="withdraw"||self.kind=="transfer"{let chain=if self.kind=="transfer"{"near"}else{text(&self.body,"chain")?};let to=text(&self.body,"to")?;crate::self_withdraw_destination(&self.owner,chain,Some(to),&self.auth_scheme)?;}Ok(())
     }
     pub fn validate_permit(&self,v:&Value)->Result<(),Error>{
         if text(v,"op_id")?!=self.op_id||text(v,"action_hash")?!=self.action_hash||u64_field(v,"epoch")?!=self.epoch||u64_field(v,"nonce")?!=self.nonce
@@ -173,6 +180,7 @@ pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:
     let pk=format!("{}/provider",j.key());let raw=host.read(&pk)?;
     let id=if raw.is_empty(){
         if j.kind=="quote"{return Err(err("needs_review","quote outcome unknown; automatic resend/unlock unsupported"));}
+        j.validate_destination()?;
         let path=match j.kind.as_str(){"swap"|"copy"=>"swap","withdraw"=>"withdraw","transfer"=>"transfer",_=>return Err(err("guard_journal","unsupported kind"))};
         let id=host.post(j,key,path).ok().and_then(|(status,v)|posted_request_id(status,&v).map(str::to_string));
         let Some(id)=id else{return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"admission_finished":false}));};
@@ -240,15 +248,15 @@ pub fn fixed_floor(cert:&Certificate,balance:&Value,wallet_id:&str)->Result<(),E
 pub fn loan_binding(cert:&Certificate,loan:&Value,binding:&Value,control:&Control,config:&Value)->Result<(),Error>{
     let terms:LoanTerms=serde_json::from_value(loan["terms"].clone()).map_err(|_|err("certificate","invalid authoritative terms"))?;
     if loan["state"]!="Offered"||loan["policy_busy"]!=false||loan["token_id"]!=cert.token_id||loan["borrower"]!=cert.borrower||loan["nonce"]!=cert.loan_nonce||loan["owner_epoch"]!=cert.owner_epoch
-        ||terms!=cert.terms||binding["ready"]!=true||binding["wallet_pubkey"]!=cert.wallet_pubkey||binding["policy_version"]!=cert.policy_version||binding["encrypted_policy_hash"]!=cert.policy_hash
+        ||u64_field(loan,"policy_sequence")?!=u64_field(binding,"policy_generation")?||terms!=cert.terms||binding["ready"]!=true||binding["wallet_pubkey"]!=cert.wallet_pubkey||binding["policy_version"]!=cert.policy_version||binding["encrypted_policy_hash"]!=cert.policy_hash
         ||config["network"]!=cert.network||config["lending_enabled"]!=true||!control.pledged||control.pending!=0||control.listed||control.transfer_pending||control.epoch.to_string()!=cert.owner_epoch{
         return Err(err("collateral_ineligible","loan/control/binding is not certifiable"));
     }Ok(())
 }
-pub fn frozen_policy(cert:&Certificate,policy:&Value)->Result<(),Error>{
+pub fn frozen_policy(cert:&Certificate,policy:&Value,generation:u64)->Result<(),Error>{
     use sha2::{Digest,Sha256};
     let payload=text(policy,"encrypted_data")?;
-    if policy["owner"]!=cert.contract||policy["frozen"]!=true||policy["locked"]!=true||policy["version"].as_u64().map(|n|n.to_string()).as_deref()!=Some(&cert.policy_version)
+    if policy["generation_supported"]!=true||policy["generation"].as_u64()!=Some(generation)||policy["owner"]!=cert.contract||policy["frozen"]!=true||policy["locked"]!=true||policy["version"].as_u64().map(|n|n.to_string()).as_deref()!=Some(&cert.policy_version)
         ||B64.encode(Sha256::digest(payload.as_bytes()))!=cert.policy_hash{return Err(err("collateral_ineligible","locked frozen controller policy does not match"));}Ok(())
 }
 /// Complete paged inventory, not "first page had nothing pending". Unknown states fail closed.

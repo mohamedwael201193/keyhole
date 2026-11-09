@@ -19,7 +19,7 @@ impl<'a> Layer<'a>{
  fn journal(&mut self,owner:&Account,kind:&str,label:&str)->Journal{
   let v=sync(view(&self.e.c,"get_control_state",json!({"token_id":"k1"})));let c=Control::parse(&v,"k1").unwrap();
   let hash=keyhole_worker::sha256_hex(label);let nonce=c.nonce+1;
-  Journal{contract:self.e.c.id().to_string(),token_id:"k1".into(),owner:owner.id().to_string(),epoch:c.epoch,nonce,op_id:format!("{nonce}:{hash}"),action_hash:hash,kind:kind.into(),body:json!({"token":guarded::ASSET,"amount":"100000","to":owner.id()}),wallet_id:"ab".repeat(32),charge:None}
+  Journal{contract:self.e.c.id().to_string(),token_id:"k1".into(),owner:owner.id().to_string(),epoch:c.epoch,nonce,op_id:format!("{nonce}:{hash}"),action_hash:hash,kind:kind.into(),body:match kind{"swap"|"copy"=>json!({"token_in":guarded::ASSET,"token_out":"nep141:wrap.near","amount_in":"100000","min_amount_out":"1"}),"withdraw"=>json!({"chain":"near","token":guarded::ASSET,"amount":"100000","to":owner.id()}),_=>json!({"token":guarded::ASSET,"amount":"100000","to":owner.id()})},wallet_id:"ab".repeat(32),charge:None,auth_scheme:"nep413".into()}
  }
  fn status(&mut self,j:&Journal,status:&str,never:bool){let row=self.rows.get_mut(&j.op_id).unwrap();row["status"]=json!(status);if never{row["result"]=json!({"never_submitted":true});}}
  fn assert_blocked(&mut self,owner:&Account,label:&str){let j=self.journal(owner,"withdraw",label);let before=self.post_calls;assert!(guarded::confirm_admission(self,&j).is_err());assert!(guarded::drive_provider(self,&j,"sealed-mock-key",false).is_err());assert_eq!(self.post_calls,before);}
@@ -65,7 +65,7 @@ async fn floor_certificate(e:&E,l:&Layer<'_>)->Result<(Value,String)>{
  cert.live(e.c.id().as_str(),"k1",cert.loan_nonce.parse()?,control.epoch,ts).unwrap();
  let loan=view(&e.c,"get_loan",json!({"token_id":"k1"})).await;let binding=view(&e.c,"get_collateral_binding",json!({"token_id":"k1"})).await;let cfg=view(&e.c,"get_pledge_config",json!({})).await;
  guarded::loan_binding(&cert,&loan,&binding,&control,&cfg).unwrap();
- guarded::frozen_policy(&cert,&view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey})).await).unwrap();
+ guarded::frozen_policy(&cert,&view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey})).await,guarded::u64_field(&binding,"policy_generation").unwrap()).unwrap();
  let eligibility=json!({"revision":guarded::REVISION,"wallet_pubkey":cert.wallet_pubkey,"policy_hash":cert.policy_hash,"policy_version":cert.policy_version,"authority_audit_sha256":"a".repeat(64),"no_presigned_authorities":true});
  guarded::eligible(&serde_json::to_vec(&eligibility)?,&cert).unwrap();
  let rows=l.rows.values().cloned().collect::<Vec<_>>();guarded::settled_inventory(&[json!({"requests":rows,"total":rows.len()})]).unwrap();

@@ -21,7 +21,7 @@ async fn setup()->Result<E>{
  minter.call(c.id(),"nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":2,"metadata":{"title":"Sealed collateral","copies":1}}))
   .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let pk=SigningKey::from_bytes(&[7;32]).verifying_key().to_bytes();
- c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"terminal_attestor_public_key":B64.encode(SigningKey::from_bytes(&[8;32]).verifying_key().to_bytes()),"custody_contract":mock.id(),"network":"sandbox"})).max_gas().transact().await?.into_result()?;
+ c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"custody_contract":mock.id(),"network":"sandbox"})).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&c,"get_pledge_config",json!({})).await["lending_enabled"],false);
  c.call("set_lending_enabled").args_json(json!({"enabled":true})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  // Mock accepts a fixed fake artifact; signature cryptography belongs to live provider rollout, not this fixture.
@@ -46,9 +46,12 @@ async fn funding(e:&E,borrower_deleted:bool)->Result<()> {
  let r=e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":"1","certificate":tampered,"signature":B64.encode(signature.to_bytes())}))
   .deposit(NearToken::from_near(1)).max_gas().transact().await?;
  assert!(format!("{:?}",r.into_result().unwrap_err()).contains("certificate not bound"));
- if borrower_deleted {e.alice.clone().delete_account(e.bob.id()).await?.into_result()?;}
+ if borrower_deleted {e.alice.deploy(&std::fs::read(MOCK)?).await?.into_result()?;}
  e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":"1","certificate":cert,"signature":B64.encode(signature.to_bytes())}))
-  .deposit(NearToken::from_near(1)).max_gas().transact().await?.into_result()?;Ok(())
+  .deposit(NearToken::from_near(1)).max_gas().transact().await?.into_result()?;
+ if borrower_deleted {e.alice.call(e.alice.id(),"claim_then_delete").args_json(json!({"keys":e.c.id(),"beneficiary":e.bob.id()})).max_gas().transact().await?.into_result()?;}
+ else{e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;}
+ Ok(())
 }
 #[tokio::test] async fn sealed_loan_repay_unlock_and_native_credit_conservation()->Result<()> {
  let e=setup().await?;open(&e).await?;let alice_before=e.alice.view_account().await?.balance.as_yoctonear();funding(&e,false).await?;
@@ -86,13 +89,11 @@ async fn funding(e:&E,borrower_deleted:bool)->Result<()> {
  assert!(r.into_result().is_err());
  e.bob.call(e.c.id(),"nft_transfer").args_json(json!({"token_id":"k1","receiver_id":e.lender.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;Ok(())
 }
-#[tokio::test] async fn failed_principal_restores_lender_credit_and_no_borrower_debt()->Result<()> {
- let e=setup().await?;open(&e).await?;funding(&e,true).await?;
- assert!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await.is_null());
- assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,N.to_string());
- assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],(N+N/20).to_string());
- e.lender.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
- assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,"0");Ok(())
+#[tokio::test] async fn failed_principal_cashout_restores_borrower_credit_and_preserves_atomic_debt()->Result<()> {let e=setup().await?;open(&e).await?;funding(&e,true).await?;
+ assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"Active");
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,N.to_string());
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,"0");
+ assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],(N+N/20).to_string());Ok(())
 }
 #[tokio::test] async fn admission_and_pledge_both_receipt_orderings_are_serialized()->Result<()> {
  let e=setup().await?;
@@ -147,11 +148,11 @@ async fn funding(e:&E,borrower_deleted:bool)->Result<()> {
   c.as_account().deploy(&std::fs::read(WASM)?).await?.into_result()?;
  }
  let pk=SigningKey::from_bytes(&[7;32]).verifying_key().to_bytes();
- c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"terminal_attestor_public_key":B64.encode(SigningKey::from_bytes(&[8;32]).verifying_key().to_bytes()),"custody_contract":"outlayer.near","network":"mainnet"})).max_gas().transact().await?.into_result()?;
+ c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"custody_contract":"outlayer.near","network":"mainnet"})).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&c,"nft_tokens",json!({"limit":50})).await,tokens);assert_eq!(view(&c,"config",json!({})).await,cfg);
  let pg=view(&c,"get_pledge_config",json!({})).await;
  assert_eq!(pg["treasury_available"],"0");assert_eq!(pg["user_liabilities"],"0");assert_eq!(pg["lending_enabled"],false);
- let again=c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"terminal_attestor_public_key":B64.encode(SigningKey::from_bytes(&[8;32]).verifying_key().to_bytes()),"custody_contract":"outlayer.near","network":"mainnet"})).max_gas().transact().await?;
+ let again=c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"custody_contract":"outlayer.near","network":"mainnet"})).max_gas().transact().await?;
  assert!(again.is_failure());Ok(())
 }
 
@@ -176,48 +177,34 @@ async fn funding(e:&E,borrower_deleted:bool)->Result<()> {
 async fn fault_callbacks(e:&E)->Result<()> {
  e.c.as_account().deploy(&std::fs::read("tests/fixtures/callback_failure.wasm")?).await?.into_result()?;Ok(())
 }
-async fn terminal_relay(e:&E,kind:&str,token:&str,nonce:&str,sequence:&str,target:&str,amount:u128,success:bool,r:&near_workspaces::result::ExecutionFinalResult)->Result<near_workspaces::result::ExecutionFinalResult> {
- let outcome=r.receipt_outcomes().iter().find(|o|o.executor_id.as_str()==target&&o.is_success()==success).expect("real matching terminal provider/native receipt");
- let ts=now(e).await;
- let proof=keyhole_keys::TerminalAttestation{domain:"KEYHOLE_TERMINAL_RECOVERY_V1".into(),network:"sandbox".into(),contract:e.c.id().to_string().parse()?,kind:kind.into(),token_id:token.into(),nonce:near_sdk::json_types::U64(nonce.parse()?),sequence:near_sdk::json_types::U64(sequence.parse()?),account_id:target.parse()?,amount:near_sdk::json_types::U128(amount),success,receipt_id:near_sdk::json_types::Base64VecU8(outcome.transaction_hash.0.to_vec()),observed_at_ns:near_sdk::json_types::U64(ts),expires_at_ns:near_sdk::json_types::U64(ts+60_000_000_000)};
- let signature=SigningKey::from_bytes(&[8;32]).sign(&near_sdk::borsh::to_vec(&proof)?);
- Ok(e.bob.call(e.c.id(),"reconcile_terminal_outcome").args_json(json!({"attestation":proof,"signature":B64.encode(signature.to_bytes())})).max_gas().transact().await?)
-}
 async fn raw_fund(e:&E)->Result<near_workspaces::result::ExecutionFinalResult>{
  let ts=now(e).await;let cert=view(&e.c,"loan_certificate_template",json!({"token_id":"k1","observed_at_ns":ts.to_string(),"expires_at_ns":(ts+60_000_000_000).to_string()})).await;
  let typed:LoanCertificate=serde_json::from_value(cert.clone())?;let sig=SigningKey::from_bytes(&[7;32]).sign(&near_sdk::borsh::to_vec(&typed)?);
  Ok(e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":"1","certificate":cert,"signature":B64.encode(sig.to_bytes())})).deposit(NearToken::from_near(1)).max_gas().transact().await?)
 }
 fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{:?}",r.receipt_failures()).contains("injected callback failure"));}
-#[tokio::test]async fn actual_failed_first_stage_principal_and_payout_callbacks_recover_without_upgrade_or_resend()->Result<()> {
- let e=setup().await?;fault_callbacks(&e).await?;let ts=now(&e).await;
+#[tokio::test]async fn actual_lost_policy_callback_recovers_by_fence_and_lost_payout_cannot_be_paid_three_times()->Result<()> {let e=setup().await?;fault_callbacks(&e).await?;let ts=now(&e).await;
  let r=e.alice.call(e.c.id(),"open_loan").args_json(json!({"token_id":"k1","terms":{"lender":e.lender.id(),"principal":N.to_string(),"repayment":(11*N/10).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"1000000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_millinear(50)).max_gas().transact().await?;injected(&r);
- assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["policy_call_complete"],false);
- terminal_relay(&e,"policy_action","k1","1","1",e.mock.id().as_str(),0,true,&r).await?.into_result()?;
+ e.bob.call(e.c.id(),"reconcile_loan_policy").args_json(json!({"token_id":"k1","nonce":"1"})).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"Offered");
- let before=e.alice.view_account().await?.balance.as_yoctonear();let r=raw_fund(&e).await?;injected(&r);
- let delivered=e.alice.view_account().await?.balance.as_yoctonear();assert!(delivered>before+N*99/100);
- assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"FundingPending");
- terminal_relay(&e,"principal","k1","1","0",e.alice.id().as_str(),N,true,&r).await?.into_result()?;
- assert_eq!(e.alice.view_account().await?.balance.as_yoctonear(),delivered,"recovery cannot resend principal");
+ raw_fund(&e).await?.into_result()?;assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,N.to_string());
+ let r=e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;injected(&r);
  let r=e.alice.call(e.c.id(),"repay_loan").args_json(json!({"token_id":"k1","nonce":"1"})).deposit(NearToken::from_yoctonear(11*N/10)).max_gas().transact().await?;injected(&r);
- terminal_relay(&e,"policy_action","k1","1","2",e.mock.id().as_str(),0,true,&r).await?.into_result()?;assert!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await.is_null());
- let before=e.lender.view_account().await?.balance.as_yoctonear();let r=e.lender.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;injected(&r);
- let delivered=e.lender.view_account().await?.balance.as_yoctonear();assert!(delivered>before+N);
- let p=view(&e.c,"get_pending_payout",json!({"account_id":e.lender.id()})).await;
- let settled=terminal_relay(&e,"payout","",p["nonce"].as_str().unwrap(),"0",e.lender.id().as_str(),11*N/10,true,&r).await?.into_result()?;
- // The original signer may still receive its prior gas refund. Absence of ANY new payee receipt proves no resend.
- assert!(!settled.receipt_outcomes().iter().any(|o|o.executor_id==*e.lender.id()));
- assert!(e.lender.view_account().await?.balance.as_yoctonear()<delivered+N/10);assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,"0");assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],(N/20).to_string());Ok(())
+ e.bob.call(e.c.id(),"reconcile_loan_policy").args_json(json!({"token_id":"k1","nonce":"1"})).max_gas().transact().await?.into_result()?;
+ assert!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await.is_null());
+ let before=e.lender.view_account().await?.balance.as_yoctonear();let r=e.lender.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;injected(&r);assert!(e.lender.view_account().await?.balance.as_yoctonear()>before+N);
+ for _ in 0..3 {
+  let fake=e.bob.call(e.c.id(),"reconcile_terminal_outcome").args_json(json!({"attestation":{"kind":"payout","success":false},"signature":B64.encode([8;64])})).max_gas().transact().await?;assert!(fake.is_failure());
+  let again=e.lender.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;assert!(again.is_failure());
+ }
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,"0");assert!(!view(&e.c,"get_pending_payout",json!({"account_id":e.lender.id()})).await.is_null());Ok(())
 }
-#[tokio::test]async fn actual_failed_native_principal_and_failed_callback_recover_backed_credit_then_close()->Result<()> {
- let e=setup().await?;open(&e).await?;fault_callbacks(&e).await?;e.alice.clone().delete_account(e.bob.id()).await?.into_result()?;
- let r=raw_fund(&e).await?;injected(&r);let thaw=terminal_relay(&e,"principal","k1","1","0",e.alice.id().as_str(),N,false,&r).await?;injected(&thaw);
- assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,N.to_string());
- // The recovery-triggered thaw also hits the deliberately failing first-stage callback. Read its finalized outcome from the chain through a retry-free reconciliation attestation.
- let l=view(&e.c,"get_loan",json!({"token_id":"k1"})).await;assert_eq!(l["state"],"UnlockPending");
- terminal_relay(&e,"policy_action","k1","1","2",e.mock.id().as_str(),0,true,&thaw).await?.into_result()?;assert!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await.is_null());
- assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],(N+N/20).to_string());Ok(())
+#[tokio::test]async fn actual_failed_native_cashout_and_lost_callback_stays_unknown_not_double_credited()->Result<()> {let e=setup().await?;open(&e).await?;fault_callbacks(&e).await?;e.alice.deploy(&std::fs::read(MOCK)?).await?.into_result()?;raw_fund(&e).await?.into_result()?;
+ let r=e.alice.call(e.alice.id(),"claim_then_delete").args_json(json!({"keys":e.c.id(),"beneficiary":e.bob.id()})).max_gas().transact().await?;
+ assert!(!r.receipt_failures().is_empty());assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"Active");
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,"0");assert!(!view(&e.c,"get_pending_payout",json!({"account_id":e.alice.id()})).await.is_null());
+ // A failed native transfer plus a lost callback is deliberately UNKNOWN on chain, never timed-refunded.
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,"0");Ok(())
 }
 #[tokio::test]async fn actual_failed_registration_refunds_forwarded_deposit_and_allows_corrected_retry()->Result<()> {
  let e=setup().await?;e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"k2","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Retry"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
@@ -228,25 +215,31 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
  e.minter.call(e.c.id(),"register_collateral").args_json(args).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],true);
  assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],dep.to_string());Ok(())
 }
-#[tokio::test]async fn actual_failed_resolver_has_permissionless_proof_bound_recovery_and_preserves_sender_slot()->Result<()> {
- let e=setup().await?;fault_callbacks(&e).await?;let recv=e.w.dev_deploy(&std::fs::read("tests/fixtures/return_bomb_receiver.wasm")?).await?;
- let r=e.alice.call(e.c.id(),"nft_transfer_call").args_json(json!({"token_id":"k1","receiver_id":recv.id(),"msg":""})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;injected(&r);
- let p=view(&e.c,"get_pending_transfer",json!({"token_id":"k1"})).await;assert_eq!(view(&e.c,"pending_return_count",json!({"account_id":e.alice.id()})).await,1);
- // Return bomb's provider receipt is successful but its protocol result is oversized, hence NOT accepted.
- let outcome=r.receipt_outcomes().iter().find(|o|o.executor_id==*recv.id()&&o.is_success()).unwrap();let ts=now(&e).await;
- let proof=keyhole_keys::TerminalAttestation{domain:"KEYHOLE_TERMINAL_RECOVERY_V1".into(),network:"sandbox".into(),contract:e.c.id().to_string().parse()?,kind:"transfer_call".into(),token_id:"k1".into(),nonce:near_sdk::json_types::U64(p["epoch"].as_str().unwrap().parse()?),sequence:near_sdk::json_types::U64(0),account_id:recv.id().to_string().parse()?,amount:near_sdk::json_types::U128(0),success:false,receipt_id:near_sdk::json_types::Base64VecU8(outcome.transaction_hash.0.to_vec()),observed_at_ns:near_sdk::json_types::U64(ts),expires_at_ns:near_sdk::json_types::U64(ts+60_000_000_000)};
- let sig=SigningKey::from_bytes(&[8;32]).sign(&near_sdk::borsh::to_vec(&proof)?);e.bob.call(e.c.id(),"reconcile_terminal_outcome").args_json(json!({"attestation":proof,"signature":B64.encode(sig.to_bytes())})).max_gas().transact().await?.into_result()?;
- assert_eq!(view(&e.c,"pending_return_count",json!({"account_id":e.alice.id()})).await,0);assert_eq!(view(&e.c,"get_control_state",json!({"token_id":"k1"})).await["transfer_pending"],false);assert_eq!(view(&e.c,"nft_token",json!({"token_id":"k1"})).await["owner_id"],e.alice.id().as_str());Ok(())
+#[tokio::test]async fn actual_failed_resolver_has_permissionless_provisional_timeout_not_economic_rollback()->Result<()> {let e=setup().await?;fault_callbacks(&e).await?;let recv=e.w.dev_deploy(&std::fs::read(MOCK)?).await?;
+ let msg=json!({"keys":e.c.id(),"attack_method":"fund_treasury","attack_args":{},"attack_deposit":(N/10).to_string()}).to_string();
+ let r=e.alice.call(e.c.id(),"nft_transfer_call").args_json(json!({"token_id":"k1","receiver_id":recv.id(),"msg":msg})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;injected(&r);
+ let p=view(&e.c,"get_pending_transfer",json!({"token_id":"k1"})).await;let epoch=p["epoch"].clone();let deadline=p["restore_after_ns"].as_str().unwrap().parse::<u64>()?;
+ let early=e.bob.call(e.c.id(),"restore_expired_transfer").args_json(json!({"token_id":"k1","epoch":epoch})).max_gas().transact().await?;assert!(early.is_failure());
+ for _ in 0..10{if now(&e).await>=deadline{break;}e.w.fast_forward(1000).await?;}
+ e.bob.call(e.c.id(),"restore_expired_transfer").args_json(json!({"token_id":"k1","epoch":epoch})).max_gas().transact().await?.into_result()?;
+ assert_eq!(view(&e.c,"pending_return_count",json!({"account_id":e.alice.id()})).await,0);assert_eq!(view(&e.c,"nft_token",json!({"token_id":"k1"})).await["owner_id"],e.alice.id().as_str());
+ assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["treasury_available"],(N/10).to_string(),"external economic side effects are NOT unwound: receiver must wait for committed acceptance");Ok(())
 }
 
 #[tokio::test]async fn actual_failed_registration_callback_recovers_after_successful_provider_without_reforwarding()->Result<()> {
  let e=setup().await?;fault_callbacks(&e).await?;
  e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"k2","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Registration callback"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let r=e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":"k2","wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?;injected(&r);
- let p=view(&e.c,"get_pending_registration",json!({"token_id":"k2"})).await;
  assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],false);
- terminal_relay(&e,"registration","k2",p["nonce"].as_str().unwrap(),"0",e.mock.id().as_str(),N*8/100,true,&r).await?.into_result()?;
+ e.bob.call(e.c.id(),"check_collateral").args_json(json!({"token_id":"k2"})).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],true);assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],"0");assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,"0");Ok(())
+}
+
+#[tokio::test]async fn custody_generation_fence_rejects_old_freeze_after_committed_thaw()->Result<()> {
+ let e=setup().await?;open(&e).await?;e.alice.call(e.c.id(),"cancel_loan").args_json(json!({"token_id":"k1","nonce":"1"})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ let wallet=format!("ed25519:{}","ab".repeat(32));
+ let stale=e.c.as_account().call(e.mock.id(),"set_wallet_frozen").args_json(json!({"wallet_pubkey":wallet,"generation":"1","frozen":true})).max_gas().transact().await?;assert!(stale.is_failure());
+ let policy=view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":wallet})).await;assert_eq!(policy["frozen"],false);assert!(policy["generation"].as_u64().unwrap()>=2);Ok(())
 }
 
 #[path="support/guarded_layer.rs"]

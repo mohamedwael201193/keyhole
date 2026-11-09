@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: contracts/keys } }
-    # Historical releases used /home/box/.cargo; current build.sh normalizes embedded source/registry paths.
-    # Building with the same CARGO_HOME keeps the byte-for-byte rebuild check exact on any machine.
+    # Retain the historical release toolchain home; build.sh remaps crate/registry paths
+    # and omits optional embedded ABI while still generating off-chain ABI JSON.
     env:
       CARGO_HOME: /home/box/.cargo
     steps:

@@ -148,7 +148,7 @@ fn owner_epochs() -> LookupMap<TokenId, u64> {
     LookupMap::new(b"E")
 }
 fn bump_owner_epoch(token_id: &TokenId) -> u64 {
-    let next = owner_epochs().get(token_id).unwrap_or(0).checked_add(1).expect("owner epoch overflow");
+    let next = owner_epochs().get(token_id).unwrap_or(0).checked_add(1).unwrap_or_else(||env::panic_str("owner epoch overflow"));
     owner_epochs().insert(token_id, &next);
     next
 }
@@ -331,7 +331,7 @@ impl Contract {
             require!(self.tokens.owner_by_id.get(t).is_some(), "unknown token");
         }
         self.beats += 1;
-        let ids = near_sdk::serde_json::to_string(&token_ids).unwrap();
+        let ids = near_sdk::serde_json::to_string(&token_ids).unwrap_or_else(|_|env::panic_str("event encoding"));
         env::log_str(&format!(
             "EVENT_JSON:{{\"standard\":\"nep171\",\"version\":\"1.2.0\",\"event\":\"nft_metadata_update\",\"data\":[{{\"token_ids\":{}}}]}}",
             ids
@@ -350,7 +350,7 @@ impl Contract {
         let current = self.tiers.get(&token_id).unwrap_or(0);
         require!(tier > current, "tier only goes up");
         self.tiers.insert(&token_id, &tier);
-        let ids = near_sdk::serde_json::to_string(&[&token_id]).unwrap();
+        let ids = near_sdk::serde_json::to_string(&[&token_id]).unwrap_or_else(|_|env::panic_str("event encoding"));
         env::log_str(&format!(
             "EVENT_JSON:{{\"standard\":\"nep171\",\"version\":\"1.2.0\",\"event\":\"nft_metadata_update\",\"data\":[{{\"token_ids\":{}}}]}}",
             ids
@@ -570,7 +570,7 @@ impl Contract {
         require!(current == epoch.0, "epoch mismatch");
         require!(self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&owner_id), "admission owner mismatch");
         let key = value_op_key(&token_id, &op_id);
-        let next = value_ops().get(&key).map(|op| op.nonce.0).unwrap_or(0).checked_add(1).expect("operation nonce overflow");
+        let next = value_ops().get(&key).map(|op| op.nonce.0).unwrap_or(0).checked_add(1).unwrap_or_else(||env::panic_str("operation nonce overflow"));
         let prefix = format!("{next}:");
         require!(op_id.starts_with(&prefix) && op_id.len() > prefix.len(), "op_id already admitted or nonce out of order");
         let before = env::storage_usage();
@@ -595,7 +595,7 @@ impl Contract {
         // Old operation ids cannot unlock a newer pending operation.
         op.state = if success { 2 } else { 3 };
         value_ops().insert(&key, &op);
-        let n = self.pending_ops(&token_id).checked_sub(1).expect("value-op counter underflow");
+        let n = self.pending_ops(&token_id).checked_sub(1).unwrap_or_else(||env::panic_str("value-op counter underflow"));
         if n == 0 { value_op_counts().remove(&token_id); } else { value_op_counts().insert(&token_id, &n); }
         emit_key_event("value_op_finish", near_sdk::serde_json::json!({"token_id": token_id, "op_id": op_id, "success": success, "epoch": op.epoch}));
     }
@@ -636,7 +636,7 @@ impl Contract {
 
     // NEP-199 (hand-written)
     pub fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: Option<u32>) -> Payout {
-        let owner = self.tokens.owner_by_id.get(&token_id).expect("unknown token");
+        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(||env::panic_str("unknown token"));
         let mut payout = HashMap::new();
         let royalty = balance.0 * self.royalty_bps as u128 / 10_000;
         if royalty > 0 && self.treasury != owner {
@@ -703,8 +703,8 @@ impl NonFungibleTokenCore for Contract {
         let (owner, approvals) = self.tokens.internal_transfer(&sender, &receiver_id, &token_id, approval_id, memo);
         bump_owner_epoch(&token_id);
         let epoch = self.nft_settlement_epoch(token_id.clone());
-        transfer_calls().insert(&token_id, &PendingTransfer { previous_owner: owner.clone(), receiver: receiver_id.clone(), epoch, approvals });
-        set_pending(&owner, pending_returns(&owner).checked_add(1).expect("reservation overflow"));
+        transfer_calls().insert(&token_id, &PendingTransfer { previous_owner: owner.clone(), receiver: receiver_id.clone(), epoch, approvals, restore_after_ns:near_sdk::json_types::U64(env::block_timestamp().checked_add(TRANSFER_RESTORE_DELAY_NS).unwrap_or_else(||env::panic_str("transfer timeout overflow"))) });
+        set_pending(&owner, pending_returns(&owner).checked_add(1).unwrap_or_else(||env::panic_str("reservation overflow")));
         // Reserve 50 Tgas for bounded resolution plus 25 Tgas for outbound wrapper/storage.
         Promise::new(receiver_id).function_call("nft_on_transfer".into(), near_sdk::serde_json::json!({
             "sender_id":sender,"previous_owner_id":owner,"token_id":token_id,"msg":msg
@@ -747,7 +747,7 @@ impl Contract {
             bump_owner_epoch(&token_id); kept = false;
         } else if let Some(old) = p.approvals { refund_approved_account_ids(p.previous_owner.clone(), &old); }
         transfer_calls().remove(&token_id);
-        set_pending(&p.previous_owner, pending_returns(&p.previous_owner).checked_sub(1).expect("missing return reservation"));
+        set_pending(&p.previous_owner, pending_returns(&p.previous_owner).checked_sub(1).unwrap_or_else(||env::panic_str("missing return reservation")));
         self.clear_stale_listing(&token_id);
         kept
     }

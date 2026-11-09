@@ -185,6 +185,7 @@ mod host {
         if need_key && token.is_none() {
             return Err(err("not_owner", "only the current key holder can authorize this"));
         }
+        if let Some(t)=&token {guarded::private_access(&guard_control(t)?,owns(t,&account)?)?;}
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         // Nonce first: a replay is refused without spending the rate budget (P1-9).
         admit(&mut Host, &account, &lim, &nonce, now_ms)?;
@@ -208,7 +209,8 @@ mod host {
         check_freshness(req.ts_ms, now_ms)?;
         let account = g.account.clone();
         if !owns(&g.token_id, &account)? { return Err(err("not_owner", "this account no longer holds the key the session was made for")); }
-        guarded::session_epoch(&Store::read(&mut Host,&session_key(&id,"guard_epoch"))?,guard_control(&g.token_id)?.epoch)?;
+        let control=guard_control(&g.token_id)?;guarded::private_access(&control,owns(&g.token_id,&account)?)?;
+        guarded::session_epoch(&Store::read(&mut Host,&session_key(&id,"guard_epoch"))?,control.epoch)?;
         let tier = holder_tier(&account)?;
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         admit(&mut Host, &account, &lim, &nonce, now_ms)?;
@@ -583,11 +585,10 @@ mod host {
         guard_preflight(&c)?;
         let p = &c.req.params;
         let lim = limits_now(&c)?;
-        let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
-            s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
-        // `to` is checked for shape on `chain` only. The NEP-413 message signed above already contains params.to, so
-        // the holder has signed this destination explicitly.
-        assert_withdraw_to(&chain, &to)?;
+        let chain=s(p,"chain").ok_or_else(||err("bad_params","missing params.chain"))?;
+        let token=s(p,"token").ok_or_else(||err("bad_params","missing params.token"))?;
+        // Derive self, never trust a pasted address as ownership proof; reject any override.
+        let to=self_withdraw_destination(&c.account,&chain,s(p,"to").as_deref(),input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413"))?;
         prov_sync_owner(&c.token_id(), &c.account, c.now_ms);
         let evs: Vec<ProvEvent> = load_prov(&c.token_id()).into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
@@ -913,10 +914,11 @@ mod host {
             "public_key": chainsig::fmt_pk(&child), "evm_address": chainsig::evm_address(&child)}))
     }
 
-    /// Chain Signatures: the holder asks the MPC network to sign a 32-byte hash for this key's address.
-    /// The minter calls `v1.signer.sign` (1 yocto); the answer is checked to recover to the derived key.
+    /// Experimental detached MPC signing is quarantined in this guarded source revision.
+    /// Never USD-capped collateral: a signature may be broadcast after title/epoch changes.
     fn op_chain_sign(input: &Value) -> Result<Value, Error> {
-        let c=authenticate(input,"chain_sign",true)?;guard_preflight(&c)?;
+        let c=authenticate(input,"chain_sign",true)?;let control=guard_preflight(&c)?;
+        settle_gate(&c.token_id(),&c.account,control.epoch)?;
         Err(err("unsupported_authority","generic detached signing is disabled in the guarded revision: future broadcast cannot be reconciled"))
     }
 
