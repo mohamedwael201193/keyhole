@@ -1,4 +1,4 @@
-## 2026-11-09 — Attack build labels + honest swap log (PR pending)
+## 2026-11-09 — Attack build labels + honest swap log (PR #187)
 - `/attack`: each refusal card shows recorded wasm (e.g. `6367401a` / `38bd67b9`) with "Recorded on previous build"; `AttackBuild.current` ready for future current-build refusals.
 - `/pnl` + vault/README: removed Mark-to-market delta metric; page shows signed swap-log pointer (log head, trades, signature, attested call) only.
 - Online `verify-claims`: **519 PASS, 0 FAIL, 0 ERROR, 1 SKIP** (`site-beats-live`).
