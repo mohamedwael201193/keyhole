@@ -4376,6 +4376,27 @@
    "verify": "node judge/verify-claims.mjs --only test-provenance_chain_verifies_and_rejects_a_tampered_owner"
   },
   {
+   "id": "test-public_and_new_holder_projection_has_no_opening",
+   "claim": "Named test or symbol `public_and_new_holder_projection_has_no_opening` exists in the source",
+   "where": "README.md:894",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "public_and_new_holder_projection_has_no_opening",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`public_and_new_holder_projection_has_no_opening` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-public_and_new_holder_projection_has_no_opening"
+  },
+  {
    "id": "test-random_transfer_and_withdraw_never_pays_the_previous_holder",
    "claim": "Named test or symbol `random_transfer_and_withdraw_never_pays_the_previous_holder` exists in the source",
    "where": "SECURITY.md:51",
@@ -4500,6 +4521,27 @@
    },
    "expected": "`settle_if_owner` found in source",
    "verify": "node judge/verify-claims.mjs --only test-settle_if_owner"
+  },
+  {
+   "id": "test-storage_errors_cannot_echo_openings_or_private_row_contents",
+   "claim": "Named test or symbol `storage_errors_cannot_echo_openings_or_private_row_contents` exists in the source",
+   "where": "README.md:894",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "storage_errors_cannot_echo_openings_or_private_row_contents",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`storage_errors_cannot_echo_openings_or_private_row_contents` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-storage_errors_cannot_echo_openings_or_private_row_contents"
   },
   {
    "id": "test-tampered_message_fails",

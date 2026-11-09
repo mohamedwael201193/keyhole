@@ -1,5 +1,6 @@
 //! KEYHOLE worker core: pure, host-independent logic (unit-tested natively).
 //! The OutLayer host glue lives in main.rs.
+pub mod provenance;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
@@ -626,7 +627,7 @@ pub fn after_move_status_epoch(status: &str, still_owner: bool, stamped: u64, cu
 fn zero_hash() -> String { "0".repeat(64) }
 
 /// One row of the per-key log. `detail_hash` commits to the private detail.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ProvEvent {
     pub i: u64,
     pub prev: String,
@@ -635,6 +636,12 @@ pub struct ProvEvent {
     pub owner: String,
     pub ts_ms: u64,
     pub detail_hash: String,
+    #[serde(default = "provenance::legacy_version")]
+    pub v: u8,
+    #[serde(default)]
+    pub contract: String,
+    #[serde(default)]
+    pub owner_epoch: u64,
 }
 
 pub fn detail_hash(detail: &str) -> String {
@@ -643,6 +650,7 @@ pub fn detail_hash(detail: &str) -> String {
 
 /// Field order is fixed so a verifier in another language recomputes the same bytes.
 pub fn event_canonical(ev: &ProvEvent) -> String {
+    if ev.v == 2 { return provenance::canonical_v2(ev); }
     format!(
         "{{\"detail_hash\":\"{}\",\"i\":{},\"kind\":\"{}\",\"owner\":\"{}\",\"prev\":\"{}\",\"token_id\":\"{}\",\"ts_ms\":{}}}",
         ev.detail_hash, ev.i, ev.kind, ev.owner, ev.prev, ev.token_id, ev.ts_ms
@@ -663,6 +671,7 @@ pub fn append_event(log: &mut Vec<ProvEvent>, kind: &str, token_id: &str, owner:
         owner: owner.to_string(),
         ts_ms,
         detail_hash: detail_hash(detail),
+        v: 1, contract: String::new(), owner_epoch: 0,
     };
     let h = event_hash(&ev);
     log.push(ev);
@@ -672,6 +681,7 @@ pub fn append_event(log: &mut Vec<ProvEvent>, kind: &str, token_id: &str, owner:
 pub fn verify_chain(log: &[ProvEvent]) -> Result<String, Error> {
     let mut prev = zero_hash();
     for (i, ev) in log.iter().enumerate() {
+        if ev.v != 1 && ev.v != 2 { return Err(err("bad_log", "unsupported commitment version")); }
         if ev.i != i as u64 { return Err(err("bad_log", "event index does not match its place in the chain")); }
         if ev.prev != prev { return Err(err("bad_log", "event prev does not match the previous hash")); }
         prev = event_hash(ev);

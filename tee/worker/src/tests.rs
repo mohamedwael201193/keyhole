@@ -818,7 +818,7 @@ fn invariant_cooldown_binds_only_the_latest_transferee() {
             let o = owners[r.below(3) as usize];
             let kind = if r.below(3) == 0 { "swap" } else { "transfer" };
             let ts = i * 1000 + r.below(500);
-            evs.push(ProvEvent { i, prev: String::new(), kind: kind.into(), token_id: "k".into(), owner: o.into(), ts_ms: ts, detail_hash: String::new() });
+            evs.push(ProvEvent { i, prev: String::new(), kind: kind.into(), token_id: "k".into(), owner: o.into(), ts_ms: ts, detail_hash: String::new(), v:1, contract:String::new(), owner_epoch:0 });
             if kind == "transfer" { last = Some((o, ts)); }
         }
         for o in owners {

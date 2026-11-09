@@ -879,3 +879,17 @@ See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.
 ```
 
 Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement/fencing proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+
+## Source candidate: versioned event openings
+
+The worker source writes v2 event commitments with a fresh 32-byte secret nonce from WASI secure randomness. The exact UTF-8 detail and its nonce are stored together in encrypted, immutable compare-and-set rows before that commitment is returned. Public projections contain neither field. Holder-authorized history opens only that holder's rows. V1 canonical bytes and mixed-chain links are preserved; the browser and standalone verifier understand both versions.
+
+Run the no-key checks from the repository root:
+
+```sh
+(cd tee/worker && cargo test --locked provenance:: && node verify-log.mjs --self-test)
+(cd web && npm ci && npx vitest run tests/keylog-v2.test.ts tests/keylog.test.ts)
+(cd tee/worker && ./build.sh)
+```
+
+The tests exercise repeated plaintext, exact-byte openings and tampering, encrypted-store/entropy errors, response-loss restart, concurrent CAS writes, public projections, redacted storage errors, unversioned legacy JSON, legacy links, and the same cross-language commitment vector. The named regressions include `public_and_new_holder_projection_has_no_opening` and `storage_errors_cannot_echo_openings_or_private_row_contents`. Release/privacy boundaries are recorded in [SECURITY.md](SECURITY.md#event-commitment-version-boundary).

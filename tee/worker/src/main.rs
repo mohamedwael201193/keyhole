@@ -145,7 +145,7 @@ mod host {
         fn cap(&self) -> String { cap_id(&self.token_id()) }
     }
 
-    /// Signature -> key ownership -> freshness -> op binding -> tier -> nonce (replay) -> rate limit.
+    // Signature -> key ownership -> freshness -> op binding -> tier -> nonce (replay) -> rate limit.
     thread_local! {
         // Account and key that passed authentication in this call, echoed in `bind`.
         static BIND: std::cell::RefCell<Option<(String, Option<String>)>> = const { std::cell::RefCell::new(None) };
@@ -378,11 +378,11 @@ mod host {
         let tier_lim = c.tier.and_then(limits_for_tier);
         let lim = if c.token.is_some() { limits_now(&c).ok().or(tier_lim) } else { tier_lim };
         let pol = c.token.as_ref().and_then(|t| policy_for(&Host.get(&tkey(t, "policy")), &c.account));
-        let cool = c.token.as_ref().and_then(|t| {
-            prov_sync_owner(t, &c.account, c.now_ms);
-            let evs: Vec<ProvEvent> = load_prov(t).into_iter().map(|(e, _)| e).collect();
+        let cool = if let Some(t) = c.token.as_ref() {
+            prov_sync_owner(t, &c.account, c.now_ms)?;
+            let evs: Vec<ProvEvent> = load_prov(t)?.into_iter().map(|(e, _)| e).collect();
             cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms)
-        });
+        } else { None };
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = c.token.as_ref().and_then(|t| active_lock(&Host.get(&tkey(t, "lock")), &c.account, c.now_ms));
         let epoch = c.token.as_ref().map(|t| epoch_of(t)).unwrap_or(0);
@@ -418,7 +418,7 @@ mod host {
             return Err(err("mint_failed", e.message));
         }
         let tx = r.unwrap();
-        prov_append(&tid, "mint", &c.account, c.now_ms, &format!("mint {tx}"));
+        prov_append(&tid, "mint", &c.account, c.now_ms, &format!("mint {tx}"))?;
         Ok(json!({"ok": true, "op": "mint", "account": c.account, "token_id": tid, "tier": 1, "tx": tx, "minter": mid}))
     }
 
@@ -519,7 +519,7 @@ mod host {
             let (st, j) = http("POST", &format!("{}/wallet/v1/confidential/deposit/cross-chain", OL), Some(&key), Some(&body))?;
             if st >= 300 { return Err(err("upstream", format!("deposit address failed ({})", st))); }
             out["deposit"] = json!({"deposit_address": j.get("deposit_address"), "amount": j.get("amount"), "expires_at": j.get("expires_at"), "hint": j.get("hint")});
-            prov_append(&c.token_id(), "deposit", &c.account, c.now_ms, &body.to_string());
+            prov_append(&c.token_id(), "deposit", &c.account, c.now_ms, &body.to_string())?;
         }
         Ok(out)
     }
@@ -589,7 +589,7 @@ mod host {
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
             "usd_in_micro": usd, "status": status, "epoch": stamped, "source": p.get("source")}));
-        if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}")); }
+        if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}"))?; }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
             "min_amount_out": min_out.to_string(), "settlement_epoch": stamped, "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
     }
@@ -603,8 +603,8 @@ mod host {
         // `to` is checked for shape on `chain` only. The NEP-413 message signed above already contains params.to, so
         // the holder has signed this destination explicitly.
         assert_withdraw_to(&chain, &to)?;
-        prov_sync_owner(&c.token_id(), &c.account, c.now_ms);
-        let evs: Vec<ProvEvent> = load_prov(&c.token_id()).into_iter().map(|(e, _)| e).collect();
+        prov_sync_owner(&c.token_id(), &c.account, c.now_ms)?;
+        let evs: Vec<ProvEvent> = load_prov(&c.token_id())?.into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         let amt = digits(p, "amount")?;
         let (key, id) = c.wallet()?;
@@ -630,53 +630,36 @@ mod host {
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
         let status = after_move_status_epoch(&raw_status, still, stamped, epoch_of(&c.token_id()));
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status, "epoch": stamped}));
-        if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
+        if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}"))?; }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
         Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "request_id": r.get("request_id"),
             "tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
     }
 
-    fn load_prov(token: &str) -> Vec<(ProvEvent, String)> {
-        let (v, _) = storage::get(&format!("p/{token}"));
-        let raw: Vec<Value> = serde_json::from_slice(&v).unwrap_or_default();
-        raw.into_iter().filter_map(|j| {
-            Some((ProvEvent {
-                i: j.get("i")?.as_u64()?,
-                prev: s(&j, "prev")?,
-                kind: s(&j, "kind")?,
-                token_id: s(&j, "token_id")?,
-                owner: s(&j, "owner")?,
-                ts_ms: j.get("ts_ms")?.as_u64()?,
-                detail_hash: s(&j, "detail_hash")?,
-            }, s(&j, "detail").unwrap_or_default()))
-        }).collect()
+    fn load_prov(token: &str) -> Result<Vec<(ProvEvent, String)>, Error> {
+        Ok(provenance::load(&mut Host, &keys_contract(), token)?.into_iter().map(|r|(r.event,r.detail)).collect())
     }
-
-    fn save_prov(token: &str, rows: &[(ProvEvent, String)]) {
-        let v: Vec<Value> = rows.iter().map(|(ev, detail)| json!({
-            "i": ev.i, "prev": ev.prev, "kind": ev.kind, "token_id": ev.token_id,
-            "owner": ev.owner, "ts_ms": ev.ts_ms, "detail_hash": ev.detail_hash, "detail": detail,
-        })).collect();
-        let _ = storage::set(&format!("p/{token}"), serde_json::to_string(&v).unwrap_or_else(|_| "[]".into()).as_bytes());
+    fn chain_owner_epoch(token: &str) -> Result<u64,Error> {
+        let v=view(&keys_contract(),"nft_settlement_epoch",json!({"token_id":token}))?;
+        v.as_u64().or_else(||v.as_str().and_then(|s|s.parse().ok())).ok_or_else(||err("rpc","missing owner epoch"))
     }
-
-    fn prov_append(token: &str, kind: &str, owner: &str, ts: u64, detail: &str) {
-        let mut rows = load_prov(token);
-        let mut evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
-        let n = evs.len();
-        let details = append_synced(&mut evs, kind, token, owner, ts, detail);
-        for (ev, d) in evs.drain(n..).zip(details) { rows.push((ev, d)); }
-        save_prov(token, &rows);
+    fn prov_append(token: &str, kind: &str, owner: &str, ts: u64, detail: &str) -> Result<(),Error> {
+        let epoch=chain_owner_epoch(token)?;
+        provenance::append(&mut Host, provenance::EventInput{contract:&keys_contract(),token,kind,owner,owner_epoch:epoch,ts_ms:ts,detail},
+            |bytes| getrandom::fill(bytes).map_err(|_|err("entropy","secure event randomness unavailable")))?;
+        Ok(())
     }
-
-    fn prov_sync_owner(token: &str, owner: &str, ts: u64) {
-        let rows = load_prov(token);
-        if rows.last().map(|(e, _)| e.owner.as_str()) == Some(owner) || rows.is_empty() { return; }
-        // Ownership changed: bump the settlement epoch so any in-flight settle stamped with the old epoch is void.
-        let next = bump_epoch(epoch_of(token));
-        set_epoch(token, next);
-        prov_append(token, "transfer", owner, ts, &format!("transfer epoch {next}"));
+    fn prov_sync_owner(token: &str, owner: &str, ts: u64) -> Result<(),Error> {
+        let rows=load_prov(token)?;
+        let epoch=chain_owner_epoch(token)?;
+        let Some((last,_))=rows.last() else {return Ok(());};
+        // An A->B->A roundtrip is still a new ownership phase. Token-wide caps are not reset.
+        if last.owner==owner && last.v==2 && last.owner_epoch==epoch {return Ok(());}
+        if last.owner==owner && last.v==1 && epoch==0 {return Ok(());}
+        prov_append(token,"transfer",owner,ts,&format!("transfer epoch {epoch}"))?;
+        set_epoch(token,epoch);
+        Ok(())
     }
 
     fn minter_secret(msk: &str) -> Result<[u8; 32], Error> {
@@ -687,16 +670,12 @@ mod host {
     /// `detail_for`: return the private detail only on rows this account wrote, so a new holder
     /// never reads a previous holder's deposit or withdraw detail (the hash still chains).
     fn prov_body(token: &str, detail_for: Option<&str>) -> Result<Value, Error> {
-        let rows = load_prov(token);
-        let evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
-        let head = verify_chain(&evs).unwrap_or_else(|_| "0".repeat(64));
-        let (mid, msk) = minter()?;
-        let sig = sign_head(&minter_secret(&msk)?, &head);
-        let events: Vec<Value> = rows.iter().map(|(ev, detail)| {
-            let mut row = json!({"i": ev.i, "hash": event_hash(ev), "kind": ev.kind, "owner": ev.owner, "prev": ev.prev, "ts_ms": ev.ts_ms, "detail_hash": ev.detail_hash});
-            if detail_for == Some(ev.owner.as_str()) { row["detail"] = json!(detail); }
-            row
-        }).collect();
+        let rows=provenance::load(&mut Host,&keys_contract(),token)?;
+        let evs:Vec<_>=rows.iter().map(|r|r.event.clone()).collect();
+        let head=verify_chain(&evs)?;
+        let (mid,msk)=minter()?;
+        let sig=sign_head(&minter_secret(&msk)?,&head);
+        let events:Vec<Value>=rows.iter().map(|r|r.project(detail_for)).collect();
         Ok(json!({"token_id": token, "head": head, "sig": sig, "minter": mid, "events": events}))
     }
 
@@ -705,7 +684,7 @@ mod host {
             .ok_or_else(|| err("bad_params", "token_id required"))?;
         let tok = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?;
         if let Some(owner) = tok.get("owner_id").and_then(|v| v.as_str()) {
-            if let Ok(now) = chain_now_ms() { prov_sync_owner(&tid, owner, now); }
+            if let Ok(now) = chain_now_ms() { prov_sync_owner(&tid, owner, now)?; }
         }
         let body = prov_body(&tid, None)?;
         let mut out = json!({"ok": true, "op": "provenance"});
@@ -725,7 +704,7 @@ mod host {
         let cur = active_lock(&Host.get(&k), &c.account, c.now_ms).unwrap_or(0);
         let until = (c.now_ms + hours * 3_600_000).max(cur);
         Host.set(&k, lock_value(&c.account, until).as_bytes());
-        prov_append(&c.token_id(), "lock", &c.account, c.now_ms, &format!("lock until {until}"));
+        prov_append(&c.token_id(), "lock", &c.account, c.now_ms, &format!("lock until {until}"))?;
         Ok(json!({"ok": true, "op": "lock", "account": c.account, "token_id": c.token_id(), "locked_until_ms": until}))
     }
 
@@ -746,7 +725,7 @@ mod host {
             return Err(err("session_scope", "raising limits needs a fresh wallet signature"));
         }
         Host.set(&k, serde_json::to_string(&pol).unwrap_or_default().as_bytes());
-        prov_append(&c.token_id(), "limits", &c.account, c.now_ms, &format!("limits {pt}/{d} pending={}", pol.pending.is_some()));
+        prov_append(&c.token_id(), "limits", &c.account, c.now_ms, &format!("limits {pt}/{d} pending={}", pol.pending.is_some()))?;
         let eff = effective_limits(tier, Some(&pol), c.now_ms);
         Ok(json!({"ok": true, "op": "limits", "account": c.account, "token_id": c.token_id(), "holder_limits": pol, "limits": eff, "tier_limits": tier}))
     }
@@ -765,9 +744,9 @@ mod host {
         let holds = balance_of(j.get("balances").unwrap_or(&Value::Null), &asset) >= min_n;
         let tid = c.token_id();
         let locked = active_lock(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms).unwrap_or(0);
-        let rows = load_prov(&tid);
+        let rows = load_prov(&tid)?;
         let evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
-        let head = verify_chain(&evs).unwrap_or_else(|_| "0".repeat(64));
+        let head = verify_chain(&evs)?;
         let statement = proof_canonical(&tid, &c.account, &asset, &min, holds, locked, &head, c.now_ms);
         let (mid, msk) = minter()?;
         let sig = sign_head(&minter_secret(&msk)?, &statement);
@@ -787,9 +766,9 @@ mod host {
         if outs.len() > 6 { return Err(err("bad_params", "too many assets to price in one call")); }
         let mut value = 0u64;
         for (tok, amt) in &outs { value = value.saturating_add(usd_of(tok, &amt.to_string(), &id, c.now_ms)?); }
-        let rows = load_prov(&tid);
+        let rows = load_prov(&tid)?;
         let evs: Vec<ProvEvent> = rows.iter().map(|(e, _)| e.clone()).collect();
-        let head = verify_chain(&evs).unwrap_or_else(|_| "0".repeat(64));
+        let head = verify_chain(&evs)?;
         let statement = pnl_canonical(&tid, &c.account, trades, cost, value, since, &head, c.now_ms);
         let (mid, msk) = minter()?;
         let sig = sign_head(&minter_secret(&msk)?, &statement);
@@ -809,11 +788,11 @@ mod host {
             .ok_or_else(|| err("rpc", "the keys contract names no owner for this key"))?;
         let tier = nft_tier_of(&tid)?;
         let now = chain_now_ms()?;
-        let stored: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        let stored: Vec<ProvEvent> = load_prov(&tid)?.into_iter().map(|(e, _)| e).collect();
         verify_chain(&stored)?;
         // The same owner sync as provenance and level_up, so a transfer the log has not seen yet is in the head.
-        prov_sync_owner(&tid, &owner, now);
-        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        prov_sync_owner(&tid, &owner, now)?;
+        let evs: Vec<ProvEvent> = load_prov(&tid)?.into_iter().map(|(e, _)| e).collect();
         let head = verify_chain(&evs)?;
         let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
         let (settled, volume) = level_counts(&all);
@@ -830,8 +809,8 @@ mod host {
     fn op_level_up(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "level_up", true)?;
         let tid = c.token_id();
-        prov_sync_owner(&tid, &c.account, c.now_ms);
-        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        prov_sync_owner(&tid, &c.account, c.now_ms)?;
+        let evs: Vec<ProvEvent> = load_prov(&tid)?.into_iter().map(|(e, _)| e).collect();
         let trades: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
         let current = nft_tier_of(&tid)?;
         // Refuses with bad_log when the provenance chain does not verify; nothing is counted then.
@@ -847,7 +826,7 @@ mod host {
         let (mid, msk) = minter()?;
         let args = json!({"token_id": tid, "tier": a.earned}).to_string();
         let tx = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_set_tier", args: args.as_bytes(), gas: LEVEL_UP_GAS, deposit: 0 }])?;
-        prov_append(&tid, "level_up", &c.account, c.now_ms, &format!("level_up {current}->{} tx {tx}", a.earned));
+        prov_append(&tid, "level_up", &c.account, c.now_ms, &format!("level_up {current}->{} tx {tx}", a.earned))?;
         let after = tier_progress(a.earned, a.progress.swaps, a.progress.volume_usd_micro);
         Ok(json!({"ok": true, "op": "level_up", "account": c.account, "token_id": tid,
             "tier_before": current, "tier_after": a.earned, "tx_hash": tx, "progress": after}))
@@ -859,7 +838,7 @@ mod host {
         let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&c.token_id(), "log"))).unwrap_or_default();
         let a = history_for(&all, &c.account);
         let tid = c.token_id();
-        let chain = prov_body(&tid, Some(&c.account)).unwrap_or(json!({}));
+        let chain = prov_body(&tid, Some(&c.account))?;
         Ok(json!({"ok": true, "op": "history", "account": c.account, "entries": a, "log": chain}))
     }
 
@@ -870,8 +849,8 @@ mod host {
         let lim = limits_now(&c)?;
         let tier_lim = c.tier.and_then(limits_for_tier);
         let pol = policy_for(&Host.get(&tkey(&tid, "policy")), &c.account);
-        prov_sync_owner(&tid, &c.account, c.now_ms);
-        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        prov_sync_owner(&tid, &c.account, c.now_ms)?;
+        let evs: Vec<ProvEvent> = load_prov(&tid)?.into_iter().map(|(e, _)| e).collect();
         let cool = cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms);
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = active_lock(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms);
@@ -939,8 +918,8 @@ mod host {
         let args = chainsig::sign_args(&hx, &path).ok_or_else(|| err("bad_params", "params.payload_hash must be 32 bytes hex"))?;
         // Same holder guards as a withdraw: no signing while the key is locked for sale or inside the
         // post-transfer cooldown, and a small per-key daily count (each request costs the minter gas).
-        prov_sync_owner(&tid, &c.account, c.now_ms);
-        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
+        prov_sync_owner(&tid, &c.account, c.now_ms)?;
+        let evs: Vec<ProvEvent> = load_prov(&tid)?.into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms)?;
         // Signing for the key's address can move the funds held there on other chains, so it is frozen too.
@@ -961,7 +940,7 @@ mod host {
         let h: [u8; 32] = hex::decode(hx.trim_start_matches("0x")).ok().and_then(|v| v.try_into().ok()).ok_or_else(|| err("bad_params", "hash"))?;
         if !chainsig::recovers_to(&h, &sig, &child) { return Err(err("bad_signature", "signature does not recover to this key's address")); }
         bump_within(&mut Host, &qk, 1, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
-        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", hx));
+        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", hx))?;
         Ok(json!({"ok": true, "op": "chain_sign", "token_id": tid, "path": path, "tx": tx, "payload_hash": hx,
             "signature": sig, "evm_address": chainsig::evm_address(&child)}))
     }
