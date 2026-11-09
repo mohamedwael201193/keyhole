@@ -27,6 +27,9 @@ fn setup() -> Contract {
     let mut c = Contract::new(a("owner.near"), a("minter.near"), a("treasury.near"), 500);
     ctx("minter.near", N / 10, NOW);
     c.nft_mint("k1".into(), a("alice.near"), 2, TokenMetadata { title: Some("Key".into()), ..Default::default() });
+    // Settle the minter's known successful mint-storage refund before the lending baseline.
+    ctx("minter.near",1,NOW);let _=c.claim_payout();let p=c.get_pending_payout(a("minter.near")).unwrap();
+    result(PromiseResult::Successful(vec![]),NOW);assert!(c.on_payout(a("minter.near"),p.nonce));
     env::state_write(&c); ctx("keys.near", 0, NOW);
     let c = Contract::migrate_pledge(a("recovery.near"), Base64VecU8(sk().verifying_key().to_bytes().to_vec()), a("custody.near"), "sandbox".into());
     let mut cfg = config_required(); cfg.lending_enabled = true; save_config(&cfg);
@@ -249,7 +252,7 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
     ctx("alice.near",LIST_STORAGE_DEPOSIT,NOW); c.nft_list("k1".into(),U128(N));
     ctx("bob.near",N,NOW); c.nft_buy("k1".into());
     assert_eq!(config_required().treasury_available.0,N/20);
-    assert_eq!(config_required().user_liabilities.0,0);
+    assert_eq!(config_required().user_liabilities.0,N-N/20+LIST_STORAGE_DEPOSIT);
 }
 
 #[test] fn value_op_storage_is_bounded_and_obsolete_finish_cannot_unlock_new_operation() {
@@ -353,7 +356,7 @@ fn registration(c:&mut Contract)->U64 {
  ctx("anyone.near",0,NOW+TRANSFER_RESTORE_DELAY_NS-1);rejected(||{c.restore_expired_transfer("k1".into(),old);});ctx("anyone.near",0,NOW+TRANSFER_RESTORE_DELAY_NS);assert!(!c.restore_expired_transfer("k1".into(),old));
  assert_eq!(c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap().len(),1);assert_eq!(c.pending_return_count(a("alice.near")),0);
  ctx("alice.near",1,NOW+TRANSFER_RESTORE_DELAY_NS);let _=c.nft_transfer_call(a("receiver.near"),"k1".into(),None,None,"".into());
- result(PromiseResult::Successful(b"false".to_vec()),NOW+TRANSFER_RESTORE_DELAY_NS);assert!(c.resolve_transfer_call("k1".into(),old));assert!(c.get_control_state("k1".into()).transfer_pending);
+ result(PromiseResult::Successful(b"false".to_vec()),NOW+TRANSFER_RESTORE_DELAY_NS);assert!(!c.resolve_transfer_call("k1".into(),old));assert!(c.get_control_state("k1".into()).transfer_pending);
  ctx("anyone.near",0,NOW+2*TRANSFER_RESTORE_DELAY_NS);rejected(||{c.restore_expired_transfer("k1".into(),old);});
 }
 
@@ -392,3 +395,5 @@ include!("pledge_review_round2_tests.rs");
 #[test]fn lazy_loan_storage_is_paid_by_borrower_bond_not_preexisting_reserves(){let mut c=setup();let before=env::storage_usage();open(&mut c);let bytes=env::storage_usage().saturating_sub(before);assert!(bytes>0);assert!((bytes as u128)*env::storage_byte_cost().as_yoctonear()<=LOAN_STORAGE_DEPOSIT);assert_eq!(c.get_loan("k1".into()).unwrap().storage_bond.0,LOAN_STORAGE_DEPOSIT);}
 #[test]fn legacy_or_stale_policy_snapshot_cannot_unlock_a_fenced_generation(){let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();for supported in [true,false]{let raw=near_sdk::serde_json::json!({"owner":"keys.near","encrypted_data":"sealed-policy","version":1,"locked":true,"frozen":true,"generation_supported":supported,"generation":if supported{0}else{l.policy_sequence.0}});result(PromiseResult::Successful(raw.to_string().into_bytes()),NOW);assert!(!c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));assert!(c.get_loan("k1".into()).unwrap().policy_busy);}}
 #[test]fn maximum_ids_and_ten_approvals_survive_provisional_timeout(){let mut c=setup();let owner=format!("{}.near","a".repeat(59));let token="t".repeat(64);ctx("minter.near",N/10,NOW);c.nft_mint(token.clone(),a(&owner),2,TokenMetadata::default());for n in 0..10{ctx(&owner,N/100,NOW);let id=format!("x{}{}.near",n,"a".repeat(57));let _=c.nft_approve(token.clone(),a(&id),None);}ctx(&owner,1,NOW);let _=c.nft_transfer_call(a("receiver.near"),token.clone(),None,None,"".into());let epoch=c.nft_settlement_epoch(token.clone());ctx("anyone.near",0,NOW+TRANSFER_RESTORE_DELAY_NS);assert!(!c.restore_expired_transfer(token.clone(),epoch));assert_eq!(c.nft_token(token).unwrap().approved_account_ids.unwrap().len(),10);assert_eq!(c.pending_return_count(a(&owner)),0);}
+
+include!("pledge_review_round3_tests.rs");

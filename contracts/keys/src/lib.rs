@@ -316,11 +316,15 @@ impl Contract {
         require!(!token_id.is_empty(), "empty token_id");
         require!(token_id.len() <= 64, "token_id too long");
         self.assert_no_key(&receiver_id);
-        // tier entry (~40 B) is charged to the contract; minter-only, bounded.
+        // Charge mint storage (including tier) before reserving the minter excess credit.
+        let before = env::storage_usage();
         self.tiers.insert(&token_id, &tier);
-        // internal_mint measures storage, panics if deposit is short, refunds excess,
-        // and emits the NEP-171 nft_mint event.
-        self.tokens.internal_mint(token_id, receiver_id, Some(metadata))
+        let token = self.tokens.internal_mint_with_refund(token_id, receiver_id, Some(metadata), None);
+        refund_storage_credit(env::storage_usage().saturating_sub(before));
+        near_contract_standards::non_fungible_token::events::NftMint {
+            owner_id: &token.owner_id, token_ids: &[&token.token_id], memo: None,
+        }.emit();
+        token
     }
 
     /// Minter only. Signals that the key's public card changed (new attested range).
@@ -380,7 +384,7 @@ impl Contract {
     /// (transfer_key, nft_transfer, nft_transfer_call, nft_resolve_transfer), so a listing never outlives its owner.
     fn end_listing(&mut self, token_id: &TokenId) {
         if let Some(listing) = self.take_listing(token_id) {
-            Promise::new(listing.seller.clone()).transfer(yocto(listing.deposit.0));
+            record_native_credit(&listing.seller, listing.deposit.0);
             emit_key_event("key_unlist", near_sdk::serde_json::json!({"token_id": token_id, "seller": listing.seller}));
         }
     }
@@ -397,7 +401,7 @@ impl Contract {
 
     /// The one place a key changes hands except the library's nft_transfer / nft_transfer_call / nft_resolve_transfer
     /// (their callers end the listing first). Ends the listing, clears approvals (their storage goes back to the
-    /// previous owner), moves the key and emits ONE nft_transfer event. Schedules no payout; only the approval refund.
+    /// previous owner), moves the key and emits ONE nft_transfer event. Records approval-storage credit; schedules no native payout.
     fn transfer_key(&mut self, token_id: &TokenId, receiver_id: &AccountId, authorized: Option<&AccountId>, memo: Option<&str>) -> AccountId {
         self.assert_can_change_owner(token_id);
         self.transfer_key_unlocked(token_id, receiver_id, authorized, memo)
@@ -418,7 +422,7 @@ impl Contract {
         }
         .emit();
         if !approved.is_empty() {
-            near_contract_standards::non_fungible_token::refund_approved_account_ids(prev_owner.clone(), &approved);
+            refund_approval_credit(&prev_owner, &approved);
         }
         bump_owner_epoch(token_id);
         prev_owner
@@ -445,12 +449,12 @@ impl Contract {
             None => {
                 let attached = env::attached_deposit().as_yoctonear();
                 require!(attached >= LIST_STORAGE_DEPOSIT, "attach at least 0.01 NEAR for listing storage");
-                // State first; only LIST_STORAGE_DEPOSIT is kept, the rest goes back now.
+                // State first; reserve excess as pull credit, not a fire-and-forget refund.
                 let listing = Listing { seller: caller.clone(), price, deposit: U128(LIST_STORAGE_DEPOSIT) };
                 listings().insert(&token_id, &listing);
                 index_add(&token_id);
                 if attached > LIST_STORAGE_DEPOSIT {
-                    Promise::new(caller.clone()).transfer(yocto(attached - LIST_STORAGE_DEPOSIT));
+                    record_native_credit(&caller, attached - LIST_STORAGE_DEPOSIT);
                 }
             }
         }
@@ -482,9 +486,9 @@ impl Contract {
         let owner = self.tokens.owner_by_id.get(&token_id);
         if owner.as_ref() != Some(&listing.seller) {
             self.take_listing(&token_id);
-            Promise::new(listing.seller.clone()).transfer(yocto(listing.deposit.0));
+            record_native_credit(&listing.seller, listing.deposit.0);
             if attached > 0 {
-                Promise::new(buyer.clone()).transfer(yocto(attached));
+                record_native_credit(&buyer, attached);
             }
             emit_key_event(
                 "key_listing_stale",
@@ -497,7 +501,7 @@ impl Contract {
         require!(buyer != seller, "the seller cannot buy its own key");
         require!(attached >= price, "attached deposit is below the listing price");
         self.assert_no_key(&buyer);
-        // State first: the listing is gone, then the key moves. Promises are created only after this.
+        // State first: the listing is gone, then the key moves. Payout credits are recorded atomically in this receipt.
         self.take_listing(&token_id);
         self.transfer_key(&token_id, &buyer, None, Some("sale"));
         let royalty = price * self.royalty_bps as u128 / 10_000;
@@ -506,12 +510,12 @@ impl Contract {
             near_sdk::serde_json::json!({"token_id": token_id, "seller": seller, "buyer": buyer, "price": U128(price), "royalty": U128(royalty)}),
         );
         if attached > price {
-            Promise::new(buyer.clone()).transfer(yocto(attached - price));
+            record_native_credit(&buyer, attached - price);
         }
         if royalty > 0 && !record_sale_royalty(&self.treasury, royalty) {
-            Promise::new(self.treasury.clone()).transfer(yocto(royalty));
+            record_native_credit(&self.treasury, royalty);
         }
-        Promise::new(seller).transfer(yocto(price - royalty + listing.deposit.0));
+        record_native_credit(&seller, price - royalty + listing.deposit.0);
     }
 
     /// The listing of a token, if it is listed.
@@ -580,7 +584,7 @@ impl Contract {
         let cost = env::storage_usage().saturating_sub(before) as u128 * env::storage_byte_cost().as_yoctonear();
         require!(env::attached_deposit().as_yoctonear() >= cost, "attach value-op storage deposit");
         let excess = env::attached_deposit().as_yoctonear() - cost;
-        if excess > 0 { Promise::new(self.minter.clone()).transfer(yocto(excess)); }
+        if excess > 0 { record_native_credit(&self.minter, excess); }
         emit_key_event("value_op_begin", near_sdk::serde_json::json!({"token_id": token_id, "op_id": op_id, "epoch": epoch}));
     }
 
@@ -688,7 +692,9 @@ impl NonFungibleTokenCore for Contract {
         self.assert_can_change_owner(&token_id);
         // A panic in the library call reverts this too, so a refused transfer keeps its listing.
         self.end_listing(&token_id);
-        self.tokens.nft_transfer(receiver_id.clone(), token_id.clone(), approval_id, memo);
+        assert_one_yocto();
+        let (owner, approvals) = self.tokens.internal_transfer(&env::predecessor_account_id(), &receiver_id, &token_id, approval_id, memo);
+        if let Some(approved) = approvals { refund_approval_credit(&owner, &approved); }
         bump_owner_epoch(&token_id);
     }
     #[payable]
@@ -731,21 +737,20 @@ impl Contract {
 }
 impl Contract {
     fn settle_transfer_call(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64, must_return: bool) -> bool {
-        use near_contract_standards::non_fungible_token::refund_approved_account_ids;
-        let Some(p) = transfer_calls().get(&token_id) else { return true; };
-        if p.epoch != epoch { return true; } // Old callback/proof may never settle a newer transfer.
+        let Some(p) = transfer_calls().get(&token_id) else { return false; };
+        if p.epoch != epoch { return false; } // Stale callbacks neither mutate nor claim acceptance.
         let mut kept = true;
         if must_return && self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&p.receiver) {
             self.tokens.internal_transfer_unguarded(&token_id, &p.receiver, &p.previous_owner);
             if let Some(by_id) = &mut self.tokens.approvals_by_id {
-                if let Some(receiver_approvals) = by_id.remove(&token_id) { refund_approved_account_ids(p.receiver.clone(), &receiver_approvals); }
+                if let Some(receiver_approvals) = by_id.remove(&token_id) { refund_approval_credit(&p.receiver, &receiver_approvals); }
                 if let Some(old) = p.approvals { by_id.insert(&token_id, &old); }
             }
             near_contract_standards::non_fungible_token::events::NftTransfer {
                 old_owner_id: &p.receiver, new_owner_id: &p.previous_owner, token_ids: &[&token_id], authorized_id: None, memo: None
             }.emit();
             bump_owner_epoch(&token_id); kept = false;
-        } else if let Some(old) = p.approvals { refund_approved_account_ids(p.previous_owner.clone(), &old); }
+        } else if let Some(old) = p.approvals { refund_approval_credit(&p.previous_owner, &old); }
         transfer_calls().remove(&token_id);
         set_pending(&p.previous_owner, pending_returns(&p.previous_owner).checked_sub(1).unwrap_or_else(||env::panic_str("missing return reservation")));
         self.clear_stale_listing(&token_id);
@@ -760,15 +765,42 @@ impl NonFungibleTokenApproval for Contract {
     fn nft_approve(&mut self, token_id: TokenId, account_id: AccountId, msg: Option<String>) -> Option<Promise> {
         self.assert_token_idle(&token_id);
         self.assert_approval_cap(&token_id, &account_id);
-        self.tokens.nft_approve(token_id, account_id, msg)
+        require!(env::attached_deposit().as_yoctonear() >= 1, "Requires attached deposit of at least 1 yoctoNEAR");
+        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        require!(env::predecessor_account_id() == owner, "Predecessor must be token owner.");
+        let map = self.tokens.approvals_by_id.as_mut().expect("approval management required");
+        let mut approved = map.get(&token_id).unwrap_or_default();
+        let next = self.tokens.next_approval_id_by_id.as_mut().expect("approval management required");
+        let id = next.get(&token_id).unwrap_or(1);
+        let replaced = approved.insert(account_id.clone(), id).is_some();
+        map.insert(&token_id, &approved);
+        next.insert(&token_id, &id.checked_add(1).expect("approval id overflow"));
+        refund_storage_credit(if replaced { 0 } else { near_contract_standards::non_fungible_token::bytes_for_approved_account_id(&account_id) });
+        msg.map(|msg| near_contract_standards::non_fungible_token::approval::ext_nft_approval_receiver::ext(account_id)
+            .with_static_gas(env::prepaid_gas().saturating_sub(near_sdk::Gas::from_tgas(10)))
+            .nft_on_approve(token_id, owner, id, msg))
     }
     #[payable]
     fn nft_revoke(&mut self, token_id: TokenId, account_id: AccountId) {
-        self.tokens.nft_revoke(token_id, account_id)
+        assert_one_yocto();
+        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        require!(env::predecessor_account_id() == owner, "Predecessor must be token owner.");
+        let map = self.tokens.approvals_by_id.as_mut().expect("approval management required");
+        if let Some(mut approved) = map.get(&token_id) {
+            if let Some(id) = approved.remove(&account_id) {
+                if approved.is_empty() { map.remove(&token_id); } else { map.insert(&token_id, &approved); }
+                refund_approval_credit(&owner, &HashMap::from([(account_id, id)]));
+            }
+        }
     }
     #[payable]
     fn nft_revoke_all(&mut self, token_id: TokenId) {
-        self.tokens.nft_revoke_all(token_id)
+        assert_one_yocto();
+        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
+        require!(env::predecessor_account_id() == owner, "Predecessor must be token owner.");
+        if let Some(approved) = self.tokens.approvals_by_id.as_mut().expect("approval management required").remove(&token_id) {
+            refund_approval_credit(&owner, &approved);
+        }
     }
     fn nft_is_approved(&self, token_id: TokenId, approved_account_id: AccountId, approval_id: Option<u64>) -> bool {
         self.tokens.nft_is_approved(token_id, approved_account_id, approval_id)
@@ -1711,7 +1743,7 @@ mod v24 {
 }
 
 /// v2.4 key sale: nft_list / nft_unlist / nft_buy, the listing clean-ups on every transfer path, stale listings,
-/// the views and the tier rules. Unit tests read the transfers the contract schedules from the mock receipts.
+/// the views and the tier rules. Unit tests check backed pull credits and absence of native push receipts.
 #[cfg(test)]
 mod v24_sale {
     use super::*;
@@ -1748,7 +1780,7 @@ mod v24_sale {
         }
         out
     }
-    fn paid(to: &str) -> u128 { transfers().iter().filter(|(r, _)| r == to).map(|(_, v)| *v).sum() }
+    fn credited(c: &Contract, to: &str) -> u128 { c.get_payout_credit(acc(to)).0 }
     /// The EVENT_JSON payloads of the last call with this event name.
     fn events(name: &str) -> Vec<Value> {
         get_logs().iter().filter_map(|l| l.strip_prefix("EVENT_JSON:"))
@@ -1810,7 +1842,7 @@ mod v24_sale {
     fn excess_storage_deposit_is_refunded_and_only_the_storage_amount_is_kept() {
         let mut c = setup(); mint(&mut c, "k1", "alice.near");
         list(&mut c, "alice.near", "k1", NEAR, 5 * LIST);
-        assert_eq!(transfers(), vec![("alice.near".to_string(), 4 * LIST)], "excess over LIST_STORAGE_DEPOSIT goes back now");
+        assert!(transfers().is_empty()); assert_eq!(credited(&c, "alice.near"), 4 * LIST, "excess is backed pull credit");
         assert_eq!(listings().get(&"k1".to_string()).unwrap().deposit, U128(LIST), "the stored deposit is the storage amount, not the attachment");
     }
     #[test]
@@ -1837,7 +1869,7 @@ mod v24_sale {
         ctx("alice.near", y(1)); c.nft_unlist("k1".into());
         assert_eq!(listing(&c, "k1"), None);
         assert_eq!(index_len(), 0);
-        assert_eq!(transfers(), vec![("alice.near".to_string(), LIST)]);
+        assert!(transfers().is_empty()); assert_eq!(credited(&c, "alice.near"), LIST);
         assert_eq!(events("key_unlist"), vec![keyhole("key_unlist", json!({"token_id": "k1", "seller": "alice.near"}))]);
         assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"));
     }
@@ -1871,10 +1903,10 @@ mod v24_sale {
         assert_eq!(c.holder_tier(acc("bob.near")), Some(2));
         assert_eq!(c.holder_tier(acc("alice.near")), None);
         // money: treasury 5 %, seller price - royalty + the listing deposit, buyer the 0.2 NEAR excess
-        assert_eq!(transfers().len(), 3, "exactly three transfers: {:?}", transfers());
-        assert_eq!(paid("treasury.near"), NEAR / 20);
-        assert_eq!(paid("alice.near"), NEAR - NEAR / 20 + LIST);
-        assert_eq!(paid("bob.near"), NEAR / 5);
+        assert!(transfers().is_empty(), "sale records credits, never fire-and-forget pushes");
+        assert_eq!(credited(&c, "treasury.near"), NEAR / 20);
+        assert_eq!(credited(&c, "alice.near"), NEAR - NEAR / 20 + LIST);
+        assert_eq!(credited(&c, "bob.near"), NEAR / 5);
         // one nft_transfer, memo sale, no authorized_id (the owner listed it, nobody was approved)
         let tr = events("nft_transfer");
         assert_eq!(tr.len(), 1);
@@ -1894,7 +1926,7 @@ mod v24_sale {
         ctx("owner.near", y(1)); c.set_royalty(acc("treasury.near"), 0);
         list(&mut c, "alice.near", "k1", NEAR, LIST);
         buy(&mut c, "bob.near", "k1", NEAR);
-        assert_eq!(transfers(), vec![("alice.near".to_string(), NEAR + LIST)], "seller gets the whole price and the deposit");
+        assert!(transfers().is_empty()); assert_eq!(credited(&c, "alice.near"), NEAR + LIST, "seller gets whole price and deposit as credit");
     }
     #[test] fn buy_clears_approvals_and_refunds_their_storage_to_the_seller() {
         let mut c = setup(); mint(&mut c, "k1", "alice.near");
@@ -1904,7 +1936,7 @@ mod v24_sale {
         let tok = c.nft_token("k1".into()).unwrap();
         assert_eq!(tok.approved_account_ids, Some(HashMap::new()), "approvals cleared");
         assert!(!c.nft_is_approved("k1".into(), acc("market.near"), None));
-        assert!(paid("alice.near") > NEAR - NEAR / 20 + LIST, "the seller also gets the approval storage back");
+        assert!(credited(&c, "alice.near") > NEAR - NEAR / 20 + LIST, "the seller also gets the approval storage back");
         assert_eq!(events("nft_transfer")[0]["data"][0].get("authorized_id"), None);
     }
     #[test] #[should_panic(expected = "attached deposit is below the listing price")]
@@ -1939,7 +1971,7 @@ mod v24_sale {
         buy(&mut c, "carol.near", "k1", NEAR);
         assert_eq!(listing(&c, "k1"), None);
         assert_eq!(index_len(), 0);
-        assert_eq!(transfers(), vec![("alice.near".to_string(), LIST), ("carol.near".to_string(), NEAR)]);
+        assert!(transfers().is_empty()); assert_eq!(credited(&c, "alice.near"), LIST); assert_eq!(credited(&c, "carol.near"), NEAR);
         assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"), "no transfer happened");
         assert!(events("key_sale").is_empty());
         assert!(events("nft_transfer").is_empty());
@@ -1953,7 +1985,7 @@ mod v24_sale {
         ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, Some("gift".into()));
         assert_eq!(listing(&c, "k1"), None);
         assert_eq!(index_len(), 0);
-        assert_eq!(transfers(), vec![("alice.near".to_string(), LIST)]);
+        assert!(transfers().is_empty()); assert_eq!(credited(&c, "alice.near"), LIST);
         assert_eq!(events("key_unlist").len(), 1);
         assert_eq!(events("nft_transfer").len(), 1, "still exactly one nft_transfer");
         assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
@@ -1964,7 +1996,7 @@ mod v24_sale {
         ctx("alice.near", y(1)); let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "".into());
         assert_eq!(listing(&c, "k1"), None);
         assert_eq!(index_len(), 0);
-        assert_eq!(paid("alice.near"), LIST);
+        assert_eq!(credited(&c, "alice.near"), LIST);
         assert_eq!(c.pending_return_count(acc("alice.near")), 1);
     }
     #[test] fn approved_market_transfer_payout_ends_the_listing() {
@@ -1976,7 +2008,7 @@ mod v24_sale {
         assert_eq!(p[&acc("treasury.near")], U128(NEAR / 20));
         assert_eq!(listing(&c, "k1"), None);
         assert_eq!(index_len(), 0);
-        assert!(paid("alice.near") >= LIST, "the listing deposit goes back to the seller");
+        assert!(credited(&c, "alice.near") >= LIST, "the listing deposit goes back to the seller");
         assert_eq!(events("key_unlist").len(), 1);
         let tr = events("nft_transfer");
         assert_eq!(tr.len(), 1, "one nft_transfer for the payout transfer");
@@ -1994,7 +2026,7 @@ mod v24_sale {
         assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("alice.near"));
         assert_eq!(listing(&c, "k1"), None, "the listing ended with the move");
         assert_eq!(index_len(), 0);
-        assert_eq!(paid("bob.near"), LIST, "bob gets his listing deposit back");
+        assert_eq!(credited(&c, "bob.near"), LIST, "bob gets his listing deposit back");
         assert_eq!(c.pending_return_count(acc("alice.near")), 0);
     }
     #[test] #[should_panic(expected = "transfer-call pending")]

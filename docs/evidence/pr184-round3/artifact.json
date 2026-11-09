@@ -1,0 +1,17 @@
+{
+  "status": "SOURCE_AND_LOCAL_SANDBOX_ONLY_NOT_DEPLOYED",
+  "reviewed_base": "01665e83c7ffc5f29241092e5eb241541be3cc1b",
+  "wasm_bytes": 438062,
+  "wasm_sha256": "4a0d1a857ce2055238a078273ad0be21a70b97cc69d4d2ea81a6242a233df0e2",
+  "contract_tests": 255,
+  "contract_baseline": 246,
+  "sandbox_tests": 32,
+  "sandbox_baseline": 28,
+  "offline_claims": {
+    "total": 516,
+    "pass": 216,
+    "fail": 0,
+    "error": 0,
+    "skip": 300
+  }
+}

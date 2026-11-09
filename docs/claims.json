@@ -3662,6 +3662,27 @@
    "verify": "node judge/verify-claims.mjs --only test-finish_value_op"
   },
   {
+   "id": "test-get_payout_credit",
+   "claim": "Named test or symbol `get_payout_credit` exists in the source",
+   "where": "SECURITY.md:282",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "get_payout_credit",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`get_payout_credit` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-get_payout_credit"
+  },
+  {
    "id": "test-global_rate_limit",
    "claim": "Named test or symbol `global_rate_limit` exists in the source",
    "where": "SECURITY.md:35",
@@ -6311,9 +6332,22 @@
    "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v2-credit.json"
   },
   {
+   "id": "path-contracts/keys-sandbox/tests/review3.rs",
+   "claim": "Linked repo path contracts/keys-sandbox/tests/review3.rs exists",
+   "where": "README.md:869",
+   "evidence_type": "file",
+   "evidence": "contracts/keys-sandbox/tests/review3.rs",
+   "check": {
+    "type": "path",
+    "path": "contracts/keys-sandbox/tests/review3.rs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-contracts/keys-sandbox/tests/review3.rs"
+  },
+  {
    "id": "path-protocol/README.md",
    "claim": "Linked repo path protocol/README.md exists",
-   "where": "README.md:873",
+   "where": "README.md:874",
    "evidence_type": "file",
    "evidence": "protocol/README.md",
    "check": {
@@ -6326,7 +6360,7 @@
   {
    "id": "path-docs/evidence/pledge-oracle-free/README.md",
    "claim": "Linked repo path docs/evidence/pledge-oracle-free/README.md exists",
-   "where": "README.md:873",
+   "where": "README.md:874",
    "evidence_type": "file",
    "evidence": "docs/evidence/pledge-oracle-free/README.md",
    "check": {

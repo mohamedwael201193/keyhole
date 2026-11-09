@@ -20,6 +20,7 @@ async fn setup()->Result<E>{
  c.call("new").args_json(json!({"owner":c.id(),"minter":minter.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
  minter.call(c.id(),"nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":2,"metadata":{"title":"Sealed collateral","copies":1}}))
   .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ minter.call(c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  let pk=SigningKey::from_bytes(&[7;32]).verifying_key().to_bytes();
  c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"custody_contract":mock.id(),"network":"sandbox"})).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&c,"get_pledge_config",json!({})).await["lending_enabled"],false);
@@ -208,12 +209,13 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
 }
 #[tokio::test]async fn actual_failed_registration_refunds_forwarded_deposit_and_allows_corrected_retry()->Result<()> {
  let e=setup().await?;e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"k2","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Retry"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let mint_credit=view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await.as_str().unwrap().parse::<u128>()?;
  let args=json!({"token_id":"k2","wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64});
  let dep=N/50+1;let r=e.minter.call(e.c.id(),"register_collateral").args_json(args.clone()).deposit(NearToken::from_yoctonear(dep)).max_gas().transact().await?;
  assert!(format!("{:?}",r.receipt_failures()).contains("mock provider insufficient deposit"));
- assert!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await.is_null());assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,dep.to_string());
+ assert!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await.is_null());assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,(dep+mint_credit).to_string());
  e.minter.call(e.c.id(),"register_collateral").args_json(args).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],true);
- assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],dep.to_string());Ok(())
+ assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],(dep+mint_credit).to_string());Ok(())
 }
 #[tokio::test]async fn actual_failed_resolver_has_permissionless_provisional_timeout_not_economic_rollback()->Result<()> {let e=setup().await?;fault_callbacks(&e).await?;let recv=e.w.dev_deploy(&std::fs::read(MOCK)?).await?;
  let msg=json!({"keys":e.c.id(),"attack_method":"fund_treasury","attack_args":{},"attack_deposit":(N/10).to_string()}).to_string();
@@ -229,10 +231,11 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
 #[tokio::test]async fn actual_failed_registration_callback_recovers_after_successful_provider_without_reforwarding()->Result<()> {
  let e=setup().await?;fault_callbacks(&e).await?;
  e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"k2","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Registration callback"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let mint_credit=view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await;
  let r=e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":"k2","wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?;injected(&r);
  assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],false);
  e.bob.call(e.c.id(),"check_collateral").args_json(json!({"token_id":"k2"})).max_gas().transact().await?.into_result()?;
- assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],true);assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],"0");assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,"0");Ok(())
+ assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],true);assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],mint_credit);assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,mint_credit);Ok(())
 }
 
 #[tokio::test]async fn custody_generation_fence_rejects_old_freeze_after_committed_thaw()->Result<()> {
