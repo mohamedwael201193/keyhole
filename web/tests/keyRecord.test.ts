@@ -16,8 +16,8 @@ const NOW = 1_800_000_000_000;
 /** The statement bytes the enclave would sign: keys sorted, no spaces. */
 function statement(over: Partial<Record<string, unknown>> = {}): string {
   const o: Record<string, unknown> = {
-    cost: 30_000_000, kind: RECORD_KIND, log_head: "ab".repeat(32), outs: { "nep141:wrap.near": "1500" }, owner: OWNER, price: PRICE,
-    seller: SELLER, settled_swaps: 2, since: NOW - 3_600_000, tier: 2, token_id: TOKEN, trades: 2, ts_ms: NOW, volume_usd_micro: 30_000_000,
+    cost_usd_micro: 30_000_000, kind: RECORD_KIND, log_head: "ab".repeat(32), outs: { "nep141:wrap.near": "1500" }, owner: OWNER, listing_price_yocto: PRICE,
+    seller: SELLER, settled_swaps: 2, since_ms: NOW - 3_600_000, tier: 2, token_id: TOKEN, trades: 2, ts_ms: NOW, volume_usd_micro: 30_000_000,
     ...over,
   };
   return JSON.stringify(Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));
@@ -35,20 +35,20 @@ const passOf = (r: ReturnType<typeof verifyKeyRecord>, id: string) => r.checks.f
 describe("record statement decoding", () => {
   it("reads every field the enclave signs", () => {
     const st = parseRecordStatement(statement());
-    expect(st).toMatchObject({ kind: RECORD_KIND, token_id: TOKEN, owner: OWNER, tier: 2, price: PRICE, seller: SELLER, settled_swaps: 2, volume_usd_micro: 30_000_000, trades: 2, cost: 30_000_000, since: NOW - 3_600_000, ts_ms: NOW });
+    expect(st).toMatchObject({ kind: RECORD_KIND, token_id: TOKEN, owner: OWNER, tier: 2, listing_price_yocto: PRICE, seller: SELLER, settled_swaps: 2, volume_usd_micro: 30_000_000, trades: 2, cost_usd_micro: 30_000_000, since_ms: NOW - 3_600_000, ts_ms: NOW });
     expect(st?.outs).toEqual({ "nep141:wrap.near": "1500" });
   });
   it("accepts a holder with no trades (since 0, empty outs)", () => {
-    expect(parseRecordStatement(statement({ since: 0, trades: 0, cost: 0, outs: {}, settled_swaps: 0, volume_usd_micro: 0 }))).not.toBeNull();
+    expect(parseRecordStatement(statement({ since_ms: 0, trades: 0, cost_usd_micro: 0, outs: {}, settled_swaps: 0, volume_usd_micro: 0 }))).not.toBeNull();
   });
   it("refuses another kind of statement, a missing field, or a bad value", () => {
     expect(parseRecordStatement(statement({ kind: "keyhole-pnl-v1" }))).toBeNull();
     expect(parseRecordStatement(statement({ kind: "keyhole-balance-proof-v1" }))).toBeNull();
-    expect(parseRecordStatement(statement({ price: "5.0" }))).toBeNull();
-    expect(parseRecordStatement(statement({ price: 5 }))).toBeNull();
+    expect(parseRecordStatement(statement({ listing_price_yocto: "5.0" }))).toBeNull();
+    expect(parseRecordStatement(statement({ listing_price_yocto: 5 }))).toBeNull();
     expect(parseRecordStatement(statement({ tier: -1 }))).toBeNull();
     expect(parseRecordStatement(statement({ tier: 1.5 }))).toBeNull();
-    expect(parseRecordStatement(statement({ cost: 2 ** 60 }))).toBeNull();
+    expect(parseRecordStatement(statement({ cost_usd_micro: 2 ** 60 }))).toBeNull();
     expect(parseRecordStatement(statement({ volume_usd_micro: "30" }))).toBeNull();
     expect(parseRecordStatement(statement({ outs: [] }))).toBeNull();
     expect(parseRecordStatement(statement({ outs: null }))).toBeNull();

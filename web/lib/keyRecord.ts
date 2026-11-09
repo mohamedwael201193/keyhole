@@ -14,17 +14,18 @@ export interface KeyRecordStatement {
   token_id: string;
   owner: string;
   tier: number;
-  price: string;
+  /** The listing price in yoctoNEAR, as the enclave signed it. */
+  listing_price_yocto: string;
   seller: string;
   settled_swaps: number;
   volume_usd_micro: number;
   trades: number;
   /** USD paid in across the holder's trades (micro-USD), priced at trade time. */
-  cost: number;
+  cost_usd_micro: number;
   /** Output per token, in base units. The browser shows no amounts from it. */
   outs: Record<string, string | number>;
   /** First trade time, or 0 when the holder has traded nothing. */
-  since: number;
+  since_ms: number;
   log_head: string;
   ts_ms: number;
 }
@@ -62,9 +63,9 @@ export function parseRecordStatement(s: string): KeyRecordStatement | null {
     const ok = o.kind === RECORD_KIND
       && typeof o.token_id === "string" && typeof o.owner === "string" && typeof o.seller === "string"
       && typeof o.log_head === "string"
-      && typeof o.price === "string" && /^\d+$/.test(o.price)
+      && typeof o.listing_price_yocto === "string" && /^\d+$/.test(o.listing_price_yocto)
       && safeInt(o.tier) && safeInt(o.settled_swaps) && safeInt(o.volume_usd_micro)
-      && safeInt(o.trades) && safeInt(o.cost) && safeInt(o.since) && safeInt(o.ts_ms)
+      && safeInt(o.trades) && safeInt(o.cost_usd_micro) && safeInt(o.since_ms) && safeInt(o.ts_ms)
       && typeof outs === "object" && outs !== null && !Array.isArray(outs);
     return ok ? (o as unknown as KeyRecordStatement) : null;
   } catch { return null; }

@@ -383,8 +383,8 @@ function SignedRecord({ listing, owner, minter }: { listing: Listing; owner: str
               <div><dt>Tier</dt><dd data-testid="sale-record-tier">{tierName(st.tier)}</dd></div>
               <div><dt>Settled swaps</dt><dd data-testid="sale-record-swaps">{st.settled_swaps}</dd></div>
               <div><dt>Volume</dt><dd data-testid="sale-record-volume">{formatUsdMicro(st.volume_usd_micro)}</dd></div>
-              <div><dt>Holder&apos;s trades</dt><dd data-testid="sale-record-trades">{st.trades} · {formatUsdMicro(st.cost)} paid in</dd></div>
-              <div><dt>Since</dt><dd>{st.since > 0 ? when(st.since) : "No trades yet"}</dd></div>
+              <div><dt>Holder&apos;s trades</dt><dd data-testid="sale-record-trades">{st.trades} · {formatUsdMicro(st.cost_usd_micro)} paid in</dd></div>
+              <div><dt>Since</dt><dd>{st.since_ms > 0 ? when(st.since_ms) : "No trades yet"}</dd></div>
               <div><dt>PnL</dt><dd data-testid="sale-record-pnl">Not in this record: the signed statement does not value the holdings.</dd></div>
               <div><dt>Signed</dt><dd>{when(st.ts_ms)} · {ageLabel(st.ts_ms, at)}</dd></div>
             </dl>
