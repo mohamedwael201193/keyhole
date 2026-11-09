@@ -890,3 +890,13 @@ Generic detached `chain_sign` is disabled in this source revision, including pro
 **Candidate destination policy: self-exit only.** Fresh NEP-413 authorization derives the authenticated NEAR holder; EIP-191 derives the same authenticated0x holder on supported EVM chains. Unknown identity/chain mapping and any different `to` are rejected, including private-transfer bypasses and durable POST replay. Sessions cannot withdraw. Current LIVE source historically allows arbitrary well-formed holder-signed destinations: this source-only restriction has not been deployed, and old attack examples do not prove it live.
 
 The two named cross-layer tests use REAL NEAR admission/pledge/title receipts and the same production drivers as WASI, but HTTP, sealed storage, registry and eligibility observations are labelled mocks. They cover repay/default, failures/unknowns, transfer_call A→B→A and legitimate post-thaw exits, not live-provider confinement or a full WASI-host execution. Source-only native payment UNKNOWN/liveness and new provider ABI gates from #184 remain. No deploy/publish/funding/legacy-version retirement/key or policy change is performed.
+
+
+#### Guarded failure messages
+
+The web error catalog gives actionable English status for pending/provisional ownership, stale sessions, self-exit-only destinations, changed quotes and unknown custody/admission outcomes. Unknown outcomes direct the holder to reconcile the existing operation ID rather than create another send.
+
+```bash
+(cd web && npm ci && npx vitest run tests/domain.test.ts tests/p2-errors.test.ts)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
