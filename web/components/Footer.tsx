@@ -11,7 +11,7 @@ import { MusicToggle } from "./MusicToggle";
  */
 export const FOOTER_GROUPS = [
   { title: "Product", links: [["/dashboard", "Launch app"], ["/mint", "Mint"], ["/swap", "Swap"], ["/vault", "Vault"]] },
-  { title: "Proof", links: [["/verify", "Verify"], ["/judge", "Judge path"], ["/atlas", "Atlas"], ["/source", "Source"]] },
+  { title: "Proof", links: [["/verify", "Verify"], ["/attack", "Attack"], ["/judge", "Judge path"], ["/atlas", "Atlas"], ["/source", "Source"]] },
   { title: "Learn", links: [["/ask", "Ask"], ["/identity", "Identity"], ["/demo", "Demo"]] },
 ] as const;
 

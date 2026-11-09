@@ -89,12 +89,13 @@ describe("landing sections", () => {
     expect(html).toMatch(/href="\/ask"/);
   });
 
-  it("for judges: three commands in a code card, each with a copy button", () => {
+  it("for judges: commands in a code card, each with a copy button", () => {
     expect(html).toContain('data-testid="judge-commands"');
     expect(html).toContain("git clone https://github.com/mohamedwael201193/keyhole");
     expect(html).toContain("node judge/verify-claims.mjs");
     expect(html).toContain("open /verify");
-    expect(html.match(/class="khm-copy/g)?.length).toBe(3);
+    expect(html).toContain("open /attack");
+    expect(html.match(/class="khm-copy/g)?.length).toBe(4);
   });
 
   it("the closing band: get your key and read the proof", () => {
@@ -157,6 +158,7 @@ describe("public top bar and footer", () => {
   it("the top bar holds How it works, Proof, For judges and Launch app, and no wallet control", () => {
     expect(nav).toContain('href: "/#handover"');
     expect(nav).toContain('href: "/verify"');
+    expect(nav).toContain('href: "/attack"');
     expect(nav).toContain('href: "/judge"');
     expect(nav).toContain('"/dashboard"');
     expect(nav).toContain('testid="open-app"');
@@ -168,7 +170,7 @@ describe("public top bar and footer", () => {
   it("the footer has three groups (Product, Proof, Learn), the contract line and the NEAR credit", () => {
     const m = renderToStaticMarkup(withI18n(createElement(Footer)));
     for (const g of ["Product", "Proof", "Learn"]) expect(m).toContain(`aria-label="${g}"`);
-    for (const href of ["/dashboard", "/mint", "/swap", "/vault", "/verify", "/judge", "/atlas", "/source", "/ask", "/identity", "/demo"]) expect(m).toContain(`href="${href}"`);
+    for (const href of ["/dashboard", "/mint", "/swap", "/vault", "/verify", "/attack", "/judge", "/atlas", "/source", "/ask", "/identity", "/demo"]) expect(m).toContain(`href="${href}"`);
     expect(m).toContain("NEAR mainnet");
     expect(m).toContain("Built on NEAR");
   });

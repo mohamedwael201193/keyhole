@@ -228,6 +228,6 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 
 ### 11. Operator keys
 
-- **Decision.** `keyhole-devmo.near` has two full-access keys: the deploy key and the owner's Meteor wallet key. The minter account's full-access key is generated and kept inside the TEE. There is no timelock or multisig yet.
+- **Decision.** `keyhole-devmo.near` has two full-access keys (deploy key and the owner's Meteor wallet key) plus a function-call beat key that can call only `beat`. The minter account's full-access key is generated and kept inside the TEE. There is no timelock or multisig yet. Live count is re-checked on [/verify](https://keyhole-seven.vercel.app/verify).
 - **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [README §8](README.md#8-security-model).
 - **Mitigation.** The beat key is a function-call key that can call only `beat`, with a 0.05 NEAR allowance, and the owner revokes it with `del_beat_key`. The deploy key is described in the repository as kept offline and never on the website or in the worker.

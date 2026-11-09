@@ -20,7 +20,7 @@
 
 Everything in this README runs on **NEAR mainnet**. Contract and worker author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
 
-**Contents:** [2 Proven](#2-proven-on-near-mainnet) · [3 Try it](#3-try-it) · [4 How it works](#4-how-it-works) · [5 Why an NFT that does something](#5-why-this-is-an-nft-that-does-something) · [6 NEAR stack](#6-near-stack-used) · [7 Verify](#7-verify-everything-yourself) · [8 Security](#8-security-model) · [9 Numbers](#9-numbers) · [10 Built during the hackathon](#10-built-during-the-hackathon) · [11 Repo map](#11-repo-map) · [12 License](#12-license)
+**Contents:** [2 Proven](#2-proven-on-near-mainnet) · [3 Try it](#3-try-it) · [3a Real vs simulated](#3a-real-vs-simulated) · [4 How it works](#4-how-it-works) · [5 Why an NFT that does something](#5-why-this-is-an-nft-that-does-something) · [6 NEAR stack](#6-near-stack-used) · [7 Verify](#7-verify-everything-yourself) · [8 Security](#8-security-model) · [9 Numbers](#9-numbers) · [10 Built during the hackathon](#10-built-during-the-hackathon) · [11 Repo map](#11-repo-map) · [12 License](#12-license)
 
 ---
 
@@ -103,13 +103,14 @@ The worker build history, with every `add_version` transaction and its live `inf
 Each step has a command or a link. The words after **See** are what you should get.
 
 1. **Check the claims, offline.** Do: `git clone https://github.com/mohamedwael201193/keyhole && cd keyhole && node judge/verify-claims.mjs --offline`. See: `512 claims: 201 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (run 2026-11-09). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
-2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d). See: the verdict "The enclave is genuine." and every check passing. The verdict element has `data-match="true"`. The last full browser run (37 of 37) was on the previous info call `0847b924`, build `cc8d2fa8`; the run on `dc3668db` is not recorded yet. The page fetches the attestation, re-hashes the wasm from FastFS and checks Intel's revocation lists and TCB status in your browser.
-3. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
-4. **Open a key's history.** Do: open [keyhole-seven.vercel.app/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940). See: the holders with from and to dates, deposits, withdrawals and the transfer of 2026-11-07. The page shows "19 events chain, head matches, head signed, signer is the TEE minter. Confirmed", re-checked in your browser.
-5. **Check that the contract on chain is the repo's wasm.** Do: `bash ./judge/1-contract.sh` (needs `bash`, `curl`, `jq`, `sha256sum` and `python3`). See: `on-chain code_hash DEXHHyEM…SiZZ`, then `OK   contract code matches the committed wasm`, then `OK   minter is an implicit account`. Checked 2026-11-09.
-6. **Verify one call from the terminal.** Do: `cd cli && npm ci && npx tsx src/cli.ts verify dc3668db-674f-4865-a2ce-272f70c41b0d`. See: `"ok": true` and three `OK` lines: TDX quote present; registered wasm_hash equals executed_wasm_sha256; FastFS bytes equal the attested hash. No key is needed. Checked 2026-11-09 with `./verify.sh` (the same checks, plus FastFS) on `dc3668db`.
-7. **Open an attested refusal.** Do: open [keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533](https://keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533). See: the attestation checks pass. The refusal is `over_cap_per_tx`: a 2 USDC swap against the $1 Bronze cap. The attestation has no output body, so the recorded outcome is in [`docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json`](docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json).
-8. **Use the agent path (optional).** Do: run `keyhole-mcp` (`cli/src/mcp.ts`), a stdio MCP server with four tools: `verify`, `explain_pnl`, `quote_buy` and `copy`. See: `verify` needs no key. `copy` needs the operator to type a code on the operator's own terminal; the code never appears in a tool result.
+2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
+3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx, labelled live check vs recorded mainnet evidence. No wallet and no value moved.
+4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
+5. **Open a key's history.** Do: open [keyhole-seven.vercel.app/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940). See: the holders with from and to dates, deposits, withdrawals and the transfer of 2026-11-07. The page shows "19 events chain, head matches, head signed, signer is the TEE minter. Confirmed", re-checked in your browser.
+6. **Check that the contract on chain is the repo's wasm.** Do: `bash ./judge/1-contract.sh` (needs `bash`, `curl`, `jq`, `sha256sum` and `python3`). See: `on-chain code_hash DEXHHyEM…SiZZ`, then `OK   contract code matches the committed wasm`, then `OK   minter is an implicit account`. Checked 2026-11-09.
+7. **Verify one call from the terminal.** Do: `cd cli && npm ci && npx tsx src/cli.ts verify dc3668db-674f-4865-a2ce-272f70c41b0d`. See: `"ok": true` and three `OK` lines: TDX quote present; registered wasm_hash equals executed_wasm_sha256; FastFS bytes equal the attested hash. No key is needed. Checked 2026-11-09 with `./verify.sh` (the same checks, plus FastFS) on `dc3668db`.
+8. **Open an attested refusal.** Do: open [keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533](https://keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533). See: the attestation checks pass. The refusal is `over_cap_per_tx`: a 2 USDC swap against the $1 Bronze cap. The attestation has no output body, so the recorded outcome is in [`docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json`](docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json).
+9. **Use the agent path (optional).** Do: run `keyhole-mcp` (`cli/src/mcp.ts`), a stdio MCP server with four tools: `verify`, `explain_pnl`, `quote_buy` and `copy`. See: `verify` needs no key. `copy` needs the operator to type a code on the operator's own terminal; the code never appears in a tool result.
 
 ### Try it with a wallet
 
@@ -132,6 +133,24 @@ Each step says whether it **moves real value on mainnet**.
 A declined signature shows "You declined the signature." Starting another action clears that message. A redirect wallet that returns with a completed trade or withdraw shows that result card.
 
 ---
+
+## 3a. Real vs simulated
+
+Honest labels for what a judge sees. Caveats that are not features live in [SECURITY.md](SECURITY.md) (operator keys §11).
+
+| What | Status | Where to check |
+|---|---|---|
+| NFT contract `keyhole-devmo.near` on mainnet (v2.4 code hash) | **Real mainnet** | [/verify](https://keyhole-seven.vercel.app/verify) live evidence pack · `bash ./judge/1-contract.sh` |
+| TEE worker published on OutLayer (wasm in `identity.json`) | **Real mainnet + attestation** | [/verify](https://keyhole-seven.vercel.app/verify) · OutLayer attestation API |
+| Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
+| Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call |
+| Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
+| Judge-claims machine (520 claims) | **Real automation** | `node judge/verify-claims.mjs` (0 FAIL on last live run) |
+| Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
+| Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
+| Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
+| Independent market demand / unrelated-party volume | **Not claimed** | Demo sizes stay tiny; no invented PnL |
+
 
 ## 4. How it works
 
@@ -358,7 +377,7 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | NEAR AI Cloud, OpenAI-compatible, TEE-hosted model | [`web/app/api/ai/route.ts`](web/app/api/ai/route.ts). Model `Qwen/Qwen3.6-35B-A3B-FP8` ([`web/lib/ai.ts:5`](web/lib/ai.ts)). The key is in a server env var. Live: [/ask](https://keyhole-seven.vercel.app/ask) | shipped |
 | Attestation with a fresh nonce, verified per the docs, with a checks panel | The browser makes a 32-byte nonce ([`web/lib/ai.ts`](web/lib/ai.ts)). `checkReply` ([`:78`](web/lib/ai.ts)) runs 7 checks: nonce in the TDX quote, signer in the quote, nonce echo, request hash, response hash, model match, ECDSA signature. The DCAP panel ([`web/app/ask/view.tsx:113`](web/app/ask/view.tsx)) runs the Intel DCAP checks on the model's TDX quote up to the pinned Intel root, and the GPU nonce echo | partial (see below) |
 | Keep nothing server side | Responses are `no-store` ([`web/app/api/ai/route.ts:25`](web/app/api/ai/route.ts)). Prompts are capped at 400 characters and rate limited | shipped |
-| Confidential computation | Every account operation runs in an Intel TDX enclave. [/verify](https://keyhole-seven.vercel.app/verify) runs 37 checks in the browser: 6 attestation, 19 Intel DCAP, 12 Intel revocation and TCB ([`web/app/verify/view.tsx:22`](web/app/verify/view.tsx)) | shipped |
+| Confidential computation | Every account operation runs in an Intel TDX enclave. [/verify](https://keyhole-seven.vercel.app/verify) runs 37 checks in the browser: 6 attestation, 19 Intel DCAP, 12 Intel revocation and TCB ([`web/components/judge/CallVerifier.tsx`](web/components/judge/CallVerifier.tsx) · live pack on `/verify`) | shipped |
 | Fictional sample documents | Sample chips on /ask, and the poisoned-note test in the [prompt-injection log](docs/evidence/prompt-injection/README.md) | shipped |
 
 **What /ask verifies, exactly.** The browser checks the nonce bindings, the signature over the exact request and response bytes, the model, the Intel DCAP chain of the model's TDX quote, and that every NVIDIA GPU report echoes the nonce. **It does not check the NVIDIA certificate chain or the GPU measurements in the browser.** Those come from the downloaded evidence, which you check with NEAR AI's verifier ([how](https://docs.near.ai/cloud/verification/cloud-api/model-attestations)). The `/ask` answer is not tied to a trading account. It is a general assistant.
