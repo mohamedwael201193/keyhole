@@ -21,12 +21,12 @@ const withI18n = (el: ReturnType<typeof createElement>) => createElement(I18nPro
 
 describe("app routes", () => {
   it("the holder routes render inside the shell, URLs unchanged; /swap and /keys are app routes in v3", () => {
-    expect([...APP_ROUTES].sort()).toEqual(["/dashboard", "/gallery", "/key", "/keys", "/mint", "/pnl", "/settle", "/swap", "/vault"]);
-    for (const p of ["/dashboard", "/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/key/extra"]) expect(isAppRoute(p), p).toBe(true);
+    expect([...APP_ROUTES].sort()).toEqual(["/attack", "/dashboard", "/gallery", "/key", "/keys", "/mint", "/pnl", "/settle", "/swap", "/vault", "/verify"]);
+    for (const p of ["/dashboard", "/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/key/extra", "/verify", "/attack"]) expect(isAppRoute(p), p).toBe(true);
   });
 
   it("public pages keep the public top bar", () => {
-    for (const p of ["/", "/start", "/judge", "/verify", "/demo", "/ask", "/atlas", "/identity", "/source", "/galleryx", "/vaults", "/swapx", null, undefined]) {
+    for (const p of ["/", "/start", "/judge", "/demo", "/ask", "/atlas", "/identity", "/source", "/galleryx", "/vaults", "/swapx", null, undefined]) {
       expect(isAppRoute(p), String(p)).toBe(false);
     }
   });
@@ -45,7 +45,7 @@ describe("sidebar items", () => {
   });
 
   it("every link points at a real route", () => {
-    const known = ["/dashboard", "/swap", "/vault", "/keys", "/settle"];
+    const known = ["/dashboard", "/swap", "/vault", "/keys", "/settle", "/verify", "/attack"];
     for (const i of APP_NAV.flatMap((g) => g.items)) expect(known).toContain(i.href.split("#")[0].split("?")[0]);
   });
 });

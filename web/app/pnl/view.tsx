@@ -7,7 +7,7 @@ import { Card, Button } from "@/components/ui";
 
 type State = { share: PnlShare; st: PnlStatement | null; sig: boolean; minter: boolean | null } | "none" | "bad";
 
-/** Signed PnL statement, checked in the browser. The checks and the verdict are the same as before; only the layout changed. */
+/** Signed swap log: enclave-signed mark-to-market of trade outputs vs cost. Not realized profit. Browser-checked. */
 export function PnlView() {
   const [s, setS] = useState<State | null>(null);
   useEffect(() => {
@@ -27,15 +27,15 @@ export function PnlView() {
   return (
     <div className="page pnl" data-testid="pnl-page">
       <header className="pnl-head">
-        <p className="eb">Signed PnL · opt-in · verified in your browser</p>
-        <h1>A track record <em>you can check.</em></h1>
-        <p className="lead">A key holder chose to publish this. The enclave read its own trade log for that holder, priced each trade&apos;s output now, and signed the totals with the minter key the NFT contract names. No balances, assets or per-trade amounts are in it.</p>
+        <p className="eb">Signed swap log · opt-in · verified in your browser</p>
+        <h1>A signed swap log <em>you can check.</em></h1>
+        <p className="lead">A key holder chose to publish this. The enclave read that holder&apos;s trade log, marked each trade&apos;s <em>output</em> to market now, and signed the totals with the minter key. This is a swap log delta (outputs vs cost), <b>not realized profit</b>. No balances or per-trade amounts are in it.</p>
       </header>
 
       {s === "none" && (
         <Card className="pnl-note" testid="pnl-none">
           <h2>No statement in this link</h2>
-          <p>A holder creates one from <Link href="/vault">the vault</Link>: Activity, then <b>Publish signed PnL</b>.</p>
+          <p>A holder creates one from <Link href="/vault">the vault</Link>: Activity, then <b>Publish signed swap log</b>.</p>
           <div className="pnl-actions"><Button href="/vault" variant="secondary">Open a vault</Button></div>
         </Card>
       )}
@@ -49,7 +49,7 @@ export function PnlView() {
       {s && typeof s === "object" && (
         <>
           <Card size="lg" className="pnl-figure" testid="pnl-card">
-            <span className="pnl-figure-l">Signed PnL</span>
+            <span className="pnl-figure-l">Mark-to-market delta (not profit)</span>
             <span className="pnl-figure-v">{s.st ? usd(s.st.pnl_usd_micro) : "—"}</span>
             {s.st && (
               <dl className="pnl-grid">

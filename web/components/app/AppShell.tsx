@@ -19,14 +19,14 @@ import { SessionPill } from "./SessionPill";
  */
 
 /** Routes that render inside the shell (exact path or a sub-path). */
-export const APP_ROUTES = ["/dashboard", "/swap", "/keys", "/gallery", "/key", "/settle", "/vault", "/mint", "/pnl"] as const;
+export const APP_ROUTES = ["/dashboard", "/swap", "/keys", "/gallery", "/key", "/settle", "/vault", "/mint", "/pnl", "/verify", "/attack"] as const;
 
 export function isAppRoute(path: string | null | undefined): boolean {
   if (!path) return false;
   return APP_ROUTES.some((r) => path === r || path.startsWith(r + "/"));
 }
 
-export type AppIcon = "home" | "key" | "swap" | "vault" | "activity";
+export type AppIcon = "home" | "key" | "swap" | "vault" | "activity" | "shield" | "alert";
 export type AppNavItem = {
   /** Stable id for tests and styling. */
   id: string;
@@ -57,6 +57,13 @@ export const APP_NAV: AppNavGroup[] = [
       { id: "activity", label: "Activity", href: "/settle", icon: "activity", match: ["/settle"] },
     ],
   },
+  {
+    title: "Judges",
+    items: [
+      { id: "proof", label: "Proof", href: "/verify", icon: "shield", match: ["/verify"] },
+      { id: "attack", label: "Attack", href: "/attack", icon: "alert", match: ["/attack"] },
+    ],
+  },
 ];
 
 const TAB_IDS = ["overview", "swap", "vault", "keys"] as const;
@@ -72,8 +79,8 @@ export function isItemActive(item: AppNavItem, pathname: string | null | undefin
 
 /** The title shown in the top bar for a route. Pure. */
 const TITLES: [string, string][] = [
-  ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Activity"], ["/vault", "Vault"], ["/pnl", "Vault statement"],
-  ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"],
+  ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Activity"], ["/vault", "Vault"], ["/pnl", "Swap log"],
+  ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"], ["/verify", "Proof"], ["/attack", "Attack"],
 ];
 export function pageTitle(path: string | null | undefined): string {
   if (!path) return "KEYHOLE";
@@ -87,6 +94,8 @@ const ICON: Record<AppIcon, ReactNode> = {
   swap: <path d="M7 4v15.5M7 19.5 3.5 16M7 19.5 10.5 16M17 20V4.5M17 4.5 13.5 8M17 4.5 20.5 8" />,
   vault: <><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><circle cx="12" cy="12" r="3" /></>,
   activity: <path d="M3 12.5h4l2.6-6.5 4.2 13 2.6-6.5H21" />,
+  shield: <><path d="M12 3.5 19 6v5.5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z" /><path d="m9 12 2.2 2.2L15.5 10" /></>,
+  alert: <><path d="M12 4 2.8 19.5h18.4z" /><path d="M12 10v4.5M12 17.2v.1" /></>,
 };
 
 export function AppNavIcon({ name }: { name: AppIcon }) {

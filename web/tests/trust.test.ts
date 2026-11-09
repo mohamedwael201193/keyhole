@@ -10,9 +10,11 @@ describe("trust labels", () => {
     expect(src).toContain("<TrustLegend />");
   });
   it("every /verify check row and both DCAP/PCS panels carry a trust label", () => {
-    const src = readFileSync(`${root}/web/app/verify/view.tsx`, "utf8");
+    // CallVerifier holds the TEE rows (extracted from view.tsx into the app-shell Proof desk).
+    const src = readFileSync(`${root}/web/components/judge/CallVerifier.tsx`, "utf8");
     const rows = src.split("\n").filter((l) => l.includes('className="ck"') || l.includes('<summary>'));
     expect(rows.length).toBeGreaterThanOrEqual(8);
     for (const r of rows) expect(r).toContain("<Trust src=");
+    expect(src).toContain("<TrustLegend />");
   });
 });

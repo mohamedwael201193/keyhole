@@ -20,15 +20,17 @@ type Call = { id: string; what: string; ok: boolean; result: string; file?: stri
 /** Worker build each step-3 call executed on (executed_wasm_sha256 in its attestation). Not the current build. */
 const STEP3_BUILD = "a55ebb14";
 const txRow = (label: string, h: string): ProofRow => ({ label, value: h, href: tx(h), alt: txAlt(h) });
-/** Transfer run on the current build (see docs/evidence). Both wallets are team test wallets, not independent users. */
+/** Transfer run on build a985fd87 (see docs/evidence/transfer-a985fd87). Both wallets are team test wallets, not independent users. */
 const SALE_TX = "89vSYY4tbeNPuNuhHB8YmkkAWAcjW5VdniQm3ePHuPYz";
+/** Handover calls on build a985fd87 (executed_wasm_sha256). Not the current build — see liveChecks / OutLayer. */
+const STEP4_BUILD = "a985fd87";
 const STEP4_NOW: Call[] = [
-  { id: "baccd727-cdca-4b3e-ae93-999fd581444a", what: "Seller A's status, before the sale", ok: true, result: "Allowed: A holds the key.", current: true },
-  { id: "ece5d109-6b98-442f-b682-96af0a23f2e7", what: "Seller A reads the balance, before the sale", ok: true, result: "Allowed: 2000 USDC base units.", current: true },
-  { id: "2a52742a-2b4a-432d-b087-888ea52f03ce", what: "Seller A reads the balance, after the sale", ok: false, result: "Refused: not_owner.", current: true },
-  { id: "3e996273-e4a0-4c26-aa54-6775fba29236", what: "Buyer B reads the balance, after the sale", ok: true, result: "Allowed: the same 2000 USDC base units. The account moved with the key.", current: true },
-  { id: "15f93f58-2568-4064-9581-db04c8b2a1aa", what: "Seller A replays the request it signed before the sale", ok: false, result: "Refused: not_owner. The owner check runs before the nonce check.", current: true },
-  { id: "8485f8d4-c4e1-4ab5-ab9c-a19a0d9d21f7", what: "Buyer B withdraws right after the transfer", ok: false, result: "Refused: cooldown (10 minutes after a transfer).", current: true },
+  { id: "baccd727-cdca-4b3e-ae93-999fd581444a", what: "Seller A's status, before the sale", ok: true, result: "Allowed: A holds the key.", build: STEP4_BUILD },
+  { id: "ece5d109-6b98-442f-b682-96af0a23f2e7", what: "Seller A reads the balance, before the sale", ok: true, result: "Allowed: 2000 USDC base units.", build: STEP4_BUILD },
+  { id: "2a52742a-2b4a-432d-b087-888ea52f03ce", what: "Seller A reads the balance, after the sale", ok: false, result: "Refused: not_owner.", build: STEP4_BUILD },
+  { id: "3e996273-e4a0-4c26-aa54-6775fba29236", what: "Buyer B reads the balance, after the sale", ok: true, result: "Allowed: the same 2000 USDC base units. The account moved with the key.", build: STEP4_BUILD },
+  { id: "15f93f58-2568-4064-9581-db04c8b2a1aa", what: "Seller A replays the request it signed before the sale", ok: false, result: "Refused: not_owner. The owner check runs before the nonce check.", build: STEP4_BUILD },
+  { id: "8485f8d4-c4e1-4ab5-ab9c-a19a0d9d21f7", what: "Buyer B withdraws right after the transfer", ok: false, result: "Refused: cooldown (10 minutes after a transfer).", build: STEP4_BUILD },
 ];
 
 function Calls({ rows, testid }: { rows: Call[]; testid?: string }) {
@@ -115,10 +117,10 @@ export default function JudgePage() {
 
         <Reveal><Step n={4} title="Selling the key moves the account; the old holder is locked out" testid="judge-step-4">
           <Trust src={["chain", "outlayer", "us"]} />
-          <p className="jclaim">The key moved from account A to account B on build <b className="mono">{CUR.slice(0, 8)}</b>, the current build. A and B are team test wallets, not independent users. Before the move A reads its balance. After it, A is refused and B reads the same balance. A replayed request and an early withdrawal by B are refused too.</p>
-          <See>Each call below carries the badge <b>Current build</b>, and its attestation names build <b className="mono">{CUR.slice(0, 8)}</b>. Click <b>Verify this call</b> to check one. The sale is one NEAR transaction, and its receipt shows SuccessValue.</See>
+          <p className="jclaim">The key moved from account A to account B on build <b className="mono">{STEP4_BUILD}</b> (not the current build <b className="mono">{CUR.slice(0, 8)}</b>). A and B are team test wallets, not independent users. Before the move A reads its balance. After it, A is refused and B reads the same balance. A replayed request and an early withdrawal by B are refused too.</p>
+          <See>Each call below is labelled <b>build {STEP4_BUILD}, previous</b>. Its attestation names that wasm, not the current <b className="mono">{CUR.slice(0, 8)}</b>. Click <b>Verify this call</b> to check one. The sale is one NEAR transaction, and its receipt shows SuccessValue.</See>
           <Calls testid="judge-step4-calls" rows={STEP4_NOW} />
-          <Proof rows={[txRow("sale: nft_transfer, A → B (current build run)", SALE_TX)]} title="Transfer" />
+          <Proof rows={[txRow(`sale: nft_transfer, A → B (build ${STEP4_BUILD})`, SALE_TX)]} title="Transfer" />
           <p className="muted">The site gateway also refuses a session-scheme withdraw with HTTP 403 <span className="mono">session_scope</span>, before any enclave call. It has no call id.</p>
           <details className="jprev" data-testid="judge-previous">
             <summary>Recorded on earlier builds (10 calls)</summary>
