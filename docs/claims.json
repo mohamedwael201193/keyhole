@@ -3662,6 +3662,27 @@
    "verify": "node judge/verify-claims.mjs --only test-finish_value_op"
   },
   {
+   "id": "test-get_payout_credit",
+   "claim": "Named test or symbol `get_payout_credit` exists in the source",
+   "where": "SECURITY.md:307",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "get_payout_credit",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`get_payout_credit` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-get_payout_credit"
+  },
+  {
    "id": "test-global_rate_limit",
    "claim": "Named test or symbol `global_rate_limit` exists in the source",
    "where": "SECURITY.md:35",

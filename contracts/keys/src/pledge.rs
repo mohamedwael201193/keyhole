@@ -33,7 +33,7 @@ pub struct PledgeConfig {
     pub next_loan_nonce: U64,
     pub next_payout_nonce: U64,
     pub treasury_available: U128,
-    /// Includes loan bonds, undelivered principal, available and pending native user credits.
+    /// Loan/registration bonds and all available/pending native loan, sale and refund credits.
     pub user_liabilities: U128,
     pub treasury_pending: Option<PendingPayout>,
 }
@@ -212,6 +212,28 @@ fn add_credit(who:&AccountId,amount:u128){if amount>0{let mut l=credit_ledgers()
 fn change_liabilities(c: &mut PledgeConfig, add: u128, subtract: u128) {
     c.user_liabilities = U128(c.user_liabilities.0.checked_add(add).and_then(|v| v.checked_sub(subtract)).unwrap_or_else(||env::panic_str("liability overflow")));
 }
+// Sale/refund credits also work before pledge migration. These isolated metadata keys
+// are folded into the one-time config initialization; never infer liabilities from balance.
+const PRE_CREDIT_TOTAL: &[u8] = b"Pcredit_total";
+const PRE_CREDIT_NONCE: &[u8] = b"Pcredit_nonce";
+fn pre_total() -> u128 { env::storage_read(PRE_CREDIT_TOTAL).map(|v| u128::from_le_bytes(v.try_into().unwrap())).unwrap_or(0) }
+fn pre_nonce() -> u64 { env::storage_read(PRE_CREDIT_NONCE).map(|v| u64::from_le_bytes(v.try_into().unwrap())).unwrap_or(0) }
+pub(crate) fn record_native_credit(who: &AccountId, amount: u128) {
+    if amount == 0 { return; }
+    add_credit(who, amount);
+    if let Some(mut c) = pledge_config() { change_liabilities(&mut c, amount, 0); save_config(&c); }
+    else { env::storage_write(PRE_CREDIT_TOTAL, &pre_total().checked_add(amount).expect("liability overflow").to_le_bytes()); }
+}
+pub(crate) fn refund_storage_credit(bytes: u64) {
+    let cost = env::storage_byte_cost().as_yoctonear() * bytes as u128;
+    let attached = env::attached_deposit().as_yoctonear();
+    require!(attached >= cost, "Must attach enough to cover storage");
+    if attached - cost > 1 { record_native_credit(&env::predecessor_account_id(), attached - cost); }
+}
+pub(crate) fn refund_approval_credit(who: &AccountId, approved: &HashMap<AccountId,u64>) {
+    let bytes: u64 = approved.keys().map(near_contract_standards::non_fungible_token::bytes_for_approved_account_id).sum();
+    record_native_credit(who, env::storage_byte_cost().as_yoctonear() * bytes as u128);
+}
 pub(crate) fn record_sale_royalty(treasury: &AccountId, amount: u128) -> bool {
     if treasury != &env::current_account_id() { return false; }
     let Some(mut c) = pledge_config() else { return false; };
@@ -241,9 +263,10 @@ impl Contract {
         require!(c.tokens.approvals_by_id.is_some(), "run legacy migrate first");
         save_config(&PledgeConfig {
             recovery_account, recovery_unlock_ns: U64(RECOVERY_UNLOCK_NS), attestor_public_key, custody_contract, network,
-            lending_enabled: false, next_loan_nonce: U64(0), next_payout_nonce: U64(0),
-            treasury_available: U128(0), user_liabilities: U128(0), treasury_pending: None,
+            lending_enabled: false, next_loan_nonce: U64(0), next_payout_nonce: U64(pre_nonce()),
+            treasury_available: U128(0), user_liabilities: U128(pre_total()), treasury_pending: None,
         });
+        env::storage_remove(PRE_CREDIT_TOTAL); env::storage_remove(PRE_CREDIT_NONCE);
         c
     }
 
@@ -537,15 +560,21 @@ impl Contract {
         assert_one_yocto();
         let who=env::predecessor_account_id();let mut ledger=credit_ledgers().get(&who).unwrap_or_default();require!(ledger.pending.is_none(),"payout already pending");
         let amount=ledger.available;require!(amount>0,"no payout credit");
-        let mut c = config_required(); c.next_payout_nonce = U64(c.next_payout_nonce.0.checked_add(1).unwrap_or_else(||env::panic_str("payout nonce overflow")));
-        let p = PendingPayout { nonce: c.next_payout_nonce, amount: U128(amount) };
+        let nonce = if let Some(mut c) = pledge_config() {
+            c.next_payout_nonce = U64(c.next_payout_nonce.0.checked_add(1).expect("payout nonce overflow"));
+            save_config(&c); c.next_payout_nonce
+        } else {
+            let n = pre_nonce().checked_add(1).expect("payout nonce overflow");
+            env::storage_write(PRE_CREDIT_NONCE, &n.to_le_bytes()); U64(n)
+        };
+        let p = PendingPayout { nonce, amount: U128(amount) };
         if let Some(delivery)=self.get_principal_delivery(who.clone()) {
             require!(delivery.payout_nonce.is_none() && amount>=delivery.principal.0, "principal delivery invariant");
             let loan=load_loan(&delivery.token_id,delivery.loan_nonce);
             require!(loan.borrower==who && loan.state==LoanState::DisbursementPending && loan.due_ns.0==0, "principal loan changed");
             principal_dispatches().insert(&delivery.token_id,&p.nonce);
         }
-        ledger.available=0;ledger.pending=Some(p.clone());save_credit(&who,&ledger);save_config(&c);
+        ledger.available=0;ledger.pending=Some(p.clone());save_credit(&who,&ledger);
         Promise::new(who.clone()).transfer(yocto(amount))
             .then(callback("on_payout", near_sdk::serde_json::json!({"account_id": who, "nonce": p.nonce}), 30))
     }
@@ -643,7 +672,10 @@ impl Contract {
             }
         }
         let amount=p.amount.0;l.pending=None;
-        if success{let mut c=config_required();change_liabilities(&mut c,0,amount);save_config(&c);}
+        if success{
+            if let Some(mut c)=pledge_config(){change_liabilities(&mut c,0,amount);save_config(&c);}
+            else {env::storage_write(PRE_CREDIT_TOTAL,&pre_total().checked_sub(amount).expect("liability underflow").to_le_bytes());}
+        }
         else{l.available=l.available.checked_add(amount).unwrap_or_else(||env::panic_str("credit overflow"));}
         save_credit(&account_id,&l);success
     }
