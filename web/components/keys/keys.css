@@ -300,3 +300,19 @@
   .km-art { animation: none; }
   .km-arrow { transition: none; }
 }
+
+/* ---- Dashboard density: match Overview ---- */
+.app-main .kp-root { padding: var(--space-4) var(--space-5) var(--space-5); }
+.kp-root { gap: var(--space-3); }
+.kg-toolbar { gap: var(--space-2) var(--space-3); }
+.kg-grid { gap: var(--space-3); }
+.kg-tile-name { font-size: 20px; }
+.kg-tile-foot { padding: 8px 12px 14px; }
+.kd-panel { gap: var(--space-4); padding: var(--space-4); }
+.km-grid { gap: var(--space-3); }
+.km-left, .km-right, .km-side { gap: var(--space-3); }
+.km-stage .km-foil.foil-card,
+.km-stage .foil-card.km-foil { width: min(100%, 240px); }
+@media (max-width: 899px) {
+  .app-main .kp-root { padding: var(--space-4) var(--space-3) var(--space-5); }
+}

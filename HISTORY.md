@@ -1,3 +1,7 @@
+## 2026-11-09 — Dashboard density on every app page (PR #185)
+- Shared v7 density (page title/lead, cards, hero, rows, empty states) applies under `.app-main` so Swap, Vault, Keys/Mint, and Activity match the Overview ~80–90% zoom.
+- Page CSS padding/gaps tightened on `.sw-page`, `.vlt`, `.kp-root`, `.act`. Landing `/` unchanged. Foil key cards kept.
+
 ## 2026-11-09 — v7 key cards restored + Overview density (PR #182)
 - Gallery/details/Overview/mint key faces use FoilCard again (Guilloche, Hallmark, metal border, sheen). Overview sample is one clean metal frame (no nested Card edge).
 - Overview type/padding/hero tightened so the signed-out dashboard fits 1440×900 and 1280×800 without vertical scroll; readable at 390×844.
