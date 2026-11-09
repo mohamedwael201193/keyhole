@@ -94,23 +94,24 @@ export function PledgeView() {
       </div>
 
       <div className="plg-inner">
-        <div
-          className={`plg-banner${live ? " plg-banner--live" : ""}`}
-          data-testid="pledge-preview-banner"
-          role="status"
-        >
-          {live ? "Pledge · live wiring on" : "Example — preview · not live"}
-        </div>
-
-        <PageHeader
-          eyebrow="Pledge"
-          title={<>Borrow NEAR without publishing your <em>full balance</em></>}
-          lead="Your lender sees one certified minimum, not the full balance while reviewing this offer."
-        />
-
         <div className="plg-layout">
-          <aside className="plg-howto" aria-label="How it works">
-            <h3>How it works</h3>
+          <div className="plg-left">
+            <div
+              className={`plg-banner${live ? " plg-banner--live" : ""}`}
+              data-testid="pledge-preview-banner"
+              role="status"
+            >
+              {live ? "Pledge · live wiring on" : "Example — preview · not live"}
+            </div>
+
+            <PageHeader
+              eyebrow="Pledge"
+              title={<>Borrow NEAR without publishing your <em>full balance</em></>}
+              lead="Your lender sees one certified minimum, not the full balance while reviewing this offer."
+            />
+
+            <aside className="plg-howto" aria-label="How it works">
+              <h3>How it works</h3>
             <ol>
               <li>
                 <span className="n">1</span>
@@ -138,7 +139,8 @@ export function PledgeView() {
               <span className="plg-cap-k">{finish} exit caps</span>
               <span className="plg-cap-v">${caps.perTx}/trade · ${caps.daily}/day</span>
             </div>
-          </aside>
+            </aside>
+          </div>
 
           <div className="plg-stage">
             <div className="plg-float-key" aria-hidden="true" data-testid="pledge-float-key">
