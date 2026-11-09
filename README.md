@@ -893,3 +893,25 @@ Run the no-key checks from the repository root:
 ```
 
 The tests exercise repeated plaintext, exact-byte openings and tampering, encrypted-store/entropy errors, response-loss restart, concurrent CAS writes, public projections, redacted storage errors, unversioned legacy JSON, legacy links, and the same cross-language commitment vector. The named regressions include `public_and_new_holder_projection_has_no_opening` and `storage_errors_cannot_echo_openings_or_private_row_contents`. Release/privacy boundaries are recorded in [SECURITY.md](SECURITY.md#event-commitment-version-boundary).
+
+## Source candidate: buyer-bound funded handover and zero royalty
+
+The protected purchase accepts the named buyer's **exact NEAR price**, validates a separate sale-domain certificate, and commits title, epoch increment, approval clearing and the full seller credit in one local receipt. Native delivery is a separate seller-initiated pull cashout. The contract keeps the token locked until the correct-holder thaw has been verified. The USDC minimum is bound to the sale nonce, immutable terms, owner epoch, custody identity and policy snapshot; signed certificates are valid for at most 60 seconds.
+
+The release-policy method `adopt_zero_royalty` explicitly changes the stored rate to zero under owner authorization. At that setting, NEP-199 returns the entire declared balance to the seller, including zero and maximum-u128 values. NEP-199 computes a payout map; it is not proof that an external marketplace paid it. The deployed configuration table above is a separate, dated live observation.
+
+Reproduce locally with no wallet or funds (Rust toolchains and cargo-near as pinned in CI):
+
+```sh
+(cd contracts/keys && cargo test --locked && ./build.sh)
+# Rebuild the labelled custody mock from its source (also checked in CI):
+(cd contracts/keys-sandbox && ./build-policy-mock.sh)
+# Rebuild the deliberately failing callback fixture only for sandbox tests:
+(cd contracts/keys && ./build.sh --features callback-failure-fixture && \
+  cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm)
+(cd contracts/keys-sandbox && CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1)
+python3 judge/gen-claims.py .
+node judge/verify-claims.mjs --offline
+```
+
+The sale runtime suite uses a **labelled custody mock** and real local NEAR receipts. It checks paid title plus seller cashout, failed cashout restoring credit once, callback-loss preserving pending liabilities, failed thaw preserving the title/credit and lock, cancellation/reopening, and alternate transfer/approval/listing routes. Contract unit tests mutate every certificate scope and nested term with valid test signatures; they also test stale/future/overlong certificates and the exact policy identity. Named runtime regressions include `failed_seller_cashout_restores_credit_once_without_reversing_title` and `lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds`. See [SECURITY.md](SECURITY.md#protected-sale-source-boundary) for the release boundary.

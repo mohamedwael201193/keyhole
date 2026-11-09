@@ -41,6 +41,11 @@ jobs:
         run: |
           ./build.sh --features callback-failure-fixture >/dev/null
           cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm
+      - name: source rebuilds the labelled custody mock fixture
+        working-directory: contracts/keys-sandbox
+        run: |
+          ./build-policy-mock.sh
+          git diff --exit-code -- tests/fixtures/custody_policy_mock.wasm
       - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + sealed pledge state), NEP-178 cap, one key, royalty sale, minter-only tier raise
         working-directory: contracts/keys-sandbox
         run: cargo test --locked

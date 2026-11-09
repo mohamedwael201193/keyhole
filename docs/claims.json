@@ -3473,6 +3473,27 @@
    "verify": "node judge/verify-claims.mjs --only test-add_beat_key"
   },
   {
+   "id": "test-adopt_zero_royalty",
+   "claim": "Named test or symbol `adopt_zero_royalty` exists in the source",
+   "where": "README.md:901",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "adopt_zero_royalty",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`adopt_zero_royalty` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-adopt_zero_royalty"
+  },
+  {
    "id": "test-assert_withdraw_to",
    "claim": "Named test or symbol `assert_withdraw_to` exists in the source",
    "where": "README.md:230",
@@ -3639,6 +3660,27 @@
    },
    "expected": "`executed_wasm_sha256` found in source",
    "verify": "node judge/verify-claims.mjs --only test-executed_wasm_sha256"
+  },
+  {
+   "id": "test-failed_seller_cashout_restores_credit_once_without_reversing_title",
+   "claim": "Named test or symbol `failed_seller_cashout_restores_credit_once_without_reversing_title` exists in the source",
+   "where": "README.md:917",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "failed_seller_cashout_restores_credit_once_without_reversing_title",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`failed_seller_cashout_restores_credit_once_without_reversing_title` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-failed_seller_cashout_restores_credit_once_without_reversing_title"
   },
   {
    "id": "test-finish_value_op",
@@ -3975,6 +4017,27 @@
    },
    "expected": "`limits_for_tier` found in source",
    "verify": "node judge/verify-claims.mjs --only test-limits_for_tier"
+  },
+  {
+   "id": "test-lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds",
+   "claim": "Named test or symbol `lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds` exists in the source",
+   "where": "README.md:917",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds"
   },
   {
    "id": "test-min_amount_out",
@@ -4378,7 +4441,7 @@
   {
    "id": "test-public_and_new_holder_projection_has_no_opening",
    "claim": "Named test or symbol `public_and_new_holder_projection_has_no_opening` exists in the source",
-   "where": "README.md:894",
+   "where": "README.md:895",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4525,7 +4588,7 @@
   {
    "id": "test-storage_errors_cannot_echo_openings_or_private_row_contents",
    "claim": "Named test or symbol `storage_errors_cannot_echo_openings_or_private_row_contents` exists in the source",
-   "where": "README.md:894",
+   "where": "README.md:895",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {

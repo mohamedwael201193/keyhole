@@ -39,10 +39,10 @@ pub struct PledgeConfig {
 pub(crate) fn pledge_config() -> Option<PledgeConfig> {
     env::storage_read(CONFIG_KEY).map(|v| near_sdk::borsh::from_slice(&v).unwrap_or_else(|_|env::panic_str("pledge config corrupt")))
 }
-fn save_config(c: &PledgeConfig) {
+pub(crate) fn save_config(c: &PledgeConfig) {
     env::storage_write(CONFIG_KEY, &near_sdk::borsh::to_vec(c).unwrap_or_else(|_|env::panic_str("config encoding")));
 }
-fn config_required() -> PledgeConfig { pledge_config().unwrap_or_else(||env::panic_str("pledge migration required")) }
+pub(crate) fn config_required() -> PledgeConfig { pledge_config().unwrap_or_else(||env::panic_str("pledge migration required")) }
 #[derive(Clone, Debug)]
 #[near(serializers = [borsh, json])]
 pub struct PendingTransfer {
@@ -64,7 +64,7 @@ fn result_success() -> bool {
     unsafe { near_sdk::sys::promise_result(0, 12_345) == 1 }
 }
 pub(crate) fn loans() -> LookupMap<TokenId, Loan> { LookupMap::new(b"Pl".as_slice()) }
-fn collateral() -> LookupMap<TokenId, CollateralBinding> { LookupMap::new(b"Pb".as_slice()) }
+pub(crate) fn collateral() -> LookupMap<TokenId, CollateralBinding> { LookupMap::new(b"Pb".as_slice()) }
 fn bound_wallets() -> LookupMap<String, TokenId> { LookupMap::new(b"Pw".as_slice()) }
 #[derive(Clone,Default)]
 #[near(serializers=[borsh])]
@@ -175,8 +175,8 @@ fn callback(method: &str, args: near_sdk::serde_json::Value, gas: u64) -> Promis
     call(env::current_account_id(), method, args, 0, gas)
 }
 fn enough_gas() { require!(env::prepaid_gas() >= Gas::from_tgas(180), "attach at least 180 Tgas"); }
-fn add_credit(who:&AccountId,amount:u128){if amount>0{let mut l=credit_ledgers().get(who).unwrap_or_default();l.available=l.available.checked_add(amount).unwrap_or_else(||env::panic_str("credit overflow"));save_credit(who,&l);}}
-fn change_liabilities(c: &mut PledgeConfig, add: u128, subtract: u128) {
+pub(crate) fn add_credit(who:&AccountId,amount:u128){if amount>0{let mut l=credit_ledgers().get(who).unwrap_or_default();l.available=l.available.checked_add(amount).unwrap_or_else(||env::panic_str("credit overflow"));save_credit(who,&l);}}
+pub(crate) fn change_liabilities(c: &mut PledgeConfig, add: u128, subtract: u128) {
     c.user_liabilities = U128(c.user_liabilities.0.checked_add(add).and_then(|v| v.checked_sub(subtract)).unwrap_or_else(||env::panic_str("liability overflow")));
 }
 // Sale/refund credits also work before pledge migration. These isolated metadata keys
@@ -329,6 +329,7 @@ impl Contract {
     }
 
     pub(crate) fn assert_token_idle(&self, token_id: &TokenId) {
+        require!(sale::sales().get(token_id).is_none(), "protected sale pending: token locked");
         require!(loans().get(token_id).is_none(), "pledged: ownership and value operations locked");
         require!(transfer_calls().get(token_id).is_none(), "transfer-call pending: token locked");
     }

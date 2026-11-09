@@ -60,6 +60,16 @@ impl Receiver {
         p["generation"]=near_sdk::serde_json::json!(generation.0);p["frozen"]=near_sdk::serde_json::json!(frozen);
         env::storage_write(wallet_pubkey.as_bytes(),p.to_string().as_bytes());
     }
+    // TEST-ONLY model of the documented single-command ABI, without provider generations.
+    pub fn freeze_wallet(&mut self,wallet_pubkey:String){self.legacy_frozen(wallet_pubkey,true);}
+    pub fn unfreeze_wallet(&mut self,wallet_pubkey:String){self.legacy_frozen(wallet_pubkey,false);}
+    fn legacy_frozen(&mut self,wallet_pubkey:String,frozen:bool){
+        assert!(!(!frozen&&env::storage_has_key(b"refuse_thaw")),"mock provider refuses thaw");
+        let mut p=self.get_wallet_policy(wallet_pubkey.clone()).unwrap();
+        assert_eq!(p["owner"].as_str().unwrap(),env::predecessor_account_id().as_str(),"only controller");
+        assert_ne!(p["frozen"].as_bool().unwrap(),frozen,"already in requested state");
+        p["frozen"]=near_sdk::serde_json::json!(frozen);env::storage_write(wallet_pubkey.as_bytes(),p.to_string().as_bytes());
+    }
     /// Sandbox-only adversary: delete its own account one receipt before the contract's pull payout arrives.
     pub fn claim_then_delete(&mut self, keys: AccountId, beneficiary: AccountId) {
         let _ = Promise::new(keys).function_call("claim_payout".into(), b"{}".to_vec(), NearToken::from_yoctonear(1), Gas::from_tgas(60));
