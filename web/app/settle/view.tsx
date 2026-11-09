@@ -1,176 +1,169 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { OC_ASSETS, statusOf, toUnits, assetById, fundsStep } from "@/lib/oneclick";
-import { SETTLEMENTS, RECORDED_FAILED, VAULT_TRADE, type Settlement } from "@/lib/settlements";
-import { tx, txAlt, intentTx } from "@/lib/config";
+import { useMemo, useState } from "react";
+import { statusOf } from "@/lib/oneclick";
+import { RECORDED_FAILED } from "@/lib/settlements";
+import { Card, CardHeader, FilterChips, Icon, PageHeader, StatusChip, type FilterItem } from "@/components/v7";
+import { ActivityList } from "@/components/activity/ActivityList";
+import { ActivityStats } from "@/components/activity/ActivityStats";
+import { OrderDetails } from "@/components/activity/OrderDetails";
+import { useOrderReads } from "@/components/activity/useOrderReads";
+import {
+  buildOrders, countsOf, filterOrders, pageSlice, RANGES, timeOf, type ChipTone, type FilterId, type RangeId,
+} from "@/components/activity/orders";
 import { AgentPanel } from "./agent";
-import { AmountInput, Badge, Button, Card, Proof, Purpose, Skeleton, Spinner, Stepper, TokenSelect, type ProofRow, type StepItem, type TokenOption, type Tone } from "@/components/ui";
+import { PriceCheck } from "./price";
 import "./settle.css";
 
-type Dry = { amountInFormatted: string; amountInUsd: string; amountOutFormatted: string; amountOutUsd: string; timeEstimate: number };
-type St = { status: string; updatedAt?: string; details: { depositedAmountFormatted: string | null; amountOutFormatted: string | null; refundedAmountFormatted: string | null; nearTxHashes: string[]; intentHashes: string[] } };
+/**
+ * /settle, the Activity page. The page owns the state (status filter, date range, search, page, selected order); every rule is
+ * in components/activity/orders.ts, and the live status comes from useOrderReads (one /api/oneclick read per listed order).
+ * Counts and shares come from the real rows. An order that is still loading or unreadable is never counted as a status.
+ */
+const FILTER_EMPTY: Record<Exclude<FilterId, "all">, { title: string; body: string }> = {
+  settled: { title: "No settled orders yet", body: "No order has settled among the orders read." },
+  refunded: { title: "No refunded orders", body: "No order among the orders read was refunded." },
+  failed: { title: "No failed orders", body: "No live 1Click order has failed. The recorded example below shows what a failed order looks like." },
+};
 
-const TONE: Record<string, Tone> = { ok: "ok", bad: "bad", wait: "wait", info: "info", warn: "warn" };
-function StatusBadge({ status }: { status: string }) {
-  const s = statusOf(status);
-  return <Badge tone={TONE[s.tone] ?? "info"} testid="st-badge" status={status}>{s.label}</Badge>;
-}
+export function SettleView() {
+  const { reads, retry } = useOrderReads();
+  const rows = useMemo(() => buildOrders(reads), [reads]);
+  const counts = useMemo(() => countsOf(rows), [rows]);
 
-const PROG = ["Deposit sent", "Intent matched", "Settled", "Funds here"] as const;
-/** Four plain steps. The last one says "Refunded to sender" when the funds went back. */
-function Progress({ status }: { status: string }) {
-  const f = fundsStep(status);
-  if (!f) return null;
-  const steps: StepItem[] = PROG.map((label, i) => ({
-    label: i === 3 && f.refund ? "Refunded to sender" : label,
-    state: i < f.step ? "done" : i === f.step ? (f.step === 3 && !f.refund ? "done" : "current") : "todo",
-  }));
+  const [filter, setFilter] = useState<FilterId>("all");
+  const [range, setRange] = useState<RangeId>("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  const matched = useMemo(() => filterOrders(rows, { filter, range, text: query, now }), [rows, filter, range, query, now]);
+  const slice = pageSlice(matched, page);
+  const current = matched.find((r) => r.id === selected) ?? matched[0] ?? null;
+  const filtersOn = filter !== "all" || range !== "all" || query.trim() !== "";
+  const undated = range === "all" ? 0 : rows.filter((r) => timeOf(r) === null).length;
+  const pending = counts.loading + counts.unavailable;
+
+  let empty: { title: string; body: string; clear: boolean } | null = null;
+  if (matched.length === 0) {
+    const note = pending ? " Orders that are not read yet are not counted here." : "";
+    if (filter !== "all" && range === "all" && query.trim() === "") {
+      empty = { ...FILTER_EMPTY[filter], body: FILTER_EMPTY[filter].body + note, clear: true };
+    } else {
+      empty = { title: "No orders match", body: `Nothing matches this ${filtersOn ? "filter, date range or search" : "view"}.`, clear: true };
+    }
+  }
+
+  const chips: FilterItem<FilterId>[] = [
+    { id: "all", label: "All activity", count: counts.total },
+    { id: "settled", label: "Settled", count: counts.settled },
+    { id: "refunded", label: "Refunded", count: counts.refunded },
+    { id: "failed", label: "Failed", count: counts.failed },
+  ];
+
+  const pickFilter = (f: FilterId) => { setFilter(f); setPage(1); };
+  const pickRange = (r: RangeId) => { setRange(r); setPage(1); setNow(Date.now()); };
+  const typeQuery = (q: string) => { setQuery(q); setPage(1); };
+  const clearAll = () => { setFilter("all"); setRange("all"); setQuery(""); setPage(1); setNow(Date.now()); };
+
   return (
-    <div data-testid="funds-path" data-step={f.step} data-refund={f.refund ? "1" : "0"} className="st-path">
-      <Stepper label="Order progress" steps={steps} />
+    <div className="act" data-testid="activity-page">
+      <PageHeader
+        eyebrow="Activity"
+        title={<>Real quotes. <em>Real settlements.</em></>}
+        lead="Each order below was run by KEYHOLE on NEAR mainnet. Its status is read live from 1Click, and its proof is one click away."
+        testid="act-head"
+      />
+
+      <div className="act-toolbar">
+        <FilterChips items={chips} value={filter} onChange={pickFilter} label="Filter orders by status" testid="act-filters" />
+        <label className="act-range">
+          <span className="v7-sr-only">Date range</span>
+          <select value={range} onChange={(e) => pickRange(e.target.value as RangeId)} data-testid="act-range">
+            {RANGES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+          </select>
+          <Icon name="chevron-down" size={16} />
+        </label>
+      </div>
+
+      {(counts.loading > 0 || undated > 0) && (
+        <div className="act-notes">
+          {counts.loading > 0 && (
+            <p className="act-note">{counts.loading === 1 ? "One order is" : `${counts.loading} orders are`} still reading live status. The counts update as each read lands.</p>
+          )}
+          {undated > 0 && (
+            <p className="act-note">{undated === 1 ? "One order has" : `${undated} orders have`} no readable time, so a bounded date range leaves {undated === 1 ? "it" : "them"} out.</p>
+          )}
+        </div>
+      )}
+
+      <ActivityStats counts={counts} />
+
+      <div className="act-split">
+        <ActivityList
+          items={slice.items}
+          matched={matched.length}
+          page={slice.page}
+          pages={slice.pages}
+          selectedId={current?.id ?? null}
+          onSelect={setSelected}
+          onPage={setPage}
+          query={query}
+          onQuery={typeQuery}
+          empty={empty}
+          onClear={clearAll}
+        />
+        {current && <OrderDetails key={current.id} row={current} onRetry={retry} />}
+      </div>
+
+      <section className="act-extra">
+        <RecordedFailed />
+        <PriceCheck />
+        <div className="settle act-agent">
+          <AgentPanel />
+        </div>
+        <Legend />
+      </section>
     </div>
   );
 }
-const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo" }) + " (UTC+2)";
 
-/** One real order. Its status is read live from 1Click; a status that cannot be read says so. */
-function Row({ s }: { s: Settlement }) {
-  const [st, setSt] = useState<St | null>(null);
-  const [err, setErr] = useState(false);
-  useEffect(() => {
-    let dead = false;
-    fetch(`/api/oneclick?depositAddress=${s.depositAddress}`).then((r) => r.json()).then((j) => { if (!dead) { if (j.ok) setSt(j); else setErr(true); } }).catch(() => !dead && setErr(true));
-    return () => { dead = true; };
-  }, [s.depositAddress]);
-  const info = st ? statusOf(st.status) : null;
-  const rows: ProofRow[] = [
-    { label: "deposit tx", value: s.depositTx, href: s.depositTxUrl ?? tx(s.depositTx), alt: s.depositTxUrl ? undefined : txAlt(s.depositTx) },
-    { label: "deposit address", value: s.depositAddress },
-    ...(st?.details.intentHashes ?? []).map((h) => ({ label: "intent", value: h, href: intentTx(h) })),
-    ...(st?.details.nearTxHashes ?? []).slice(-1).map((h) => ({ label: "settlement tx", value: h, href: tx(h), alt: txAlt(h) })),
-    ...(s.destTx ? [{ label: "destination tx", value: s.destTx.hash, href: s.destTx.url }] : []),
-  ];
+/** A recorded failed order, labelled as an example. It is not a live order and is not counted anywhere. */
+function RecordedFailed() {
   return (
-    <Card as="article" className="st-order" testid="settlement" data-deposit={s.depositAddress}>
-      <div className="st-orderhead">
-        <h3>{s.label}</h3>
-        {st ? <StatusBadge status={st.status} /> : err ? <Badge tone="warn">Status unavailable</Badge> : <span data-testid="st-loading"><Spinner label="Reading live status" /></span>}
+    <Card as="article" className="act-example" testid="recorded-failed" labelledBy="act-ex-h">
+      <CardHeader title="Example only: the shape of a failed order" id="act-ex-h" />
+      <div className="act-example-head">
+        <p className="act-note">{RECORDED_FAILED.label}</p>
+        <span data-status={RECORDED_FAILED.status}>
+          <StatusChip tone="error">{statusOf(RECORDED_FAILED.status).label}</StatusChip>
+        </span>
       </div>
-      <p className="st-amt">{s.quote}{st?.details.amountOutFormatted ? <> · <b>received {st.details.amountOutFormatted}</b></> : null}{st?.details.refundedAmountFormatted && st.details.refundedAmountFormatted !== "0" ? <> · <b>refunded {st.details.refundedAmountFormatted}</b></> : null}</p>
-      {st ? <Progress status={st.status} /> : !err && <Skeleton lines={1} />}
-      {info && <p className="st-where"><b>Where the funds are:</b> {info.where}</p>}
-      {s.note && <p className="st-note">{s.note}</p>}
-      {st?.updatedAt && <p className="st-note">Live from 1Click, updated <span data-testid="st-updated">{when(st.updatedAt)}</span></p>}
-      <Proof rows={rows} />
+      <p className="act-where"><b>Where the funds are:</b> {statusOf(RECORDED_FAILED.status).where}</p>
+      <p className="act-note">{RECORDED_FAILED.note}</p>
     </Card>
   );
 }
 
-const human = (code?: string, message?: string) => {
-  const M: Record<string, string> = {
-    policy_transaction_limit_exceeded: "That amount is above this key's per-trade limit, so the policy refused it. Try a smaller amount.",
-    rate_limited: "Too many quotes in a minute. Wait a few seconds and try again.",
-    no_quote: "No solver offered a price for this pair and amount right now. Try a different amount or pair.",
-  };
-  return (code && M[code]) || message || "No quote came back. Try again in a moment.";
-};
+const LEGEND = ["PENDING_DEPOSIT", "KNOWN_DEPOSIT_TX", "INCOMPLETE_DEPOSIT", "PROCESSING", "SUCCESS", "REFUNDED", "FAILED"] as const;
+const LEGEND_TONE: Record<string, ChipTone> = { ok: "success", warn: "warn", bad: "error", wait: "info" };
 
-/** The 1Click assets, as token options. The label is "SYMBOL · chain". */
-const OPTIONS: TokenOption[] = OC_ASSETS.map((a) => {
-  const [symbol, chain] = a.label.split(" · ");
-  return { id: a.id, symbol, name: chain, assetId: a.id, chain: a.chain };
-});
-
-export function SettleView() {
-  const [origin, setOrigin] = useState<string>(OC_ASSETS[2].id);
-  const [dest, setDest] = useState<string>(OC_ASSETS[0].id);
-  const [amount, setAmount] = useState("0.05");
-  const [dry, setDry] = useState<Dry | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const outRef = useRef<HTMLDivElement>(null);
-  const o = assetById(origin);
-  const d = assetById(dest);
-  const units = o ? toUnits(amount, o.decimals) : null;
-  async function run() {
-    setDry(null); setMsg(null);
-    if (!units || origin === dest) { setMsg("Pick two different assets and a positive amount."); return; }
-    setBusy(true);
-    try {
-      const j = await (await fetch("/api/oneclick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin, dest, amount: units }) })).json();
-      if (j.ok) setDry(j.quote); else setMsg(human(j.error?.code, j.error?.message));
-    } catch { setMsg("Could not reach 1Click. Check your connection and try again."); } finally { setBusy(false); requestAnimationFrame(() => outRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })); }
-  }
-  const sym = (x: typeof o) => x?.label.split(" · ")[0] ?? "";
+/** What each 1Click status means, from the same table the rows use. */
+function Legend() {
   return (
-    <div className="page settle">
-      <Purpose eyebrow="NEAR Intents · 1Click · mainnet" title={<>Real quotes. <em>Real settlements.</em></>}
-        line="Check a live cross-chain price with no wallet, then see every order KEYHOLE really settled: where its money is now, step by step, with proof one click away." />
-
-      <Card as="section" className="st-card st-dry" testid="dry" aria-labelledby="st-dry-h">
-        <div className="st-cardhead">
-          <h2 id="st-dry-h">Check a price</h2>
-          <Badge tone="info" testid="dry-badge">Price only · nothing moves</Badge>
-        </div>
-        <p className="st-note">A live price from 1Click solvers. Nothing is signed and nothing executes.</p>
-        <form className="st-form" onSubmit={(e) => { e.preventDefault(); void run(); }}>
-          <TokenSelect label="From" options={OPTIONS} value={origin} onChange={setOrigin} testid="oc-from" />
-          <AmountInput label="Amount" value={amount} onChange={setAmount} symbol={sym(o)} error={units ? null : "Enter an amount above zero."} testid="oc-amount" />
-          <TokenSelect label="To" options={OPTIONS} value={dest} onChange={setDest} testid="oc-to" />
-          <Button type="submit" loading={busy} loadingLabel="Asking solvers" testid="dry-btn">Get price</Button>
-        </form>
-        <div ref={outRef} aria-live="polite" className="st-out">
-          {msg && <p className="st-note st-alert" role="alert" data-testid="dry-msg">{msg}</p>}
-          {dry && (
-            <article className="st-quote" data-testid="dry-out" aria-label="Price quote">
-              <Badge tone="info" testid="dry-tag">Price quote · dry run · nothing moves</Badge>
-              <p className="st-route">{o?.label} <span aria-hidden="true">→</span> {d?.label}</p>
-              <dl className="st-grid">
-                <div><dt>You send</dt><dd>{dry.amountInFormatted} <small>${Number(dry.amountInUsd).toFixed(4)}</small></dd></div>
-                <div><dt>You receive</dt><dd>{dry.amountOutFormatted} <small>${Number(dry.amountOutUsd).toFixed(4)}</small></dd></div>
-                <div><dt>Fee and spread</dt><dd>${(Number(dry.amountInUsd) - Number(dry.amountOutUsd)).toFixed(4)} <small>USD in minus USD out</small></dd></div>
-                <div><dt>Estimated time</dt><dd>about {dry.timeEstimate}s</dd></div>
-              </dl>
-              <p className="st-note">Quoted by 1Click solvers. Nothing was signed and no funds moved.</p>
-            </article>
-          )}
-        </div>
-      </Card>
-
-      <AgentPanel />
-
-      <h2 className="st-section">A private vault trade, end to end</h2>
-      <p className="st-sub">The holder signed one swap. The enclave checked the signature, the holder and the Bronze caps, then the key&apos;s sealed account swapped through NEAR Intents. Intel TDX attested the answer.</p>
-      <Card as="article" className="st-order" testid="vault-trade">
-        <div className="st-orderhead">
-          <h3>{VAULT_TRADE.amountIn} <span aria-hidden="true">→</span> {VAULT_TRADE.amountOut}</h3>
-          <Badge tone="ok">Settled</Badge>
-        </div>
-        <p className="st-note">Inside the vault of key {VAULT_TRADE.token} · build {VAULT_TRADE.build}</p>
-        <div className="st-actions"><Button variant="secondary" href={`/verify?call=${VAULT_TRADE.callId}`} testid="vault-trade-verify">Verify the enclave call</Button></div>
-        <Proof rows={[
-          { label: "enclave call", value: VAULT_TRADE.callId, href: `/verify?call=${VAULT_TRADE.callId}`, internal: true },
-          { label: "intent hash", value: VAULT_TRADE.intentHash, href: intentTx(VAULT_TRADE.intentHash) },
-          { label: "account", value: VAULT_TRADE.account },
-          { label: "evidence file", value: VAULT_TRADE.file },
-        ]} />
-      </Card>
-
-      <h2 className="st-section">1Click orders executed on mainnet</h2>
-      <p className="st-sub">Each card reads its status live from 1Click. Refunded orders are shown, not hidden.</p>
-      <div className="st-orders">{SETTLEMENTS.map((s) => <Row key={s.depositAddress} s={s} />)}</div>
-
-      <h2 className="st-section">Example only: the shape of a failed order</h2>
-      <Card as="article" className="st-order st-recorded" testid="recorded-failed">
-        <div className="st-orderhead"><h3>{RECORDED_FAILED.label}</h3><StatusBadge status={RECORDED_FAILED.status} /></div>
-        <p className="st-where"><b>Where the funds are:</b> {statusOf("FAILED").where}</p>
-        <p className="st-note">{RECORDED_FAILED.note}</p>
-      </Card>
-
-      <details className="st-card st-legend">
-        <summary>What each status means</summary>
-        <ul>{(["PENDING_DEPOSIT", "KNOWN_DEPOSIT_TX", "INCOMPLETE_DEPOSIT", "PROCESSING", "SUCCESS", "REFUNDED", "FAILED"] as const).map((k) => <li key={k}><StatusBadge status={k} /><span>{statusOf(k).where}</span></li>)}</ul>
-      </details>
-    </div>
+    <details className="act-legend">
+      <summary>What each status means</summary>
+      <ul>
+        {LEGEND.map((k) => {
+          const s = statusOf(k);
+          return (
+            <li key={k} data-status={k}>
+              <StatusChip tone={LEGEND_TONE[s.tone] ?? "neutral"}>{s.label}</StatusChip>
+              <span>{s.where}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }
