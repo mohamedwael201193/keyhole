@@ -112,7 +112,13 @@ describe("sendKeysCall routes", () => {
     const r = await sendKeysCall({ kind: "ws", accountId: "alice.near", walletId: "my-near-wallet", wallet, callbackUrl: "https://x/key?id=k1" }, LIST);
     expect(r).toEqual({ redirect: true });
     expect(calls[0].params.callbackUrl).toBe("https://x/key?id=k1");
-    expect((calls[0].params.actions as { params: { gas: string; deposit: string } }[])[0].params).toMatchObject({ gas: GAS_LIST, deposit: LIST.deposit });
+    // wallet-selector v10 only accepts near-api-js actions (it refuses {type, params} with "Unsupported NAJ action").
+    const fc = (calls[0].params.actions as { functionCall?: { methodName: string; args: Uint8Array; gas: bigint; deposit: bigint } }[])[0].functionCall;
+    expect(fc).toBeDefined();
+    expect(fc!.methodName).toBe(LIST.method);
+    expect(fc!.gas).toBe(BigInt(GAS_LIST));
+    expect(fc!.deposit).toBe(BigInt(LIST.deposit));
+    expect(JSON.parse(new TextDecoder().decode(fc!.args))).toEqual(LIST.args);
   });
 
   it("an executed outcome that failed is a contract error with the panic text", async () => {
