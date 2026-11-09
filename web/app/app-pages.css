@@ -66,7 +66,7 @@
   .pnl-mark { width: 32px; height: 32px; font-size: 16px; }
 }
 
-/* ---- Signed PnL (app/pnl) ---- */
+/* ---- Signed swap log (app/pnl) ---- */
 .pnl { display: grid; gap: var(--space-5); max-width: 980px; }
 .pnl-head { display: grid; gap: var(--space-2); }
 .pnl-head h1 { margin: 0; }

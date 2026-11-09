@@ -128,6 +128,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
           <p className="priv-line">{t("lp.privLine")}</p>
           <div className="lp-cta">
             <Button href="/verify" variant="secondary">{t("lp.verifyCall")}</Button>
+            <Button href="/attack" variant="secondary" testid="lp-attack">Try to steal a key</Button>
             <Link href="/ask" className="lp-link lp-cta-link">{t("lp.askLink")}</Link>
           </div>
         </div>
@@ -142,6 +143,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
             <div className="code-row"><code>{CMD_CLONE}</code><CopyButton value={CMD_CLONE} /></div>
             <div className="code-row"><code>{CMD_VERIFY}</code><CopyButton value={CMD_VERIFY} /></div>
             <div className="code-row"><code>open /verify</code><CopyButton value={`${SITE}/verify`} /></div>
+            <div className="code-row"><code>open /attack</code><CopyButton value={`${SITE}/attack`} /></div>
           </div>
         </div>
       </section>

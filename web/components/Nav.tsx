@@ -13,6 +13,7 @@ import { useI18n } from "@/lib/i18n";
 export const SITE_LINKS = [
   { href: "/#handover", label: "How it works", match: "/" },
   { href: "/verify", label: "Proof", match: "/verify" },
+  { href: "/attack", label: "Attack", match: "/attack" },
   { href: "/judge", label: "For judges", match: "/judge" },
 ] as const;
 
