@@ -66,9 +66,8 @@
 - Web: register `epoch_void` in `WORKER_ERROR_CODES` + en.json error copy so p2-errors stays green.
 - PnL-on-card / Attested Key Desk PnL dropped from the plan (swap-only; no invented metrics). Priority remains epoch + operator trust.
 
-## 2026-11-09 22:20 Africa/Cairo (UTC+2) — Contract v2.5 admission barrier + desk storage (feat/contract-admission-desk)
-- One storage layout (no migrate): owner epoch `E`, pending value-ops `Vc`/`Vo`, desk `S`/`Q`/`A`/`F`.
-- Admission barrier: `begin_value_op` / `finish_value_op` (minter); every ownership path refuses while pending. Epochs complement; they do not recall committed external txs. SECURITY §1 rewritten; operator FA keys documented in §11 with FC-minter limits (FC cannot attach NEAR).
-- Desk: `configure_service` / `get_service` / `get_desk_economics` now; buy/settle/claim next PR on same prefixes (Option A Paid Private Strategy Desk).
-- Unit 184; sandbox admission test. Release wasm `0ef957d9…ac15` / `21TEERjh…Si8`. `deployed/` still v2.4. **No mainnet redeploy / no worker publish.**
-- PR #183 (worker epoch + wet-quote freeze) squash-merged earlier this session.
+## 2026-11-09 — v2.5 pledge contract rework (PR #184, prepared/not deployed)
+- Replaces the undeployed desk proposal: S/Q/A/F and service/economics methods removed; v2.4 layout and E/Vo/Vc preserved.
+- Adds complete sealed-loan state/nonce, all-path pledge and token transfer-call locks, authenticated-owner/epoch admission, canonical contract-verified certificate, asynchronous principal and failure-restored lender credits.
+- Fixed-account treasury-only recovery after December2,2026 02:00 Africa/Cairo, explicit provenance ledger and all-liability/storage/reserve exclusions; no upgrade escape hatch.
+- 209 unit + 19 sandbox tests, strict clippy and captured-state fork dry-run pass. Captured native balance is short for candidate code storage; sandbox-only funding used. Live deployment, publication, retirement and key changes remain approval gates.
