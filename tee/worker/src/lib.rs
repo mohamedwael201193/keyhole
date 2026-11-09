@@ -1184,8 +1184,8 @@ pub fn tier_progress(current: u8, settled_swaps: u32, volume_usd_micro: u64) -> 
     }
 }
 
-/// Settled swaps and copies in a key's trade log, and the USD they cost. Only rows with status "success" count.
-/// A row without `usd_in_micro` counts as one swap at 0.
+/// Counts a key's trade-log rows that count toward a tier: kind `swap` or `copy` with status `success`, each adding one swap and its `usd_in_micro` (0 if absent).
+/// The log keeps only its last 100 rows (`log_push`), and the count is per key, so rows from any holder of the key count.
 pub fn level_counts(entries: &[serde_json::Value]) -> (u32, u64) {
     let (mut n, mut usd) = (0u32, 0u64);
     for e in entries {

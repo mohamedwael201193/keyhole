@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-C="${KEYS_CONTRACT:-keyhole-devmo.near}"; RPC="${NEAR_RPC:-https://rpc.mainnet.near.org}"
+C="${KEYS_CONTRACT:-keyhole-devmo.near}"; RPC="${NEAR_RPC:-https://rpc.mainnet.fastnear.com}"
 q(){ curl -fsS "$RPC" -H 'content-type: application/json' -d "$1"; }
 CH=$(q '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_account","finality":"final","account_id":"'"$C"'"}}' | jq -r .result.code_hash)
 LOCAL=$(sha256sum contracts/keys/deployed/keyhole_keys.wasm | cut -d' ' -f1)

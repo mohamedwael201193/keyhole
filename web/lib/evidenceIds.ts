@@ -1,5 +1,6 @@
 /** Calls whose worker output is published in /public/evidence (each hashes to its attested output_hash). */
 export const EVIDENCE_IDS: ReadonlySet<string> = new Set([
+  "0847b924-df76-4cee-ab5a-a96c789d2983",
   "246e4a7a-f138-4459-8548-350dd9960751",
   "baccd727-cdca-4b3e-ae93-999fd581444a",
   "ece5d109-6b98-442f-b682-96af0a23f2e7",

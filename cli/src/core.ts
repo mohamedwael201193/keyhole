@@ -16,7 +16,7 @@ export const DEFAULTS = {
   recipient: process.env.KEYHOLE_RECIPIENT ?? "keyhole",
   outlayer: process.env.OUTLAYER_API ?? "https://api.outlayer.ai",
   fastfs: process.env.FASTFS_BASE ?? "https://main.fastfs.io",
-  rpc: process.env.NEAR_RPC ?? "https://rpc.mainnet.near.org",
+  rpc: process.env.NEAR_RPC ?? "https://rpc.mainnet.fastnear.com",
 };
 
 export interface Key { accountId: string; secret: Uint8Array; publicKey: string }

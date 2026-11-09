@@ -753,9 +753,9 @@ mod host {
         Ok(json!({"ok": true, "op": "pnl", "statement": statement, "sig": sig, "minter": mid}))
     }
 
-    /// Earned tiers. The key's own settled swaps and volume, read from its verified provenance chain and trade log,
-    /// raise its tier on chain. Moves no funds, so a session may call it. The minter sends `nft_set_tier` only when
-    /// the record earns a higher tier than the one the contract holds now.
+    /// Earned tiers. The key's settled swaps and volume, read from its verified provenance chain and trade log, raise its tier.
+    /// The count is `level_counts` (lib.rs): swap and copy rows with status success, in the last 100 rows of the key's log, any holder.
+    /// Moves no funds. The minter sends `nft_set_tier` only when the record earns a higher tier than the contract holds now.
     fn op_level_up(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "level_up", true)?;
         let tid = c.token_id();

@@ -2,16 +2,16 @@
   "_doc": "Single source of truth for live build identities. Edit this file only, then run: node scripts/gen-identity.mjs",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8",
-    "bytes": 745180,
-    "add_version_tx": "A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG",
-    "info_call": "246e4a7a-f138-4459-8548-350dd9960751",
-    "previous_wasm_sha256": "94c355ffa318ec0e6cafc5268afb6968c91cad5c99ebd343e14f9b85f2bca9ed"
+    "wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+    "bytes": 755751,
+    "add_version_tx": "Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6",
+    "info_call": "0847b924-df76-4cee-ab5a-a96c789d2983",
+    "previous_wasm_sha256": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8"
   },
   "contract": {
     "account": "keyhole-devmo.near",
-    "code_hash": "8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG",
-    "wasm_sha256": "700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d",
-    "deploy_tx": "CM7JvwdnN2oQ4xakmcSoDPDREBbE7ZUCh5FnJargd5bp"
+    "code_hash": "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ",
+    "wasm_sha256": "b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c",
+    "deploy_tx": "84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn"
   }
 }
