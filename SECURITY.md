@@ -231,3 +231,8 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 - **Decision.** `keyhole-devmo.near` has two full-access keys (deploy key and the owner's Meteor wallet key) plus a function-call beat key that can call only `beat`. The minter account's full-access key is generated and kept inside the TEE. There is no timelock or multisig yet. Live count is re-checked on [/verify](https://keyhole-seven.vercel.app/verify).
 - **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [README §8](README.md#8-security-model).
 - **Mitigation.** The beat key is a function-call key that can call only `beat`, with a 0.05 NEAR allowance, and the owner revokes it with `del_beat_key`. The deploy key is described in the repository as kept offline and never on the website or in the worker.
+
+
+### Pledge preview/client ABI gate
+
+The removed terminal-payment attestor has no field or callable path in the preview client. The remaining attestor key certifies only the fixed collateral floor; it cannot choose native payout truth. `Active` means debt and backed credit, not demonstrated native delivery. Freezing/Offered/UnlockPending must not be rendered as a funded-and-paid loan. The preview stays flag-OFF while complete borrower/lender transactions, exact storage/gas builders and custody release gates undergo separate review. This client cleanup is not a live-product acceptance or a deployment.

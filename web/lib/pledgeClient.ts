@@ -1,5 +1,5 @@
 /**
- * Typed client for the sealed bilateral Pledge surface on contracts/keys (PR #184 head 0c3c6196).
+ * Typed client for the sealed bilateral Pledge surface on contracts/keys (oracle-free contract candidate).
  * Method names and argument shapes match contracts/keys/src/pledge.rs on that revision.
  * Live calls stay behind PLEDGE_LIVE; when the flag is off this module still exports the shapes
  * so the UI and unit tests can bind against the real contract API without talking to mainnet.
@@ -23,12 +23,10 @@ export type LoanTerms = {
 };
 
 export type LoanState =
+  | "Freezing"
   | "Offered"
-  | "Funded"
-  | "Repaid"
-  | "Defaulted"
-  | "Cancelled"
-  | string;
+  | "Active"
+  | "UnlockPending";
 
 export type Loan = {
   token_id: TokenId;
@@ -49,17 +47,24 @@ export type PledgeConfig = {
   recovery_account: AccountId;
   recovery_unlock_ns: U64;
   attestor_public_key: string;
-  terminal_attestor_public_key: string;
   custody_contract: AccountId;
   network: string;
   lending_enabled: boolean;
   next_loan_nonce: U64;
+  next_payout_nonce: U64;
+  treasury_available: U128;
+  user_liabilities: U128;
+  treasury_pending: PendingPayout | null;
 };
+
+export type PendingPayout = { nonce: U64; amount: U128 };
 
 export type CollateralBinding = {
   wallet_pubkey: string;
   encrypted_policy_hash: string;
   policy_version: U64;
+  /** LOCAL command sequence, not a provider generation guarantee. */
+  policy_generation: U64;
   ready: boolean;
 };
 

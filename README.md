@@ -862,3 +862,15 @@ verify.sh             one-call verifier (attestation, FastFS, optional rebuild)
 **Credits:** the ambient music was generated for this project and is released under CC0. Chain marks are the official logos of their projects, shown only to name the supported assets.
 
 Built on NEAR.
+
+
+### Pledge client ABI — reviewed source interface
+
+The preview client models `Freezing → Offered → Active → UnlockPending` and the exact native pending-payout shape. Funding creates debt plus backed borrower credit; cash withdrawal is separate. Its configuration type contains the floor-certificate public key and no terminal-payment outcome signer. The preview remains behind its existing feature flag.
+
+```bash
+(cd web && npm ci && npx vitest run tests/pledge-client.test.ts tests/pledge-view.test.ts && npx tsc --noEmit)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
+
+The test transport is injected and performs no mainnet transaction. The CLI/MCP surface contains no terminal-outcome reconciliation method.

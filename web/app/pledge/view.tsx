@@ -58,7 +58,7 @@ export function PledgeView() {
     client.getLoan(keys.primary.token_id).then((L) => {
       if (cancel) return;
       setLoan(L);
-      if (L && (L.state === "Funded" || L.state === "Offered")) setMode("active");
+      setMode(L?.state === "Active" ? "active" : "form");
     }).catch(() => {});
     return () => { cancel = true; };
   }, [live, keys.primary, client]);
@@ -124,7 +124,7 @@ export function PledgeView() {
                 <span className="n">2</span>
                 <p>
                   <strong>Borrow NEAR</strong>
-                  Named lender funds. Principal lands in your wallet.
+                  Funding starts debt and creates a NEAR claim. Withdraw it separately.
                 </p>
               </li>
               <li>

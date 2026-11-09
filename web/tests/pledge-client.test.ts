@@ -13,6 +13,8 @@ import {
   createPledgeClient,
   type LoanCertificate,
   type LoanTerms,
+  type LoanState,
+  type PledgeConfig,
 } from "@/lib/pledgeClient";
 
 const terms: LoanTerms = {
@@ -26,7 +28,7 @@ const terms: LoanTerms = {
 };
 
 const cert: LoanCertificate = {
-  domain: "keyhole.pledge",
+  domain: "KEYHOLE_SEALED_LOAN_V2_CREDIT",
   network: "mainnet",
   contract: "keyhole-devmo.near",
   token_id: "0",
@@ -34,7 +36,7 @@ const cert: LoanCertificate = {
   borrower: "alice.near",
   owner_epoch: "0",
   terms,
-  asset: "usdc.near",
+  asset: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
   wallet_pubkey: "ed25519:ab",
   policy_version: "1",
   policy_hash: "",
@@ -45,7 +47,7 @@ const cert: LoanCertificate = {
   pending_value_ops: "0",
 };
 
-describe("pledgeClient method surface (PR #184 head 0c3c6196)", () => {
+describe("pledgeClient method surface (oracle-free contract candidate)", () => {
   it("exposes the sealed bilateral change methods by exact name", () => {
     expect([...PLEDGE_CHANGE_METHODS]).toEqual([
       "migrate_pledge",
@@ -99,15 +101,33 @@ describe("feature flag ON", () => {
   it("calls the typed view methods through the injected transport", async () => {
     const view = vi.fn(async (method: string) => {
       if (method === "get_pledge_config") return { lending_enabled: true, network: "mainnet" };
-      if (method === "get_loan") return { token_id: "0", state: "Funded" };
+      if (method === "get_loan") return { token_id: "0", state: "Active" };
       if (method === "get_collateral_binding") return { ready: true, wallet_pubkey: "ed25519:ab" };
       return null;
     });
     const c = createPledgeClient({ live: true, view: view as never });
     expect(c.canTransact()).toBe(true);
     expect((await c.getPledgeConfig())?.lending_enabled).toBe(true);
-    expect((await c.getLoan("0"))?.state).toBe("Funded");
+    expect((await c.getLoan("0"))?.state).toBe("Active");
     expect((await c.getCollateralBinding("0"))?.ready).toBe(true);
     expect(view).toHaveBeenCalledTimes(3);
+  });
+});
+
+
+describe("oracle-free credit lifecycle ABI", () => {
+  it("uses current contract phases and optional pending native claim without an outcome-signer role", async () => {
+    const phases: LoanState[] = ["Freezing", "Offered", "Active", "UnlockPending"];
+    const config: PledgeConfig = {
+      recovery_account: "recovery.near", recovery_unlock_ns: "1796169600000000000",
+      attestor_public_key: "floor-key-only", custody_contract: "custody.near", network: "sandbox",
+      lending_enabled: false, next_loan_nonce: "1", next_payout_nonce: "2",
+      treasury_available: "0", user_liabilities: "100", treasury_pending: { nonce: "2", amount: "100" },
+    };
+    const client=createPledgeClient({live:true,view:(async (method:string) => method === "get_pledge_config" ? config : null) as never});
+    expect((await client.getPledgeConfig())?.treasury_pending).toEqual({nonce:"2",amount:"100"});
+    expect(phases).toEqual(["Freezing", "Offered", "Active", "UnlockPending"]);
+    expect(PLEDGE_CHANGE_METHODS).not.toContain("reconcile_terminal_outcome");
+    expect(PLEDGE_VIEW_METHODS).not.toContain("terminal_attestor_public_key");
   });
 });
