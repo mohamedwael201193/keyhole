@@ -56,3 +56,10 @@
 - Clippy: drop unnecessary `as u64` in epoch invariant test (`r.below` is already u64).
 - Web: register `epoch_void` in `WORKER_ERROR_CODES` + en.json error copy so p2-errors stays green.
 - PnL-on-card / Attested Key Desk PnL dropped from the plan (swap-only; no invented metrics). Priority remains epoch + operator trust.
+
+## 2026-11-09 22:20 Africa/Cairo (UTC+2) — Contract v2.5 admission barrier + desk storage (feat/contract-admission-desk)
+- One storage layout (no migrate): owner epoch `E`, pending value-ops `Vc`/`Vo`, desk `S`/`Q`/`A`/`F`.
+- Admission barrier: `begin_value_op` / `finish_value_op` (minter); every ownership path refuses while pending. Epochs complement; they do not recall committed external txs. SECURITY §1 rewritten; operator FA keys documented in §11 with FC-minter limits (FC cannot attach NEAR).
+- Desk: `configure_service` / `get_service` / `get_desk_economics` now; buy/settle/claim next PR on same prefixes (Option A Paid Private Strategy Desk).
+- Unit 184; sandbox admission test. Release wasm `0ef957d9…ac15` / `21TEERjh…Si8`. `deployed/` still v2.4. **No mainnet redeploy / no worker publish.**
+- PR #183 (worker epoch + wet-quote freeze) squash-merged earlier this session.

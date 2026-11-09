@@ -110,7 +110,7 @@ The contract refuses a mint or a transfer (`nft_transfer`, `nft_transfer_call`, 
 
 ## Contract upgrades
 
-`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1, v2.2 and v2.3 changed code only. v2.3 (live since 2026-11-07) caps approvals at 10 per token; its evidence is in [`docs/evidence/contract-v2-3`](docs/evidence/contract-v2-3/README.md). Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`.
+`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1, v2.2 and v2.3 changed code only. v2.3 (live since 2026-11-07) caps approvals at 10 per token; its evidence is in [`docs/evidence/contract-v2-3`](docs/evidence/contract-v2-3/README.md). v2.4 adds the built-in sale; v2.5 (release wasm ready, not yet redeployed) adds owner epoch, value-op admission barrier and desk storage prefixes with no migrate. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed` (still v2.4 until the approved redeploy).
 
 ## Sessions (one signature, then no wallet popups for 30 minutes)
 
@@ -166,11 +166,11 @@ Tests: `tee/worker/src/p2harden.rs`.
 
 Each entry gives the decision, the reason for it, and the mitigation. Each one is a limit that remains in the design. Nothing here is hidden elsewhere in the repository.
 
-### 1. Settlement epoch voids a mid-flight settle that has not left custody
+### 1. Admission barrier + settlement epoch (handover safety)
 
-- **Decision.** Every value-moving op is stamped with the key's settlement epoch. When the enclave first sees a new owner (transfer or sale), it bumps that epoch. A settle whose stamp no longer matches is refused `epoch_void` (or reported `needs_review` if the custody call already returned). Funds that have not left custody stay with the key.
-- **Why.** Track 10 asks for a sale in the middle of a payout. Ownership alone is re-read before the send; the epoch closes the same race for any concurrent settle stamped earlier (see [THREAT_MODEL.md](THREAT_MODEL.md)).
-- **Mitigation.** Owner check + epoch check run immediately before the send; listing is re-read then too. After the custody call, ownership or epoch drift becomes `needs_review` instead of a plain success. The historical mid-payout run on build `6367401a` (2026-11-01) in [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md) predates the epoch; a re-run on the epoch build is required before claiming the invariant on mainnet. A custody payout that OutLayer has already completed cannot be recalled on chain.
+- **Decision.** Before any external custody dispatch the settler must `begin_value_op` on-chain for that token. Every ownership-changing path (`nft_transfer`, `nft_transfer_call`, `nft_transfer_payout`, `nft_buy` / `transfer_key`) refuses while a value-op is pending. Independently, the worker stamps value-moves with the key's owner epoch (`nft_settlement_epoch`); a settle whose stamp no longer matches is refused `epoch_void` (or `needs_review` after a custody return). Listing freeze (including wet `quote --execute`) still blocks new value-moves while listed.
+- **Why.** An epoch (or a last-second owner recheck) **cannot recall** an Intents deposit, external transfer or Agent API job that already committed ([NEAR Agent API grants](https://docs.agentsonintents.com/integration/agent-api/overview); KEY_VALUE_IDEAS §3). The required pattern is a contract-side admission permit acquired before dispatch, with ownership locked until reconcile. Epochs complement the barrier; they do not replace it. NEP-178 is NFT transfer approval only ([NEAR NFT standard](https://docs.near.org/primitives/nft/standard)); a function-call key's allowance is gas, not a principal spend cap ([NEAR access keys](https://docs.near.org/protocol/accounts-contracts/access-keys)).
+- **Mitigation.** v2.5 stores epochs under prefix `E` and pending ops under `Vc`/`Vo` (no migrate). Worker must call begin/finish around dispatch (follow-up PR; stop before publish). **Incomplete until** every still-callable money-moving OutLayer worker version also enforces the permit — inventory and disable or pin before claiming the barrier complete on mainnet. Residual: committed external payouts cannot be recalled. Historical mid-payout on build `6367401a` (2026-11-01): [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md).
 
 ### 2. No NEAR sub-account per key
 
@@ -181,7 +181,7 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 ### 3. The contract account is not locked
 
 - **Decision.** `keyhole-devmo.near` holds two full-access keys, and its owner can change the contract. There is no multisig and no timelock, and the account is not keyless.
-- **Why.** Each contract version so far is a code deploy signed by a full-access key (v1 to v2.4). The multisig and timelock are not built yet.
+- **Why.** Each contract version so far is a code deploy signed by a full-access key (v1 to v2.4 live; v2.5 release ready). The multisig and timelock are not built yet.
 - **Mitigation.** Every deployed version is in `contracts/keys/release` with its sha256. CI rebuilds the source, and `judge/1-contract.sh` compares the on-chain `code_hash` with the committed wasm. The key list and the purpose of each key are in [README §8](README.md#8-security-model).
 
 ### 4. Intents solvers see the pair and amount
@@ -228,6 +228,18 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 
 ### 11. Operator keys
 
-- **Decision.** `keyhole-devmo.near` has two full-access keys: the deploy key and the owner's Meteor wallet key. The minter account's full-access key is generated and kept inside the TEE. There is no timelock or multisig yet.
-- **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [README §8](README.md#8-security-model).
-- **Mitigation.** The beat key is a function-call key that can call only `beat`, with a 0.05 NEAR allowance, and the owner revokes it with `del_beat_key`. The deploy key is described in the repository as kept offline and never on the website or in the worker.
+- **Decision.** `keyhole-devmo.near` currently holds **two FullAccess** keys and one FastFS FunctionCall key (read-only RPC `view_access_key_list`, 2026-11-09):
+  - FullAccess `ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF` — deploy / owner ops (kept offline per README §8).
+  - FullAccess `ed25519:8NP9x5eFZic4E8cL4Pq8NLoHwB5VG1tbhWPnHSPE2bdj` — owner's Meteor wallet.
+  - FunctionCall `ed25519:FNe2aYtzNZ3FicPYdCjxgWuVMTf29NK2F1UzoFSsQ6h1` → receiver `social`, methods `__fastdata_kv` / `__fastdata_fastfs` (FastFS), allowance 1 NEAR.
+  The TEE minter `015a0259…ac443` holds one FullAccess (enclave-generated) and one FunctionCall limited to `beat` on `keyhole-devmo.near`. There is no multisig and no timelock. `config.treasury` is the contract account itself.
+- **Why.** Deploys so far are FA-signed (v1–v2.4 live; v2.5 release wasm ready, not redeployed). Classic FunctionCall keys **cannot attach NEAR** ([docs](https://docs.near.org/protocol/accounts-contracts/access-keys)), so payable `nft_mint` / future `buy_signal` cannot move to a pure FC minter; FC is appropriate for non-payable settler methods (`beat`, `begin_value_op`, `finish_value_op`, `nft_set_tier`) once provisioned.
+- **Mitigation.** Do **not** delete FullAccess keys from mainnet without a verified recovery plan. Prepared commands (report only; user runs):
+  ```
+  # Add FC settler on minter for non-payable methods (after v2.5 deploy), then stop using FA for those calls:
+  # near account add-key <minter> grant-function-call-access --contract-account-id keyhole-devmo.near \
+  #   --allowance 0.25 NEAR --method-names beat,nft_set_tier,begin_value_op,finish_value_op ...
+  # Optional later: set_royalty to a dedicated treasury account (no live listings required).
+  # Removing a FullAccess key: near account delete-key keyhole-devmo.near <public_key> ...
+  ```
+  Desk fee ledgers (v2.5 prefixes `A`/`F`/`Q`/`S`) keep customer refunds and holder revenue separate from the contract's free balance once buy/settle/claim land.

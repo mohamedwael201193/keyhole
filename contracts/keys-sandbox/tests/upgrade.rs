@@ -10,6 +10,7 @@ const V2_1: &str = "../keys/release/v2.1/keyhole_keys.wasm";
 const V2: &str = "../keys/release/v2.2/keyhole_keys.wasm";
 const V2_3: &str = "../keys/release/v2.3/keyhole_keys.wasm";
 const V2_4: &str = "../keys/release/v2.4/keyhole_keys.wasm";
+const V2_5: &str = "../keys/release/v2.5/keyhole_keys.wasm";
 const MAINNET_OWNER: &str = "keyhole-devmo.near";
 
 fn fixture() -> Vec<Value> {
@@ -585,5 +586,54 @@ async fn v2_4_sale_settles_real_balances() -> anyhow::Result<()> {
     // the 5 mainnet tokens are untouched by the sale
     assert_eq!(view(&e.c, "nft_total_supply", json!({})).await, "6");
     for (t, o) in &e.ids { assert_eq!(view(&e.c, "nft_token", json!({"token_id": t})).await["owner_id"], o.as_str()); }
+    Ok(())
+}
+
+
+/// v2.5 code-only: admission barrier + owner epoch + desk storage. Existing tokens unchanged; pending op blocks transfer.
+#[tokio::test]
+async fn v2_5_admission_barrier_and_epoch_code_only() -> anyhow::Result<()> {
+    let e = v1_like_mainnet().await?;
+    upgrade(&e).await?;
+    e.c.as_account().deploy(&std::fs::read(V2_3)?).await?.into_result()?;
+    e.c.as_account().deploy(&std::fs::read(V2_4)?).await?.into_result()?;
+    let before = snapshot(&e).await;
+    e.c.as_account().deploy(&std::fs::read(V2_5)?).await?.into_result()?;
+    assert_eq!(before, snapshot(&e).await, "code only");
+    let src = view(&e.c, "contract_source_metadata", json!({})).await;
+    assert_eq!(src["version"], "2.5.0");
+    for (t, _) in &e.ids {
+        assert_eq!(view(&e.c, "nft_settlement_epoch", json!({"token_id": t})).await, "0");
+        assert_eq!(view(&e.c, "pending_value_op_count", json!({"token_id": t})).await, "0");
+    }
+    let root = e.root.clone();
+    let alice = mk(&root, "alice").await;
+    let bob = mk(&root, "bob").await;
+    let c = e.c.id().clone();
+    e.minter.call(&c, "nft_mint")
+        .args_json(json!({"token_id": "kadm", "receiver_id": alice.id(), "tier": 2, "metadata": fixture()[1]["metadata"]}))
+        .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+    e.minter.call(&c, "begin_value_op")
+        .args_json(json!({"token_id": "kadm", "epoch": "0", "op_id": "op1", "action_hash": "ah"}))
+        .max_gas().transact().await?.into_result()?;
+    assert_eq!(view(&e.c, "pending_value_op_count", json!({"token_id": "kadm"})).await, "1");
+    let r = alice.call(&c, "nft_transfer").args_json(json!({"receiver_id": bob.id(), "token_id": "kadm"}))
+        .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    assert!(format!("{:?}", r.into_result().unwrap_err()).contains("value-op pending"));
+    e.minter.call(&c, "finish_value_op")
+        .args_json(json!({"token_id": "kadm", "op_id": "op1", "success": true}))
+        .max_gas().transact().await?.into_result()?;
+    alice.call(&c, "nft_transfer").args_json(json!({"receiver_id": bob.id(), "token_id": "kadm"}))
+        .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert_eq!(view(&e.c, "nft_settlement_epoch", json!({"token_id": "kadm"})).await, "1");
+    assert_eq!(view(&e.c, "nft_token", json!({"token_id": "kadm"})).await["owner_id"], bob.id().as_str());
+    // desk configure by new owner
+    bob.call(&c, "configure_service").args_json(json!({
+        "token_id": "kadm", "manifest_hash": "mh", "price_yocto": NearToken::from_millinear(1).as_yoctonear().to_string(),
+        "version": "v1", "enabled": true
+    })).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    let svc = view(&e.c, "get_service", json!({"token_id": "kadm"})).await;
+    assert_eq!(svc["version"], "v1");
+    assert_eq!(svc["enabled"], true);
     Ok(())
 }

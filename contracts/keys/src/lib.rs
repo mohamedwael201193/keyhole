@@ -5,6 +5,9 @@
 //! v2.4: nft_set_tier (minter only, upward only): a holder can earn a higher tier. No state change.
 //! v2.4: built-in key sale. nft_list / nft_unlist / nft_buy sell a key from the contract itself. Listings live under
 //! their own storage prefixes (not a field of Contract), so the v2.3 layout is unchanged and no migrate is needed.
+//! v2.5: owner epoch + value-op admission barrier + desk storage prefixes (service/request/revenue/refund).
+//! All under their own LookupMap prefixes (E/V/S/Q/A/F); no Contract field change and no migrate. Missing epoch = 0.
+//! Epochs complement the barrier; they do not recall committed external txs (see SECURITY).
 use near_contract_standards::non_fungible_token::approval::NonFungibleTokenApproval;
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
@@ -81,6 +84,23 @@ pub struct ListingView {
     pub price: U128,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [json])]
+pub struct ControlState {
+    pub token_id: TokenId,
+    pub owner_epoch: near_sdk::json_types::U64,
+    pub pending_value_ops: near_sdk::json_types::U64,
+    pub listed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [json])]
+pub struct DeskEconomics {
+    pub token_id: TokenId,
+    pub revenue_available: U128,
+    pub service: Option<DeskService>,
+}
+
 /// Listings by token id: raw keys are b"L" + borsh(token_id). The prefix byte 'L' (0x4C) differs from the Key enum
 /// variant bytes (0..=5), from the NEP-178 approval keys (5 + "n"), from the "pending/" markers ('p') and from the
 /// index prefix b"M".
@@ -126,6 +146,75 @@ fn index_remove(token_id: &TokenId) {
     env::storage_write(INDEX_COUNT, &last.to_le_bytes());
 }
 
+/// v2.5 owner / settlement epoch per token. Prefix 'E'. Missing = 0.
+fn owner_epochs() -> LookupMap<TokenId, u64> {
+    LookupMap::new(b"E")
+}
+fn bump_owner_epoch(token_id: &TokenId) -> u64 {
+    let next = owner_epochs().get(token_id).unwrap_or(0).saturating_add(1);
+    owner_epochs().insert(token_id, &next);
+    next
+}
+
+/// Admitted value-op before any external custody dispatch. Prefixes 'Vc' (count) and 'Vo' (op records).
+/// Ownership changes refuse while count > 0. Epoch alone cannot recall a committed Intents/OutLayer tx.
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [borsh, json])]
+pub struct ValueOp {
+    pub epoch: near_sdk::json_types::U64,
+    pub action_hash: String,
+    /// 0 = admitted (not yet dispatched), 1 = dispatched (awaiting reconcile).
+    pub state: u8,
+}
+
+fn value_op_counts() -> LookupMap<TokenId, u64> {
+    LookupMap::new(&b"Vc"[..])
+}
+fn value_op_key(token_id: &TokenId, op_id: &str) -> String {
+    format!("{token_id}/{op_id}")
+}
+fn value_ops() -> LookupMap<String, ValueOp> {
+    LookupMap::new(&b"Vo"[..])
+}
+
+/// Desk service config per token. Prefix 'S'.
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [borsh, json])]
+pub struct DeskService {
+    pub version: String,
+    pub manifest_hash: String,
+    pub price_yocto: U128,
+    pub enabled: bool,
+}
+fn desk_services() -> LookupMap<TokenId, DeskService> {
+    LookupMap::new(b"S")
+}
+
+/// Paid signal request. Prefix 'Q'. Full buy/settle/refund land in a follow-up PR; storage reserved now.
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [borsh, json])]
+pub struct SignalRequest {
+    pub desk_token: TokenId,
+    pub reader: AccountId,
+    pub signal_commitment: String,
+    pub service_version: String,
+    pub fee_yocto: U128,
+    pub delivery_deadline: near_sdk::json_types::U64,
+    /// 0 PaidPending, 1 Delivered, 2 Refunded.
+    pub state: u8,
+    pub output_hash: Option<String>,
+}
+fn signal_requests() -> LookupMap<String, SignalRequest> {
+    LookupMap::new(b"Q")
+}
+
+fn revenue_available() -> LookupMap<TokenId, u128> {
+    LookupMap::new(b"A")
+}
+fn refund_available() -> LookupMap<AccountId, u128> {
+    LookupMap::new(b"F")
+}
+
 fn yocto(v: u128) -> near_sdk::NearToken {
     near_sdk::NearToken::from_yoctonear(v)
 }
@@ -138,7 +227,7 @@ fn emit_key_event(event: &str, data: near_sdk::serde_json::Value) {
 }
 
 #[near(contract_state, contract_metadata(
-    version = "2.4.0",
+    version = "2.5.0",
     link = "https://github.com/mohamedwael201193/keyhole",
     standard(standard = "nep171", version = "1.2.0"),
     standard(standard = "nep177", version = "2.0.0"),
@@ -314,6 +403,16 @@ impl Contract {
         Some(listing)
     }
 
+    /// Refuse ownership changes while a value-op is admitted/dispatched for this token (admission barrier).
+    fn assert_can_change_owner(&self, token_id: &TokenId) {
+        let n = value_op_counts().get(token_id).unwrap_or(0);
+        require!(n == 0, "value-op pending: finish or reconcile before transfer or sale");
+    }
+
+    fn pending_ops(&self, token_id: &TokenId) -> u64 {
+        value_op_counts().get(token_id).unwrap_or(0)
+    }
+
     /// Ends a token's listing, if any: the deposit goes back to the seller. Every path that moves a key calls this
     /// (transfer_key, nft_transfer, nft_transfer_call, nft_resolve_transfer), so a listing never outlives its owner.
     fn end_listing(&mut self, token_id: &TokenId) {
@@ -337,6 +436,7 @@ impl Contract {
     /// (their callers end the listing first). Ends the listing, clears approvals (their storage goes back to the
     /// previous owner), moves the key and emits ONE nft_transfer event. Schedules no payout; only the approval refund.
     fn transfer_key(&mut self, token_id: &TokenId, receiver_id: &AccountId, authorized: Option<&AccountId>, memo: Option<&str>) -> AccountId {
+        self.assert_can_change_owner(token_id);
         self.end_listing(token_id);
         let prev_owner = self.tokens.owner_by_id.get(token_id).unwrap_or_else(|| env::panic_str("Token not found"));
         require!(prev_owner != *receiver_id, "Current and next owner must differ");
@@ -353,6 +453,7 @@ impl Contract {
         if !approved.is_empty() {
             near_contract_standards::non_fungible_token::refund_approved_account_ids(prev_owner.clone(), &approved);
         }
+        bump_owner_epoch(token_id);
         prev_owner
     }
 
@@ -363,6 +464,7 @@ impl Contract {
         let caller = env::predecessor_account_id();
         let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("unknown token"));
         require!(owner == caller, "only the owner can list");
+        require!(self.pending_ops(&token_id) == 0, "value-op pending: finish before listing");
         require!(price.0 >= MIN_LIST_PRICE, "price below the 0.1 NEAR minimum");
         require!(price.0 <= MAX_LIST_PRICE, "price above the 100000 NEAR cap");
         match listings().get(&token_id) {
@@ -405,6 +507,7 @@ impl Contract {
     /// and the call returns without panicking (so the stale listing is cleaned up in the same transaction).
     #[payable]
     pub fn nft_buy(&mut self, token_id: TokenId) {
+        self.assert_can_change_owner(&token_id);
         let buyer = env::predecessor_account_id();
         let attached = env::attached_deposit().as_yoctonear();
         let listing = listings().get(&token_id).unwrap_or_else(|| env::panic_str("no listing"));
@@ -459,6 +562,92 @@ impl Contract {
             .filter_map(|i| index_slots().get(&i))
             .filter_map(|t| self.nft_listing(t))
             .collect()
+    }
+
+    /// Owner / settlement epoch of a key. Starts at 0; every ownership change bumps it by one.
+    pub fn nft_settlement_epoch(&self, token_id: TokenId) -> near_sdk::json_types::U64 {
+        near_sdk::json_types::U64(owner_epochs().get(&token_id).unwrap_or(0))
+    }
+
+    /// Control plane for handover safety: epoch, pending value-ops, listing flag.
+    pub fn get_control_state(&self, token_id: TokenId) -> ControlState {
+        ControlState {
+            token_id: token_id.clone(),
+            owner_epoch: near_sdk::json_types::U64(owner_epochs().get(&token_id).unwrap_or(0)),
+            pending_value_ops: near_sdk::json_types::U64(self.pending_ops(&token_id)),
+            listed: listings().get(&token_id).is_some(),
+        }
+    }
+
+    pub fn pending_value_op_count(&self, token_id: TokenId) -> near_sdk::json_types::U64 {
+        near_sdk::json_types::U64(self.pending_ops(&token_id))
+    }
+
+    /// Admit a value-op before external custody dispatch. Minter (TEE settler) only for v1.
+    /// Refuses if listed, epoch mismatch, or op_id already present. Does not move funds.
+    pub fn begin_value_op(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64, op_id: String, action_hash: String) {
+        self.assert_minter();
+        require!(!op_id.is_empty() && op_id.len() <= 64, "bad op_id");
+        require!(!action_hash.is_empty() && action_hash.len() <= 128, "bad action_hash");
+        require!(self.tokens.owner_by_id.get(&token_id).is_some(), "unknown token");
+        require!(listings().get(&token_id).is_none(), "listed: unlist before value-ops");
+        let current = owner_epochs().get(&token_id).unwrap_or(0);
+        require!(current == epoch.0, "epoch mismatch");
+        let key = value_op_key(&token_id, &op_id);
+        require!(value_ops().get(&key).is_none(), "op_id already admitted");
+        value_ops().insert(&key, &ValueOp { epoch, action_hash, state: 0 });
+        let n = self.pending_ops(&token_id) + 1;
+        value_op_counts().insert(&token_id, &n);
+        emit_key_event("value_op_begin", near_sdk::serde_json::json!({"token_id": token_id, "op_id": op_id, "epoch": epoch}));
+    }
+
+    /// Mark an admitted op as dispatched (still locks ownership) or finish it (clears the lock).
+    /// `ok = true` and `state` was 0 → mark dispatched (state=1). `finish = true` clears the op entirely.
+    pub fn finish_value_op(&mut self, token_id: TokenId, op_id: String, success: bool) {
+        self.assert_minter();
+        let key = value_op_key(&token_id, &op_id);
+        let op = value_ops().get(&key).unwrap_or_else(|| env::panic_str("unknown value-op"));
+        // Always clear on finish: success or failure both reconcile. Unknown external status must NOT call this.
+        value_ops().remove(&key);
+        let n = self.pending_ops(&token_id).saturating_sub(1);
+        if n == 0 { value_op_counts().remove(&token_id); } else { value_op_counts().insert(&token_id, &n); }
+        emit_key_event("value_op_finish", near_sdk::serde_json::json!({"token_id": token_id, "op_id": op_id, "success": success, "epoch": op.epoch}));
+    }
+
+    /// Holder configures the desk service. Affects future paid reads only. Storage reserved for buy/settle/claim next.
+    #[payable]
+    pub fn configure_service(&mut self, token_id: TokenId, manifest_hash: String, price_yocto: U128, version: String, enabled: bool) {
+        assert_one_yocto();
+        let caller = env::predecessor_account_id();
+        let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("unknown token"));
+        require!(owner == caller, "only the owner can configure the desk");
+        require!(self.pending_ops(&token_id) == 0, "value-op pending: finish before configure");
+        require!(!manifest_hash.is_empty() && manifest_hash.len() <= 128, "bad manifest_hash");
+        require!(!version.is_empty() && version.len() <= 64, "bad version");
+        require!(price_yocto.0 >= MIN_LIST_PRICE / 100, "price below the 0.001 NEAR minimum"); // 0.001 NEAR floor for a signal
+        require!(price_yocto.0 <= MAX_LIST_PRICE, "price above the 100000 NEAR cap");
+        desk_services().insert(&token_id, &DeskService { version: version.clone(), manifest_hash: manifest_hash.clone(), price_yocto, enabled });
+        emit_key_event("desk_configure", near_sdk::serde_json::json!({"token_id": token_id, "version": version, "manifest_hash": manifest_hash, "price": price_yocto, "enabled": enabled}));
+    }
+
+    pub fn get_service(&self, token_id: TokenId) -> Option<DeskService> {
+        desk_services().get(&token_id)
+    }
+
+    pub fn get_desk_economics(&self, token_id: TokenId) -> DeskEconomics {
+        DeskEconomics {
+            token_id: token_id.clone(),
+            revenue_available: U128(revenue_available().get(&token_id).unwrap_or(0)),
+            service: desk_services().get(&token_id),
+        }
+    }
+
+    pub fn get_signal_request(&self, request_id: String) -> Option<SignalRequest> {
+        signal_requests().get(&request_id)
+    }
+
+    pub fn get_refund_available(&self, account_id: AccountId) -> U128 {
+        U128(refund_available().get(&account_id).unwrap_or(0))
     }
 
     #[payable]
@@ -545,16 +734,21 @@ impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_transfer(&mut self, receiver_id: AccountId, token_id: TokenId, approval_id: Option<u64>, memo: Option<String>) {
         self.assert_no_key(&receiver_id);
+        self.assert_can_change_owner(&token_id);
         // A panic in the library call reverts this too, so a refused transfer keeps its listing.
         self.end_listing(&token_id);
-        self.tokens.nft_transfer(receiver_id, token_id, approval_id, memo)
+        self.tokens.nft_transfer(receiver_id.clone(), token_id.clone(), approval_id, memo);
+        bump_owner_epoch(&token_id);
     }
     #[payable]
     fn nft_transfer_call(&mut self, receiver_id: AccountId, token_id: TokenId, approval_id: Option<u64>, memo: Option<String>, msg: String) -> PromiseOrValue<bool> {
         self.assert_no_key(&receiver_id);
+        self.assert_can_change_owner(&token_id);
         let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
         set_pending(&owner, pending_returns(&owner) + 1);
         self.end_listing(&token_id);
+        // Ownership moves outbound now; bump. A return bumps again in resolve. Barrier already held until settle.
+        bump_owner_epoch(&token_id);
         self.tokens.nft_transfer_call(receiver_id, token_id, approval_id, memo, msg)
     }
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
@@ -567,10 +761,14 @@ impl near_contract_standards::non_fungible_token::core::NonFungibleTokenResolver
     #[private]
     fn nft_resolve_transfer(&mut self, previous_owner_id: AccountId, receiver_id: AccountId, token_id: TokenId, approved_account_ids: Option<HashMap<AccountId, u64>>) -> bool {
         set_pending(&previous_owner_id, pending_returns(&previous_owner_id).saturating_sub(1));
-        let returned = self.tokens.nft_resolve_transfer(previous_owner_id, receiver_id, token_id.clone(), approved_account_ids);
-        // The key may have gone back to the sender: a listing the receiver made meanwhile is now stale.
+        // NEP-171: true = kept by receiver; false = returned to previous_owner.
+        let kept = self.tokens.nft_resolve_transfer(previous_owner_id, receiver_id, token_id.clone(), approved_account_ids);
         self.clear_stale_listing(&token_id);
-        returned
+        if !kept {
+            // Return is a second ownership change; barrier must already be clear (asserted on outbound).
+            bump_owner_epoch(&token_id);
+        }
+        kept
     }
 }
 
@@ -1888,5 +2086,132 @@ mod v24_sale {
         buy(&mut c, "bob.near", "k1", NEAR);
         assert_eq!(c.nft_total_supply(), U128(1));
         assert_eq!(near_sdk::serde_json::to_string(&c.config()).unwrap(), cfg);
+    }
+}
+
+
+/// v2.5 admission barrier + owner epoch + desk storage (migrate-once prefixes).
+#[cfg(test)]
+mod v25_admission {
+    use super::*;
+    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::{testing_env, NearToken};
+
+    const NEAR: u128 = 10u128.pow(24);
+    const LIST: u128 = LIST_STORAGE_DEPOSIT;
+
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn y(v: u128) -> NearToken { NearToken::from_yoctonear(v) }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", y(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
+    fn mint(c: &mut Contract, id: &str, to: &str) {
+        ctx("minter.near", NearToken::from_millinear(100));
+        c.nft_mint(id.into(), acc(to), 2, meta());
+    }
+
+    #[test] fn mint_starts_at_epoch_zero() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        assert_eq!(c.nft_settlement_epoch("k1".into()).0, 0);
+        assert_eq!(c.pending_value_op_count("k1".into()).0, 0);
+        assert!(!c.get_control_state("k1".into()).listed);
+    }
+
+    #[test] fn transfer_bumps_epoch() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        assert_eq!(c.nft_settlement_epoch("k1".into()).0, 1);
+        assert_eq!(c.get_control_state("k1".into()).owner_epoch.0, 1);
+    }
+
+    #[test] fn finish_clears_barrier_and_transfer_succeeds() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("minter.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "op1".into(), "ah".into());
+        assert_eq!(c.pending_value_op_count("k1".into()).0, 1);
+        ctx("minter.near", y(0));
+        c.finish_value_op("k1".into(), "op1".into(), true);
+        assert_eq!(c.pending_value_op_count("k1".into()).0, 0);
+        ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+        assert_eq!(c.nft_settlement_epoch("k1".into()).0, 1);
+    }
+
+    #[test] #[should_panic(expected = "value-op pending: finish or reconcile before transfer or sale")]
+    fn transfer_refused_while_value_op_pending() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("minter.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "op1".into(), "ah".into());
+        ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+    }
+
+    #[test] #[should_panic(expected = "value-op pending: finish before listing")]
+    fn list_refused_while_value_op_pending() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("minter.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "op1".into(), "ah".into());
+        ctx("alice.near", y(LIST)); c.nft_list("k1".into(), U128(NEAR));
+    }
+
+    #[test] #[should_panic(expected = "listed: unlist before value-ops")]
+    fn begin_refused_while_listed() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(LIST)); c.nft_list("k1".into(), U128(NEAR));
+        ctx("minter.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "op1".into(), "ah".into());
+    }
+
+    #[test] #[should_panic(expected = "epoch mismatch")]
+    fn begin_refuses_stale_epoch() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        // epoch is now 1
+        ctx("minter.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "op1".into(), "ah".into());
+    }
+
+    #[test] #[should_panic(expected = "only minter")]
+    fn begin_is_minter_only() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "op1".into(), "ah".into());
+    }
+
+    #[test] fn configure_service_stores_desk_and_economics_view() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1));
+        c.configure_service("k1".into(), "mh".into(), U128(NEAR / 100), "v1".into(), true);
+        let s = c.get_service("k1".into()).unwrap();
+        assert_eq!(s.version, "v1");
+        assert_eq!(s.manifest_hash, "mh");
+        assert_eq!(s.price_yocto.0, NEAR / 100);
+        assert!(s.enabled);
+        let e = c.get_desk_economics("k1".into());
+        assert_eq!(e.revenue_available.0, 0);
+        assert_eq!(e.service.unwrap().version, "v1");
+        // request / refund maps exist and read empty
+        assert!(c.get_signal_request("none".into()).is_none());
+        assert_eq!(c.get_refund_available(acc("reader.near")).0, 0);
+    }
+
+    #[test] #[should_panic(expected = "value-op pending: finish before configure")]
+    fn configure_refused_while_value_op_pending() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("minter.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "op1".into(), "ah".into());
+        ctx("alice.near", y(1));
+        c.configure_service("k1".into(), "mh".into(), U128(NEAR / 100), "v1".into(), true);
+    }
+
+    #[test] fn sale_bumps_epoch_when_no_pending_ops() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(LIST)); c.nft_list("k1".into(), U128(NEAR));
+        ctx("bob.near", y(NEAR)); c.nft_buy("k1".into());
+        assert_eq!(c.nft_settlement_epoch("k1".into()).0, 1);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
     }
 }
