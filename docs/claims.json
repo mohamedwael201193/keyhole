@@ -7288,86 +7288,86 @@
   },
   {
    "id": "tx-8r5RMGJo",
-   "claim": "Mainnet transaction 8r5RMGJo… linked from README.md (expected revert)",
+   "claim": "Mainnet transaction 8r5RMGJo… recorded in the historical proof index (expected refusal)",
    "where": "judge/evidence-index.json:343",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x",
    "check": {
     "type": "tx",
     "hash": "8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x",
-    "expect": "exists"
+    "expect": "failure"
    },
-   "expected": "transaction found on mainnet",
+   "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
    "verify": "node judge/verify-claims.mjs --only tx-8r5RMGJo"
   },
   {
    "id": "tx-3PvLd4W1",
-   "claim": "Mainnet transaction 3PvLd4W1… linked from README.md (expected revert)",
+   "claim": "Mainnet transaction 3PvLd4W1… recorded in the historical proof index (expected refusal)",
    "where": "judge/evidence-index.json:356",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/3PvLd4W1yyjBkt2sfxZVkznuV4yZSndTRS5Cd8aYsmG2",
    "check": {
     "type": "tx",
     "hash": "3PvLd4W1yyjBkt2sfxZVkznuV4yZSndTRS5Cd8aYsmG2",
-    "expect": "exists"
+    "expect": "failure"
    },
-   "expected": "transaction found on mainnet",
+   "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
    "verify": "node judge/verify-claims.mjs --only tx-3PvLd4W1"
   },
   {
    "id": "tx-oGGRn6jW",
-   "claim": "Mainnet transaction oGGRn6jW… linked from README.md (expected revert)",
+   "claim": "Mainnet transaction oGGRn6jW… recorded in the historical proof index (expected refusal)",
    "where": "judge/evidence-index.json:369",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF",
    "check": {
     "type": "tx",
     "hash": "oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF",
-    "expect": "exists"
+    "expect": "failure"
    },
-   "expected": "transaction found on mainnet",
+   "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
    "verify": "node judge/verify-claims.mjs --only tx-oGGRn6jW"
   },
   {
    "id": "tx-4Wz1EUh1",
-   "claim": "Mainnet transaction 4Wz1EUh1… linked from README.md (expected revert)",
+   "claim": "Mainnet transaction 4Wz1EUh1… recorded in the historical proof index (expected refusal)",
    "where": "judge/evidence-index.json:382",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk",
    "check": {
     "type": "tx",
     "hash": "4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk",
-    "expect": "exists"
+    "expect": "failure"
    },
-   "expected": "transaction found on mainnet",
+   "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
    "verify": "node judge/verify-claims.mjs --only tx-4Wz1EUh1"
   },
   {
    "id": "tx-AvQNnkVt",
-   "claim": "Mainnet transaction AvQNnkVt… linked from README.md (expected revert)",
+   "claim": "Mainnet transaction AvQNnkVt… recorded in the historical proof index (expected refusal)",
    "where": "judge/evidence-index.json:395",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ",
    "check": {
     "type": "tx",
     "hash": "AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ",
-    "expect": "exists"
+    "expect": "failure"
    },
-   "expected": "transaction found on mainnet",
+   "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
    "verify": "node judge/verify-claims.mjs --only tx-AvQNnkVt"
   },
   {
    "id": "tx-72P1YcuV",
-   "claim": "Mainnet transaction 72P1YcuV… linked from README.md (expected revert)",
+   "claim": "Mainnet transaction 72P1YcuV… recorded in the historical proof index (expected refusal)",
    "where": "judge/evidence-index.json:408",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8",
    "check": {
     "type": "tx",
     "hash": "72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8",
-    "expect": "exists"
+    "expect": "failure"
    },
-   "expected": "transaction found on mainnet",
+   "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
    "verify": "node judge/verify-claims.mjs --only tx-72P1YcuV"
   },
   {

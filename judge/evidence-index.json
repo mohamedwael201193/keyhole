@@ -289,7 +289,7 @@
     },
     {
       "id": "tx-krSpH895",
-      "claim": "Mainnet transaction krSpH895\u2026 linked from README.md (succeeded)",
+      "claim": "Mainnet transaction krSpH895… linked from README.md (succeeded)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/krSpH895juhCnwP91CbXkePWEQvnu39fsnfJHGvmsee",
       "check": {
@@ -302,7 +302,7 @@
     },
     {
       "id": "tx-A6E9JMRn",
-      "claim": "Mainnet transaction A6E9JMRn\u2026 linked from README.md (succeeded)",
+      "claim": "Mainnet transaction A6E9JMRn… linked from README.md (succeeded)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/A6E9JMRn4di5nYVgRRj4QsmWcNouuCQkDLEN2XLM6Hwn",
       "check": {
@@ -315,7 +315,7 @@
     },
     {
       "id": "tx-HZ3Srg1K",
-      "claim": "Mainnet transaction HZ3Srg1K\u2026 linked from README.md (succeeded)",
+      "claim": "Mainnet transaction HZ3Srg1K… linked from README.md (succeeded)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/HZ3Srg1K2S2srBkBFTF6gGnTMdXYRdAjcgjooTwhv8eE",
       "check": {
@@ -328,7 +328,7 @@
     },
     {
       "id": "tx-9pvby5e2",
-      "claim": "Mainnet transaction 9pvby5e2\u2026 linked from README.md (succeeded)",
+      "claim": "Mainnet transaction 9pvby5e2… linked from README.md (succeeded)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/9pvby5e2qFkHND3roKaaZvXtkD7wPu5rQjrqSBPSuExc",
       "check": {
@@ -341,85 +341,85 @@
     },
     {
       "id": "tx-8r5RMGJo",
-      "claim": "Mainnet transaction 8r5RMGJo\u2026 linked from README.md (expected revert)",
+      "claim": "Mainnet transaction 8r5RMGJo… recorded in the historical proof index (expected refusal)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x",
       "check": {
         "type": "tx",
         "hash": "8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x",
-        "expect": "exists"
+        "expect": "failure"
       },
-      "expected": "transaction found on mainnet",
+      "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
       "verify": "node judge/verify-claims.mjs --only tx-8r5RMGJo"
     },
     {
       "id": "tx-3PvLd4W1",
-      "claim": "Mainnet transaction 3PvLd4W1\u2026 linked from README.md (expected revert)",
+      "claim": "Mainnet transaction 3PvLd4W1… recorded in the historical proof index (expected refusal)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/3PvLd4W1yyjBkt2sfxZVkznuV4yZSndTRS5Cd8aYsmG2",
       "check": {
         "type": "tx",
         "hash": "3PvLd4W1yyjBkt2sfxZVkznuV4yZSndTRS5Cd8aYsmG2",
-        "expect": "exists"
+        "expect": "failure"
       },
-      "expected": "transaction found on mainnet",
+      "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
       "verify": "node judge/verify-claims.mjs --only tx-3PvLd4W1"
     },
     {
       "id": "tx-oGGRn6jW",
-      "claim": "Mainnet transaction oGGRn6jW\u2026 linked from README.md (expected revert)",
+      "claim": "Mainnet transaction oGGRn6jW… recorded in the historical proof index (expected refusal)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF",
       "check": {
         "type": "tx",
         "hash": "oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF",
-        "expect": "exists"
+        "expect": "failure"
       },
-      "expected": "transaction found on mainnet",
+      "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
       "verify": "node judge/verify-claims.mjs --only tx-oGGRn6jW"
     },
     {
       "id": "tx-4Wz1EUh1",
-      "claim": "Mainnet transaction 4Wz1EUh1\u2026 linked from README.md (expected revert)",
+      "claim": "Mainnet transaction 4Wz1EUh1… recorded in the historical proof index (expected refusal)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk",
       "check": {
         "type": "tx",
         "hash": "4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk",
-        "expect": "exists"
+        "expect": "failure"
       },
-      "expected": "transaction found on mainnet",
+      "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
       "verify": "node judge/verify-claims.mjs --only tx-4Wz1EUh1"
     },
     {
       "id": "tx-AvQNnkVt",
-      "claim": "Mainnet transaction AvQNnkVt\u2026 linked from README.md (expected revert)",
+      "claim": "Mainnet transaction AvQNnkVt… recorded in the historical proof index (expected refusal)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ",
       "check": {
         "type": "tx",
         "hash": "AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ",
-        "expect": "exists"
+        "expect": "failure"
       },
-      "expected": "transaction found on mainnet",
+      "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
       "verify": "node judge/verify-claims.mjs --only tx-AvQNnkVt"
     },
     {
       "id": "tx-72P1YcuV",
-      "claim": "Mainnet transaction 72P1YcuV\u2026 linked from README.md (expected revert)",
+      "claim": "Mainnet transaction 72P1YcuV… recorded in the historical proof index (expected refusal)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8",
       "check": {
         "type": "tx",
         "hash": "72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8",
-        "expect": "exists"
+        "expect": "failure"
       },
-      "expected": "transaction found on mainnet",
+      "expected": "transaction found on mainnet with a failed receipt (expected refusal)",
       "verify": "node judge/verify-claims.mjs --only tx-72P1YcuV"
     },
     {
       "id": "tx-BLEWXFX8",
-      "claim": "Mainnet transaction BLEWXFX8\u2026 linked from README.md (succeeded)",
+      "claim": "Mainnet transaction BLEWXFX8… linked from README.md (succeeded)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/BLEWXFX8qdX8iAkytAT8pjYpY382PjzGP38S3vUMZPQx",
       "check": {
@@ -432,7 +432,7 @@
     },
     {
       "id": "tx-ARt9BRAd",
-      "claim": "Mainnet transaction ARt9BRAd\u2026 linked from README.md (succeeded)",
+      "claim": "Mainnet transaction ARt9BRAd… linked from README.md (succeeded)",
       "evidence_type": "mainnet tx",
       "evidence": "https://nearblocks.io/txns/ARt9BRAdZDF3nipDD5swjTxL68Vt8uPEG9hQ4KvK8V7F",
       "check": {

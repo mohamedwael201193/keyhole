@@ -19,7 +19,7 @@ PASS recorded refusal already_holder: a516a457-0be8-4805-acb1-4f3a9ad30ad3, buil
 PASS recorded refusal rate_limited: d892ac43-b786-4d5b-909a-764b6c92f6fd, build f13efe92, exact output hash
 PASS recorded refusal rate_limited: 1a88f79f-49dd-45fb-bcae-96b746f38423, build f13efe92, exact output hash
 PASS recorded refusal over_cap_per_tx: 458541cb-ae80-4cae-9f3f-711e413e8b33, build 8136a3fd, exact output hash
-PASS fresh public signed swap log: 32 events, 10 swaps, minter matches mainnet, output bound to b06dca16-7081-4a44-8c78-d1186314dd1c
+PASS fresh public signed swap log: 32 events, 10 swaps, minter matches mainnet, output bound to 1e426121-ec64-42a5-b3cb-aa18d2486fe0
 PASS fresh gateway refusal: HTTP 400 bad_op (not an enclave attack)
 PASS fresh gateway refusal: HTTP 413 oversized body (not an enclave attack)
 PASS live proof page /verify: HTTP 200
@@ -532,12 +532,12 @@ PASS tx-krSpH895  ok, signer 015a025906a59f9f40ca17daf2a3c61c5e63a37c081c7523087
 PASS tx-A6E9JMRn  ok, signer keyhole-devmo.near  [judge/evidence-index.json:304]
 PASS tx-HZ3Srg1K  ok, signer keyhole-devmo.near  [judge/evidence-index.json:317]
 PASS tx-9pvby5e2  ok, signer keyhole-devmo.near  [judge/evidence-index.json:330]
-PASS tx-8r5RMGJo  found, signer keyhole-devmo.near  [judge/evidence-index.json:343]
-PASS tx-3PvLd4W1  found, signer keyhole-devmo.near  [judge/evidence-index.json:356]
-PASS tx-oGGRn6jW  found, signer keyhole-devmo.near  [judge/evidence-index.json:369]
-PASS tx-4Wz1EUh1  found, signer keyhole-devmo.near  [judge/evidence-index.json:382]
-PASS tx-AvQNnkVt  found, signer keyhole-devmo.near  [judge/evidence-index.json:395]
-PASS tx-72P1YcuV  found, signer keyhole-devmo.near  [judge/evidence-index.json:408]
+PASS tx-8r5RMGJo  expected refusal: a receipt failed  [judge/evidence-index.json:343]
+PASS tx-3PvLd4W1  expected refusal: a receipt failed  [judge/evidence-index.json:356]
+PASS tx-oGGRn6jW  expected refusal: a receipt failed  [judge/evidence-index.json:369]
+PASS tx-4Wz1EUh1  expected refusal: a receipt failed  [judge/evidence-index.json:382]
+PASS tx-AvQNnkVt  expected refusal: a receipt failed  [judge/evidence-index.json:395]
+PASS tx-72P1YcuV  expected refusal: a receipt failed  [judge/evidence-index.json:408]
 PASS tx-BLEWXFX8  ok, signer keyhole-devmo.near  [judge/evidence-index.json:421]
 PASS tx-ARt9BRAd  ok, signer keyhole-devmo.near  [judge/evidence-index.json:434]
 PASS acct-015a025906a5  funded account  [judge/evidence-index.json:447]
@@ -569,4 +569,4 @@ PASS att-d5077866-build  keyhole-devmo.near/keyhole cc8d2fa8e2e4  [judge/evidenc
 PASS att-2a1aed5b-build  keyhole-devmo.near/keyhole cc8d2fa8e2e4  [judge/evidence-index.json:895]
 
 541 claims: 541 PASS, 0 FAIL, 0 ERROR, 0 SKIP
-PASS README quick commands (60.6s)
+PASS README quick commands (61.6s)
