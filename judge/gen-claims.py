@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Regenerates docs/claims.json from README.md, TRACK_COVERAGE.md, SECURITY.md and the site source.
 # usage: python3 judge/gen-claims.py .
-import re, json, os, sys
+import re, json, os, sys, inspect
 R = sys.argv[1] if len(sys.argv) > 1 else "."; os.chdir(R)
 DOCS = ["README.md", "TRACK_COVERAGE.md", "SECURITY.md"]
 C = []; seen = set()
@@ -9,14 +9,18 @@ SITE = "https://keyhole-seven.vercel.app"
 def add(id, claim, where, etype, evidence, check, expected, verify=None):
     if id in seen: return
     seen.add(id)
-    C.append(dict(id=id, claim=claim, where=where or ("Evidence: " + evidence), evidence_type=etype, evidence=evidence,
+    # A retained source claim with no current doc mention originates HERE, not at a fake README line or URL.
+    caller = inspect.currentframe().f_back
+    if caller.f_code.co_name == "<lambda>": caller = caller.f_back
+    origin = f"judge/gen-claims.py:{caller.f_lineno}"
+    C.append(dict(id=id, claim=claim, where=where or origin, evidence_type=etype, evidence=evidence,
                   check=check, expected=expected,
                   verify=verify or f"node judge/verify-claims.mjs --only {id}"))
 def where(doc, needle):
     for i, l in enumerate(open(doc, encoding="utf8"), 1):
         if needle in l: return f"{doc}:{i}"
     # Docs are reorganized without changing the assertion's concrete check.
-    # Do not invent README line numbers: add() records the actual evidence target instead.
+    # Do not invent README line numbers: add() records the actual generator callsite instead.
     return None
 ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"

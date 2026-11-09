@@ -8,8 +8,12 @@ license = "MIT"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# Sandbox fault injection ONLY; never a release/deploy artifact.
+callback-failure-fixture = []
+
 [dependencies]
-near-sdk = "~5.17"
+near-sdk = { version = "~5.17", features = ["unstable"] }
 near-contract-standards = "~5.17"
 
 [dev-dependencies]

@@ -4,3 +4,6 @@ node_modules/
 *.secret*
 web/.scratch/
 web/AGENTS.md
+
+# Generated only with the explicit sandbox fault-injection feature.
+contracts/keys-sandbox/tests/fixtures/callback_failure.wasm
