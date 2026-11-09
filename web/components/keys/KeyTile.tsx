@@ -1,17 +1,20 @@
 "use client";
 import Link from "next/link";
 import { KeyArt } from "@/components/Art";
+import { Guilloche, Hallmark } from "@/components/Engraving";
+import { FoilCard } from "@/components/FoilCard";
 import { useI18n } from "@/lib/i18n";
 import { keyState, shortAccount, shortKeyId, type Token } from "@/lib/near";
 import { nearText } from "@/lib/sale";
-import { CAPS, keyIdentity } from "@/lib/traits";
+import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
 import { formatTradePrice } from "@/lib/price";
-import { StatusChip, TierChip } from "@/components/v7";
+import { StatusChip } from "@/components/v7";
 import type { SaleRead } from "./keyData";
 
 /**
- * One key in the gallery grid. The whole art area is a button that selects the key for the details panel; the name is a
- * link to the key's history and proof page. Tier, cap and the holder or sale state come from the chain reads the page passes in.
+ * One key in the gallery grid. Restores the animated foil face (FoilCard + guilloche + hallmark)
+ * from the pre-v7 KeyCard, inside the v7 tile layout. The whole foil is a button that selects the
+ * key for the details panel; the name is a link to the key's history and proof page.
  */
 export function KeyTile({ token, tier, index, viewer, sale, selected, onSelect }: {
   token: Token;
@@ -33,13 +36,19 @@ export function KeyTile({ token, tier, index, viewer, sale, selected, onSelect }
   return (
     <article className={`kg-tile${selected ? " is-selected" : ""}`} data-state={state} data-tier={id.finish.toLowerCase()} data-testid="key-nft">
       <button type="button" className="kg-tile-pick" aria-pressed={selected} aria-label={`Show details for ${title}`} onClick={onSelect}>
-        <span className="kg-tile-top">
-          {tier === null ? <TierChip tier="Tier not read" /> : <TierChip tier={id.finish} />}
-          <span className="kg-tile-no" data-testid="mint-no">No. {index} · {t("land.oneOfOne")}</span>
-        </span>
-        <span className="kg-tile-art">
-          <KeyArt n={id.art} alt="" width={430} height={1080} />
-        </span>
+        <FoilCard finish={id.finish} className="kg-foil">
+          <div className="top">
+            {tier === null
+              ? <span className="tier" data-testid="tier-unread">Tier not read</span>
+              : <span className="tier">{t(`finish.${id.finish}`)}</span>}
+            <span className="oo" data-testid="mint-no">No. {index} · {t("land.oneOfOne")}</span>
+          </div>
+          <div className="art">
+            <Guilloche seed={id.seedHex} />
+            <KeyArt n={id.art} alt="" width={430} height={1080} />
+          </div>
+          <Hallmark bits={id.bits} serial={serialOf(id.seedHex)} />
+        </FoilCard>
       </button>
       <div className="kg-tile-foot">
         <Link href={`/key?id=${encodeURIComponent(token.token_id)}`} className="kg-tile-name" data-testid="key-link" title={token.token_id}>{title}</Link>

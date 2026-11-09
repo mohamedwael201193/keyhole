@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { Button, badgeFor } from "@/components/ui";
 import { KeyArt } from "@/components/Art";
+import { Guilloche, Hallmark } from "@/components/Engraving";
+import { FoilCard } from "@/components/FoilCard";
 import { TokenMark } from "@/components/TokenMark";
 import { ErrorBox } from "@/components/Result";
 import { TxResult } from "@/components/TxResult";
@@ -252,9 +254,18 @@ function KeyCard({ token, identity, tierKnown, caps, count, capped }: {
         <span className="v7-card-meta">1 of 1</span>
       </div>
       <figure className="ov-art">
-        <KeyArt n={identity.art} alt={`Artwork of key ${shortKeyId(token.token_id)}`} width={430} height={1080} priority />
+        <FoilCard finish={identity.finish} className="ov-foil">
+          <div className="top">
+            <span className="tier">{tierKnown ? identity.finish : "—"}</span>
+            <span className="oo">1 of 1</span>
+          </div>
+          <div className="art">
+            <Guilloche seed={identity.seedHex} />
+            <KeyArt n={identity.art} alt={`Artwork of key ${shortKeyId(token.token_id)}`} width={430} height={1080} priority />
+          </div>
+          <Hallmark bits={identity.bits} serial={serialOf(identity.seedHex)} />
+        </FoilCard>
       </figure>
-      <p className="ov-serial" aria-label={`Serial ${serialOf(identity.seedHex)}`}><span className="v7-mono">{`#${serialOf(identity.seedHex).toUpperCase()}`}</span></p>
       <h2 id="ov-key-h" className="ov-key-name">{`KEYHOLE Key #${id}`}</h2>
       <p className="ov-sentence">Your NFT is the account: whoever holds the key controls the vault, and selling the key hands over the account. The keys to the money never leave the enclave.</p>
       <p className="ov-meta"><span data-testid="stat-keys">{keyCountText(count, capped)} {count === 1 && !capped ? "key" : "keys"} held</span>{count > 1 ? ". Showing the first." : ""}</p>
@@ -274,7 +285,15 @@ function MintCard() {
         <span className="v7-card-meta">Sample</span>
       </div>
       <figure className="ov-art">
-        <KeyArt n={SAMPLE_BRONZE_ART} alt="Sample Bronze key artwork" width={430} height={1080} />
+        <FoilCard finish="Bronze" className="ov-foil">
+          <div className="top">
+            <span className="tier">Bronze</span>
+            <span className="oo">Sample</span>
+          </div>
+          <div className="art">
+            <KeyArt n={SAMPLE_BRONZE_ART} alt="Sample Bronze key artwork" width={430} height={1080} />
+          </div>
+        </FoilCard>
       </figure>
       <h2 id="ov-mint-h" className="ov-key-name">Mint your key</h2>
       <p className="ov-sentence">Your key is the account. Free. One signature. The enclave pays storage.</p>
@@ -664,7 +683,15 @@ function SignedOut({ signIn }: { signIn: SignInOptionsProps }) {
             <span className="v7-card-meta">Sample</span>
           </div>
           <figure className="ov-art">
-            <KeyArt n={SAMPLE_BRONZE_ART} alt="Sample Bronze key artwork" width={430} height={1080} />
+            <FoilCard finish="Bronze" className="ov-foil">
+              <div className="top">
+                <span className="tier">Bronze</span>
+                <span className="oo">Sample</span>
+              </div>
+              <div className="art">
+                <KeyArt n={SAMPLE_BRONZE_ART} alt="Sample Bronze key artwork" width={430} height={1080} />
+              </div>
+            </FoilCard>
           </figure>
           <h2 id="ov-sample-h" className="ov-key-name">KEYHOLE Key</h2>
           <p className="ov-sentence">Minting today issues a Bronze key: $1 a trade, $5 a day. Silver and Gold are previews for now.</p>

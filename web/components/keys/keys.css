@@ -55,9 +55,16 @@
 .kg-tile-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
 .kg-tile-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 14px 14px 0; }
 .kg-tile-no { font: 500 12px/1 var(--font-mono); color: var(--muted); white-space: nowrap; }
-/* Flex, not grid: a percentage height on a grid item resolved to the image's natural height and spilled over the title. */
-.kg-tile-art { display: flex; align-items: center; justify-content: center; height: 236px; padding: 8px 12px 0; min-width: 0; overflow: hidden; }
-.kg-tile-art img { display: block; flex: 0 1 auto; height: 100%; width: auto; max-width: 100%; min-height: 0; object-fit: contain; }
+/* Animated foil key face (restored from pre-v7 KeyCard / FoilCard). */
+.kg-tile-pick { background: transparent; padding: 10px 10px 0; }
+.kg-tile .kg-foil.foil-card,
+.kg-tile .foil-card.kg-foil {
+  width: 100%; aspect-ratio: 1 / 1.55; padding: 14px 14px 12px; border-radius: var(--radius-lg);
+  box-shadow: 0 14px 28px -20px rgba(26, 42, 44, .4);
+}
+.kg-tile .foil-card .art { min-height: 0; }
+.kg-tile .foil-card .art img { max-height: 100%; }
+.kg-tile .foil-card h3 { display: none; }
 .kg-tile-foot { display: grid; gap: 6px; min-width: 0; padding: 10px 14px 16px; }
 .kg-tile-name { font: 600 22px/1.15 var(--font-display); color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
 .kg-tile-name:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
@@ -73,7 +80,7 @@
   background: linear-gradient(100deg, var(--sunken) 30%, var(--raised) 50%, var(--sunken) 70%) 0 0 / 300% 100%;
   animation: v7-shimmer 1.6s linear infinite;
 }
-.kg-skel-art { height: 236px; border-radius: var(--radius-md); }
+.kg-skel-art { height: 280px; border-radius: var(--radius-md); }
 .kg-skel-line { height: 14px; }
 .kg-skel-line.short { width: 60%; }
 
@@ -92,11 +99,15 @@
 /* ---------- Key details panel (KEY DETAILS) ---------- */
 .kd-panel { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: var(--space-6); align-items: start; padding: var(--space-6); }
 .kd-art {
-  position: relative; display: grid; place-items: center; min-height: 340px; min-width: 0; overflow: hidden;
-  border-radius: var(--radius-md); background: linear-gradient(160deg, var(--surface-warm) 0%, var(--sunken) 100%);
+  position: relative; display: grid; place-items: center; min-height: 0; min-width: 0; overflow: visible;
+  border-radius: var(--radius-md); background: transparent; padding: 0;
 }
-.kd-art img { display: block; width: auto; height: min(420px, 100%); max-width: 88%; object-fit: contain; }
-.kd-art .v7-icon-btn { position: absolute; top: 12px; right: 12px; background: var(--raised); }
+.kd-art .kd-foil.foil-card,
+.kd-art .foil-card.kd-foil {
+  width: min(100%, 300px); aspect-ratio: 1 / 1.65; margin-inline: auto;
+}
+.kd-art .v7-icon-btn { position: absolute; top: 12px; right: 12px; background: var(--raised); z-index: 8; }
+.kd-dialog-art .kd-foil.foil-card { width: min(100%, 420px); aspect-ratio: 1 / 1.65; margin-inline: auto; }
 .kd-body { display: grid; gap: 12px; min-width: 0; align-content: start; }
 .kd-body .v7-eyebrow { margin: 0; }
 .kd-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; min-width: 0; }
@@ -184,10 +195,14 @@
 
 .km-preview, .km-keycard { padding-bottom: var(--space-5); }
 .km-stage {
-  display: grid; place-items: center; height: 340px; min-width: 0; border-radius: var(--radius-md);
-  background: linear-gradient(160deg, var(--surface-warm) 0%, var(--sunken) 100%); overflow: hidden;
+  display: grid; place-items: center; min-height: 0; min-width: 0; border-radius: var(--radius-md);
+  background: transparent; overflow: visible; padding: 4px 0;
 }
-.km-art { display: block; height: 100%; width: auto; max-width: 92%; object-fit: contain; animation: km-fade var(--dur-base) var(--ease-out) both; }
+.km-stage .km-foil.foil-card,
+.km-stage .foil-card.km-foil {
+  width: min(100%, 280px); aspect-ratio: 1 / 1.65; animation: km-fade var(--dur-base) var(--ease-out) both;
+}
+.km-art { display: block; height: 100%; width: auto; max-width: 92%; object-fit: contain; }
 .km-caption { display: grid; justify-items: center; gap: 6px; padding-top: var(--space-4); text-align: center; min-width: 0; }
 .km-caption-name { margin: 0; font: 600 26px/1.2 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
 .km-caption-cap { margin: 0; font: 500 14px/1.4 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -279,6 +294,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .kg-tile, .kg-tile:hover { transition: none; transform: none; }
+  .kg-tile .foil-card .foil, .kd-foil .foil, .km-foil .foil { animation: none !important; --p: 50%; background-position: 50% 0; }
+  .kg-tile .foil-card .bw, .kd-foil .bw, .km-foil .bw { display: none !important; }
   .kg-skel-art, .kg-skel-line { animation: none; }
   .km-art { animation: none; }
   .km-arrow { transition: none; }
