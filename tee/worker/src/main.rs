@@ -208,6 +208,7 @@ mod host {
         check_freshness(req.ts_ms, now_ms)?;
         let account = g.account.clone();
         if !owns(&g.token_id, &account)? { return Err(err("not_owner", "this account no longer holds the key the session was made for")); }
+        guarded::session_epoch(&Store::read(&mut Host,&session_key(&id,"guard_epoch"))?,guard_control(&g.token_id)?.epoch)?;
         let tier = holder_tier(&account)?;
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         admit(&mut Host, &account, &lim, &nonce, now_ms)?;
@@ -220,12 +221,15 @@ mod host {
     fn op_session(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "session", true)?;
         let g = grant_from_request(&c.req, &c.token_id(), c.now_ms)?;
+        let control=guard_control(&c.token_id())?;
+        if control.transfer_pending{return Err(err("transfer_pending","wait for title settlement before creating a session"));}
         let mut t = [0u8; 32];
         getrandom::fill(&mut t).map_err(|_| err("rng", "no randomness"))?;
         let id = session_id(&t);
-        Host.set(&session_key(&id, "grant"), serde_json::to_string(&g).unwrap_or_default().as_bytes());
+        guarded::put_once(&mut Host,&session_key(&id,"grant"),&serde_json::to_vec(&g).map_err(|_|err("storage","grant encoding"))?)?;
+        guarded::put_once(&mut Host,&session_key(&id,"guard_epoch"),&control.epoch.to_be_bytes())?;
         Ok(json!({"ok": true, "op": "session", "account": c.account, "token_id": g.token_id, "session_token": b64(&t),
-            "exp_ms": g.exp_ms, "max_usd_micro": g.max_usd_micro, "scope": g.scope}))
+            "exp_ms": g.exp_ms, "max_usd_micro": g.max_usd_micro, "scope": g.scope, "owner_epoch":control.epoch.to_string()}))
     }
 
     /// Minter key is generated inside the TEE on first use and kept in encrypted storage.
@@ -382,10 +386,10 @@ mod host {
         });
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = c.token.as_ref().and_then(|t| active_lock(&Host.get(&tkey(t, "lock")), &c.account, c.now_ms));
-        let epoch = c.token.as_ref().map(|t| epoch_of(t)).unwrap_or(0);
+        let epoch=match c.token.as_ref(){Some(t)=>guard_control(t)?.epoch,None=>0};
         Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
             "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent,
-            "settlement_epoch": epoch}))
+            "settlement_epoch": epoch,"owner_epoch":epoch.to_string()}))
     }
 
     fn op_mint(input: &Value) -> Result<Value, Error> {
@@ -978,7 +982,7 @@ mod host {
             "level_up" => op_level_up(&input),
             "session" => op_session(&input),
             "session_revoke" => op_session_revoke(&input),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, record, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, level_up, session, session_revoke")),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, transfer, loan_certificate, reconcile_value_op, history, provenance, record, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, level_up, session, session_revoke")),
         };
         let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.

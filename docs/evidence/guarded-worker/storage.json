@@ -1,0 +1,12 @@
+{
+  "capture_block": 223813218,
+  "candidate_bytes": 452589,
+  "candidate_sha256": "2b4ddd3d57b7181feb5823e9c7514cf1b43d15444db41fc99c481f1e56cffc8d",
+  "pre_optimization_candidate_bytes": 458449,
+  "saved_bytes": 5860,
+  "saved_code_storage_yocto": "58600000000000000000000",
+  "projected_post_deploy_storage_bytes": 458681,
+  "capture_balance_yocto": "3684822200019972662621661",
+  "code_storage_deficit_yocto_excluding_execution_and_migration": "901987799980027337378339",
+  "qualification": "Captured state only; execution gas and migration state require additional balance. Not a mainnet quote or approval."
+}

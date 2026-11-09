@@ -71,3 +71,7 @@ cargo test        # unit tests: NEP-413, replay, caps, rate limits, tx encoding
 ```
 
 Config (OutLayer project env/secrets): `KEYS_CONTRACT` (default `keyhole-devmo.near`), `NEP413_RECIPIENT` (default `keyhole`), `ONECLICK_JWT` (secret).
+
+## Guarded candidate (NOT published)
+
+See [guarded worker source status](../../README.md#guarded-worker-candidate--source-only-not-published). Value requests require signed `params.owner_epoch` (decimal string). Sessions are epoch-bound and legacy grants are rejected. `transfer`, `reconcile_value_op`, and public `loan_certificate` are new guarded entrypoints. Loan certificates accept ONLY `{token_id,loan_nonce}` and derive the fixed USDC floor from the current loan; no caller-supplied template, asset or minimum is accepted. Native + real-NEAR cross-layer tests share the production admission/provider driver; custody API and sealed audit observations in those tests remain mocks. No mainnet rollout is implied.

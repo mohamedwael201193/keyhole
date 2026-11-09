@@ -39,6 +39,13 @@ impl Control {
         if self.pending!=0{return Err(err("value_op_pending","reconcile the existing value operation first"));}Ok(())
     }
 }
+/// A previously signed request must not revive after title returns to the same owner.
+pub fn signed_epoch(params:&Value,current:u64)->Result<(),Error>{
+    if u64_field(params,"owner_epoch")?!=current{return Err(err("epoch_changed","sign again for the current owner epoch"));}Ok(())
+}
+pub fn session_epoch(raw:&[u8],current:u64)->Result<(),Error>{
+    if raw!=current.to_be_bytes(){return Err(err("session_epoch","title changed or legacy session; unlock again"));}Ok(())
+}
 /// Registry checks reject legacy co-registrations. They do NOT prove currently executed bytes.
 pub fn registry(project:&Value,versions:&Value,count:u64,expected_hash:&str)->Result<(),Error>{
     let old:Value=serde_json::from_str(include_str!("../../../protocol/legacy-worker-versions.json")).map_err(|_|err("legacy_versions","invalid compiled inventory"))?;
@@ -117,6 +124,32 @@ pub fn reconcile_status(v:&Value,id:&str)->Result<Option<Terminal>,Error>{
     Ok(terminal.map(|(success,refund_charge)|Terminal{success,refund_charge,provider_id:id.into()}))
 }
 
+
+/// The same receipt-finality protocol is used by the WASI host and cross-layer sandbox.
+pub trait AdmissionHost:Store {
+    fn value_op(&mut self,j:&Journal)->Result<Value,Error>;
+    fn control(&mut self,token:&str)->Result<Control,Error>;
+    fn begin(&mut self,j:&Journal)->Result<(),Error>;
+    fn complete(&mut self,j:&Journal,t:&Terminal)->Result<(),Error>;
+}
+pub fn confirm_admission<H:AdmissionHost>(host:&mut H,j:&Journal)->Result<(),Error>{
+    j.validate()?;
+    if let Ok(v)=host.value_op(j){if j.validate_permit(&v).is_ok(){return Ok(());}}
+    // A lost send reply is neither rejection nor finality. Require the exact finalized record.
+    let _=host.begin(j);
+    j.validate_permit(&host.value_op(j)?).map_err(|_|err("admission_unknown",format!("admission not confirmed; reconcile operation {}",j.op_id)))
+}
+pub fn settle_admission<H:AdmissionHost>(host:&mut H,j:&Journal,t:&Terminal)->Result<bool,Error>{
+    put_once(host,&format!("{}/terminal",j.key()),&serde_json::to_vec(t).map_err(|_|err("guard_journal","encode terminal"))?)?;
+    let _=host.complete(j,t);
+    let control=host.control(&j.token_id)?;let last=host.value_op(j)?;
+    let done=control.nonce>j.nonce||(last["op_id"]==j.op_id&&last["state"].as_u64()==Some(if t.success{2}else{3}));
+    if !done{return Ok(false);}
+    put_once(host,&format!("{}/finish_ack",j.key()),b"1")?;
+    // Crash after the marker may overcharge, never refund the same reservation twice.
+    if t.refund_charge&&put_once(host,&format!("{}/refund_once",j.key()),b"1")?{if let Some(ch)=&j.charge{ch.release(host);}}
+    Ok(true)
+}
 
 /// Host boundary shared by WASI and native fault-injection tests. The driver is the
 /// production journal/idempotency state machine, not a second mock implementation.

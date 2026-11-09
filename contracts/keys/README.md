@@ -25,7 +25,7 @@ One NFT contract: NEP-171 core, NEP-177 metadata, NEP-178 approvals, NEP-181 enu
 - `set_minter` / `set_royalty`: owner only, 1 yocto (`set_minter` disabled after pledge migration). `set_royalty(treasury, royalty_bps)` sets both the treasury and the rate. `nft_buy` reads them at buy time, so a change applies to open listings too.
 - `migrate()`: v1 -> v2, self-call only, runs once. Turns on the approval maps; no token, owner, tier, metadata or config changes.
 
-Build: `cargo near build non-reproducible-wasm` (rustc 1.86 via `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2). The build is deterministic: CI rebuilds the source and compares it with the v2.5 entry in `release/SHA256SUMS`. The wasm does not depend on the checkout path, but it does depend on the toolchain's sysroot: build with the rustup `minimal` profile (no `rust-src`), as CI does.
+Build: `./build.sh` (off-chain ABI generated; optional on-chain ABI omitted; source/registry paths normalized) (rustc 1.86 via `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2). The build is deterministic: CI rebuilds the source and compares it with the v2.5 entry in `release/SHA256SUMS`. The wasm does not depend on the checkout path, but it does depend on the toolchain's sysroot: build with the rustup `minimal` profile (no `rust-src`), as CI does.
 
 | | sha256 | where |
 |---|---|---|

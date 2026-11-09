@@ -248,3 +248,6 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
  terminal_relay(&e,"registration","k2",p["nonce"].as_str().unwrap(),"0",e.mock.id().as_str(),N*8/100,true,&r).await?.into_result()?;
  assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],true);assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],"0");assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,"0");Ok(())
 }
+
+#[path="support/guarded_layer.rs"]
+mod guarded_layer;

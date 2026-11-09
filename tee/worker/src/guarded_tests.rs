@@ -145,3 +145,12 @@ fn production_driver_routes_each_confidential_mutation_through_identical_journal
         assert_eq!(host.paths,vec![path]);assert_eq!(host.executions,1);
     }
 }
+
+#[test]fn signed_epoch_is_required_and_a_b_a_cannot_resurrect_old_authority(){
+ assert!(signed_epoch(&json!({"owner_epoch":"0"}),0).is_ok());
+ assert!(signed_epoch(&json!({"owner_epoch":"0"}),2).is_err());
+ for bad in [json!({}),json!({"owner_epoch":2}),json!({"owner_epoch":"-1"})]{assert!(signed_epoch(&bad,2).is_err());}
+}
+#[test]fn session_epoch_rejects_legacy_missing_and_returned_title_grants(){
+ assert!(session_epoch(&0u64.to_be_bytes(),0).is_ok());assert!(session_epoch(&0u64.to_be_bytes(),2).is_err());assert!(session_epoch(&[],0).is_err());
+}

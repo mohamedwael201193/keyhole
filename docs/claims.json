@@ -3788,6 +3788,48 @@
    "verify": "node judge/verify-claims.mjs --only test-global_rate_limit"
   },
   {
+   "id": "test-guarded_worker_cross_layer_default_failures_and_new_holder_exit",
+   "claim": "Named test or symbol `guarded_worker_cross_layer_default_failures_and_new_holder_exit` exists in the source",
+   "where": "README.md:914",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "guarded_worker_cross_layer_default_failures_and_new_holder_exit",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`guarded_worker_cross_layer_default_failures_and_new_holder_exit` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-guarded_worker_cross_layer_default_failures_and_new_holder_exit"
+  },
+  {
+   "id": "test-guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a",
+   "claim": "Named test or symbol `guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a` exists in the source",
+   "where": "README.md:914",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a"
+  },
+  {
    "id": "test-holder_cut_applies_now_and_raise_waits_a_day",
    "claim": "Named test or symbol `holder_cut_applies_now_and_raise_waits_a_day` exists in the source",
    "where": "SECURITY.md:36",
@@ -6540,6 +6582,19 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v1.json"
+  },
+  {
+   "id": "path-docs/evidence/guarded-worker/storage.json",
+   "claim": "Linked repo path docs/evidence/guarded-worker/storage.json exists",
+   "where": "README.md:904",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/guarded-worker/storage.json",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/guarded-worker/storage.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/guarded-worker/storage.json"
   },
   {
    "id": "path-contracts/keys",

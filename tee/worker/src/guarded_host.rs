@@ -21,7 +21,7 @@ fn guarded_minter()->Result<(String,String),Error>{
     let m=minter()?;if view(&keys_contract(),"config",json!({}))?["minter"]!=m.0{return Err(err("guard_state","minter mismatch"));}Ok(m)
 }
 fn guard_preflight(c:&Ctx)->Result<Control,Error>{
-    let control=guard_control(&c.token_id())?;control.admit()?;guard_registry()?;
+    let control=guard_control(&c.token_id())?;control.admit()?;guarded::signed_epoch(&c.req.params,control.epoch)?;guard_registry()?;
     if view(&keys_contract(),"get_pledge_config",json!({}))?.is_null(){return Err(err("guard_state","pledge migration required; no legacy compatibility"));}
     if !owns(&c.token_id(),&c.account)?{return Err(err("not_owner","ownership changed"));}Ok(control)
 }
@@ -33,28 +33,23 @@ fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->
     let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,charge};
     j.create(&mut Host)?;guard_admit(&j)?;Ok(j)
 }
+impl guarded::AdmissionHost for Host {
+    fn value_op(&mut self,j:&Journal)->Result<Value,Error>{view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))}
+    fn control(&mut self,token:&str)->Result<Control,Error>{guard_control(token)}
+    fn begin(&mut self,j:&Journal)->Result<(),Error>{
+        let (mid,msk)=guarded_minter()?;let args=j.admission_args().to_string();
+        send(&mid,&msk,&j.contract,&[Action::FunctionCall{method:"begin_value_op",args:args.as_bytes(),gas:35_000_000_000_000,deposit:guarded::ADMISSION_DEPOSIT}]).map(|_|())
+    }
+    fn complete(&mut self,j:&Journal,t:&Terminal)->Result<(),Error>{
+        let (mid,msk)=guarded_minter()?;let args=j.finish_args(t.success).to_string();
+        send(&mid,&msk,&j.contract,&[Action::FunctionCall{method:"finish_value_op",args:args.as_bytes(),gas:35_000_000_000_000,deposit:0}]).map(|_|())
+    }
+}
 fn guard_admit(j:&Journal)->Result<(),Error>{
     if j.contract!=keys_contract(){return Err(err("guard_journal","wrong contract"));}
-    if let Ok(v)=view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id})){if j.validate_permit(&v).is_ok(){return Ok(());}}
-    let (mid,msk)=guarded_minter()?;let args=j.admission_args().to_string();
-    // Error/hash alone is not finality. A fresh exact on-chain record is mandatory before dispatch.
-    let _=send(&mid,&msk,&j.contract,&[Action::FunctionCall{method:"begin_value_op",args:args.as_bytes(),gas:35_000_000_000_000,deposit:guarded::ADMISSION_DEPOSIT}]);
-    j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)
-        .map_err(|_|err("admission_unknown",format!("admission not confirmed; reconcile operation {}",j.op_id)))
+    guarded::confirm_admission(&mut Host,j)
 }
-fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{
-    guarded::put_once(&mut Host,&format!("{}/terminal",j.key()),&serde_json::to_vec(t).map_err(|_|err("guard_journal","encode terminal"))?)?;
-    let (mid,msk)=guarded_minter()?;let args=j.finish_args(t.success).to_string();
-    let _=send(&mid,&msk,&j.contract,&[Action::FunctionCall{method:"finish_value_op",args:args.as_bytes(),gas:35_000_000_000_000,deposit:0}]);
-    let control=guard_control(&j.token_id)?;let last=view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?;
-    // Newer monotonic admission proves the previous one finished. Never finish the new id.
-    let done=control.nonce>j.nonce||(last["op_id"]==j.op_id&&last["state"].as_u64()==Some(if t.success{2}else{3}));
-    if !done{return Ok(false);}
-    guarded::put_once(&mut Host,&format!("{}/finish_ack",j.key()),b"1")?;
-    // A crash between marker and counters can over-charge, never double-refund past a cap.
-    if t.refund_charge&&guarded::put_once(&mut Host,&format!("{}/refund_once",j.key()),b"1")?{if let Some(ch)=&j.charge{ch.release(&mut Host);}}
-    Ok(true)
-}
+fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{guarded::settle_admission(&mut Host,j,t)}
 impl guarded::ProviderHost for Host {
     fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>{
         guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
