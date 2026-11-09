@@ -357,6 +357,22 @@
     "source": "Source"
   },
   "errors": {
+    "admission_unknown": ["Admission outcome is unknown.", "Keep the existing operation ID. Reconcile that admission before sending or opening another operation."],
+    "certificate": ["This collateral certificate is not valid for the current offer.", "Read the exact offer and refresh its same-terms certificate. Do not fund a changed or expired statement."],
+    "collateral_ineligible": ["This account has not passed the custody checks for this offer.", "Do not fund. Verify the wallet, settled prior operations and approved authority audit first."],
+    "cooldown_state": ["The ownership cooldown could not be verified.", "Do not withdraw or reset the record. Wait for storage and final-chain reads to recover, then read status again."],
+    "destination_policy": ["This release allows self-exit only.", "Use a supported chain and your authenticated holder account. Sessions and other destinations cannot withdraw."],
+    "epoch_changed": ["The key changed hands after this request was signed.", "Read its current owner and ownership epoch. Only the current holder may sign a new request."],
+    "guard_journal": ["The saved operation does not match this account or request.", "Keep its original ID and body. Do not create a replacement send; inspect the existing operation first."],
+    "guard_state": ["The guarded account state is unavailable or inconsistent.", "Do not send value. Verify the current contract, canonical wallet and minter configuration first."],
+    "legacy_versions": ["The approved worker registry is not exclusive.", "New value operations are paused until the canonical registry is verified. Do not bypass the version check."],
+    "needs_review": ["The custody outcome is not yet known.", "Keep the original operation ID and reconcile it. Do not resend, refund or assume failure because time passed."],
+    "pledged": ["This key is pledged; its account is locked.", "Read the loan state. Trading and exits stay blocked until the valid loan resolution and confirmed thaw."],
+    "quote_changed": ["The executable quote no longer matches the preview.", "Check the existing operation status, then request a fresh preview before authorizing another quote."],
+    "session_epoch": ["This session belongs to an earlier ownership epoch.", "Sign in again as the current holder to create a new scoped session."],
+    "transfer_pending": ["This key transfer is still provisional.", "Wait for committed acceptance or the contract-supported provisional-title restoration. Private access is unavailable meanwhile."],
+    "unsupported_authority": ["This signing authority is not supported in this release.", "Use a supported holder-authorized operation. Arbitrary detached signing is disabled."],
+    "value_op_pending": ["An admitted value operation is still pending.", "Reconcile its original operation ID before trading, transferring the key or opening a pledge."],
     "account_mismatch": [
       "The signed account doesn't match.",
       "Reconnect the same account and sign again."

@@ -908,3 +908,13 @@ python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
 ```
 
 The committed candidate in `release/v2.5` is the normal build; the fault fixture is generated only for sandbox tests. No mainnet calls or worker publication occur in these commands.
+
+
+#### Guarded failure messages
+
+The web error catalog gives actionable English status for pending/provisional ownership, stale sessions, self-exit-only destinations, changed quotes and unknown custody/admission outcomes. Unknown outcomes direct the holder to reconcile the existing operation ID rather than create another send.
+
+```bash
+(cd web && npm ci && npx vitest run tests/domain.test.ts tests/p2-errors.test.ts)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
