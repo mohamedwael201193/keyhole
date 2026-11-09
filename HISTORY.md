@@ -51,3 +51,8 @@
 - Freeze: `quote` with `execute: true` is refused while listed (`listing_blocks_ex` / H-1). Listing re-checked immediately before custody send. FREEZE_NOTE updated.
 - SECURITY.md §1 and §9 rewritten for epoch + wet-quote freeze. README unchanged (no weakness language).
 - Unit tests: 542 pass (added wet-quote, epoch void, epoch invariant). No mainnet publish.
+
+## 2026-11-09 21:55 Africa/Cairo (UTC+2) — CI fix for settlement-epoch worker PR
+- Clippy: drop unnecessary `as u64` in epoch invariant test (`r.below` is already u64).
+- Web: register `epoch_void` in `WORKER_ERROR_CODES` + en.json error copy so p2-errors stays green.
+- PnL-on-card / Attested Key Desk PnL dropped from the plan (swap-only; no invented metrics). Priority remains epoch + operator trust.

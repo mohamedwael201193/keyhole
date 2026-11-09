@@ -574,8 +574,8 @@ fn settlement_epoch_voids_a_stale_stamp() {
 fn invariant_a_payout_settles_only_on_matching_settlement_epoch() {
     let mut r = Rng(99);
     for _ in 0..3000 {
-        let stamped = r.below(5) as u64;
-        let current = if r.below(3) == 0 { stamped } else { r.below(5) as u64 };
+        let stamped = r.below(5);
+        let current = if r.below(3) == 0 { stamped } else { r.below(5) };
         let ok = settle_if_epoch(stamped, current).is_ok();
         assert_eq!(ok, stamped == current);
     }
