@@ -50,12 +50,17 @@ export type TxRoute =
   | { kind: "privy"; accountId: string; signer: Signer }
   | { kind: "none" };
 
-export type TxErrorCode = "signed_out" | "unsupported_wallet" | "rejected" | "insufficient_balance" | "contract" | "bad_call" | "unknown";
+export type TxErrorCode = "signed_out" | "unsupported_wallet" | "rejected" | "insufficient_balance" | "contract" | "bad_call" | "stale_listing" | "unknown";
 export type TxError = { code: TxErrorCode; message: string };
 export type SendResult = { txHash: string } | { redirect: true } | { error: TxError };
 
 const YOCTO = /^\d+$/;
 const GAS = /^\d+$/;
+
+/** The near-api-js action wallet-selector v10 expects: `{ functionCall: { methodName, args (JSON bytes), gas, deposit } }`. */
+export function selectorAction(call: KeysCall, action: FunctionCallAction = functionCallAction(call)) {
+  return najActions.functionCall(call.method, call.args, BigInt(action.params.gas), BigInt(call.deposit));
+}
 
 /** The selector-format action for one call. Throws on a call that could not be sent (bad method, deposit or gas). */
 export function functionCallAction(call: KeysCall): FunctionCallAction {
@@ -129,7 +134,9 @@ export async function sendKeysCall(route: TxRoute, call: KeysCall, contractId = 
     if (route.kind === "nc") {
       outcome = await route.wallet.signAndSendTransaction({ signerId: route.accountId, receiverId: contractId, actions: [action] });
     } else if (route.kind === "ws") {
-      outcome = await route.wallet.signAndSendTransaction({ signerId: route.accountId, receiverId: contractId, actions: [action], callbackUrl: route.callbackUrl });
+      // wallet-selector v10 converts near-api-js actions itself (najActionToInternal) and refuses the {type, params} shape
+      // with "Unsupported NAJ action", so its wallets get the near-api-js action. NEAR Connect accepts both shapes.
+      outcome = await route.wallet.signAndSendTransaction({ signerId: route.accountId, receiverId: contractId, actions: [selectorAction(call, action)], callbackUrl: route.callbackUrl });
     } else {
       const account = new Account(route.accountId, new JsonRpcProvider({ url: RPC_URL }), route.signer);
       outcome = await account.signAndSendTransaction({

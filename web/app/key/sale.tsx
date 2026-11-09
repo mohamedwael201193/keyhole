@@ -6,7 +6,8 @@ import { TxResult } from "@/components/TxResult";
 import { TxLink } from "@/components/TxLink";
 import { useWallet } from "@/lib/wallet";
 import { useKeyStore } from "@/lib/keyStore";
-import { shortAccount } from "@/lib/near";
+import { shortAccount, view, type Token } from "@/lib/near";
+import { KEYS_CONTRACT } from "@/lib/config";
 import { GAS_BUY, GAS_LIST, ONE_YOCTO, type KeysCall, type SendResult, type TxError } from "@/lib/keysTx";
 import { accountState } from "@/lib/nearAccount";
 import { useSaleSupport } from "@/lib/useSaleSupport";
@@ -110,7 +111,19 @@ export function SaleCard({ id, owner, royaltyBps, onChanged }: Props) {
       r = { error: { code: "unknown", message: "The transaction did not complete. Nothing is confirmed on NEAR." } };
     }
     setBusy(null);
-    if ("txHash" in r) { setTx({ act, hash: r.txHash, redirect: false, error: null }); reload(); return; }
+    if ("txHash" in r) {
+      // A buy on a listing that ended in the meantime succeeds on chain without a sale (the contract refunds the buyer and
+      // emits key_listing_stale), so the result is only a purchase if the key is now ours.
+      if (act === "buy" && accountId) {
+        // A fresh read (not the shared 60 s cache): the owner must be the one after this transaction.
+        const owner = await view<Token | null>("nft_token", { token_id: id }, KEYS_CONTRACT, { shared: false }).then((t) => t?.owner_id ?? null).catch(() => undefined);
+        if (owner !== undefined && owner !== accountId) {
+          setTx({ act, hash: r.txHash, redirect: false, error: { code: "stale_listing", message: "The listing had already ended, so no sale happened. Your NEAR was refunded in the same transaction." } });
+          reload(); return;
+        }
+      }
+      setTx({ act, hash: r.txHash, redirect: false, error: null }); reload(); return;
+    }
     if ("redirect" in r) { setTx({ act, hash: null, redirect: true, error: null }); return; }
     setTx({ act, hash: null, redirect: false, error: r.error });
   }
