@@ -16,13 +16,15 @@ test.describe("Pledge dashboard", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/pledge");
     await expect(page.getByTestId("pledge-page")).toBeVisible();
-    await expect(page.getByTestId("pledge-preview-banner")).toContainText(/Preview/i);
+    await expect(page.getByTestId("pledge-preview-banner")).toContainText(/Example|preview/i);
     await expect(page.getByTestId("pledge-cta")).toBeDisabled();
     await expect(page.getByTestId("pledge-cta")).toHaveText(/Pledge launches after audit/);
     await expect(page.getByTestId("pledge-warn")).toContainText(/Whole account is collateral/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/Borrow NEAR without publishing/);
     await expect(page.getByTestId("pledge-caps")).toContainText(/exit caps/);
     await expect(page.getByTestId("pledge-float-key")).toBeVisible();
+    await expect(page.getByTestId("pledge-floor")).toHaveText("0.50");
+    await expect(page.getByTestId("pledge-borrow")).toHaveValue("0.01");
     const metrics = await page.evaluate(() => {
       const el = document.scrollingElement || document.documentElement;
       return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth };
