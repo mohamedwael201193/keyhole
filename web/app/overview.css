@@ -47,6 +47,10 @@
   width: min(100%, 220px); aspect-ratio: 1 / 1.55; padding: 12px 12px 10px;
   box-shadow: 0 12px 28px -18px rgba(26, 42, 44, .42);
 }
+.ov-key--foil .ov-art .ov-foil.foil-card,
+.ov-key--foil .ov-art .foil-card.ov-foil {
+  width: 100%; max-width: 100%;
+}
 .ov-art img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
 .ov-key-name { margin: 0; font: 600 22px/1.15 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
 .ov-key .ov-meta, .ov-key .ov-caps { text-align: center; }
@@ -249,12 +253,14 @@
   .ov .v7-page-title { font-size: 32px; }
   .ov .v7-hero { padding: var(--space-4); min-height: 0; }
   .ov .v7-hero-value { font-size: 34px; }
+  .ov-key--foil .ov-art .ov-foil.foil-card { width: 100%; }
   .ov-art .ov-foil.foil-card { width: min(100%, 200px); }
 }
 @media (max-width: 419px) {
   .ov .v7-page-title { font-size: 28px; }
+  .ov-key--foil .ov-art .ov-foil.foil-card { width: 100%; }
   .ov-art .ov-foil.foil-card { width: min(100%, 180px); }
-  .ov-key, .ov-sample { padding: var(--space-3); }
+  .ov-key:not(.ov-key--foil), .ov-sample:not(.ov-key--foil) { padding: var(--space-3); }
 }
 /* Hide the bottom "three steps" on short laptop heights so the main dashboard fits without scroll. */
 @media (min-width: 1000px) and (max-height: 920px) {
@@ -263,6 +269,88 @@
 @media (min-width: 1000px) and (max-height: 820px) {
   .ov .v7-hero { min-height: 112px; padding: var(--space-3) var(--space-4); }
   .ov .v7-hero-value { font-size: 34px; }
-  .ov-art .ov-foil.foil-card { width: min(100%, 180px); aspect-ratio: 1 / 1.45; }
+  .ov-key--foil .ov-art .ov-foil.foil-card { width: 100%; aspect-ratio: 1 / 1.45; }
   .ov-tier { display: none; }
+}
+
+/* One clean frame: FoilCard alone; no outer Card edge, no beam double-cut, no duplicate chips. */
+.app-main .ov-key--foil.v7-card,
+.app-main .ov-key--foil.v7-card--flush {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  gap: var(--space-3);
+  overflow: visible;
+}
+.app-main .ov-key--foil .ov-art {
+  margin: 0;
+  width: 100%;
+  max-width: 220px;
+  justify-self: center;
+  overflow: visible;
+  background: transparent;
+}
+.app-main .ov-key--foil .ov-art .ov-foil.foil-card,
+.app-main .ov-key--foil .ov-art .foil-card.ov-foil {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1 / 1.5;
+  margin: 0;
+  /* The metal border is the only frame. Hide the orbiting beam which drew a second right edge. */
+  overflow: hidden;
+  isolation: isolate;
+}
+.app-main .ov-key--foil .foil-card .bw { display: none; }
+/* Restore the metal frame: polish .card rules must not paint a second cream edge on the foil. */
+.app-main .ov-key--foil .foil-card {
+  border: 2px solid var(--c1);
+  background: var(--raised);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+}
+
+.app-main .ov-key--foil .ov-key-name,
+.app-main .ov-key--foil .ov-sentence,
+.app-main .ov-key--foil .ov-meta,
+.app-main .ov-key--foil .ov-caps,
+.app-main .ov-key--foil .ov-muted,
+.app-main .ov-key--foil .ov-key-action {
+  padding-inline: 2px;
+  text-align: center;
+  justify-self: stretch;
+  max-width: 220px;
+  width: 100%;
+  justify-self: center;
+}
+.app-main .ov-key--foil .ov-key-action .kh-btn { width: 100%; }
+.app-main .ov-key--foil.ov-lookup {
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--card-edge);
+  box-shadow: var(--shadow-1);
+  background: var(--raised);
+  border-radius: var(--radius-lg);
+  max-width: none;
+}
+@media (max-width: 899px) {
+  .app-main .ov-key--foil .ov-art,
+  .app-main .ov-key--foil .ov-key-name,
+  .app-main .ov-key--foil .ov-sentence,
+  .app-main .ov-key--foil .ov-meta,
+  .app-main .ov-key--foil .ov-caps,
+  .app-main .ov-key--foil .ov-muted,
+  .app-main .ov-key--foil .ov-key-action { max-width: 200px; }
+}
+@media (max-width: 419px) {
+  .app-main .ov-key--foil .ov-art,
+  .app-main .ov-key--foil .ov-key-name,
+  .app-main .ov-key--foil .ov-sentence,
+  .app-main .ov-key--foil .ov-meta,
+  .app-main .ov-key--foil .ov-caps,
+  .app-main .ov-key--foil .ov-muted,
+  .app-main .ov-key--foil .ov-key-action { max-width: 180px; }
+}
+@media (min-width: 1000px) and (max-height: 820px) {
+  .app-main .ov-key--foil .ov-art { max-width: 180px; }
+  .app-main .ov-key--foil .ov-art .ov-foil.foil-card { aspect-ratio: 1 / 1.4; }
 }

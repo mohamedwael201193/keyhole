@@ -248,15 +248,11 @@ function KeyCard({ token, identity, tierKnown, caps, count, capped }: {
 }) {
   const id = shortKeyId(token.token_id);
   return (
-    <Card as="section" labelledBy="ov-key-h" testid="key-hero" className="ov-key">
-      <div className="ov-key-top">
-        <TierChip tier={tierKnown ? identity.finish : "Tier not readable"} testid="stat-tier" />
-        <span className="v7-card-meta">1 of 1</span>
-      </div>
+    <Card as="section" tone="flush" labelledBy="ov-key-h" testid="key-hero" className="ov-key ov-key--foil">
       <figure className="ov-art">
-        <FoilCard finish={identity.finish} className="ov-foil">
+        <FoilCard finish={identity.finish} className="ov-foil" data-testid="stat-tier-foil">
           <div className="top">
-            <span className="tier">{tierKnown ? identity.finish : "—"}</span>
+            <span className="tier" data-testid="stat-tier">{tierKnown ? identity.finish : "Tier not readable"}</span>
             <span className="oo">1 of 1</span>
           </div>
           <div className="art">
@@ -279,11 +275,7 @@ function KeyCard({ token, identity, tierKnown, caps, count, capped }: {
 /** Signed in, no key: the sample artwork (labelled as one) and the one mint action. */
 function MintCard() {
   return (
-    <Card as="section" labelledBy="ov-mint-h" testid="mint-banner" className="ov-key">
-      <div className="ov-key-top">
-        <TierChip tier="Bronze" />
-        <span className="v7-card-meta">Sample</span>
-      </div>
+    <Card as="section" tone="flush" labelledBy="ov-mint-h" testid="mint-banner" className="ov-key ov-key--foil">
       <figure className="ov-art">
         <FoilCard finish="Bronze" className="ov-foil">
           <div className="top">
@@ -677,11 +669,7 @@ function SignedOut({ signIn }: { signIn: SignInOptionsProps }) {
           <SignInOptions {...signIn} />
           <Link className="ov-link" href="/judge" data-testid="dash-explore">Explore without a wallet</Link>
         </Card>
-        <Card as="section" labelledBy="ov-sample-h" className="ov-key ov-sample">
-          <div className="ov-key-top">
-            <TierChip tier="Bronze" />
-            <span className="v7-card-meta">Sample</span>
-          </div>
+        <Card as="section" tone="flush" labelledBy="ov-sample-h" className="ov-key ov-sample ov-key--foil">
           <figure className="ov-art">
             <FoilCard finish="Bronze" className="ov-foil">
               <div className="top">
