@@ -253,10 +253,10 @@ pub fn loan_binding(cert:&Certificate,loan:&Value,binding:&Value,control:&Contro
         return Err(err("collateral_ineligible","loan/control/binding is not certifiable"));
     }Ok(())
 }
-pub fn frozen_policy(cert:&Certificate,policy:&Value,generation:u64)->Result<(),Error>{
+pub fn frozen_policy(cert:&Certificate,policy:&Value)->Result<(),Error>{
     use sha2::{Digest,Sha256};
     let payload=text(policy,"encrypted_data")?;
-    if policy["generation_supported"]!=true||policy["generation"].as_u64()!=Some(generation)||policy["owner"]!=cert.contract||policy["frozen"]!=true||policy["locked"]!=true||policy["version"].as_u64().map(|n|n.to_string()).as_deref()!=Some(&cert.policy_version)
+    if policy["owner"]!=cert.contract||policy["frozen"]!=true||policy["locked"]!=true||policy["version"].as_u64().map(|n|n.to_string()).as_deref()!=Some(&cert.policy_version)
         ||B64.encode(Sha256::digest(payload.as_bytes()))!=cert.policy_hash{return Err(err("collateral_ineligible","locked frozen controller policy does not match"));}Ok(())
 }
 /// Complete paged inventory, not "first page had nothing pending". Unknown states fail closed.

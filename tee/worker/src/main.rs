@@ -114,16 +114,6 @@ mod host {
         listing_blocks_ex(op, execute, read.as_ref().map_err(String::as_str))
     }
 
-    /// Current settlement epoch for a key (enclave storage). Missing means 0.
-    fn epoch_of(token: &str) -> u64 {
-        epoch_from_bytes(&Host.get(&tkey(token, "epoch")))
-    }
-
-    /// Persist epoch. Called when ownership changes.
-    fn set_epoch(token: &str, epoch: u64) {
-        Host.set(&tkey(token, "epoch"), &epoch_to_bytes(epoch));
-    }
-
     /// Stamp a value-move with the current epoch, then refuse if owner or epoch drift before the send.
     fn settle_gate(token: &str, account: &str, stamped: u64) -> Result<(), Error> {
         owns(token, account).and_then(settle_if_owner)?;
@@ -381,11 +371,13 @@ mod host {
         let tier_lim = c.tier.and_then(limits_for_tier);
         let lim = if c.token.is_some() { limits_now(&c).ok().or(tier_lim) } else { tier_lim };
         let pol = c.token.as_ref().and_then(|t| policy_for(&Host.get(&tkey(t, "policy")), &c.account));
-        let cool = c.token.as_ref().and_then(|t| {
-            prov_sync_owner(t, &c.account, c.now_ms);
-            let evs: Vec<ProvEvent> = load_prov(t).into_iter().map(|(e, _)| e).collect();
-            cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms)
-        });
+        let cool = match c.token.as_ref() {
+            Some(t) => {
+                let epoch_cool=prov_sync_owner(t, &c.account, c.now_ms)?;
+                let evs: Vec<ProvEvent> = load_prov(t).into_iter().map(|(e, _)| e).collect();
+                epoch_cool.max(cooldown_until(&evs, &c.account)).filter(|u| *u > c.now_ms)
+            }, None => None,
+        };
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = c.token.as_ref().and_then(|t| active_lock(&Host.get(&tkey(t, "lock")), &c.account, c.now_ms));
         let epoch=match c.token.as_ref(){Some(t)=>guard_control(t)?.epoch,None=>0};
@@ -589,7 +581,8 @@ mod host {
         let token=s(p,"token").ok_or_else(||err("bad_params","missing params.token"))?;
         // Derive self, never trust a pasted address as ownership proof; reject any override.
         let to=self_withdraw_destination(&c.account,&chain,s(p,"to").as_deref(),input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413"))?;
-        prov_sync_owner(&c.token_id(), &c.account, c.now_ms);
+        let epoch_cool=prov_sync_owner(&c.token_id(), &c.account, c.now_ms)?;
+        ownership_sync::require_elapsed(epoch_cool,c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&c.token_id()).into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         let amt = digits(p, "amount")?;
@@ -655,13 +648,22 @@ mod host {
         save_prov(token, &rows);
     }
 
-    fn prov_sync_owner(token: &str, owner: &str, ts: u64) {
+    /// Separate from the log: a round trip can return the same owner with a higher epoch.
+    fn custody_cooldown(token: &str, owner: &str, now_ms: u64) -> Result<Option<u64>, Error> {
+        let control=guard_control(token)?;
+        if !owns(token,owner)? || guard_control(token)?!=control {
+            return Err(err("not_owner", "ownership epoch changed during cooldown synchronization"));
+        }
+        ownership_sync::observe(&mut Host,&keys_contract(),token,owner,control.epoch,now_ms)
+    }
+
+    fn prov_sync_owner(token: &str, owner: &str, ts: u64) -> Result<Option<u64>, Error> {
+        let until=custody_cooldown(token,owner,ts)?;
         let rows = load_prov(token);
-        if rows.last().map(|(e, _)| e.owner.as_str()) == Some(owner) || rows.is_empty() { return; }
-        // Ownership changed: bump the settlement epoch so any in-flight settle stamped with the old epoch is void.
-        let next = bump_epoch(epoch_of(token));
-        set_epoch(token, next);
-        prov_append(token, "transfer", owner, ts, &format!("transfer epoch {next}"));
+        if rows.last().is_some_and(|(e, _)| e.owner != owner) {
+            prov_append(token, "transfer", owner, ts, "transfer");
+        }
+        Ok(until)
     }
 
     fn minter_secret(msk: &str) -> Result<[u8; 32], Error> {
@@ -690,7 +692,7 @@ mod host {
             .ok_or_else(|| err("bad_params", "token_id required"))?;
         let tok = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?;
         if let Some(owner) = tok.get("owner_id").and_then(|v| v.as_str()) {
-            if let Ok(now) = chain_now_ms() { prov_sync_owner(&tid, owner, now); }
+            prov_sync_owner(&tid, owner, chain_now_ms()?)?;
         }
         let body = prov_body(&tid, None)?;
         let mut out = json!({"ok": true, "op": "provenance"});
@@ -797,7 +799,7 @@ mod host {
         let stored: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
         verify_chain(&stored)?;
         // The same owner sync as provenance and level_up, so a transfer the log has not seen yet is in the head.
-        prov_sync_owner(&tid, &owner, now);
+        prov_sync_owner(&tid, &owner, now)?;
         let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
         let head = verify_chain(&evs)?;
         let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
@@ -815,7 +817,7 @@ mod host {
     fn op_level_up(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "level_up", true)?;
         let tid = c.token_id();
-        prov_sync_owner(&tid, &c.account, c.now_ms);
+        prov_sync_owner(&tid, &c.account, c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
         let trades: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
         let current = nft_tier_of(&tid)?;
@@ -855,9 +857,9 @@ mod host {
         let lim = limits_now(&c)?;
         let tier_lim = c.tier.and_then(limits_for_tier);
         let pol = policy_for(&Host.get(&tkey(&tid, "policy")), &c.account);
-        prov_sync_owner(&tid, &c.account, c.now_ms);
+        let epoch_cool=prov_sync_owner(&tid, &c.account, c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
-        let cool = cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms);
+        let cool = epoch_cool.max(cooldown_until(&evs, &c.account)).filter(|u| *u > c.now_ms);
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = active_lock(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms);
         let (key, id) = c.wallet()?;
