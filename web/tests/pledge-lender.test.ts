@@ -1,0 +1,9 @@
+import {it,expect,vi} from "vitest";
+import {createElement} from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {readFileSync} from "node:fs";
+vi.mock("next/navigation",()=>({usePathname:()=>"/pledge/lend/example"}));
+vi.mock("@/lib/config",async()=>({...await vi.importActual("@/lib/config"),PLEDGE_LIVE:false}));
+import {LenderView} from "@/app/pledge/lend/[tokenId]/view";
+it("distinct read-only lender page has both cashflows, eligibility and adjacent forfeiture warning",()=>{const html=renderToStaticMarkup(createElement(LenderView,{tokenId:"example"}));for(const s of ["Lender example","Principal out","0.0101","Whole account is collateral","ordinary caps","native NEAR identity","UNKNOWN","Funding disabled"])expect(html).toContain(s);expect(html).toContain("disabled");});
+it("lender component never imports or calls holder balance/history/session APIs",()=>{const src=readFileSync(new URL("../app/pledge/lend/[tokenId]/view.tsx",import.meta.url),"utf8");expect(src).not.toMatch(/useKeyStore|callWorker|startSession|getBalance|getHistory|fetch\(/);expect(src).toContain("getLenderOffer(tokenId)");});

@@ -1,5 +1,5 @@
 /**
- * Typed client for the sealed bilateral Pledge surface on contracts/keys (PR #184 head 0c3c6196).
+ * Typed client for the sealed bilateral Pledge surface on contracts/keys (PR #184 oracle-free head 01665e83 + loan-limits candidate).
  * Method names and argument shapes match contracts/keys/src/pledge.rs on that revision.
  * Live calls stay behind PLEDGE_LIVE; when the flag is off this module still exports the shapes
  * so the UI and unit tests can bind against the real contract API without talking to mainnet.
@@ -22,13 +22,7 @@ export type LoanTerms = {
   funding_deadline_ns: U64;
 };
 
-export type LoanState =
-  | "Offered"
-  | "Funded"
-  | "Repaid"
-  | "Defaulted"
-  | "Cancelled"
-  | string;
+export type LoanState = "Freezing" | "Offered" | "Active" | "UnlockPending";
 
 export type Loan = {
   token_id: TokenId;
@@ -49,7 +43,6 @@ export type PledgeConfig = {
   recovery_account: AccountId;
   recovery_unlock_ns: U64;
   attestor_public_key: string;
-  terminal_attestor_public_key: string;
   custody_contract: AccountId;
   network: string;
   lending_enabled: boolean;
@@ -103,6 +96,10 @@ export const PLEDGE_VIEW_METHODS = [
   "get_pledge_config",
   "get_loan",
   "get_collateral_binding",
+  "get_loan_limits",
+  "get_lender_offer",
+  "get_payout_credit",
+  "get_pending_payout",
 ] as const;
 
 export type PledgeChangeMethod = (typeof PLEDGE_CHANGE_METHODS)[number];
@@ -121,27 +118,36 @@ export type RegisterCollateralArgs = {
   token_id: TokenId;
   wallet_pubkey: string;
   encrypted_data: string;
+  wallet_signature: string;
+  version: number;
+  valid_until: number;
 };
 
 /** Build a FunctionCall payload for open_loan. Does not send. */
-export function buildOpenLoan(args: OpenLoanArgs) {
-  return { method: "open_loan" as const, args, deposit: "1", gas: String(100 * 10 ** 12) };
+export function buildOpenLoan(args: OpenLoanArgs, storageBondYocto: U128) {
+  if (!/^\d+$/.test(storageBondYocto) || BigInt(storageBondYocto) <= 0n) throw Error("Read exact storage bond from get_loan_limits");
+  return { method: "open_loan" as const, args, deposit: storageBondYocto, gas: "200000000000000" };
 }
 export function buildFundLoan(args: FundLoanArgs) {
-  return { method: "fund_loan" as const, args, deposit: "0", gas: String(100 * 10 ** 12) };
+  return { method: "fund_loan" as const, args, deposit: args.certificate.terms.principal, gas: "200000000000000" };
 }
 export function buildRepayLoan(args: LoanRefArgs, repaymentYocto: U128) {
-  return { method: "repay_loan" as const, args, deposit: repaymentYocto, gas: String(100 * 10 ** 12) };
+  return { method: "repay_loan" as const, args, deposit: repaymentYocto, gas: "200000000000000" };
 }
 export function buildCancelLoan(args: LoanRefArgs) {
-  return { method: "cancel_loan" as const, args, deposit: "1", gas: String(50 * 10 ** 12) };
+  return { method: "cancel_loan" as const, args, deposit: "1", gas: "200000000000000" };
 }
 export function buildClaimDefault(args: ClaimDefaultArgs) {
-  return { method: "claim_default" as const, args, deposit: "1", gas: String(100 * 10 ** 12) };
+  return { method: "claim_default" as const, args, deposit: "1", gas: "200000000000000" };
 }
-export function buildRegisterCollateral(args: RegisterCollateralArgs) {
-  return { method: "register_collateral" as const, args, deposit: "1", gas: String(100 * 10 ** 12) };
+export function buildRegisterCollateral(args: RegisterCollateralArgs, policyAndBindingDeposit: U128) {
+  if (!/^\d+$/.test(policyAndBindingDeposit) || BigInt(policyAndBindingDeposit) <= 0n) throw Error("Exact provider plus binding deposit required");
+  return { method: "register_collateral" as const, args, deposit: policyAndBindingDeposit, gas: "200000000000000" };
 }
+
+export type LoanLimits = { storage_bond: U128; collateral_binding_deposit: U128; min_duration_sec: U64; max_duration_sec: U64; max_grace_sec: U64; certificate_max_age_ns: U64; activation: string };
+export type LenderOffer = { loan: Loan; asset: string; decimals: number; lender_has_no_key: boolean; lender_has_no_return_reservation: boolean; lending_enabled: boolean; owner_current: boolean; funding_open: boolean; certificate_required: boolean };
+export function buildClaimPayout() { return {method: "claim_payout" as const, args: {}, deposit: "1", gas: "200000000000000"}; }
 
 export type PledgeClientOpts = {
   /** Override the live flag (tests). Defaults to PLEDGE_LIVE from config. */
@@ -207,9 +213,14 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
     buildCancelLoan,
     buildClaimDefault,
     buildRegisterCollateral,
-    /** True only when the feature flag allows live reads/writes. */
+    buildClaimPayout,
+    async getLoanLimits(): Promise<LoanLimits | null> { return live ? viewFn<LoanLimits>("get_loan_limits", {}) : null; },
+    async getLenderOffer(token_id: TokenId): Promise<LenderOffer | null> { return live ? viewFn<LenderOffer | null>("get_lender_offer", {token_id}) : null; },
+    async getPayoutCredit(account_id: AccountId): Promise<U128 | null> { return live ? viewFn<U128>("get_payout_credit", {account_id}) : null; },
+    async getPendingPayout(account_id: AccountId): Promise<{nonce: U64; amount: U128} | null> { return live ? viewFn<{nonce: U64; amount: U128} | null>("get_pending_payout", {account_id}) : null; },
+    /** Read-only candidate: stays false until separate certificate/wallet release review. */
     canTransact(): boolean {
-      return live;
+      return false; // Read-only candidate: verified certificate/wallet release gate is not implemented.
     },
     async getPledgeConfig(): Promise<PledgeConfig | null> {
       if (!live) return null;

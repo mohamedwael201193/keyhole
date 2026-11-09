@@ -63,16 +63,16 @@ describe("pledgeClient method surface (PR #184 head 0c3c6196)", () => {
   });
 
   it("exposes the view methods get_pledge_config, get_loan, get_collateral_binding", () => {
-    expect([...PLEDGE_VIEW_METHODS]).toEqual(["get_pledge_config", "get_loan", "get_collateral_binding"]);
+    expect([...PLEDGE_VIEW_METHODS]).toEqual(["get_pledge_config", "get_loan", "get_collateral_binding", "get_loan_limits", "get_lender_offer", "get_payout_credit", "get_pending_payout"]);
   });
 
   it("builds open_loan / fund_loan / repay_loan / cancel_loan / claim_default / register_collateral payloads", () => {
-    expect(buildOpenLoan({ token_id: "0", terms }).method).toBe("open_loan");
+    expect(buildOpenLoan({ token_id: "0", terms }, "9000000000000000000000").method).toBe("open_loan");
     expect(buildFundLoan({ token_id: "0", nonce: "1", certificate: cert, signature: "sig" }).method).toBe("fund_loan");
     expect(buildRepayLoan({ token_id: "0", nonce: "1" }, terms.repayment).deposit).toBe(terms.repayment);
     expect(buildCancelLoan({ token_id: "0", nonce: "1" }).method).toBe("cancel_loan");
     expect(buildClaimDefault({ token_id: "0", nonce: "1", receiver_id: "lender.near" }).method).toBe("claim_default");
-    expect(buildRegisterCollateral({ token_id: "0", wallet_pubkey: "ed25519:ab", encrypted_data: "x" }).method).toBe(
+    expect(buildRegisterCollateral({ token_id: "0", wallet_pubkey: "ed25519:ab", encrypted_data: "x", wallet_signature: "ab".repeat(64), version: 1, valid_until: 4000000000 }, "100000000000000000000000").method).toBe(
       "register_collateral",
     );
   });
@@ -99,15 +99,20 @@ describe("feature flag ON", () => {
   it("calls the typed view methods through the injected transport", async () => {
     const view = vi.fn(async (method: string) => {
       if (method === "get_pledge_config") return { lending_enabled: true, network: "mainnet" };
-      if (method === "get_loan") return { token_id: "0", state: "Funded" };
+      if (method === "get_loan") return { token_id: "0", state: "Active" };
       if (method === "get_collateral_binding") return { ready: true, wallet_pubkey: "ed25519:ab" };
       return null;
     });
     const c = createPledgeClient({ live: true, view: view as never });
-    expect(c.canTransact()).toBe(true);
+    expect(c.canTransact()).toBe(false);
     expect((await c.getPledgeConfig())?.lending_enabled).toBe(true);
-    expect((await c.getLoan("0"))?.state).toBe("Funded");
+    expect((await c.getLoan("0"))?.state).toBe("Active");
     expect((await c.getCollateralBinding("0"))?.ready).toBe(true);
     expect(view).toHaveBeenCalledTimes(3);
   });
+});
+
+it("builds the exact funded principal, measured bond and >=180 Tgas (not placeholders)",()=>{
+ const o=buildOpenLoan({token_id:"0",terms},"9000000000000000000000");expect(o.deposit).toBe("9000000000000000000000");expect(BigInt(o.gas)).toBeGreaterThanOrEqual(180000000000000n);
+ const f=buildFundLoan({token_id:"0",nonce:"1",certificate:cert,signature:"sig"});expect(f.deposit).toBe(terms.principal);expect(BigInt(f.gas)).toBeGreaterThanOrEqual(180000000000000n);
 });

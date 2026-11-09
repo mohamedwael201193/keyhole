@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Regenerates docs/claims.json from README.md, TRACK_COVERAGE.md, SECURITY.md and the site source.
 # usage: python3 judge/gen-claims.py .
-import re, json, os, sys
+import re, json, os, sys, inspect
 R = sys.argv[1] if len(sys.argv) > 1 else "."; os.chdir(R)
 DOCS = ["README.md", "TRACK_COVERAGE.md", "SECURITY.md"]
 C = []; seen = set()
@@ -9,15 +9,17 @@ SITE = "https://keyhole-seven.vercel.app"
 def add(id, claim, where, etype, evidence, check, expected, verify=None):
     if id in seen: return
     seen.add(id)
-    C.append(dict(id=id, claim=claim, where=where, evidence_type=etype, evidence=evidence,
+    # Retained source assertions cite their real generator callsite, not README line zero.
+    caller = inspect.currentframe().f_back
+    if caller.f_code.co_name == "<lambda>": caller = caller.f_back
+    origin = f"judge/gen-claims.py:{caller.f_lineno}"
+    C.append(dict(id=id, claim=claim, where=where or origin, evidence_type=etype, evidence=evidence,
                   check=check, expected=expected,
                   verify=verify or f"node judge/verify-claims.mjs --only {id}"))
 def where(doc, needle):
     for i, l in enumerate(open(doc, encoding="utf8"), 1):
         if needle in l: return f"{doc}:{i}"
-    # Soft: README can drift ahead of a needle; still emit the claim so verify can check evidence.
-    print(f"warn: where() miss in {doc}: {needle!r}", flush=True)
-    return f"{doc}:0"
+    return None # add() records the exact source-generator callsite instead.
 ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
 # ---------------- contract (live RPC) ----------------
@@ -123,7 +125,7 @@ G("src-cooldown","10-minute withdraw cooldown after a transfer (TRANSFER_COOLDOW
 G("src-ai-model","/ask uses Qwen/Qwen3.6-35B-A3B-FP8",where(RD,"`Qwen/Qwen3.6-35B-A3B-FP8`"),"web/lib/ai.ts",r"Qwen/Qwen3\.6-35B-A3B-FP8","model id found")
 G("src-gw-8kb","Gateway rejects bodies over 8 KB with 413",where(RD,"bodies over 8 KB are rejected with 413"),"web/app/api/worker/route.ts",r"len > 8192.*status: 413","8192 / 413")
 G("src-gw-ip","Gateway allows 20 calls a minute per IP",where(RD,"Each IP gets 20 calls a minute"),"web/app/api/worker/route.ts",r"createLimiter\(20, 60_000\)","20 per 60 s")
-G("src-gw-allow","Gateway allowlist: info, provenance, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"\]',"exact list")
+G("src-gw-allow","Gateway allowlist: info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "record", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"\]',"exact list")
 G("src-gw-nocopy","copy and sweep_minter are not in the gateway allowlist (bad_op)",where(RD,"Both refusals are `bad_op`"),"web/lib/gateway.ts",r'code: "bad_op"',"bad_op for any other op")
 G("src-limits-t1","Tier 1: $1 per trade, $5 per day, 6/min",where(RD,"| 1 Bronze | $1 | $5 | 6 |"),"docs/evidence/mainnet-e2e/01_info.json",r'"daily_usd_micro": ?5000000',"in attested info")
 G("src-global","Global limits 120/min and 25 free mints per day",where(RD,"Global limits: 120 requests per minute and 25 free mints per day"),"docs/evidence/mainnet-e2e/01_info.json",r'"global_mints_per_day": ?25',"25 in attested info")

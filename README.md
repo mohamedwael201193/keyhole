@@ -444,7 +444,7 @@ KEYHOLE's next holder surface after Swap (sidebar **Pledge**): **borrow NEAR wit
 
 - **UI shipped now** at [`/pledge`](web/app/pledge): sketch-v5 widget (Certified USDC minimum → lock connector → You borrow NEAR), real USDC/NEAR icons as **locked chips** (v1 allowlist only — no fake multi-asset picker), visible whole-account warning, tier exit-caps line, ambient motion with `prefers-reduced-motion`, morph to Active loan chrome (preview control / `?preview=active`), floating key art unclipped, dashboard density like PR #185 so the page fits **1440×900** and **1280×800** without scrolling.
 - **Not live lending.** `NEXT_PUBLIC_PLEDGE_LIVE` defaults off. The page is a clearly labelled **preview / in review**: CTA disabled with **Pledge launches after audit**; preview shows clearly labelled **Example** terms (0.50 USDC / 0.01 NEAR / 0.0101 repay) matching sketch v5; live mode uses `get_loan` only — never invents balances as live. Lender preview never requests the holder balance.
-- **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against PR #184 head `0c3c6196` method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
+- **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against the oracle-free PR #184 ABI plus the loan-limits/lender-projection source candidate method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
 - **Proof.** Unit tests mock the client and the preview markup; Playwright e2e covers nav, disabled CTA, density (no scroll at desktop sizes), and screenshots under `shots_pledge/`. Offline claims include the Pledge preview statements (`src-pledge-*`).
 
 
@@ -862,3 +862,25 @@ verify.sh             one-call verifier (attestation, FastFS, optional rebuild)
 **Credits:** the ambient music was generated for this project and is released under CC0. Chain marks are the official logos of their projects, shown only to name the supported assets.
 
 Built on NEAR.
+
+
+### Two-sided Pledge source review
+
+Borrower `/pledge` links to the separate named-lender review `/pledge/lend/example` (or `/pledge/lend/<tokenId>` for read-only chain projection when enabled). The lender page uses only public `get_lender_offer` data and shows exact immutable cashflows, native lender empty-key-slot eligibility, certificate verification, whole-account default, cashout and cap/cooldown-dependent recovery stages. The borrower copy explicitly distinguishes backed credit from native delivery. The UI presents disabled transaction controls while preserving the existing cream/teal dashboard.
+
+The typed client builds exact principal/repayment deposits, a contract-supplied measured bond, full provider-registration arguments and 200-Tgas financial calls. Oracle-free state names are `Freezing`, `Offered`, `Active`, `UnlockPending`.
+
+**Loan or partial swap?** The matched-portfolio card compares the same usable NEAR now and restoration of the same USDC later. A pure exact-integer model accepts same-ledger current forward/reverse quotes, separates locked bond from fees, keeps quoted fixed reverse fees fixed across hypothetical -20% / unchanged / +20% NEAR-price scenarios, and recommends a partial swap when supplied evidence supports it. Without matching current quotes it says **Comparison unavailable at this size**, rather than inventing savings. Both routes retain the NFT/address.
+
+```bash
+cd web
+npm run typecheck
+npm run lint
+npx vitest run tests/pledge-client.test.ts tests/pledge-view.test.ts tests/pledge-lender.test.ts tests/pledge-economics.test.ts
+npm run build
+cd ..
+python3 judge/gen-claims.py .
+node judge/verify-claims.mjs --offline
+```
+
+Safety and release status: [SECURITY.md](SECURITY.md#two-sided-pledge-ui-release-gate).
