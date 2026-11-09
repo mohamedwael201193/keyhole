@@ -1,4 +1,4 @@
-## 2026-11-09 — Judge proof UX: live evidence pack + Attack desk (PR pending)
+## 2026-11-09 — Judge proof UX: live evidence pack + Attack desk (PR #186)
 - Harsh AI-judge pass: Attack PASS now requires live OutLayer attestation AND `/evidence/<call>.json` error.code match (not quote-only). Primary CTA re-runs checks.
 - `/verify` (app shell): live evidence table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) plus the existing 37 TEE checks.
 - `/attack` ("Try to steal a key"): re-fetches real attested refusals and the handover tx; each card labels live check vs recorded mainnet evidence. No wallet, no value moves.
