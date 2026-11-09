@@ -870,14 +870,14 @@ Built on NEAR.
 - NFT transfer-call title is explicitly provisional until local acceptance commits. Anyone can restore only the exact still-pending title after300seconds; accepted/newer title cannot be unwound. Bounded resolver parsing avoids receiver gas exhaustion. External receiver side effects are not reversed: irreversible consideration must wait for committed acceptance or conditional escrow.
 - Migration pins the floor key/custody identity and fixed treasury-only beneficiary. New lending defaults **OFF**. Legacy funds/listing deposits do not become treasury. Treasury recovery excludes all liabilities/storage/reserves and is fixed-beneficiary only after December2,2026 02:00 Africa/Cairo. No upgrade/arbitrary-call/DeleteAccount escape hatch.
 
-See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.md) for residual trust/liveness gates and the [oracle-free validation record](docs/evidence/pledge-oracle-free/README.md). The guarded worker, privacy hardening and verified funded handover are separate reviewed lanes; no source-only feature is claimed live.
+See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.md) for residual trust/liveness gates and the [historical oracle-free record](docs/evidence/pledge-oracle-free/README.md) and [current serialized-custody evidence](docs/evidence/serialized-custody/README.md). The guarded worker, privacy hardening and verified funded handover are separate reviewed lanes; no source-only feature is claimed live.
 
 ```bash
 (cd contracts/keys && cargo test --locked && ./build.sh)
 (cd contracts/keys-sandbox && cargo test --locked)
 ```
 
-Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement/fencing proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
 
 ### Guarded worker candidate — SOURCE ONLY, NOT PUBLISHED
 

@@ -18,6 +18,8 @@ Measured 10 November 2026, Africa/Cairo. No deployment, provider mutation on mai
 - Normal contract: **437998 bytes**, SHA256 `c7d943992de1de8574323c6446e8aa4b2b249659a7c89d19a124ad21e6eb2a95`.
 - Normal worker: **878011 bytes**, SHA256 `5b8d79c8f5ebda5d454b76122041d3445b809cd5504ec9c76032864d2a5aea86`.
 
+The captured-account sandbox rerun measured a `LackBalanceForState` shortfall of **0.784981136074739537378339 NEAR**, including that local execution, for this artifact. It is not an integrated-candidate/mainnet quote.
+
 The injected-callback fixture is separate and must never be deployed. The captured-account storage estimate is in [the measured JSON](../guarded-worker/storage.json); it excludes fresh-network gas and migration and is not a mainnet funding quote.
 
 ## Reproduce without keys or funds

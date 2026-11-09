@@ -6337,6 +6337,19 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/pledge-oracle-free/README.md"
   },
   {
+   "id": "path-docs/evidence/serialized-custody/README.md",
+   "claim": "Linked repo path docs/evidence/serialized-custody/README.md exists",
+   "where": "README.md:873",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/serialized-custody/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/serialized-custody/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/serialized-custody/README.md"
+  },
+  {
    "id": "path-contracts/keys",
    "claim": "Linked repo path contracts/keys exists",
    "where": "TRACK_COVERAGE.md:10",
