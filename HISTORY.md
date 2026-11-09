@@ -1,3 +1,8 @@
+## 2026-11-09 — v7 key cards restored + Overview density (PR #182)
+- Gallery/details/Overview/mint key faces use FoilCard again (Guilloche, Hallmark, metal border, sheen). Overview sample is one clean metal frame (no nested Card edge).
+- Overview type/padding/hero tightened so the signed-out dashboard fits 1440×900 and 1280×800 without vertical scroll; readable at 390×844.
+- FoilCard no longer carries the shared `.card` class (polish was painting a second cream border over the metal frame).
+
 
 ## 2026-11-01 — Design polish (landing, vault, mint)
 - Landing: privacy section is now a two-column "Public chain / Sealed vault" split with warmer, smaller art; the "Check the seal" chest is smaller and balanced with the attestation card.

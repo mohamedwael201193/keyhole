@@ -32,7 +32,7 @@ export function FoilCard({
   const TagName = as ?? "div";
   return (
     <TagName
-      className={`foil-card card${finish === "Legendary" ? " is-leg" : ""} ${className ?? ""}`.trim()}
+      className={`foil-card${finish === "Legendary" ? " is-leg" : ""} ${className ?? ""}`.trim()}
       data-finish={finish}
       data-t={finish === "Legendary" ? "leg" : finish.toLowerCase()}
       style={{ ...style, ["--c1" as string]: METAL[finish].c1, ["--c2" as string]: METAL[finish].c2 }}

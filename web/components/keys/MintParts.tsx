@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { KeyArt } from "@/components/Art";
+import { FoilCard } from "@/components/FoilCard";
 import { CAPS, type Finish } from "@/lib/traits";
 import { formatTradePrice } from "@/lib/price";
 import { Icon, StatusChip, TierChip } from "@/components/v7";
@@ -36,7 +37,15 @@ export function PreviewCarousel({ slides, startAt = 0 }: { slides: PreviewSlide[
   return (
     <div className="km-carousel" role="region" aria-roledescription="carousel" aria-label="Key art preview" data-testid="mint-carousel">
       <div className="km-stage">
-        <KeyArt key={cur.art} n={cur.art} alt={`${cur.finish} key art`} width={430} height={1080} className="km-art" />
+        <FoilCard finish={cur.finish} className="km-foil">
+          <div className="top">
+            <span className="tier">{cur.finish}</span>
+            <span className="oo">{cur.mintable ? "Mintable" : "Preview"}</span>
+          </div>
+          <div className="art">
+            <KeyArt key={cur.art} n={cur.art} alt={`${cur.finish} key art`} width={430} height={1080} className="km-art" />
+          </div>
+        </FoilCard>
       </div>
       <div className="km-caption">
         <TierChip tier={cur.finish} />
