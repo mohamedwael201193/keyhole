@@ -225,6 +225,13 @@ export async function runEvidencePack(): Promise<LiveRow[]> {
   return rows;
 }
 
+export type AttackBuild = {
+  /** First 8 hex chars of executed_wasm_sha256 from the recorded attestation. */
+  wasm: string;
+  /** True only when wasm matches identity.json current worker. Ready for future current-build refusals. */
+  current: boolean;
+};
+
 export type AttackCase = {
   id: string;
   title: string;
@@ -235,7 +242,16 @@ export type AttackCase = {
   txHash?: string;
   keyword?: string;
   expectTxSuccess?: boolean;
+  /** Worker build the recorded evidence ran on. Omitted only for pure chain txs. */
+  build?: AttackBuild;
 };
+
+/** Badge label for a recorded attack case's worker build. */
+export function attackBuildLabel(b: AttackBuild): string {
+  return b.current
+    ? `Recorded on current build · wasm ${b.wasm}`
+    : `Recorded on previous build · wasm ${b.wasm}`;
+}
 
 export const ATTACK_CASES: AttackCase[] = [
   {
@@ -246,6 +262,7 @@ export const ATTACK_CASES: AttackCase[] = [
     kind: "attestation",
     callId: "c1312e2d-8c20-4b3e-ad5b-22dd3102826d",
     keyword: "bad_params",
+    build: { wasm: "6367401a", current: false },
   },
   {
     id: "over-cap",
@@ -255,6 +272,7 @@ export const ATTACK_CASES: AttackCase[] = [
     kind: "attestation",
     callId: "afaaf3e1-32ff-42d8-88da-412a0bb61e11",
     keyword: "over_cap_per_tx",
+    build: { wasm: "6367401a", current: false },
   },
   {
     id: "replay",
@@ -264,6 +282,7 @@ export const ATTACK_CASES: AttackCase[] = [
     kind: "attestation",
     callId: "d8f5f0ee-3c0b-44bc-afed-bc24ad190ed0",
     keyword: "replay",
+    build: { wasm: "6367401a", current: false },
   },
   {
     id: "tamper",
@@ -273,6 +292,7 @@ export const ATTACK_CASES: AttackCase[] = [
     kind: "attestation",
     callId: "16b09581-9010-4600-b5c5-58af0216cdc8",
     keyword: "bad_signature",
+    build: { wasm: "6367401a", current: false },
   },
   {
     id: "not-owner",
@@ -282,6 +302,7 @@ export const ATTACK_CASES: AttackCase[] = [
     kind: "attestation",
     callId: "711795b9-3e77-4a59-98ee-d798cb63ccc2",
     keyword: "not_owner",
+    build: { wasm: "6367401a", current: false },
   },
   {
     id: "locked",
@@ -291,6 +312,7 @@ export const ATTACK_CASES: AttackCase[] = [
     kind: "attestation",
     callId: "075287b5-a100-4fa5-8e96-94a36019c6bc",
     keyword: "locked",
+    build: { wasm: "38bd67b9", current: false },
   },
   {
     id: "handover-tx",

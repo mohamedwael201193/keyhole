@@ -188,7 +188,7 @@
     "destHelp": "Your wallet signs this exact address.",
     "activityHint": "Sign a read to see your recent trades and withdrawals.",
     "pnlBtn": "Publish signed swap log",
-    "pnlHelp": "Opt-in. The enclave signs a swap-log delta (trades, USD paid at trade time, outputs marked to market now). Not realized profit. You choose whom to show the link to.",
+    "pnlHelp": "Opt-in. The enclave signs a pointer to your swap log (key, trade count, log head). Open Activity and /verify for each trade’s inputs, outputs, quote and receipt. No profit number.",
     "pnlOpen": "Open your shareable swap log ↗",
     "lockNote": "This key is locked for sale until {time} UTC. Trades and withdrawals resume then, or after a transfer."
   },
