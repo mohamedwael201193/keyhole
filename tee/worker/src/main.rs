@@ -103,11 +103,30 @@ mod host {
     }
 
     /// Refuses a value-moving op while the key is listed for sale. Called before any spend is held.
-    /// Reads never reach the RPC call.
+    /// Reads never reach the RPC call. Pass `execute: true` for a wet quote.
     fn assert_not_listed(op: &str, token: &str) -> Result<(), Error> {
-        if !is_value_move(op) { return Ok(()); }
+        assert_not_listed_ex(op, token, false)
+    }
+    fn assert_not_listed_ex(op: &str, token: &str, execute: bool) -> Result<(), Error> {
+        if !is_value_move_or_wet_quote(op, execute) { return Ok(()); }
         let read = listing_read(token);
-        listing_blocks(op, read.as_ref().map_err(String::as_str))
+        listing_blocks_ex(op, execute, read.as_ref().map_err(String::as_str))
+    }
+
+    /// Current settlement epoch for a key (enclave storage). Missing means 0.
+    fn epoch_of(token: &str) -> u64 {
+        epoch_from_bytes(&Host.get(&tkey(token, "epoch")))
+    }
+
+    /// Persist epoch. Called when ownership changes.
+    fn set_epoch(token: &str, epoch: u64) {
+        Host.set(&tkey(token, "epoch"), &epoch_to_bytes(epoch));
+    }
+
+    /// Stamp a value-move with the current epoch, then refuse if owner or epoch drift before the send.
+    fn settle_gate(token: &str, account: &str, stamped: u64) -> Result<(), Error> {
+        owns(token, account).and_then(settle_if_owner)?;
+        settle_if_epoch(stamped, epoch_of(token))
     }
 
     fn yocto_of(v: &Value) -> u128 {
@@ -327,6 +346,10 @@ mod host {
         let usd = dry.pointer("/quote/amountInUsd").and_then(|v| v.as_str()).and_then(parse_usd_micro)
             .ok_or_else(|| err("upstream", "quote has no USD value; cannot apply caps"))?;
         let execute = p.get("execute").and_then(|v| v.as_bool()).unwrap_or(false);
+        // Wet quotes move custody funds via an INTENTS deposit; refuse them while listed (H-1).
+        if execute {
+            assert_not_listed_ex("quote", &c.token_id(), true)?;
+        }
         let spent = enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, execute)?;
         let mut out = json!({"ok": true, "op": "quote", "account": c.account, "tier": c.tier, "usd_micro": usd,
             "limits": lim, "spent_today_usd_micro": spent, "policy": "passed"});
@@ -362,8 +385,10 @@ mod host {
         });
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = c.token.as_ref().and_then(|t| active_lock(&Host.get(&tkey(t, "lock")), &c.account, c.now_ms));
+        let epoch = c.token.as_ref().map(|t| epoch_of(t)).unwrap_or(0);
         Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
-            "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent}))
+            "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent,
+            "settlement_epoch": epoch}))
     }
 
     fn op_mint(input: &Value) -> Result<Value, Error> {
@@ -530,6 +555,7 @@ mod host {
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         // A key listed for sale is frozen for value moves until it is sold or unlisted (before any spend is held).
         assert_not_listed(op, &c.token_id())?;
+        let stamped = epoch_of(&c.token_id());
         // The floor the wallet must respect. Without one from the caller, it comes from a fresh quote.
         let min_out = match client_min {
             Some(m) => m,
@@ -542,7 +568,12 @@ mod host {
         };
         // Everything below holds the spend. Each refusal before the send gives it back (charge_spend and release).
         let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
-        if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
+        if let Err(e) = settle_gate(&c.token_id(), &c.account, stamped) {
+            charge.release(&mut Host);
+            return Err(e);
+        }
+        // Re-read listing once more immediately before the send (check-then-act window).
+        if let Err(e) = assert_not_listed(op, &c.token_id()) {
             charge.release(&mut Host);
             return Err(e);
         }
@@ -551,14 +582,16 @@ mod host {
             Ok(r) => r,
             Err(e) => { charge.release(&mut Host); return Err(e); }
         };
-        let status = s(&r, "status").unwrap_or_default();
-        charge.settle(&mut Host, &status);
+        let raw_status = s(&r, "status").unwrap_or_default();
+        charge.settle(&mut Host, &raw_status);
+        let still = owns(&c.token_id(), &c.account).unwrap_or(false);
+        let status = after_move_status_epoch(&raw_status, still, stamped, epoch_of(&c.token_id()));
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
-            "usd_in_micro": usd, "status": status, "source": p.get("source")}));
+            "usd_in_micro": usd, "status": status, "epoch": stamped, "source": p.get("source")}));
         if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}")); }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
-            "min_amount_out": min_out.to_string(), "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
+            "min_amount_out": min_out.to_string(), "settlement_epoch": stamped, "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
     }
 
     fn op_withdraw(input: &Value) -> Result<Value, Error> {
@@ -578,9 +611,14 @@ mod host {
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         assert_not_listed("withdraw", &c.token_id())?;
+        let stamped = epoch_of(&c.token_id());
         // Holds the spend; every refusal before the send gives it back (see charge_spend).
         let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
-        if let Err(e) = owns(&c.token_id(), &c.account).and_then(settle_if_owner) {
+        if let Err(e) = settle_gate(&c.token_id(), &c.account, stamped) {
+            charge.release(&mut Host);
+            return Err(e);
+        }
+        if let Err(e) = assert_not_listed("withdraw", &c.token_id()) {
             charge.release(&mut Host);
             return Err(e);
         }
@@ -588,14 +626,14 @@ mod host {
         let r = match r { Ok(r) => r, Err(e) => { charge.release(&mut Host); return Err(e); } };
         let raw_status = s(&r, "status").unwrap_or_default();
         charge.settle(&mut Host, &raw_status);
-        // Re-read ownership after the move (P1-4a): if the key changed hands meanwhile, report needs_review.
+        // Re-read ownership and settlement epoch after the move: either drift reports needs_review.
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
-        let status = after_move_status(&raw_status, still);
-        log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status}));
+        let status = after_move_status_epoch(&raw_status, still, stamped, epoch_of(&c.token_id()));
+        log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status, "epoch": stamped}));
         if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
-        Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "request_id": r.get("request_id"),
+        Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "request_id": r.get("request_id"),
             "tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
     }
 
@@ -635,7 +673,10 @@ mod host {
     fn prov_sync_owner(token: &str, owner: &str, ts: u64) {
         let rows = load_prov(token);
         if rows.last().map(|(e, _)| e.owner.as_str()) == Some(owner) || rows.is_empty() { return; }
-        prov_append(token, "transfer", owner, ts, "transfer");
+        // Ownership changed: bump the settlement epoch so any in-flight settle stamped with the old epoch is void.
+        let next = bump_epoch(epoch_of(token));
+        set_epoch(token, next);
+        prov_append(token, "transfer", owner, ts, &format!("transfer epoch {next}"));
     }
 
     fn minter_secret(msk: &str) -> Result<[u8; 32], Error> {
