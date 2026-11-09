@@ -39,15 +39,30 @@ fresh_rows! {
 }
 #[test] fn expired_code() { assert_eq!(check_freshness(0, N).unwrap_err().code, "expired"); }
 
-macro_rules! to_rows { ($($name:ident: $signer:expr, $to:expr => $ok:expr;)*) => { $(#[test] fn $name() { assert_eq!(assert_withdraw_to($signer, $to).is_ok(), $ok); })* } }
+macro_rules! to_rows { ($($name:ident: $chain:expr, $to:expr => $ok:expr;)*) => { $(#[test] fn $name() { assert_eq!(assert_withdraw_to($chain, $to).is_ok(), $ok, "{} {:?}", $chain, $to); })* } }
 to_rows! {
-    to_self: "a.near", "a.near" => true;
-    to_other: "a.near", "b.near" => false;
-    to_case: "a.near", "A.near" => false;
-    to_space: "a.near", "a.near " => false;
-    to_sub: "a.near", "x.a.near" => false;
-    to_empty: "a.near", "" => false;
-    to_treasury: "a.near", "keyhole-devmo.near" => false;
+    near_self: "near", "a.near" => true;
+    near_other: "near", "b.near" => true;
+    near_sub: "near", "x.a.near" => true;
+    near_implicit: "near", "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443" => true;
+    near_case: "near", "A.near" => false;
+    near_space: "near", "a.near " => false;
+    near_empty: "near", "" => false;
+    near_bad_edge: "near", ".a.near" => false;
+    evm_checksum: "base", "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" => true;
+    evm_lower: "eth", "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" => true;
+    evm_upper: "avax", "0x5AAEB6053F3E94C9B9A09F33669435E7EF1BEAED" => true;
+    evm_bad_checksum: "arb", "0x5aaEb6053F3E94C9b9A09f33669435E7Ef1BeAed" => false;
+    evm_short: "op", "0x5aaeb6053f3e94c9b9a09f33669435e7ef1bea" => false;
+    evm_no_prefix: "pol", "5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" => false;
+    evm_non_hex: "bsc", "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaeg" => false;
+    evm_near_name: "gnosis", "alice.near" => false;
+    sol_system: "sol", "11111111111111111111111111111111" => true;
+    sol_short: "sol", "1111" => false;
+    sol_bad_char: "sol", "0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl" => false;
+    sol_evm_address: "sol", "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" => false;
+    unknown_chain: "doge", "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" => false;
+    chain_is_exact: "BASE", "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" => false;
 }
 
 #[test] fn tiers_outside_1_3_have_no_limits() { for t in [0u8, 4, 9, 255] { assert!(limits_for_tier(t).is_none(), "{t}"); } }

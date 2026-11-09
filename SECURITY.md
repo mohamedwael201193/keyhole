@@ -33,7 +33,7 @@ Report a problem privately to the repository owner. Please do not open a public 
 | **I**nformation disclosure | A new holder reads the old holder's rows | row detail is returned only to the account that wrote it; others see hashes | `provenance` op; `/key` shows counts only |
 | **I**nformation disclosure | The site logs AI prompts | `/api/ai` stores nothing and sends `no-store`; the model runs in a TEE with a fresh nonce | `web/app/api/ai/route.ts`, `ai.test.ts` |
 | **D**enial of service | Spam the enclave | per-holder and global per-minute limits; per-IP limits on site routes | `rate_limit_per_holder`, `global_rate_limit`; limiter tests |
-| **E**levation of privilege | A function-call key or agent drains funds | full-access key required; per-trade and daily caps; raises wait 24 h; withdraw only to the signer | `over_cap_per_tx_refused`, `holder_cut_applies_now_and_raise_waits_a_day`, `withdraw_refuses_any_destination_but_the_signer` |
+| **E**levation of privilege | A function-call key or agent drains funds | full-access key required; per-trade and daily caps; raises wait 24 h; withdraw to a destination the holder signs, shape-checked per chain | `over_cap_per_tx_refused`, `holder_cut_applies_now_and_raise_waits_a_day`, `withdraw_destination_must_be_a_valid_address_for_its_chain` |
 | **E**levation of privilege | Old holder keeps access after selling | owner read on every call; 10-minute withdraw cooldown for a new owner; seller lock | `transfer_then_old_signature_is_not_owner`, `withdraw_waits_after_a_transfer_only_for_the_new_owner`, `seller_lock_binds_only_the_owner_who_set_it` |
 | **E**levation of privilege | Anyone mints or changes the minter | contract: minter-only mint, owner-only setters with 1 yocto, private init | contract tests `non_minter_cannot_mint`, `old_minter_cannot_mint`, `set_minter_only_owner`, `init_is_private` |
 
@@ -58,7 +58,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - [x] Contract: standard NEP-171 transfer rules (owner or approved, 1 yocto, no self-transfer) and events; NEP-178 approvals cleared on every transfer.
 - [x] Worker: every state-changing op authenticates, checks freshness and nonce, reads the owner on chain.
 - [x] Worker: amounts parsed as integers; USD caps checked before any external call; spend rolled back on failure.
-- [x] Worker: withdraw destination must be the signer; cooldown after transfer.
+- [x] Worker: withdraw destination is a well-formed address for its chain, covered by the holder's signature; caps, cooldown after transfer and listing freeze still apply.
 - [x] Secrets: none in the repo (CI `hygiene` job scans); site keys are server-only Vercel env vars.
 - [x] Reproducible build: pinned toolchain, path remapping, hash checked in CI against FastFS.
 - [x] Attestation: report_data recomputed from the attested fields; DCAP chain to the pinned Intel root.

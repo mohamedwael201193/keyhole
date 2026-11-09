@@ -449,12 +449,92 @@ pub fn encode_tx(signer: &str, pk: &[u8; 32], nonce: u64, receiver: &str, block_
     v
 }
 
-/// Withdraw may pay only the account that signed the request.
-pub fn assert_withdraw_to(signer: &str, to: &str) -> Result<(), Error> {
-    if to != signer {
-        return Err(err("bad_params", "params.to must be the account that signed this request"));
+/// Withdraw destination: `to` must be a well-formed address on `chain`. It may be any such address, not only the
+/// signer's. The holder's NEP-413 / EIP-191 signature covers the whole signed `params` (`params.to` included), so the
+/// holder names the destination explicitly and the signature commits to it. Shape only: no chain lookup. The chains
+/// are fixed here; an unknown chain is `bad_params`.
+pub fn assert_withdraw_to(chain: &str, to: &str) -> Result<(), Error> {
+    let ok = match chain {
+        "near" => is_valid_account_id(to),
+        "sol" => is_sol_address(to),
+        "eth" | "base" | "arb" | "op" | "bsc" | "pol" | "avax" | "gnosis" => is_evm_address(to),
+        _ => return Err(err("bad_params", "params.chain is not a supported withdraw chain")),
+    };
+    if ok { Ok(()) } else { Err(err("bad_params", "params.to is not a valid address for params.chain")) }
+}
+
+/// Solana address: base58 that decodes to exactly 32 bytes.
+pub fn is_sol_address(a: &str) -> bool {
+    bs58::decode(a).into_vec().map(|b| b.len() == 32).unwrap_or(false)
+}
+
+/// EVM address: `0x` and 40 hex digits. All-lower or all-upper hex is accepted as is. Mixed case must carry the
+/// EIP-55 checksum, so a mistyped address is refused instead of paid.
+pub fn is_evm_address(a: &str) -> bool {
+    let Some(h) = a.strip_prefix("0x") else { return false };
+    if h.len() != 40 || !h.bytes().all(|b| b.is_ascii_hexdigit()) { return false; }
+    let mixed = h.bytes().any(|b| b.is_ascii_lowercase()) && h.bytes().any(|b| b.is_ascii_uppercase());
+    !mixed || eip55(&h.to_ascii_lowercase()) == h
+}
+
+/// EIP-55 checksum of 40 lowercase hex digits (without `0x`): a letter is upper-case when the matching nibble of
+/// keccak256(lowercase hex) is 8 or more. Returns the digits only.
+pub fn eip55(lower_hex: &str) -> String {
+    use sha3::Keccak256;
+    let ch = Keccak256::digest(lower_hex.as_bytes());
+    lower_hex.chars().enumerate().map(|(i, c)| {
+        let nib = (ch[i / 2] >> if i % 2 == 0 { 4 } else { 0 }) & 0xf;
+        if c.is_ascii_alphabetic() && nib >= 8 { c.to_ascii_uppercase() } else { c }
+    }).collect()
+}
+
+/// The refusal for a key that is not listed for sale, as `record` answers it.
+pub const NOT_LISTED_MSG: &str = "A key's record is public only while it is listed for sale.";
+
+/// The sale listing a public record names: the seller and the price as a decimal yocto string.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordListing {
+    pub seller: String,
+    pub price_yocto: String,
+}
+
+/// The listing decision for `record`. `listing` is the `nft_listing` answer: `null` (not listed) or a missing method
+/// gives `not_listed`. An object gives the seller and price. Any other RPC error, or an answer that is neither, fails
+/// closed as `rpc`. Unlike `listing_blocks` (which lets an unlisted key move), a record is only ever for a listed key.
+pub fn record_listing(listing: Result<&serde_json::Value, &str>) -> Result<RecordListing, Error> {
+    match listing {
+        Err(e) if is_method_not_found(e) => Err(err("not_listed", NOT_LISTED_MSG)),
+        Err(e) => Err(err("rpc", format!("could not read the sale listing: {}", e.chars().take(200).collect::<String>()))),
+        Ok(serde_json::Value::Null) => Err(err("not_listed", NOT_LISTED_MSG)),
+        Ok(v) if v.is_object() => {
+            let seller = v.get("seller").and_then(|x| x.as_str()).filter(|x| is_valid_account_id(x))
+                .ok_or_else(|| err("rpc", "the sale listing names no valid seller"))?;
+            let price = v.get("price").and_then(|x| x.as_str().map(str::to_string).or_else(|| x.as_u64().map(|n| n.to_string())))
+                .filter(|x| !x.is_empty() && x.bytes().all(|b| b.is_ascii_digit()))
+                .ok_or_else(|| err("rpc", "the sale listing names no price"))?;
+            Ok(RecordListing { seller: seller.to_string(), price_yocto: price })
+        }
+        Ok(_) => Err(err("rpc", "could not read the sale listing: unexpected answer")),
     }
-    Ok(())
+}
+
+/// JSON string literal for `s`, with every escape the JSON grammar needs.
+fn json_str(s: &str) -> String {
+    serde_json::to_string(s).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+/// Canonical bytes of a public record (`record` op). Keys are in alphabetical order, no spaces, every string escaped.
+/// The totals are the PnL figures `pnl_aggregate` gives, with `outs` as per-asset output amounts (strings).
+#[allow(clippy::too_many_arguments)]
+pub fn record_canonical(token_id: &str, owner: &str, tier: u8, seller: &str, listing_price_yocto: &str, settled_swaps: u32,
+    volume_usd_micro: u64, trades: u64, cost_usd_micro: u64, outs: &std::collections::BTreeMap<String, u128>, since_ms: u64,
+    log_head: &str, ts_ms: u64) -> String {
+    let outs_json: Vec<String> = outs.iter().map(|(asset, amt)| format!("{}:\"{}\"", json_str(asset), amt)).collect();
+    format!(
+        "{{\"cost_usd_micro\":{},\"kind\":\"keyhole-record-v1\",\"listing_price_yocto\":{},\"log_head\":{},\"outs\":{{{}}},\"owner\":{},\"seller\":{},\"settled_swaps\":{},\"since_ms\":{},\"tier\":{},\"token_id\":{},\"trades\":{},\"ts_ms\":{},\"volume_usd_micro\":{}}}",
+        cost_usd_micro, json_str(listing_price_yocto), json_str(log_head), outs_json.join(","), json_str(owner), json_str(seller),
+        settled_swaps, since_ms, tier, json_str(token_id), trades, ts_ms, volume_usd_micro
+    )
 }
 
 /// Attached gas for `nft_mint`. 20 Tgas. Unused gas is refunded. 10 Tgas is not used:

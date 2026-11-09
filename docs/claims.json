@@ -3117,17 +3117,17 @@
   },
   {
    "id": "src-gw-allow",
-   "claim": "Gateway allowlist: info, provenance, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
+   "claim": "Gateway allowlist: info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
    "where": "README.md:411",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
     "type": "grep",
     "path": "web/lib/gateway.ts",
-    "pattern": "ALLOWED_OPS = \\[\"info\", \"provenance\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
+    "pattern": "ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
    },
    "expected": "exact list",
-   "verify": "grep -nE 'ALLOWED_OPS = \\[\"info\", \"provenance\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
+   "verify": "grep -nE 'ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
   },
   {
    "id": "src-gw-nocopy",
@@ -4378,14 +4378,14 @@
    "verify": "node judge/verify-claims.mjs --only test-valid_signature_passes"
   },
   {
-   "id": "test-withdraw_refuses_any_destination_but_the_signer",
-   "claim": "Named test or symbol `withdraw_refuses_any_destination_but_the_signer` exists in the source",
+   "id": "test-withdraw_destination_must_be_a_valid_address_for_its_chain",
+   "claim": "Named test or symbol `withdraw_destination_must_be_a_valid_address_for_its_chain` exists in the source",
    "where": "SECURITY.md:36",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
     "type": "symbol",
-    "name": "withdraw_refuses_any_destination_but_the_signer",
+    "name": "withdraw_destination_must_be_a_valid_address_for_its_chain",
     "dirs": [
      "tee/worker/src",
      "contracts/keys/src",
@@ -4395,8 +4395,8 @@
      "cli/src"
     ]
    },
-   "expected": "`withdraw_refuses_any_destination_but_the_signer` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-withdraw_refuses_any_destination_but_the_signer"
+   "expected": "`withdraw_destination_must_be_a_valid_address_for_its_chain` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-withdraw_destination_must_be_a_valid_address_for_its_chain"
   },
   {
    "id": "test-withdraw_waits_after_a_transfer_only_for_the_new_owner",

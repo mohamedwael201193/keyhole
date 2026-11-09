@@ -223,13 +223,30 @@ fn signed_tx_verifies() {
 }
 
 #[test]
-fn withdraw_refuses_any_destination_but_the_signer() {
-    assert!(assert_withdraw_to("alice.near", "alice.near").is_ok());
-    let other = assert_withdraw_to("alice.near", "bob.near").unwrap_err();
-    assert_eq!(other.code, "bad_params");
-    assert!(other.message.contains("signed this request"));
-    assert!(assert_withdraw_to("alice.near", "alice.near ").is_err());
-    assert!(assert_withdraw_to("alice.near", "").is_err());
+fn withdraw_destination_must_be_a_valid_address_for_its_chain() {
+    // Any well-formed destination is allowed: the holder's signature covers params.to.
+    assert!(assert_withdraw_to("near", "bob.near").is_ok());
+    assert!(assert_withdraw_to("base", "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed").is_ok());
+    assert!(assert_withdraw_to("sol", "11111111111111111111111111111111").is_ok());
+    // Shape errors and unknown chains are refused with bad_params.
+    let bad = assert_withdraw_to("near", "bob.near ").unwrap_err();
+    assert_eq!(bad.code, "bad_params");
+    assert!(assert_withdraw_to("near", "").is_err());
+    assert!(assert_withdraw_to("doge", "bob.near").is_err());
+    assert!(assert_withdraw_to("base", "bob.near").is_err());
+}
+
+#[test]
+fn eip55_matches_the_spec_vectors() {
+    // EIP-55 examples: the checksum of each lowercase address.
+    for want in ["0x52908400098527886E0F7030069857D2E4169EE7", "0x8617E340B3D01FA5F11F306F4090FD50E238070D",
+        "0xde709f2102306220921060314715629080e2fb77", "0x27b1fdb04752bbc536007a920d24acb045561c26",
+        "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed", "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+        "0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB", "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb"] {
+        let lower = want.trim_start_matches("0x").to_ascii_lowercase();
+        assert_eq!(format!("0x{}", eip55(&lower)), want);
+        assert!(is_evm_address(want), "{want}");
+    }
 }
 
 fn art_file_hash(n: u8) -> String {
@@ -418,7 +435,7 @@ fn transfer_moves_the_confidential_account_to_the_new_holder() {
     assert_eq!(wa, wb);
     assert_eq!(ledger[&wb], 100);
     // Bob withdraws 10 to himself.
-    assert_withdraw_to("bob.near", "bob.near").unwrap();
+    assert_withdraw_to("near", "bob.near").unwrap();
     settle_if_owner(owner == "bob.near").unwrap();
     *ledger.get_mut(&wb).unwrap() -= 10;
     log.push(serde_json::json!({"kind": "withdraw", "amount": "10", "by": "bob.near"}));
@@ -618,6 +635,89 @@ fn pnl_counts_only_successful_trades_and_signs_totals_only() {
     let sig = sign_head(&secret, &st);
     let public = SigningKey::from_bytes(&secret).verifying_key().to_bytes();
     assert!(verify_head(&public, &st, &sig));
+}
+
+// ---------- public record (`record`): listed keys only, from a log that verifies ----------
+#[test]
+fn record_statement_has_a_fixed_field_order_and_no_extra_fields() {
+    let mut outs = std::collections::BTreeMap::new();
+    outs.insert("nep141:wrap.near".to_string(), 1500u128);
+    let head = "0".repeat(64);
+    let st = record_canonical("k5f4750858f328940", "bob.near", 2, "alice.near", "2500", 12, 7_500_000, 3, 30_000, &outs, 40, &head, 99);
+    assert_eq!(st, format!("{{\"cost_usd_micro\":30000,\"kind\":\"keyhole-record-v1\",\"listing_price_yocto\":\"2500\",\"log_head\":\"{head}\",\"outs\":{{\"nep141:wrap.near\":\"1500\"}},\"owner\":\"bob.near\",\"seller\":\"alice.near\",\"settled_swaps\":12,\"since_ms\":40,\"tier\":2,\"token_id\":\"k5f4750858f328940\",\"trades\":3,\"ts_ms\":99,\"volume_usd_micro\":7500000}}"));
+    let v: serde_json::Value = serde_json::from_str(&st).unwrap();
+    assert_eq!(v.as_object().unwrap().len(), 14);
+    assert!(!st.contains(" "), "no spaces");
+}
+
+#[test]
+fn record_statement_escapes_every_string() {
+    let mut outs = std::collections::BTreeMap::new();
+    outs.insert("nep141:a\"b\\c".to_string(), 5u128);
+    let st = record_canonical("k5f4750858f328940", "o\"w\\ner", 1, "s.near", "10", 0, 0, 0, 0, &outs, 0, "h\n", 1);
+    let v: serde_json::Value = serde_json::from_str(&st).expect("the statement is JSON the browser can parse");
+    assert_eq!(v["owner"], "o\"w\\ner");
+    assert_eq!(v["log_head"], "h\n");
+    assert_eq!(v["outs"]["nep141:a\"b\\c"], "5");
+}
+
+#[test]
+fn record_statement_with_no_trades_has_empty_outs() {
+    let st = record_canonical("k5f4750858f328940", "bob.near", 1, "alice.near", "1", 0, 0, 0, 0, &Default::default(), 0, &"0".repeat(64), 1);
+    assert!(st.contains("\"outs\":{}"), "{st}");
+}
+
+#[test]
+fn record_is_refused_unless_the_key_is_listed() {
+    assert_eq!(record_listing(Ok(&serde_json::Value::Null)).unwrap_err().code, "not_listed");
+    for raw in ["MethodNotFound", "method not found", "Method_Not_Found"] {
+        let e = record_listing(Err(raw)).unwrap_err();
+        assert_eq!(e.code, "not_listed", "{raw}");
+        assert_eq!(e.message, NOT_LISTED_MSG);
+    }
+    // Any other RPC error, or an answer that is neither null nor a listing, fails closed.
+    for raw in ["HandlerError: panicked", "UnknownAccount", "timeout"] {
+        assert_eq!(record_listing(Err(raw)).unwrap_err().code, "rpc", "{raw}");
+    }
+    assert_eq!(record_listing(Ok(&serde_json::json!([1]))).unwrap_err().code, "rpc");
+    assert_eq!(record_listing(Ok(&serde_json::json!("alice.near"))).unwrap_err().code, "rpc");
+}
+
+#[test]
+fn record_reads_seller_and_price_from_a_listing() {
+    let ok = record_listing(Ok(&serde_json::json!({"token_id": "k5f4750858f328940", "seller": "alice.near", "price": "2500"}))).unwrap();
+    assert_eq!(ok, RecordListing { seller: "alice.near".into(), price_yocto: "2500".into() });
+    let num = record_listing(Ok(&serde_json::json!({"seller": "alice.near", "price": 2500}))).unwrap();
+    assert_eq!(num.price_yocto, "2500");
+    for bad in [serde_json::json!({"seller": "alice.near", "price": "2.5"}), serde_json::json!({"seller": "alice.near", "price": ""}),
+        serde_json::json!({"seller": "alice.near", "price": "-1"}), serde_json::json!({"seller": "alice.near"}),
+        serde_json::json!({"seller": "Alice.near", "price": "2500"}), serde_json::json!({"price": "2500"})] {
+        assert_eq!(record_listing(Ok(&bad)).unwrap_err().code, "rpc", "{bad}");
+    }
+}
+
+#[test]
+fn record_is_refused_for_a_log_that_does_not_verify() {
+    let t = "k5f4750858f328940";
+    let mut log = Vec::new();
+    append_event(&mut log, "mint", t, "bob.near", 1, "mint");
+    append_event(&mut log, "swap", t, "bob.near", 2, "swap USDC 5");
+    append_event(&mut log, "withdraw", t, "bob.near", 3, "withdraw 1 USDC");
+    assert!(verify_chain(&log).is_ok());
+    let mut owner_changed = log.clone();
+    owner_changed[0].owner = "mallory.near".into();
+    assert_eq!(verify_chain(&owner_changed).unwrap_err().code, "bad_log");
+    let mut relinked = log.clone();
+    relinked[2].prev = "0".repeat(64);
+    assert_eq!(verify_chain(&relinked).unwrap_err().code, "bad_log");
+    let mut renumbered = log.clone();
+    renumbered[1].i = 5;
+    assert_eq!(verify_chain(&renumbered).unwrap_err().code, "bad_log");
+}
+
+#[test]
+fn record_is_not_a_session_op() {
+    assert!(!SESSION_OPS.contains(&"record"));
 }
 
 // ---------- invariant tests: seeded random sequences, thousands of steps each ----------

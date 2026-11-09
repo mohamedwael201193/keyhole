@@ -22,11 +22,13 @@ Proof: `replay_rejected`, `freshness_window`, and `eip191_recovers_the_fixed_vec
 
 Nonce records are kept for good: no pruning on the call path. (Build ebeb6a34 pruned them after 15 minutes, but the storage key listing it used blocked signed calls on OutLayer, so that build was rolled back; see SECURITY.md.) A replay is refused as `replay` for as long as the record exists, and as `expired` once its signed time is more than 5 minutes from chain time.
 
-## Withdraw aimed at someone other than the signer
+## Withdraw to an address the holder names
 
-`assert_withdraw_to` returns `bad_params` unless `params.to` equals the account that signed. The vault sets `to` to the connected account before it asks for the signature.
+`assert_withdraw_to(chain, to)` returns `bad_params` unless `params.to` is well formed for `params.chain`: a NEAR account id for `near`, `0x` and 40 hex digits (EIP-55 checksum required when mixed case) for the EVM chains, base58 of 32 bytes for `sol`. An unknown chain is refused. Any well-formed address is allowed, not only the signer's. The holder's NEP-413 or EIP-191 signature covers `params.to`, so the wallet shows the destination the holder signs.
 
-Proof: the `assert_withdraw_to` cases in [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs).
+What this changes: a key that can get a withdraw signature can now send to an address that is not the holder's. Before, a withdraw could only go to the signer's own account. The limits still apply: the per-trade and daily caps, the 10-minute cooldown after a transfer, the seller lock, and the listing freeze. A session token still cannot withdraw. The main risk left is a signature prompt that a phisher gets the holder to sign with an attacker's `to`, and it is bounded by those caps.
+
+Proof: the `assert_withdraw_to` cases in [`tee/worker/src/p2fail.rs`](tee/worker/src/p2fail.rs), [`tee/worker/src/matrix.rs`](tee/worker/src/matrix.rs) and [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs). The vault still sets `to` to the connected account, which the worker accepts.
 
 ## A withdraw racing the transfer
 
