@@ -3,4 +3,4 @@
 # Same as ./verify.sh <call_id> --rebuild from the repository root. Default call: the published cc8d2fa8 info call.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-exec ./verify.sh "${1:-f21fbb59-13f7-41f4-a89e-a612cf6bdca5}" --rebuild
+exec ./verify.sh "${1:-0847b924-df76-4cee-ab5a-a96c789d2983}" --rebuild

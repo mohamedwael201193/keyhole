@@ -52,7 +52,7 @@ test("verify: the previous-build verdict says so, and the current call links its
 
 test("verify: the default page checks the published cc8d2fa8 info call", async ({ page }) => {
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("f21fbb59-13f7-41f4-a89e-a612cf6bdca5");
+  await expect(page.locator("#cid")).toHaveValue("0847b924-df76-4cee-ab5a-a96c789d2983");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);

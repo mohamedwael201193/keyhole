@@ -357,5 +357,10 @@
   "8485f8d4-c4e1-4ab5-ab9c-a19a0d9d21f7": {
     "output_hash": "e8c16921b70d6d92f85fd9823d2be2a1b1c09a26fac14d3af692fa601c82208e",
     "executed_wasm_sha256": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8"
+  },
+  "0847b924-df76-4cee-ab5a-a96c789d2983": {
+    "output_hash": "7d7a3d4bfa21e3a9e31b47e365db8556dee716ab7300ae7c4041a6eb4131d28b",
+    "executed_wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+    "input_hash": "b178a361d660e91ab33b0dd0fe445e0d1c71fa55bb0a8b5252f5270ff7563ec9"
   }
 }

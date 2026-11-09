@@ -26,10 +26,10 @@ describe("flagship outputs are published, so the sixth check is a real hash matc
     it(`${id.slice(0, 8)}: published output hashes to the attested output_hash`, () => expect(sha(ev(id).output)).toBe(h));
     it(`${id.slice(0, 8)}: one changed field no longer matches`, () => { const o = structuredClone(ev(id).output); o.ok = !o.ok; expect(sha(o)).not.toBe(h); });
   }
-  it("the info output names the 23 ops of build a985fd87 (sessions, hardening, wallet-signed withdraw), Chain Signatures and the beat key included", () => {
+  it("the info output names the 24 ops of build cc8d2fa8 (sessions, hardening, wallet-signed withdraw, earned tiers), Chain Signatures and the beat key included", () => {
     const o = ev(PUBLISHED_INFO_CALL).output;
-    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(23);
-    for (const op of ["chain_address", "chain_sign", "add_beat_key", "del_beat_key", "session", "session_revoke"]) expect(o.ops).toContain(op);
+    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(24);
+    for (const op of ["chain_address", "chain_sign", "add_beat_key", "del_beat_key", "session", "session_revoke", "level_up"]) expect(o.ops).toContain(op);
   });
   it("the chain_sign output returns the key's EVM address and is listed on /verify", () => {
     const o = ev("0cd1c3bd-21be-44dc-bc60-e792a42344e6").output;
