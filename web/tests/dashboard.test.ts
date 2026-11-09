@@ -87,7 +87,7 @@ describe("pure helpers", () => {
 describe("Overview: signed out", () => {
   it("is one centred card: the sign-in rows inline, and a way to explore without a wallet", () => {
     const m = html({ accountId: null });
-    expect(m).toContain("Open your key");
+    expect(m).toContain("Open your <em>key</em>");
     expect(m).toContain('data-testid="dash-connect"');
     for (const id of ["choose-social", "choose-email", "choose-near", "signin-meteor", "choose-other"]) expect(m, id).toContain(`data-testid="${id}"`);
     expect(tagOf(m, "dash-explore")).toContain('href="/judge"');
@@ -107,7 +107,7 @@ describe("Overview: signed out", () => {
   it("while the wallet is restoring it shows a neutral skeleton, not the sign-in card", () => {
     const m = html({ accountId: null, restoring: true });
     expect(m).toContain('data-testid="dash-restoring"');
-    expect(m).not.toContain("Open your key");
+    expect(m).not.toContain("Open your <em>key</em>");
   });
 });
 
@@ -175,8 +175,8 @@ describe("Overview: signed in with a key, vault locked", () => {
     expect(m).toMatch(/\/heirloom\/keys\/k(03|05|08)\.webp/);
   });
 
-  it("the vault total is Locked, with one Unlock button that starts the session", () => {
-    expect(m).toContain('data-testid="stat-balance">Locked<');
+  it("the vault total is Sealed until a read, with one Unlock button that starts the session", () => {
+    expect(m).toContain('data-testid="stat-balance">Sealed<');
     expect(m).toContain('data-testid="dash-unlock"');
     expect(m).toContain("One signature. 30 minutes.");
     expect(m).not.toContain('data-testid="dash-asset-list"');

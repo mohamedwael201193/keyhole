@@ -1,93 +1,109 @@
 /*
- * KEYHOLE design tokens v3. The one source of colour, type, radius, shadow, spacing and motion values.
- * Imported first in app/layout.tsx. The older token blocks (polish.css, heirloom.css, design2.css, ui.css,
- * globals.css @theme) alias these names; do not add new literal colours elsewhere. See web/DESIGN.md.
+ * KEYHOLE design tokens, v7 (the app redesign). The one source of colour, type, radius, shadow, spacing and motion values.
+ * Imported first in app/layout.tsx. The older token blocks (polish.css, heirloom.css, design2.css, ui.css, globals.css @theme)
+ * alias these names; do not add new literal colours elsewhere. Shared components: components/v7/v7.css (see its README.md).
  */
 :root {
-  /* Surfaces: page, raised card, sunken field and shimmer. */
-  --surface: #E6DFD0;
-  --raised: #FFFCF6;
-  --sunken: #F1ECE1;
-  --surface-warm: #F8F3EA;
+  /* Surfaces: page (warm cream), raised card, sunken field, the sidebar and a warm wash. */
+  --surface: #F4ECDF;
+  --raised: #FBF7F0;
+  --sunken: #EFE6D6;
+  --surface-warm: #F7F0E6;
+  --surface-glow: #FFF9EE;
+  --sidebar: #F7F0E6;
+  --sidebar-line: #E7DACA;
+  --card-edge: #EADFCF;
 
-  /* Ink: headings and body. muted is meta text (AA on raised and surface). */
-  --ink: #1F2A2C;
-  --ink-2: #3A4547;
-  --muted: #4E5759;
+  /* Ink: headings, body, meta and faint hints. muted is AA on raised and surface. */
+  --ink: #1E1A16;
+  --ink-2: #4A4239;
+  --muted: #6B6258;
+  --faint: #9A8F82;
 
   /* Lines and fields. */
-  --line: #1A2A2C38;
-  --line-strong: #CFC6B3;
-  --field: #6E7778;
+  --line: #3C281426;
+  --line-strong: #D9CBB5;
+  --field: #8C8170;
 
-  /* Primary: deep teal. Used for the one main action per screen, links and focus. */
-  --primary: #1F4B4F;
-  --primary-hover: #173B3E;
-  --primary-ink: #FFFCF6;
-  --primary-soft: #1F4B4F14;
-  --primary-tint: #E2ECEC;
+  /* Primary: deep teal. The one main action per screen, the active nav pill, links and focus. */
+  --primary: #0F4A48;
+  --primary-hover: #0B3B3A;
+  --primary-ink: #FBF7F0;
+  --primary-soft: #0F4A4814;
+  --primary-tint: #DCE8E5;
 
-  /* Accent: warm brass for eyebrows, fills and a small amount of highlight. coral is the italic display accent only. */
+  /* Accent: rust for eyebrow labels and the italic word in page titles. Brass stays for fills. */
+  --rust: #A9472B;
   --accent: #B8893E;
   --accent-ink: #7A5410;
-  --coral: #A8432C;
+  --coral: var(--rust);
 
-  /* Status: each has an ink (text and icon) and a background. Always printed with a label, never colour alone. */
-  --success: #0B5D3B;
-  --success-bg: #D9F5E6;
-  --warn: #7A4A06;
-  --warn-bg: #FDECC8;
-  --danger: #9A3412;
-  --danger-bg: #FDE4D6;
+  /* Status: the colour is for dots and fills; the *-ink pair is for text on the tinted background (AA). Always printed with a label. */
+  --success: #2F8A5B;
+  --success-bg: #E3F1E6;
+  --success-ink: #1F6B43;
+  --warn: #C07A2C;
+  --warn-bg: #F7EAD6;
+  --warn-ink: #8A5517;
+  --danger: #C2413A;
+  --danger-bg: #F8E1DE;
+  --danger-ink: #A3322C;
   --info: #12407A;
   --info-bg: #DCE9FB;
-  --neutral-ink: #3A4547;
-  --neutral-bg: #E3DCCD;
+  --neutral-ink: #4A4239;
+  --neutral-bg: #EDE5D7;
+
+  /* Key tiers: the chip colour for each finish. */
+  --tier-bronze: #8A4B2A;
+  --tier-silver: #6F7782;
+  --tier-gold: #B08A2E;
+  --tier-legendary: #8C1D3F;
 
   /* Vault: the one dark surface, for hero moments only. */
-  --vault: #174A4E;
-  --vault-ink: #F6F1E7;
+  --vault: #0F4A48;
+  --vault-ink: #FBF7F0;
 
   /* Focus ring. */
-  --focus: #1F4B4F;
-  --focus-ring: 0 0 0 3px #1F4B4F55;
+  --focus: #0F4A48;
+  --focus-ring: 0 0 0 3px #0F4A4855;
 
-  /* Type scale: six sizes. 13px is the floor. */
+  /* Type scale. 13px is the floor. --text-page is the page title (serif, one italic rust phrase). */
   --text-display: 64px;
+  --text-page: 56px;
   --text-title: 36px;
   --text-heading: 22px;
   --text-lead: 18px;
   --text-body: 16px;
   --text-small: 13px;
 
-  /* Font roles: the display serif for headlines only, Manrope for UI, mono for hashes and figures. */
+  /* Font roles: Cormorant Garamond for headings and big figures, Inter for UI, DM Mono for hashes, ids and figures. */
   --font-display: var(--font-cormorant), Georgia, serif;
-  --font-ui: var(--font-manrope), sans-serif;
+  --font-ui: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-dm), ui-monospace, monospace;
 
-  /* Radii. */
+  /* Radii. Cards 18px, fields 12px, controls pill. */
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-lg: 18px;
   --radius-xl: 20px;
   --radius-pill: 999px;
 
-  /* Elevation. */
-  --shadow-1: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(20,40,40,.12);
-  --shadow-2: 0 2px 4px rgba(0,0,0,.10), 0 16px 40px rgba(20,60,60,.22);
+  /* Elevation. The card shadow is soft and warm; the lifted one is for popovers. */
+  --shadow-1: 0 1px 2px rgba(60,40,20,.05), 0 8px 24px rgba(60,40,20,.06);
+  --shadow-2: 0 2px 4px rgba(60,40,20,.06), 0 16px 40px rgba(60,40,20,.14);
   --shadow-soft: var(--shadow-1);
   --shadow-lifted: var(--shadow-2);
-  --shadow-glow: 0 12px 28px -10px rgba(20,163,160,.55);
+  --shadow-glow: 0 12px 28px -10px rgba(15,74,72,.55);
 
   /* Spacing: a 4px scale. */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 72px;
 
-  /* Motion: three durations, three easings. Reduced motion turns animation off in polish.css. */
-  --dur-fast: 150ms;
-  --dur-base: 250ms;
+  /* Motion: 160 to 240 ms for hover and press, one ease curve. Reduced motion turns animation off (components/v7/v7.css). */
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
   --dur-slow: 600ms;
-  --ease-out: cubic-bezier(.22,.61,.36,1);
-  --ease-std: cubic-bezier(.2,.7,.2,1);
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --ease-std: cubic-bezier(.2,.8,.2,1);
   --ease-spring: cubic-bezier(.2,.9,.3,1.3);
 }

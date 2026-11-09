@@ -11,12 +11,11 @@
   --teal: var(--primary);        /* primary fill, active nav, links, focus */
   --brass: var(--accent-ink);    /* eyebrows and labels */
   --ln: var(--line);             /* hairlines */
-  --kh-edge: var(--line-strong); /* card edge */
+  --kh-edge: var(--card-edge);   /* card edge */
   --kh-field: var(--field);      /* input border, 4.6:1 on white */
-  --ok-ink: var(--success); --ok-bg: var(--success-bg);
+  --ok-ink: var(--success-ink); --ok-bg: var(--success-bg);
   --info-ink: var(--info);
-  --warn-ink: var(--warn);
-  --bad-ink: var(--danger); --bad-bg: var(--danger-bg);
+  --bad-ink: var(--danger-ink); --bad-bg: var(--danger-bg);
   --kh-stops: #0E6B70, #14A3A0 18%, #D4A33A 38%, #F2C25B 50%, #D4A33A 62%, #14A3A0 82%, #0E6B70;
   --kh-shadow: var(--shadow-1);
   --kh-shadow-hi: var(--shadow-2);

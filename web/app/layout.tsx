@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { Cormorant_Garamond, DM_Mono, Manrope } from "next/font/google";
+import { Cormorant_Garamond, DM_Mono, Inter } from "next/font/google";
 import "./tokens.css";
 import "./globals.css";
 import "./ui.css";
@@ -9,6 +9,7 @@ import "./landing.css";
 import "./app-shell.css";
 import "./app-pages.css";
 import "./overview.css";
+import "../components/v7/v7.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -18,8 +19,9 @@ import { SiteFrame } from "@/components/SiteFrame";
 const walletModalCss = readFileSync(join(process.cwd(), "node_modules/@near-wallet-selector/modal-ui/styles.css"), "utf8")
   .replace(/@import\s+url\([^)]*\)\s*;?/g, "");
 
-const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["600", "700"], style: ["normal", "italic"], variable: "--font-cormorant", display: "swap" });
-const sans = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"], variable: "--font-manrope", display: "swap" });
+/* Display serif (headings, card titles, big figures), UI sans (Inter) and mono (hashes, ids, serials). Roles: app/tokens.css. */
+const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600", "700"], style: ["normal", "italic"], variable: "--font-cormorant", display: "swap" });
+const sans = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-inter", display: "swap" });
 const mono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm", display: "swap" });
 export const metadata: Metadata = {
   title: "KEYHOLE — the NFT is the viewing key",

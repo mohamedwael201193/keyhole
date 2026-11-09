@@ -137,7 +137,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
             <p className="mono" style={{ fontSize: 13, color: "var(--mu)", marginBottom: 16 }}>{t("ident.type")}</p>
             <p style={{ font: "700 42px/1 var(--serif)" }}>Cormorant Garamond</p>
             <p className="mono" style={{ fontSize: 13, color: "var(--mu)" }}>{t("ident.typeD")}</p>
-            <p style={{ font: "600 22px var(--sans)", marginTop: 16 }}>Manrope 500–800</p>
+            <p style={{ font: "600 22px var(--sans)", marginTop: 16 }}>Inter 400–600</p>
             <p style={{ font: "500 18px var(--mono)", marginTop: 16 }}>DM Mono 400/500</p>
           </div>
           <div className="bx">

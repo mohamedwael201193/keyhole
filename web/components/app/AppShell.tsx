@@ -211,10 +211,10 @@ function AppShellFrame({ children }: { children: ReactNode }) {
       </header>
       <div className="app-body">
         <aside id="app-side" className={`app-side${open ? " open" : ""}`} aria-label="App">
-          <Link href="/" className="app-back" data-testid="app-back">← Back to site</Link>
           <AppNav pathname={pathname} hash={hash} mint={mint} onNavigate={(href) => { setHash(hashOf(href)); setOpen(false); }} />
           <div className="app-foot">
             <p className="app-net-line"><i aria-hidden="true" />NEAR mainnet</p>
+            <Link href="/" className="app-back" data-testid="app-back">← Back to site</Link>
             <Link href="/verify" className="app-proof" data-testid="app-proof">Proof</Link>
             <p className="app-legal">
               <a href="https://near.org" target="_blank" rel="noreferrer">Built on NEAR</a>

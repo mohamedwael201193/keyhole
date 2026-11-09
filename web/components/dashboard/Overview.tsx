@@ -1,25 +1,27 @@
 "use client";
 import Link from "next/link";
-import { Badge, Button, Card, Skeleton } from "@/components/ui";
+import { Button, badgeFor } from "@/components/ui";
 import { KeyArt } from "@/components/Art";
 import { TokenMark } from "@/components/TokenMark";
 import { ErrorBox } from "@/components/Result";
-import { TxLink } from "@/components/TxLink";
 import { TxResult } from "@/components/TxResult";
 import { SignInOptions, type SignInOptionsProps } from "@/components/SignInModal";
+import { Card, CardHeader, Icon, PageHeader, ProofPanel, SetupProgress, Skeleton, StatusChip, TierChip, VaultHero, type IconName, type SetupItem } from "@/components/v7";
 import { useHealth } from "@/lib/useHealth";
 import { formatUsdMicro, type AssetRow, type Total } from "@/lib/amount";
 import { shortAccount, shortKeyId, tierName, type Token } from "@/lib/near";
-import { capsOf, entryDetail, keyCountText, kindLabel, meterPct, settledOrders, type HistEntry, type TierProgressRead } from "@/lib/dashboard";
+import { entryDetail, keyCountText, kindLabel, meterPct, settledOrders, type HistEntry, type TierProgressRead } from "@/lib/dashboard";
 import { KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
-import { keyIdentity } from "@/lib/traits";
+import { keyIdentity, serialOf } from "@/lib/traits";
 import type { KeyStatus } from "@/lib/keyStore";
 
 /**
  * The Overview body (/dashboard). Presentational: every value arrives as a prop from app/dashboard/view.tsx, which owns
  * the reads. A number is shown only when its read succeeded; every other state names what is missing.
- * Order of states: signed out (sign-in options inline), signed in without a key (Mint), signed in with a key (the key
- * card, the setup checklist, the proof, then the signed assets and activity).
+ * Layout (mockup 20): the page title, the vault banner, then three columns: the key card, the middle (quick actions,
+ * assets and activity, the proof) and the setup progress. Below: the tier progress and the three steps.
+ * Order of states: signed out (sign-in options inline), signed in with keys still loading, signed in without a key (Mint),
+ * signed in with a key (the full page).
  */
 
 export type KeysView = {
@@ -118,6 +120,11 @@ function totalText(total: Total | null): string | undefined {
   return formatUsdMicro(total.micro);
 }
 
+/** Tone for a status word in the activity feed. The label stays the one from the shared badge table. */
+const FEED_TONE: Record<string, "success" | "warn" | "error" | "info" | "neutral"> = {
+  ok: "success", warn: "warn", bad: "error", info: "info", wait: "neutral",
+};
+
 export function Overview(p: OverviewProps) {
   if (!p.accountId) {
     return p.restoring ? <Restoring /> : <SignedOut signIn={p.signIn} />;
@@ -141,181 +148,290 @@ export function Overview(p: OverviewProps) {
   const unlocked = unlock.live || balance.read || activity.read;
   const recent = activity.entries ? [...activity.entries].reverse().slice(0, RECENT) : [];
   const unpriced = balance.total?.kind === "partial" ? balance.total.unpriced : [];
+  const rowCount = balance.rows?.length ?? 0;
+
+  // The vault banner: the balance only from a signed read, otherwise "Sealed" and the one line that says why.
+  let heroValue: string = "Sealed";
+  let heroSub: string;
+  if (!held) {
+    heroSub = noKey ? "Your vault opens with your key. Mint one to start." : looking ? "Checking your key on NEAR mainnet…" : "The number of keys is not shown until NEAR mainnet answers.";
+  } else if (!unlock.live) {
+    heroSub = `Balances stay sealed until you sign a read. ${unlock.via === "privy" ? "Signed in-page. No popup." : "One signature. 30 minutes."}`;
+  } else if (balance.read) {
+    heroValue = totalText(balance.total) ?? "Sealed";
+    heroSub = `${rowCount === 0 ? "No assets yet" : rowCount === 1 ? "1 asset" : `${rowCount} assets`}. Read with your session. No popup.`;
+  } else if (balance.error) {
+    heroValue = "Unavailable";
+    heroSub = "The vault read did not complete. Try again from Assets below.";
+  } else {
+    heroSub = balance.busy ? balance.busyLabel : "Reading your vault…";
+  }
+  const heroActions = held ? (
+    <>
+      {!unlock.live && (
+        <Button variant="banner" onClick={unlock.onUnlock} loading={unlock.busy} loadingLabel={unlock.busyLabel} testid="dash-unlock">
+          Unlock
+        </Button>
+      )}
+      <Button href="/vault" variant={unlock.live ? "banner" : "secondary"} className={unlock.live ? undefined : "v7-on-vault"} testid="dash-deposit">Deposit</Button>
+      <Button href="/vault" variant="secondary" className="v7-on-vault" testid="dash-withdraw">Withdraw</Button>
+    </>
+  ) : undefined;
 
   return (
     <div className="page ov" data-testid="dash">
-      <header className="ov-head">
-        <h1 className="ov-title">Overview</h1>
-        <p className="ov-meta">Signed in as <span className="ov-mono" data-testid="dash-account">{shortAccount(p.accountId, 6)}</span></p>
-      </header>
+      <PageHeader
+        eyebrow="Overview"
+        title={<>Your <em>confidential</em> account</>}
+        lead={p.accountId ? <>Signed in as <span className="v7-mono" data-testid="dash-account">{shortAccount(p.accountId, 6)}</span></> : undefined}
+      />
 
-      {held && identity && keys.primary ? (
-        <section className="ov-hero kh-card" aria-labelledby="ov-hero-h" data-testid="key-hero">
-          <figure className="ov-art">
-            <KeyArt n={identity.art} alt={`Artwork of key ${shortKeyId(keys.primary.token_id)}`} width={430} height={1080} priority />
-          </figure>
-          <div className="ov-hero-body">
-            <p className="ov-eb">Your key</p>
-            <h2 id="ov-hero-h" className="ov-name">
-              {`Key #${shortKeyId(keys.primary.token_id)} · `}<span data-testid="stat-tier">{tierKnown ? identity.finish : "Tier not readable"}</span>
-            </h2>
-            <p className="ov-sentence">Your NFT is the account: whoever holds the key controls the vault, and selling the key hands over the account. The keys to the money never leave the enclave.</p>
-            <p className="ov-meta"><span data-testid="stat-keys">{keyCountText(keys.count, keys.capped)} {keys.count === 1 && !keys.capped ? "key" : "keys"} held</span>{keys.count > 1 ? ". Showing the first." : ""}</p>
+      <VaultHero
+        value={<span data-testid="stat-balance">{heroValue}</span>}
+        sealed={heroValue === "Sealed"}
+        sub={heroSub}
+        actions={heroActions}
+        testid="ov-vault"
+      />
+      {held && !unlock.live && unlock.error && <div className="ov-banner-err"><ErrorBox code={unlock.error} /></div>}
 
-            <div className="ov-vault">
-              <span className="ov-label">Vault</span>
-              {unlock.live ? (
-                balance.read ? (
-                  <span className="ov-amount" data-testid="stat-balance">{totalText(balance.total)}</span>
-                ) : balance.error ? (
-                  <span className="ov-amount ov-muted" data-testid="stat-balance">Unavailable</span>
-                ) : (
-                  <span className="ov-amount ov-muted" data-testid="stat-balance">{balance.busy ? balance.busyLabel : "Reading…"}</span>
-                )
-              ) : (
-                <span className="ov-amount ov-locked" data-testid="stat-balance">Locked</span>
-              )}
-              {!unlock.live && (
-                <div className="ov-unlock">
-                  <Button variant="primary" size="md" onClick={unlock.onUnlock} loading={unlock.busy} loadingLabel={unlock.busyLabel} testid="dash-unlock">
-                    Unlock
-                  </Button>
-                  <span className="ov-muted">{unlock.via === "privy" ? "Signed in-page. No popup." : "One signature. 30 minutes."}</span>
-                  {unlock.error && <ErrorBox code={unlock.error} />}
-                </div>
-              )}
-              {unlock.live && balance.error && (
-                <div className="ov-unlock">
-                  <ErrorBox code={balance.error.code} retryAfter={balance.error.retry_after} />
-                  <Button variant="secondary" size="sm" onClick={balance.onRead} testid="dash-balance-retry">Try again</Button>
-                </div>
-              )}
-              {unlock.live && <span className="ov-muted">Read with your session. No popup.</span>}
-            </div>
+      <div className="ov-cols">
+        {held && identity && keys.primary ? (
+          <KeyCard
+            token={keys.primary}
+            identity={identity}
+            tierKnown={tierKnown}
+            caps={caps}
+            count={keys.count}
+            capped={keys.capped}
+          />
+        ) : noKey ? (
+          <MintCard />
+        ) : (
+          <LookupCard failed={failed} onRetry={keys.onRetry} />
+        )}
 
-            <p className="ov-caps" data-testid="dash-caps">
-              {caps ? `Caps: $${caps.perTx} a trade · $${caps.daily} a day` : "Caps: not readable for this tier right now"}
-            </p>
-
-            <div className="ov-actions">
-              <Button href="/swap" variant={unlock.live ? "primary" : "secondary"} testid="dash-swap">Swap</Button>
-              <Button href="/vault" variant="secondary" testid="dash-deposit">Deposit</Button>
-              <Button href="/vault" variant="secondary" testid="dash-withdraw">Withdraw</Button>
-            </div>
-          </div>
-        </section>
-      ) : noKey ? (
-        <section className="ov-hero kh-card" aria-labelledby="ov-mint-h" data-testid="mint-banner">
-          <figure className="ov-art">
-            <KeyArt n={SAMPLE_BRONZE_ART} alt="Sample Bronze key artwork" width={430} height={1080} />
-          </figure>
-          <div className="ov-hero-body">
-            <p className="ov-eb">No key yet</p>
-            <h2 id="ov-mint-h" className="ov-name">Mint your key</h2>
-            <p className="ov-sentence">Your key is the account. Free. One signature. The enclave pays storage.</p>
-            <p className="ov-caps">Only Bronze is mintable today: $1 a trade, $5 a day.</p>
-            <div className="ov-actions">
-              <Button href="/mint" variant="primary" size="lg" testid="dash-mint">Mint your key</Button>
-            </div>
-            <p className="ov-muted">The artwork is a sample. Your key&apos;s own art is chosen when it is minted.</p>
-          </div>
-        </section>
-      ) : (
-        <section className="ov-hero kh-card" aria-labelledby="ov-loading-h" data-testid="dash-keys-state">
-          <div className="ov-hero-body ov-hero-wide">
-            <h2 id="ov-loading-h" className="ov-name">{failed ? "Your keys did not load" : "Looking up your key"}</h2>
-            {failed ? (
-              <>
-                <p className="ov-sentence">NEAR mainnet did not answer. The number of keys is not shown until it does.</p>
-                <div className="ov-actions"><Button variant="secondary" onClick={keys.onRetry} testid="dash-keys-retry">Try again</Button></div>
-              </>
-            ) : (
-              <Skeleton lines={3} testid="dash-keys-loading" />
-            )}
-          </div>
-        </section>
-      )}
-
-      <div className="ov-grid">
         <SetupChecklist held={held} looking={looking} unlock={unlock} unlocked={unlocked} funded={funded} swapped={swapped} balanceBusy={balance.busy} />
-        <ProofCard callId={activity.callId} />
+
+        <div className="ov-mid">
+          {(held || noKey) && (
+            <QuickActions held={held} />
+          )}
+          {held && (
+            <div className="ov-pair">
+              <AssetsCard unlock={unlock} balance={balance} unpriced={unpriced} />
+              <ActivityCard unlock={unlock} activity={activity} settled={settled} recent={recent} />
+            </div>
+          )}
+          <ProofCard callId={activity.callId} logOk={activity.logOk} />
+        </div>
       </div>
 
       {held && p.tier && <TierCard tier={p.tier} unlock={unlock} />}
 
-      {held && (
-        <div className="ov-grid">
-          <section className="ov-card kh-card" aria-labelledby="dash-assets-h" data-testid="dash-assets">
-            <div className="ov-card-head">
-              <h2 id="dash-assets-h">Assets</h2>
-              {unlock.live && balance.read && (
-                <button type="button" className="ov-text-btn" onClick={balance.onRead} disabled={balance.busy} data-testid="dash-balance-refresh">
-                  {balance.busy ? balance.busyLabel : "Refresh"}
-                </button>
-              )}
-            </div>
-            {!unlock.live ? (
-              <UnlockLine unlock={unlock} label="Unlock to read" />
-            ) : !balance.read ? (
-              balance.error ? <ErrorBox code={balance.error.code} retryAfter={balance.error.retry_after} /> : <p className="ov-muted">{balance.busy ? balance.busyLabel : "Reading your vault…"}</p>
-            ) : null}
-            {unlock.live && balance.read && balance.rows && balance.rows.length === 0 && <p className="ov-muted" data-testid="dash-assets-empty">No assets in this vault yet.</p>}
-            {unlock.live && balance.rows && balance.rows.length > 0 && (
-              <div className="ov-assets" data-testid="dash-asset-list">
-                {balance.rows.map((row) => (
-                  <div className="ov-row" key={row.key} data-token={row.symbol}>
-                    <TokenMark assetId={row.known ? row.key : null} symbol={row.symbol} chain="near" size={24} />
-                    <div className="ov-row-who"><b>{row.symbol}</b>{row.name ? <small>{row.name}</small> : null}</div>
-                    <div className="ov-row-amt"><b>{row.amountLabel}</b>{row.usdMicro != null ? <small>{formatUsdMicro(row.usdMicro)}</small> : null}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {unpriced.length > 0 && <p className="ov-muted" data-testid="dash-unpriced">Not priced: {unpriced.join(" · ")}</p>}
-            <div className="ov-actions">
-              <Button href="/vault" variant="secondary" size="sm" testid="dash-open-vault">Open your vault</Button>
-            </div>
-          </section>
+      <Steps step={noKey ? 2 : held ? 3 : 0} />
+    </div>
+  );
+}
 
-          <section className="ov-card kh-card" id="activity" aria-labelledby="dash-activity-h" data-testid="dash-activity">
-            <div className="ov-card-head">
-              <h2 id="dash-activity-h">Recent activity</h2>
-              <span className="ov-fact" data-testid="stat-settled">
-                Settled orders <b>{settled ?? "—"}</b>
+/** The key card: the key art, the finish, the serial, the name, the one sentence, the vault line and the caps. */
+function KeyCard({ token, identity, tierKnown, caps, count, capped }: {
+  token: Token;
+  identity: ReturnType<typeof keyIdentity>;
+  tierKnown: boolean;
+  caps: { perTx: number; daily: number } | null;
+  count: number;
+  capped: boolean;
+}) {
+  const id = shortKeyId(token.token_id);
+  return (
+    <Card as="section" labelledBy="ov-key-h" testid="key-hero" className="ov-key">
+      <div className="ov-key-top">
+        <TierChip tier={tierKnown ? identity.finish : "Tier not readable"} testid="stat-tier" />
+        <span className="v7-card-meta">1 of 1</span>
+      </div>
+      <figure className="ov-art">
+        <KeyArt n={identity.art} alt={`Artwork of key ${shortKeyId(token.token_id)}`} width={430} height={1080} priority />
+      </figure>
+      <p className="ov-serial" aria-label={`Serial ${serialOf(identity.seedHex)}`}><span className="v7-mono">{`#${serialOf(identity.seedHex).toUpperCase()}`}</span></p>
+      <h2 id="ov-key-h" className="ov-key-name">{`KEYHOLE Key #${id}`}</h2>
+      <p className="ov-sentence">Your NFT is the account: whoever holds the key controls the vault, and selling the key hands over the account. The keys to the money never leave the enclave.</p>
+      <p className="ov-meta"><span data-testid="stat-keys">{keyCountText(count, capped)} {count === 1 && !capped ? "key" : "keys"} held</span>{count > 1 ? ". Showing the first." : ""}</p>
+      <p className="ov-caps" data-testid="dash-caps">
+        {caps ? `Caps: $${caps.perTx} a trade · $${caps.daily} a day` : "Caps: not readable for this tier right now"}
+      </p>
+    </Card>
+  );
+}
+
+/** Signed in, no key: the sample artwork (labelled as one) and the one mint action. */
+function MintCard() {
+  return (
+    <Card as="section" labelledBy="ov-mint-h" testid="mint-banner" className="ov-key">
+      <div className="ov-key-top">
+        <TierChip tier="Bronze" />
+        <span className="v7-card-meta">Sample</span>
+      </div>
+      <figure className="ov-art">
+        <KeyArt n={SAMPLE_BRONZE_ART} alt="Sample Bronze key artwork" width={430} height={1080} />
+      </figure>
+      <h2 id="ov-mint-h" className="ov-key-name">Mint your key</h2>
+      <p className="ov-sentence">Your key is the account. Free. One signature. The enclave pays storage.</p>
+      <p className="ov-caps">Only Bronze is mintable today: $1 a trade, $5 a day.</p>
+      <div className="ov-key-action">
+        <Button href="/mint" variant="primary" testid="dash-mint">Mint your key</Button>
+      </div>
+      <p className="ov-muted">The artwork is a sample. Your key&apos;s own art is chosen when it is minted.</p>
+    </Card>
+  );
+}
+
+/** Keys still loading, or the lookup failed: one card that says which, with a retry on failure. */
+function LookupCard({ failed, onRetry }: { failed: boolean; onRetry: () => void }) {
+  return (
+    <Card as="section" labelledBy="ov-loading-h" testid="dash-keys-state" className="ov-key ov-lookup">
+      <h2 id="ov-loading-h" className="ov-key-name">{failed ? "Your keys did not load" : "Looking up your key"}</h2>
+      {failed ? (
+        <>
+          <p className="ov-sentence">NEAR mainnet did not answer. The number of keys is not shown until it does.</p>
+          <div className="ov-key-action"><Button variant="secondary" onClick={onRetry} testid="dash-keys-retry">Try again</Button></div>
+        </>
+      ) : (
+        <Skeleton lines={4} testid="dash-keys-loading" />
+      )}
+    </Card>
+  );
+}
+
+/** The four quick actions. Mint shows only when there is no key ("One key per account"); otherwise the activity page. */
+function QuickActions({ held }: { held: boolean }) {
+  const tiles: { id: string; label: string; href: string; icon: IconName; testid: string }[] = [
+    { id: "swap", label: "Swap", href: "/swap", icon: "swap", testid: "dash-swap" },
+    held
+      ? { id: "activity", label: "Activity", href: "/settle", icon: "activity", testid: "ov-tile-activity" }
+      : { id: "mint", label: "Mint key", href: "/mint", icon: "mint", testid: "ov-tile-mint" },
+    { id: "vault", label: "Open vault", href: "/vault", icon: "vault", testid: "ov-tile-vault" },
+    { id: "keys", label: "View keys", href: "/keys", icon: "key", testid: "ov-tile-keys" },
+  ];
+  return (
+    <Card as="section" labelledBy="ov-quick-h" className="ov-quick">
+      <CardHeader title="Quick actions" id="ov-quick-h" />
+      <div className="ov-tiles">
+        {tiles.map((t) => (
+          <Link key={t.id} href={t.href} className="ov-tile" data-testid={t.testid}>
+            <span className="ov-tile-icon" aria-hidden="true"><Icon name={t.icon} size={22} /></span>
+            <span className="ov-tile-label">{t.label}</span>
+          </Link>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+/** Assets: locked until the session is live; then the real rows from the signed balance read. */
+function AssetsCard({ unlock, balance, unpriced }: { unlock: UnlockView; balance: BalanceView; unpriced: string[] }) {
+  return (
+    <Card as="section" labelledBy="dash-assets-h" testid="dash-assets" className="ov-half">
+      <CardHeader
+        title="Assets"
+        id="dash-assets-h"
+        icon="layers"
+        meta={unlock.live && balance.read ? `${balance.rows?.length ?? 0} ${(balance.rows?.length ?? 0) === 1 ? "asset" : "assets"}` : undefined}
+        action={
+          unlock.live && balance.read ? (
+            <button type="button" className="v7-card-link" onClick={balance.onRead} disabled={balance.busy} data-testid="dash-balance-refresh">
+              {balance.busy ? balance.busyLabel : "Refresh"}
+            </button>
+          ) : (
+            <Link href="/vault" className="v7-card-link" aria-label="Open your vault" data-testid="dash-open-vault">
+              <Icon name="arrow-right" size={18} />
+            </Link>
+          )
+        }
+      />
+      {!unlock.live ? (
+        <UnlockLine unlock={unlock} label="Unlock to read your assets" />
+      ) : !balance.read ? (
+        balance.error ? (
+          <div className="ov-stack">
+            <ErrorBox code={balance.error.code} retryAfter={balance.error.retry_after} />
+            <Button variant="secondary" size="sm" onClick={balance.onRead} testid="dash-balance-retry">Try again</Button>
+          </div>
+        ) : <p className="ov-muted">{balance.busy ? balance.busyLabel : "Reading your vault…"}</p>
+      ) : null}
+      {unlock.live && balance.read && balance.rows && balance.rows.length === 0 && <p className="ov-muted" data-testid="dash-assets-empty">No assets in this vault yet.</p>}
+      {unlock.live && balance.rows && balance.rows.length > 0 && (
+        <div className="ov-assets" data-testid="dash-asset-list">
+          {balance.rows.map((row) => (
+            <div className="v7-row ov-asset" key={row.key} data-token={row.symbol}>
+              <span className="ov-asset-mark"><TokenMark assetId={row.known ? row.key : null} symbol={row.symbol} chain="near" size={24} /></span>
+              <span className="v7-row-body">
+                <span className="v7-row-title">{row.symbol}</span>
+                {row.name ? <span className="v7-row-sub">{row.name}</span> : null}
+              </span>
+              <span className="v7-row-end">
+                <span className="v7-row-value">{row.amountLabel}</span>
+                {row.usdMicro != null ? <span className="v7-row-meta">{formatUsdMicro(row.usdMicro)}</span> : null}
               </span>
             </div>
-            {!unlock.live && !activity.read && <UnlockLine unlock={unlock} label="Unlock to read" />}
-            {unlock.live && !activity.read && (
-              activity.error
-                ? <ErrorBox code={activity.error.code} retryAfter={activity.error.retry_after} />
-                : <p className="ov-muted">{activity.busy ? activity.busyLabel : "Reading this key’s log…"}</p>
-            )}
-            {activity.read && activity.logOk === null && <p className="ov-muted">Checking the log…</p>}
-            {activity.read && activity.logOk === false && <p className="ov-muted" data-testid="dash-log-hidden">The log did not verify, so no entries are shown and none are counted.</p>}
-            {activity.read && activity.logOk === true && recent.length === 0 && <p className="ov-muted" data-testid="dash-empty">No trades on this key yet.</p>}
-            {activity.logOk === true && recent.length > 0 && (
-              <ol className="ov-feed" data-testid="dash-feed">
-                {recent.map((e, i) => (
-                  <li key={`${e.ts_ms ?? i}-${i}`} data-kind={e.kind ?? ""}>
-                    <span className="ov-feed-k">{kindLabel(e.kind)}</span>
-                    {e.status ? <Badge status={e.status} /> : <span />}
-                    <span className="ov-feed-d">{entryDetail(e)}</span>
-                    <span className="ov-feed-t">{e.ts_ms ? new Date(e.ts_ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Time not recorded"}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-            {activity.read && activity.error && <ErrorBox code={activity.error.code} retryAfter={activity.error.retry_after} />}
-            {activity.callId && (
-              <p className="ov-meta">
-                <Link href={`/verify?call=${encodeURIComponent(activity.callId)}`} data-testid="dash-verify-read">Verify this read</Link>
-                <span>{` · call ${activity.callId.slice(0, 8)}`}</span>
-              </p>
-            )}
-          </section>
+          ))}
         </div>
       )}
-    </div>
+      {unpriced.length > 0 && <p className="ov-muted" data-testid="dash-unpriced">Not priced: {unpriced.join(" · ")}</p>}
+    </Card>
+  );
+}
+
+/** Recent activity: the signed history, only when its attestation verifies. Locked until the session is live. */
+function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockView; activity: ActivityView; settled: number | null; recent: HistEntry[] }) {
+  return (
+    <Card as="section" labelledBy="dash-activity-h" testid="dash-activity" className="ov-half">
+      <div id="activity" className="ov-anchor" />
+      <CardHeader
+        title="Recent activity"
+        id="dash-activity-h"
+        icon="activity"
+        meta={<span data-testid="stat-settled">Settled orders <b>{settled ?? "—"}</b></span>}
+        action={
+          <Link href="/settle" className="v7-card-link" aria-label="View all activity" data-testid="dash-view-activity">
+            <Icon name="arrow-right" size={18} />
+          </Link>
+        }
+      />
+      {!unlock.live && !activity.read && <UnlockLine unlock={unlock} label="Unlock to read your activity" />}
+      {unlock.live && !activity.read && (
+        activity.error
+          ? <ErrorBox code={activity.error.code} retryAfter={activity.error.retry_after} />
+          : <p className="ov-muted">{activity.busy ? activity.busyLabel : "Reading this key’s log…"}</p>
+      )}
+      {activity.read && activity.logOk === null && <p className="ov-muted">Checking the log…</p>}
+      {activity.read && activity.logOk === false && <p className="ov-muted" data-testid="dash-log-hidden">The log did not verify, so no entries are shown and none are counted.</p>}
+      {activity.read && activity.logOk === true && recent.length === 0 && <p className="ov-muted" data-testid="dash-empty">No trades on this key yet.</p>}
+      {activity.logOk === true && recent.length > 0 && (
+        <ol className="ov-feed" data-testid="dash-feed">
+          {recent.map((e, i) => {
+            const badge = badgeFor(e.status);
+            return (
+              <li key={`${e.ts_ms ?? i}-${i}`} data-kind={e.kind ?? ""} className="v7-row ov-feed-row">
+                <span className="v7-row-body">
+                  <span className="v7-row-title">{kindLabel(e.kind)}</span>
+                  <span className="v7-row-sub">{entryDetail(e)}</span>
+                  <span className="v7-row-sub">{e.ts_ms ? new Date(e.ts_ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Time not recorded"}</span>
+                </span>
+                {e.status ? <StatusChip tone={FEED_TONE[badge?.tone ?? ""] ?? "neutral"}>{badge?.label ?? e.status}</StatusChip> : null}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {activity.read && activity.error && <ErrorBox code={activity.error.code} retryAfter={activity.error.retry_after} />}
+      {activity.callId && (
+        <p className="ov-meta ov-verify">
+          <Link href={`/verify?call=${encodeURIComponent(activity.callId)}`} data-testid="dash-verify-read">Verify this read</Link>
+          <span>{` · call ${activity.callId.slice(0, 8)}`}</span>
+        </p>
+      )}
+    </Card>
   );
 }
 
@@ -352,15 +468,17 @@ function TierCard({ tier, unlock }: { tier: TierView; unlock: UnlockView }) {
   const p = tier.progress;
   const next = p?.next ?? null;
   return (
-    <section className="ov-card kh-card ov-tier" aria-labelledby="ov-tier-h" data-testid="tier-progress">
-      <div className="ov-card-head">
-        <h2 id="ov-tier-h">Tier progress</h2>
-        {p && <span className="ov-fact">Earned tier <b>{tierName(p.current)}</b></span>}
-      </div>
+    <Card as="section" labelledBy="ov-tier-h" testid="tier-progress" className="ov-tier">
+      <CardHeader
+        title="Tier progress"
+        id="ov-tier-h"
+        icon="tag"
+        meta={p ? <>Earned tier <b>{tierName(p.current)}</b></> : undefined}
+      />
       {!unlock.live ? (
         <UnlockLine unlock={unlock} label="Unlock to see progress" />
       ) : !tier.read && tier.error ? (
-        <div className="ov-actions">
+        <div className="ov-stack">
           <ErrorBox code={tier.error.code} retryAfter={tier.error.retry_after} />
           <Button variant="secondary" size="sm" onClick={tier.onRead} testid="tier-retry">Try again</Button>
         </div>
@@ -371,18 +489,18 @@ function TierCard({ tier, unlock }: { tier: TierView; unlock: UnlockView }) {
       ) : next === null ? (
         <p className="ov-tier-say" data-testid="tier-top">{tierName(p.current)} is the top tier.</p>
       ) : (
-        <>
+        <div className="ov-tier-body">
           <p className="ov-tier-say">Next tier: <b data-testid="tier-next">{tierName(next)}</b>. Both targets must be met.</p>
           <Meter label="Settled swaps and copies" done={p.swaps} needed={p.swaps_needed} text={`${p.swaps} of ${p.swaps_needed}`} testid="tier-swaps" />
           <Meter label="Settled volume" done={p.volume_usd_micro} needed={p.volume_needed_usd_micro} text={`${formatUsdMicro(p.volume_usd_micro)} of ${formatUsdMicro(p.volume_needed_usd_micro)}`} testid="tier-volume" />
           {p.met && (
-            <div className="ov-actions">
+            <div className="ov-key-action">
               <Button variant="primary" onClick={tier.onLevelUp} loading={tier.levelBusy} loadingLabel={tier.levelLabel} testid="level-up">
                 {`Level up to ${tierName(next)}`}
               </Button>
             </div>
           )}
-        </>
+        </div>
       )}
       {tier.levelError && <ErrorBox code={tier.levelError.code} retryAfter={tier.levelError.retry_after} />}
       {tier.noRaise && <p className="ov-muted" data-testid="level-none">No higher tier is earned yet.</p>}
@@ -394,103 +512,91 @@ function TierCard({ tier, unlock }: { tier: TierView; unlock: UnlockView }) {
           testid="level-result"
         />
       )}
-    </section>
+    </Card>
   );
 }
 
-type Row = {
-  id: string;
-  title: string;
-  done: boolean;
-  note: string;
-  action?: { label: string; href?: string; onClick?: () => void; loading?: boolean; loadingLabel?: string };
-};
-
-/** Setup, from real state only. Each open row has its one action; when every row is done the list collapses. */
+/**
+ * Setup, from real state only. Each open item has its one action; when every item is done the list is one line.
+ * The shared SetupProgress draws it; this only computes the items.
+ */
 function SetupChecklist(p: {
   held: boolean; looking: boolean; unlock: UnlockView; unlocked: boolean; funded: boolean; swapped: boolean; balanceBusy: boolean;
 }) {
   const { held, looking, unlock, unlocked, funded, swapped } = p;
-  const rows: Row[] = [
+  const items: SetupItem[] = [
     { id: "sign", title: "Sign in", done: true, note: "Signed in." },
     {
       id: "key", title: "Get your key", done: held,
       note: held ? "Held on NEAR mainnet." : looking ? "Checking NEAR mainnet…" : "Free. One signature.",
-      action: !held && !looking ? { label: "Mint a key", href: "/mint" } : undefined,
+      action: !held && !looking ? <Button href="/mint" variant="secondary" size="sm" testid="setup-key-action">Mint a key</Button> : undefined,
     },
     {
-      id: "unlock", title: "Unlock", done: unlocked,
+      id: "unlock", title: "Unlock session", done: unlocked,
       note: unlock.live ? `${unlock.minutes} min left on this session.` : unlocked ? "Unlocked earlier on this visit." : held ? "One signature. 30 minutes." : "Needs a key first.",
-      action: held && !unlocked ? { label: "Unlock", onClick: unlock.onUnlock, loading: unlock.busy, loadingLabel: unlock.busyLabel } : undefined,
+      action: held && !unlocked ? (
+        <Button variant="secondary" size="sm" onClick={unlock.onUnlock} loading={unlock.busy} loadingLabel={unlock.busyLabel} testid="setup-unlock-action">Unlock</Button>
+      ) : undefined,
     },
     {
       id: "fund", title: "Fund the vault", done: funded,
       note: funded ? "Balance read from the vault." : !held ? "Needs a key first." : !unlocked ? "Checked once you unlock." : p.balanceBusy ? "Reading your vault…" : "A deposit is a transfer you approve in your wallet.",
-      action: held && !funded ? { label: "Deposit", href: "/vault" } : undefined,
+      action: held && !funded ? <Button href="/vault" variant="secondary" size="sm" testid="setup-fund-action">Deposit</Button> : undefined,
     },
     {
       id: "swap", title: "First swap", done: swapped,
       note: swapped ? "Read from your signed activity." : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
-      action: held && !swapped ? { label: "Swap", href: "/swap" } : undefined,
+      action: held && !swapped ? <Button href="/swap" variant="secondary" size="sm" testid="setup-swap-action">Swap</Button> : undefined,
     },
   ];
-  const complete = rows.every((r) => r.done);
-
   return (
-    <section className="ov-card kh-card" aria-labelledby="ov-setup-h" data-testid="setup-checklist">
-      <div className="ov-card-head">
-        <h2 id="ov-setup-h">Setup</h2>
-        <span className="ov-muted">{rows.filter((r) => r.done).length} of {rows.length}</span>
-      </div>
-      {complete ? (
-        <p className="ov-complete" data-testid="setup-complete"><span className="ov-tick" aria-hidden="true">✓</span> Setup complete</p>
-      ) : (
-        <ol className="ov-steps">
-          {rows.map((r, i) => (
-            <li key={r.id} className={`ov-step${r.done ? " done" : ""}`} data-testid={`setup-${r.id}`} data-done={r.done ? "1" : "0"}>
-              <span className="ov-num" aria-hidden="true">{r.done ? "✓" : i + 1}</span>
-              <div className="ov-step-body">
-                <b>{r.title}</b>
-                <small>{r.note}</small>
-              </div>
-              {r.action && (
-                r.action.href ? (
-                  <Button href={r.action.href} variant="secondary" size="sm" testid={`setup-${r.id}-action`}>{r.action.label}</Button>
-                ) : (
-                  <Button variant="secondary" size="sm" onClick={r.action.onClick} loading={r.action.loading} loadingLabel={r.action.loadingLabel} testid={`setup-${r.id}-action`}>{r.action.label}</Button>
-                )
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
+    <Card as="section" labelledBy="ov-setup-h" className="ov-setup">
+      <SetupProgress items={items} variant="vertical" title="Setup progress" headingId="ov-setup-h" doneText="Setup complete" testid="setup-checklist" />
+    </Card>
   );
 }
 
 /** Enclave status, the worker build, the contract and the way to check the last call. Every value is read, none is typed in. */
-function ProofCard({ callId }: { callId: string | null }) {
+function ProofCard({ callId, logOk }: { callId: string | null; logOk: boolean | null }) {
   const online = useHealth();
   // The first entry is the published build; superseded builds follow it in the list (lib/config.ts).
   const build = WORKER_WASM_SHA256[0] ?? "";
   return (
-    <section className="ov-card kh-card" aria-labelledby="ov-proof-h" data-testid="ov-proof">
-      <div className="ov-card-head">
-        <h2 id="ov-proof-h">Proof</h2>
-      </div>
-      <dl className="ov-kv">
-        <div>
-          <dt>Enclave</dt>
-          <dd data-testid="ov-enclave" data-state={online === null ? "checking" : online ? "live" : "down"}>
-            {online === null ? "Checking…" : online ? "Live" : "Not reachable right now"}
-          </dd>
-        </div>
-        <div><dt>Hardware</dt><dd>Intel TDX</dd></div>
-        <div><dt>Worker build</dt><dd className="ov-mono" title={build}>{build ? `${build.slice(0, 12)}…` : "—"}</dd></div>
-        <div><dt>Contract</dt><dd><TxLink account={KEYS_CONTRACT} /></dd></div>
-      </dl>
-      <div className="ov-actions">
-        <Button href={callId ? `/verify?call=${encodeURIComponent(callId)}` : "/verify"} variant="secondary" size="sm" testid="ov-verify">Verify the last call</Button>
+    <ProofPanel
+      headingId="ov-proof-h"
+      enclave={online === null ? "checking" : online ? "live" : "down"}
+      workerBuild={build || null}
+      contract={KEYS_CONTRACT}
+      attestation={logOk === true ? "verified" : logOk === false ? "not-verified" : "unread"}
+      lastCall={callId}
+      verifyHref={callId ? `/verify?call=${encodeURIComponent(callId)}` : "/verify"}
+      verifyTestId="ov-verify"
+      testid="ov-proof"
+    />
+  );
+}
+
+/** Three steps, one signature: the existing copy. The step that is next for this visitor is highlighted. */
+function Steps({ step }: { step: number }) {
+  const steps: { n: string; title: string; body: string; icon: IconName }[] = [
+    { n: "01", title: "Connect", body: "Google or email (we create a NEAR account for you), any NEAR wallet, or MetaMask. Named or implicit account. No KYC.", icon: "unlock" },
+    { n: "02", title: "Mint your key", body: "One gas-free signature (NEAR NEP-413 or MetaMask EIP-191). The TEE-held minter pays and mints the NFT to you.", icon: "key" },
+    { n: "03", title: "Open the account", body: "Signed requests run inside Intel TDX. Caps are checked there, with an attestation for every call.", icon: "shield" },
+  ];
+  return (
+    <section className="ov-steps" aria-labelledby="ov-steps-h">
+      <h2 id="ov-steps-h" className="ov-steps-h">Three steps. One signature.</h2>
+      <div className="ov-steps-grid">
+        {steps.map((s, i) => (
+          <article key={s.n} className={`v7-card ov-explain${step === i + 1 ? " is-next" : ""}`} aria-current={step === i + 1 ? "step" : undefined}>
+            <div className="ov-explain-top">
+              <span className="v7-mono ov-explain-n">{s.n}</span>
+              <span className="ov-explain-icon" aria-hidden="true"><Icon name={s.icon} size={22} /></span>
+            </div>
+            <h3 className="ov-explain-h">{s.title}</h3>
+            <p className="ov-explain-body">{s.body}</p>
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -499,22 +605,40 @@ function ProofCard({ callId }: { callId: string | null }) {
 function Restoring() {
   return (
     <div className="page ov" data-testid="dash">
-      <header className="ov-head"><h1 className="ov-title">Overview</h1></header>
+      <PageHeader eyebrow="Overview" title="Overview" />
       <Skeleton lines={3} testid="dash-restoring" />
     </div>
   );
 }
 
-/** Signed out: one centred card with the sign-in options inline, and a way to explore without a wallet. */
+/** Signed out: the sign-in options inline and the sample key beside them, then the three steps. */
 function SignedOut({ signIn }: { signIn: SignInOptionsProps }) {
   return (
     <div className="page ov ov-out" data-testid="dash">
-      <section className="ov-signin kh-card" aria-labelledby="ov-signin-h" data-testid="dash-connect">
-        <h1 id="ov-signin-h" className="ov-title">Open your key</h1>
-        <p className="ov-lead">Your key is an NFT on NEAR mainnet, and the account behind it. Sign in to see the keys you hold. Your vault and activity open only when you unlock.</p>
-        <SignInOptions {...signIn} />
-        <Link className="ov-link" href="/judge" data-testid="dash-explore">Explore without a wallet</Link>
-      </section>
+      <PageHeader
+        eyebrow="Overview"
+        title={<>Open your <em>key</em></>}
+        lead="Your key is an NFT on NEAR mainnet, and the account behind it. Sign in to see the keys you hold. Your vault and activity open only when you unlock."
+      />
+      <div className="ov-signed-out">
+        <Card as="section" labelledBy="ov-signin-h" testid="dash-connect" className="ov-signin">
+          <h2 id="ov-signin-h" className="v7-card-h">Sign in</h2>
+          <SignInOptions {...signIn} />
+          <Link className="ov-link" href="/judge" data-testid="dash-explore">Explore without a wallet</Link>
+        </Card>
+        <Card as="section" labelledBy="ov-sample-h" className="ov-key ov-sample">
+          <div className="ov-key-top">
+            <TierChip tier="Bronze" />
+            <span className="v7-card-meta">Sample</span>
+          </div>
+          <figure className="ov-art">
+            <KeyArt n={SAMPLE_BRONZE_ART} alt="Sample Bronze key artwork" width={430} height={1080} />
+          </figure>
+          <h2 id="ov-sample-h" className="ov-key-name">KEYHOLE Key</h2>
+          <p className="ov-sentence">Minting today issues a Bronze key: $1 a trade, $5 a day. Silver and Gold are previews for now.</p>
+        </Card>
+      </div>
+      <Steps step={1} />
     </div>
   );
 }
