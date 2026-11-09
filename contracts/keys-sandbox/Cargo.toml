@@ -17,3 +17,5 @@ keyhole-keys = { path = "../keys" }
 near-sdk = { version = "~5.17", features = ["unit-testing"] }
 ed25519-dalek = "2.2"
 base64 = "0.22"
+
+keyhole-worker = { path = "../../tee/worker" }

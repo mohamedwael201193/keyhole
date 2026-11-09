@@ -463,6 +463,15 @@ pub fn assert_withdraw_to(chain: &str, to: &str) -> Result<(), Error> {
     if ok { Ok(()) } else { Err(err("bad_params", "params.to is not a valid address for params.chain")) }
 }
 
+/// Standard self-exit policy. Address syntax alone is NOT proof of destination ownership.
+/// NEP-413 proves the NEAR account; EIP-191 proves the same 0x holder on allowlisted EVM chains.
+pub fn self_withdraw_destination(holder:&str,chain:&str,requested:Option<&str>,scheme:&str)->Result<String,Error>{
+    let evm=scheme=="eip191";
+    if !((scheme=="nep413"&&chain=="near"&&is_valid_account_id(holder))||(evm&&["eth","base","arb","op","bsc","pol","avax","gnosis"].contains(&chain)&&is_evm_address(holder))){return Err(err("destination_policy","no authenticated self destination for this identity/chain"));}
+    if let Some(to)=requested {assert_withdraw_to(chain,to)?;if if evm{!to.eq_ignore_ascii_case(holder)}else{to!=holder}{return Err(err("destination_policy","standard exit pays only the current fresh holder"));}}
+    assert_withdraw_to(chain,holder)?;Ok(holder.to_owned())
+}
+
 /// Solana address: base58 that decodes to exactly 32 bytes.
 pub fn is_sol_address(a: &str) -> bool {
     bs58::decode(a).into_vec().map(|b| b.len() == 32).unwrap_or(false)
@@ -829,7 +838,7 @@ pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) 
 /// A spend held against the session cap (when the call runs in a session) and the key's daily cap.
 /// Every refusal before the send gives it back at once (`charge_spend`). A send that failed for good
 /// gives it back in `settle`. A send still pending or under review keeps it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Charge {
     day_key: String,
     session_id: Option<String>,
@@ -1348,3 +1357,8 @@ pub fn assess_level(prov: &[ProvEvent], trades: &[serde_json::Value], current: u
         earned: earned_tier(current, swaps, volume),
     })
 }
+
+pub mod guarded;
+
+/// Epoch-scoped durable ownership cooldown, separate from the public provenance format.
+pub mod ownership_sync;

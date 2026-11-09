@@ -129,7 +129,7 @@ Each step says whether it **moves real value on mainnet**.
 | 4 | Open **1 · Fund**, enter an amount, click **Get deposit address**, approve the signature | **Deposit address** and the address. That signature is not a transfer | Only if you send. Sending from your wallet is a normal transfer that pays gas on the source chain. The site sends nothing. You can fund from any chain through NEAR Intents 1Click |
 | 5 | Click **Read balance** and approve the signature | The total in USD, or token amounts if nothing is priced. A held asset with no price shows as "+ … unpriced". The note says "Read from the enclave with your signature." | No |
 | 6 | Open **2 · Trade**, pick a token (any of 216 tokens on 39 chains), click **Get attested quote**, then **Sign & trade** | The receipt shows **You give**, **You get**, **Price** and **Cap**. The result card starts with "Traded", names the amount out, and has a status and **Verify** | **Yes.** The swap runs on mainnet inside your account, within caps: Bronze is $1 per trade and $5 per UTC day |
-| 7 | Open **3 · Withdraw**, enter an amount, click **Sign & withdraw** and approve a fresh signature | "Withdrawn", naming the connected account. The worker refuses any other destination | **Yes.** Funds leave the account to the connected wallet |
+| 7 | Open **3 · Withdraw**, enter an amount, click **Sign & withdraw** and approve a fresh signature | "Withdrawn", naming the UI-selected connected account. The API also permits other well-formed destinations explicitly authorized by a fresh holder signature | **Yes.** Funds leave the account to the connected wallet |
 | 8 | Open the **Verify** link on any result | "The enclave is genuine." and `data-match="true"` | No |
 | 9 | Open [/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940) and read **Check a key before you buy it** | The current holder, the latest transfer, the transfer cooldown and the seller lock, from the enclave's signed log. The holder can also share a signed statement that the account holds at least a stated amount | No |
 
@@ -680,7 +680,7 @@ Caps and locks are enforced by the enclave, so they do not stop an attacker who 
 
 **Browser and site.** [`web/next.config.ts`](web/next.config.ts) sets a Content-Security-Policy with `frame-ancestors 'none'`, HSTS (2 years, preload), `nosniff` and strict referrer and permissions policies. `curl -I https://keyhole-seven.vercel.app` shows them.
 
-**Agents.** Do not give an agent your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 hours), and lock the key while you are away. The worker then enforces, inside the TEE: payouts only to the signing holder, per-trade and per-day caps, one use per signature, the transfer cooldown, and the lock. The MCP `copy` tool needs the operator's confirmation on their own terminal. The attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md) shows an agent that obeys an injected "send everything to attacker.near" refused on every path.
+**Agents.** Do not give an agent your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 hours), and lock the key while you are away. The worker then enforces, inside the TEE: the exact signed payout destination, per-trade and per-day caps, one use per signature, the transfer cooldown, and the lock. The MCP `copy` tool needs the operator's confirmation on their own terminal. The attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md) records the specific historical malformed/over-cap/replay/tamper refusals shown there; it is NOT a destination allowlist or a guarantee against a fresh valid in-cap holder-signed malicious payout.
 
 **Function-call keys, precisely.**
 
@@ -858,19 +858,19 @@ Built on NEAR.
 
 **Borrow without opening your vault.** This branch prepares a named-lender NEAR loan against a key's sealed USDC custody account. A lender verifies the borrower's declared **raw USDC minimum**, never an exact balance or invented USD valuation. The contract checks an Ed25519 signature over a canonical, loan/nonce/token/epoch/terms/contract/network/expiry-bound certificate. The shared public test vector is [protocol/loan-certificate-v2-credit.json](protocol/loan-certificate-v2-credit.json). This is a trusted-attestor statement, not a zero-knowledge proof or independent on-chain verification of Intel measurement.
 
-**Why borrow rather than swap?** Short NEAR liquidity without selling USDC exposure or opening the full vault balance to a lender. This is useful only when a willing lender values those terms; swaps may be cheaper and simpler. No demand, yield or solvency is inferred from a team-wallet demonstration. NEAR debt creates NEAR/USDC FX risk, USDC can depeg, all vault trading/withdrawal capital is frozen while pledged, and default forfeits the **whole confidential account**, including assets above the declared floor. There is no price oracle or partial liquidation.
+**Why borrow rather than swap?** Short NEAR liquidity without selling USDC exposure or opening the full vault balance to a lender. This is useful only when a willing lender values those terms; swaps may be cheaper and simpler. No demand, yield or solvency is inferred from a team-wallet demonstration. NEAR debt creates NEAR/USDC FX risk, USDC can depeg, ordinary worker routes reject new swaps and withdrawals while pledged, and default forfeits the **whole confidential account**, including assets above the declared floor. There is no price oracle or partial liquidation.
 
 ### Prepared in contract code — oracle-free review candidate
 
 - Every admitted value operation binds current owner+epoch, durable op ID/action hash and a single bounded pending record before send. A pledge, listing or provisional transfer blocks admission; admitted work blocks pledge/title movement. Old epochs and operation IDs cannot be reused.
 - Sealed floor certificates bind exact loan terms, nonce, owner epoch, wallet/policy, network/contract and a fresh60-second window. Domain `KEYHOLE_SEALED_LOAN_V2_CREDIT` deliberately rejects the old delivery-before-debt certificate.
 - Funding atomically creates the borrower's backed **pull credit** and Active debt/due date, NOT an assertion that native NEAR was delivered. The borrower must consent to credit-before-cashout economics. No principal push callback or terminal-outcome signer exists. Failed cashout restores borrower credit, not lender credit or cancelled debt.
-- Repay/default preserves custody locks until exact authoritative thaw. First-stage callback recovery requires a real **custody-side monotonic generation fence**, not a local stale-callback check. Registration success requires atomic authoritative nonce/deposit evidence. These new provider ABI semantics are implemented only in the labelled sandbox mock; live OutLayer compatibility is not proven.
+- Repay/default preserves custody locks until a confirmed thaw. The source uses the documented `freeze_wallet(wallet_pubkey)` / `unfreeze_wallet(wallet_pubkey)` ABI. Each dispatch is persisted first; its exact private terminal callback AND a matching controller/locked/version/digest/freeze read must complete before any later command. The sequence is local, not an asserted provider-generation feature. See SECURITY for callback-loss handling.
 - Native claims reserve before transfer. Only a genuine private callback can consume paid liability or restore failed credit. **If that callback is lost, the outcome remains UNKNOWN/locked.** The same applies to treasury; absent registration evidence cannot justify refund. This is safe against repeated false-outcome double-pay, but NOT complete financial callback-loss liveness or a keyless-complete product.
 - NFT transfer-call title is explicitly provisional until local acceptance commits. Anyone can restore only the exact still-pending title after300seconds; accepted/newer title cannot be unwound. Bounded resolver parsing avoids receiver gas exhaustion. External receiver side effects are not reversed: irreversible consideration must wait for committed acceptance or conditional escrow.
 - Migration pins the floor key/custody identity and fixed treasury-only beneficiary. New lending defaults **OFF**. Legacy funds/listing deposits do not become treasury. Treasury recovery excludes all liabilities/storage/reserves and is fixed-beneficiary only after December2,2026 02:00 Africa/Cairo. No upgrade/arbitrary-call/DeleteAccount escape hatch.
 
-See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.md) for residual trust/liveness gates and the [oracle-free validation record](docs/evidence/pledge-oracle-free/README.md). The guarded worker, privacy hardening and verified funded handover are separate reviewed lanes; no source-only feature is claimed live.
+See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.md) for residual trust/liveness gates and the [historical oracle-free record](docs/evidence/pledge-oracle-free/README.md) and [current serialized-custody evidence](docs/evidence/serialized-custody/README.md). The guarded worker, privacy hardening and verified funded handover are separate reviewed lanes; no source-only feature is claimed live.
 
 ```bash
 (cd contracts/keys && cargo test --locked && ./build.sh)
@@ -900,3 +900,45 @@ node judge/verify-claims.mjs --offline
 ```
 
 [Two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).
+
+Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+
+### Guarded worker candidate — SOURCE ONLY, NOT PUBLISHED
+
+Stacked on oracle-free #184 head01665e8; neither PR is merged. Every custody swap/copy/withdraw/private transfer/wet quote uses the shared production admission/provider drivers. Persisted journals bind exact owner/epoch/nonce/body/action; an op ID/idempotency key never changes on retry. Value requests require signed decimal-string `params.owner_epoch`; legacy sessions are rejected and A→B→A cannot revive old authorizations. Provisional receivers cannot read sealed data or establish sessions; pledged legitimate holders may still read.
+
+The fresh fixed-floor certificate uses V2_CREDIT and verifies exact binding plus the contract-confirmed local command sequence; current policy/loan/control are re-read after the private balance/inventory observation. Canonical project UUID and a single pinned nonlegacy version are required. A sealed authority-audit record must already exist; no public/automatic eligibility writer or silent legacy-wallet approval exists. This remains a fail-closed rollout gate, not self-measured code proof.
+
+Generic detached `chain_sign` is disabled in this source revision, including protected/pledged collateral, and the owner/epoch settle gate is explicit. Prior foreign signatures cannot be revoked, so foreign assets/allowances are excluded from the fixed custody-USDC certificate. This is not a claim to have changed live versions or existing credentials.
+
+**Candidate destination policy: self-exit only.** Fresh NEP-413 authorization derives the authenticated NEAR holder; EIP-191 derives the same authenticated0x holder on supported EVM chains. Unknown identity/chain mapping and any different `to` are rejected, including private-transfer bypasses and durable POST replay. Sessions cannot withdraw. Current LIVE source historically allows arbitrary well-formed holder-signed destinations: this source-only restriction has not been deployed, and old attack examples do not prove it live.
+
+The two named cross-layer tests use REAL NEAR admission/pledge/title receipts and the same production drivers as WASI, but HTTP, sealed storage, registry and eligibility observations are labelled mocks. They cover repay/default, failures/unknowns, transfer_call A→B→A and legitimate post-thaw exits, not live-provider confinement or a full WASI-host execution. Source-only native payment UNKNOWN/liveness and live confinement gates remain. No deploy/publish/funding/legacy-version retirement/key or policy change is performed.
+
+
+### Serialized custody and epoch cooldown — local source verification
+
+The provider mock exposes the same Boolean freeze/thaw argument shapes as the public provider contract. Native tests exercise exact-command callbacks, duplicate/late callbacks, delayed reads, terminal failures and restart. Sandbox fault builds exercise a provider mutation whose callback fails; the outstanding command remains durable across a return to the normal binary.
+
+Withdrawal cooldown is keyed by **contract + token + authoritative ownership epoch**, not just the last logged account name. First final-chain observation of a new nonzero epoch durably arms ten minutes; A→B→A cannot reuse A's old record. Status/dashboard show the effective deadline and the normal POST boundary checks it again. No ownership observation deletes or resets the token-wide daily spent counter.
+
+```bash
+(cd contracts/keys && cargo test --locked custody && cargo test --locked policy)
+(cd tee/worker && cargo test --locked ownership_sync && cargo clippy --locked --target wasm32-wasip2 -- -D warnings)
+# Full normal-release + labelled mock/fault integration:
+(cd contracts/keys && ./build.sh && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm)
+(cd contracts/keys-sandbox && cargo test --locked)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
+
+The committed candidate in `release/v2.5` is the normal build; the fault fixture is generated only for sandbox tests. No mainnet calls or worker publication occur in these commands.
+
+
+#### Guarded failure messages
+
+The web error catalog gives actionable English status for pending/provisional ownership, stale sessions, self-exit-only destinations, changed quotes and unknown custody/admission outcomes. Unknown outcomes direct the holder to reconcile the existing operation ID rather than create another send.
+
+```bash
+(cd web && npm ci && npx vitest run tests/domain.test.ts tests/p2-errors.test.ts)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
