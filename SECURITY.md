@@ -93,7 +93,7 @@ Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel
 - Withdraw pays the connected account only.
 - If the enclave is offline or the payment key is missing, Vault and Mint show the offline state and do not send the signature.
 - The site is English only. There is no language switcher.
-- The 30-step mainnet log in the README (§10) was recorded against worker `f13efe92`. The worker serving the site is `cc8d2fa8` ([add_version tx](https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6)); before it `a985fd87` ([add_version tx](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG)), `ebeb6a34` (published and rolled back, [add_version tx](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq)), `94c355ff` ([add_version tx](https://nearblocks.io/txns/EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy)), `cff9fd3c`, then `a55ebb14`, which includes the review fixes R1 to R4.
+- The 30-step mainnet log in the README (§9) was recorded against worker `f13efe92`. The worker serving the site is `cc8d2fa8` ([add_version tx](https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6)); before it `a985fd87` ([add_version tx](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG)), `ebeb6a34` (published and rolled back, [add_version tx](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq)), `94c355ff` ([add_version tx](https://nearblocks.io/txns/EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy)), `cff9fd3c`, then `a55ebb14`, which includes the review fixes R1 to R4.
 - Prices come from the NEAR Intents token list. An asset with no price is named as unpriced. USDC is treated as $1 only when that list has no price for it.
 
 ## Chain Signatures (`chain_sign`)
@@ -161,3 +161,73 @@ Tests: `tee/worker/src/p2harden.rs`.
 ## Continuity
 
 - If the OutLayer payment balance runs out, live calls stop and `/api/health` (the strip on /judge) shows "offline: payment balance empty". Attestations, FastFS wasm and on-chain state stay public and verifiable.
+
+## Design decisions and trade-offs
+
+Each entry gives the decision, the reason for it, and the mitigation. Each one is a limit that remains in the design. Nothing here is hidden elsewhere in the repository.
+
+### 1. A payout already in flight completes
+
+- **Decision.** A withdraw signed before a sale is paid to the holder who signed it. The payout is not recalled by the transfer.
+- **Why.** The owner is re-read before the send, so a transfer that lands before the send stops it. Once the send has been made, a later transfer does not recall the money (see [THREAT_MODEL.md](THREAT_MODEL.md)).
+- **Mitigation.** A key moved before the send aborts the send and gives back the day's spend. The holder's next request is refused `not_owner`. The seller keeps only a payout already in flight. The mid-payout run on build `6367401a` (2026-11-01) is in [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md). Later source changes, such as the `needs_review` flag, are not in that run.
+
+### 2. No NEAR sub-account per key
+
+- **Decision.** Each `token_id` has one OutLayer confidential custody wallet, held inside the TEE. There is no NEAR sub-account.
+- **Why.** A NEAR sub-account would need an access key, and someone would hold that key. Here the keys never leave the enclave.
+- **Mitigation.** The holder cannot take the key out, and the account is not a NEAR account that a wallet can open directly. OutLayer runs the custody service, so it is a third-party custody API and part of the trust base. Keep balances small: the caps and locks are enforced inside the enclave, but they do not stop an attacker who runs outside it (see [README §8](README.md#8-security-model)).
+
+### 3. The contract account is not locked
+
+- **Decision.** `keyhole-devmo.near` holds two full-access keys, and its owner can change the contract. There is no multisig and no timelock, and the account is not keyless.
+- **Why.** Each contract version so far is a code deploy signed by a full-access key (v1 to v2.4). The multisig and timelock are not built yet.
+- **Mitigation.** Every deployed version is in `contracts/keys/release` with its sha256. CI rebuilds the source, and `judge/1-contract.sh` compares the on-chain `code_hash` with the committed wasm. The key list and the purpose of each key are in [README §8](README.md#8-security-model).
+
+### 4. Intents solvers see the pair and amount
+
+- **Decision.** Swaps run through NEAR Intents 1Click with `confidentiality` set to `basic` or `advanced`.
+- **Why.** Solvers need the asset pair and amount to quote the trade. The solvers still see them.
+- **Mitigation.** The `advanced` setting is available, and the checks on mainnet use small amounts because Intents has no testnet. Each settled order in the evidence is under one dollar.
+
+### 5. Advisory checks and copy trading
+
+- **Decision.** The counterparty check is advisory and is not enforced inside the TEE. Copy trading exists only on the CLI and MCP.
+- **Why.** A check cannot prove that an address is safe, so ALLOW is not safety. Copy trading needs a person to confirm the trade.
+- **Mitigation.** `block` stops the call before anything is signed. `warn` needs a code typed on the operator's own terminal (`/dev/tty` or `CONIN$`). The code is never written to stdout or into an MCP result. The web gateway refuses `copy` with `bad_op`.
+
+### 6. The threat model was written after the code
+
+- **Decision.** The contract and worker code were first committed on 2026-10-28 (`66f7070`). [THREAT_MODEL.md](THREAT_MODEL.md) was first committed on 2026-10-31 (`701faf4`), and [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md) on 2026-11-03 (`4736e9c`).
+- **Why.** The track asked for the threat model first. It was not written first.
+- **Mitigation.** Each control in the transfer threat model maps to a named test and, where one exists, to a mainnet call (the table in [README §5](README.md#control-on-transfer)).
+
+### 7. /ask checks are partial
+
+- **Decision.** The browser checks the nonce bindings, the signature over the exact request and response bytes, the model, the Intel DCAP chain of the model's TDX quote, and that every NVIDIA GPU report echoes the nonce. It does not check the NVIDIA certificate chain or the GPU measurements.
+- **Why.** Those checks need downloaded evidence that the browser does not fetch.
+- **Mitigation.** The evidence is checked with [NEAR AI's verifier](https://docs.near.ai/cloud/verification/cloud-api/model-attestations). The `/ask` answer is not tied to a trading account.
+
+### 8. Earned tiers can be farmed
+
+- **Decision.** A tier counts settled swaps and volume from the key's own trade log.
+- **Why.** The tier is computed from that log, so the key's own trades are the only input.
+- **Mitigation.** A tier can only rise: the contract refuses a lower value. A holder who trades back and forth to reach a tier pays fees and spread on each trip. The tier is real on-chain history, but it does not show that the trading was useful to anyone.
+
+### 9. The listing freeze is checked once per value move
+
+- **Decision.** Before a value move, the enclave reads the key's listing once, as it reads the owner.
+- **Why.** One read per request, the same pattern as the owner check.
+- **Mitigation.** The window is one request. A listing made after the read, within the same move, is seen by the next request.
+
+### 10. Transfer events declare NEP-171 1.0.0
+
+- **Decision.** The custom transfer helper emits the `nft_transfer` event through the standards crate's `NftTransfer` struct, which declares version 1.0.0. The `nft_metadata_update` event declares 1.2.0.
+- **Why.** The event struct comes from `near-contract-standards`, and it declares 1.0.0.
+- **Mitigation.** The transfer event is to be aligned to 1.2.0 in the next contract release.
+
+### 11. Operator keys
+
+- **Decision.** `keyhole-devmo.near` has two full-access keys: the deploy key and the owner's Meteor wallet key. The minter account's full-access key is generated and kept inside the TEE. There is no timelock or multisig yet.
+- **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [README §8](README.md#8-security-model).
+- **Mitigation.** The beat key is a function-call key that can call only `beat`, with a 0.05 NEAR allowance, and the owner revokes it with `del_beat_key`. The deploy key is described in the repository as kept offline and never on the website or in the worker.

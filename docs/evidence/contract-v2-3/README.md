@@ -32,7 +32,7 @@ Code only over v2.2:
 | `config` (owner, minter, treasury, `royalty_bps` 500, beats 2) | as listed | same |
 | `contract_source_metadata` | version `0.1.0`, link `null` | version `2.3.0`, link set. The only changed value |
 
-The 6 tokens are token `0` (test key, held by `keyhole-devmo.near`) and five keys held by people. Owners and the minter are listed in [`README.md` §5](../../../README.md#5-the-keys-nft-contract).
+The 6 tokens are token `0` (test key, held by `keyhole-devmo.near`) and five keys held by people. Owners and the minter are listed in [`README.md` §9](../../../README.md#keys-on-the-contract).
 
 Re-check: `./judge/1-contract.sh` prints `OK contract code matches the committed wasm`.
 

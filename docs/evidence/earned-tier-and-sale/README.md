@@ -39,3 +39,5 @@ The owner's Meteor wallet ran the sale buttons in the app on key `0` (seller `ke
 |---|---|---|---|
 | `nft_list` for token `0`, price 100 NEAR (1e26 yoctoNEAR) | tx [`8nVr98N2…`](https://nearblocks.io/txns/8nVr98N2vYeTAaNiMtGWvge9fiAfoDSSBQL1wnSaTCwH) | success, method `nft_list` |
 | `nft_unlist` for token `0` (the seller unlists; the listing deposit returns to the seller) | tx [`2v6Nw9Ww…`](https://nearblocks.io/txns/2v6Nw9WwkbGCoG6PCT2wBRh5bfikLNtoQ6PcHGnbnPQ9) | success, method `nft_unlist` |
+| The site's own Sale card buttons after PR #175 (wallet-selector actions fix): `nft_list` 100 NEAR, card shows "Listing confirmed on NEAR" | tx [`5d1R83qr…`](https://nearblocks.io/txns/5d1R83qr2WZLM5tKRQWiuS9jweH9rbGFPKDF8DrMEDsi) | success, method `nft_list` |
+| Then the card's Unlist button, card shows "Listing ended on NEAR" | tx [`EkRuCKRG…`](https://nearblocks.io/txns/EkRuCKRG4TCtrmJEomfDih7vDVw4xegTNP46G98fXa6A) | success, method `nft_unlist` |
