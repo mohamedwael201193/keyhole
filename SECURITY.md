@@ -68,7 +68,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 ## Scope notes, and why they fit the design
 
 - **The enclave is the custodian, by design.** The OutLayer operator runs the service, but balances and trades are sealed by Intel TDX, so the operator cannot read them. That is the privacy promise: the chain shows who holds the key, never what the account holds. Every reply carries a quote you can check in the browser on `/verify`.
-- **The key moves by plain transfer.** The contract has no NEP-178 approvals yet, so approval-based marketplaces cannot list a key. Transfers and `nft_transfer_payout` work, and ownership is re-read before every swap or withdraw, so the account always follows the NFT, even mid-payout ([evidence](docs/evidence/mid-payout/README.md)).
+- **The key moves by plain transfer.** The contract supports NEP-178 approvals (capped at ten); transfers and `nft_transfer_payout` work, and ownership is re-read before every swap or withdraw, so the account always follows the NFT, even mid-payout ([evidence](docs/evidence/mid-payout/README.md)).
 - **Cross-chain legs are third parties, shown honestly.** 1Click and bridges are outside the enclave; `/settle` lists every real order with its final status, including refunds and failures.
 - **Two kinds of limits.** The tier's daily spend counter belongs to the key (`cap_id(token_id)`), so moving a key between accounts never resets the day's spend. Holder-set caps, the lock and the transfer cooldown are bound to the key and the holder who set them, so a buyer is not trapped by the seller's settings and a seller cannot dodge a cooldown by passing the key around and taking it back.
 - **Browser DCAP and Intel PCS scope.** `/verify` runs 19 Intel TDX DCAP checks on the quote (structure, signatures, QE binding, certificate chain to the pinned Intel root, validity dates, report_data) and 12 checks on Intel PCS collateral: the PCK and Root CA revocation lists, the TDX TCB Info for the machine's FMSPC, the TDX module identity and the TD Quoting Enclave identity, each signature verified in the browser against the pinned Intel root, with TCB levels matched by Intel's rules ([`web/lib/pcs.ts`](web/lib/pcs.ts), [tests](web/tests/pcs.test.ts)). Intel sends no CORS headers, so the bytes pass through `/api/pcs`, which forwards only fixed Intel URLs; it cannot change a result without breaking a signature. The status is shown as Intel reports it (UpToDate for the published call; the independent `dcap-qvl` verifier agrees: [`docs/evidence/pcs`](docs/evidence/pcs/dcap-qvl_7882f97a.json)).
@@ -110,7 +110,7 @@ The contract refuses a mint or a transfer (`nft_transfer`, `nft_transfer_call`, 
 
 ## Contract upgrades
 
-`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1, v2.2 and v2.3 changed code only. v2.3 (live since 2026-11-07) caps approvals at 10 per token; its evidence is in [`docs/evidence/contract-v2-3`](docs/evidence/contract-v2-3/README.md). v2.4 adds the built-in sale; v2.5 (release wasm ready, not yet redeployed) adds owner epoch, value-op admission barrier and desk storage prefixes with no migrate. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed` (still v2.4 until the approved redeploy).
+`keyhole-devmo.near` holds a full-access key, so its owner can deploy new code. v1 to v2 added `migrate()`; v2.1, v2.2 and v2.3 changed code only. v2.3 (live since 2026-11-07) caps approvals at 10 per token; its evidence is in [`docs/evidence/contract-v2-3`](docs/evidence/contract-v2-3/README.md). v2.4 adds the built-in sale; v2.5 (candidate release wasm, not deployed) adds owner epoch, value-op admission and sealed pledge state with a separate one-time `migrate_pledge` for lending/recovery configuration; the abandoned desk surface is removed. Every deployed version is in `contracts/keys/release` with its sha256, CI rebuilds the source to the newest one, and `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed` (still v2.4 until the approved redeploy).
 
 ## Sessions (one signature, then no wallet popups for 30 minutes)
 
@@ -217,7 +217,7 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 ### 9. The listing freeze covers value moves and wet quotes
 
 - **Decision.** Before a value move (withdraw, swap, copy, chain_sign) or a `quote` with `execute: true`, the enclave reads the key's listing. A dry quote stays allowed while listed. The listing is re-read immediately before the custody send.
-- **Why.** A wet quote with an INTENTS deposit can move custody funds the same way a swap does.
+- **Why.** A wet quote returns a deposit address; obtaining that address is not itself proof of a debit. It is still conservatively classified as value-capable for admission, and funding/settlement requires separate evidence.
 - **Mitigation.** The check-then-act window is one custody round-trip. A listing that appears after the second read is seen by the next request; an epoch bump from a sale voids the settle stamp.
 
 ### 10. Transfer events declare NEP-171 1.0.0
@@ -233,13 +233,35 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
   - FullAccess `ed25519:8NP9x5eFZic4E8cL4Pq8NLoHwB5VG1tbhWPnHSPE2bdj` — owner's Meteor wallet.
   - FunctionCall `ed25519:FNe2aYtzNZ3FicPYdCjxgWuVMTf29NK2F1UzoFSsQ6h1` → receiver `social`, methods `__fastdata_kv` / `__fastdata_fastfs` (FastFS), allowance 1 NEAR.
   The TEE minter `015a0259…ac443` holds one FullAccess (enclave-generated) and one FunctionCall limited to `beat` on `keyhole-devmo.near`. There is no multisig and no timelock. `config.treasury` is the contract account itself.
-- **Why.** Deploys so far are FA-signed (v1–v2.4 live; v2.5 release wasm ready, not redeployed). Classic FunctionCall keys **cannot attach NEAR** ([docs](https://docs.near.org/protocol/accounts-contracts/access-keys)), so payable `nft_mint` / future `buy_signal` cannot move to a pure FC minter; FC is appropriate for non-payable settler methods (`beat`, `begin_value_op`, `finish_value_op`, `nft_set_tier`) once provisioned.
-- **Mitigation.** Do **not** delete FullAccess keys from mainnet without a verified recovery plan. Prepared commands (report only; user runs):
-  ```
-  # Add FC settler on minter for non-payable methods (after v2.5 deploy), then stop using FA for those calls:
-  # near account add-key <minter> grant-function-call-access --contract-account-id keyhole-devmo.near \
-  #   --allowance 0.25 NEAR --method-names beat,nft_set_tier,begin_value_op,finish_value_op ...
-  # Optional later: set_royalty to a dedicated treasury account (no live listings required).
-  # Removing a FullAccess key: near account delete-key keyhole-devmo.near <public_key> ...
-  ```
-  Desk fee ledgers (v2.5 prefixes `A`/`F`/`Q`/`S`) keep customer refunds and holder revenue separate from the contract's free balance once buy/settle/claim land.
+- **Why.** Deploys so far are FA-signed (v1–v2.4 live; v2.5 release wasm ready, not redeployed). Classic FunctionCall keys **cannot attach NEAR** ([docs](https://docs.near.org/protocol/accounts-contracts/access-keys)), so payable `nft_mint`, `register_collateral` and storage-funded `begin_value_op` cannot move to a pure FC minter; FC can cover only non-payable methods such as `beat`, `finish_value_op` and `nft_set_tier` once separately approved/provisioned.
+- **Mitigation.** Do **not** delete FullAccess keys from mainnet without a verified recovery plan and separate approval of exact current keys/commands. The prepared pledge recovery method below is treasury-only; it cannot restore upgrade authority or operate the minter. No key-change command is executed by this code/test PR. The abandoned desk surface and its ledgers are removed, not a future recovery mechanism.
+
+
+## Pledge v2.5 authority graph — prepared, not deployed
+
+| Authority | Allowed path | Cannot legitimately do | Residual trust / evidence gate |
+|---|---|---|---|
+| Holder / borrower | NEP-413 worker request; open immutable named-lender terms; exact repay; cancel unfunded offer | Transfer/list/approve/swap/withdraw while pledged or token transfer-call pending | Worker admission must cover every value-capable path; a UI badge is not custody confinement |
+| Named lender | Fund a fresh contract-verified certificate; claim native credit; default to eligible receiver | Change floor/terms, read sealed balance as visitor, seize before grace, bypass one-key rule | Floor is raw USDC only; willing lender chooses economic terms |
+| Pinned TEE minter / attestor | Mint; admit/finish reconciled operations; bind exact collateral wallet/policy; sign fixed floor | Rebind wallet, replace attestor through a setter, finish ambiguous external settlement safely | Old versions sharing its storage MUST be retired; certificate signature alone is not measured-code proof |
+| NFT contract | Fixed-ABI calls to immutable configured custody contract; confirm controller+locked policy digest/version+freeze; verified thaw after resolution | Generic arbitrary call, policy deletion/update, upgrade or DeleteAccount through recovery | Provider/keystore enforcement and old signed orders/delegates require live proof |
+| Existing operator FullAccess on NFT/project account | TODAY can replace contract, publish a bypass build and act as controller directly | Cannot honestly promise operator resistance while retained | Key removal/retirement/policy cutover need separate explicit approval; no such action is performed here |
+| Contract owner role | Enable/disable **new funding/offers** and bounded royalty administration; minter setter works only before pledge migration | Disable repayment/default/credit claims through lending switch; change fixed recovery identity through a setter | Removing FA only helps when no other owner-role route retains override capability |
+| Fixed recovery account | After December2,2026 02:00 Africa/Cairo, recover an explicit treasury ledger amount to ITSELF | Move loan principal, user credits, refundable bonds/listing deposits, stored vault assets or NFT; upgrade code or change authority | New treasury funding and future self-directed sale royalties are explicit; pre-existing unclassified native capital remains unclassified |
+| OutLayer provider / platform governance | Runtime, keystore, confidential routing and policy service | Not claimed cryptographically powerless by this app | Platform governance/shared-master/routing assumptions remain even after app FA removal |
+
+### Liability conservation and recovery
+
+Native user liabilities include refundable loan bonds, undelivered principal and all available/in-flight payout credits. Principal delivery success reduces the liability exactly once; failure transforms the same amount into lender credit without creating borrower debt. Exact repayment increases lender credit/liability before any thaw. A pull claim reserves its credit before transfer; success reduces liability once, failure restores credit once. Nonce/phase mismatch callbacks are ignored. Listing deposits, required storage and a 0.1 NEAR operating reserve are additionally excluded from recoverable balance. A treasury transfer in flight is excluded too. Unknown policy receipts/reads keep the lien, and overlapping freeze/thaw actions are forbidden.
+
+Treasury recovery is bounded twice: by provenance-tracked `treasury_available` and by native account balance after all those reserves. A time gate alone never makes an active loan's money treasury. Legacy balance is initialized as **zero recoverable ledger**, not “balance less code storage.” Future built-in sale royalties directed to the contract are provenance-tracked when earned; external-market transfers and pre-migration royalties are not assumed attributable. No new lending fee is invented. Any future request to attribute legacy operating capital requires its own auditable migration design. All generated callbacks have private access guards; ordinary callers cannot manufacture success.
+
+There is intentionally **no timelocked upgrade path** after FullAccess removal: an upgrade could replace the escrow rules after the date while user obligations still exist, defeating treasury-only recovery. This makes final code/worker administration potentially immutable and demands a separate pre-removal longevity/reconciliation audit. No promise of instant fixability or emergency admin seizure is made. Upgrade deployment must be quiescent: no legacy transfer-call receipts or old worker jobs still pending; pre-v2.5 in-flight receivers cannot retroactively acquire token-specific locks.
+
+### Economic and privacy consent
+
+This is bilateral short liquidity in NEAR while retaining USDC exposure and not revealing exact vault balance. Swapping is an alternative, often simpler/cheaper. The minimum is voluntary public information; the exact balance stays sealed until actual ownership changes. A true floor does NOT prove USD value, debt coverage, demand, profit or solvency. NEAR/USDC FX and USDC depeg risk remain; no price oracle, partial liquidation or automatic surplus return exists. **Default forfeits the whole confidential vault, not merely the disclosed minimum. All trading/withdrawal capital is frozen during the pledge**, including assets unrelated to the floor. Borrower/lender UX must disclose these facts before signatures. Pre-signed orders/delegates/keys can invalidate collateral eligibility; no lending on opaque legacy authority assumptions.
+
+### Verification status
+
+Unit and sandbox proofs validate application accounting and local receipt semantics, with a labelled mock provider. They do not validate live custody freeze, version retirement, absent delegates, gateway cutover or operator key removal. Mainnet lending stays disabled until the separately approved confinement rollout is complete. No code-only test may be relabelled as that live proof.

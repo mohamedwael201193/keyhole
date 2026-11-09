@@ -590,7 +590,7 @@ async fn v2_4_sale_settles_real_balances() -> anyhow::Result<()> {
 }
 
 
-/// v2.5 code-only: admission barrier + owner epoch + desk storage. Existing tokens unchanged; pending op blocks transfer.
+/// v2.5 code-only: admission barrier + owner epoch + pledge metadata. Existing tokens unchanged; pending op blocks transfer.
 #[tokio::test]
 async fn v2_5_admission_barrier_and_epoch_code_only() -> anyhow::Result<()> {
     let e = v1_like_mainnet().await?;
@@ -614,26 +614,21 @@ async fn v2_5_admission_barrier_and_epoch_code_only() -> anyhow::Result<()> {
         .args_json(json!({"token_id": "kadm", "receiver_id": alice.id(), "tier": 2, "metadata": fixture()[1]["metadata"]}))
         .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
     e.minter.call(&c, "begin_value_op")
-        .args_json(json!({"token_id": "kadm", "epoch": "0", "op_id": "op1", "action_hash": "ah"}))
-        .max_gas().transact().await?.into_result()?;
+        .args_json(json!({"token_id": "kadm", "epoch": "0", "op_id": "1:op1", "action_hash": "ah", "owner_id": alice.id()}))
+        .deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;
     assert_eq!(view(&e.c, "pending_value_op_count", json!({"token_id": "kadm"})).await, "1");
     let r = alice.call(&c, "nft_transfer").args_json(json!({"receiver_id": bob.id(), "token_id": "kadm"}))
         .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
     assert!(format!("{:?}", r.into_result().unwrap_err()).contains("value-op pending"));
     e.minter.call(&c, "finish_value_op")
-        .args_json(json!({"token_id": "kadm", "op_id": "op1", "success": true}))
+        .args_json(json!({"token_id": "kadm", "op_id": "1:op1", "success": true}))
         .max_gas().transact().await?.into_result()?;
     alice.call(&c, "nft_transfer").args_json(json!({"receiver_id": bob.id(), "token_id": "kadm"}))
         .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
     assert_eq!(view(&e.c, "nft_settlement_epoch", json!({"token_id": "kadm"})).await, "1");
     assert_eq!(view(&e.c, "nft_token", json!({"token_id": "kadm"})).await["owner_id"], bob.id().as_str());
-    // desk configure by new owner
-    bob.call(&c, "configure_service").args_json(json!({
-        "token_id": "kadm", "manifest_hash": "mh", "price_yocto": NearToken::from_millinear(1).as_yoctonear().to_string(),
-        "version": "v1", "enabled": true
-    })).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
-    let svc = view(&e.c, "get_service", json!({"token_id": "kadm"})).await;
-    assert_eq!(svc["version"], "v1");
-    assert_eq!(svc["enabled"], true);
+    // Lending is disabled until a separately approved one-time pledge migration.
+    assert!(view(&e.c, "get_loan", json!({"token_id":"kadm"})).await.is_null());
+    assert!(view(&e.c, "get_pledge_config", json!({})).await.is_null());
     Ok(())
 }

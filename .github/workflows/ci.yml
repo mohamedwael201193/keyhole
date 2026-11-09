@@ -37,7 +37,7 @@ jobs:
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
           want=$(grep ' v2.5/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
-      - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + desk storage), NEP-178 cap, one key, royalty sale, minter-only tier raise
+      - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + sealed pledge state), NEP-178 cap, one key, royalty sale, minter-only tier raise
         working-directory: contracts/keys-sandbox
         run: cargo test --locked
       - name: count passing sandbox tests

@@ -830,3 +830,39 @@ verify.sh             one-call verifier (attestation, FastFS, optional rebuild)
 **Credits:** the ambient music was generated for this project and is released under CC0. Chain marks are the official logos of their projects, shown only to name the supported assets.
 
 Built on NEAR.
+
+
+## Pledge preparation — v2.5 source, NOT deployed
+
+**Borrow without opening your vault.** This branch prepares a named-lender NEAR loan against a key's sealed USDC custody account. A lender verifies the borrower's declared **raw USDC minimum**, never an exact balance or invented USD valuation. The contract checks an Ed25519 signature over a canonical, loan/nonce/token/epoch/terms/contract/network/expiry-bound certificate. The shared public test vector is [protocol/loan-certificate-v1.json](protocol/loan-certificate-v1.json). This is a trusted-attestor statement, not a zero-knowledge proof or independent on-chain verification of Intel measurement.
+
+**Why borrow rather than swap?** Short NEAR liquidity without selling USDC exposure or opening the full vault balance to a lender. This is useful only when a willing lender values those terms; swaps may be cheaper and simpler. No demand, yield or solvency is inferred from a team-wallet demonstration. NEAR debt creates NEAR/USDC FX risk, USDC can depeg, all vault trading/withdrawal capital is frozen while pledged, and default forfeits the **whole confidential account**, including assets above the declared floor. There is no price oracle or partial liquidation.
+
+### Prepared in contract code
+
+- Removed the undeployed signals/desk APIs and S/Q/A/F storage. Kept E/Vo/Vc and the existing v2.4 Contract Borsh layout.
+- All sale/title/approval paths refuse a pledge. A token-specific transfer-call lock prevents an intermediate receiver from pledging, listing, approving or admitting a value operation before the NEP-171 resolver. Revocation/read methods remain available.
+- Lower custody policy/controller freeze is confirmed before an offer becomes fundable. A failed/unknown thaw leaves an explicit lock, never fake success. The sandbox policy fixture models predecessor/controller and receipt behavior **only**; it does not prove provider cryptography, live keystore enforcement, absent delegates or version retirement.
+- Principal is pending until its native transfer succeeds; failure credits the lender without borrower debt. Repayment becomes funded lender credit before unlocking. Failed pull payouts restore exact credits, and callbacks are private and nonce-bound. Default supports an eligible redirected receiver under the one-key rule.
+- Value admission uses one bounded record per token and a monotonic nonce in every operation id. Obsolete ids cannot unlock a new operation. The minter prepays a maximum 0.01 NEAR storage budget; unused deposit is refunded and only actual growth is retained, never attributed as treasury. Failure/timeout is not terminal settlement.
+- One-time self-call pledge migration pins an immutable recovery beneficiary and attestor key. New lending defaults **OFF**. Legacy native balance and listing deposits are not automatically attributed as treasury. `recover_treasury` can transfer only explicitly funded treasury or newly tracked self-directed sale royalties, bounded by free native balance after user liabilities, listing deposits, pending recovery, storage and 0.1 NEAR operating reserve; only to the fixed beneficiary, from December 2, 2026, 02:00 Africa/Cairo. A failed transfer restores its ledger once. No upgrade/arbitrary-execution/DeleteAccount escape hatch.
+
+### Reproduce local proof
+
+```sh
+(cd contracts/keys && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains)
+(cd contracts/keys && cargo near build non-reproducible-wasm)
+(cd contracts/keys-sandbox && cargo test --locked)
+python3 judge/gen-claims.py .
+node judge/verify-claims.mjs --offline
+```
+
+Named tests: `funding_rejects_each_tampered_binding_even_with_a_valid_attestor_signature`, `repaid_credit_remains_backed_across_failed_pull_payout_and_unlock`, `default_redirect_checks_one_key_before_title_and_keeps_unlock_lock`, `admission_before_open_blocks_open_and_open_before_admission_blocks_admission`, `recovery_has_exact_timelock_immutable_destination_and_failed_transfer_restore`, `sealed_loan_repay_unlock_and_native_credit_conservation`, `sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked`. These are executable test names, not a claim that mainnet loans have run.
+
+### Hard rollout gates
+
+Mainnet remains v2.4, worker d337e822. No deployment, publication, version retirement, credential or access-key change is authorized by these source changes. Funding must stay disabled until exact eligible wallet/controller policy, old22-version retirement and outstanding authority/job reconciliation are independently verified with separate approvals. Removing FullAccess is irreversible: the no-upgrade design may prevent future contract/worker project administration, minter changes and payment-key renewal. It requires a separate operational longevity review; do not remove keys from a code-only test result. See [SECURITY.md](SECURITY.md) for the authority graph and residual trust. Web implementation waits for reviewed green contract+worker PRs and must preserve the existing dashboard, with Pledge in the sidebar.
+
+Admission ABI: `begin_value_op(token_id, epoch, op_id, action_hash, owner_id)` atomically validates the authenticated owner and epoch. `op_id` is `<value_op_nonce+1>:<unique-action-id>` (maximum 85 bytes); the on-chain last nonce comes from `get_control_state`. `finish_value_op` requires the exact latest id and terminal provider reconciliation, never timeout. Latest record only: `get_value_op` returns null for obsolete ids.
+
+Local validation of this candidate: **209 contract unit tests, strict clippy, 19 sandbox integration tests**, including eight pledge tests and eleven historical upgrade tests; captured-state fork dry-run also passes. These are application/runtime tests with a labelled custody mock, not live keystore proof. Captured account state at block 223813218 has insufficient storage balance for the larger 436,040-byte candidate: deployment fails with `LackBalanceForState` (about 0.766 NEAR short including the attempt's gas). Only a sandbox top-up of 2 NEAR was used to continue migration proof. Any real top-up/deploy remains a separate approval gate.
