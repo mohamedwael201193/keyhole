@@ -6,17 +6,27 @@ import { TEE_MINTER } from "@/lib/config";
 import { TxLink } from "@/components/TxLink";
 import { Button, CopyBtn, Spinner } from "@/components/ui";
 import { TxResult } from "@/components/TxResult";
+import { PageHeader, Card, CardHeader, StatusChip } from "@/components/v7";
+import { KeyDetails } from "@/components/keys/KeyDetails";
+import { useKeyListing, useKeyTier } from "@/components/keys/keyData";
+import { useWallet } from "@/lib/wallet";
 import { useKeyChain } from "./useKeyChain";
 import { BeforeYouBuy, BuyerProof, ProofPanel } from "./buyer";
 import { SaleCard } from "./sale";
 import "./key.css";
+import "@/components/keys/keys.css";
 
 /** New ids are k + hex; the first keys were minted with plain numbers (0, 1, 2…). */
 export const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;
 const ID = KEY_ID;
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
+/**
+ * The key page (/key): look up a key by id, then its KEY DETAILS panel (the same layout as the gallery), the proof in a link,
+ * the sale card, the buyer checks, and the holder table and event log. Every read and check is the one each card made before.
+ */
 export function KeyHistoryView() {
+  const { accountId } = useWallet();
   const [id, setId] = useState("");
   const [body, setBody] = useState<KeyLogBody | null>(null);
   const [callId, setCallId] = useState<string | null>(null);
@@ -28,7 +38,11 @@ export function KeyHistoryView() {
   const [active, setActive] = useState("");
   /** The `proof` query value, when the page was opened with a share link. */
   const [proof, setProof] = useState<string | null>(null);
+  /** Bumped after a sale action, so the listing in the details panel is read again. */
+  const [saleRound, setSaleRound] = useState(0);
   const chain = useKeyChain(active);
+  const tier = useKeyTier(active);
+  const listing = useKeyListing(active, saleRound);
 
   async function load(tid: string) {
     setErr(null); setBody(null); setCk(null); setCallId(null); setLegacy(null);
@@ -54,28 +68,56 @@ export function KeyHistoryView() {
 
   const hs = body ? holders(body.events) : [];
   const ok = !!ck && ck.chain && ck.head && ck.sig && ck.minter;
-  const pill = (pass: boolean, label: string, tid: string) => <span className={`kpill ${pass ? "" : "bad"}`} data-testid={tid} data-pass={String(pass)}>{pass ? "✓" : "✕"} {label}</span>;
+  const pill = (pass: boolean, label: string, tid: string) => (
+    <span className={`kpill ${pass ? "" : "bad"}`} data-testid={tid} data-pass={String(pass)}>{pass ? "✓" : "✕"} {label}</span>
+  );
   return (
-    <div className="page khist">
-      <p className="eb">Key history · public</p>
-      <h1>Every key has a <em>book.</em></h1>
-      <p className="lead">Who held this key, and when it deposited, paid out and traded. This page re-checks every link in your browser; amounts stay sealed.</p>
-      <form className="field" onSubmit={(e) => { e.preventDefault(); setProof(null); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
+    <div className="kp-root kd-page khist" data-testid="key-page">
+      <PageHeader
+        eyebrow="Key history · public"
+        title={<>Every key has a <em>book.</em></>}
+        lead="Who held this key, and when it deposited, paid out and traded. This page re-checks every link in your browser; amounts stay sealed."
+        testid="key-head"
+      />
+      <form className="kd-lookup" onSubmit={(e) => { e.preventDefault(); setProof(null); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
         <label htmlFor="kid" className="sr-only">key id</label>
         <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
         <Button type="submit" loading={busy} loadingLabel="Opening" testid="key-load">Open</Button>
       </form>
-      <p className="vhelp" data-testid="key-help">Paste a key id, for example <span className="mono">k5f4750858f328940</span> or <span className="mono">0</span>.</p>
-      {busy && !body && <p className="note" data-testid="key-loading"><Spinner label="Loading" /> Reading the book from the enclave and checking every link…</p>}
-      {err && <p className="note key-error" role="alert" data-testid="key-error">{err}</p>}
+      <p className="kd-help" data-testid="key-help">Paste a key id, for example <span className="kd-mono">k5f4750858f328940</span> or <span className="kd-mono">0</span>.</p>
+      {busy && !body && <p className="kg-note" data-testid="key-loading"><Spinner label="Loading" /> Reading the book from the enclave and checking every link…</p>}
+      {err && <p className="kg-note key-error" role="alert" data-testid="key-error">{err}</p>}
+
       {legacy !== null && (
-        <section className="card" data-testid="key-legacy">
-          <h2>KEYHOLE Key #{legacy}</h2>
-          <p>An early key, minted before per-key history books existed. Its owner is still on chain: see <span className="mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
-        </section>
+        <Card as="section" testid="key-legacy" labelledBy="key-legacy-h">
+          <CardHeader title={`KEYHOLE Key #${legacy}`} id="key-legacy-h" />
+          <p className="kg-note">An early key, minted before per-key history books existed. Its owner is still on chain: see <span className="kd-mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
+        </Card>
+      )}
+
+      {active && legacy === null && (
+        <KeyDetails
+          tokenId={active}
+          owner={chain.owner}
+          tier={tier}
+          viewer={accountId}
+          sale={listing}
+          proofHref="#key-log"
+          saleHref="#sale-card"
+        />
       )}
       {proof && <ProofPanel raw={proof} id={active} owner={chain.owner} minter={chain.minter} />}
-      {active && <SaleCard id={active} owner={chain.owner} royaltyBps={chain.royaltyBps} minter={chain.minter} onChanged={chain.refresh} />}
+      {active && (
+        <div id="sale-card" className="kd-anchor">
+          <SaleCard
+            id={active}
+            owner={chain.owner}
+            royaltyBps={chain.royaltyBps}
+            minter={chain.minter}
+            onChanged={() => { chain.refresh(); setSaleRound((n) => n + 1); }}
+          />
+        </div>
+      )}
       {active && legacy === null && <BuyerProof id={active} owner={chain.owner} />}
       {body && ck && (
         <>
@@ -93,8 +135,8 @@ export function KeyHistoryView() {
             callId={callId ?? undefined}
             testid="key-result"
           />
-          <section className="card khold">
-            <h2>Holders</h2>
+          <Card as="section" className="khold" labelledBy="holders-h" testid="holders-card">
+            <CardHeader title="Holders" id="holders-h" />
             <div className="ktable" data-testid="holders">
               <div className="kr kh"><span>Holder</span><span>From</span><span>To</span><span>Deposits</span><span>Paid out</span><span>Trades</span></div>
               {hs.map((h, i) => (
@@ -105,18 +147,19 @@ export function KeyHistoryView() {
                 </div>
               ))}
             </div>
-            <p className="note">Paid out counts withdraw events. USD totals are private to each holder; a holder can publish a signed total from the vault (<Link href="/pnl">signed PnL</Link>).</p>
-          </section>
-          <section className="card klog">
-            <h2>Event log</h2>
+            <p className="kg-note">Paid out counts withdraw events. USD totals are private to each holder; a holder can publish a signed total from the vault (<Link href="/pnl">signed PnL</Link>).</p>
+          </Card>
+          <Card as="section" className="klog" labelledBy="log-h" testid="key-log-card">
+            <span id="key-log" className="kd-anchor" />
+            <CardHeader title="Event log" id="log-h" meta={<StatusChip tone={ok ? "success" : "error"}>{ok ? "Checked" : "Not checked"}</StatusChip>} />
             <ol>
               {body.events.map((e) => (
                 <li key={e.i}><b>{e.kind}</b><span className="mono"><TxLink account={e.owner}>{short(e.owner)}</TxLink></span><span>{when(e.ts_ms)}</span><span className="mono h" title={`log entry hash ${e.hash}`}>{e.hash.slice(0, 12)}… <CopyBtn value={e.hash} label="Copy hash" /></span></li>
               ))}
             </ol>
-            <p className="mono khead">head {body.head} <CopyBtn value={body.head} label="Copy" /></p>
-            <p className="note">Each entry hash covers the previous one, so changing any row breaks every hash after it. These are log hashes, not chain transactions.</p>
-          </section>
+            <p className="khead">head {body.head} <CopyBtn value={body.head} label="Copy" /></p>
+            <p className="kg-note">Each entry hash covers the previous one, so changing any row breaks every hash after it. These are log hashes, not chain transactions.</p>
+          </Card>
         </>
       )}
     </div>

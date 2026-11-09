@@ -5,6 +5,7 @@ import { useKeyStore } from "@/lib/keyStore";
 import { minutesLeft } from "@/lib/session";
 import { capsOf } from "@/lib/dashboard";
 import { errorText } from "@/lib/i18n";
+import { Icon } from "@/components/v7/icons";
 
 /**
  * The session pill in the app top bar. Locked: one tap starts the 30-minute session (one signature, or in-page for
@@ -73,10 +74,10 @@ export function SessionPill() {
           data-testid="session-pill"
           data-state="unlocked"
         >
-          <i aria-hidden="true" />
-          <span>Unlocked</span>
+          <Icon name="unlock" size={16} />
+          <span className="sp-word">Unlocked</span>
           <span className="sp-sep" aria-hidden="true">·</span>
-          <span className="sp-time">{minutes} min</span>
+          <span className="sp-time">{minutes}<span className="sp-unit"> min</span></span>
         </button>
       ) : (
         <button
@@ -90,7 +91,7 @@ export function SessionPill() {
           data-testid="session-pill"
           data-state="locked"
         >
-          <i aria-hidden="true" />
+          <Icon name="lock" size={16} />
           {busy ? (
             <span>{privy ? "Signing in-page…" : "Confirm in wallet…"}</span>
           ) : (

@@ -1,175 +1,178 @@
 /*
- * Overview (app/dashboard), the session pill in the app top bar, and the Mint call to action in the sidebar.
- * Loaded from app/layout.tsx after app-pages.css, so the pill can show on every app route.
- * Tokens come from app/tokens.css only. No forced overrides. Cards 16px, controls 12px, one card shadow.
- * Display serif only for the page title and the key name; Manrope for UI; tabular numbers for amounts.
+ * Overview (app/dashboard) and the session pill in the app top bar. Loaded from app/layout.tsx after app-pages.css, so the pill
+ * can show on every app route. Markup: components/dashboard/Overview.tsx and components/app/SessionPill.tsx.
+ * Tokens come from app/tokens.css only (no literal colours, no forced overrides). Shared cards, chips and rows: components/v7/v7.css.
+ * Layout: three columns from 1360px (key card | middle | setup), two from 1000px (key and setup, then the middle full width),
+ * one column below that. The middle column is a size container, so its pair of cards and its proof grid pick their own columns.
  */
 
 /* ---- Page ---- */
 .ov { display: grid; gap: var(--space-5); min-width: 0; color: var(--ink); }
-.app-main .ov { max-width: 1120px; padding: var(--space-6) var(--space-6) var(--space-7); }
-.ov-head { display: grid; gap: var(--space-2); min-width: 0; }
-.ov-eb { margin: 0; font: 700 var(--text-small)/1.2 var(--font-ui); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); }
-.ov-title { margin: 0; font: 600 var(--text-title)/1.08 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
-.ov-name { margin: 0; font: 600 var(--text-title)/1.1 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
-.ov-meta { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--muted); }
-.ov-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: var(--ink); }
-.ov-muted { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--muted); }
-.ov-lead { margin: 0; font: 500 var(--text-body)/1.55 var(--font-ui); color: var(--ink-2); }
-.ov-sentence { margin: 0; max-width: 60ch; font: 500 var(--text-body)/1.55 var(--font-ui); color: var(--ink-2); }
-.ov-caps { margin: 0; font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.ov-link { min-height: 44px; display: inline-flex; align-items: center; font: 600 var(--text-body)/1.2 var(--font-ui); color: var(--primary); text-underline-offset: 3px; }
-.ov-link:focus-visible, .ov-text-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-
-/* ---- Key hero ---- */
-.ov-hero {
-  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--space-6); align-items: start;
-  min-width: 0; padding: var(--space-6); border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
+.app-main .ov { padding: var(--space-6) var(--space-6) var(--space-7); }
+.ov-banner-err { min-width: 0; }
+.ov-anchor { position: absolute; top: -96px; }
+.ov-muted { margin: 0; font: 400 14px/1.5 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.ov-meta { margin: 0; font: 500 13px/1.5 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.ov-caps { margin: 0; font: 600 13px/1.45 var(--font-ui); color: var(--ink-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ov-sentence { margin: 0; font: 400 14px/1.6 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+.ov-stack { display: grid; gap: var(--space-3); justify-items: start; min-width: 0; }
+.ov-link {
+  min-height: 44px; width: fit-content; display: inline-flex; align-items: center; font: 600 15px/1.2 var(--font-ui);
+  color: var(--primary); text-underline-offset: 3px;
 }
-/* The key artwork sits in a fixed box, centred, and is scaled to fit (never cropped). 200 x 260 on desktop, 140 x 180 on phones. */
-.ov-art { margin: 0; min-width: 0; justify-self: start; width: 200px; height: 260px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-/* max-height, not height: 100%, so the key art fits the box whatever its intrinsic size. */
+.ov-link:focus-visible, .ov-text-btn:focus-visible, .ov-tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---- Columns ---- */
+.ov-cols { display: grid; grid-template-columns: 250px minmax(0, 1fr) 320px; gap: var(--space-4); align-items: stretch; min-width: 0; }
+.ov-cols > * { min-width: 0; }
+.ov-cols > .ov-key { grid-column: 1; grid-row: 1; }
+.ov-cols > .ov-setup { grid-column: 3; grid-row: 1; }
+.ov-cols > .ov-mid { grid-column: 2; grid-row: 1; }
+.ov-mid { display: grid; gap: var(--space-4); align-content: start; min-width: 0; container-type: inline-size; }
+.ov-pair { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.ov-half { min-width: 0; }
+@container (min-width: 480px) {
+  .ov-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---- Key card (and the mint and lookup cards in the same place) ---- */
+.ov-key { display: grid; gap: var(--space-3); align-content: start; justify-items: center; text-align: center; padding: var(--space-5) var(--space-4); }
+.ov-key-top { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+.ov-art {
+  margin: var(--space-2) 0 0; width: 100%; height: 252px; min-width: 0; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md); overflow: hidden; background: linear-gradient(160deg, var(--surface-warm) 0%, var(--sunken) 100%);
+}
 .ov-art img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
-.ov-hero-body { display: grid; gap: var(--space-3); min-width: 0; align-content: start; }
-.ov-hero-wide { grid-column: 1 / -1; }
-.ov-vault {
-  display: grid; gap: var(--space-2); min-width: 0; padding: var(--space-4); border-radius: var(--radius-md);
-  background: var(--sunken); border: 1px solid var(--line);
+.ov-serial { margin: calc(var(--space-2) * -1) 0 0; }
+.ov-serial .v7-mono {
+  display: inline-flex; align-items: center; min-height: 26px; padding: 0 12px; border-radius: var(--radius-pill);
+  background: var(--sunken); color: var(--ink-2); font-size: 13px; letter-spacing: .08em;
 }
-.ov-label { font: 700 var(--text-small)/1.2 var(--font-ui); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-.ov-amount { font: 700 var(--text-title)/1.1 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.ov-amount.ov-locked { font-weight: 600; color: var(--ink-2); }
-.ov-unlock { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; }
-.ov-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; }
+.ov-key-name { margin: 0; font: 600 26px/1.15 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }
+.ov-key .ov-meta, .ov-key .ov-caps { text-align: center; }
+.ov-key-action { display: flex; justify-content: center; width: 100%; min-width: 0; }
+.ov-key-action .kh-btn { width: 100%; }
+.ov-lookup { justify-items: start; text-align: start; }
+.ov-lookup .v7-skel { width: 100%; }
+.ov-sample { padding: var(--space-5) var(--space-4); }
 
-/* ---- Grid of cards ---- */
-.ov-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; min-width: 0; }
-.ov-grid > * { min-width: 0; }
-.ov-card { display: grid; gap: var(--space-4); align-content: start; padding: var(--space-5); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
-.ov-card h2 { margin: 0; font: 700 var(--text-heading)/1.2 var(--font-ui); color: var(--ink); }
-.ov-card p { margin: 0; }
-.ov-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.ov-fact { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
-.ov-fact b { margin-inline-start: 4px; font: 700 var(--text-body)/1 var(--font-ui); color: var(--ink); }
+/* ---- Quick actions ---- */
+.ov-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); min-width: 0; }
+.ov-tile {
+  display: grid; justify-items: center; align-content: center; gap: 10px; min-height: 88px; min-width: 0; padding: 14px 8px;
+  border-radius: var(--radius-md); border: 1px solid var(--line-strong); background: var(--surface-warm); color: var(--ink);
+  text-decoration: none; font: 600 14px/1.2 var(--font-ui);
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.ov-tile:hover { background: var(--raised); border-color: var(--primary); transform: translateY(-1px); }
+.ov-tile:active { transform: translateY(0); }
+.ov-tile-icon { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--raised); color: var(--primary); }
+.ov-tile-label { text-align: center; overflow-wrap: anywhere; }
+
+/* ---- Assets and activity ---- */
+/* An asset row in a narrow card: the symbol and its USD value on the first line, the amount on the second, the name on the third.
+   The body and end wrappers are dissolved (display: contents) so each line is one grid cell. Every line stays on one line and
+   truncates with an ellipsis; no word breaks inside "USDC". .v7-row.ov-asset is used so it beats v7.css (loaded after this file). */
+.v7-row.ov-asset {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; grid-template-rows: auto auto auto;
+  column-gap: var(--space-3); row-gap: 2px; align-items: center; padding: 12px 0;
+}
+.v7-row.ov-asset .v7-row-body, .v7-row.ov-asset .v7-row-end { display: contents; }
+.v7-row.ov-asset .ov-asset-mark { grid-column: 1; grid-row: 1 / span 3; }
+.v7-row.ov-asset .v7-row-title { grid-column: 2; grid-row: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.v7-row.ov-asset .v7-row-meta { grid-column: 3; grid-row: 1; justify-self: end; white-space: nowrap; }
+.v7-row.ov-asset .v7-row-value { grid-column: 2 / span 2; grid-row: 2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.v7-row.ov-asset .v7-row-sub { grid-column: 2 / span 2; grid-row: 3; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.ov-asset-mark {
+  display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%; overflow: hidden;
+  background: var(--raised); border: 1px solid var(--card-edge);
+}
+.ov-feed { list-style: none; margin: 0; padding: 0; display: grid; min-width: 0; }
+.ov-feed-row { align-items: flex-start; }
+.ov-feed-row .v7-row-sub { font-variant-numeric: tabular-nums; }
+.ov-feed-row > .v7-chip { flex: none; }
+.ov-verify { margin-top: var(--space-3); }
+.ov-verify a { color: var(--primary); font-weight: 600; text-underline-offset: 3px; }
+.ov-unlock-line { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font: 400 15px/1.5 var(--font-ui); color: var(--muted); }
 .ov-text-btn {
-  appearance: none; min-height: 44px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-md); background: none; cursor: pointer;
-  font: 600 var(--text-body)/1.2 var(--font-ui); color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px;
+  appearance: none; min-height: 40px; padding: 0; border: 0; border-radius: var(--radius-sm); background: none; cursor: pointer;
+  font: 600 15px/1.2 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px;
 }
-.ov-text-btn:hover:not(:disabled) { color: var(--primary); background: var(--primary-soft); }
+.ov-text-btn:hover:not(:disabled) { color: var(--primary-hover); }
 .ov-text-btn:disabled { cursor: progress; color: var(--muted); }
-.ov-unlock-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font: 500 var(--text-body)/1.4 var(--font-ui); color: var(--muted); }
-.ov-unlock-line .ov-text-btn { padding-inline-start: 0; }
 
-/* ---- Setup checklist ---- */
-.ov-steps { list-style: none; margin: 0; padding: 0; display: grid; }
-.ov-step {
-  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
-  padding: var(--space-3) 0; border-bottom: 1px solid var(--line); min-width: 0;
-}
-.ov-step:last-child { border-bottom: 0; }
-.ov-num {
-  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
-  font: 700 var(--text-small)/1 var(--font-ui); color: var(--ink-2); background: var(--sunken); border: 1px solid var(--line-strong);
-  font-variant-numeric: tabular-nums;
-}
-.ov-step.done .ov-num { background: var(--success-bg); color: var(--success); border-color: transparent; }
-.ov-step-body { display: grid; gap: 2px; min-width: 0; }
-.ov-step-body b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); }
-.ov-step-body small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
-.ov-step.done .ov-step-body b { color: var(--ink-2); }
-.ov-complete { margin: 0; display: flex; align-items: center; gap: var(--space-2); font: 700 var(--text-body)/1.3 var(--font-ui); color: var(--success); }
-.ov-tick {
-  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--success-bg); color: var(--success);
-  font: 700 var(--text-small)/1 var(--font-ui);
+/* ---- Vault banner messages ---- */
+.ov-banner-err .errbox { margin: 0; }
+
+/* ---- Setup (the right column) ---- */
+.ov-setup { align-content: start; }
+
+/* ---- Tier progress (the held key): two targets, one bar each, and the level up ---- */
+.ov-tier { display: grid; gap: var(--space-4); align-content: start; }
+.ov-tier-body { display: grid; gap: var(--space-4); min-width: 0; }
+.ov-tier-say { margin: 0; font: 400 15px/1.5 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+.ov-tier-say b { font-weight: 600; color: var(--ink); }
+.ov-meter { display: grid; gap: var(--space-2); min-width: 0; }
+.ov-meter-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-2) var(--space-3); min-width: 0; }
+.ov-meter-head span { font: 500 14px/1.4 var(--font-ui); color: var(--muted); }
+.ov-meter-head b { font: 600 15px/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ov-meter-track { position: relative; height: 8px; border-radius: var(--radius-pill); background: var(--sunken); overflow: hidden; }
+.ov-meter-track > span {
+  position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--primary);
+  transition: width var(--dur-base) var(--ease-out);
 }
 
-/* ---- Proof ---- */
-.ov-kv { margin: 0; display: grid; }
-.ov-kv > div {
-  display: grid; grid-template-columns: minmax(96px, 128px) minmax(0, 1fr); gap: var(--space-3); align-items: baseline;
-  padding: var(--space-2) 0; border-bottom: 1px solid var(--line); min-width: 0;
-}
-.ov-kv > div:last-child { border-bottom: 0; }
-.ov-kv dt { font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
-.ov-kv dd { margin: 0; min-width: 0; font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
-
-/* ---- Assets ---- */
-.ov-assets { display: grid; min-width: 0; }
-.ov-row {
-  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: var(--space-3);
-  padding: var(--space-3) 0; border-bottom: 1px solid var(--line); min-width: 0;
-}
-.ov-row:last-child { border-bottom: 0; }
-.ov-row-who { display: grid; min-width: 0; }
-.ov-row-who b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
-.ov-row-who small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
-.ov-row-amt { display: grid; justify-items: end; text-align: right; min-width: 0; }
-.ov-row-amt b { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.ov-row-amt small { font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); font-variant-numeric: tabular-nums; }
-
-/* ---- Activity ---- */
-.ov-feed { list-style: none; margin: 0; padding: 0; display: grid; }
-.ov-feed li {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--space-3); align-items: center;
-  padding: var(--space-3) 0; border-bottom: 1px solid var(--line); min-width: 0;
-}
-.ov-feed li:last-child { border-bottom: 0; }
-.ov-feed-k { font: 600 var(--text-body)/1.3 var(--font-ui); color: var(--ink); }
-.ov-feed-d { grid-column: 1 / -1; font: 500 var(--text-small)/1.5 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
-.ov-feed-t { grid-column: 1 / -1; font: 500 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
+/* ---- Three steps ---- */
+.ov-steps { display: grid; gap: var(--space-4); min-width: 0; }
+.ov-steps-h { margin: 0; font: 600 28px/1.2 var(--font-display); color: var(--ink); }
+.ov-steps-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); min-width: 0; }
+.ov-explain { display: grid; gap: 10px; align-content: start; min-width: 0; padding: var(--space-5); }
+.ov-explain.is-next { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), var(--shadow-1); }
+.ov-explain-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.ov-explain-n { font-size: 13px; letter-spacing: .14em; color: var(--rust); }
+.ov-explain-icon { color: var(--ink-2); display: inline-flex; }
+.ov-explain-h { margin: 6px 0 0; font: 600 24px/1.15 var(--font-display); color: var(--ink); }
+.ov-explain-body { margin: 0; font: 400 14px/1.6 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
 
 /* ---- Signed out ---- */
-.ov-out { margin-top: var(--space-6); }
-.ov-signin {
-  justify-self: center; width: 100%; max-width: 560px; display: grid; gap: var(--space-4); padding: var(--space-6);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-1); min-width: 0;
-}
+.ov-signed-out { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; min-width: 0; }
+.ov-signin { display: grid; gap: var(--space-4); align-content: start; min-width: 0; padding: var(--space-6); }
 .ov-signin .signin-list { margin: 0; }
+.ov-signin-note { margin: 0; }
 
 /* ---- Session pill (app top bar) ---- */
 .sp { position: relative; flex: none; min-width: 0; }
 .sp-pill {
-  display: inline-flex; align-items: center; gap: 8px; height: 40px; min-height: 40px; padding: 0 14px;
-  border-radius: var(--radius-md); border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink);
-  font: 600 var(--text-small)/1 var(--font-ui); white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; min-height: 40px; padding: 0 16px;
+  border-radius: var(--radius-pill); border: 1px solid var(--card-edge); background: var(--raised); color: var(--ink);
+  box-shadow: var(--shadow-1); font: 600 14px/1 var(--font-ui); white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
-.sp-pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
-.sp-pill.on { border-color: transparent; background: var(--primary-tint); color: var(--primary); }
-.sp-pill.on i { background: var(--success); }
-.sp-pill:hover:not(:disabled) { background: var(--primary-soft); }
+.sp-pill svg { flex: none; color: var(--ink-2); }
+.sp-pill.on svg { color: var(--success); }
+.sp-pill:hover:not(:disabled) { border-color: var(--primary); }
 .sp-pill:focus-visible, .sp-btn:focus-visible, .sp-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .sp-pill:disabled { cursor: progress; opacity: 0.7; }
 .sp-sep { color: var(--muted); }
 .sp-pop {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 70; display: grid; gap: var(--space-3);
   width: min(320px, calc(100vw - 32px)); padding: var(--space-4); border-radius: var(--radius-lg);
-  background: var(--raised); border: 1px solid var(--line-strong); box-shadow: var(--shadow-2);
+  background: var(--raised); border: 1px solid var(--card-edge); box-shadow: var(--shadow-2);
 }
-.sp-lead { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--ink-2); }
+.sp-lead { margin: 0; font: 500 14px/1.5 var(--font-ui); color: var(--ink-2); }
 .sp-lead b { color: var(--ink); }
-.sp-note { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--muted); }
+.sp-note { margin: 0; font: 500 13px/1.5 var(--font-ui); color: var(--muted); }
 .sp-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .sp-btn {
-  min-height: 40px; padding: 0 var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--line-strong);
-  background: var(--raised); color: var(--ink); font: 600 var(--text-small)/1 var(--font-ui); cursor: pointer;
+  min-height: 40px; padding: 0 var(--space-4); border-radius: var(--radius-pill); border: 1px solid var(--line-strong);
+  background: var(--raised); color: var(--ink); font: 600 14px/1 var(--font-ui); cursor: pointer;
 }
-.sp-btn:hover:not(:disabled) { background: var(--primary-soft); }
+.sp-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
 .sp-btn:disabled { cursor: progress; color: var(--muted); }
 .sp-link {
   min-height: 40px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-md); background: none; cursor: pointer;
-  font: 600 var(--text-small)/1 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px;
+  font: 600 14px/1 var(--font-ui); color: var(--primary); text-decoration: underline; text-underline-offset: 3px;
 }
-
-/* ---- Tier progress (the held key): two targets, one bar each, and the level up ---- */
-.ov-tier { gap: var(--space-4); }
-.ov-tier-say { margin: 0; font: 500 var(--text-body)/1.5 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
-.ov-tier-say b { font-weight: 700; color: var(--ink); }
-.ov-meter { display: grid; gap: var(--space-2); min-width: 0; }
-.ov-meter-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-2) var(--space-3); min-width: 0; }
-.ov-meter-head span { font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--muted); }
-.ov-meter-head b { font: 700 var(--text-body)/1.3 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.ov-meter-track { position: relative; height: 10px; border-radius: var(--radius-pill); background: var(--sunken); border: 1px solid var(--line); overflow: hidden; }
-.ov-meter-track > span { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--primary); transition: width var(--dur-base) var(--ease-out); }
 
 /* ---- Mint call to action in the sidebar (shown only when the key store says there is no key) ---- */
 .app-link-cta { color: var(--primary); box-shadow: inset 0 0 0 1px var(--line-strong); }
@@ -177,24 +180,30 @@
 .app-link-cta:hover { background: var(--primary-soft); }
 
 /* ---- Breakpoints ---- */
-@media (max-width: 1099px) {
-  .ov-grid { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 1359px) and (min-width: 1000px) {
+  .ov-cols { grid-template-columns: 250px minmax(0, 1fr); }
+  .ov-cols > .ov-key { grid-column: 1; grid-row: 1; }
+  .ov-cols > .ov-setup { grid-column: 2; grid-row: 1; }
+  .ov-cols > .ov-mid { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 999px) {
+  .ov-cols { display: flex; flex-direction: column; }
+  .ov-cols > .ov-key { order: 1; }
+  .ov-cols > .ov-setup { order: 2; }
+  .ov-cols > .ov-mid { order: 3; }
+  .ov-steps-grid { grid-template-columns: minmax(0, 1fr); }
+  .ov-signed-out { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 899px) {
   .app-main .ov { padding: var(--space-5) var(--space-4) var(--space-7); gap: var(--space-4); }
-  .ov-hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: var(--space-5); }
-  .ov-art { justify-self: center; }
-  .ov-title { font-size: 30px; }
-  .ov-name { font-size: 28px; }
-  .ov-amount { font-size: 28px; }
+  .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ov-art { height: 260px; }
   .ov-signin { padding: var(--space-5); }
 }
 @media (max-width: 419px) {
-  .app-main .ov { padding: var(--space-4) var(--space-4) var(--space-7); }
-  .ov-art { width: 140px; height: 180px; }
-  .ov-hero, .ov-card { padding: var(--space-4); }
-  .ov-out { margin-top: var(--space-4); }
+  .ov-art { height: 220px; }
+  .ov-key, .ov-sample { padding: var(--space-4); }
   .ov-signin { padding: var(--space-4); }
-  .sp-pill { padding: 0 10px; }
+  .sp-pill { padding: 0 12px; }
   .sp-pill[data-state="locked"] .sp-word, .sp-pill[data-state="locked"] .sp-sep { display: none; }
 }

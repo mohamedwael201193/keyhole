@@ -1,36 +1,201 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { KeyCard } from "@/components/KeyCard";
-import { EmptyState } from "@/components/EmptyState";
+import { useRouter } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { Button } from "@/components/ui";
+import { EmptyState, FilterChips, Icon, PageHeader, Skeleton, type FilterItem } from "@/components/v7";
+import { KeyTile, KeyTileSkeleton } from "@/components/keys/KeyTile";
+import { KeyDetails } from "@/components/keys/KeyDetails";
+import { useKeyTotal, useListings, useTiersFor, useTokensFor, type SaleRead } from "@/components/keys/keyData";
+import { SaleListState } from "./sale";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { KEY_LIST_LIMIT, useKeyStore } from "@/lib/keyStore";
-import { nftTier, type Token } from "@/lib/near";
-import { Button, Skeleton } from "@/components/ui";
-import { ForSale } from "./sale";
+import type { Token } from "@/lib/near";
+import "@/components/keys/keys.css";
 
-export function GalleryView({ tokens, tiers, mine = false, sale = false }: { tokens: Token[]; tiers: (number | null)[]; mine?: boolean; sale?: boolean }) {
+/**
+ * The keys screen (/keys and /gallery). Three filters: All keys (every minted key), My keys (the signed-in account, from the
+ * shared key store) and For sale (nft_listings). Search filters the visible keys by token id. Selecting a key opens its
+ * KEY DETAILS panel below the grid. `serverTokens` is the first page of every key, read on the server for /gallery; /keys
+ * starts on My keys and reads nothing for All until the account asks for it (then it links to /gallery).
+ */
+export type KeysFilter = "all" | "mine" | "sale";
+
+type Row = { id: string; token: Token | undefined; tier: number | null | undefined };
+type ReadyRow = { id: string; token: Token; tier: number | null };
+
+export function GalleryView({ initial, serverTokens, serverTiers }: {
+  initial: KeysFilter;
+  serverTokens?: Token[];
+  serverTiers?: (number | null)[];
+}) {
   const { t } = useI18n();
+  const router = useRouter();
   const { accountId, connect } = useWallet();
-  const all = !mine && !sale;
-  return (
-    <div className="page gal" data-testid={sale ? "gallery-sale" : mine ? "gallery-mine" : "gallery-all"}>
-      <p className="eb">{t("gallery.eyebrow")}</p>
-      <h1>{t("gallery.h1a")}<em>{t("gallery.h1b")}</em></h1>
-      <p className="lead">{t("gallery.lead")}</p>
+  const store = useKeyStore();
+  const total = useKeyTotal();
+  const sales = useListings();
+  const [filter, setFilter] = useState<KeysFilter>(initial);
+  const [query, setQuery] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
 
-      <nav className="gal-filter" aria-label="Which keys to show">
-        <Link href="/gallery" className={`gal-tab${all ? " on" : ""}`} aria-current={all ? "page" : undefined} data-testid="gallery-filter-all">All keys</Link>
-        <Link href="/gallery?mine=1" className={`gal-tab${mine ? " on" : ""}`} aria-current={mine ? "page" : undefined} data-testid="gallery-filter-mine">My keys</Link>
-        <Link href="/gallery?sale=1" className={`gal-tab${sale ? " on" : ""}`} aria-current={sale ? "page" : undefined} data-testid="gallery-filter-sale">For sale</Link>
-      </nav>
-      <div className="gal-bar">
-        <p className="note gal-count-top">{sale ? "Keys listed for sale right now, read from NEAR mainnet." : mine ? "Keys this wallet holds, read from NEAR mainnet." : "Every key minted on NEAR mainnet."}</p>
-        <Button href="/mint" testid="keys-mint">Mint a key</Button>
+  // Tiers and tokens are read only for the list on screen.
+  const mineTiers = useTiersFor(filter === "mine" ? store.keys.slice(1).map((tk) => tk.token_id) : []);
+  const listed = sales.read.status === "ready" ? sales.read.items : [];
+  const saleIds = filter === "sale" ? listed.map((l) => l.token_id) : [];
+  const saleTokens = useTokensFor(saleIds);
+  const saleTiers = useTiersFor(saleIds);
+
+  const allRows: Row[] = (serverTokens ?? []).map((tk, i) => ({ id: tk.token_id, token: tk, tier: serverTiers?.[i] ?? null }));
+  const mineRows: Row[] = store.keys.map((tk, i) => ({ id: tk.token_id, token: tk, tier: i === 0 ? store.tier : mineTiers[tk.token_id] }));
+  const saleRows: Row[] = listed.flatMap((l) => {
+    const tk = saleTokens[l.token_id];
+    if (tk === null) return [];
+    return [{ id: l.token_id, token: tk, tier: saleTiers[l.token_id] }];
+  });
+
+  const rows = filter === "all" ? allRows : filter === "mine" ? mineRows : saleRows;
+  const q = query.trim().toLowerCase();
+  const shown = q ? rows.filter((r) => r.id.toLowerCase().includes(q)) : rows;
+  const ready = shown.filter((r): r is ReadyRow => !!r.token && r.tier !== undefined);
+  const sel = ready.find((r) => r.id === picked) ?? ready[0] ?? null;
+
+  /** The sale state of one key, as the tiles and the details panel show it. */
+  const saleOf = (id: string): SaleRead => {
+    if (sales.support === "v23" || sales.support === "unknown") return "unavailable";
+    if (sales.read.status === "error") return "error";
+    if (sales.read.status !== "ready") return "reading";
+    return sales.read.items.find((l) => l.token_id === id) ?? null;
+  };
+
+  const mineCount = accountId && store.status === "ready" ? store.keys.length : undefined;
+  const saleCount = sales.read.status === "ready" ? sales.read.items.length : undefined;
+  const chips: FilterItem<KeysFilter>[] = [
+    { id: "all", label: "All keys", count: total ?? undefined },
+    { id: "mine", label: "My keys", count: mineCount },
+    { id: "sale", label: "For sale", count: saleCount },
+  ];
+
+  function onFilter(next: KeysFilter) {
+    // The first page of all keys is read on /gallery. From /keys, All opens that page.
+    if (next === "all" && !serverTokens) { router.push("/gallery"); return; }
+    setFilter(next);
+    setPicked(null);
+    setQuery("");
+  }
+
+  /** The state that replaces the grid (or null when the grid shows). */
+  let stateBlock: ReactNode = null;
+  if (filter === "mine") {
+    if (!accountId) {
+      stateBlock = (
+        <EmptyState title="Sign in to see your keys" body="Your keys are read from NEAR mainnet for the account you sign in with. Reading them needs no signature." testid="gallery-mine-connect"
+          action={<Button onClick={connect} testid="gallery-connect">Sign in</Button>} />
+      );
+    } else if (store.keys.length === 0 && (store.status === "idle" || store.status === "loading")) {
+      stateBlock = <div data-testid="gallery-mine-loading" aria-live="polite"><p className="kg-note">Looking up your keys on NEAR mainnet…</p><Skeleton lines={2} /></div>;
+    } else if (store.keys.length === 0 && store.status === "error") {
+      stateBlock = (
+        <EmptyState title="NEAR mainnet did not answer" body="Your keys could not be read just now. The rest of this page still works." testid="gallery-mine-error"
+          action={<Button variant="secondary" onClick={() => store.refresh()} testid="gallery-mine-retry">Try again</Button>} />
+      );
+    } else if (store.keys.length === 0) {
+      stateBlock = (
+        <EmptyState title="No key in this wallet yet" body="A key is the account. Minting is free and takes one signature. Only Bronze is mintable today." testid="gallery-mine-empty"
+          action={<Button href="/mint" testid="gallery-mine-mint">Mint a key</Button>} />
+      );
+    }
+  } else if (filter === "all") {
+    if (serverTokens && serverTokens.length === 0) {
+      stateBlock = <EmptyState title="No keys yet" body={t("gallery.empty")} testid="gallery-empty" />;
+    }
+  } else {
+    stateBlock = <SaleListState support={sales.support} read={sales.read} retrySupport={sales.retrySupport} reload={sales.reload} />;
+  }
+
+  let countLine: ReactNode = null;
+  if (filter === "all" && serverTokens) {
+    countLine = total != null && total > serverTokens.length
+      ? <p className="kg-count" data-testid="gallery-count">Showing the first {serverTokens.length} of {total} keys minted on NEAR mainnet.</p>
+      : <p className="kg-count" data-testid="gallery-count">{serverTokens.length === 1 ? "1 key" : `${serverTokens.length} keys`} minted on NEAR mainnet.</p>;
+  } else if (filter === "mine" && store.keys.length > 0) {
+    countLine = (
+      <p className="kg-count" data-testid="gallery-mine-count">
+        {store.capped ? `Showing the first ${KEY_LIST_LIMIT} keys this wallet holds.` : `${store.keys.length} ${store.keys.length === 1 ? "key" : "keys"} in this wallet.`}
+      </p>
+    );
+  } else if (filter === "sale" && sales.read.status === "ready" && sales.read.items.length > 0) {
+    countLine = <p className="kg-count" data-testid="sale-list-count">{sales.read.items.length === 1 ? "1 key for sale." : `${sales.read.items.length} keys for sale.`}</p>;
+  }
+
+  const showGrid = !stateBlock && rows.length > 0;
+
+  return (
+    <div className="kp-root kg-root" data-testid={`gallery-${filter}`}>
+      <PageHeader
+        eyebrow="Gallery"
+        title={<>Every key is <em>one of one.</em></>}
+        lead={t("gallery.lead")}
+        testid="gallery-head"
+      />
+
+      <div className="kg-toolbar">
+        <FilterChips items={chips} value={filter} onChange={onFilter} label="Which keys to show" testid="gallery-filter" />
+        <label className="kg-search">
+          <span className="v7-sr-only">Search by token id</span>
+          <Icon name="search" size={18} className="kg-search-icon" />
+          <input
+            type="search"
+            className="kg-input"
+            placeholder="Search by token id…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            data-testid="gallery-search"
+          />
+        </label>
+        <Button href="/mint" icon={<Icon name="plus" size={18} />} testid="keys-mint">Mint a key</Button>
       </div>
 
-      <details className="traitsx" data-testid="traits-explain">
+      {stateBlock}
+      {showGrid && countLine}
+      {showGrid && shown.length === 0 && (
+        <EmptyState title="No key matches" body={<>No key id contains “{query.trim()}”.</>} testid="gallery-no-match"
+          action={<Button variant="secondary" onClick={() => setQuery("")} testid="gallery-clear">Clear search</Button>} />
+      )}
+      {showGrid && shown.length > 0 && (
+        <div className="kg-grid" data-testid={filter === "sale" ? "sale-list" : "gallery"}>
+          {shown.map((r, i) => (
+            r.token && r.tier !== undefined ? (
+              <KeyTile
+                key={r.id}
+                token={r.token}
+                tier={r.tier}
+                index={i + 1}
+                viewer={accountId}
+                sale={saleOf(r.id)}
+                selected={sel?.id === r.id}
+                onSelect={() => setPicked(r.id)}
+              />
+            ) : <KeyTileSkeleton key={r.id} />
+          ))}
+        </div>
+      )}
+      {sel && (
+        <KeyDetails
+          tokenId={sel.id}
+          owner={sel.token.owner_id}
+          tier={sel.tier}
+          viewer={accountId}
+          sale={saleOf(sel.id)}
+          proofHref={`/key?id=${encodeURIComponent(sel.id)}`}
+          saleHref={`/key?id=${encodeURIComponent(sel.id)}#sale-card`}
+        />
+      )}
+
+      <details className="kg-explain" data-testid="traits-explain">
         <summary>What the marks on a key mean</summary>
         <dl>
           <dt>Serial (6 hex characters, e.g. 020842)</dt><dd>The first six characters of the key&apos;s seed, sha256 of the contract id plus the token id. It is unique per key and is engraved on the hallmark.</dd>
@@ -40,77 +205,7 @@ export function GalleryView({ tokens, tiers, mine = false, sale = false }: { tok
         </dl>
       </details>
 
-      {sale ? <ForSale /> : mine ? <MineKeys accountId={accountId} connect={connect} /> : (
-        tokens.length === 0 ? <p className="note">{t("gallery.empty")}</p> : (
-          <div className="gg" data-testid="gallery">
-            {tokens.map((tk, i) => <KeyCard key={tk.token_id} token={tk} tier={tiers[i]} viewer={accountId} displayIndex={i + 1} />)}
-          </div>
-        )
-      )}
-
-      <p className="note gal-foot"><Link href="/identity" className="gal-link">{t("gallery.toIdentity")}</Link></p>
+      <p className="kg-foot"><Link href="/identity" className="kg-link">{t("gallery.toIdentity")}</Link></p>
     </div>
   );
-}
-
-/**
- * The connected account's keys, from the shared key store (mounted by components/app/AppShell.tsx). A cached list shows at once
- * and a fresh read runs behind it, so this does not look the keys up again. The store holds the first key's tier; the tiers of
- * the other keys are read in the background. Every state is said plainly: not connected, reading, unreachable, no key, or the keys.
- */
-function MineKeys({ accountId, connect }: { accountId: string | null; connect: () => void }) {
-  const store = useKeyStore();
-  const keys = store.keys;
-  const tiers = useTiers(keys.slice(1).map((tk) => tk.token_id));
-
-  if (!accountId) {
-    return (
-      <EmptyState title="Sign in to see your keys" body="Your keys are read from NEAR mainnet for the account you sign in with. Reading them needs no signature." testid="gallery-mine-connect">
-        <Button onClick={connect} testid="gallery-connect">Sign in</Button>
-      </EmptyState>
-    );
-  }
-  if (keys.length === 0 && (store.status === "idle" || store.status === "loading")) {
-    return <div data-testid="gallery-mine-loading" aria-live="polite"><p className="note">Looking up your keys on NEAR mainnet…</p><Skeleton lines={2} /></div>;
-  }
-  if (keys.length === 0 && store.status === "error") {
-    return (
-      <EmptyState title="NEAR mainnet did not answer" body="Your keys could not be read just now. The rest of this page still works." testid="gallery-mine-error">
-        <Button variant="secondary" onClick={() => store.refresh()} testid="gallery-mine-retry">Try again</Button>
-      </EmptyState>
-    );
-  }
-  if (keys.length === 0) {
-    return (
-      <EmptyState title="No key in this wallet yet" body="A key is the account. Minting is free and takes one signature. Only Bronze is mintable today." testid="gallery-mine-empty">
-        <Button href="/mint" testid="gallery-mine-mint">Mint a key</Button>
-      </EmptyState>
-    );
-  }
-  return (
-    <>
-      <p className="note gal-count" data-testid="gallery-mine-count">
-        {store.capped ? `Showing the first ${KEY_LIST_LIMIT} keys this wallet holds.` : `${keys.length} ${keys.length === 1 ? "key" : "keys"} in this wallet.`}
-      </p>
-      <div className="gg" data-testid="gallery">
-        {keys.map((tk, i) => <KeyCard key={tk.token_id} token={tk} tier={i === 0 ? store.tier : (tiers[tk.token_id] ?? null)} viewer={accountId} displayIndex={i + 1} />)}
-      </div>
-    </>
-  );
-}
-
-/** nft_tier for each id given (the keys after the first). Null while unread; a failed read stays null. Re-reads only when the ids change. */
-function useTiers(ids: string[]): Record<string, number | null> {
-  const [tiers, setTiers] = useState<Record<string, number | null>>({});
-  const joined = ids.join(",");
-  useEffect(() => {
-    if (!joined) return;
-    let cancel = false;
-    const list = joined.split(",");
-    Promise.all(list.map((id) => nftTier(id).catch(() => null))).then((ts) => {
-      if (!cancel) setTiers(Object.fromEntries(list.map((id, i) => [id, ts[i]])));
-    });
-    return () => { cancel = true; };
-  }, [joined]);
-  return tiers;
 }

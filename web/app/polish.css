@@ -11,12 +11,11 @@
   --teal: var(--primary);        /* primary fill, active nav, links, focus */
   --brass: var(--accent-ink);    /* eyebrows and labels */
   --ln: var(--line);             /* hairlines */
-  --kh-edge: var(--line-strong); /* card edge */
+  --kh-edge: var(--card-edge);   /* card edge */
   --kh-field: var(--field);      /* input border, 4.6:1 on white */
-  --ok-ink: var(--success); --ok-bg: var(--success-bg);
+  --ok-ink: var(--success-ink); --ok-bg: var(--success-bg);
   --info-ink: var(--info);
-  --warn-ink: var(--warn);
-  --bad-ink: var(--danger); --bad-bg: var(--danger-bg);
+  --bad-ink: var(--danger-ink); --bad-bg: var(--danger-bg);
   --kh-stops: #0E6B70, #14A3A0 18%, #D4A33A 38%, #F2C25B 50%, #D4A33A 62%, #14A3A0 82%, #0E6B70;
   --kh-shadow: var(--shadow-1);
   --kh-shadow-hi: var(--shadow-2);
@@ -184,6 +183,8 @@ p .mono, li .mono, small .mono, p code, li code { display: inline; white-space: 
 @media (max-width: 370px) { .nav .kh-word { letter-spacing: .1em; } .nav .music { display: none; } }
 /* axe fixes: second-explorer link and text on the dark result panel */
 .txl .alt { color: #1F4B4F !important; opacity: 1 !important; }
+/* The footer sits on dark teal: its second-explorer links need the light ink there. */
+.ft .txl .alt { color: #D6E6E4 !important; }
 .res p, .res small, .res .note { color: #E8F0EE !important; }
 @media (max-width: 480px) { .nav .cw, .nav .cw:not(:disabled) { max-width: none; overflow: visible; padding: 0 14px !important; white-space: nowrap; } }
 @media (max-width: 370px) { .nav .cw, .nav .cw:not(:disabled) { padding: 0 10px !important; font-size: 12px !important; } }
@@ -253,6 +254,11 @@ p .mono, li .mono, small .mono, p code, li code { display: inline; white-space: 
 .kh-empty--amber { box-shadow: inset 0 0 0 1px #E8B86066, var(--shadow-soft); }
 .kh-empty-icon { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #1F4B4F12; color: var(--teal); margin-bottom: var(--space-3); }
 .kh-empty h2 { text-wrap: balance; }
+.kh-empty-wrap { container-type: inline-size; min-width: 0; }
+@container (max-width: 600px) {
+  .kh-empty-wrap .card.kh-empty { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .kh-empty-wrap .card.kh-empty > img { order: -1; justify-self: start; width: auto; max-height: 150px; }
+}
 
 /* Transaction result: one state line, then the proof links */
 .kh-tx { display: grid; gap: var(--space-3); }

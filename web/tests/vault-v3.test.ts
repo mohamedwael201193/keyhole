@@ -25,13 +25,19 @@ describe("/vault v3 layout", () => {
     expect(v).toContain('if (ctx.op === "withdraw") { setDoneWithdraw({ amount: ctx.amount, to: ctx.to }); setWOpen(true); }');
   });
 
-  it("settings is one card with three tabs: limits, session, lock", () => {
+  it("settings is one card of real controls: limits, session, withdraw and fund from another chain", () => {
     expect(v).toContain('testid="settings-card"');
-    expect(v).toContain('<Tabs id="vset"');
-    for (const tab of ["limits", "session", "lock"]) expect(v).toContain(`id: "${tab}"`);
+    for (const id of ["settings-limits", "settings-session", "settings-withdraw", "settings-fund-chain"]) expect(v).toContain(`testid="${id}"`);
+    expect(v).not.toContain('<Tabs id="vset"');
     expect(v).toContain('data-testid="vault-session"');
     expect(v).toContain('"session-unlock"');
     expect(v).not.toContain("<SessionCard");
+  });
+
+  it("the listed-key freeze and the withdraw cooldown stay visible under the balance", () => {
+    expect(v).toContain('data-testid="lock-note"');
+    expect(v).toContain('data-testid="lock-cooldown"');
+    expect(v).toContain('data-testid="balance-card"');
   });
 
   it("trading is a link to /swap, not a form on the vault", () => {

@@ -27,8 +27,8 @@
 
 /* Proof check: the verdict, the checks and the claims. */
 .kp-verdict { display: inline-flex; align-items: center; margin: 0 0 var(--space-2); padding: 8px 14px; border-radius: var(--radius-pill); font: 700 14px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
-.kp-verdict.pass { background: var(--success-bg); color: var(--success); }
-.kp-verdict.fail { background: var(--danger-bg); color: var(--danger); }
+.kp-verdict.pass { background: var(--success-bg); color: var(--success-ink); }
+.kp-verdict.fail { background: var(--danger-bg); color: var(--danger-ink); }
 .kp-verdict.pending, .kp-verdict.unverified { background: var(--neutral-bg); color: var(--neutral-ink); }
 .kp-checks { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-3); }
 .kp-check { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--space-3); align-items: start; min-width: 0; }

@@ -12,7 +12,7 @@
 /* Badges */
 .ubadge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font: 700 13px var(--sans); letter-spacing: .02em; white-space: nowrap; }
 .ubadge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.ubadge.ok { background: var(--okbg); color: var(--ok); } .ubadge.bad { background: var(--badbg); color: var(--bad); }
+.ubadge.ok { background: var(--okbg); color: var(--success-ink); } .ubadge.bad { background: var(--badbg); color: var(--danger-ink); }
 .ubadge.wait { background: var(--waitbg); color: var(--waitc); } .ubadge.info { background: var(--infobg); color: var(--info); }
 .ubadge.warn { background: var(--waitbg); color: var(--waitc); }
 
