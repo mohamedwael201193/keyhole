@@ -2,11 +2,11 @@
   "_doc": "Single source of truth for live build identities. Edit this file only, then run: node scripts/gen-identity.mjs",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
-    "bytes": 755751,
-    "add_version_tx": "Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6",
-    "info_call": "0847b924-df76-4cee-ab5a-a96c789d2983",
-    "previous_wasm_sha256": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8"
+    "wasm_sha256": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    "bytes": 765658,
+    "add_version_tx": "BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5",
+    "info_call": "dc3668db-674f-4865-a2ce-272f70c41b0d",
+    "previous_wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c"
   },
   "contract": {
     "account": "keyhole-devmo.near",

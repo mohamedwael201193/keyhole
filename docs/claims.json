@@ -535,31 +535,31 @@
   },
   {
    "id": "worker-deployed",
-   "claim": "The live worker build is cc8d2fa8…ec4c (tee/worker/DEPLOYED_SHA256)",
-   "where": "README.md:391",
+   "claim": "The live worker build is d337e822…ae41 (tee/worker/DEPLOYED_SHA256)",
+   "where": "README.md:490",
    "evidence_type": "file",
    "evidence": "tee/worker/DEPLOYED_SHA256",
    "check": {
     "type": "grep",
     "path": "tee/worker/DEPLOYED_SHA256",
-    "pattern": "^cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c\\s*$"
+    "pattern": "^d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41\\s*$"
    },
-   "expected": "cc8d2fa8e2e4cc3b…6270ec4c",
+   "expected": "d337e822544d31da…e049ae41",
    "verify": "node judge/verify-claims.mjs --only worker-deployed"
   },
   {
    "id": "worker-fastfs",
-   "claim": "The cc8d2fa8 wasm (755751 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
-   "where": "README.md:391",
+   "claim": "The d337e822 wasm (765658 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
+   "where": "README.md:490",
    "evidence_type": "OutLayer call",
-   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c.wasm",
+   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41.wasm",
    "check": {
     "type": "fastfs",
-    "sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
-    "bytes": 755751
+    "sha256": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    "bytes": 765658
    },
-   "expected": "sha256 == DEPLOYED_SHA256, 755751 bytes",
-   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c.wasm | sha256sum"
+   "expected": "sha256 == DEPLOYED_SHA256, 765658 bytes",
+   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41.wasm | sha256sum"
   },
   {
    "id": "att-246e4a7a-build",
@@ -4442,17 +4442,17 @@
   },
   {
    "id": "e2e-verify: the default page checks the publ",
-   "claim": "e2e test named 'verify: the default page checks the published cc8d2fa8 info call' exists",
+   "claim": "e2e test named 'verify: the default page checks the published d337e822 info call' exists",
    "where": "README.md:355",
    "evidence_type": "test file",
    "evidence": "web/e2e/site.spec.ts",
    "check": {
     "type": "grep",
     "path": "web/e2e/site.spec.ts",
-    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ cc8d2fa8\\ info\\ call"
+    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ d337e822\\ info\\ call"
    },
    "expected": "test name found",
-   "verify": "grep -n \"verify: the default page checks the published cc8d2fa8 info call\" web/e2e/site.spec.ts"
+   "verify": "grep -n \"verify: the default page checks the published d337e822 info call\" web/e2e/site.spec.ts"
   },
   {
    "id": "e2e-settle: the real SOL→NEAR order reads SU",
@@ -6396,17 +6396,17 @@
   },
   {
    "id": "site-hash",
-   "claim": "Home page names the live build cc8d2fa8",
-   "where": "README.md:116",
+   "claim": "Home page names the live build d337e822",
+   "where": "README.md:142",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
     "type": "http",
     "url": "https://keyhole-seven.vercel.app/",
     "status": 200,
-    "contains": "cc8d2fa8"
+    "contains": "d337e822"
    },
-   "expected": "home carries cc8d2fa8",
+   "expected": "home carries d337e822",
    "verify": "node judge/verify-claims.mjs --only site-hash"
   },
   {
@@ -7489,6 +7489,126 @@
    },
    "expected": "transaction found on mainnet with no failed receipt",
    "verify": "node judge/verify-claims.mjs --only tx-2v6Nw9Ww"
+  },
+  {
+   "id": "att-dc3668db-build",
+   "claim": "Call dc3668db (info) executed worker build d337e822",
+   "where": "README.md:106",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d",
+   "check": {
+    "type": "attestation",
+    "call": "dc3668db-674f-4865-a2ce-272f70c41b0d",
+    "wasm_prefix": "d337e822",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts d337e822, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d"
+  },
+  {
+   "id": "att-b5fbed71-build",
+   "claim": "Call b5fbed71 (record) executed worker build d337e822",
+   "where": "README.md:43",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/b5fbed71-d497-43fe-bbd4-6e28efc4dacf",
+   "check": {
+    "type": "attestation",
+    "call": "b5fbed71-d497-43fe-bbd4-6e28efc4dacf",
+    "wasm_prefix": "d337e822",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts d337e822, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh b5fbed71-d497-43fe-bbd4-6e28efc4dacf"
+  },
+  {
+   "id": "att-740191ec-build",
+   "claim": "Call 740191ec (balance) executed worker build d337e822",
+   "where": "README.md:583",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/740191ec-48a4-4bbb-87f9-906b27c8116e",
+   "check": {
+    "type": "attestation",
+    "call": "740191ec-48a4-4bbb-87f9-906b27c8116e",
+    "wasm_prefix": "d337e822",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts d337e822, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh 740191ec-48a4-4bbb-87f9-906b27c8116e"
+  },
+  {
+   "id": "att-9f76716e-build",
+   "claim": "Call 9f76716e (swap) executed worker build cc8d2fa8",
+   "where": "README.md:44",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/9f76716e-b3d6-4081-b50f-fdff21a60f82",
+   "check": {
+    "type": "attestation",
+    "call": "9f76716e-b3d6-4081-b50f-fdff21a60f82",
+    "wasm_prefix": "cc8d2fa8",
+    "project": "keyhole-devmo.near/keyhole"
+   },
+   "expected": "executed_wasm_sha256 starts cc8d2fa8, == wasm_hash, TDX quote present",
+   "verify": "./verify.sh 9f76716e-b3d6-4081-b50f-fdff21a60f82"
+  },
+  {
+   "id": "tx-BWQxEoSg",
+   "claim": "Mainnet transaction BWQxEoSg… (add_version of worker d337e822) succeeded",
+   "where": "README.md:295",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5",
+   "check": {
+    "type": "tx",
+    "hash": "BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5",
+    "expect": "success",
+    "receiver": "outlayer.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-BWQxEoSg"
+  },
+  {
+   "id": "tx-J2pMXQhL",
+   "claim": "Mainnet transaction J2pMXQhL… (test holder lists the key (nft_list)) succeeded",
+   "where": "README.md:43",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/J2pMXQhLK7dZJKME126oK3AaeEg2U8kvXDqA1jVE3UuG",
+   "check": {
+    "type": "tx",
+    "hash": "J2pMXQhLK7dZJKME126oK3AaeEg2U8kvXDqA1jVE3UuG",
+    "expect": "success",
+    "receiver": "keyhole-devmo.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-J2pMXQhL"
+  },
+  {
+   "id": "tx-6Qp2F32q",
+   "claim": "Mainnet transaction 6Qp2F32q… (test holder unlists the key (nft_unlist)) succeeded",
+   "where": "README.md:43",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/6Qp2F32qfBxAhJh5w1HPtmgvTiTba5k8nsfznNYfYckU",
+   "check": {
+    "type": "tx",
+    "hash": "6Qp2F32qfBxAhJh5w1HPtmgvTiTba5k8nsfznNYfYckU",
+    "expect": "success",
+    "receiver": "keyhole-devmo.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-6Qp2F32q"
+  },
+  {
+   "id": "tx-EURp4e8V",
+   "claim": "Mainnet transaction EURp4e8V… (vault funding of key 0) succeeded",
+   "where": "README.md:44",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/EURp4e8VTPVeSBjhyTUaCH3tZLp8it2Ev9ycUvLxcjUE",
+   "check": {
+    "type": "tx",
+    "hash": "EURp4e8VTPVeSBjhyTUaCH3tZLp8it2Ev9ycUvLxcjUE",
+    "expect": "success",
+    "receiver": "wrap.near"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-EURp4e8V"
   }
  ]
 }
