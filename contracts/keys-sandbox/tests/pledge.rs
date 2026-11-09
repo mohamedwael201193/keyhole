@@ -257,6 +257,12 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
  for cycle in 0..3 {
   let ts=now(&e).await;
   borrower.call(e.c.id(),"open_loan").args_json(json!({"token_id":token,"terms":{"lender":lender.id(),"principal":(N/100).to_string(),"repayment":(101*N/10000).to_string(),"duration_sec":"7200","grace_sec":"900","floor_raw":"500000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
+  let limits=view(&e.c,"get_loan_limits",json!({})).await;
+  assert_eq!(limits["storage_bond"],"9000000000000000000000");
+  assert_eq!(limits["activation"],"backed_principal_credit_before_native_cashout");
+  let public_offer=view(&e.c,"get_lender_offer",json!({"token_id":token})).await;
+  assert_eq!(public_offer["funding_open"],true);assert_eq!(public_offer["decimals"],6);
+  assert!(public_offer.get("balance").is_none());assert!(public_offer.get("history").is_none());
   let offer=e.c.view_account().await?.storage_usage;
   let loan=view(&e.c,"get_loan",json!({"token_id":token})).await;
   let nonce=loan["nonce"].as_str().unwrap();
