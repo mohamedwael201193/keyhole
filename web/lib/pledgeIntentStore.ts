@@ -4,6 +4,7 @@ export type IntentStore<T extends IntentIdentity>={
  reserve(value:T):Promise<T>;
  replace(expected:T,value:T):Promise<boolean>;
  clear(expected:T):Promise<boolean>;
+ clearVerified(expected:T,verify:(snapshot:T)=>Promise<boolean>):Promise<boolean>;
  subscribe(listener:()=>void):()=>void;
 };
 export type IntentEnvironment={
@@ -44,6 +45,14 @@ export function createBrowserIntentStore<T extends IntentIdentity>(scope:string,
    env.changed();return true;
   }),
   clear:expected=>exclusive(()=>{if(!matches(expected))return false;env.storage.removeItem(keyOf(expected));env.changed();return true;}),
+  clearVerified:async(expected,verify)=>{
+   // No owner-session guessing or long-held lock: verify first, then exact-record CAS under admission lock.
+   const encoded=JSON.stringify(expected),snapshot=JSON.parse(encoded) as T,key=keyOf(snapshot);validate(snapshot);
+   if(!await verify(JSON.parse(encoded) as T))return false;
+   return exclusive(()=>{const current=read(key);if(!current||JSON.stringify(current)!==encoded)return false;
+    env.storage.removeItem(key);env.changed();return true;
+   });
+  },
   subscribe:env.listen,
  };
 }

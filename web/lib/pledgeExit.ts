@@ -6,10 +6,12 @@ export const retryableExit=(op:ExitRecord|null)=>!!op&&op.intent==="withdraw"&&!
 /** An unsent signature is regenerable from the immutable intent. Auth is never stored in localStorage. */
 export async function dispatchExitContinuation<T>(auth:SignedAuth,original:ExitRecord,store:IntentStore<ExitRecord>,preflight:()=>void,send:(auth:SignedAuth)=>Promise<T>,consumeAuth:()=>void=()=>{}):Promise<{result:T;pending:ExitRecord}> {
  if(!retryableExit(original))throw Error("Original exit may already have been dispatched; reconcile only.");
+ const request=JSON.parse(auth.message),p=request.params;
+ // Reject an ABA continuation BEFORE any mutation, even when every economic field is identical.
+ if(!original.id||p?.intent_id!==original.id)throw Error("Signature belongs to another exit intent. Sign this saved intent again.");
  let pending=original,dispatched=false;
  try {
   if(auth.account_id!==original.account)throw Error("Exit signer changed. Sign the original intent again.");
-  const request=JSON.parse(auth.message),p=request.params;
   if(request.op!=="withdraw"||request.account_id!==original.account||p?.token_id!==original.token||p?.owner_epoch!==original.epoch||p?.amount!==original.amount||p?.to!==original.account||p?.chain!=="near"||p?.token!==PLEDGE_EXIT_USDC)throw Error("Signature does not match the original exit intent.");
   preflight();
   const next:ExitRecord={...original,status:"UNKNOWN"};

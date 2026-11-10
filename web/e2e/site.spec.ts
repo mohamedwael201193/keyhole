@@ -1,3 +1,4 @@
+import {fixtureRedirect} from "./support/signed-redirect";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge", "/ask"];
@@ -239,18 +240,10 @@ for (const kind of ["swap", "withdraw"] as const) {
         : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success", usd_in_micro: 20000 };
       await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
     });
-    await page.addInitScript(({ nonce, kind }) => {
-      const op = kind;
-      sessionStorage.setItem("kh_pending_sign", JSON.stringify({
-        message: JSON.stringify({ op, account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
-        nonce,
-        ctx: op === "withdraw"
-          ? { op, amount: "0.01 USDC", to: "holder.keyhole.test" }
-          : { op, give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
-      }));
-    }, { nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", kind });
+    const redirect=fixtureRedirect(kind,kind==="withdraw"?{op:kind,amount:"0.01 USDC",to:"holder.keyhole.test"}:{op:kind,give:"0.02 USDC",decimals:24,symbol:"wNEAR"});
+    await page.addInitScript(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
     // A swap is started and resumed on /swap; a withdrawal on /vault (its sheet reopens).
-    await page.goto(`${kind === "swap" ? "/swap" : "/vault"}#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc`);
+    await page.goto((kind==="swap"?"/swap":"/vault")+redirect.hash);
     if (kind === "swap") {
       await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
       await expect(page.getByTestId("trade-out")).toContainText("success");
@@ -286,14 +279,9 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await (await popup).close();
   await expect(balanceCard.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
   await expect(balanceCard.getByText("You declined the signature.")).toBeVisible();
-  await page.evaluate(() => {
-    sessionStorage.setItem("kh_pending_sign", JSON.stringify({
-      message: JSON.stringify({ op: "swap", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
-      nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-      ctx: { op: "swap", give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
-    }));
-  });
-  await page.goto("/swap?back=1#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+  const redirect=fixtureRedirect("swap",{op:"swap",give:"0.02 USDC",decimals:24,symbol:"wNEAR"});
+  await page.evaluate(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
+  await page.goto("/swap?back=1"+redirect.hash);
   await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
   await expect(page.getByTestId("trade-out")).toContainText("success");
   await expect(page.getByTestId("error")).toHaveCount(0);
@@ -323,15 +311,11 @@ test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
       },
     },
   }));
-  await page.addInitScript(() => {
-    sessionStorage.setItem("kh_pending_sign", JSON.stringify({
-      message: JSON.stringify({ op: "balance", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
-      nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    }));
-  });
+  const redirect=fixtureRedirect("balance");
+  await page.addInitScript(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
   for (const [w, h] of [[1280, 800], [390, 844]] as const) {
     await page.setViewportSize({ width: w, height: h });
-    await page.goto("/vault#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+    await page.goto("/vault"+redirect.hash);
     const list = page.getByTestId("asset-list");
     await expect(list).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("vault-total")).toHaveText("$0.04", { timeout: 15_000 });
@@ -765,4 +749,12 @@ test("verify: when Intel PCS does not answer, the page says so and counts what d
   await expect(page.getByTestId("tally-head")).toContainText("Intel PCS did not answer", { timeout: 30_000 });
   await expect(page.getByTestId("tally-head")).toContainText("25 of 25");
   await expect(page.getByTestId("verdict")).toHaveText("Intel PCS unreachable. Run again.");
+});
+
+test("production redirect parsing does not consume an overwritten challenge on an older signature",async({page})=>{
+ await holdAccount(page);let withdrawals=0;await page.route("**/api/worker",async route=>{if(route.request().postDataJSON()?.op==="withdraw")withdrawals++;await route.fulfill({json:{output:{ok:true,op:"withdraw",request_id:"binding-proof",status:"success"}}});});
+ const ctx={op:"withdraw",amount:"0.01 USDC",to:"holder.keyhole.test"},x=fixtureRedirect("withdraw",ctx,1),y=fixtureRedirect("withdraw",ctx,2);
+ await page.addInitScript(saved=>{if(!sessionStorage.getItem("kh_pending_sign"))sessionStorage.setItem("kh_pending_sign",saved);},y.saved);
+ await page.goto("/vault"+x.hash);await expect.poll(()=>page.evaluate(()=>location.hash)).toBe("");expect(await page.evaluate(()=>sessionStorage.getItem("kh_pending_sign"))).toBe(y.saved);expect(withdrawals).toBe(0);await expect(page.getByTestId("withdraw-out")).toHaveCount(0);
+ await page.goto("/vault?callback=valid"+y.hash);await expect(page.getByTestId("withdraw-out")).toContainText("binding-proof",{timeout:20000});expect(withdrawals).toBe(1);
 });

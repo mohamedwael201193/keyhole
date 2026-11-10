@@ -15,6 +15,19 @@ export async function clearMoneyOperation(store:MoneyStore,expected:MoneyOperati
  if(store.clear)return store.clear(expected);
  if(JSON.stringify(store.load())!==JSON.stringify(expected))return false;store.save(null);return true;
 }
+/** A different/lost owner session may retire ONLY the exact independently verified FINAL operation.
+ * No uncertain operation is adopted, rewritten or made resendable. */
+export async function clearVerifiedMoneyOperation(store:MoneyStore,expected:MoneyOperation,verify:(snapshot:MoneyOperation)=>Promise<boolean>):Promise<boolean>{
+ if(store.clearVerified)return store.clearVerified(expected,verify);
+ const snapshot=JSON.parse(JSON.stringify(expected)) as MoneyOperation;
+ if(!await verify(snapshot))return false;
+ return clearMoneyOperation(store,expected);
+}
+/** A recovered hash is checked without attaching unverified data to another session's durable intent. */
+export async function recoverFinalMoneyOperation(store:MoneyStore,expected:MoneyOperation,rpcUrl:string,hash=expected.txHash,signal?:AbortSignal):Promise<boolean>{
+ if(!hash||(expected.txHash&&expected.txHash!==hash))return false;
+ return clearVerifiedMoneyOperation(store,expected,snapshot=>finalMoneyReceipt({...snapshot,txHash:hash},rpcUrl,signal));
+}
 /** Persist BEFORE opening a wallet or following its redirect. No automatic retry on network/receipt uncertainty. */
 export async function dispatchMoney(account:string,contract:string,call:KeysCall,store:MoneyStore,send:(call:KeysCall)=>Promise<BatchSendResult>,minBlockHeight:string,calls?:KeysCall[]):Promise<MoneyOperation|null> {
  if(store.load())throw Error("An earlier money operation is unresolved. Refresh its original receipt; do not resend.");

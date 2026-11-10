@@ -3,6 +3,7 @@ import {SandboxWalletProvider} from "./sandboxWallet";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { WalletSelector, WalletModuleFactory } from "@near-wallet-selector/core";
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
+import {parseWalletRedirect} from "./walletRedirect";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { PLEDGE_SANDBOX, NEP413_RECIPIENT } from "./config";
 import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
@@ -294,13 +295,9 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
     const h = new URLSearchParams(location.hash.slice(1));
     const saved = sessionStorage.getItem(PENDING);
     if (h.get("signature") && saved) {
-      const s = JSON.parse(saved) as { message: string; nonce: string; ctx?: OpResume | null; callbackUrl?: string };
-      const signed = { account_id: h.get("accountId") || "", public_key: h.get("publicKey") || "", signature: h.get("signature") || "",
-        nonce: s.nonce, message: s.message, recipient: NEP413_RECIPIENT };
-      // The callback the wallet was given is part of the signed payload only if the wallet kept it (checked here).
-      const cb = s.callbackUrl ? signedCallbackUrl(signed, s.callbackUrl) : undefined;
-      setPending({ ...signed, ...(cb ? { callback_url: cb } : {}), ctx: s.ctx });
-      sessionStorage.removeItem(PENDING);
+      const recovered=parseWalletRedirect<OpResume|null>(saved,location.hash);
+      if(recovered){setPending(recovered);sessionStorage.removeItem(PENDING);}
+      // An invalid/old callback must NOT consume the newer saved challenge.
       history.replaceState(null, "", location.pathname + location.search);
     }
     const resume = privyEnabled() ? privyResume(location.search, Object.keys(localStorage)) : null;
