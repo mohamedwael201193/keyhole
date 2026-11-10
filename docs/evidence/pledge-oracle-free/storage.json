@@ -5,12 +5,12 @@
   "captured_storage_bytes": 247713,
   "captured_code_bytes": 241621,
   "old_candidate_bytes": 458449,
-  "candidate_bytes": 438062,
-  "candidate_sha256": "4a0d1a857ce2055238a078273ad0be21a70b97cc69d4d2ea81a6242a233df0e2",
-  "code_bytes_saved": 20387,
-  "code_storage_saved_near": "0.20387",
-  "static_code_only_deficit_near": "0.756717799980027337378339",
-  "observed_failed_deploy_deficit_yocto": "785625312346349137378339",
-  "observed_failed_deploy_deficit_near": "0.785625312346349137378339",
-  "remaining_gate": "Real top-up/deploy/migration/gas needs separate approval; 2 NEAR used ONLY in sandbox; new loan storage is lazy and borrower-bond-covered."
+  "candidate_bytes": 442777,
+  "candidate_sha256": "632978e18daef174a77dbc5f5a5e0809ef191e42800fe9dd3bede08b2621ed3a",
+  "code_bytes_saved": 15672,
+  "code_storage_saved_near": "0.15672",
+  "static_code_only_deficit_near": "0.803867799980027337378339",
+  "observed_failed_deploy_deficit_yocto": "833082986106337637378339",
+  "observed_failed_deploy_deficit_near": "0.833082986106337637378339",
+  "remaining_gate": "Real top-up/deploy/migration/gas needs separate approval; 2 NEAR used ONLY in sandbox; new loan storage is lazy and borrower-bond-covered. Payout-account storage separately prepaid; permanent/nonrefundable registration consent and client onboarding required."
 }

@@ -1,5 +1,7 @@
-//! Sandbox: deploy the exact mainnet v1 wasm, mint the 5 mainnet tokens, upgrade to v2,
-//! migrate, and prove nothing moved. Then exercise every v2 path on a real runtime.
+#[path="support/payout_storage.rs"] mod payout_storage;
+use payout_storage::register_payouts;
+// Sandbox: deploy the exact mainnet v1 wasm, mint the 5 mainnet tokens, upgrade to v2,
+// migrate, and prove nothing moved. Then exercise every v2 path on a real runtime.
 use near_workspaces::types::NearToken;
 use near_workspaces::{Account, Contract};
 use serde_json::{json, Value};
@@ -610,6 +612,7 @@ async fn v2_5_admission_barrier_and_epoch_code_only() -> anyhow::Result<()> {
     let alice = mk(&root, "alice").await;
     let bob = mk(&root, "bob").await;
     let c = e.c.id().clone();
+    register_payouts(&e.c,&root,&[e.minter.id()]).await?;
     e.minter.call(&c, "nft_mint")
         .args_json(json!({"token_id": "kadm", "receiver_id": alice.id(), "tier": 2, "metadata": fixture()[1]["metadata"]}))
         .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;

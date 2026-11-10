@@ -1,0 +1,34 @@
+{
+  "status": "SOURCE_AND_LOCAL_SANDBOX_ONLY_NOT_DEPLOYED",
+  "base_head": "d5a3e410971c7d99b52600b9f70846d24f52076c",
+  "wasm_bytes": 442777,
+  "wasm_sha256": "632978e18daef174a77dbc5f5a5e0809ef191e42800fe9dd3bede08b2621ed3a",
+  "function_exports": 71,
+  "abi_methods": 71,
+  "registration_budget_bytes": 320,
+  "maximum_measured_initial_ledger_bytes": 127,
+  "maximum_measured_ledger_pending_and_first_aggregate_bytes": 281,
+  "fee_yocto_at_tested_byte_price": "3200000000000000000000",
+  "unit_tests": 260,
+  "sandbox_tests": 35,
+  "before_review_probes": {
+    "pass": 2,
+    "fail": 1
+  },
+  "after_review_probes": {
+    "unit_pass": 5,
+    "sandbox_pass": 3
+  },
+  "runtime_four_buyers": {
+    "new_storage_bytes": 312,
+    "new_storage_stake_yocto": "3120000000000000000000",
+    "contract_balance_change_including_gas_rewards_yocto": "14302056100870800000016",
+    "reserved_dust_liability_yocto": "8"
+  },
+  "unit_twenty_buyers": {
+    "new_storage_bytes": 1500,
+    "new_storage_stake_yocto": "15000000000000000000000",
+    "retained_new_funds_yocto": "64000000000000000000080",
+    "reserved_dust_liability_yocto": "40"
+  }
+}

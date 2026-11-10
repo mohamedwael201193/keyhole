@@ -8,6 +8,9 @@ use near_sdk::Gas;
 pub const RECOVERY_UNLOCK_NS: u64 = 1_796_169_600_000_000_000;
 pub const LOAN_STORAGE_DEPOSIT: u128 = 50_000_000_000_000_000_000_000;
 pub const COLLATERAL_STORAGE_DEPOSIT: u128 = 20_000_000_000_000_000_000_000;
+/// Non-refundable prepaid budget per permanent payout account. Covers the maximum
+/// 151-byte ledger (including pending payout) plus <=130 bytes of fixed pre-migration metadata.
+pub const PAYOUT_STORAGE_BYTES: u64 = 320;
 pub const OPERATING_RESERVE: u128 = 100_000_000_000_000_000_000_000;
 pub const COLLATERAL_ASSET: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 pub const CERTIFICATE_DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V2_CREDIT";
@@ -70,7 +73,12 @@ fn bound_wallets() -> LookupMap<String, TokenId> { LookupMap::new(b"Pw".as_slice
 #[near(serializers=[borsh])]
 struct CreditLedger {available:u128,pending:Option<PendingPayout>}
 fn credit_ledgers()->LookupMap<AccountId,CreditLedger>{LookupMap::new(b"Pc".as_slice())}
-fn save_credit(who:&AccountId,l:&CreditLedger){if l.available==0&&l.pending.is_none(){credit_ledgers().remove(who);}else{credit_ledgers().insert(who,l);}}
+// Empty slots deliberately persist: their storage was paid at registration and remains
+// funded even after a delivered native payout whose callback is lost. Never allocate on credit.
+fn save_credit(who:&AccountId,l:&CreditLedger){credit_ledgers().insert(who,l);}
+pub(crate) fn require_payout_account(who: &AccountId) {
+    require!(credit_ledgers().get(who).is_some(), "register payout account storage first");
+}
 
 
 #[derive(Clone, Debug)]
@@ -153,7 +161,7 @@ pub struct LoanCertificate {
 
 #[derive(near_sdk::serde::Deserialize)]
 #[serde(crate = "near_sdk::serde")]
-struct PolicyView { owner: AccountId, encrypted_data: String, frozen: bool, version: u64, locked: bool, #[serde(default)] generation:u64, #[serde(default)] generation_supported:bool, #[serde(default)] registration_nonce:U64, #[serde(default)] registration_deposit:U128 }
+pub(crate) struct PolicyView { pub(crate) owner: AccountId, pub(crate) encrypted_data: String, pub(crate) frozen: bool, pub(crate) version: u64, pub(crate) locked: bool, #[serde(default)] generation:u64, #[serde(default)] generation_supported:bool, #[serde(default)] registration_nonce:U64, #[serde(default)] registration_deposit:U128 }
 
 pub(crate) fn callback_failure_fixture() {
     #[cfg(feature = "callback-failure-fixture")]
@@ -161,7 +169,7 @@ pub(crate) fn callback_failure_fixture() {
 }
 fn private_callback() { require!(env::predecessor_account_id() == env::current_account_id(), "callback is private"); }
 fn promise_succeeded() -> bool { result_success() }
-fn policy_result() -> Option<PolicyView> {
+pub(crate) fn policy_result() -> Option<PolicyView> {
     bounded_result(32_768).and_then(|v| near_sdk::serde_json::from_slice(&v).ok())
 }
 fn policy_matches(p: &PolicyView, b: &CollateralBinding) -> bool {
@@ -175,7 +183,7 @@ fn callback(method: &str, args: near_sdk::serde_json::Value, gas: u64) -> Promis
     call(env::current_account_id(), method, args, 0, gas)
 }
 fn enough_gas() { require!(env::prepaid_gas() >= Gas::from_tgas(180), "attach at least 180 Tgas"); }
-pub(crate) fn add_credit(who:&AccountId,amount:u128){if amount>0{let mut l=credit_ledgers().get(who).unwrap_or_default();l.available=l.available.checked_add(amount).unwrap_or_else(||env::panic_str("credit overflow"));save_credit(who,&l);}}
+pub(crate) fn add_credit(who:&AccountId,amount:u128){if amount>0{let mut l=credit_ledgers().get(who).unwrap_or_else(||env::panic_str("register payout account storage first"));l.available=l.available.checked_add(amount).unwrap_or_else(||env::panic_str("credit overflow"));save_credit(who,&l);}}
 pub(crate) fn change_liabilities(c: &mut PledgeConfig, add: u128, subtract: u128) {
     c.user_liabilities = U128(c.user_liabilities.0.checked_add(add).and_then(|v| v.checked_sub(subtract)).unwrap_or_else(||env::panic_str("liability overflow")));
 }
@@ -237,6 +245,26 @@ impl Contract {
         c
     }
 
+    /// Explicit, non-refundable storage purchase; not a NEP-145 refundable bond.
+    /// Anyone may sponsor an account. No native refund/credit is created from this fee.
+    #[payable]
+    pub fn register_payout_account(&mut self, account_id: Option<AccountId>) -> bool {
+        let who = account_id.unwrap_or_else(env::predecessor_account_id);
+        require!(credit_ledgers().get(&who).is_none(), "payout account already registered");
+        let cost = self.payout_storage_cost().0;
+        require!(env::attached_deposit().as_yoctonear() == cost, "attach exact payout storage cost");
+        let before = env::storage_usage();
+        save_credit(&who, &CreditLedger::default());
+        // Borsh Option<PendingPayout> may later grow by exactly 24 bytes. Fixed raw
+        // aggregate+nonce keys add at most 130 bytes once, not once per account.
+        require!(env::storage_usage().saturating_sub(before) + 24 + 130 <= PAYOUT_STORAGE_BYTES,
+            "payout storage budget insufficient");
+        emit_key_event("payout_storage_register", near_sdk::serde_json::json!({"account_id":who,"paid":U128(cost),"budget_bytes":PAYOUT_STORAGE_BYTES}));
+        true
+    }
+    pub fn payout_storage_cost(&self) -> U128 { U128(env::storage_byte_cost().as_yoctonear() * PAYOUT_STORAGE_BYTES as u128) }
+    pub fn payout_account_registered(&self, account_id: AccountId) -> bool { credit_ledgers().get(&account_id).is_some() }
+
     pub fn get_pledge_config(&self) -> Option<PledgeConfig> { pledge_config() }
     pub fn get_loan(&self, token_id: TokenId) -> Option<Loan> { loans().get(&token_id) }
     pub fn get_collateral_binding(&self, token_id: TokenId) -> Option<CollateralBinding> { collateral().get(&token_id) }
@@ -256,6 +284,7 @@ impl Contract {
     pub fn register_collateral(&mut self, token_id: TokenId, wallet_pubkey: String, encrypted_data: String,
         wallet_signature: String, version: u64, valid_until: u64) -> Promise {
         enough_gas(); self.assert_minter(); self.assert_can_change_owner(&token_id);
+        require_payout_account(&env::predecessor_account_id());
         let mut c = config_required();
         require!(self.tokens.owner_by_id.get(&token_id).is_some(), "unknown token");
         require!(listings().get(&token_id).is_none(), "unlist first");
@@ -341,6 +370,7 @@ impl Contract {
         self.assert_can_change_owner(&token_id);
         let borrower = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(||env::panic_str("unknown token"));
         require!(env::predecessor_account_id() == borrower, "only borrower");
+        require_payout_account(&borrower);
         require!(listings().get(&token_id).is_none(), "unlist first");
         require!(collateral().get(&token_id).is_some_and(|b| b.ready), "collateral confinement not ready");
         require!(env::attached_deposit().as_yoctonear() == LOAN_STORAGE_DEPOSIT, "attach exact 0.05 NEAR refundable loan bond");
@@ -435,6 +465,7 @@ impl Contract {
         let mut l = load_loan(&token_id, nonce);
         require!(l.state == LoanState::Offered && !l.policy_busy, "loan not fundable");
         require!(env::predecessor_account_id() == l.terms.lender, "only named lender");
+        require_payout_account(&l.terms.lender);
         // The certificate-bound lender is the initial default receiver; seizure may redirect and rechecks eligibility.
         self.assert_no_key(&l.terms.lender);
         require!(env::attached_deposit().as_yoctonear() == l.terms.principal.0, "attach exact principal");

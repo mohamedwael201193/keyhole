@@ -1,7 +1,7 @@
 //! Buyer-bound, sealed-minimum purchase. Exact native consideration, title and seller credit
 //! settle locally together. Provider commands are strictly single-flight: unknown stays locked.
 use crate::*;
-use crate::pledge::{self,collateral,config_required,save_config,add_credit,change_liabilities};
+use crate::pledge::{self,collateral,config_required,save_config,add_credit,change_liabilities,require_payout_account};
 use near_sdk::json_types::{Base64VecU8,U64};
 use near_sdk::Gas;
 pub const SALE_DOMAIN:&str="KEYHOLE_SEALED_SALE_V1";
@@ -36,9 +36,6 @@ fn load(token:&TokenId,nonce:U64)->Sale{let s=sales().get(token).unwrap_or_else(
 fn call(target:AccountId,method:&str,args:near_sdk::serde_json::Value,gas:u64)->Promise{Promise::new(target).function_call(method.into(),args.to_string().into_bytes(),yocto(0),Gas::from_tgas(gas))}
 fn cb(method:&str,args:near_sdk::serde_json::Value,gas:u64)->Promise{call(env::current_account_id(),method,args,gas)}
 fn enough_gas(){require!(env::prepaid_gas()>=Gas::from_tgas(180),"attach at least 180 Tgas");}
-#[derive(near_sdk::serde::Deserialize)]
-#[serde(crate="near_sdk::serde")]
-struct Policy {owner:AccountId,encrypted_data:String,version:u64,locked:bool,frozen:bool}
 
 #[near]
 impl Contract {
@@ -51,7 +48,7 @@ impl Contract {
   enough_gas();require!(enabled(),"protected sales disabled");require!(self.royalty_bps==0,"zero royalty required");
   self.assert_can_change_owner(&token_id);let mut c=config_required();
   let seller=self.tokens.owner_by_id.get(&token_id).unwrap_or_else(||env::panic_str("unknown token"));
-  require!(env::predecessor_account_id()==seller,"only seller");require!(listings().get(&token_id).is_none(),"unlist first");
+  require!(env::predecessor_account_id()==seller,"only seller");require_payout_account(&seller);require!(listings().get(&token_id).is_none(),"unlist first");
   require!(terms.buyer!=seller && terms.buyer!=env::current_account_id(),"distinct external buyer required");self.assert_no_key(&terms.buyer);
   require!(terms.price.0>0 && terms.price.0<=MAX_LIST_PRICE,"bad sale price");require!(terms.floor_raw.0>0,"zero floor");
   let now=env::block_timestamp();require!(terms.deadline_ns.0>now && terms.deadline_ns.0<=now.saturating_add(7*86_400_000_000_000),"bad sale deadline");
@@ -101,7 +98,7 @@ impl Contract {
   let Some(mut s)=sales().get(&token_id) else{return false;};
   if s.nonce!=nonce||s.policy_sequence!=sequence||!s.policy_busy||!s.policy_call_complete{return false;}
   let Some(b)=collateral().get(&token_id)else{return false;};
-  let Some(v)=pledge::bounded_result(32_768).and_then(|v|near_sdk::serde_json::from_slice::<Option<Policy>>(&v).ok()).flatten()else{return false;};
+  let Some(v)=pledge::policy_result()else{return false;};
   if v.owner!=env::current_account_id()||!v.locked||v.version!=b.policy_version.0||env::sha256(v.encrypted_data.as_bytes())!=b.encrypted_policy_hash.0{return false;}
   let holder=self.tokens.owner_by_id.get(&token_id);if holder.as_ref()!=Some(&s.current_holder){return false;}
   if s.state==SaleState::Freezing && v.frozen {s.state=SaleState::Offered;}

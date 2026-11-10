@@ -3475,7 +3475,7 @@
   {
    "id": "test-adopt_zero_royalty",
    "claim": "Named test or symbol `adopt_zero_royalty` exists in the source",
-   "where": "README.md:901",
+   "where": "README.md:902",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3664,7 +3664,7 @@
   {
    "id": "test-failed_seller_cashout_restores_credit_once_without_reversing_title",
    "claim": "Named test or symbol `failed_seller_cashout_restores_credit_once_without_reversing_title` exists in the source",
-   "where": "README.md:919",
+   "where": "README.md:920",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4021,7 +4021,7 @@
   {
    "id": "test-lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds",
    "claim": "Named test or symbol `lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds` exists in the source",
-   "where": "README.md:919",
+   "where": "README.md:920",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4441,7 +4441,7 @@
   {
    "id": "test-public_and_new_holder_projection_has_no_opening",
    "claim": "Named test or symbol `public_and_new_holder_projection_has_no_opening` exists in the source",
-   "where": "README.md:895",
+   "where": "README.md:896",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4500,6 +4500,27 @@
    },
    "expected": "`rate_limit_per_holder` found in source",
    "verify": "node judge/verify-claims.mjs --only test-rate_limit_per_holder"
+  },
+  {
+   "id": "test-register_payout_account",
+   "claim": "Named test or symbol `register_payout_account` exists in the source",
+   "where": "README.md:900",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "register_payout_account",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`register_payout_account` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-register_payout_account"
   },
   {
    "id": "test-seller_lock_binds_only_the_owner_who_set_it",
@@ -4588,7 +4609,7 @@
   {
    "id": "test-storage_errors_cannot_echo_openings_or_private_row_contents",
    "claim": "Named test or symbol `storage_errors_cannot_echo_openings_or_private_row_contents` exists in the source",
-   "where": "README.md:895",
+   "where": "README.md:896",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6450,9 +6471,22 @@
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys-sandbox/tests/review3.rs"
   },
   {
+   "id": "path-docs/evidence/pr184-round4/README.md",
+   "claim": "Linked repo path docs/evidence/pr184-round4/README.md exists",
+   "where": "README.md:870",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/pr184-round4/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/pr184-round4/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/pr184-round4/README.md"
+  },
+  {
    "id": "path-protocol/README.md",
    "claim": "Linked repo path protocol/README.md exists",
-   "where": "README.md:874",
+   "where": "README.md:875",
    "evidence_type": "file",
    "evidence": "protocol/README.md",
    "check": {
@@ -6465,7 +6499,7 @@
   {
    "id": "path-docs/evidence/pledge-oracle-free/README.md",
    "claim": "Linked repo path docs/evidence/pledge-oracle-free/README.md exists",
-   "where": "README.md:874",
+   "where": "README.md:875",
    "evidence_type": "file",
    "evidence": "docs/evidence/pledge-oracle-free/README.md",
    "check": {

@@ -1,5 +1,7 @@
-//! Local NEAR runtime + clearly-labelled mock OutLayer policy contract.
-//! Does NOT prove live keystore enforcement or retired legacy worker availability.
+#[path="support/payout_storage.rs"] mod payout_storage;
+use payout_storage::register_payouts;
+// Local NEAR runtime + clearly-labelled mock OutLayer policy contract.
+// Does NOT prove live keystore enforcement or retired legacy worker availability.
 use anyhow::Result;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use ed25519_dalek::{Signer, SigningKey};
@@ -18,6 +20,7 @@ async fn setup()->Result<E>{
  let c=w.dev_deploy(&std::fs::read(WASM)?).await?; let mock=w.dev_deploy(&std::fs::read(MOCK)?).await?;
  let alice=account(&root,"alice").await?;let lender=account(&root,"lender").await?;let bob=account(&root,"bob").await?;let minter=account(&root,"minter").await?;
  c.call("new").args_json(json!({"owner":c.id(),"minter":minter.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
+ register_payouts(&c,&root,&[minter.id(),alice.id()]).await?;
  minter.call(c.id(),"nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":2,"metadata":{"title":"Sealed collateral","copies":1}}))
   .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  // Settle the unrelated mint-excess credit before isolating sale liabilities.
@@ -122,4 +125,18 @@ async fn lost_seller_cashout_callback_keeps_liability_pending_in_both_native_wor
  let s=view(&e.c,"get_sale",json!({"token_id":"k1"})).await;assert_eq!(s["state"],"Offered");assert_eq!(s["policy_busy"],false);assert_eq!(s["policy_sequence"],"1");
  e.alice.call(e.c.id(),"cancel_sale").args_json(json!({"token_id":"k1","nonce":"1"})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  assert!(view(&e.c,"get_sale",json!({"token_id":"k1"})).await.is_null());Ok(())
+}
+
+#[tokio::test] async fn protected_seller_storage_is_prepaid_separately_before_freeze()->Result<()>{
+ let e=setup().await?;enable(&e).await?;
+ e.alice.call(e.c.id(),"nft_transfer").args_json(json!({"token_id":"k1","receiver_id":e.bob.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ let ts=now(&e).await;let args=json!({"token_id":"k1","terms":{"buyer":e.lender.id(),"price":(N/100).to_string(),"floor_raw":"500000","deadline_ns":(ts+600_000_000_000).to_string()}});
+ let r=e.bob.call(e.c.id(),"open_sale").args_json(args.clone()).deposit(NearToken::from_millinear(20)).max_gas().transact().await?;assert!(r.is_failure());
+ assert!(view(&e.c,"get_sale",json!({"token_id":"k1"})).await.is_null());
+ assert_eq!(view(&e.c,"payout_account_registered",json!({"account_id":e.bob.id()})).await,false);
+ register_payouts(&e.c,&e.w.root_account()?,&[e.bob.id()]).await?;
+ e.bob.call(e.c.id(),"open_sale").args_json(args).deposit(NearToken::from_millinear(20)).max_gas().transact().await?.into_result()?;
+ assert_eq!(view(&e.c,"get_sale",json!({"token_id":"k1"})).await["state"],"Offered");
+ e.bob.call(e.c.id(),"cancel_sale").args_json(json!({"token_id":"k1","nonce":"1"})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.bob.id()})).await,(N/50).to_string());Ok(())
 }

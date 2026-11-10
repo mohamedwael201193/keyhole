@@ -1,0 +1,54 @@
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+• done
+
+• Checking the host environment...
+• done
+
+• Generating ABI
+ │    Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+ │     Finished `dev` profile [unoptimized] target(s) in 1.91s
+• Extracting ABI...
+• done
+
+• Building contract
+ │    Compiling serde_core v1.0.229
+ │    Compiling serde v1.0.229
+ │    Compiling borsh v1.8.1
+ │    Compiling zmij v1.0.23
+ │    Compiling wee_alloc v0.4.5
+ │    Compiling serde_json v1.0.154
+ │    Compiling cfg-if v0.1.10
+ │    Compiling itoa v1.0.18
+ │    Compiling memory_units v0.4.0
+ │    Compiling memchr v2.8.3
+ │    Compiling bs58 v0.5.1
+ │    Compiling near-sys v0.2.9
+ │    Compiling base64 v0.22.1
+ │    Compiling once_cell v1.21.4
+ │    Compiling near-token v0.3.6
+ │    Compiling near-account-id v1.1.4
+ │    Compiling near-gas v0.3.7
+ │    Compiling near-sdk v5.17.2
+ │    Compiling near-contract-standards v5.17.2
+ │    Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+ │     Finished `release` profile [optimized] target(s) in 9.43s
+
+• Running an optimize for size post-step with wasm-opt ...
+    Finished wasm-opt -O in 1s 164ms
+• done
+
+✓ Contract successfully built! (in CARGO_NEAR_BUILD_ENVIRONMENT=host)
+     -                Binary: /workspace/near_hackathon/wt_pr184_fix/docs/local_only/r4-normal-build/keyhole_keys.wasm
+     -                  Size: 442.8 KB (442777 bytes)
+     - SHA-256 checksum hex : 632978e18daef174a77dbc5f5a5e0809ef191e42800fe9dd3bede08b2621ed3a
+     - SHA-256 checksum bs58: 7g63LZ2GXJdaw3bahNo9qnfSh5xCYKW6oxBAXpRBLS2d
+     -                   ABI: /workspace/near_hackathon/wt_pr184_fix/docs/local_only/r4-normal-build/keyhole_keys_abi.json
+    Finished cargo near build in 12s
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked --no-embed-abi --out-dir /workspace/near_hackathon/wt_pr184_fix/docs/local_only/r4-normal-build --env 'RUSTFLAGS=--remap-path-prefix=/home/box/.cargo=/cargo --remap-path-prefix=/workspace/near_hackathon/wt_pr184_fix/contracts/keys=/keyhole-contract'
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /home/box/.cargo/bin/cargo-near near self-update

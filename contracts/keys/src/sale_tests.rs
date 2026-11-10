@@ -8,8 +8,10 @@ fn sk()->SigningKey{SigningKey::from_bytes(&[7;32])}
 fn context(who:&str,dep:u128,now:u64)->near_sdk::VMContext{VMContextBuilder::new().current_account_id(a("keys.near")).predecessor_account_id(a(who)).signer_account_id(a(who)).account_balance(yocto(1000*N)).attached_deposit(yocto(dep)).prepaid_gas(Gas::from_tgas(300)).block_timestamp(now).storage_usage(env::storage_usage()).build()}
 fn ctx(who:&str,dep:u128,now:u64){testing_env!(context(who,dep,now));}
 fn result(r:PromiseResult){testing_env!(context("keys.near",0,NOW),near_sdk::test_vm_config(),near_sdk::RuntimeFeesConfig::test(),HashMap::default(),vec![r]);}
-fn setup()->Contract{
+fn setup()->Contract{setup_with_registered_seller(true)}
+fn setup_with_registered_seller(register_seller:bool)->Contract{
  ctx("keys.near",0,NOW);let mut c=Contract::new(a("owner.near"),a("minter.near"),a("treasury.near"),0);
+ crate::test_register_payouts(&mut c,&[a("minter.near")]);if register_seller{crate::test_register_payouts(&mut c,&[a("alice.near")]);}
  ctx("minter.near",N/10,NOW);c.nft_mint("k1".into(),a("alice.near"),2,TokenMetadata{title:Some("Key".into()),..Default::default()});
  env::state_write(&c);ctx("keys.near",0,NOW);let mut c=Contract::migrate_pledge(a("recovery.near"),Base64VecU8(sk().verifying_key().to_bytes().to_vec()),a("custody.near"),"sandbox".into());
  collateral().insert(&"k1".into(),&CollateralBinding{wallet_pubkey:format!("ed25519:{}","ab".repeat(32)),encrypted_policy_hash:Base64VecU8(env::sha256(b"sealed-policy")),policy_version:U64(1),ready:true,policy_generation:U64(0)});
@@ -97,4 +99,13 @@ fn rejects<F:FnOnce()>(f:F){assert!(catch_unwind(AssertUnwindSafe(f)).is_err());
  let s=c.get_sale("k1".into()).unwrap();assert_eq!(s.policy_sequence,U64(2));assert!(s.policy_busy&&!s.policy_call_complete);
  ctx("alice.near",1,NOW);rejects(||{let _=c.cancel_sale("k1".into(),U64(1));});
  settle(&mut c,true);assert_eq!(c.get_sale("k1".into()).unwrap().state,SaleState::Offered);
+}
+
+#[test] fn protected_sale_requires_prepaid_seller_slot_before_any_policy_dispatch(){
+ let mut c=setup_with_registered_seller(false);let prior=config_required().user_liabilities;
+ ctx("alice.near",SALE_STORAGE_BOND,NOW);rejects(||{let _=c.open_sale("k1".into(),terms());});
+ assert!(c.get_sale("k1".into()).is_none());assert_eq!(config_required().user_liabilities,prior);
+ assert!(get_created_receipts().is_empty());
+ crate::test_register_payouts(&mut c,&[a("alice.near")]);open(&mut c);settle(&mut c,true);buy(&mut c);
+ assert_eq!(c.get_payout_credit(a("alice.near")).0,terms().price.0);
 }
