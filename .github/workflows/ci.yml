@@ -217,6 +217,8 @@ jobs:
           name: pledge-final
           path: |
             web/test-results/pledge-final
+            web/test-results/pledge-funded*/error-context.md
+            web/test-results/pledge-funded*/trace.zip
             ${{ runner.temp }}/pledge-sandbox.log
             ${{ runner.temp }}/pledge-ui.log
           if-no-files-found: warn
