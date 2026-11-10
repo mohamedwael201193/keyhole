@@ -376,3 +376,8 @@ The web builder/readonly receiver are convenience restrictions, not an authoriza
 ## Integrated release boundary
 
 Ordinary and durable withdrawals are NEAR-only to the freshly authenticated current holder, not arbitrary destinations or EVM self exits. The generic detached-signing path remains disabled. Integration is local-only; no deploy, funding, secret reads, authority change or version retirement was performed. Lenders may remain locked if borrowers never claim principal; an unknown native cashout or missing policy action callback has no automatic liveness recovery. This is a deliberately conservative economic tradeoff, not a launch-ready claim. Loan and protected sale concurrency must remain mutually exclusive under the contract admission barrier.
+
+
+### Integrated-stack online verification limitation (2026-11-10)
+
+The candidate's local PR-CI gates are separate from the public service's live readiness. At 08:31 Africa/Cairo, the deployed health endpoint returned online=false with reason=service_unfunded. The online claim requiring online=true therefore remains a real FAIL; it was not relaxed to make this verification green. No balance top-up, deployment or paid worker call was authorized or performed by this integration run. The two documented intentional contract refusals are checked for their exact failure messages, not mislabelled as successful transactions. Full online readiness needs a separately authorized operational action and another verification; offline checks do not establish it.

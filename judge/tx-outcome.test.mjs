@@ -1,0 +1,11 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { checkTxOutcome } from "./tx-outcome.mjs";
+const receipt = (error) => ({ status: { SuccessValue: "" }, transaction: { signer_id: "holder.near" }, receipts_outcome: [{ outcome: { status: error ? { Failure: { ActionError: { kind: { FunctionCallError: { ExecutionError: error } } } } } : { SuccessValue: "" } } }] });
+test("successful receipts prove success", () => assert.equal(checkTxOutcome(receipt(), { expect: "success" })[0], true));
+test("a failed nested receipt cannot prove success", () => assert.equal(checkTxOutcome(receipt("already migrated"), { expect: "success" })[0], false));
+test("intentional refusal must match its documented error", () => assert.equal(checkTxOutcome(receipt("Smart contract panicked: already migrated"), { expect: "failure", expected_error: "already migrated" })[0], true));
+test("an unrelated failure does not prove the documented refusal", () => assert.equal(checkTxOutcome(receipt("out of gas"), { expect: "failure", expected_error: "one key per account" })[0], false));
+test("success cannot prove refusal", () => assert.equal(checkTxOutcome(receipt(), { expect: "failure", expected_error: "already migrated" })[0], false));
+test("failure claims without a reason fail closed", () => assert.equal(checkTxOutcome(receipt("anything"), { expect: "failure" })[0], false));
+test("unknown expectations fail closed", () => assert.equal(checkTxOutcome(receipt(), { expect: "unknown" })[0], false));

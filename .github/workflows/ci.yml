@@ -111,6 +111,8 @@ jobs:
         run: |
           python3 judge/gen-claims.py .
           git diff --exit-code -- docs/claims.json
+      - name: transaction receipt proof checker regression tests
+        run: node --test judge/tx-outcome.test.mjs
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:

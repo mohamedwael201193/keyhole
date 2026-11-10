@@ -127,11 +127,14 @@ export type RegisterCollateralArgs = {
   token_id: TokenId;
   wallet_pubkey: string;
   encrypted_data: string;
+  wallet_signature: string;
+  version: number;
+  valid_until: number;
 };
 
 /** Build a FunctionCall payload for open_loan. Does not send. */
 export function buildOpenLoan(args: OpenLoanArgs, storageBondYocto: U128 = "9000000000000000000000") {
-  return { method: "open_loan" as const, args, deposit: "1", gas: String(300 * 10 ** 12) };
+  return { method: "open_loan" as const, args, deposit: storageBondYocto, gas: String(300 * 10 ** 12) };
 }
 export function buildFundLoan(args: FundLoanArgs) {
   return { method: "fund_loan" as const, args, deposit: args.certificate.terms.principal, gas: String(300 * 10 ** 12) };

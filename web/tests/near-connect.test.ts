@@ -65,7 +65,7 @@ describe("Meteor goes through the wallet-selector path, not near-connect", () =>
     const w = readFileSync("lib/wallet.tsx", "utf8");
     expect(w).toContain("meteor.setupMeteorWallet()");
     expect(w).toMatch(/const modal = setupModal\(selector/);
-  });
+  }, 20_000); // Cold imports on constrained Windows runners can exceed Vitest's 5-second default.
   it("the sign-in sheet reaches the selector list (connectOther) for Meteor, and the NEAR option stays on near-connect", () => {
     const w = readFileSync("lib/wallet.tsx", "utf8");
     expect(w).toContain('onOther={() => void connectOther()}');

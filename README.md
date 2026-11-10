@@ -894,4 +894,4 @@ python3 judge/gen-claims.py .
 node judge/verify-claims.mjs --offline
 ```
 
-The runtime suite uses real local NEAR receipts with a labelled custody mock. Verification results for this integrated head are recorded in docs/evidence/integration-stack/validation.json. Trust, economic risks, UNKNOWN liveness and release gates are in [SECURITY.md](SECURITY.md). No local result is a claim of a published candidate or live provider confinement.
+The runtime suite uses real local NEAR receipts with a labelled custody mock. Verification results for this integrated head are recorded in [the integrated validation record](docs/evidence/integration-stack/validation.json). Trust, economic risks, UNKNOWN liveness and release gates are in [SECURITY.md](SECURITY.md). No local result is a claim of a published candidate or live provider confinement.

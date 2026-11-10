@@ -109,6 +109,11 @@ for d in DOCS:
     for i,l in enumerate(open(d,encoding="utf8"),1):
         for h in re.findall(r"nearblocks\.io/txns/([1-9A-HJ-NP-Za-km-z]{43,44})", l):
             exp = "exists" if "revert" in l else "success"
+            refusal = re.search(r"refused.*?`([^`]+)`.*?as expected", l, re.I)
+            if refusal:
+                add(f"tx-{h[:8]}", f"Mainnet transaction {h[:8]} proves the documented refusal", f"{d}:{i}", "mainnet tx", f"https://nearblocks.io/txns/{h}",
+                    {"type":"tx","hash":h,"expect":"failure","expected_error":refusal.group(1)}, "a failed receipt contains the documented refusal reason")
+                continue
             add(f"tx-{h[:8]}", f"Mainnet transaction {h[:8]}… linked from {d} ({'expected revert' if exp=='exists' else 'succeeded'})", f"{d}:{i}", "mainnet tx", f"https://nearblocks.io/txns/{h}",
                 {"type":"tx","hash":h,"expect":exp}, "transaction found on mainnet" + ("" if exp=="exists" else " with no failed receipt"))
 add("tx-7P9VFx4p", "Chain Signatures: one real MPC signature for the key's derived address (v1.signer.sign tx 7P9VFx4p…)", where(TC,"7P9VFx4p"), "mainnet tx", "https://nearblocks.io/txns/7P9VFx4pz5oxyXpXkyDVE6SheDuTqHgQcEM2vgKFUAfK",

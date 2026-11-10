@@ -2384,30 +2384,32 @@
   },
   {
    "id": "tx-9kmr1tsb",
-   "claim": "Mainnet transaction 9kmr1tsb… linked from README.md (succeeded)",
+   "claim": "Mainnet transaction 9kmr1tsb proves the documented refusal",
    "where": "README.md:57",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/9kmr1tsbbXwdr3y8VcwmBGW5zE44MCcwsSANa7S8C4LY",
    "check": {
     "type": "tx",
     "hash": "9kmr1tsbbXwdr3y8VcwmBGW5zE44MCcwsSANa7S8C4LY",
-    "expect": "success"
+    "expect": "failure",
+    "expected_error": "already migrated"
    },
-   "expected": "transaction found on mainnet with no failed receipt",
+   "expected": "a failed receipt contains the documented refusal reason",
    "verify": "node judge/verify-claims.mjs --only tx-9kmr1tsb"
   },
   {
    "id": "tx-H8qJNgox",
-   "claim": "Mainnet transaction H8qJNgox… linked from README.md (succeeded)",
+   "claim": "Mainnet transaction H8qJNgox proves the documented refusal",
    "where": "README.md:58",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV",
    "check": {
     "type": "tx",
     "hash": "H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV",
-    "expect": "success"
+    "expect": "failure",
+    "expected_error": "one key per account"
    },
-   "expected": "transaction found on mainnet with no failed receipt",
+   "expected": "a failed receipt contains the documented refusal reason",
    "verify": "node judge/verify-claims.mjs --only tx-H8qJNgox"
   },
   {
@@ -3151,7 +3153,7 @@
   {
    "id": "src-max-tier",
    "claim": "MAX_TIER = 3",
-   "where": "judge/gen-claims.py:126",
+   "where": "judge/gen-claims.py:131",
    "evidence_type": "file",
    "evidence": "contracts/keys/src/lib.rs",
    "check": {
@@ -3193,7 +3195,7 @@
   {
    "id": "src-gw-8kb",
    "claim": "Gateway rejects bodies over 8 KB with 413",
-   "where": "judge/gen-claims.py:129",
+   "where": "judge/gen-claims.py:134",
    "evidence_type": "file",
    "evidence": "web/app/api/worker/route.ts",
    "check": {
@@ -3221,7 +3223,7 @@
   {
    "id": "src-gw-allow",
    "claim": "Gateway allowlist: info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
-   "where": "judge/gen-claims.py:131",
+   "where": "judge/gen-claims.py:136",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
@@ -3235,7 +3237,7 @@
   {
    "id": "src-gw-nocopy",
    "claim": "copy and sweep_minter are not in the gateway allowlist (bad_op)",
-   "where": "judge/gen-claims.py:132",
+   "where": "judge/gen-claims.py:137",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
@@ -3249,7 +3251,7 @@
   {
    "id": "src-limits-t1",
    "claim": "Tier 1: $1 per trade, $5 per day, 6/min",
-   "where": "judge/gen-claims.py:133",
+   "where": "judge/gen-claims.py:138",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/01_info.json",
    "check": {
@@ -3263,7 +3265,7 @@
   {
    "id": "src-global",
    "claim": "Global limits 120/min and 25 free mints per day",
-   "where": "judge/gen-claims.py:134",
+   "where": "judge/gen-claims.py:139",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/01_info.json",
    "check": {
@@ -3277,7 +3279,7 @@
   {
    "id": "src-ci-6jobs",
    "claim": "CI has 6 jobs: contract, worker, cli, judge-kit, hygiene, web",
-   "where": "judge/gen-claims.py:135",
+   "where": "judge/gen-claims.py:140",
    "evidence_type": "file",
    "evidence": ".github/workflows/ci.yml",
    "check": {
@@ -3445,7 +3447,7 @@
   {
    "id": "src-lang-en",
    "claim": "Site is English only, html lang=en",
-   "where": "judge/gen-claims.py:147",
+   "where": "judge/gen-claims.py:152",
    "evidence_type": "file",
    "evidence": "web/app/layout.tsx",
    "check": {
@@ -6534,6 +6536,19 @@
    "verify": "node judge/verify-claims.mjs --only path-LICENSE"
   },
   {
+   "id": "path-docs/evidence/integration-stack/validation.json",
+   "claim": "Linked repo path docs/evidence/integration-stack/validation.json exists",
+   "where": "README.md:897",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/integration-stack/validation.json",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/integration-stack/validation.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/integration-stack/validation.json"
+  },
+  {
    "id": "path-contracts/keys",
    "claim": "Linked repo path contracts/keys exists",
    "where": "TRACK_COVERAGE.md:10",
@@ -6834,7 +6849,7 @@
   {
    "id": "site-health",
    "claim": "/api/health reports the enclave online",
-   "where": "judge/gen-claims.py:181",
+   "where": "judge/gen-claims.py:186",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/api/health",
    "check": {
@@ -6849,7 +6864,7 @@
   {
    "id": "site-ar-redirect",
    "claim": "/ar/… redirects to the same path without the prefix and keeps the query",
-   "where": "judge/gen-claims.py:182",
+   "where": "judge/gen-claims.py:187",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app/ar/judge?x=1",
    "check": {
@@ -6863,7 +6878,7 @@
   {
    "id": "site-hdr-strict-transport-security",
    "claim": "Site sends strict-transport-security: …max-age=63072000; includeSubDomains; preload",
-   "where": "judge/gen-claims.py:184",
+   "where": "judge/gen-claims.py:189",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
@@ -6878,7 +6893,7 @@
   {
    "id": "site-hdr-x-content-type-options",
    "claim": "Site sends x-content-type-options: …nosniff",
-   "where": "judge/gen-claims.py:184",
+   "where": "judge/gen-claims.py:189",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
@@ -6893,7 +6908,7 @@
   {
    "id": "site-hdr-content-security-policy",
    "claim": "Site sends content-security-policy: …frame-ancestors 'none'",
-   "where": "judge/gen-claims.py:184",
+   "where": "judge/gen-claims.py:189",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
@@ -6908,7 +6923,7 @@
   {
    "id": "site-hdr-referrer-policy",
    "claim": "Site sends referrer-policy: …strict-origin-when-cross-origin",
-   "where": "judge/gen-claims.py:184",
+   "where": "judge/gen-claims.py:189",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
@@ -6923,7 +6938,7 @@
   {
    "id": "site-hdr-permissions-policy",
    "claim": "Site sends permissions-policy: …camera=()",
-   "where": "judge/gen-claims.py:184",
+   "where": "judge/gen-claims.py:189",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
@@ -6938,7 +6953,7 @@
   {
    "id": "site-supply-live",
    "claim": "Home page key count equals nft_total_supply minus the contract-held test key",
-   "where": "judge/gen-claims.py:185",
+   "where": "judge/gen-claims.py:190",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
@@ -7676,7 +7691,7 @@
   {
    "id": "site-37",
    "claim": "Home and /verify advertise 37 in-browser checks",
-   "where": "judge/gen-claims.py:199",
+   "where": "judge/gen-claims.py:204",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
