@@ -7,8 +7,9 @@ export function assertNoSavedPledgeExit(account:string,contract:string,env:Inten
  const prefix=`keyhole:pledge-exit:v1:${contract}:${account}:`;
  for(let i=0;i<env.storage.length;i++){const key=env.storage.key(i);if(key?.startsWith(prefix)&&env.storage.getItem(key)!==null)throw Error("Resolve the original exit before preparing another loan.");}
 }
+export const opensLoan=(op:MoneyOperation)=>op.call.method==="open_loan"||!!op.calls?.some(call=>call.method==="open_loan");
 export function browserMoneyStore(account:string,contract:string,env:IntentEnvironment=browserIntentEnvironment()):MoneyStore {
- const store=createBrowserIntentStore<MoneyOperation>(`keyhole:pledge-money:v1:${contract}:${account}`,op=>{if(op.account!==account||op.contract!==contract)throw Error("Pending operation identity mismatch");},env,{scope:pledgeLifecycleScope(account,contract),check:op=>{if(op.call.method==="open_loan")assertNoSavedPledgeExit(account,contract,env);}});
+ const store=createBrowserIntentStore<MoneyOperation>(`keyhole:pledge-money:v1:${contract}:${account}`,op=>{if(op.account!==account||op.contract!==contract)throw Error("Pending operation identity mismatch");},env,{scope:pledgeLifecycleScope(account,contract),check:op=>{if(opensLoan(op))assertNoSavedPledgeExit(account,contract,env);}});
  return {...store,save(){throw Error("Use identity-checked money operation mutations");}};
 }
 /** Only identity-matched updates/removals are allowed after an async boundary. */

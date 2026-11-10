@@ -5,7 +5,7 @@ import {useWallet} from "@/lib/wallet";
 import {callWorker} from "@/lib/worker";
 import {usePayoutStorageFee} from "@/lib/usePayoutStorageFee";
 import {createPledgeClient,payoutStorageConsent,type Loan,type LoanTerms,type LoanLimits,type PledgeConfig,type LenderOffer,type PendingPayout,type CollateralBinding} from "@/lib/pledgeClient";
-import {browserMoneyStore,assertNoSavedPledgeExit,dispatchMoneyBatch,finalMoneyReceipt,nextFinalBlockHeight,updateMoneyOperation,clearVerifiedMoneyOperation,recoverFinalMoneyOperation,type MoneyOperation} from "@/lib/pledgeMoney";
+import {browserMoneyStore,opensLoan,assertNoSavedPledgeExit,dispatchMoneyBatch,finalMoneyReceipt,nextFinalBlockHeight,updateMoneyOperation,clearVerifiedMoneyOperation,recoverFinalMoneyOperation,type MoneyOperation} from "@/lib/pledgeMoney";
 import {requestLoanCertificate,verifyLoanCertificate,type CertificateEnvelope} from "@/lib/loanCertificate";
 import type {KeysCall} from "@/lib/keysTx";
 import type {SignedAuth} from "@/lib/nep413";
@@ -58,7 +58,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  const refreshRunner=useMemo(()=>createSingleFlightRefresh(),[]);
  const exitResume=useRef<string|null>(null);
  const exitKey=`keyhole:pledge-exit:v1:${client.contractId}:${account}:${token}`;
- const exitStore=useMemo(()=>account&&typeof window!=="undefined"?browserExitStore(account,client.contractId,token):null,[exitKey,account,token,client.contractId]);
+ const exitStore=useMemo(()=>account&&typeof window!=="undefined"?browserExitStore(account,client.contractId,token):null,[account,token,client.contractId]);
  useEffect(()=>{const q=new URLSearchParams(location.search).get("token");if(!tokenId&&q&&q.length<=128)setTracked(q);},[tokenId]);
  useEffect(()=>{setConsent(null);consentRef.current=null;setBundle(null);setInventory(null);setData(null);setLast(null);setMessage("");setReceiver(account??"");setExitOp(null);if(!account)return;try{const e=exitStore?.load()??null;if(e&&(e.account!==account||e.token!==token))throw Error("Exit identity mismatch");setExitOp(e);}catch{setMessage("Exit storage invalid. Do not start another exit.");setExitOp({account,token,epoch:"0",amount:"0",status:"UNKNOWN"});}},[identity,account,token,exitKey,exitStore]);
  const refresh=useCallback(()=>refreshRunner.run(async signal=>{
@@ -128,7 +128,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  }
  function exitPreflight(pending:ExitRecord){
   readGate.capture(identity);const fresh=latestData.current;
-  if(store?.load()?.call.method==="open_loan")throw Error("Original loan opening unresolved; do not dispatch an exit.");
+  const nativeOp=store?.load();if(nativeOp&&opensLoan(nativeOp))throw Error("Original loan opening unresolved; do not dispatch an exit.");
   if(activeIdentity.current!==identity||!fresh||fresh.account!==pending.account||fresh.token!==pending.token||fresh.owner!==pending.account||fresh.loan||fresh.control?.owner_epoch!==pending.epoch||fresh.control.listed||fresh.control.transfer_pending||fresh.control.pending_value_ops!=="0")throw Error("Exit control changed. Refresh before signing the original intent again.");
  }
  async function finishExit(auth:SignedAuth,pending:ExitRecord,consumeAuth=()=>{}){
