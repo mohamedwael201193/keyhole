@@ -5891,6 +5891,19 @@
    "verify": "node judge/verify-claims.mjs --only path-web/components/judge/CallVerifier.tsx"
   },
   {
+   "id": "path-web/tests/ai.test.ts",
+   "claim": "Linked repo path web/tests/ai.test.ts exists",
+   "where": "README.md:462",
+   "evidence_type": "file",
+   "evidence": "web/tests/ai.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/ai.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/ai.test.ts"
+  },
+  {
    "id": "path-web/lib/oneclick.ts",
    "claim": "Linked repo path web/lib/oneclick.ts exists",
    "where": "README.md:471",
@@ -6331,32 +6344,6 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys-sandbox/tests/upgrade.rs"
-  },
-  {
-   "id": "path-skills/keyhole/SKILL.md",
-   "claim": "Linked repo path skills/keyhole/SKILL.md exists",
-   "where": "README.md:774",
-   "evidence_type": "file",
-   "evidence": "skills/keyhole/SKILL.md",
-   "check": {
-    "type": "path",
-    "path": "skills/keyhole/SKILL.md"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-skills/keyhole/SKILL.md"
-  },
-  {
-   "id": "path-web/tests/sourceTarball.test.ts",
-   "claim": "Linked repo path web/tests/sourceTarball.test.ts exists",
-   "where": "README.md:775",
-   "evidence_type": "file",
-   "evidence": "web/tests/sourceTarball.test.ts",
-   "check": {
-    "type": "path",
-    "path": "web/tests/sourceTarball.test.ts"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-web/tests/sourceTarball.test.ts"
   },
   {
    "id": "path-web/e2e",
@@ -7100,6 +7087,32 @@
    "verify": "node judge/verify-claims.mjs --only path-web/tests/locked-hashes.test.ts"
   },
   {
+   "id": "path-docs/evidence/integration-stack/r5-lifecycle-notification.md",
+   "claim": "Linked repo path docs/evidence/integration-stack/r5-lifecycle-notification.md exists",
+   "where": "README.md:1054",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/integration-stack/r5-lifecycle-notification.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/integration-stack/r5-lifecycle-notification.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/integration-stack/r5-lifecycle-notification.md"
+  },
+  {
+   "id": "path-web/tests/wallet-patch-lifecycle.test.ts",
+   "claim": "Linked repo path web/tests/wallet-patch-lifecycle.test.ts exists",
+   "where": "README.md:1054",
+   "evidence_type": "file",
+   "evidence": "web/tests/wallet-patch-lifecycle.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/wallet-patch-lifecycle.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/wallet-patch-lifecycle.test.ts"
+  },
+  {
    "id": "path-contracts/keys",
    "claim": "Linked repo path contracts/keys exists",
    "where": "TRACK_COVERAGE.md:10",
@@ -7241,6 +7254,32 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-web/next.config.ts"
+  },
+  {
+   "id": "path-skills/keyhole/SKILL.md",
+   "claim": "Linked repo path skills/keyhole/SKILL.md exists",
+   "where": "SECURITY.md:541",
+   "evidence_type": "file",
+   "evidence": "skills/keyhole/SKILL.md",
+   "check": {
+    "type": "path",
+    "path": "skills/keyhole/SKILL.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-skills/keyhole/SKILL.md"
+  },
+  {
+   "id": "path-web/tests/sourceTarball.test.ts",
+   "claim": "Linked repo path web/tests/sourceTarball.test.ts exists",
+   "where": "SECURITY.md:541",
+   "evidence_type": "file",
+   "evidence": "web/tests/sourceTarball.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/sourceTarball.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/sourceTarball.test.ts"
   },
   {
    "id": "site-/",

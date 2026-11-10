@@ -5,7 +5,12 @@
     "file": "dist/index.js",
     "before": "import { stringify } from \"query-string\";",
     "after": "import queryString from \"query-string\";\nconst { stringify } = queryString;",
-    "count": 1
+    "count": 1,
+    "pristine_sha256": "3489c69e527ebc51981ed416b07dff5a563099df9bd66ac22640841e81fe66bb",
+    "patched_sha256": "ae797204650909c46f8f8b408265a7d4e5b500422e8d3de313a20463e606155e",
+    "pristine_offsets_utf8": [
+      528
+    ]
   },
   {
     "package": "@meteorwallet/sdk",
@@ -13,7 +18,12 @@
     "file": "dist/index.cjs",
     "before": "query_string.stringify",
     "after": "query_string.default.stringify",
-    "count": 1
+    "count": 1,
+    "pristine_sha256": "4a7c0bbae820d12ccfa1dbf7186d5e2289c237e29476b193ea23fb4d7c72ee97",
+    "patched_sha256": "c0b811639a5b2aa31d0e0e84cf0499e2cdc36a8f1ea5eb7cf09e0bfcdcf96f06",
+    "pristine_offsets_utf8": [
+      10572
+    ]
   },
   {
     "package": "x402",
@@ -21,7 +31,15 @@
     "file": "dist/cjs/index.js",
     "before": "import_zod3.z.record(import_zod3.z.any())",
     "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "4ecf3d633ed04e0ddde8ce792845d4b974d99d64d6dd69f9c40dae5780982bb1",
+    "patched_sha256": "75821502d5e0aab36c71d4b2aae7d9d66fd64fd910ae1550627fe753cf68f75c",
+    "pristine_offsets_utf8": [
+      31772,
+      31947,
+      34451,
+      36025
+    ]
   },
   {
     "package": "x402",
@@ -29,7 +47,15 @@
     "file": "dist/esm/chunk-3EQVFRKV.mjs",
     "before": "z3.record(z3.any())",
     "after": "z3.record(z3.string(), z3.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "375a194a047f75831d3bc0fe556e92cad202770ab682825b56f86a1c8e2caae5",
+    "patched_sha256": "fd32fedb78f080dfb7d6fea19bd474bd74f0ca12c140527a7caa2a015ef838c8",
+    "pristine_offsets_utf8": [
+      13533,
+      13675,
+      15717,
+      17016
+    ]
   },
   {
     "package": "x402",
@@ -37,7 +63,15 @@
     "file": "dist/cjs/client/index.js",
     "before": "import_zod3.z.record(import_zod3.z.any())",
     "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "df1f36874bc93828eabe5cbc5f1c3707f912eec10a29a71c3ef70d1ecd52d0c6",
+    "patched_sha256": "3aa7743acd704cf81357b19c2849d2064f614100a79e60f7cb3ea6d1e5427272",
+    "pristine_offsets_utf8": [
+      11107,
+      11282,
+      13786,
+      15360
+    ]
   },
   {
     "package": "x402",
@@ -45,7 +79,15 @@
     "file": "dist/cjs/schemes/index.js",
     "before": "import_zod3.z.record(import_zod3.z.any())",
     "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "bc16230d3aeaf75f4f1b713464e05418019f768d346b4583b2617c9f57679208",
+    "patched_sha256": "e6cfe6a4a8c3b760ba964c21212f546f2644f55f20e680fab1bb56a3f117a0eb",
+    "pristine_offsets_utf8": [
+      31919,
+      32094,
+      34598,
+      36172
+    ]
   },
   {
     "package": "x402",
@@ -53,7 +95,15 @@
     "file": "dist/cjs/shared/index.js",
     "before": "import_zod3.z.record(import_zod3.z.any())",
     "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "12452d688d227869d8951fa51290a32b5fca3f414d292055a7efcaa30887aadd",
+    "patched_sha256": "a0c02eedbca1fa6ef3054bb8260ebd4360d557e6c62c8984d3fb8428d1a51a4a",
+    "pristine_offsets_utf8": [
+      12192,
+      12367,
+      14871,
+      16445
+    ]
   },
   {
     "package": "x402",
@@ -61,7 +111,15 @@
     "file": "dist/cjs/verify/index.js",
     "before": "import_zod3.z.record(import_zod3.z.any())",
     "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "67603316f2cdc0dedd3193a89c00ab130e6f11482beaa68ae3027b414d6c7fff",
+    "patched_sha256": "864d5f6819d898171d3a34c9fbd1d782725af7a81b306ce9aaeafde5300e8a5b",
+    "pristine_offsets_utf8": [
+      6918,
+      7093,
+      9597,
+      11171
+    ]
   },
   {
     "package": "x402",
@@ -69,7 +127,15 @@
     "file": "dist/cjs/facilitator/index.js",
     "before": "import_zod3.z.record(import_zod3.z.any())",
     "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "e43851fb74eaff8e7cbbd0eb2933043eb50c4c375911328766f4feb75716e784",
+    "patched_sha256": "ccf5224029394dee61261c1f6ac0bf8c4bc69b6391d748e75d03830e28c97ed3",
+    "pristine_offsets_utf8": [
+      30331,
+      30506,
+      33010,
+      34584
+    ]
   },
   {
     "package": "x402",
@@ -77,6 +143,14 @@
     "file": "dist/cjs/types/index.js",
     "before": "import_zod3.z.record(import_zod3.z.any())",
     "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
-    "count": 4
+    "count": 4,
+    "pristine_sha256": "e75bb6474819dd159acd163975f0544951f3eabcfb6967552f77c235f9f9cf61",
+    "patched_sha256": "3bfd4e9cf277fc7f29b8b30e1ad344d444a816252a5d0211448c57770da7d7be",
+    "pristine_offsets_utf8": [
+      37850,
+      38025,
+      40529,
+      42103
+    ]
   }
 ]

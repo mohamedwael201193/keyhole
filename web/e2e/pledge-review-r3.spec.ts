@@ -59,9 +59,46 @@ test('two real tabs preserve Y when a delayed FINAL X returns, including reload'
  await page.evaluate(`(async()=>{const x=h.store.load();if(!await h.money.finalMoneyReceipt(x,location.origin+'/rpc'))throw Error('receipt');await h.money.clearMoneyOperation(h.store,x);h.y=h.money.dispatchMoneyBatch('alice.near','keys.near',[x.call],h.store,async()=>{await new Promise(r=>h.release=r);return {redirect:true};},'43');})()`);
  await other.evaluate('h.late');expect(await other.evaluate('h.cleared')).toBe(false);await page.reload();expect(await page.evaluate(`h.money.browserMoneyStore('alice.near','keys.near').load().status`)).toBe('AwaitingWallet');expect(await page.evaluate(`h.money.browserMoneyStore('alice.near','keys.near').load().minBlockHeight`)).toBe('43');await other.close();
 });
+// Chromium's first localStorage read rebinds its observer at the GetAll snapshot.
+// A bare tab whose first read races the winning write can see that record while
+// dropping its earlier queued event. Prime BOTH real stores before publishing,
+// just as the mounted component's initial read does; never substitute a sleep.
+async function readyMoneyTabs(tabs: Page[]) {
+ for (const tab of tabs) {
+  await tab.goto(url+'/?bare');
+  expect(await tab.evaluate(`(()=>{
+   h.store=h.money.browserMoneyStore('alice.near','keys.near');
+   const initial=h.store.load();
+   h.events=0;h.notifiedId=null;
+   h.store.subscribe(()=>{h.events++;h.notifiedId=h.store.load()?.id??null;});
+   h.go=()=>h.money.dispatchMoneyBatch('alice.near','keys.near',[{method:'claim_payout',args:{},deposit:'1',gas:'200000000000000'}],h.store,async()=>{h.walletCalls++;return {redirect:true};},'42').then(()=>true,()=>false);
+   return initial;
+  })()`)).toBeNull();
+ }
+}
+async function assertOneWalletAndNotifications(tabs: Page[], results: boolean[]) {
+ expect(results.filter(Boolean)).toHaveLength(1);
+ const calls=await Promise.all(tabs.map(tab=>tab.evaluate<number>('h.walletCalls')));
+ expect(calls.reduce((sum,n)=>sum+n,0)).toBe(1);
+ const winner=tabs[results.indexOf(true)];
+ const id=await winner.evaluate<string>('h.store.load().id');
+ // Assert the original event predicate in BOTH tabs, then bind the notification
+ // to this real operation. A same-tab custom event alone cannot satisfy both.
+ for (const tab of tabs) {
+  await expect.poll(()=>tab.evaluate<number>('h.events')).toBeGreaterThan(0);
+  await expect.poll(()=>tab.evaluate<string>('h.notifiedId')).toBe(id);
+ }
+}
 test('simultaneous real tabs open one wallet and receive storage notifications',async({page,context})=>{
- const other=await context.newPage();await page.goto(url+'/?bare');await other.goto(url+'/?bare');for(const tab of [page,other])await tab.evaluate(`(()=>{h.store=h.money.browserMoneyStore('alice.near','keys.near');h.events=0;h.store.subscribe(()=>h.events++);h.go=()=>h.money.dispatchMoneyBatch('alice.near','keys.near',[{method:'claim_payout',args:{},deposit:'1',gas:'200000000000000'}],h.store,async()=>{h.walletCalls++;return {redirect:true};},'42').then(()=>true,()=>false);})()`);
- const results=await Promise.all([page.evaluate('h.go()'),other.evaluate('h.go()')]);expect(results.filter(Boolean)).toHaveLength(1);expect(Number(await page.evaluate('h.walletCalls'))+Number(await other.evaluate('h.walletCalls'))).toBe(1);await expect.poll(()=>other.evaluate('h.events')).toBeGreaterThan(0);await other.close();
+ const other=await context.newPage(),tabs=[page,other];await readyMoneyTabs(tabs);
+ const results=await Promise.all(tabs.map(tab=>tab.evaluate<boolean>('h.go()')));
+ await assertOneWalletAndNotifications(tabs,results);await other.close();
+});
+for (const first of [0,1]) test(`storage notification survives contender ${first+1} finishing before the other starts`,async({page,context})=>{
+ const other=await context.newPage(),tabs=[page,other];await readyMoneyTabs(tabs);
+ const results=[false,false];results[first]=await tabs[first].evaluate<boolean>('h.go()');
+ results[1-first]=await tabs[1-first].evaluate<boolean>('h.go()');
+ await assertOneWalletAndNotifications(tabs,results);await other.close();
 });
 
 test('mounted signing aborts if the signer changes during delayed wallet routing',async({page})=>{

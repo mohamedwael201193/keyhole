@@ -181,7 +181,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `566 claims: 273 PASS, 0 FAIL, 0 ERROR, 293 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `569 claims: 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -225,7 +225,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (566 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 273 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo) |
+| Judge-claims machine (569 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo) |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -454,12 +454,12 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | Ask | Where KEYHOLE does it | Status |
 |---|---|---|
 | NEAR AI Cloud, OpenAI-compatible, TEE-hosted model | [`web/app/api/ai/route.ts`](web/app/api/ai/route.ts). Model `Qwen/Qwen3.6-35B-A3B-FP8` ([`web/lib/ai.ts:5`](web/lib/ai.ts)). The key is in a server env var. Live: [/ask](https://keyhole-seven.vercel.app/ask) | shipped |
-| Attestation with a fresh nonce, verified per the docs, with a checks panel | The browser makes a 32-byte nonce ([`web/lib/ai.ts`](web/lib/ai.ts)). `checkReply` ([`:78`](web/lib/ai.ts)) runs 7 checks: nonce in the TDX quote, signer in the quote, nonce echo, request hash, response hash, model match, ECDSA signature. The DCAP panel ([`web/app/ask/view.tsx:113`](web/app/ask/view.tsx)) runs the Intel DCAP checks on the model's TDX quote up to the pinned Intel root, and the GPU nonce echo | partial (see below) |
+| Attestation with a fresh nonce, verified per the docs, with a checks panel | The browser makes a 32-byte nonce ([`web/lib/ai.ts`](web/lib/ai.ts)). `checkReply` ([`:78`](web/lib/ai.ts)) runs 7 checks: nonce in the TDX quote, signer in the quote, nonce echo, request hash, response hash, model match, ECDSA signature. The DCAP panel ([`web/app/ask/view.tsx:113`](web/app/ask/view.tsx)) runs the Intel DCAP checks on the model's TDX quote up to the pinned Intel root, and the GPU nonce echo | [verification scope](SECURITY.md#7-ask-checks-are-partial) |
 | Keep nothing server side | Responses are `no-store` ([`web/app/api/ai/route.ts:25`](web/app/api/ai/route.ts)). Prompts are capped at 400 characters and rate limited | shipped |
 | Confidential computation | Every account operation runs in an Intel TDX enclave. [/verify](https://keyhole-seven.vercel.app/verify) runs 37 checks in the browser: 6 attestation, 19 Intel DCAP, 12 Intel revocation and TCB ([`web/components/judge/CallVerifier.tsx`](web/components/judge/CallVerifier.tsx) · live pack on `/verify`) | shipped |
 | Fictional sample documents | Sample chips on /ask, and the poisoned-note test in the [prompt-injection log](docs/evidence/prompt-injection/README.md) | shipped |
 
-**What /ask verifies, exactly.** The browser checks the nonce bindings, the signature over the exact request and response bytes, the model, the Intel DCAP chain of the model's TDX quote, and that every NVIDIA GPU report echoes the nonce. **It does not check the NVIDIA certificate chain or the GPU measurements in the browser.** Those come from the downloaded evidence, which you check with NEAR AI's verifier ([how](https://docs.near.ai/cloud/verification/cloud-api/model-attestations)). The `/ask` answer is not tied to a trading account. It is a general assistant.
+**What /ask verifies.** Nonce bindings, exact request/response signatures, model identity, Intel DCAP and GPU nonce echo: [browser verifier](web/lib/ai.ts), [regressions](web/tests/ai.test.ts), and [verification scope](SECURITY.md#7-ask-checks-are-partial).
 
 </details>
 
@@ -771,10 +771,10 @@ Historical measurements below belong to `2f7ac1e` (on top of `7356cfa`), unless 
 | Keys contract unit tests | **140** pass | `cd contracts/keys && cargo test --locked` (measured 2026-11-09) |
 | Keys contract sandbox tests | **9** test functions in [`contracts/keys-sandbox/tests/upgrade.rs`](contracts/keys-sandbox/tests/upgrade.rs) | counted, not run here. The near-workspaces sandbox binary is available only on Linux and macOS, so CI runs them |
 | TEE worker unit tests | **511** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
-| CLI tests | **53** cases; 52 pass here | `cd cli && npm test`. The one failure is a checkout artefact: [`skills/keyhole/SKILL.md`](skills/keyhole/SKILL.md) is LF in git, but this Windows checkout has CRLF (`core.autocrlf` is on), and the test's regex expects LF |
-| Web unit tests (Vitest) | **1256** cases in 65 files; 1254 pass in the full run | `cd web && npx vitest run`. One failure is the same CRLF artefact, in [`web/tests/sourceTarball.test.ts`](web/tests/sourceTarball.test.ts) (the `.sha256` file has CRLF here). One Meteor test timed out at 5 s while other work was running; it passes alone (10 of 10) |
+| CLI tests | **53** historical cases | `cd cli && npm test`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
+| Web unit tests (Vitest) | **1256** historical cases in 65 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web e2e (Playwright) | not re-run for this README | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). CI runs them at 1440 and 390 px |
-| Claims in `docs/claims.json` | **566**: offline 273 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **569**: offline 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | **216** tokens on **39** chains | live `GET keyhole-seven.vercel.app/api/tokens` (2026-11-09) |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (2026-11-09). The home page counts the five holder keys |
@@ -1050,3 +1050,5 @@ The funded evidence collector captures each original transaction hash/signer as 
 Clean web installs honor the upstream NEAR signer/transaction/curve hash pins and keep the application's hash v2 separate. The unnecessary inherited hash overrides are removed; the npm 10 and npm 11 resolvers now accept the same lockfile. [Lock-resolution regression](web/tests/locked-hashes.test.ts); reproduce with the full fence's unchanged `npm ci` command.
 
 Dependency-policy context for clean reproduction is kept in [SECURITY.md](SECURITY.md#clean-install-dependency-advisory-boundary).
+
+The wallet lifecycle and two-tab notification checks are reproducible from the [R5 repair proof](docs/evidence/integration-stack/r5-lifecycle-notification.md), [exact patch lifecycle tests](web/tests/wallet-patch-lifecycle.test.ts), and [real-browser storage regressions](web/e2e/pledge-review-r3.spec.ts).
