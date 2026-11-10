@@ -6620,6 +6620,19 @@
    "verify": "node judge/verify-claims.mjs --only path-LICENSE"
   },
   {
+   "id": "path-web/tests/pledge-client.test.ts",
+   "claim": "Linked repo path web/tests/pledge-client.test.ts exists",
+   "where": "README.md:874",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-client.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-client.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-client.test.ts"
+  },
+  {
    "id": "path-docs/evidence/integration-stack/validation.json",
    "claim": "Linked repo path docs/evidence/integration-stack/validation.json exists",
    "where": "README.md:916",
@@ -6891,19 +6904,6 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-web/lib/payout.ts"
-  },
-  {
-   "id": "path-web/tests/pledge-client.test.ts",
-   "claim": "Linked repo path web/tests/pledge-client.test.ts exists",
-   "where": "README.md:1005",
-   "evidence_type": "file",
-   "evidence": "web/tests/pledge-client.test.ts",
-   "check": {
-    "type": "path",
-    "path": "web/tests/pledge-client.test.ts"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-client.test.ts"
   },
   {
    "id": "path-contracts/keys",
