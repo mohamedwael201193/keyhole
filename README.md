@@ -996,3 +996,9 @@ The shared borrower/lender page preserves an ambiguous wallet abort/cancel as th
 cd web
 npx vitest run tests/pledge-review-safety.test.ts tests/pledge-money.test.ts tests/pledge-lifecycle.test.ts
 ```
+
+### PR194 R3 async/recovery regression coverage
+
+The exit flow records locally blocked, provably unsent continuations as retryable: signing again preserves the saved amount/epoch, while an uncertain worker dispatch remains non-retryable. Money admission uses browser-wide Web Locks and per-intent records with identity-checked updates and removal. Wallet routing carries the expected signer through its awaits, rechecks consent immediately before wallet invocation, and checks the returned transaction signer. Refreshes coalesce rather than overlap; polling is completion-paced with bounded error backoff, and the executable observation window starts when the read begins.
+
+Executable proofs: [negative/positive unit cases](web/tests/pledge-review-r3.test.ts) and [mounted-component/real-two-tab browser cases](web/e2e/pledge-review-r3.spec.ts), including popup/redirect recovery and reload, delayed FINAL X versus new Y, simultaneous admission, five-second reads, timeout recovery, observation age and signer switching. Run the browser cases with `cd web && npx playwright test e2e/pledge-review-r3.spec.ts --workers=1`; both configured viewports are exercised. See [security boundaries](SECURITY.md#pr194-r3-browser-coordination-and-recovery-boundaries).

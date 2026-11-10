@@ -1,25 +1,27 @@
 "use client";
 import Link from "next/link";
-import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from "react";
 import {useWallet} from "@/lib/wallet";
 import {callWorker} from "@/lib/worker";
 import {usePayoutStorageFee} from "@/lib/usePayoutStorageFee";
 import {createPledgeClient,payoutStorageConsent,type Loan,type LoanTerms,type LoanLimits,type PledgeConfig,type LenderOffer,type PendingPayout,type CollateralBinding} from "@/lib/pledgeClient";
-import {browserMoneyStore,dispatchMoneyBatch,finalMoneyReceipt,nextFinalBlockHeight,type MoneyOperation} from "@/lib/pledgeMoney";
+import {browserMoneyStore,dispatchMoneyBatch,finalMoneyReceipt,nextFinalBlockHeight,updateMoneyOperation,clearMoneyOperation,type MoneyOperation} from "@/lib/pledgeMoney";
 import {requestLoanCertificate,verifyLoanCertificate,type CertificateEnvelope} from "@/lib/loanCertificate";
 import type {KeysCall} from "@/lib/keysTx";
 import type {SignedAuth} from "@/lib/nep413";
 import {assertStorageConsent,storageConsentMatches,createPledgeReadGate,type PayoutStorageConsent} from "@/lib/pledgeSafety";
+import {abortable,createSingleFlightRefresh,startPledgePolling} from "@/lib/pledgeRefresh";
+import {createBrowserIntentStore,browserIntentEnvironment} from "@/lib/pledgeIntentStore";
+import {dispatchExitContinuation,retryableExit,PLEDGE_EXIT_USDC,type ExitRecord} from "@/lib/pledgeExit";
 import "./live.css";
 
 type Control={owner_epoch:string;listed:boolean;transfer_pending:boolean;pending_value_ops:string};
 type Snapshot={readSequence:number;token:string;account:string|null;owner:string|null;control:Control|null;loan:Loan|null;offer:LenderOffer|null;limits:LoanLimits|null;config:PledgeConfig|null;binding:CollateralBinding|null;now:string;credit:string;pending:PendingPayout|null};
 type Inventory={ok:true;complete:true;account:string;token_id:string;owner_epoch:string;observed_at_ns:string;binding_ready:boolean;eligible_pending_zero:boolean;assets:{token:string;amount:string;symbol?:string;decimals?:number;priced:false}[];obligations:{id:string;kind:string;status:string;token?:string;amount?:string}[];limits:{per_tx_usd_micro:number;daily_usd_micro:number};spent_today_usd_micro:number;withdraw_cooldown_until_ms:number|null};
-type ExitRecord={account:string;token:string;epoch:string;amount:string;value_op_id?:string;status:"AwaitingSignature"|"UNKNOWN"|"Pending";intent?:"withdraw"|"reconcile_value_op"};
 const native=(s:string)=>s.length>=2&&s.length<=64&&/^[a-z0-9]+([._-][a-z0-9]+)*$/.test(s)&&!/^0x[0-9a-f]{40}$/i.test(s);
 export function exactUnits(value:string,decimals=24):string {if(value.length>80||!new RegExp(`^\\d+(?:\\.\\d{1,${decimals}})?$`).test(value))throw Error("Enter an exact positive decimal amount.");const [a,b=""]=value.split(".");const n=BigInt(a)*10n**BigInt(decimals)+BigInt(b.padEnd(decimals,"0"));if(n<=0n||n>=1n<<128n)throw Error("Amount out of range.");return n.toString();}
 export function units(value:string,decimals=24):string {const n=BigInt(value),negative=n<0n,v=negative?-n:n,d=10n**BigInt(decimals);return `${negative?"−":""}${v/d}${v%d?`.${(v%d).toString().padStart(decimals,"0").replace(/0+$/,"")}`:""}`;}
-const USDC="nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+const USDC=PLEDGE_EXIT_USDC;
 const errorText=(e:unknown)=>e instanceof Error?e.message:"Unavailable. Keep the original operation; do not resend.";
 /** Never infer a terminal ending from a remembered loan while its final-chain owner read is unavailable. */
 export function lifecycleState(current:{loan:Pick<Loan,"state">|null;owner:string|null}|null,last:(Pick<Loan,"state"|"due_ns"|"borrower">&{resolution?:string|null})|null):string {
@@ -50,30 +52,44 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  const ack=storageConsentMatches(consent,account,client.contractId,fee);
  useEffect(()=>{consentRef.current=null;setConsent(null);feeRef.current=fee;},[account,client.contractId,fee]);
  const token=tokenId||tracked,identity=`${account}|${token}`,activeIdentity=useRef(identity);
- useEffect(()=>{activeIdentity.current=identity;},[identity]);
+ useLayoutEffect(()=>{activeIdentity.current=identity;},[identity]);
  useEffect(()=>{if(!bundle||certUntil<=0)return;const t=setTimeout(()=>setBundle(null),Math.max(0,certUntil-performance.now()));return()=>clearTimeout(t);},[bundle,certUntil]);
  const store=useMemo(()=>account&&typeof window!=="undefined"?browserMoneyStore(account,client.contractId):null,[account,client.contractId]);
+ const latestData=useRef(data);useLayoutEffect(()=>{latestData.current=data;},[data]);
+ const refreshRunner=useMemo(()=>createSingleFlightRefresh(),[]);
+ const exitResume=useRef<string|null>(null);
  const exitKey=`keyhole:pledge-exit:v1:${client.contractId}:${account}:${token}`;
+ const exitStore=useMemo(()=>typeof window!=="undefined"?createBrowserIntentStore<ExitRecord>(exitKey,e=>{if(e.account!==account||e.token!==token)throw Error("Exit identity mismatch");},browserIntentEnvironment()):null,[exitKey,account,token]);
  useEffect(()=>{const q=new URLSearchParams(location.search).get("token");if(!tokenId&&q&&q.length<=128)setTracked(q);},[tokenId]);
- useEffect(()=>{setConsent(null);consentRef.current=null;setBundle(null);setInventory(null);setData(null);setLast(null);setMessage("");setReceiver(account??"");if(!account)return;try{const raw=localStorage.getItem(exitKey);const e=raw?JSON.parse(raw) as ExitRecord:null;if(e&&(e.account!==account||e.token!==token))throw Error("Exit identity mismatch");setExitOp(e);}catch{setMessage("Exit storage invalid. Do not start another exit.");setExitOp({account,token,epoch:"0",amount:"0",status:"UNKNOWN"});}},[identity,account,token,exitKey]);
- const refresh=useCallback(async()=>{
+ useEffect(()=>{setConsent(null);consentRef.current=null;setBundle(null);setInventory(null);setData(null);setLast(null);setMessage("");setReceiver(account??"");setExitOp(null);if(!account)return;try{const e=exitStore?.load()??null;if(e&&(e.account!==account||e.token!==token))throw Error("Exit identity mismatch");setExitOp(e);}catch{setMessage("Exit storage invalid. Do not start another exit.");setExitOp({account,token,epoch:"0",amount:"0",status:"UNKNOWN"});}},[identity,account,token,exitKey,exitStore]);
+ const refresh=useCallback(()=>refreshRunner.run(async signal=>{
   if(!token)return;const requested=`${account}|${token}`,ticket=readGate.begin(requested);setLoading(true);
   try {
-   const saved=store?.load()??null;
-   const [loan,owner,control,offer,limits,config,binding,now,credit,pending,finalized]=await Promise.all([client.getLoan(token),client.getOwner(token),client.getControl(token),client.getLenderOffer(token),client.getLoanLimits(),client.getPledgeConfig(),client.getCollateralBinding(token),client.chainNowNs(),account?client.getPayoutCredit(account):Promise.resolve("0"),account?client.getPendingPayout(account):Promise.resolve(null),saved?finalMoneyReceipt(saved,client.rpcUrl):Promise.resolve(false)]);
+   const saved=store?.load()??null,reads=createPledgeClient({signal});
+   const [loan,owner,control,offer,limits,config,binding,now,credit,pending,finalized]=await abortable(Promise.all([reads.getLoan(token),reads.getOwner(token),reads.getControl(token),reads.getLenderOffer(token),reads.getLoanLimits(),reads.getPledgeConfig(),reads.getCollateralBinding(token),reads.chainNowNs(),account?reads.getPayoutCredit(account):Promise.resolve("0"),account?reads.getPendingPayout(account):Promise.resolve(null),saved?finalMoneyReceipt(saved,reads.rpcUrl,signal):Promise.resolve(false)]),signal);
    const duplicate=saved?.calls?.some(c=>c.method==="register_payout_account")&&saved.error?.includes("already registered");
-   if(saved&&finalized&&!pending&&duplicate&&account&&await client.payoutAccountRegistered(account)!==true)throw Error("Registration status is inconsistent. Keep the original operation; do not resend.");
+   if(saved&&finalized&&!pending&&duplicate&&account&&await abortable(reads.payoutAccountRegistered(account),signal)!==true)throw Error("Registration status is inconsistent. Keep the original operation; do not resend.");
+   const reconciled=!!(saved&&finalized&&!pending&&store&&await abortable(clearMoneyOperation(store,saved),signal));
    if(activeIdentity.current!==requested||!readGate.complete(ticket))return;
    setData({readSequence:ticket.sequence,token,account,loan,owner,control,offer,limits,config,binding,now,credit:credit??"0",pending});
    const publicKey=`keyhole:pledge-last:v1:${client.contractId}:${token}`;
    if(loan){setLast(loan);sessionStorage.setItem(publicKey,JSON.stringify(loan));}else {try{const old=JSON.parse(sessionStorage.getItem(publicKey)??"null") as Loan|null;if(old?.token_id===token)setLast(old);}catch{/* presentation only; never an authorization */}}
-   if(saved&&finalized&&!pending){store?.save(null);setOperation(null);window.dispatchEvent(new Event("keyhole:keys-changed"));setMessage(saved.error?.includes("already registered")?"Storage is already registered. The failed batch did not run the action; retry it manually without another storage fee.":"Original receipt finalized. Current chain state below determines what completed.");}else setOperation(saved);
+   if(reconciled&&saved&&store){setOperation(store.load());window.dispatchEvent(new Event("keyhole:keys-changed"));setMessage(saved.error?.includes("already registered")?"Storage is already registered. The failed batch did not run the action; retry it manually without another storage fee.":"Original receipt finalized. Current chain state below determines what completed.");}else setOperation(store?.load()??null);
    setLoading(false);
   }catch(e){if(activeIdentity.current===requested&&readGate.fail(ticket)){setData(null);setInventory(null);setBundle(null);setLoading(false);setMessage(errorText(e));}throw e;}
- },[account,client,store,token,readGate]);
- useEffect(()=>{if(!token)return;const update=()=>{if(document.visibilityState!=="hidden")void refresh().catch(()=>{/* shared refresh owns failure and stale-read rejection */});};
-  if(store){try{const op=store.load(),url=new URL(location.href),hash=url.searchParams.get("transactionHashes");if(op&&!op.txHash&&hash&&!hash.includes(",")){op.txHash=hash;op.status="Submitted";store.save(op);url.searchParams.delete("transactionHashes");history.replaceState(null,"",url);}}catch{setData(null);setMessage("Pending money storage is unreadable. Do not submit another operation.");return;}}
-  update();const timer=setInterval(update,4000);return()=>{clearInterval(timer);};},[token,refresh,store]);
+ }),[account,client,store,token,readGate,refreshRunner]);
+ useEffect(()=>{if(!token)return;let stop=()=>{},cancelled=false;
+  void (async()=>{
+   try{const op=store?.load(),url=new URL(location.href),hash=url.searchParams.get("transactionHashes");
+    if(op&&!op.txHash&&hash&&!hash.includes(",")&&store&&await updateMoneyOperation(store,op,{...op,txHash:hash,status:"Submitted"})){url.searchParams.delete("transactionHashes");history.replaceState(null,"",url);}
+    if(!cancelled)stop=startPledgePolling(refresh,()=>document.visibilityState!=="hidden");
+   }catch{setData(null);setMessage("Pending money storage is unreadable. Do not submit another operation.");}
+  })();
+  return()=>{cancelled=true;stop();};},[token,refresh,store]);
+ useEffect(()=>{
+  const sync=()=>{try{setOperation(store?.load()??null);setExitOp(exitStore?.load()??null);}catch{setData(null);setMessage("Pending operation storage is unreadable. Do not submit another operation.");}};
+  const offMoney=store?.subscribe?.(sync),offExit=exitStore?.subscribe(sync);sync();return()=>{offMoney?.();offExit?.();};
+ },[store,exitStore]);
  const current=data?.token===token&&data.account===account?data:null,loan=current?.loan??null;
  const owned=!!account&&current?.owner===account;
  const inv=owned&&inventory?.account===account&&inventory.token_id===token&&inventory.owner_epoch===current?.control?.owner_epoch?inventory:null;
@@ -81,7 +97,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  const certified=!!bundle&&!!loan&&loan.state==="Offered"&&bundle.certificate.loan_nonce===loan.nonce&&bundle.certificate.owner_epoch===loan.owner_epoch&&certUntil>0&&!!current&&BigInt(current.now)<BigInt(bundle.certificate.expires_at_ns);
  const enabled=client.canTransact()&&!!account&&native(account)&&!!current&&!loading&&!busy&&!operation&&!current.pending;
  const openReady=enabled&&owned&&!loan&&invFresh&&inv?.eligible_pending_zero&&current.binding?.ready&&current.config?.lending_enabled&&!current.control?.listed&&!current.control?.transfer_pending&&current.control?.pending_value_ops==="0"&&fee!==null&&ack;
- const exitReady=enabled&&owned&&!loan&&invFresh&&!exitOp&&!!inv&&(!inv.withdraw_cooldown_until_ms||!!current&&BigInt(inv.withdraw_cooldown_until_ms)*1_000_000n<=BigInt(current.now))&&!current?.control?.listed&&!current?.control?.transfer_pending&&current?.control?.pending_value_ops==="0";
+ const exitReady=enabled&&owned&&!loan&&invFresh&&(!exitOp||retryableExit(exitOp))&&!!inv&&(!inv.withdraw_cooldown_until_ms||!!current&&BigInt(inv.withdraw_cooldown_until_ms)*1_000_000n<=BigInt(current.now))&&!current?.control?.listed&&!current?.control?.transfer_pending&&current?.control?.pending_value_ops==="0";
  const ref=loan?{token_id:token,nonce:loan.nonce}:null;
  const named=!!loan&&account===loan.terms.lender;
  const defaultReady=!!loan&&loan.state==="Active"&&loan.due_ns!=="0"&&!!current&&BigInt(current.now)>BigInt(loan.due_ns)+BigInt(loan.terms.grace_sec)*1_000_000_000n;
@@ -102,36 +118,57 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   // Recheck AFTER every preflight await: an in-flight/failed refresh or changed identity revokes dispatch.
   readGate.assert(lease,activeIdentity.current);
   if(registration)assertStorageConsent(consentRef.current,account,client.contractId,feeRef.current,plan.payoutStorageChargeYocto);
-  await dispatchMoneyBatch(account,client.contractId,plan.calls,store,wallet.sendTxBatch,height);await refresh();
+  await dispatchMoneyBatch(account,client.contractId,plan.calls,store,calls=>wallet.sendTxBatch(calls,{expectedSigner:account,assertCurrent:()=>{readGate.assert(lease,activeIdentity.current);if(registration)assertStorageConsent(consentRef.current,account,client.contractId,feeRef.current,plan.payoutStorageChargeYocto);}}),height);await refresh();
  }catch(e){setMessage(errorText(e));try{setOperation(store.load());}catch{setData(null);setMessage("Pending money storage is unreadable. Do not submit another operation.");}}finally{setBusy(false);}}
  async function open(){if(!openReady||!account||!current?.limits)return;try{if(!native(lender)||lender===account)throw Error("Choose a different native NEAR lender.");if(!/^\d+$/.test(duration)||!/^\d+$/.test(grace))throw Error("Term and grace must be whole seconds.");if(BigInt(duration)<BigInt(current.limits.min_duration_sec)||BigInt(duration)>BigInt(current.limits.max_duration_sec)||BigInt(grace)>BigInt(current.limits.max_grace_sec))throw Error("Term/grace outside current contract limits.");const terms:LoanTerms={lender,principal:exactUnits(principal),repayment:exactUnits(repayment),duration_sec:duration,grace_sec:grace,floor_raw:exactUnits(floor,6),funding_deadline_ns:(BigInt(await client.chainNowNs())+600_000_000_000n).toString()};if(BigInt(terms.repayment)<BigInt(terms.principal))throw Error("Repayment must cover principal.");const fresh=await client.getControl(token);if(!fresh||fresh.owner_epoch!==inv?.owner_epoch||fresh.pending_value_ops!=="0"||fresh.listed||fresh.transfer_pending||await client.getOwner(token)!==account)throw Error("Account control changed. Refresh private inventory before pledging.");const url=new URL(location.href);url.searchParams.set("token",token);history.replaceState(null,"",url);setTracked(token);await send(client.buildOpenLoan({token_id:token,terms},current.limits.storage_bond));}catch(e){setMessage(errorText(e));}}
  async function fund(){if(!enabled||!certified||!bundle||!named||!ack)return;try{const [fresh,config,expected,now]=await Promise.all([client.getLenderOffer(token),client.getPledgeConfig(),client.getCertificateTemplate(token,bundle.certificate.observed_at_ns,bundle.certificate.expires_at_ns),client.chainNowNs()]);if(!fresh?.funding_open||!fresh.lender_has_no_key||!fresh.lender_has_no_return_reservation||!fresh.owner_current||!fresh.lending_enabled||!config||!expected||!await verifyLoanCertificate(bundle,expected,config,now))throw Error("Funding eligibility/certificate changed. Verify again.");await send(client.buildFundLoan({token_id:token,nonce:bundle.certificate.loan_nonce,...bundle}));}catch(e){setBundle(null);setMessage(errorText(e));}}
  async function claimDefault(){if(!enabled||!named||!ref||!defaultReady)return;try{if(!native(receiver)||!await client.receiverEligible(receiver))throw Error("Receiver must be a native account with no key or return reservation.");await send(client.buildClaimDefault({...ref,receiver_id:receiver}));}catch(e){setMessage(errorText(e));}}
- async function finishExit(auth:SignedAuth,pending:ExitRecord){
-  // Persist the immutable intent BEFORE dispatch. A resumed wallet signature cannot create a new intent.
-  readGate.capture(identity);
-  pending.status="UNKNOWN";localStorage.setItem(exitKey,JSON.stringify(pending));setExitOp({...pending});
-  const r=await callWorker("withdraw",auth);if(r.output?.value_op_id)pending.value_op_id=String(r.output.value_op_id);
-  if(r.output?.status==="success"&&r.output.admission_finished===true){localStorage.removeItem(exitKey);setExitOp(null);setInventory(null);setMessage("Ordinary self-exit confirmed by provider; contract admission finished. Read a fresh private inventory before another exit.");}
-  else{pending.status=r.error?"UNKNOWN":"Pending";localStorage.setItem(exitKey,JSON.stringify(pending));setExitOp({...pending});setMessage(r.error?.message??"Original exit pending. Do not resend; reconcile only this operation.");}
+ function exitPreflight(pending:ExitRecord){
+  readGate.capture(identity);const fresh=latestData.current;
+  if(activeIdentity.current!==identity||!fresh||fresh.account!==pending.account||fresh.token!==pending.token||fresh.owner!==pending.account||fresh.loan||fresh.control?.owner_epoch!==pending.epoch||fresh.control.listed||fresh.control.transfer_pending||fresh.control.pending_value_ops!=="0")throw Error("Exit control changed. Refresh before signing the original intent again.");
  }
- async function finishReconcile(auth:SignedAuth,pending:ExitRecord){pending.status="UNKNOWN";localStorage.setItem(exitKey,JSON.stringify(pending));setExitOp({...pending});const r=await callWorker("reconcile_value_op",auth);if(r.error)throw Error(r.error.message??"Exit unresolved");if(r.output?.admission_finished===true){localStorage.removeItem(exitKey);setExitOp(null);setInventory(null);}setMessage("Original exit reconciled. Refresh inventory; no replacement withdrawal was sent.");await refresh();}
- async function ordinaryExit(){if(!exitReady||!account||!current||!inv)return;setBusy(true);let awaiting=false;try{
-  const amount=exactUnits(exitAmount,6),asset=inv.assets.find(a=>a.token===USDC);if(!asset||BigInt(amount)>BigInt(asset.amount))throw Error("Insufficient supported USDC; unpriced assets are not assumed liquid.");
+ async function finishExit(auth:SignedAuth,pending:ExitRecord,consumeAuth=()=>{}){
+  if(!exitStore)throw Error("Exit storage unavailable");
+  try{
+   const {result:r,pending:sent}=await dispatchExitContinuation(auth,pending,exitStore,()=>exitPreflight(pending),a=>callWorker("withdraw",a),consumeAuth);
+   const next={...sent,...(r.output?.value_op_id?{value_op_id:String(r.output.value_op_id)}:{})};
+   if(r.output?.status==="success"&&r.output.admission_finished===true){await exitStore.clear(sent);setInventory(null);setMessage("Ordinary self-exit confirmed by provider; contract admission finished. Read a fresh private inventory before another exit.");}
+   else{await exitStore.replace(sent,{...next,status:r.error?"UNKNOWN":"Pending"});setMessage(r.error?.message??"Original exit pending. Do not resend; reconcile only this operation.");}
+  }finally{setExitOp(exitStore.load());}
+ }
+ async function finishReconcile(auth:SignedAuth,pending:ExitRecord){
+  if(!exitStore)throw Error("Exit storage unavailable");const sent:ExitRecord={...pending,status:"UNKNOWN"};
+  if(!await exitStore.replace(pending,sent))throw Error("Exit intent changed; reconcile in its owning tab.");
+  setExitOp(sent);const r=await callWorker("reconcile_value_op",auth);if(r.error)throw Error(r.error.message??"Exit unresolved");
+  if(r.output?.admission_finished===true){await exitStore.clear(sent);setExitOp(exitStore.load());setInventory(null);}
+  setMessage("Original exit reconciled. Refresh inventory; no replacement withdrawal was sent.");await refresh();
+ }
+ async function ordinaryExit(){if(!exitReady||!account||!current||!inv||!exitStore)return;setBusy(true);let pending:ExitRecord|null=null;try{
+  const prior=exitStore.load();if(prior&&!retryableExit(prior))throw Error("Original exit unresolved; reconcile only.");
+  const amount=prior?.amount??exactUnits(exitAmount,6),asset=inv.assets.find(a=>a.token===USDC);if(!asset||BigInt(amount)>BigInt(asset.amount))throw Error("Insufficient supported USDC; unpriced assets are not assumed liquid.");
   if(!inv.limits||BigInt(amount)>BigInt(inv.limits.per_tx_usd_micro)||BigInt(amount)+BigInt(inv.spent_today_usd_micro)>BigInt(inv.limits.daily_usd_micro))throw Error("Exit exceeds current per-transaction/daily caps.");
-  const pending:ExitRecord={account,token,epoch:inv.owner_epoch,amount,status:"AwaitingSignature",intent:"withdraw"};localStorage.setItem(exitKey,JSON.stringify(pending));setExitOp(pending);awaiting=true;
-  const auth=await wallet.sign("withdraw",{token_id:token,owner_epoch:inv.owner_epoch,token:USDC,amount,to:account,chain:"near"});awaiting=false;await finishExit(auth,pending);
- }catch(e){if(awaiting&&(!(e instanceof Error)||!("code" in e)||e.code!=="redirect")){localStorage.removeItem(exitKey);setExitOp(null);}setMessage(errorText(e));}finally{setBusy(false);}}
- async function reconcileExit(){if(!exitOp?.value_op_id||!owned||busy||loading)return;setBusy(true);const pending:ExitRecord={...exitOp,status:"AwaitingSignature",intent:"reconcile_value_op"};localStorage.setItem(exitKey,JSON.stringify(pending));setExitOp(pending);try{await finishReconcile(await wallet.sign("reconcile_value_op",{token_id:token,owner_epoch:exitOp.epoch,value_op_id:exitOp.value_op_id}),pending);}catch(e){setMessage(errorText(e));}finally{setBusy(false);}}
- useEffect(()=>{const auth=wallet.pending;if(!auth||!owned||!account)return;try{
-  const request=JSON.parse(auth.message),saved=JSON.parse(localStorage.getItem(exitKey)??"null") as ExitRecord|null,p=request.params;
-  if(!saved||saved.status!=="AwaitingSignature"||saved.account!==account||saved.token!==token||request.account_id!==account||p?.token_id!==token||p?.owner_epoch!==saved.epoch)return;
+  if(prior&&prior.epoch!==inv.owner_epoch)throw Error("Original exit epoch changed; no withdrawal was dispatched.");
+  const next:ExitRecord=prior?{...prior,status:"AwaitingSignature"}:{account,token,epoch:inv.owner_epoch,amount,status:"AwaitingSignature",intent:"withdraw"};
+  if(prior){if(!await exitStore.replace(prior,next))throw Error("Continue the original exit in its owning tab.");pending=next;}else pending=await exitStore.reserve(next);
+  setExitOp(pending);const auth=await wallet.sign("withdraw",{token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"});await finishExit(auth,pending);
+ }catch(e){if(pending&&(!(e instanceof Error)||!("code" in e)||e.code!=="redirect")){const saved=exitStore.load();if(saved?.id===pending.id&&saved?.status==="AwaitingSignature")await exitStore.replace(saved,{...saved,status:"Retryable"});setExitOp(exitStore.load());}setMessage(errorText(e));}finally{setBusy(false);}}
+ async function discardUnsentExit(){
+  if(!exitStore||!retryableExit(exitOp)||busy||loading||!exitOp)return;
+  const original=exitOp;if(await exitStore.clear(original)){
+   const auth=wallet.pending;if(auth){try{const r=JSON.parse(auth.message),p=r.params;if(r.op==="withdraw"&&r.account_id===original.account&&p?.token_id===original.token&&p?.owner_epoch===original.epoch&&p?.amount===original.amount)wallet.clearPending();}catch{/* unrelated auth remains untouched */}}
+   setExitOp(exitStore.load());setMessage("Unsent exit intent discarded. No withdrawal was sent; review a fresh inventory before creating another intent.");setInventory(null);
+  }
+ }
+ async function reconcileExit(){if(!exitOp?.value_op_id||!owned||busy||loading||!exitStore)return;setBusy(true);const pending:ExitRecord={...exitOp,status:"AwaitingSignature",intent:"reconcile_value_op"};try{if(!await exitStore.replace(exitOp,pending))throw Error("Continue the original exit in its owning tab.");setExitOp(pending);await finishReconcile(await wallet.sign("reconcile_value_op",{token_id:token,owner_epoch:exitOp.epoch,value_op_id:exitOp.value_op_id}),pending);}catch(e){setMessage(errorText(e));}finally{setBusy(false);}}
+ useEffect(()=>{const auth=wallet.pending;if(!auth||!owned||!account||loading||busy||!exitStore||exitResume.current===auth.signature)return;try{
+  const request=JSON.parse(auth.message),saved=exitStore.load(),p=request.params;
+  if(!saved||saved.status!=="AwaitingSignature"||saved.account!==account||saved.token!==token||request.account_id!==account||auth.account_id!==account||p?.token_id!==token||p?.owner_epoch!==saved.epoch)return;
   if(request.op==="withdraw"&&saved.intent==="withdraw"&&p.token===USDC&&p.amount===saved.amount&&p.to===account&&p.chain==="near"){
-   wallet.clearPending();setBusy(true);void finishExit(auth,saved).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));
-  }else if(request.op==="reconcile_value_op"&&saved.intent==="reconcile_value_op"&&saved.value_op_id&&p.value_op_id===saved.value_op_id){wallet.clearPending();setBusy(true);void finishReconcile(auth,saved).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));}
+   exitResume.current=auth.signature;setBusy(true);void finishExit(auth,saved,wallet.clearPending).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));
+  }else if(request.op==="reconcile_value_op"&&saved.intent==="reconcile_value_op"&&saved.value_op_id&&p.value_op_id===saved.value_op_id){exitResume.current=auth.signature;setBusy(true);void finishReconcile(auth,saved).then(wallet.clearPending).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));}
  }catch{setMessage("Pending exit signature could not bind to its saved intent. Nothing new was dispatched.");}
  // eslint-disable-next-line react-hooks/exhaustive-deps
- },[wallet.pending,owned,account,token,exitKey]);
+ },[wallet.pending,owned,account,token,exitStore,loading,busy,current?.readSequence]);
 
  const publicLoan=current?(loan??last):null;
  const feeLine=fee===null?"Storage fee unavailable — first action blocked":fee==="0"?"Payout storage registered · no new fee":`Agree: ${units(fee)} NEAR one-time nonrefundable storage`;
@@ -155,9 +192,9 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
     {loan?.state==="Active"&&ref?<>{owned?<><button className="pledge-live-primary" disabled={!enabled} onClick={()=>void send(client.buildRepayLoan(ref,loan.terms.repayment))}>Repay {units(loan.terms.repayment)} NEAR & thaw</button><p>Repay the full amount. The bond returns as a separate backed credit; no silent netting.</p></>:null}{named?<><label className="pledge-live-receiver">Default receiver<input aria-label="Default receiver" value={receiver} onChange={e=>setReceiver(e.target.value.trim())}/></label><button className="pledge-live-primary" disabled={!enabled||!defaultReady} onClick={()=>void claimDefault()}>Claim entire collateral account</button><p>{defaultReady?"Due + grace passed on final-chain clock.":"Default unavailable until chain now > due + grace."} Eligibility rechecked before claim.</p></>:null}</>:null}
     {loan?.state==="UnlockPending"?<p className="pledge-live-important">{loan.resolution??"Resolution committed"} · terminal lower-policy thaw still pending. Do not transfer or exit yet.</p>:null}
     {loan&&ref&&["Freezing","UnlockPending"].includes(loan.state)&&(owned||named)?(!loan.policy_busy?<button disabled={!enabled} onClick={()=>void send({method:"retry_loan_policy",args:ref,deposit:"0",gas:"200000000000000"},false)}>Retry completed policy transition</button>:loan.policy_call_complete?<button disabled={!enabled} onClick={()=>void send({method:"reconcile_loan_policy",args:ref,deposit:"0",gas:"100000000000000"},false)}>Reconcile terminal policy read</button>:<p>Custody command pending / UNKNOWN. No redispatch or timeout unlock.</p>):null}
-    {current&&!loan&&last?<><p data-testid="settlement">{canceled?"Canceled before funding: thaw confirmed.":last.resolution==="repaid"?"Repaid ending: thaw confirmed.":last.resolution==="default_claimed"?`Default ending: account is now ${current.owner}; thaw confirmed. Old holder has no new private/value authority.`:"Closed · history unverified"}</p>{owned?<><div className="pledge-live-exit"><label>Ordinary USDC self-exit<input aria-label="Ordinary USDC self-exit" value={exitAmount} onChange={e=>setExitAmount(e.target.value)}/></label><button disabled={!exitReady} onClick={()=>void ordinaryExit()}>Exit to my wallet</button></div><small>Current caps, daily spend and real owner-change cooldown apply. Read private inventory first.</small>{inv?.withdraw_cooldown_until_ms?<p>Cooldown until {cairo((BigInt(inv.withdraw_cooldown_until_ms)*1_000_000n).toString())}.</p>:null}{exitOp?<><p>Original exit {exitOp.status}; never resend.</p><button disabled={busy||loading||!exitOp.value_op_id} onClick={()=>void reconcileExit()}>Reconcile original exit</button></>:null}{role==="borrower"&&current?.owner===last.borrower?<button className="pledge-live-link" onClick={()=>{sessionStorage.removeItem(`keyhole:pledge-last:v1:${client.contractId}:${token}`);setLast(null);setInventory(null);}}>Prepare another loan</button>:null}</>:null}</>:null}
+    {current&&!loan&&last?<><p data-testid="settlement">{canceled?"Canceled before funding: thaw confirmed.":last.resolution==="repaid"?"Repaid ending: thaw confirmed.":last.resolution==="default_claimed"?`Default ending: account is now ${current.owner}; thaw confirmed. Old holder has no new private/value authority.`:"Closed · history unverified"}</p>{owned?<><div className="pledge-live-exit"><label>Ordinary USDC self-exit<input aria-label="Ordinary USDC self-exit" value={exitAmount} onChange={e=>setExitAmount(e.target.value)}/></label><button disabled={!exitReady} onClick={()=>void ordinaryExit()}>Exit to my wallet</button></div><small>Current caps, daily spend and real owner-change cooldown apply. Read private inventory first.</small>{inv?.withdraw_cooldown_until_ms?<p>Cooldown until {cairo((BigInt(inv.withdraw_cooldown_until_ms)*1_000_000n).toString())}.</p>:null}{exitOp?<><p>Original exit {exitOp.status} ({units(exitOp.amount,6)} USDC); {retryableExit(exitOp)?"not sent; sign the saved amount again with Exit to my wallet.":"never resend."}</p>{retryableExit(exitOp)?<button disabled={busy||loading} onClick={()=>void discardUnsentExit().catch(e=>setMessage(errorText(e)))}>Discard unsent exit intent</button>:null}<button disabled={busy||loading||!exitOp.value_op_id} onClick={()=>void reconcileExit()}>Reconcile original exit</button></>:null}{role==="borrower"&&current?.owner===last.borrower?<button className="pledge-live-link" onClick={()=>{sessionStorage.removeItem(`keyhole:pledge-last:v1:${client.contractId}:${token}`);setLast(null);setInventory(null);}}>Prepare another loan</button>:null}</>:null}</>:null}
     {current&&account&&((BigInt(current.credit)>0n)||current.pending||operation)?<div className="pledge-live-credit" data-testid="payout-credit"><strong>{units(current.credit)} NEAR backed credit</strong><span>{current.pending?`Native cashout pending · nonce ${current.pending.nonce}`:"Not delivered wallet funds."}</span><button disabled={!enabled||BigInt(current.credit)<=0n} onClick={()=>void send(client.buildClaimPayout())}>{loan?.state==="DisbursementPending"&&owned?"Cash out principal":"Claim your funds"}</button></div>:null}
-    {operation?<div className="pledge-live-unknown"><p>Original money operation {operation.status}. No automatic retry.</p>{!operation.txHash?<><input aria-label="Original transaction hash" value={originalHash} onChange={e=>setOriginalHash(e.target.value)}/><button onClick={()=>{if(store&&/^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(originalHash)){store.save({...operation,txHash:originalHash,status:"Submitted"});void refresh().catch(e=>setMessage(errorText(e)));}}}>Check original hash</button></>:null}</div>:null}
+    {operation?<div className="pledge-live-unknown"><p>Original money operation {operation.status}. No automatic retry.</p>{!operation.txHash?<><input aria-label="Original transaction hash" value={originalHash} onChange={e=>setOriginalHash(e.target.value)}/><button onClick={()=>{if(store&&/^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(originalHash)){void updateMoneyOperation(store,operation,{...operation,txHash:originalHash,status:"Submitted"}).then(()=>refresh()).catch(e=>setMessage(errorText(e)));}}}>Check original hash</button></>:null}</div>:null}
     <label className="pledge-live-consent" title={payoutStorageConsent(fee)}><input type="checkbox" checked={ack} disabled={fee===null||loading||busy} onChange={e=>{const next=e.target.checked&&account&&fee!==null?{account,contract:client.contractId,fee}:null;consentRef.current=next;setConsent(next);}}/><span>{feeLine}</span></label>
     {!client.canTransact()?<small>Write gate OFF — release review required. No transaction can be sent.</small>:null}
    </section>

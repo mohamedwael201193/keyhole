@@ -179,6 +179,7 @@ export function buildRegisterPayoutAccount(account: AccountId, exactCost: U128):
 }
 
 export type PledgeClientOpts = {
+  signal?: AbortSignal;
   /** Override the live flag (tests). Defaults to PLEDGE_LIVE from config. */
   live?: boolean;
   transactionsEnabled?: boolean;
@@ -199,11 +200,11 @@ function utf8FromBytes(bytes: number[]): string {
   return new TextDecoder().decode(u);
 }
 
-async function rpcView<T>(rpcUrl: string, contractId: string, method: string, args: Record<string, unknown>): Promise<T> {
+async function rpcView<T>(rpcUrl: string, contractId: string, method: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
   const res = await fetch(rpcUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    cache:"no-store",signal:AbortSignal.timeout(10000),
+    cache:"no-store",signal:signal?AbortSignal.any([signal,AbortSignal.timeout(10000)]):AbortSignal.timeout(10000),
     body: JSON.stringify({
       jsonrpc: "2.0",
       id: "pledge",
@@ -233,7 +234,7 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
   const live = opts.live ?? PLEDGE_LIVE;
   const contractId = opts.contractId ?? KEYS_CONTRACT;
   const rpcUrl = opts.rpcUrl ?? RPC_URL;
-  const viewFn = opts.view ?? (<T,>(method: string, args: Record<string, unknown>) => rpcView<T>(rpcUrl, contractId, method, args));
+  const viewFn = opts.view ?? (<T,>(method: string, args: Record<string, unknown>) => rpcView<T>(rpcUrl, contractId, method, args, opts.signal));
 
   return {
     live,

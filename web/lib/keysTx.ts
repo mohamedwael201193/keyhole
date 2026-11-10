@@ -44,11 +44,12 @@ export type TxWallet = {
   signAndSendTransaction(params: { signerId?: string; receiverId: string; actions: unknown[]; callbackUrl?: string }): Promise<unknown>;
 };
 
-export type TxRoute =
+export type TxConsent = {expectedSigner:string;assertCurrent?:()=>void};
+export type TxRoute = (
   | { kind: "nc"; accountId: string; wallet: TxWallet }
   | { kind: "ws"; accountId: string; walletId: string; wallet: TxWallet; callbackUrl: string }
   | { kind: "privy"; accountId: string; signer: Signer }
-  | { kind: "none" };
+  | { kind: "none" }) & {assertCurrent?:()=>void};
 
 export type TxErrorCode = "signed_out" | "unsupported_wallet" | "rejected" | "insufficient_balance" | "contract" | "bad_call" | "stale_listing" | "unknown";
 export type TxError = { code: TxErrorCode; message: string; /** Set only by local validation before invoking a wallet. */ preSend?: true };
@@ -128,7 +129,7 @@ export async function sendKeysCall(route: TxRoute, call: KeysCall, contractId = 
 }
 
 /** One atomic same-receiver transaction, one wallet confirmation. Never fall back to sequential sends. */
-export async function sendKeysCalls(route: TxRoute, calls: readonly KeysCall[], contractId = KEYS_CONTRACT): Promise<BatchSendResult> {
+export async function sendKeysCalls(route: TxRoute, calls: readonly KeysCall[], contractId = KEYS_CONTRACT, consent?:TxConsent): Promise<BatchSendResult> {
   if (route.kind === "none") return { error: { code: "signed_out", preSend: true, message: "Sign in with a NEAR wallet to send this." } };
   if (route.kind === "ws" && route.walletId === "ethereum-wallets") {
     return { error: { code: "unsupported_wallet", preSend: true, message: "Selling and buying keys is not supported for MetaMask in this build. Sign in with a NEAR wallet." } };
@@ -141,6 +142,11 @@ export async function sendKeysCalls(route: TxRoute, calls: readonly KeysCall[], 
   } catch (e) {
     return { error: { code: "bad_call", preSend: true, message: textOf(e) } };
   }
+  // No await between these checks and the actual wallet invocation.
+  try {
+    if(consent&&route.accountId!==consent.expectedSigner)throw Error("Signer changed after consent; nothing was sent.");
+    route.assertCurrent?.();consent?.assertCurrent?.();
+  }catch(e){return {error:{code:"bad_call",preSend:true,message:textOf(e)}};}
   let outcome: unknown;
   try {
     if (route.kind === "nc") {
@@ -162,9 +168,20 @@ export async function sendKeysCalls(route: TxRoute, calls: readonly KeysCall[], 
   }
   // A browser wallet (MyNearWallet and similar) navigates away and resolves with nothing. Its result returns in the URL.
   if (outcome === undefined || outcome === null) return { redirect: true };
+  if(consent){
+    const signer=(outcome as {transaction?:{signer_id?:string;signerId?:string}})?.transaction;
+    if((signer?.signer_id??signer?.signerId)!==consent.expectedSigner){const hash=outcomeHash(outcome);return {...(hash?{txHash:hash}:{}),error:{code:"unknown",message:"Returned transaction signer does not match consent. Keep the original intent; reconcile, never resend."}};}
+  }
   const failed = outcomeFailure(outcome);
   const hash = outcomeHash(outcome);
   if (failed) return hash ? {error: failed, txHash: hash} : {error: failed};
   if (!hash) return { error: { code: "unknown", message: "The wallet did not return a transaction hash. Check the account on NEAR before trying again." } };
   return { txHash: hash };
+}
+
+/** Route acquisition cannot silently substitute a new signer after its awaits. */
+export async function sendRoutedKeysCalls(resolve:()=>Promise<TxRoute>,calls:readonly KeysCall[],consent:TxConsent,contractId=KEYS_CONTRACT):Promise<BatchSendResult>{
+ let route:TxRoute;
+ try{route=await resolve();}catch(e){return {error:{code:"bad_call",preSend:true,message:textOf(e)}};}
+ return sendKeysCalls(route,calls,contractId,consent);
 }

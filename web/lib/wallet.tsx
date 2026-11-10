@@ -1,13 +1,13 @@
 "use client";
 import {SandboxWalletProvider} from "./sandboxWallet";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { WalletSelector, WalletModuleFactory } from "@near-wallet-selector/core";
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { PLEDGE_SANDBOX, NEP413_RECIPIENT } from "./config";
 import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
 import { callWorker } from "./worker";
-import { sendKeysCall, sendKeysCalls, type KeysCall, type SendResult, type BatchSendResult, type TxRoute, type TxWallet } from "./keysTx";
+import { sendKeysCall, sendRoutedKeysCalls, type TxConsent, type KeysCall, type SendResult, type BatchSendResult, type TxRoute, type TxWallet } from "./keysTx";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
@@ -78,7 +78,7 @@ export interface WalletCtx {
   revokeSession: () => Promise<void>;
   /** Sends one FunctionCall to the keys contract from the signed-in account, through the wallet it signed in with (lib/keysTx.ts). */
   sendTx: (call: KeysCall) => Promise<SendResult>;
-  sendTxBatch: (calls: readonly KeysCall[]) => Promise<BatchSendResult>;
+  sendTxBatch: (calls: readonly KeysCall[], consent?:TxConsent) => Promise<BatchSendResult>;
 }
 const Ctx = createContext<WalletCtx | null>(null);
 const PENDING = "kh_pending_sign";
@@ -227,6 +227,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {return PL
 function NativeWalletProvider({ children }: { children: ReactNode }) {
   const ref = useRef<{ selector: WalletSelector; modal: WalletSelectorModal } | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const currentAccount=useRef(accountId);useLayoutEffect(()=>{currentAccount.current=accountId;},[accountId]);
   const [ready, setReady] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [mismatch, setMismatch] = useState<string | null>(null);
@@ -481,23 +482,26 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
     if (!accountId) return { kind: "none" };
     if (owner.current === "privy") {
       const signer = privy.current?.signer;
-      return signer ? { kind: "privy", accountId, signer } : { kind: "none" };
+      return signer ? { kind: "privy", accountId, signer, assertCurrent:()=>{if(currentAccount.current!==accountId||owner.current!=="privy"||privy.current?.accountId!==accountId||privy.current?.signer!==signer)throw Error("Signer changed after consent; nothing was sent.");} } : { kind: "none" };
     }
     if (owner.current === "nc") {
       const nc = await nearConnector();
       const w = await nc.wallet().catch(() => null);
-      return w ? { kind: "nc", accountId, wallet: w as unknown as TxWallet } : { kind: "none" };
+      if(!w)return {kind:"none"};
+      const accounts=await w.getAccounts();
+      if(!accounts.some(a=>a.accountId===accountId))throw Error("Signer changed after consent; nothing was sent.");
+      return { kind: "nc", accountId, wallet: w as unknown as TxWallet,assertCurrent:()=>{if(currentAccount.current!==accountId||owner.current!=="nc")throw Error("Signer changed after consent; nothing was sent.");} };
     }
     await ensure();
     const st = ref.current!.selector.store.getState();
     const acc = st.accounts.find((a) => a.active)?.accountId;
     if (!acc) return { kind: "none" };
     const w = await ref.current!.selector.wallet();
-    return { kind: "ws", accountId: acc, walletId: st.selectedWalletId ?? "", wallet: w as unknown as TxWallet, callbackUrl: location.href.split("#")[0] };
+    return { kind: "ws", accountId: acc, walletId: st.selectedWalletId ?? "", wallet: w as unknown as TxWallet, callbackUrl: location.href.split("#")[0],assertCurrent:()=>{const current=ref.current!.selector.store.getState();if(current.accounts.find(a=>a.active)?.accountId!==acc||current.selectedWalletId!==st.selectedWalletId||owner.current!=="ws"||currentAccount.current!==accountId)throw Error("Signer changed after consent; nothing was sent.");} };
   }, [accountId, ensure]);
   const sendTx = useCallback(async (call: KeysCall): Promise<SendResult> => sendKeysCall(await txRoute(), call), [txRoute]);
 
-  const sendTxBatch = useCallback(async (calls: readonly KeysCall[]): Promise<BatchSendResult> => sendKeysCalls(await txRoute(), calls), [txRoute]);
+  const sendTxBatch = useCallback(async (calls: readonly KeysCall[], consent?:TxConsent): Promise<BatchSendResult> => sendRoutedKeysCalls(txRoute,calls,consent??{expectedSigner:accountId??""}), [txRoute,accountId]);
 
   return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectMeteor: () => connectSelectorWallet("meteor-wallet"), connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession, sendTx, sendTxBatch }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }
