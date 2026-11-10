@@ -1,0 +1,134 @@
+{
+  "at": "2026-11-10T19:43:28.775775+02:00",
+  "pages": [
+    {
+      "path": "/",
+      "status": 200,
+      "bytes": 130816,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/judge",
+      "status": 200,
+      "bytes": 203545,
+      "error_html": false,
+      "old_contract_hash": true,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/verify",
+      "status": 200,
+      "bytes": 133150,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/gallery",
+      "status": 200,
+      "bytes": 170548,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/key?id=k5f4750858f328940",
+      "status": 200,
+      "bytes": 119901,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/vault",
+      "status": 200,
+      "bytes": 120800,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/pledge",
+      "status": 404,
+      "bytes": 115345,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/mint",
+      "status": 200,
+      "bytes": 129936,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/settle",
+      "status": 200,
+      "bytes": 145896,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/start",
+      "status": 200,
+      "bytes": 119107,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/ask",
+      "status": 200,
+      "bytes": 119985,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/atlas",
+      "status": 200,
+      "bytes": 134960,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/identity",
+      "status": 200,
+      "bytes": 150631,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    },
+    {
+      "path": "/pnl",
+      "status": 200,
+      "bytes": 118878,
+      "error_html": false,
+      "old_contract_hash": false,
+      "live_contract_hash": false
+    }
+  ],
+  "script_count": 38,
+  "bundle_old_code_hash": true,
+  "bundle_live_code_hash": false,
+  "method_literals": [
+    "nft_buy",
+    "nft_list",
+    "nft_listing",
+    "nft_listings",
+    "nft_tier",
+    "nft_token",
+    "nft_tokens_for_owner",
+    "nft_total_supply",
+    "nft_unlist",
+    "pending_weak"
+  ],
+  "pledge_disabled_copy": false,
+  "paid_calls_or_health_requests_made": false
+}

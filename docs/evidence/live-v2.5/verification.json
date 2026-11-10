@@ -1,0 +1,259 @@
+{
+  "at": "2026-11-10T19:48:18.262905+02:00",
+  "source_main": "cb8179e289ad64b36ac707d433128420e2976189",
+  "no_mainnet_transactions": true,
+  "spent": {
+    "NEAR": "0",
+    "USDC": "0",
+    "paid_worker_calls": 0
+  },
+  "postchecks_status": "PASS",
+  "views_recorded": 87,
+  "view_block_hash": "3GR2VfsZ141Vevj1SdiiixRzG8Qhqqmryq3wAX25ffiD",
+  "tokens_preserved": 6,
+  "raw_state_rows": 47,
+  "access_authority_preserved": true,
+  "loan_and_pending_views": "all null; all epochs/nonces/pending counts zero; no listed/pledged/transferring NFT",
+  "pledge_config": {
+    "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+    "recovery_unlock_ns": "1796169600000000000",
+    "attestor_public_key": "AVoCWQaln59Ayhfa8qPGHF5jo3wIHHUjCHDKpqgqxEM=",
+    "custody_contract": "outlayer.near",
+    "network": "mainnet",
+    "lending_enabled": false,
+    "next_loan_nonce": "0",
+    "next_payout_nonce": "0",
+    "treasury_available": "0",
+    "user_liabilities": "0",
+    "treasury_pending": null
+  },
+  "account_balance_NEAR": "5.299576661423691162621661",
+  "storage_usage": 492179,
+  "storage_backing_NEAR": "4.92179",
+  "free_after_storage_NEAR": "0.377786661423691162621661",
+  "contract_rebuild": "PASS: exact bytes match release, deployed artifact and live view_code",
+  "worker_rebuild": "EXPECTED FAIL: current source is 59379cfe, public active worker is unchanged d337e822. Recorded attestation/FastFS checks pass; no worker publication was attempted.",
+  "claims_online": {
+    "pass": 573,
+    "fail": 0,
+    "error": 0,
+    "skip": 0,
+    "strict": true
+  },
+  "claims_offline": {
+    "pass": 279,
+    "fail": 0,
+    "error": 0,
+    "skip": 294
+  },
+  "web_unit": {
+    "files": 98,
+    "tests": 1785,
+    "fail": 0
+  },
+  "web_build": "PASS: production webpack mainnet build, flags OFF",
+  "browser": {
+    "passed": 203,
+    "skipped": 13,
+    "failed": 0,
+    "flaky": 0,
+    "paid_gateway_tests_excluded": 2,
+    "live_mainnet_read_only_tests_passed": 2,
+    "retries": 0,
+    "time_zone": "Africa/Cairo",
+    "started_at": "2026-11-10T19:44:28.843000+02:00",
+    "scope": "local production server, live RPC/read-only evidence plus explicitly mocked interactive fixtures; not a live funded loan proof"
+  },
+  "cleanup": {
+    "head": "cb8179e289ad64b36ac707d433128420e2976189",
+    "pid": 3055408,
+    "returncode": 143,
+    "port": 3186,
+    "cleaned_up": true
+  },
+  "compute": {
+    "before": {
+      "owner": "keyhole-devmo.near",
+      "nonce": 1,
+      "initial_balance": "1288694",
+      "spent": "774037",
+      "reserved": "0",
+      "available": "514657",
+      "last_used_at": "2026-11-10T17:31:11.901725+00:00"
+    },
+    "after": {
+      "owner": "keyhole-devmo.near",
+      "nonce": 1,
+      "initial_balance": "1288694",
+      "spent": "774037",
+      "reserved": "0",
+      "available": "514657",
+      "last_used_at": "2026-11-10T17:31:11.901725+00:00"
+    },
+    "money_spent_unchanged": true,
+    "no_topup_needed_now": true
+  },
+  "production": {
+    "at": "2026-11-10T19:43:28.775775+02:00",
+    "pages": [
+      {
+        "path": "/",
+        "status": 200,
+        "bytes": 130816,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/judge",
+        "status": 200,
+        "bytes": 203545,
+        "error_html": false,
+        "old_contract_hash": true,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/verify",
+        "status": 200,
+        "bytes": 133150,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/gallery",
+        "status": 200,
+        "bytes": 170548,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/key?id=k5f4750858f328940",
+        "status": 200,
+        "bytes": 119901,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/vault",
+        "status": 200,
+        "bytes": 120800,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/pledge",
+        "status": 404,
+        "bytes": 115345,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/mint",
+        "status": 200,
+        "bytes": 129936,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/settle",
+        "status": 200,
+        "bytes": 145896,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/start",
+        "status": 200,
+        "bytes": 119107,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/ask",
+        "status": 200,
+        "bytes": 119985,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/atlas",
+        "status": 200,
+        "bytes": 134960,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/identity",
+        "status": 200,
+        "bytes": 150631,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      },
+      {
+        "path": "/pnl",
+        "status": 200,
+        "bytes": 118878,
+        "error_html": false,
+        "old_contract_hash": false,
+        "live_contract_hash": false
+      }
+    ],
+    "script_count": 38,
+    "bundle_old_code_hash": true,
+    "bundle_live_code_hash": false,
+    "method_literals": [
+      "nft_buy",
+      "nft_list",
+      "nft_listing",
+      "nft_listings",
+      "nft_tier",
+      "nft_token",
+      "nft_tokens_for_owner",
+      "nft_total_supply",
+      "nft_unlist",
+      "pending_weak"
+    ],
+    "pledge_disabled_copy": false,
+    "paid_calls_or_health_requests_made": false
+  },
+  "loan_readiness": "NO-GO until reviewed worker/version retirement/policy binding and explicit onboarding; see loan-plan.json and SECURITY.md",
+  "judge_tests": {
+    "pass": 21,
+    "fail": 0,
+    "skip": 0
+  },
+  "typecheck": "PASS",
+  "lint": {
+    "errors": 0,
+    "preexisting_warnings": 10
+  },
+  "immutable_judge_source_commit": "211e8e17fe7de25c54435f6ac2d3410e843e0f00",
+  "final_metadata_refresh": {
+    "scope": "generated immutable judge refs only; no executable behavior changed from first evidence commit",
+    "production_build": "PASS after source-ref refresh",
+    "live_browser_tests": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "strict_online_contract": "PASS after source-ref refresh",
+    "server_cleanup": {
+      "head": "211e8e17fe7de25c54435f6ac2d3410e843e0f00",
+      "pid": 3063041,
+      "returncode": 143,
+      "port": 3186,
+      "cleaned_up": true
+    }
+  }
+}

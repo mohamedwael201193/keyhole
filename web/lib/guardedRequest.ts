@@ -1,10 +1,10 @@
 import { nearView } from "./rpc";
-import { CONTRACT_CODE_HASH, KEYS_CONTRACT, RPC_URL } from "./config";
+import { KEYS_CONTRACT, RPC_URL } from "./config";
 import { isMethodNotFound } from "./rpcError";
 
 type Read = <T>(method: string, args: Record<string, unknown>) => Promise<T>;
-/** Pinned live v2.4 code hash from identity.json. A missing get_control_state is legacy only for this hash. */
-export const LIVE_V24_CODE_HASH = CONTRACT_CODE_HASH;
+/** Historical v2.4 only. Never derive this exception from the current deployment identity. */
+export const LIVE_V24_CODE_HASH = "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ";
 export const guardedValueOp = (op: string, params: Record<string, unknown>) =>
   ["swap", "copy", "withdraw", "transfer"].includes(op) || (op === "quote" && params.execute === true);
 export const decimalEpoch = (v: unknown): v is string => typeof v === "string" && /^(0|[1-9]\d*)$/.test(v) && BigInt(v) <= 18446744073709551615n;

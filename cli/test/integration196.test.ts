@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { LIVE_V24_CODE_HASH, prepareGuardedRequest, keyFromString, signRequest } from "../src/core.ts";
 import { payout } from "../src/payout.ts";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import bs58 from "bs58";
 const key=keyFromString("alice.near",bs58.encode(new Uint8Array(32).fill(1)));
 const read=(epoch="7")=>(async (m:string)=>m==="nft_tokens_for_owner"?[{token_id:"k1234"}]:m==="nft_token"?{owner_id:"alice.near"}:{token_id:"k1234",owner_epoch:epoch,transfer_pending:false}) as any;
@@ -30,9 +31,13 @@ test("control-view failures that are not MethodNotFound fail closed",async()=>{
   const missing=async(m:string)=>{ if(m==="nft_token") return {owner_id:key.accountId}; throw new Error("MethodResolveError(MethodNotFound)"); };
   await assert.rejects(prepareGuardedRequest(key.accountId,"swap",{token_id:"k1234"},missing as any,async()=>"other-hash"), /unpinned_contract/);
 });
-test("pinned live code hash matches identity.json",async()=>{
+test("legacy fallback stays pinned to the v2.4 release, never the upgraded live identity",async()=>{
+  const release=readFileSync(new URL("../../contracts/keys/release/v2.4/keyhole_keys.wasm",import.meta.url));
+  assert.equal(LIVE_V24_CODE_HASH,bs58.encode(createHash("sha256").update(release).digest()));
   const ident=JSON.parse(readFileSync(new URL("../../identity.json",import.meta.url),"utf8"));
-  assert.equal(LIVE_V24_CODE_HASH, ident.contract.code_hash);
+  assert.notEqual(LIVE_V24_CODE_HASH,ident.contract.code_hash);
+  const missing=async(m:string)=>{ if(m==="nft_token") return {owner_id:key.accountId}; throw new Error("MethodResolveError(MethodNotFound)"); };
+  await assert.rejects(prepareGuardedRequest(key.accountId,"swap",{token_id:"k1234"},missing as any,async()=>ident.contract.code_hash),/unpinned_contract/);
 });
 test("Rust worker fixture is a genuine CLI signature over prepared exact params",async()=>{
   const f=JSON.parse(readFileSync(new URL("../../protocol/client-owner-epoch.json",import.meta.url),"utf8"));

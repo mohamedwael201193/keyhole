@@ -1,0 +1,42 @@
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+• done
+
+• Checking the host environment...
+• done
+
+• Generating ABI
+ │     Finished `dev` profile [unoptimized] target(s) in 0.07s
+• Extracting ABI...
+• done
+
+• Building contract
+ │     Finished `release` profile [optimized] target(s) in 0.07s
+
+• Running an optimize for size post-step with wasm-opt ...
+    Finished wasm-opt -O in 1s 33ms
+• done
+
+✓ Contract successfully built! (in CARGO_NEAR_BUILD_ENVIRONMENT=host)
+     -                Binary: /workspace/near_hackathon/upgrade/worktree/contracts/keys/target/near/keyhole_keys.wasm
+     -                  Size: 492.4 KB (492399 bytes)
+     - SHA-256 checksum hex : e047e60403fdff3973c0f5d3bf9a158f6ecd89387394f2c3400d04aef16afd37
+     - SHA-256 checksum bs58: G6VuswhPaeQ93Wo4HjzgKmNkSR4ovWv7UFdUQY5isMUi
+     -                   ABI: /workspace/near_hackathon/upgrade/worktree/contracts/keys/target/near/keyhole_keys_abi.json
+    Finished cargo near build in 1s
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked --no-embed-abi --env 'RUSTFLAGS=--remap-path-prefix=/home/box/.cargo=/cargo --remap-path-prefix=/workspace/near_hackathon/wt_live_v25/contracts/keys=/keyhole-contract'
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /home/box/.cargo/bin/cargo-near near self-update
+/home/box/.cache/keyhole/binaryen-version_123/bin/wasm-opt: OK
+28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce  target/near/keyhole_keys.wasm
+OK   reproducible contract rebuild == committed deployed wasm
+on-chain code_hash  3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b
+repo wasm (base58)  3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b  (sha256 28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce)
+OK   contract code matches the committed wasm
+config {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
+OK   minter is an implicit account (015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443); its key was generated inside the TEE (see worker op info in evidence)
+PASS strict online contract identity, actual code bytes, version and minter at final block FryxvpuqY1pdZG4memhckyTWhf3jFeDoyhDXUce5cjM1

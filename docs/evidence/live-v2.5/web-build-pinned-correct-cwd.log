@@ -1,0 +1,73 @@
+▲ Next.js 16.4.3 (webpack)
+✓ Running next.config.ts took 26ms
+
+  Creating an optimized production build ...
+⚠ Compiled with warnings in 10.4s
+
+../../wt_final_candidate/web/node_modules/@privy-io/react-auth/dist/esm/index-CSy63ITt.mjs
+Module not found: Can't resolve '@farcaster/mini-app-solana' in '/workspace/near_hackathon/wt_final_candidate/web/node_modules/@privy-io/react-auth/dist/esm'
+
+Import trace for requested module:
+../../wt_final_candidate/web/node_modules/@privy-io/react-auth/dist/esm/index-CSy63ITt.mjs
+../../wt_final_candidate/web/node_modules/@privy-io/react-auth/dist/esm/index.mjs
+./lib/privyBridge.tsx
+./lib/wallet.tsx
+./app/providers.tsx
+
+✓ Compiled successfully in 23.9s
+  Running TypeScript ...
+  Finished TypeScript in 9.1s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/29) ...
+  Generating static pages using 7 workers (7/29) 
+  Generating static pages using 7 workers (14/29) 
+  Generating static pages using 7 workers (21/29) 
+✓ Generating static pages using 7 workers (29/29) in 605ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)                 Revalidate  Expire
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /api/agent
+├ ƒ /api/ai
+├ ƒ /api/check
+├ ƒ /api/health
+├ ƒ /api/keyhole
+├ ƒ /api/keys
+├ ƒ /api/oneclick
+├ ƒ /api/oneclick/deposit
+├ ƒ /api/oneclick/fund
+├ ƒ /api/pcs
+├ ƒ /api/pledge-sandbox
+├ ƒ /api/prices
+├ ƒ /api/supply
+├ ƒ /api/tokens
+├ ƒ /api/worker
+├ ○ /apple-icon.png
+├ ○ /ask
+├ ○ /atlas
+├ ○ /attack
+├ ○ /dashboard
+├ ○ /demo
+├ ƒ /gallery
+├ ƒ /identity
+├ ○ /judge
+├ ○ /key
+├ ○ /keys
+├ ○ /manifest.webmanifest
+├ ○ /mint                           1m      1y
+├ ○ /pledge
+├ ƒ /pledge/lend/[tokenId]
+├ ○ /pnl
+├ ○ /settle
+├ ○ /source
+├ ○ /start
+├ ○ /swap
+├ ○ /vault                          1m      1y
+└ ƒ /verify
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

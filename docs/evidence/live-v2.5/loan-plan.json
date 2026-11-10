@@ -1,0 +1,353 @@
+{
+  "offline_only": true,
+  "network": "mainnet",
+  "contract": "keyhole-devmo.near",
+  "borrower": "kh-borrow-1112.keyhole-devmo.near",
+  "lender": "kh-lend-1112.keyhole-devmo.near",
+  "token_id": "DEDICATED_TEAM_TOKEN",
+  "setup": [
+    {
+      "action": "create_new_team_subaccount",
+      "account": "kh-borrow-1112.keyhole-devmo.near",
+      "initial_near": "0.04",
+      "sponsor": "keyhole-devmo.near",
+      "submit": false
+    },
+    {
+      "action": "create_new_team_subaccount",
+      "account": "kh-lend-1112.keyhole-devmo.near",
+      "initial_near": "0.04",
+      "sponsor": "keyhole-devmo.near",
+      "submit": false
+    },
+    {
+      "gate": "Both names MUST be absent. Keys generated and retained only by approved wallet tool; never printed. No scripts generate or collect them."
+    },
+    {
+      "gate": "Dedicated eligible account/title assigned to borrower; exactly 0.70 USDC initial reserve (0.10 borrower exit leaves 0.60, above the second 0.50 floor; 0.10 lender exit leaves 0.50), no undisclosed assets plus disclosed later deposits. Final reviewed build/policy/caps/route/cooldown and same-domain old-owner negatives verified; funding disabled until approval."
+    }
+  ],
+  "operator_preflight": [
+    {
+      "signer": "keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "register_payout_account",
+      "args": {
+        "account_id": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443"
+      },
+      "deposit_yocto": "3200000000000000000000",
+      "gas_tgas": 20,
+      "if_unregistered": true,
+      "submit": false,
+      "gate": "Final actual pinned minter must match; explicit separate operator onboarding consent; never an auto-funded faucet. Any additional royalty/legacy-credit beneficiary is a STOP for a newly costed approval."
+    }
+  ],
+  "worker_native_admissions": [
+    {
+      "owner": "kh-borrow-1112.keyhole-devmo.near",
+      "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+      "receiver": "keyhole-devmo.near",
+      "begin": {
+        "method": "begin_value_op",
+        "deposit_yocto": "10000000000000000000000",
+        "gas_tgas": 35
+      },
+      "finish": {
+        "method": "finish_value_op",
+        "deposit_yocto": "0",
+        "gas_tgas": 35
+      },
+      "submit": false,
+      "gate": "Worker signs exact final owner/epoch/action; native admission precedes provider dispatch. Definite terminal completion only; UNKNOWN remains locked. Excess becomes minter credit, not automatic external refund."
+    },
+    {
+      "owner": "kh-lend-1112.keyhole-devmo.near",
+      "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+      "receiver": "keyhole-devmo.near",
+      "begin": {
+        "method": "begin_value_op",
+        "deposit_yocto": "10000000000000000000000",
+        "gas_tgas": 35
+      },
+      "finish": {
+        "method": "finish_value_op",
+        "deposit_yocto": "0",
+        "gas_tgas": 35
+      },
+      "submit": false,
+      "gate": "Worker signs exact final owner/epoch/action; native admission precedes provider dispatch. Definite terminal completion only; UNKNOWN remains locked. Excess becomes minter credit, not automatic external refund."
+    }
+  ],
+  "runA": [
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "open_loan",
+      "args": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "terms": {
+          "lender": "kh-lend-1112.keyhole-devmo.near",
+          "principal": "10000000000000000000000",
+          "repayment": "10100000000000000000000",
+          "duration_sec": "7200",
+          "grace_sec": "900",
+          "floor_raw": "500000",
+          "funding_deadline_ns": "SET_FROM_FINAL_CHAIN_TIME"
+        }
+      },
+      "deposit_yocto": "9000000000000000000000",
+      "gas_tgas": 200,
+      "submit": false,
+      "prepend_actions_if_unregistered": [
+        {
+          "method": "register_payout_account",
+          "args": {
+            "account_id": "kh-borrow-1112.keyhole-devmo.near"
+          },
+          "deposit_yocto": "3200000000000000000000",
+          "gas_tgas": 20
+        }
+      ],
+      "registration_gate": "Confirm final payout_storage_cost equals quoted 0.0032 NEAR and consent to permanent nonrefundable fee; skip only when final registered=true; one atomic same-receiver transaction, total 220 Tgas"
+    },
+    {
+      "gate": "Exact terminal lower freeze; no previous orders/authorities/value operations; fresh bound certificate <=60s; independent runtime/signing-authority verification"
+    },
+    {
+      "signer": "kh-lend-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "fund_loan",
+      "args": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "nonce": "READ_NEXT_NONCE",
+        "certificate": "FRESH_BOUND_CERTIFICATE",
+        "signature": "CERTIFICATE_SIGNATURE"
+      },
+      "deposit_yocto": "10000000000000000000000",
+      "gas_tgas": 200,
+      "submit": false,
+      "prepend_actions_if_unregistered": [
+        {
+          "method": "register_payout_account",
+          "args": {
+            "account_id": "kh-lend-1112.keyhole-devmo.near"
+          },
+          "deposit_yocto": "3200000000000000000000",
+          "gas_tgas": 20
+        }
+      ],
+      "registration_gate": "Confirm final payout_storage_cost equals quoted 0.0032 NEAR and consent to permanent nonrefundable fee; skip only when final registered=true; one atomic same-receiver transaction, total 220 Tgas"
+    },
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "claim_payout",
+      "args": {},
+      "deposit_yocto": "1",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "gate": "Principal native delivery FINAL, pending payout null. Debt starts only on the exact native-success callback; failed/UNKNOWN cashout keeps due_ns=0. UNKNOWN stops the batch."
+    },
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "repay_loan",
+      "args": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "nonce": "READ_NEXT_NONCE"
+      },
+      "deposit_yocto": "10100000000000000000000",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "signer": "kh-lend-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "claim_payout",
+      "args": {},
+      "deposit_yocto": "1",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "gate": "Repayment disables default locally; lender native cashout confirmed; ordinary thaw terminal, loan absent, bond credit available."
+    },
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "claim_payout",
+      "args": {},
+      "deposit_yocto": "1",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "gate": "Actual ordinary borrower self-exit within caps/cooldown/minimum, no bypass. Reuse funds only after exact terminal evidence; record exit/route fees."
+    },
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "worker_op": "withdraw",
+      "params": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "owner_epoch": "READ_FINAL_OWNER_EPOCH",
+        "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+        "chain": "near",
+        "amount": "100000",
+        "to": "kh-borrow-1112.keyhole-devmo.near"
+      },
+      "auth": "fresh owner-bound NEP-413; never reuse an old signature",
+      "submit": false,
+      "gate": "No outstanding UNKNOWN, loan absent, terminal thaw and real cooldown; exact provider route/fee quote within aggregate fee ceiling"
+    }
+  ],
+  "runB": [
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "open_loan",
+      "args": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "terms": {
+          "lender": "kh-lend-1112.keyhole-devmo.near",
+          "principal": "10000000000000000000000",
+          "repayment": "10100000000000000000000",
+          "duration_sec": "7200",
+          "grace_sec": "900",
+          "floor_raw": "500000",
+          "funding_deadline_ns": "SET_FROM_FINAL_CHAIN_TIME"
+        }
+      },
+      "deposit_yocto": "9000000000000000000000",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "gate": "Exact terminal lower freeze; no previous orders/authorities/value operations; fresh bound certificate <=60s; independent runtime/signing-authority verification"
+    },
+    {
+      "signer": "kh-lend-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "fund_loan",
+      "args": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "nonce": "READ_AFTER_A_TERMINAL",
+        "certificate": "FRESH_BOUND_CERTIFICATE",
+        "signature": "CERTIFICATE_SIGNATURE"
+      },
+      "deposit_yocto": "10000000000000000000000",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "claim_payout",
+      "args": {},
+      "deposit_yocto": "1",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "gate": "Principal native delivery FINAL, pending payout null. Debt starts only on the exact native-success callback; failed/UNKNOWN cashout keeps due_ns=0. UNKNOWN stops the batch."
+    },
+    {
+      "gate": "Related team parties consent to deliberate default. Wait actual chain now > due_ns + 900000000000 (not >=); no clock manipulation."
+    },
+    {
+      "signer": "kh-lend-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "claim_default",
+      "args": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "nonce": "READ_AFTER_A_TERMINAL",
+        "receiver_id": "kh-lend-1112.keyhole-devmo.near"
+      },
+      "deposit_yocto": "1",
+      "gas_tgas": 200,
+      "submit": false
+    },
+    {
+      "gate": "Same account, lender current holder, old holder/session denied; genuine terminal thaw/cooldown; actual tiny ordinary-policy lender self-exit. Whole account at risk; report exact remainder."
+    },
+    {
+      "signer": "kh-lend-1112.keyhole-devmo.near",
+      "worker_op": "withdraw",
+      "params": {
+        "token_id": "DEDICATED_TEAM_TOKEN",
+        "owner_epoch": "READ_FINAL_OWNER_EPOCH",
+        "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+        "chain": "near",
+        "amount": "100000",
+        "to": "kh-lend-1112.keyhole-devmo.near"
+      },
+      "auth": "fresh owner-bound NEP-413; never reuse an old signature",
+      "submit": false,
+      "gate": "No outstanding UNKNOWN, loan absent, terminal thaw and real cooldown; exact provider route/fee quote within aggregate fee ceiling"
+    },
+    {
+      "signer": "kh-borrow-1112.keyhole-devmo.near",
+      "receiver": "keyhole-devmo.near",
+      "method": "claim_payout",
+      "args": {},
+      "deposit_yocto": "1",
+      "gas_tgas": 200,
+      "submit": false
+    }
+  ],
+  "budgets": {
+    "permanent_payout_slot_charge_near": "0.0032 each, 0.0064 for two new accounts; nonrefundable, not credit or loan bond; exact final-chain cost gate",
+    "permanent_payout_slot_attached_yocto": "6400000000000000000000",
+    "first_action_total_attached_yocto": "54500000000000000000006",
+    "registration_actions": 2,
+    "loan_stage_attached_yocto": "48100000000000000000006",
+    "loan_stage_attached_near": "0.048100000000000000000006 (gross recycled attachments, not net spending)",
+    "loan_stage_calls": 11,
+    "account_funding_near": "0.08 (capital, not fee)",
+    "creation_charge_estimate_near": "0.014 (two accounts; confirm protocol, separate gas)",
+    "loan_bond_near": "0.009 per open; recyclable only after terminal bond cashout",
+    "principal_near": "0.01 per fund",
+    "repayment_near": "0.0101 Run A only",
+    "gross_premium_near": "0.0001 (not net profit)",
+    "aggregate_gas_and_creation_ceiling_near": "0.10; STOP if insufficient",
+    "reserve_usdc_ceiling": "0.70 exact planned capital; 1.00 absolute per transfer",
+    "compute_usdc_ceiling": "1.00 aggregate INCLUDING compute/provider/route fees; fresh quote required",
+    "worker_admission_gross_attached_yocto": "20000000000000000000000",
+    "optional_minter_slot_attached_yocto": "3200000000000000000000",
+    "all_keys_contract_gross_attached_ceiling_yocto": "77700000000000000000006",
+    "native_transactions_with_worker_and_optional_minter_slot": 16,
+    "total_native_cash_allocation_ceiling_near": "0.2032 = 0.08 borrower/lender capital + 0.10 gas/creation reserve + 0.02 minter admission reserve + at most 0.0032 separate minter slot; user slot charges draw from account capital; gross attachments are not added again",
+    "total_usdc_allocation_ceiling": "1.70 = 0.70 reserve capital + at most 1.00 aggregate fees; final unspent reserve is not a fee",
+    "ordinary_exit_raw": "100000 per ending (0.10 USDC); second floor has 0.60 USDC beforehand",
+    "per_transaction_ceiling_near": "0.10 excluding separately approved infrastructure",
+    "infrastructure": "NOT included; separate reviewed deploy/storage preflight",
+    "exact_fees": "UNKNOWN until preflight; no funds sent by this program"
+  },
+  "evidence": [
+    "Finalized transaction and receipt lineage (principal, repayment, cashouts, default)",
+    "Exact source/build/code hash, policy/controller/version and runtime certificate bytes",
+    "Provider request IDs and exact terminal outcomes; balance delivery deltas net of gas",
+    "Chain activation/due/grace, actual cooldown and cap remaining",
+    "Public sanitized ledger; no credentials, signatures authorizing value, private balances/history or blinding nonce"
+  ],
+  "labels": {
+    "purpose": "team-operated mechanism pilot; demand UNKNOWN",
+    "timing": "Target 12 Nov 2026 18:00 Africa/Cairo; complete 13 Nov 2026 14:00 Africa/Cairo, subject to actual cooldown and settlement buffer"
+  },
+  "readiness": {
+    "status": "STOP_BEFORE_EXECUTION",
+    "lending_enabled": false,
+    "all_six_bindings": null,
+    "minter_payout_registered": false,
+    "new_team_accounts": "both absent in finalized RPC reads",
+    "worker_active_version": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    "registered_worker_versions": 22,
+    "source_guard_requires_versions": 1,
+    "guarded_worker_rebuild_sha256": "59379cfecd2af439f2eea7a175aa418ebbf43fbcb8e0fd22a99fdf10db37145a",
+    "compute_money_usd": "0.514657",
+    "compute_top_up_now": "NOT NEEDED: public nonce-1 money balance 0.514657 USD, no reservation. Do not prepay another 0.50 USDC before a fresh per-call reservation/route quote and worker readiness. Nonce-0 balance is zero; configured payer must deliberately match the funded key.",
+    "setup_not_yet_exact": "Minter slot 0.0032 NEAR is mandatory before a new mint. Source worker mint deposit 0.012 NEAR (excess becomes pull credit); collateral registration requires strictly more than 0.02 NEAR, with the remainder forwarded as actual provider-policy storage. Exact payload-dependent provider quote, token, wallet policy, runtime and fresh signatures remain unavailable. Stop if a registration would exceed 0.1 NEAR; do not guess its forward deposit. Contract-owner set_lending_enabled true needs 1 yocto only after these gates. Worker publication/version retirement also need separate reviewed authorization.",
+    "cost_interpretation": "Loan stages are exactly costed attachments, NOT future gas fees. Two payout slots 0.0064 NEAR nonrefundable; 0.009 bond per loan is recyclable only after confirmed cashout; 0.01 principal per loan; 0.0101 repayment A only. Account setup 0.08 NEAR capital plus creation/gas. 0.70 USDC reserve capital funds both ordinary 0.10-USDC exits and leaves 0.50. Exact future provider/route/compute/native fees are UNKNOWN until quotes and FINAL outcomes, not guaranteed by this plan."
+  }
+}

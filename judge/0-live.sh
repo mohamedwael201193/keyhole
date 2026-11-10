@@ -201,9 +201,9 @@ try:
             problems.append("identity.json minter is not 64 lowercase hex")
         elif minter != pinned_minter:
             problems.append("minter %s != pinned identity %s" % (minter, pinned_minter))
-        # Live v2.4 royalty is 500 bps. Do not assert a candidate 0% rate.
+        # Preserved live royalty is 500 bps. Do not assert a candidate 0% rate.
         if cfg.get("royalty_bps") != 500:
-            problems.append("royalty_bps=%s (live v2.4 is 500)" % cfg.get("royalty_bps"))
+            problems.append("royalty_bps=%s (preserved live value is 500)" % cfg.get("royalty_bps"))
         if problems:
             bad("config() mismatch: %s" % "; ".join(problems))
         else:
@@ -220,10 +220,10 @@ try:
     ver = None
     if isinstance(meta, dict):
         ver = meta.get("version")
-    if ver == "2.4.0":
-        ok("contract_source_metadata.version == 2.4.0 (live)")
+    if ver == contract.get("version", "2.4.0"):
+        ok("contract_source_metadata.version == %s (live)" % ver)
     else:
-        bad("contract_source_metadata.version == %r (expected live 2.4.0)" % ver)
+        bad("contract_source_metadata.version == %r (expected %s)" % (ver, contract.get("version", "2.4.0")))
 except Exception as e:
     bad("contract_source_metadata() failed: %s" % e)
 
