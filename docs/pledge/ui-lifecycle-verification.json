@@ -1,65 +1,141 @@
 {
-  "candidate_only": true,
-  "recorded_at_cairo": "2026-11-10T03:20:55.119845+02:00",
-  "reviewed_parents": {
-    "ui": "c976895b536a2b951b10816a1c96d9dd96132992",
-    "contract": "f58b3eb14d3dc7d2b969eb68c00ddde34179cc79",
-    "prepaid_slot_base": "92da2864dd3b154fba088303f39bd11c32091f24"
-  },
-  "local_checks": {
-    "web_typecheck": "PASS",
-    "web_lint": {
-      "errors": 0,
-      "inherited_warnings": 10
-    },
-    "web_units": {
-      "files_passed": 85,
-      "tests_passed": 1599
-    },
-    "web_production_default_off_build": "PASS (webpack, existing dependencies)",
-    "funded_spec_typecheck": "PASS, not execution",
-    "worker_units_passed": 593,
-    "worker_native_and_wasi_strict_clippy": "PASS",
-    "native_sandbox_tests_passed": 45,
-    "offline_planner_tests_passed": 7,
-    "offline_claims": {
-      "total": 537,
-      "pass": 243,
-      "fail": 0,
-      "error": 0,
-      "skip": 294
-    },
-    "terminal_display": "PASS: missing final-chain reads cannot fabricate a repaid/default/thawed ending; delayed cancellation retains its canceled resolution"
-  },
-  "normal_contract_wasm_sha256": "e0922b1e922f0c874e210e4a266711d4dca0e7f4e9d37f86654a23e08ce42bd3",
-  "candidate_worker_wasm_sha256": "5036f802dda07466bfbc7a9bf0731ca1ac2b3469ff14892a34dde08b28b09ce9",
-  "deployed_identity_pins_changed": false,
-  "native_storage_bytes": {
-    "prepaid_payout_slot": 320,
-    "loan_peak_after_prepaid_slots": 580,
-    "cancel": 450,
-    "default": 574,
-    "bounded_retained_default_owner_epoch": 117
-  },
-  "browser_acceptance": {
-    "completed": false,
-    "funded_repay_ending_executed": false,
-    "funded_default_ending_executed": false,
-    "final_screenshots": [],
-    "required_viewports": [
-      "1440x900",
-      "390x844"
-    ],
-    "required_destination": "/workspace/near_hackathon/shots_pledge/final/",
-    "ci_spec": "web/e2e/pledge-funded.spec.ts",
-    "ci_artifact": "pledge-final",
-    "reason": "No browser/desktop delegation available to executor; backend smoke and compiled spec are not browser proof."
-  },
-  "release": {
-    "keep_pr_194_draft": true,
-    "production_write_gate": "OFF",
-    "mainnet_operations_executed": false,
-    "custody_fixture": "explicit mock; native sandbox transactions/receipts and production pure guarded drivers real",
-    "live_same_ledger_comparison": "unavailable, explicitly labelled"
-  }
+    "candidate_only":  true,
+    "recorded_at_cairo":  "2026-11-10T03:20:55.119845+02:00",
+    "reviewed_parents":  {
+                             "ui":  "c976895b536a2b951b10816a1c96d9dd96132992",
+                             "contract":  "f58b3eb14d3dc7d2b969eb68c00ddde34179cc79",
+                             "prepaid_slot_base":  "92da2864dd3b154fba088303f39bd11c32091f24"
+                         },
+    "local_checks":  {
+                         "web_typecheck":  "PASS",
+                         "web_lint":  {
+                                          "errors":  0,
+                                          "inherited_warnings":  10
+                                      },
+                         "web_units":  {
+                                           "files_passed":  85,
+                                           "tests_passed":  1599
+                                       },
+                         "web_production_default_off_build":  "PASS (webpack, existing dependencies)",
+                         "funded_spec_typecheck":  "PASS, not execution",
+                         "worker_units_passed":  593,
+                         "worker_native_and_wasi_strict_clippy":  "PASS",
+                         "native_sandbox_tests_passed":  45,
+                         "offline_planner_tests_passed":  7,
+                         "offline_claims":  {
+                                                "total":  537,
+                                                "pass":  243,
+                                                "fail":  0,
+                                                "error":  0,
+                                                "skip":  294
+                                            },
+                         "terminal_display":  "PASS: missing final-chain reads cannot fabricate a repaid/default/thawed ending; delayed cancellation retains its canceled resolution"
+                     },
+    "normal_contract_wasm_sha256":  "e0922b1e922f0c874e210e4a266711d4dca0e7f4e9d37f86654a23e08ce42bd3",
+    "candidate_worker_wasm_sha256":  "5036f802dda07466bfbc7a9bf0731ca1ac2b3469ff14892a34dde08b28b09ce9",
+    "deployed_identity_pins_changed":  false,
+    "native_storage_bytes":  {
+                                 "prepaid_payout_slot":  320,
+                                 "loan_peak_after_prepaid_slots":  580,
+                                 "cancel":  450,
+                                 "default":  574,
+                                 "bounded_retained_default_owner_epoch":  117
+                             },
+    "browser_acceptance":  {
+                               "completed":  true,
+                               "funded_repay_ending_executed":  true,
+                               "funded_default_ending_executed":  true,
+                               "final_screenshots":  [
+                                                         {
+                                                             "sha256":  "588da7b4f7b76ecf004f08fe99f26c442843372893c8751bf2a6c4ee7ee1eafc",
+                                                             "file":  "default_ending_exit_confirmed_borrower_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "17478be7dc2cc4ac315a787e639f094c51acb405ec56b1c4f8ec002a0aa58654",
+                                                             "file":  "default_ending_exit_confirmed_borrower_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "63589631e294dcfc736fec89a6b27299efe76d9ca348e8c172e07cac1e5e1193",
+                                                             "file":  "default_ending_exit_confirmed_borrower_390_inventory.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "3595c3fdc84c78f9b3c63b0fb6499e11058b815ba816884cbd27527ad9dc1768",
+                                                             "file":  "default_ending_exit_confirmed_lender_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "2ef2d9d6db6048f2aa381fec03ad07596570fccd174b4242f790c377ab30c0a7",
+                                                             "file":  "default_ending_exit_confirmed_lender_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "2a6e65f8d59639af47f5e9aaad4d29aec74f946ee2d11b49d31f6ea29297b48f",
+                                                             "file":  "default_ending_exit_confirmed_lender_390_inventory.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "78243957c350bf1d5ee6e061dcbf359d42e4af0a987a995c63d52a33bc11c8cb",
+                                                             "file":  "repay_ending_exit_confirmed_borrower_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "eec5af7a29fae3ced9925166d69534b3ff01ebb89f4422c99c0efaa973c8f865",
+                                                             "file":  "repay_ending_exit_confirmed_borrower_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "b7a3d99c229a2514effa2488f325fdf7523af924e58d3aa6ebb4f849f11a6d79",
+                                                             "file":  "repay_ending_exit_confirmed_borrower_390_inventory.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "c18e3b75e21bb7566c3d297b739d1a673012c80dbad76ab6bc083f6f8cc5da20",
+                                                             "file":  "repay_ending_exit_confirmed_lender_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "a78405f30a817924f7998783d6860158d0ab0a7ce33f6654faefc09c24ae8e73",
+                                                             "file":  "repay_ending_exit_confirmed_lender_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "e7cf0add29fff04363bccb5eb7a6d483192f91b063bc0c59f41800ccf487da8d",
+                                                             "file":  "repay_ending_exit_confirmed_lender_390_inventory.png"
+                                                         }
+                                                     ],
+                               "required_viewports":  [
+                                                          "1440x900",
+                                                          "390x844"
+                                                      ],
+                               "required_destination":  "web/test-results/pledge-final (CI artifact)",
+                               "ci_spec":  "web/e2e/pledge-funded.spec.ts",
+                               "ci_artifact":  "pledge-final",
+                               "reason":  "Executed both complete endings on Windows Node 20 with a real local native sandbox in WSL. Local loopback forwarding preserved raw RPC bytes after a WSL restart. Custody HTTP, registry and WASI host remain explicitly mocked."
+                           },
+    "release":  {
+                    "keep_pr_194_draft":  true,
+                    "production_write_gate":  "OFF",
+                    "mainnet_operations_executed":  false,
+                    "custody_fixture":  "explicit mock; native sandbox transactions/receipts and production pure guarded drivers real",
+                    "live_same_ledger_comparison":  "unavailable, explicitly labelled"
+                },
+    "ci_web_fix_verification":  {
+                                    "recorded_at_cairo":  "2026-11-10T07:35:35.3327151+02:00",
+                                    "source_parent":  "8414f13568cfb0f5a41609d172cdb9dcf3a0510c",
+                                    "source_scope":  "working tree native UI harness and funded acceptance changes",
+                                    "node":  "20.20.2",
+                                    "web_typecheck":  "PASS",
+                                    "web_lint":  {
+                                                     "errors":  0,
+                                                     "inherited_warnings":  10
+                                                 },
+                                    "web_unit_tests_passed":  1651,
+                                    "web_unit_files_passed":  87,
+                                    "production_funded_build":  "PASS: npm run build",
+                                    "native_ui_bridge_tests_passed":  3,
+                                    "funded_browser_tests_passed":  1,
+                                    "funded_browser_retries":  0,
+                                    "state_viewport_checks":  64,
+                                    "screenshots":  96,
+                                    "final_native_receipts":  13,
+                                    "negative_cases":  3,
+                                    "local_artifact_directory":  "D:\\route\\near\\KEYHOLE\\LOCAL_ONLY\\funded-ci-fixed",
+                                    "evidence_sha256":  "8003f4694956501a15819dd349ef4de0ca9dfea4b89333295fa1b58e1cc62ab7",
+                                    "native_receipts_sha256":  "1bc6054a4d56643ab5d5e148ab6be4c8cb51d27fdfa23acf8a0ed536168cc9e2",
+                                    "prior_head_failed_job":  129625115727,
+                                    "pushed_8414_failed_job":  129639722117,
+                                    "remote_fix_run":  "not run: local commit only; no push"
+                                }
 }
