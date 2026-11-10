@@ -393,7 +393,7 @@ mod host {
         let (mid, msk) = minter()?;
         let payout_supported = match view(&keys_contract(),"payout_storage_cost",json!({})) {
             Ok(cost)=>{if view(&keys_contract(),"payout_account_registered",json!({"account_id":mid}))?!=true{return Err(err("minter_payout_unregistered",format!("Operator onboarding required: register the minter payout slot with exact {cost} yoctoNEAR nonrefundable storage. No sponsorship was charged.")));} true}
-            Err(e) if e.message.contains("MethodNotFound")||e.message.contains("MethodResolveError")=>false,
+            Err(e) if mint_payout::legacy_missing_method(&e)=>false,
             Err(e)=>return Err(e),
         };
         let (acct_raw, e) = rpc::view_account(&mid, "final");

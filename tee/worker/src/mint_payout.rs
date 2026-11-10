@@ -4,6 +4,11 @@
 use crate::Error;
 use serde_json::{json, Value};
 
+/// Only the definitive missing-method error identifies a pre-payout contract.
+pub fn legacy_missing_method(error: &Error) -> bool {
+    error.message.contains("MethodNotFound")
+}
+
 pub trait Host {
     fn snapshot(&mut self) -> Result<(Value, Value), Error>;
     fn claim(&mut self) -> Result<String, Error>;
@@ -67,6 +72,20 @@ mod tests {
             }
             self.pending = json!({"nonce":"1"});
             Ok("unsigned-test-transaction-hash".into())
+        }
+    }
+    #[test]
+    fn only_missing_method_allows_legacy_mint_without_payout_methods() {
+        assert!(legacy_missing_method(&err(
+            "rpc",
+            "MethodResolveError(MethodNotFound)"
+        )));
+        for message in [
+            "MethodResolveError(MethodInvalidSignature)",
+            "timeout",
+            "unavailable",
+        ] {
+            assert!(!legacy_missing_method(&err("rpc", message)));
         }
     }
     fn fake() -> Fake {
