@@ -22,6 +22,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  async function view(method:string,args:unknown={}){const r=await rpc("query",{request_type:"call_function",finality:"final",account_id:meta.contract,method_name:method,args_base64:Buffer.from(JSON.stringify(args)).toString("base64")});return JSON.parse(Buffer.from(r.result).toString());}
  const loan=()=>view("get_loan",{token_id:meta.token_id});
  const balance=async(account:string)=>BigInt((await rpc("query",{request_type:"view_account",finality:"final",account_id:account})).amount);
+ const nativeReceipts:FinalWalletReceipt[]=[];
  const submissions:WalletSubmission[]=[],observed:{role:WalletRole;request:Request}[]=[];
  const privateLenderRequests:string[]=[];
  lender.on("request",r=>{if(r.url().includes("/api/worker")&&r.postData()?.includes('"pledge_inventory"'))privateLenderRequests.push(r.postData()!);});
@@ -40,6 +41,14 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   expect(payload).toEqual({action:"tx",account_id:account,receiver_id:meta.contract,actions:calls.map(c=>({type:"FunctionCall",params:{methodName:c.method,args:c.args,gas:c.gas,deposit:c.deposit}}))});
   expect(j.status).toHaveProperty("SuccessValue");
   const submission:WalletSubmission={role,hash:j.transaction.hash,account,contract:meta.contract,calls};submissions.push(submission);
+  // Capture genuine FINAL evidence before later sandbox clock advances can retire
+  // node history. Every read still binds this ORIGINAL submission, never a new tx.
+  nativeReceipts.push(await readFinalReceipt(async()=>{
+   const response=await request.post(meta.rpc,{data:{jsonrpc:"2.0",id:"final-ledger",method:"tx",params:{tx_hash:submission.hash,sender_account_id:submission.account,wait_until:"FINAL"}}});
+   const reply=await response.json();
+   if(!response.ok())expect(reply.error?.cause?.name).toBe("TIMEOUT_ERROR");
+   return reply;
+  }));
   return submission;
  }
  async function refresh(){for(const p of [borrower,lender])await p.getByRole("button",{name:"Refresh chain",exact:true}).click();}
@@ -87,17 +96,6 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   // Drain every observed response deterministically, including unexpected extra submissions.
   const collected=await Promise.all(observed.map(async x=>{const r=await x.request.response();expect(r?.ok()).toBeTruthy();const j=await r!.json();expect(j.error).toBeFalsy();return {role:x.role,hash:j.transaction.hash};}));
   expect(collected).toEqual(submissions.map(({role,hash})=>({role,hash})));
-  // Bound load on the local node. Only read the original identity again on a timeout;
-  // never substitute a wallet hash, a pending reply, or a second submission for FINAL.
-  const nativeReceipts:FinalWalletReceipt[]=[];
-  for(const x of submissions)nativeReceipts.push(await readFinalReceipt(async()=>{
-   const response=await request.post(meta.rpc,{data:{jsonrpc:"2.0",id:"final-ledger",method:"tx",params:{tx_hash:x.hash,sender_account_id:x.account,wait_until:"FINAL"}}});
-   const reply=await response.json();
-   // near-sandbox uses HTTP 408 for its typed JSON-RPC timeout. This is still
-   // unavailable evidence, eligible only for the same bounded read-only retry.
-   if(!response.ok())expect(reply.error?.cause?.name).toBe("TIMEOUT_ERROR");
-   return reply;
-  }));
   assertFundedWalletLedger(submissions,nativeReceipts);
   evidence.native_receipts=nativeReceipts;expect(evidence.states).toHaveLength(64);expect(evidence.negatives).toHaveLength(3);
   const pngs=readdirSync(shots).filter(x=>x.endsWith(".png"));expect(pngs).toHaveLength(96);

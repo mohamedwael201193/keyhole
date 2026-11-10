@@ -1,4 +1,5 @@
 import {it,expect,vi} from "vitest";
+import {readFileSync} from "node:fs";
 import {readFinalReceipt} from "../e2e/support/final-receipt";
 import type {FinalWalletReceipt} from "../e2e/support/pledge-ledger";
 const final={final_execution_status:"FINAL",transaction:{hash:"same-hash"}} as FinalWalletReceipt;
@@ -20,4 +21,14 @@ it.each(["NONE","INCLUDED","EXECUTED_OPTIMISTIC","EXECUTED"])("%s never becomes 
 });
 it("missing/malformed results are not receipt evidence",async()=>{
  await expect(readFinalReceipt(async()=>({}))).rejects.toThrow("missing result");
+});
+
+it("funded FINAL evidence is captured at submission, before any later clock advance",()=>{
+ const source=readFileSync(new URL("../e2e/pledge-funded.spec.ts",import.meta.url),"utf8");
+ const submit=source.split("async function submit(")[1].split("async function refresh(")[0];
+ expect(submit).toContain("nativeReceipts.push(await readFinalReceipt(");
+ expect(submit).toContain("tx_hash:submission.hash,sender_account_id:submission.account,wait_until:\"FINAL\"");
+ expect(submit.indexOf("nativeReceipts.push")).toBeLessThan(submit.indexOf("return submission"));
+ expect(source).toContain("assertFundedWalletLedger(submissions,nativeReceipts)");
+ expect(source).not.toContain('Promise.all(submissions.map(x=>rpc("tx"');
 });
