@@ -4,9 +4,19 @@ KEYHOLE is an NFT on NEAR mainnet (`keyhole-devmo.near`, NEP-171) that is the vi
 The enclave keeps one custody wallet per `token_id`, answers only the account that owns the token right now, and enforces caps, replay and recipient checks.
 Every enclave answer carries an attestation whose executed wasm hash equals the published, reproducible build in this repository.
 
-## Fastest verification (about 1 minute, no keys, no spending)
+## Fastest verification (under 5 minutes, no keys, no spending, no Rust, no npm)
 
-Get the source with `git clone`, or, without GitHub access, download the source tarball from the site:
+```bash
+git clone --depth 1 https://github.com/mohamedwael201193/keyhole && cd keyhole
+bash judge/0-live.sh
+```
+
+`judge/0-live.sh` needs only `curl`, `bash` and `python3`. It compares the live contract `code_hash` with [`identity.json`](identity.json), reads `config` / `contract_source_metadata` / `nft_total_supply`, re-fetches the live worker `info` attestation, and checks one recorded mainnet refusal receipt. Each step prints `PASS` or `FAIL`.
+
+In a browser only: [the verifier](https://keyhole-seven.vercel.app/verify) and [the judge path](https://keyhole-seven.vercel.app/judge).
+
+To go further, get the source with `git clone`, or, without GitHub access, download the source tarball from the site:
+
 
 ```bash
 curl -fsSLO https://keyhole-seven.vercel.app/source/keyhole-src.tar.gz
@@ -44,6 +54,7 @@ Values that change over time (token supply, heartbeat count, beat-key gas allowa
 
 | Command | Proves |
 |---|---|
+| `./judge/0-live.sh` | live `code_hash` equals `identity.json`; config / metadata / supply views; one attested info call; one recorded refusal receipt. No wallet, no rebuild |
 | `./judge/1-contract.sh` | on-chain contract code equals `contracts/keys/deployed/keyhole_keys.wasm`; the minter is the TEE-held implicit account |
 | `./judge/2-attestations.sh` | each recorded call in `judge/evidence.json` ran the attested build and its published output hashes to the attested `output_hash` |
 | `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec --rebuild` | rebuild the worker from source with the pinned toolchain; its sha256 equals what the enclave executed |

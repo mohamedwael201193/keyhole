@@ -1,9 +1,10 @@
 # Judge kit: verify KEYHOLE on NEAR mainnet yourself
 
-Needs `bash`, `curl`, `jq`, `sha256sum` (and Node 18+ for step 4). Nothing here uses our keys.
+The zero-install path (`./judge/0-live.sh`) needs only `bash`, `curl` and `python3` (standard library). The deeper steps also use `jq` and `sha256sum` (and Node 18+ for step 4). Nothing here uses our keys.
 
 | step | command | what it proves |
 |---|---|---|
+| 0 | `./judge/0-live.sh` | live `code_hash` equals `identity.json`; `config`, source metadata and supply views; the live worker `info` attestation; one recorded mainnet refusal receipt. No wallet, no Rust, no npm |
 | 1 | `./judge/1-contract.sh` | the keys NFT contract on `keyhole-devmo.near` runs exactly `contracts/keys/deployed/keyhole_keys.wasm` (on-chain `code_hash`), and its minter is the TEE-held account |
 | 2 | `./judge/2-attestations.sh` | each recorded refusal and trade was produced by the attested worker build; the published output hashes to the attested `output_hash` |
 | 3 | `./judge/3-verify.sh [call_id]` (same as `./verify.sh <call_id> --rebuild`) | rebuild the worker from source (pinned toolchain); the sha256 equals what the TEE executed |
