@@ -79,7 +79,7 @@ Fees and deposits for every action, and what a sealed-floor attestation does and
 
 The source worker (not published) requires the separately released v2.6 CAS contract, then prepares its real provider policy inside the enclave, quotes exact storage with the minter refund beneficiary, and submits collateral with the enclave-only minter. A separately pinned, signed authority review binds the exact wallet, policy, build and owner epoch. The sealed eligibility writer runs only after the original registration is FINAL and the immutable binding matches. Holder-only exit previews retain actual provider minima without broadcasting a withdrawal.
 
-[R3 release tooling and finding map](docs/evidence/worker-provisioning/R3.md) · [Production path and runnable proof](docs/evidence/worker-provisioning/README.md) · [Independent-review schema](tee/worker/src/collateral.rs) · [Reproducible candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Storage, route and bounded compute accounting](docs/evidence/worker-provisioning/RESEARCH.md).
+[R4 release lifecycle and finding map](docs/evidence/worker-provisioning/R4.md) · [Production path and runnable proof](docs/evidence/worker-provisioning/README.md) · [Independent-review schema](tee/worker/src/collateral.rs) · [Reproducible candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Storage, route and bounded compute accounting](docs/evidence/worker-provisioning/RESEARCH.md).
 
 <!-- IDENTITY:START -->
 ### Live mainnet identities
@@ -494,7 +494,7 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | 1Click API for quotes, deposits and status | `op_quote` [`tee/worker/src/main.rs:287`](tee/worker/src/main.rs). `confidentiality` is `basic` or `advanced` ([`:294`–`:295`](tee/worker/src/main.rs)). Dry quote first; a wet quote only on execute. Client: [`web/lib/oneclick.ts`](web/lib/oneclick.ts) | shipped |
 | Handle REFUNDED and FAILED, shown in the UI | [/settle](https://keyhole-seven.vercel.app/settle) reads 1Click status live. A real `NO_LIQUIDITY` order reads REFUNDED ([evidence](docs/evidence/oneclick-sol/README.md)) | shipped |
 | Show where the funds sit at every step | Vault balances and deposit addresses on [/vault](https://keyhole-seven.vercel.app/vault). `/settle` shows where each 1Click order's funds are | partial |
-| History of executed trades, with explorer links | Vault history lists trades with intent links. Some links are still being added | partial |
+| History of executed trades, with explorer links | Vault history lists executed trades with their recorded intent links | supported |
 | Dry-run mode with real quotes and no funds | /settle **Dry-run quote** calls 1Click with `dry: true`. [`web/app/api/oneclick/route.ts`](web/app/api/oneclick/route.ts) refuses any body that is not dry ([tests](web/tests/oneclick.test.ts)) | shipped |
 | Chain Signatures stretch | Per-key EVM address and a real MPC signature from `v1.signer` ([`chain_address`, `chain_sign`](tee/worker/src/main.rs)). Refused while the key is locked or in cooldown, and at most 5 per key per day ([evidence](docs/evidence/publish-a55ebb14/README.md)) | shipped |
 
@@ -791,7 +791,7 @@ Detailed trust boundaries (a broken TEE, privacy limits, the browser, agents, fu
 
 ## 9. Numbers
 
-Current repair validation: [R3 proof and exact finding map](docs/evidence/worker-provisioning/R3.md); [historical R2 proof](docs/evidence/worker-provisioning/R2.md). Mainnet and product measurements below retain their explicitly named historical evidence.
+Current repair validation: [R4 proof and exact finding map](docs/evidence/worker-provisioning/R4.md); [historical R2 proof](docs/evidence/worker-provisioning/R2.md). Mainnet and product measurements below retain their explicitly named historical evidence.
 
 | Component | Count | How it was measured |
 |---|---|---|
@@ -987,7 +987,7 @@ python3 judge/gen-claims.py .
 node judge/verify-claims.mjs --offline
 ```
 
-The runtime suite uses real local NEAR receipts with labelled custody/transport mocks. [Current repair proof and finding map](docs/evidence/worker-provisioning/R2.md) · [Live identities](#live-mainnet-identities) · [Historical profiling](docs/evidence/integration-stack/contract-size.md).
+The runtime suite uses real local NEAR receipts with labelled custody/transport mocks. [Current repair proof and finding map](docs/evidence/worker-provisioning/R4.md) · [Live identities](#live-mainnet-identities) · [Historical profiling](docs/evidence/integration-stack/contract-size.md).
 Safety and release status: [SECURITY.md](SECURITY.md#two-sided-pledge-ui-release-gate).
 
 Before a public loan exists the floor is **Declared, not yet verified**. An open offer that is not yet checked says **Minimum to verify · not a current balance**. After the pinned Ed25519 signature and exact final-chain loan template verify, the live page says **Verified minimum · sealed signature verified**. A funded loan shows **Loan minimum · not a current balance**. None of these is a fresh balance, and an expired proof is not relabelled as one. The canonical encoding/signature test consumes the contract/worker's [V3 delivery-domain Borsh vector](protocol/loan-certificate-v3-delivery.json). The public request accepts only token ID and loan nonce, never another asset or minimum.

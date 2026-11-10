@@ -5177,17 +5177,17 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/COSTS_AND_RISK.md"
   },
   {
-   "id": "path-docs/evidence/worker-provisioning/R3.md",
-   "claim": "Linked repo path docs/evidence/worker-provisioning/R3.md exists",
+   "id": "path-docs/evidence/worker-provisioning/R4.md",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/R4.md exists",
    "where": "README.md:82",
    "evidence_type": "file",
-   "evidence": "docs/evidence/worker-provisioning/R3.md",
+   "evidence": "docs/evidence/worker-provisioning/R4.md",
    "check": {
     "type": "path",
-    "path": "docs/evidence/worker-provisioning/R3.md"
+    "path": "docs/evidence/worker-provisioning/R4.md"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/R3.md"
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/R4.md"
   },
   {
    "id": "path-docs/evidence/worker-provisioning/README.md",
@@ -7515,6 +7515,32 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/RUNBOOK_DELTA.md"
+  },
+  {
+   "id": "path-scripts/release/lifecycle.mjs",
+   "claim": "Linked repo path scripts/release/lifecycle.mjs exists",
+   "where": "SECURITY.md:610",
+   "evidence_type": "file",
+   "evidence": "scripts/release/lifecycle.mjs",
+   "check": {
+    "type": "path",
+    "path": "scripts/release/lifecycle.mjs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-scripts/release/lifecycle.mjs"
+  },
+  {
+   "id": "path-scripts/release/lifecycle.test.mjs",
+   "claim": "Linked repo path scripts/release/lifecycle.test.mjs exists",
+   "where": "SECURITY.md:610",
+   "evidence_type": "file",
+   "evidence": "scripts/release/lifecycle.test.mjs",
+   "check": {
+    "type": "path",
+    "path": "scripts/release/lifecycle.test.mjs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-scripts/release/lifecycle.test.mjs"
   },
   {
    "id": "site-/",

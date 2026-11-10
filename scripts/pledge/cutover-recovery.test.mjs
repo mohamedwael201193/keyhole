@@ -81,7 +81,7 @@ test("forged legacy Boolean cannot reopen without real guarded attestation", asy
   );
 });
 test("fresh attested guarded withdraw preview restores after all client gates", async () => {
-  const { e, ctx } = fixtures();
+  const { e, ctx } = fixtures("restore");
   assert.deepEqual(
     await cutoverNext(plan, ready(e.restore, e.info), {
       context: async () => ctx,
@@ -115,7 +115,7 @@ for (const [name, change] of [
   ],
 ])
   test(name + " cannot mark restore-ready", async () => {
-    const f = fixtures();
+    const f = fixtures("restore");
     change(f);
     assert.equal(
       (

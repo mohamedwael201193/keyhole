@@ -34,6 +34,7 @@ import {
   attested,
   registry,
 } from "./gates.mjs";
+import {PHASES,seconds,makeCheckpoint,verifyCheckpoint} from "./lifecycle.mjs";
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 export const load = (p) => JSON.parse(readFileSync(p, "utf8"));
 export function artifacts() {
@@ -120,8 +121,8 @@ export function decodeDeployment(row) {
     signed: row.signed_transaction_as_base64,
   };
 }
-export async function context(e = {}, call = rpc, net = fetch) {
-  const s = await capture(call, undefined, false),
+export async function context(e = {}, call = rpc, net = fetch, opts={}) {
+  const s = await capture(call, opts.block, false),
     q = async (account, method, args = {}, block = s.block.hash) =>
       JSON.parse(
         Buffer.from(
@@ -147,17 +148,22 @@ export async function context(e = {}, call = rpc, net = fetch) {
     count = await q("outlayer.near", "get_version_count", {
       project_id: ACCOUNT + "/keyhole",
     });
-  const tokenId =
-    e.restore && JSON.parse(e.restore.input.auth.message).params.token_id;
+  if(opts.phase==="predeploy")validateBefore(s);
+  const tokenId = ["provision-pre","provision-post","pilot-post","all"].includes(opts.phase)?e.prepare?.output?.token_id:opts.phase==="restore"||!opts.phase ? e.restore&&JSON.parse(e.restore.input.auth.message).params.token_id:undefined;
   const ctx = {
     snapshot: s,
+    phase:opts.phase||"predeploy", historical:opts.historical===true,
+    now:opts.historical?seconds(s.block):Math.floor(Date.now()/1000),
+    verifyCheckpoint:(cp,phase,trust)=>verifyCheckpoint(cp,phase,trust,call,net),
+    verifyContractPost:proof=>revalidatePost(proof,call),
     token: s.tokens.find((t) => t.token_id === tokenId),
     control: s.controls.find((t) => t.token_id === tokenId),
     pledge: s.pledge,
     minter_account: s.config.minter,
     registry: { ...project, count, versions },
-    fetchAttestation,
+    fetchAttestation:async id=>{must(/^[0-9a-f-]{36}$/.test(id),"call ID");const r=await net("https://api.outlayer.ai/attestations/by-call/"+id,{signal:AbortSignal.timeout(30000)});must(r.ok,"attestation unavailable");return r.json();},
   };
+  if(opts.phase==='predeploy'&&e.native_before){const before=await capture(call,e.native_before.block.hash);validateBefore(before);must(canonical(before)===canonical(e.native_before)&&before.block.height<=s.block.height&&s.block.height-before.block.height<=100,'invalid/stale approved before snapshot');preserved(before,s);ctx.approved_snapshot=before;}
   const minter = await call("query", {
     request_type: "view_account",
     block_id: s.block.hash,
@@ -185,7 +191,7 @@ export async function context(e = {}, call = rpc, net = fetch) {
   ).toString();
   // Invalid JSON cannot reach worker submission, even if maintenance is absent.
   ctx.alias_checks = [];
-  for (const path of ["/api/keyhole", "/api/worker"]) {
+  for (const path of opts.historical?[]:["/api/keyhole", "/api/worker"]) {
     const r = await net("https://keyhole-seven.vercel.app" + path, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -198,6 +204,8 @@ export async function context(e = {}, call = rpc, net = fetch) {
       cache_control: r.headers.get("cache-control"),
     });
   }
+  if(opts.historical)ctx.alias_checks=e.barrier_observation;
+  if(ctx.phase==="provision-pre"){
   const balance = await net(
     "https://api.outlayer.ai/public/payment-keys/" + ACCOUNT + "/1/balance",
     { signal: AbortSignal.timeout(30000) },
@@ -209,7 +217,8 @@ export async function context(e = {}, call = rpc, net = fetch) {
     available: Number(v.available),
     reserved: Number(v.reserved),
   };
-  if (e.prepare?.output) {
+  }
+  if (e.prepare?.output && ["provision-pre","provision-post","pilot-post","all"].includes(ctx.phase)) {
     const p = e.prepare.output;
     ctx.binding = await q(ACCOUNT, "get_collateral_binding", {
       token_id: p.token_id,
@@ -227,7 +236,7 @@ export async function context(e = {}, call = rpc, net = fetch) {
     }
     return out;
   };
-  if (e.secret_merge) {
+  if (e.secret_merge && ctx.phase==="restore") {
     const z = e.secret_merge,
       tx = await call("tx", {
         tx_hash: z.hash,
@@ -256,7 +265,8 @@ export async function context(e = {}, call = rpc, net = fetch) {
       receipts: await receipts(tx),
     };
   }
-  if (e.freeze) {
+  if (e.freeze && ["pilot-post","all"].includes(ctx.phase)) {
+    must(e.freeze.token_id===e.prepare?.output?.token_id,"foreign freeze token");
     ctx.freeze_loan = await q(ACCOUNT, "get_loan", {
       token_id: e.freeze.token_id,
     });
@@ -269,17 +279,19 @@ export async function context(e = {}, call = rpc, net = fetch) {
       { wallet_pubkey: ctx.freeze_binding.wallet_pubkey },
     );
     const c = e.certificate.output.certificate;
-    ctx.certificate_template = await q(ACCOUNT, "loan_certificate_template", {
-      token_id: e.freeze.token_id,
-      observed_at_ns: c.observed_at_ns,
-      expires_at_ns: c.expires_at_ns,
-    });
+    const observed=BigInt(c.observed_at_ns);must(observed%1000000n===0n,'noncanonical observed timestamp');
+    const candidates=[];for(let h=s.block.height, n=0;h>=0&&n<64;h--,n++){const b=(await call('block',{block_id:h})).header;const t=BigInt(b.timestamp)/1000000n*1000000n;if(t===observed)candidates.push({hash:b.hash,height:b.height,timestamp:b.timestamp});if(t<observed)break;}
+    must(candidates.length===1,'certificate observation is not one unique canonical finalized block');ctx.certificate_block=candidates[0];
+    must((await call('block',{block_id:ctx.certificate_block.height})).header.hash===ctx.certificate_block.hash,'certificate block reorg');
+    ctx.certificate_template = await q(ACCOUNT, "loan_certificate_template", {token_id:e.freeze.token_id,observed_at_ns:c.observed_at_ns,expires_at_ns:c.expires_at_ns},ctx.certificate_block.hash);
+    for(const [method,args,value] of [['get_loan',{token_id:e.freeze.token_id},ctx.freeze_loan],['get_collateral_binding',{token_id:e.freeze.token_id},ctx.freeze_binding],['get_control_state',{token_id:e.freeze.token_id},ctx.control]])must(canonical(await q(ACCOUNT,method,args,ctx.certificate_block.hash))===canonical(value),'certificate/current subject state diverged');
     e.freeze.tx = await call("tx", {
       tx_hash: e.freeze.hash,
       sender_account_id: e.freeze.signer_id,
       wait_until: "FINAL",
     });
     ctx.freeze_receipts = await receipts(e.freeze.tx);
+    const heights=[];for(const n of [e.freeze.tx.transaction_outcome,...e.freeze.tx.receipts_outcome]){const b=(await call('block',{block_id:n.block_hash})).header;must((await call('block',{block_id:b.height})).header.hash===b.hash,'noncanonical freeze receipt block');heights.push(b.height);}ctx.freeze_start_height=Math.min(...heights);ctx.freeze_end_height=Math.max(...heights);
   }
   return ctx;
 }
@@ -313,8 +325,8 @@ export async function broadcastOnce(path, tx, before, call = rpc) {
     return { hash: tx.hash, state: "UNKNOWN" };
   }
 }
-export async function workerPublication(e, trust, call = rpc, net = fetch) {
-  const ctx = await context(e, call, net),
+export async function workerPublication(e, trust, call = rpc, net = fetch, opts={}) {
+  const ctx = opts.context||await context(e, call, net,{phase:"restore"}),
     g = await releaseGates(e, trust, ctx);
   must(g.ready_restore, "restore gates incomplete");
   must(
@@ -388,7 +400,7 @@ export async function workerPublication(e, trust, call = rpc, net = fetch) {
     e.publication_approval,
     trust,
     "worker-publication",
-    Math.floor(Date.now() / 1000),
+    ctx.now,
   );
   must(
     approved.registry_before_sha256 === sha(canonical(old)),
@@ -442,7 +454,7 @@ export async function workerPublication(e, trust, call = rpc, net = fetch) {
     for (const n of [tx.transaction_outcome, ...tx.receipts_outcome]) {
       const b = await call("block", { block_id: n.block_hash });
       must(
-        b.header.height > snap.header.height &&
+        (await call("block",{block_id:b.header.height})).header.hash===b.header.hash && b.header.height > snap.header.height &&
           b.header.height <= ctx.snapshot.block.height,
         "registry transaction outside capture bounds",
       );
@@ -480,24 +492,26 @@ export async function main(argv) {
     "--journal",
     "--hash",
     "--phase",
+    "--observe",
   ]);
   const args = {};
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     must(allowed.has(k) && !Object.hasOwn(args, k), "unknown/duplicate flag");
-    args[k] = ["--dry-run", "--execute", "--post", "--check-gates"].includes(k)
+    args[k] = ["--dry-run", "--execute", "--post", "--check-gates", "--observe"].includes(k)
       ? true
       : argv[++i];
     must(args[k] !== undefined, "missing flag value");
   }
   must(
-    ["--dry-run", "--execute", "--post", "--check-gates"].filter((k) => args[k])
+    ["--dry-run", "--execute", "--post", "--check-gates", "--observe"].filter((k) => args[k])
       .length <= 1,
     "choose one mode",
   );
   artifacts();
   const e = args["--evidence"] ? load(args["--evidence"]) : {},
     trust = args["--trust"] ? load(args["--trust"]) : {};
+  if(args["--before"]&&args["--check-gates"])e.native_before=load(args["--before"]);
   if (args["--post"]) {
     must(
       args["--before"] && args["--hash"] && args["--out"],
@@ -526,47 +540,16 @@ export async function main(argv) {
     );
     return;
   }
+  if(args['--observe']){must(args['--out'],'observation output required');const c=await context(e,rpc,fetch,{phase:'predeploy'});journal(args['--out'],{block:c.snapshot.block,barrier_observation:c.alias_checks,barrier_sha256:sha(canonical(c.alias_checks))});console.log('READ ONLY observation saved; no approval or readiness implied');return;}
   if (args["--check-gates"]) {
-    let ctx = {},
-      contextOK = true;
-    try {
-      ctx = await context(e);
-    } catch {
-      contextOK = false;
-    }
-    const result = await releaseGates(e, trust, ctx);
-    if (!contextOK)
-      console.log("FAIL fresh_context_collection: required before execution");
-    for (const r of result.rows)
-      console.log(`${r.status} ${r.name}: ${r.when}`);
-    const phase = args["--phase"] || "all";
-    must(
-      ["all", "predeploy", "restore", "provision", "pilot-post"].includes(
-        phase,
-      ),
-      "unknown gate phase",
-    );
-    const phases =
-      phase === "predeploy"
-        ? ["predeploy"]
-        : phase === "restore"
-          ? ["predeploy", "restore"]
-          : phase === "provision"
-            ? ["predeploy", "restore", "provision"]
-            : ["predeploy", "restore", "provision", "pilot-post"];
-    const ready = result.rows
-      .filter((r) => phases.includes(r.phase))
-      .every((r) => r.status === "PASS");
-    console.log(
-      "PHASE " +
-        phase +
-        " " +
-        (ready ? "PASS" : "FAIL") +
-        "; all_mainnet_gates=" +
-        result.ready,
-    );
-    must(ready && contextOK, "release gates remain NO-GO");
-    return;
+    const phase=args['--phase']||'predeploy';must(PHASES.includes(phase)||phase==='all','unknown gate phase');
+    let ctx={phase},contextOK=true;try{ctx=await context(e,rpc,fetch,{phase});}catch{contextOK=false;}
+    const result=await releaseGates(e,trust,ctx);if(!contextOK)console.log('FAIL fresh_context_collection: required before execution');
+    for(const r of result.rows)console.log(`${r.status} ${r.name}: ${r.when}`);
+    console.log(`PHASE ${phase} ${result.phase_ready&&contextOK?'PASS':'FAIL'}; all_mainnet_gates=${result.all_mainnet_ready}`);
+    must(result.phase_ready&&contextOK,'release gates remain NO-GO');
+    if(phase==='restore')await workerPublication(e,trust,rpc,fetch,{context:ctx});
+    if(args['--out'])journal(args['--out'],makeCheckpoint(phase,e,ctx));return;
   }
   if (args["--execute"]) {
     must(
@@ -606,7 +589,7 @@ export async function main(argv) {
     const gates = await releaseGates(
       { ...e, approval: load(args["--approval"]) },
       trust,
-      await context(e),
+      await context({...e,native_before:before},rpc,fetch,{phase:"predeploy"}),
     );
     must(gates.ready_deploy, "maintenance/drain or native approval missing");
     const tx = decodeDeployment(load(args["--signed"]));
@@ -660,7 +643,7 @@ export async function main(argv) {
     writeFileSync(args["--out"], JSON.stringify(before, null, 2) + "\n", {
       flag: "wx",
     });
-  const gates = await releaseGates(e, trust, {});
+  const gates = await releaseGates(e, trust, {phase:"predeploy"});
   console.log(`DRY_RUN ONLY account=${ACCOUNT}`);
   console.log("PASS candidate " + CANDIDATE + " bytes=487260");
   console.log(

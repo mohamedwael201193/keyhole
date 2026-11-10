@@ -1,0 +1,13 @@
+identity  /workspace/near_hackathon/wt_worker_prov/identity.json
+PASS  identity.json names contract keyhole-devmo.near and worker d337e822…
+PASS  on-chain code_hash 3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b == identity.json
+PASS  config() owner=keyhole-devmo.near treasury=keyhole-devmo.near royalty_bps=500 minter=015a0259…
+      config.beats (grows) = 2
+PASS  contract_source_metadata.version == 2.5.0 (live)
+PASS  nft_total_supply == 6 (>= 6, captured 2026-11-09)
+PASS  info call dc3668db-674f-4865-a2ce-272f70c41b0d has a TDX quote (6676 chars)
+PASS  attested executed_wasm_sha256 == identity.json worker d337e822…
+PASS  registered wasm_hash == executed_wasm_sha256
+PASS  tx H8qJNgox… is FINAL with the typed one-key refusal (FINAL typed refusal)
+COUNTS 9 0 0
+----- all steps PASS (live identities from identity.json; no wallet, no build) -----

@@ -1,4 +1,5 @@
 // Fail-closed evidence validators. Missing execution-time evidence is FAIL, never PASS.
+import {PHASES,PREVIOUS,approvedSubject} from './lifecycle.mjs';
 import { createPublicKey, verify } from "node:crypto";
 import {
   canonical,
@@ -229,27 +230,35 @@ export function approval(e, trust, action, now) {
   return p;
 }
 export async function releaseGates(e = {}, trust = {}, ctx = {}) {
-  const now = ctx.now ?? Math.floor(Date.now() / 1000),
-    rows = [];
-  const add = async (name, phase, f) => {
+  const now = ctx.now ?? Math.floor(Date.now() / 1000), rows=[];
+  const phase=ctx.phase||"all";must(phase==="all"||PHASES.includes(phase),"unknown release phase");
+  if(phase==='all'){
+   const combined=[];for(const stage of PHASES){try{if(stage==='pilot-post'){const r=await releaseGates(e,trust,{...ctx,phase:stage});combined.push(...r.rows);}else{const v=await ctx.verifyCheckpoint(e.checkpoints?.[stage],stage,trust);const r=await releaseGates(v.evidence,trust,{...v.ctx,phase:stage});combined.push(...r.rows);}}catch{combined.push({name:stage+'_checkpoint',phase:stage,status:'FAIL',when:stage==='predeploy'?'required before execution':EXECUTION});}}
+   return {ready:combined.every(r=>r.status==='PASS'),phase_ready:combined.every(r=>r.status==='PASS'),all_mainnet_ready:combined.every(r=>r.status==='PASS'),ready_deploy:false,ready_restore:false,rows:combined};
+  }
+  const add = async (name, rowPhase, f) => {
+    if(phase!=="all"&&rowPhase!==phase)return;
+    const phaseName=rowPhase;
     try {
       await f();
       rows.push({
         name,
         status: "PASS",
-        phase,
-        when: phase === "predeploy" ? "required before execution" : EXECUTION,
+        phase:phaseName,
+        when: phaseName === "predeploy" ? "required before execution" : EXECUTION,
       });
     } catch {
       rows.push({
         name,
         status: "FAIL",
-        phase,
-        when: phase === "predeploy" ? "required before execution" : EXECUTION,
+        phase:phaseName,
+        when: phaseName === "predeploy" ? "required before execution" : EXECUTION,
       });
     }
   };
-  await add("maintenance_and_submitter_drain", "predeploy", () => {
+  if(PREVIOUS[phase])await add('original_'+PREVIOUS[phase]+'_checkpoint',phase,async()=>{const previous=await ctx.verifyCheckpoint(e.checkpoints?.[PREVIOUS[phase]],PREVIOUS[phase],trust);must(previous.block.height<=ctx.snapshot.block.height,'phase replay/reversed block');ctx.previous=previous;if(['provision-post','pilot-post'].includes(phase)){const old=approvedSubject(previous.evidence,previous.ctx);const current=approvedSubject(e,ctx,phase==='pilot-post');approval(e.pilot_approval,trust,'pilot-budget',now);must(canonical(old)===canonical(current),'foreign/replayed pilot checkpoint');}});
+  await add('code_only_deployment_postcheck','deploy-post',async()=>{await ctx.verifyContractPost(e.contract_post);must(e.contract_post.after.block.height<=ctx.snapshot.block.height,'deployment checkpoint interval');});
+  await add("maintenance_and_submitter_drain", phase==="restore"?"restore":"predeploy", () => {
     const p = approval(e.maintenance, trust, "maintenance-and-drain", now),
       aliases = ["/api/keyhole", "/api/worker"];
     must(
@@ -277,6 +286,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       );
     }
     must(ctx.alias_checks?.length === 2, "fresh alias checks missing");
+    must(p.barrier_sha256===sha(canonical(ctx.alias_checks))&&canonical(e.barrier_observation)===canonical(ctx.alias_checks),"signed barrier observation mismatch");
     for (let i = 0; i < 2; i++)
       must(
         ctx.alias_checks[i].path === aliases[i] &&
@@ -293,7 +303,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       "unreviewed protocol fees",
     );
     must(
-      /^[0-9a-f]{64}$/.test(a.before_state_sha256 || "") &&
+      a.before_state_sha256===sha(canonical(ctx.approved_snapshot||ctx.snapshot)) &&
         /^ed25519:[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(a.public_key || "") &&
         /^[1-9][0-9]*$/.test(a.nonce || ""),
       "native approval lacks exact snapshot/key/nonce",
@@ -307,17 +317,18 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       "native ceiling/backing",
     );
   });
-  await add("reviewer_audit_report_quorum", "provision", () => {
-    auditEvidence(e.audit, trust, now);
+  if(['provision-pre','provision-post','pilot-post'].includes(phase))await add('current_release_authority',phase,()=>{registry(ctx.registry);must(ctx.snapshot.code.sha256==='54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a'&&ctx.pledge.network==='mainnet'&&Buffer.from(ctx.pledge.attestor_public_key,'base64').toString('hex')===ctx.snapshot.config.minter,'live code/immutable authority mismatch');});
+  await add("reviewer_audit_report_quorum", "provision-pre", () => {
+    auditEvidence(e.audit, trust, now);approvedSubject(e,ctx);
     must(
       e.audit.provision_id === e.prepare.output.provision_id,
       "audit not sealed artifact",
     );
   });
-  await add("provider_policy_artifact", "provision", () =>
+  await add("provider_policy_artifact", "provision-pre", () =>
     policyArtifact(e.prepare, ctx),
   );
-  await add("funding_and_actual_Q", "provision", async () => {
+  await add("funding_and_actual_Q", "provision-pre", async () => {
     await attested(e.quote, "collateral_quote", ctx);
     const q = e.quote.output,
       p = e.prepare.output,
@@ -337,17 +348,14 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
         BigInt(q.binding_deposit_yocto) === D &&
         D <= BigInt(a.max_binding_yocto) &&
         q.storage_refund_to === ctx.minter_account &&
-        BigInt(e.provision.output.deposit_yocto) === D &&
-        BigInt(
-          JSON.parse(e.install.input.auth.message).params.max_deposit_yocto,
-        ) <= BigInt(a.max_binding_yocto),
+        a.max_binding_yocto && ctx.binding===null,
       "Q or approved D mismatch",
     );
     const f = ctx.funding;
     must(
       f &&
         BigInt(f.available_after_storage_and_liabilities) >=
-          (ctx.binding?.ready ? 0n : D) + 10n ** 23n,
+          D + 10n ** 23n,
       "unbacked minter reserve",
     );
     must(
@@ -400,7 +408,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
   });
   await add(
     "configured_auditor_and_sealed_eligibility",
-    "provision",
+    "provision-post",
     async () => {
       must(
         ["provision_collateral", "reconcile_collateral"].includes(
@@ -408,7 +416,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
         ),
         "not provisioning",
       );
-      await attested(
+      const completed=await attested(
         e.provision,
         e.provision.input.op,
         ctx,
@@ -421,6 +429,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
           e.provision.output.status === "success",
         "key/seal not proved",
       );
+      const preview=await attested(e.restore,"withdraw_dry_run",ctx),inventory=await attested(e.inventory,"pledge_inventory",ctx);must(preview.timestamp>=completed.timestamp&&inventory.timestamp>=completed.timestamp,"exit/inventory predates completed provision");
       // Include the original attested provision request even if read-only reconcile completed later.
       await attested(
         e.install,
@@ -442,10 +451,10 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       );
     },
   );
-  await add("singleton_registry_and_guarded_restore", "restore", () =>
+  await add("singleton_registry_and_guarded_restore", phase==="provision-post"?"provision-post":"restore", () =>
     restoreProbe(e.restore, ctx),
   );
-  await add("lower_policy_and_binding", "provision", () => {
+  await add("lower_policy_and_binding", "provision-post", () => {
     const b = ctx.binding,
       p = e.prepare.output,
       o = ctx.lower_policy;
@@ -460,8 +469,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       o?.owner === ACCOUNT &&
         o.version === 1 &&
         o.locked === true &&
-        (o.frozen === false ||
-          (o.frozen === true && ctx.freeze_loan?.state === "Offered")) &&
+        o.frozen === false &&
         Buffer.from(sha(o.encrypted_data), "hex").toString("base64") ===
           p.policy_hash,
       "fresh lower policy mismatch",
@@ -472,6 +480,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
     "pilot-post",
     async () => {
       const f = e.freeze;
+      const target=approvedSubject(e,ctx,true),certificate=e.certificate.output.certificate;must(e.freeze.token_id===target.token_id&&ctx.freeze_loan.token_id===target.token_id&&ctx.control.pledged===true,'not the approved Offered pilot');must(ctx.freeze_loan.owner_epoch===target.owner_epoch&&ctx.freeze_binding.wallet_pubkey===target.wallet_pubkey&&ctx.freeze_binding.encrypted_policy_hash===target.policy_hash&&ctx.freeze_binding.policy_version===target.policy_version,'foreign loan binding/epoch');must(ctx.freeze_start_height>ctx.previous.block.height&&ctx.freeze_end_height<=ctx.certificate_block.height&&ctx.certificate_block.height<=ctx.snapshot.block.height,'phase/freeze/certificate block interval');must(canonical(e.certificate.block)===canonical(ctx.certificate_block)&&BigInt(ctx.certificate_block.timestamp)/1000000n*1000000n===BigInt(certificate.observed_at_ns),'certificate not bound to exact observed block');must(certificate.token_id===target.token_id&&certificate.wallet_pubkey===target.wallet_pubkey&&certificate.owner_epoch===target.owner_epoch&&certificate.borrower===target.owner&&certificate.policy_hash===target.policy_hash&&certificate.policy_version===target.policy_version&&certificate.contract===target.contract&&certificate.network===target.network&&certificate.domain==='KEYHOLE_SEALED_LOAN_V3_DELIVERY'&&certificate.loan_nonce===target.loan_nonce&&canonical(certificate.terms)===canonical(target.terms),'foreign certificate/approved terms');must(e.certificate.input.params?.token_id===target.token_id&&e.certificate.input.params.loan_nonce===target.loan_nonce&&Object.keys(e.certificate.input.params).length===2,'wrong certificate request');must(ctx.frozen_policy.owner===ACCOUNT&&ctx.frozen_policy.locked===true&&ctx.frozen_policy.version===Number(target.policy_version)&&Buffer.from(sha(ctx.frozen_policy.encrypted_data),'hex').toString('base64')===target.policy_hash,'foreign frozen policy');
       finalGraph(f.tx, f.hash, ACCOUNT, [ctx.pledge.custody_contract]);
       const a = f.tx.transaction.actions;
       must(
@@ -482,7 +491,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
         loan = ctx.freeze_loan;
       must(
         p.token_id === loan.token_id &&
-          canonical(p.terms) === canonical(loan.terms) &&
+          canonical(p.terms) === canonical(target.terms) && canonical(loan.terms)===canonical(target.terms) &&
           f.tx.transaction.signer_id === loan.borrower,
         "wrong loan",
       );
@@ -544,8 +553,8 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
           c.frozen === true &&
           c.floor_met === true &&
           c.pending_value_ops === "0" &&
-          BigInt(c.observed_at_ns) <= BigInt(now) * 1000000000n &&
-          BigInt(c.expires_at_ns) > BigInt(now) * 1000000000n,
+          BigInt(c.observed_at_ns) <= BigInt(ctx.snapshot.block.timestamp) &&
+          BigInt(c.expires_at_ns) > BigInt(ctx.historical?now:Math.floor(Date.now()/1000)) * 1000000000n,
         "certificate not current loan",
       );
       must(
@@ -558,7 +567,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       );
     },
   );
-  await add("complete_inventory_and_exit_cooldown", "provision", async () => {
+  await add("complete_inventory_and_exit_cooldown", phase==="provision-post"?"provision-post":"provision-pre", async () => {
     await attested(e.inventory, "pledge_inventory", ctx);
     const o = e.inventory.output;
     must(
@@ -582,7 +591,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       "stale inventory",
     );
   });
-  await add("exit_route_fee_deadline", "restore", async () => {
+  await add("exit_route_fee_deadline", phase==="provision-post"?"provision-post":"restore", async () => {
     await restoreProbe(e.restore, ctx);
     must(
       Date.parse(e.restore.output.deadline) > now * 1000 &&
@@ -649,16 +658,7 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
       "actual original refund not proved",
     );
   });
-  return {
-    ready: rows.every((r) => r.status === "PASS"),
-    ready_deploy: rows
-      .filter((r) => r.phase === "predeploy")
-      .every((r) => r.status === "PASS"),
-    ready_restore: rows
-      .filter((r) => ["predeploy", "restore"].includes(r.phase))
-      .every((r) => r.status === "PASS"),
-    rows,
-  };
+  const pass=rows.length>0&&rows.every(r=>r.status==='PASS');return {ready:pass,phase_ready:pass,all_mainnet_ready:phase==='pilot-post'&&pass,ready_deploy:phase==='predeploy'&&pass,ready_restore:phase==='restore'&&pass,phase,rows};
 }
 
 // Exact Rust Borsh schema; vector-tested against the existing certificate fixture.

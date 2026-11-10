@@ -3,11 +3,12 @@ import { generateKeyPairSync, sign } from "node:crypto";
 import {
   ACCOUNT,
   CANDIDATE,
-  WORKER,
+  WORKER, ROLLBACK, b58, requireThat as must,
   canonical,
   sha,
 } from "./promotion-lib.mjs";
-import { certificateBytes } from "./gates.mjs";
+import {PHASES,makeCheckpoint} from "./lifecycle.mjs";
+import { certificateBytes, releaseGates } from "./gates.mjs";
 import { readFileSync } from "node:fs";
 export const clone = (x) => structuredClone(x);
 export function signer() {
@@ -61,7 +62,7 @@ export function graph(
     status: { SuccessValue: "" },
   };
 }
-export function fixtures() {
+export function fixtures(phase="pilot-post") {
   const now = Math.floor(Date.now() / 1000),
     auditor = signer(),
     release = signer(),
@@ -134,6 +135,7 @@ export function fixtures() {
     funding: { available_after_storage_and_liabilities: String(10n ** 24n) },
     compute_balance: { available: 514657, reserved: 0 },
     pledge: {
+      network:"mainnet", next_loan_nonce:"5",
       custody_contract: "outlayer.near",
       attestor_public_key: attestor.pk,
     },
@@ -164,7 +166,7 @@ export function fixtures() {
       contract: ACCOUNT,
       provision_id: id,
       authority_audit_sha256: sha("synthetic report"),
-      issued_at_sec: now - 1,
+      issued_at_sec: now - 100,
       expires_at_sec: now + 600,
       no_presigned_authorities: true,
       all_aliases_reviewed: true,
@@ -332,6 +334,7 @@ export function fixtures() {
   });
   ctx.certificate_template = c;
   ctx.freeze_loan = {
+    owner_epoch:"3",
     token_id: "pilot",
     borrower: "alice.near",
     terms: c.terms,
@@ -340,12 +343,14 @@ export function fixtures() {
     policy_busy: false,
     policy_sequence: "1",
   };
-  ctx.freeze_binding = { wallet_pubkey: wallet, policy_generation: "1" };
-  ctx.frozen_policy = { frozen: true };
+  ctx.freeze_binding = { ...ctx.binding, policy_generation: "1" };
+  ctx.frozen_policy = { ...ctx.lower_policy, frozen: true };
   e.certificate = row("loan_certificate", authParams, {
     certificate: c,
     signature: attestor.sign(certificateBytes(c)).toString("base64"),
   });
+  e.certificate.input={op:"loan_certificate",params:{token_id:"pilot",loan_nonce:"5"}};
+  e.pilot_approval=approve("pilot-budget",{...e.pilot_approval.payload,subject:{contract:ACCOUNT,network:"mainnet",token_id:"pilot",owner:"alice.near",owner_epoch:"3",wallet_pubkey:wallet,policy_hash:policyHash,policy_version:"1",provision_id:id,loan_nonce:"5",terms:c.terms}});
   const tx = graph("fixture-freeze", ACCOUNT, "alice.near");
   tx.transaction.actions = [
     {
@@ -497,15 +502,27 @@ export function fixtures() {
     limit_micro_usd: 10000,
     status: "SUCCESS",
   }));
-  return {
-    e,
-    ctx,
-    trust: {
+  const trust = {
       auditor_public_key: auditor.pk,
       release_public_key: release.pk,
       direct_submitters: [{ id: "unit", public_key: submitter.pk }],
-    },
-    row,
-    approve,
-  };
+    };
+  e.barrier_observation=clone(ctx.alias_checks);e.maintenance=approve('maintenance-and-drain',{...e.maintenance.payload,barrier_sha256:sha(canonical(e.barrier_observation))});e.pause_acknowledgements[0].signature=submitter.sign('KEYHOLE_PAUSE_V1\n'+sha(canonical(e.maintenance.payload))).toString('base64');
+  const stages=new Map(),caps={};
+  for(const [i,stage] of PHASES.entries()){
+    const cctx={...ctx,phase:stage,control:{...ctx.control,pledged:stage==='pilot-post'},pledge:{...ctx.pledge,next_loan_nonce:stage==='pilot-post'?'5':'4'},lower_policy:{...ctx.lower_policy,frozen:stage==='pilot-post'},binding:stage==='provision-pre'?null:clone(ctx.binding)};
+    cctx.snapshot={...clone(ctx.snapshot),block:{height:100+i*10,hash:'stage-'+stage,timestamp:String(BigInt(now)*1000000000n)},pledge:{...cctx.pledge,lending_enabled:stage==='pilot-post'}};
+    cctx.certificate_block=clone(cctx.snapshot.block);cctx.freeze_start_height=145;cctx.freeze_end_height=146;
+    cctx.verifyCheckpoint=async(cp,expected)=>{must(cp&&canonical(cp)===canonical(caps[expected]),'invalid fixture checkpoint');const old=stages.get(expected);const r=await releaseGates(old.e,trust,old.ctx);must(r.phase_ready,'checkpoint gates failed');return {ctx:old.ctx,evidence:old.e,block:old.ctx.snapshot.block,phase:expected};};
+    cctx.verifyContractPost=async p=>must(p?.fixture==='code-only-deploy','missing fixture postproof');
+    if(stage!=='pilot-post'){delete cctx.freeze_loan;delete cctx.frozen_policy;delete cctx.certificate_template;}
+    const ev=clone(e);ev.checkpoints=clone(caps);ev.contract_post={fixture:'code-only-deploy',after:{block:{height:110}}};ev.certificate.block=clone(stages.get('pilot-post')?.ctx.certificate_block||{height:150,hash:'stage-pilot-post',timestamp:String(BigInt(now)*1000000000n)});
+    const originalFetch=cctx.fetchAttestation;cctx.fetchAttestation=async id=>{const a=await originalFetch(id),r=Object.values(ev).find(v=>v?.call_id===id);return r?{...a,input_hash:sha(canonical(r.input)),output_hash:sha(canonical(r.output))}:a;};
+    if(stage==='predeploy')ev.approval=approve('deploy-code-only-v26',{...ev.approval.payload,before_state_sha256:sha(canonical(cctx.snapshot))});
+    stages.set(stage,{ctx:cctx,e:ev});caps[stage]=makeCheckpoint(stage,ev,cctx);
+  }
+  const chosen=stages.get(phase)||stages.get('pilot-post');
+  // Each stage is contract-consistent: the current Offered loan is pledged;
+  // earlier checkpoints have no current loan. Historical rows remain immutable.
+  return {e:chosen.e,ctx:chosen.ctx,trust,row,approve,attestor,stages,caps,at:p=>stages.get(p)};
 }

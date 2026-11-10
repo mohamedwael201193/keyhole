@@ -30,15 +30,15 @@ test("complete synthetic evidence exercises every gate positively", async () => 
   assert.equal(g.ready, true);
 });
 test("pilot-post freeze is not a prerequisite for ordinary restoration", async () => {
-  const { e, trust, ctx } = fixtures();
+  const { e, trust, ctx } = fixtures("restore");
   delete e.freeze;
   delete e.certificate;
   const g = await releaseGates(e, trust, ctx);
   assert.equal(g.ready_restore, true);
-  assert.equal(g.ready, false);
+  assert.equal(g.all_mainnet_ready, false);
 });
 test("UNKNOWN original installation can only complete through successful attested reconciliation", async () => {
-  const { e, trust, ctx } = fixtures();
+  const { e, trust, ctx } = fixtures("provision-post");
   e.install.output.ok = false;
   e.install.output.status = "UNKNOWN";
   assert.equal(
@@ -84,7 +84,8 @@ for (const [name, mutate] of Object.entries({
   secret_row: (f) => (f.ctx.secret_merge.row.encrypted_sha256 = "bad"),
 }))
   test("tampering fails closed: " + name, async () => {
-    const f = fixtures();
+    const stages={audit_report:'provision-pre',audit_key:'provision-pre',artifact_signature_commitment:'provision-pre',quorum:'provision-pre',unbacked_funding:'provision-pre',wrong_Q:'provision-pre',missing_ledger:'provision-pre',unapproved_submitter:'predeploy',fake_alias:'predeploy',sealed_row:'provision-post',binding:'provision-post',lower_policy:'provision-post',secret_refund:'restore',cooldown:'provision-pre',pending_approval:'provision-pre',secret_row:'restore'};
+    const f = fixtures(stages[name]||'pilot-post');
     if (name === "quorum") {
       const p = JSON.parse(f.e.prepare.input.auth.message);
       p.params.threshold = 2;
@@ -94,7 +95,7 @@ for (const [name, mutate] of Object.entries({
   });
 for (const op of ["account", "info"])
   test(op + " cannot substitute for guarded restore", async () => {
-    const f = fixtures();
+    const f = fixtures("restore");
     f.e.restore.input.op = op;
     f.e.restore.output.op = op;
     await assert.rejects(restoreProbe(f.e.restore, f.ctx));
@@ -113,7 +114,7 @@ for (const mutation of [
   (f) => (f.e.restore.output.broadcast = true),
 ])
   test("bad guarded context/probe never restores", async () => {
-    const f = fixtures();
+    const f = fixtures("restore");
     mutation(f);
     await assert.rejects(restoreProbe(f.e.restore, f.ctx));
   });
@@ -164,7 +165,7 @@ for (const [name, patch] of [
   ["stale attestation", { timestamp: 1 }],
 ])
   test("restore rejects forged " + name, async () => {
-    const f = fixtures(),
+    const f = fixtures("restore"),
       fetch = f.ctx.fetchAttestation;
     f.ctx.fetchAttestation = async (id) => ({ ...(await fetch(id)), ...patch });
     await assert.rejects(restoreProbe(f.e.restore, f.ctx));
