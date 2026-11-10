@@ -176,4 +176,5 @@ list.forEach((c, i) => {
 console.log(`\n${list.length} claims: ${pass} PASS, ${fail} FAIL, ${errs} ERROR, ${skip} SKIP`);
 if (failed.length) console.log("failed: " + failed.join(", "));
 if (errored.length) console.log("error (source unreachable, not a failed claim): " + errored.join(", "));
-process.exit(fail ? 1 : errs ? 2 : args.includes("--strict") && skip ? 3 : 0);
+// Let piped stdout drain before exiting (the reproduction test reads the final summary).
+process.exitCode = fail ? 1 : errs ? 2 : args.includes("--strict") && skip ? 3 : 0;
