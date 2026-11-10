@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 pub const REVISION: &str = "keyhole-guarded-custody-v1";
 pub const ASSET: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
-pub const DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V2_CREDIT";
+pub const DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V3_DELIVERY";
 pub const PROJECT_ID: &str = "keyhole-devmo.near/keyhole";
 pub const PROJECT_UUID: &str = "p000000000000004b";
 pub const ADMISSION_DEPOSIT: u128 = 10_000_000_000_000_000_000_000;

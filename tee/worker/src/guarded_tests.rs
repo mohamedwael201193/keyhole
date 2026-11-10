@@ -9,7 +9,7 @@ impl Store for Memory{
  fn remove(&mut self,k:&str)->Result<(),Error>{self.0.remove(k);Ok(())}
  fn list_prefix(&mut self,p:&str)->Result<Vec<String>,Error>{Ok(self.0.keys().filter(|k|k.starts_with(p)).cloned().collect())}
 }
-fn fixture()->Value{serde_json::from_str(include_str!("../../../protocol/loan-certificate-v2-credit.json")).unwrap()}
+fn fixture()->Value{serde_json::from_str(include_str!("../../../protocol/loan-certificate-v3-delivery.json")).unwrap()}
 fn cert()->Certificate{serde_json::from_value(fixture()["certificate"].clone()).unwrap()}
 fn control()->Value{json!({"token_id":"k1","owner_epoch":"0","value_op_nonce":"0","pending_value_ops":"0","pledged":false,"listed":false,"transfer_pending":false})}
 fn journal()->Journal{Journal{contract:"keys.near".into(),token_id:"k1".into(),owner:"alice.near".into(),epoch:0,nonce:1,op_id:format!("1:{}","a".repeat(64)),action_hash:"a".repeat(64),kind:"swap".into(),body:json!({"amount_in":"100"}),wallet_id:"ab".repeat(32),charge:None,auth_scheme:"nep413".into()}}

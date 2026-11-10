@@ -312,7 +312,7 @@ impl Contract {
         metadata: TokenMetadata,
     ) -> Token {
         self.assert_minter();
-        require!(tier >= 1 && tier <= MAX_TIER, "bad tier");
+        require!((1..=MAX_TIER).contains(&tier), "bad tier");
         require!(!token_id.is_empty(), "empty token_id");
         require!(token_id.len() <= 64, "token_id too long");
         self.assert_no_key(&receiver_id);
@@ -350,7 +350,7 @@ impl Contract {
     pub fn nft_set_tier(&mut self, token_id: TokenId, tier: u8) {
         self.assert_minter();
         require!(self.tokens.owner_by_id.get(&token_id).is_some(), "no token");
-        require!(tier >= 1 && tier <= MAX_TIER, "bad tier");
+        require!((1..=MAX_TIER).contains(&tier), "bad tier");
         let current = self.tiers.get(&token_id).unwrap_or(0);
         require!(tier > current, "tier only goes up");
         self.tiers.insert(&token_id, &tier);

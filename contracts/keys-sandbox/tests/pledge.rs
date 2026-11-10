@@ -325,9 +325,87 @@ mod guarded_layer;
  let e=setup().await?;open(&e).await?;raw_fund(&e).await?.into_result()?;fault_callbacks(&e).await?;
  let before=e.alice.view_account().await?.balance.as_yoctonear();
  let r=e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;injected(&r);
- assert!(e.alice.view_account().await?.balance.as_yoctonear()>before+N*99/100);
+ assert!(r.receipt_outcomes().iter().any(|o|o.executor_id==*e.alice.id()&&o.is_success()),"native-recipient receipt must actually succeed despite the later callback failure");
  e.w.fast_forward(1000).await?;
+ // RPC transact may precede gas-refund receipt finality. Wait for subsequent real blocks, never synthesize a callback.
+ let mut delivered=e.alice.view_account().await?.balance.as_yoctonear();
+ for _ in 0..8 {if delivered>before+N*99/100{break;}e.w.fast_forward(10).await?;delivered=e.alice.view_account().await?.balance.as_yoctonear();}
+ assert!(delivered>before+N*99/100,"actual native delivery after gas refunds: before={before}, after={delivered}");
  let loan=view(&e.c,"get_loan",json!({"token_id":"k1"})).await;assert_eq!(loan["state"],"DisbursementPending");assert_eq!(loan["due_ns"],"0");
  assert!(e.lender.call(e.c.id(),"claim_default").args_json(json!({"token_id":"k1","nonce":"1","receiver_id":e.lender.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.is_failure());
  assert!(!view(&e.c,"get_pending_payout",json!({"account_id":e.alice.id()})).await.is_null());Ok(())
+}
+
+#[tokio::test] async fn measured_max_identifier_cancel_and_default_paths_release_storage()->Result<()> {
+ for ending in ["cancel","default"] {
+ let e=setup().await?;
+ let root=e.w.root_account()?;
+ let borrower=account(&root,&"b".repeat(64-root.id().as_str().len()-1)).await?;
+ let lender=account(&root,&"l".repeat(64-root.id().as_str().len()-1)).await?;
+ let token="k".repeat(64);
+ e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":token,"receiver_id":borrower.id(),"tier":2,"metadata":{"title":"Storage measurement"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let before_binding=e.c.view_account().await?.storage_usage;
+ e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let baseline=e.c.view_account().await?.storage_usage;
+  let ts=now(&e).await;
+  borrower.call(e.c.id(),"open_loan").args_json(json!({"token_id":token,"terms":{"lender":lender.id(),"principal":(N/100).to_string(),"repayment":(101*N/10000).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"500000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
+  let loan=view(&e.c,"get_loan",json!({"token_id":token})).await;let nonce=loan["nonce"].as_str().unwrap();
+  let mut peak=e.c.view_account().await?.storage_usage-baseline;
+  if ending=="default" {
+   let ts=now(&e).await;
+   let cert=view(&e.c,"loan_certificate_template",json!({"token_id":token,"observed_at_ns":ts.to_string(),"expires_at_ns":(ts+60_000_000_000).to_string()})).await;
+   let typed:LoanCertificate=serde_json::from_value(cert.clone())?;
+   let signature=SigningKey::from_bytes(&[7;32]).sign(&near_sdk::borsh::to_vec(&typed)?);
+   lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":token,"nonce":nonce,"certificate":cert,"signature":B64.encode(signature.to_bytes())})).deposit(NearToken::from_yoctonear(N/100)).max_gas().transact().await?.into_result()?;
+   peak=peak.max(e.c.view_account().await?.storage_usage-baseline);
+   borrower.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+   let due=view(&e.c,"get_loan",json!({"token_id":token})).await["due_ns"].as_str().unwrap().parse::<u64>()?;
+   for _ in 0..10 {if now(&e).await>due+30_000_000_000{break;}e.w.fast_forward(1000).await?;}
+   assert!(now(&e).await>due+30_000_000_000);
+  }
+  e.mock.call("mock_refuse_thaw").args_json(json!({"refuse":true})).transact().await?.into_result()?;
+  if ending=="cancel" {borrower.call(e.c.id(),"cancel_loan").args_json(json!({"token_id":token,"nonce":nonce})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;}
+  else {lender.call(e.c.id(),"claim_default").args_json(json!({"token_id":token,"nonce":nonce,"receiver_id":lender.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;}
+  let terminal_pending=e.c.view_account().await?.storage_usage-baseline;peak=peak.max(terminal_pending);
+  println!("LOAN_STORAGE ending={ending} binding_bytes={} terminal_pending_bytes={terminal_pending} peak_bytes={peak} peak_yocto={}",baseline-before_binding,peak as u128*10_000_000_000_000_000_000u128);
+  assert!(peak as u128*10_000_000_000_000_000_000u128<=keyhole_keys::LOAN_STORAGE_DEPOSIT);
+  e.mock.call("mock_refuse_thaw").args_json(json!({"refuse":false})).transact().await?.into_result()?;
+  let owner=if ending=="cancel"{&borrower}else{&lender};
+  owner.call(e.c.id(),"retry_loan_policy").args_json(json!({"token_id":token,"nonce":nonce})).max_gas().transact().await?.into_result()?;
+  assert!(view(&e.c,"get_loan",json!({"token_id":token})).await.is_null());
+  borrower.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+  // First title change creates owner_epochs[64-byte token]: key 1+4+64, u64 8, runtime record overhead 40 = 117 bytes. This bounded per-token metadata remains; it is not a leaked loan record.
+  let retained_epoch_bytes=if ending=="default"{117}else{0};
+  assert_eq!(view(&e.c,"nft_settlement_epoch",json!({"token_id":token})).await,if ending=="default"{"1"}else{"0"});
+  assert_eq!(e.c.view_account().await?.storage_usage,baseline+retained_epoch_bytes,"only first-write title epoch metadata may remain");
+  println!("LOAN_STORAGE ending={ending} retained_owner_epoch_bytes={retained_epoch_bytes}");
+ }
+ Ok(())
+}
+
+#[tokio::test] async fn measured_max_identifier_repaid_lender_cashout_unknown()->Result<()> {
+ let e=setup().await?;
+ let root=e.w.root_account()?;
+ let borrower=account(&root,&"b".repeat(64-root.id().as_str().len()-1)).await?;
+ let lender=account(&root,&"l".repeat(64-root.id().as_str().len()-1)).await?;
+ let token="k".repeat(64);
+ e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":token,"receiver_id":borrower.id(),"tier":2,"metadata":{"title":"Storage measurement"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let before_binding=e.c.view_account().await?.storage_usage;
+ e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let baseline=e.c.view_account().await?.storage_usage;
+ let ts=now(&e).await;
+ borrower.call(e.c.id(),"open_loan").args_json(json!({"token_id":token,"terms":{"lender":lender.id(),"principal":(N/100).to_string(),"repayment":(101*N/10000).to_string(),"duration_sec":"7200","grace_sec":"900","floor_raw":"500000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
+ let loan=view(&e.c,"get_loan",json!({"token_id":token})).await;let nonce=loan["nonce"].as_str().unwrap();let ts=now(&e).await;
+ let cert=view(&e.c,"loan_certificate_template",json!({"token_id":token,"observed_at_ns":ts.to_string(),"expires_at_ns":(ts+60_000_000_000).to_string()})).await;
+ let typed:LoanCertificate=serde_json::from_value(cert.clone())?;let signature=SigningKey::from_bytes(&[7;32]).sign(&near_sdk::borsh::to_vec(&typed)?);
+ lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":token,"nonce":nonce,"certificate":cert,"signature":B64.encode(signature.to_bytes())})).deposit(NearToken::from_yoctonear(N/100)).max_gas().transact().await?.into_result()?;
+ borrower.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ e.mock.call("mock_refuse_thaw").args_json(json!({"refuse":true})).transact().await?.into_result()?;
+ borrower.call(e.c.id(),"repay_loan").args_json(json!({"token_id":token,"nonce":nonce})).deposit(NearToken::from_yoctonear(101*N/10000)).max_gas().transact().await?.into_result()?;
+ let before_fixture=e.c.view_account().await?.storage_usage;fault_callbacks(&e).await?;let after_fixture=e.c.view_account().await?.storage_usage;
+ let r=lender.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;injected(&r);
+ let peak=e.c.view_account().await?.storage_usage-after_fixture+before_fixture-baseline;
+ println!("LOAN_STORAGE repaid_lender_cashout_unknown_bytes={peak} peak_yocto={} binding_bytes={}",peak as u128*10_000_000_000_000_000_000u128,baseline-before_binding);
+ assert!(peak as u128*10_000_000_000_000_000_000u128<=keyhole_keys::LOAN_STORAGE_DEPOSIT);
+ assert_eq!(view(&e.c,"get_loan",json!({"token_id":token})).await["state"],"UnlockPending");assert!(view(&e.c,"get_pending_payout",json!({"account_id":lender.id()})).await.is_object());Ok(())
 }

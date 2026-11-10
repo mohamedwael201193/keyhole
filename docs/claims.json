@@ -6382,17 +6382,17 @@
    "verify": "node judge/verify-claims.mjs --only path-LICENSE"
   },
   {
-   "id": "path-protocol/loan-certificate-v2-credit.json",
-   "claim": "Linked repo path protocol/loan-certificate-v2-credit.json exists",
+   "id": "path-protocol/loan-certificate-v3-delivery.json",
+   "claim": "Linked repo path protocol/loan-certificate-v3-delivery.json exists",
    "where": "README.md:859",
    "evidence_type": "file",
-   "evidence": "protocol/loan-certificate-v2-credit.json",
+   "evidence": "protocol/loan-certificate-v3-delivery.json",
    "check": {
     "type": "path",
-    "path": "protocol/loan-certificate-v2-credit.json"
+    "path": "protocol/loan-certificate-v3-delivery.json"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v2-credit.json"
+   "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v3-delivery.json"
   },
   {
    "id": "path-protocol/README.md",
