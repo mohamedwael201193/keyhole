@@ -139,6 +139,7 @@ fn review3_all_migrated_refund_paths_create_backed_credit_without_native_pushes(
 fn review3_pre_migration_sale_credit_and_inflight_nonce_survive_migration() {
     near_sdk::mock::with_mocked_blockchain(|b|{b.take_storage();});
     ctx("keys.near",0,NOW);let mut c=Contract::new(a("owner.near"),a("minter.near"),a("treasury.near"),0);
+    test_register_payouts(&mut c,&[a("minter.near"),a("alice.near")]);
     ctx("minter.near",N/10,NOW);c.nft_mint("k1".into(),a("alice.near"),1,TokenMetadata::default());
     ctx("alice.near",LIST_STORAGE_DEPOSIT,NOW);c.nft_list("k1".into(),U128(N));ctx("bob.near",N,NOW);c.nft_buy("k1".into());
     let mint_credit=c.get_payout_credit(a("minter.near")).0;

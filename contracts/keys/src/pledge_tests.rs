@@ -24,7 +24,7 @@ fn policy(frozen: bool) -> PromiseResult {
 }
 fn setup() -> Contract {
     ctx("keys.near", 0, NOW);
-    let mut c = Contract::new(a("owner.near"), a("minter.near"), a("treasury.near"), 500);
+    let mut c = test_funded_contract();
     ctx("minter.near", N / 10, NOW);
     c.nft_mint("k1".into(), a("alice.near"), 2, TokenMetadata { title: Some("Key".into()), ..Default::default() });
     // Settle the minter's known successful mint-storage refund before the lending baseline.
@@ -419,7 +419,7 @@ include!("pledge_review_round2_tests.rs");
  let raw=near_sdk::serde_json::json!({"owner":"keys.near","encrypted_data":"sealed-policy","version":1,"locked":true,"frozen":true,"generation_supported":true,"generation":l.policy_sequence.0});
  result(PromiseResult::Successful(raw.to_string().into_bytes()),NOW);assert!(!c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));assert!(c.get_loan("k1".into()).unwrap().policy_busy);
 }
-#[test]fn maximum_ids_and_ten_approvals_survive_provisional_timeout(){let mut c=setup();let owner=format!("{}.near","a".repeat(59));let token="t".repeat(64);ctx("minter.near",N/10,NOW);c.nft_mint(token.clone(),a(&owner),2,TokenMetadata::default());for n in 0..10{ctx(&owner,N/100,NOW);let id=format!("x{}{}.near",n,"a".repeat(57));let _=c.nft_approve(token.clone(),a(&id),None);}ctx(&owner,1,NOW);let _=c.nft_transfer_call(a("receiver.near"),token.clone(),None,None,"".into());let epoch=c.nft_settlement_epoch(token.clone());ctx("anyone.near",0,NOW+TRANSFER_RESTORE_DELAY_NS);assert!(!c.restore_expired_transfer(token.clone(),epoch));assert_eq!(c.nft_token(token).unwrap().approved_account_ids.unwrap().len(),10);assert_eq!(c.pending_return_count(a(&owner)),0);}
+#[test]fn maximum_ids_and_ten_approvals_survive_provisional_timeout(){let mut c=setup();let owner=format!("{}.near","a".repeat(59));test_register_payouts(&mut c,&[a(&owner)]);let token="t".repeat(64);ctx("minter.near",N/10,NOW);c.nft_mint(token.clone(),a(&owner),2,TokenMetadata::default());for n in 0..10{ctx(&owner,N/100,NOW);let id=format!("x{}{}.near",n,"a".repeat(57));let _=c.nft_approve(token.clone(),a(&id),None);}ctx(&owner,1,NOW);let _=c.nft_transfer_call(a("receiver.near"),token.clone(),None,None,"".into());let epoch=c.nft_settlement_epoch(token.clone());ctx("anyone.near",0,NOW+TRANSFER_RESTORE_DELAY_NS);assert!(!c.restore_expired_transfer(token.clone(),epoch));assert_eq!(c.nft_token(token).unwrap().approved_account_ids.unwrap().len(),10);assert_eq!(c.pending_return_count(a(&owner)),0);}
 
 #[test] fn two_hour_term_and_fifteen_minute_grace_use_ordinary_abi() {
  let mut c=setup();let limits=c.get_loan_limits();assert_eq!(limits.storage_bond.0,9*N/1000);
@@ -447,3 +447,25 @@ include!("pledge_review_round2_tests.rs");
 include!("custody_serialization_tests.rs");
 
 include!("pledge_review_round3_tests.rs");
+
+include!("pledge_review_round4_tests.rs");
+
+#[test] fn first_borrower_operation_requires_its_own_prepaid_slot_not_the_loan_bond() {
+ let mut c=setup();ctx("alice.near",1,NOW);c.nft_transfer(a("fresh.near"),"k1".into(),None,None);
+ let before=env::storage_usage();let liability=config_required().user_liabilities;
+ ctx("fresh.near",LOAN_STORAGE_DEPOSIT,NOW);rejected(||{let _=c.open_loan("k1".into(),terms());});
+ assert!(c.get_loan("k1".into()).is_none());assert_eq!(env::storage_usage(),before);assert_eq!(config_required().user_liabilities,liability);
+ let cost=c.payout_storage_cost().0;assert_eq!(cost,320*env::storage_byte_cost().as_yoctonear());
+ ctx("fresh.near",cost,NOW);assert!(c.register_payout_account(None));assert_eq!(config_required().user_liabilities,liability);assert_eq!(c.get_payout_credit(a("fresh.near")).0,0);
+ ctx("fresh.near",LOAN_STORAGE_DEPOSIT,NOW);let _=c.open_loan("k1".into(),terms());assert_eq!(c.get_loan("k1".into()).unwrap().storage_bond.0,LOAN_STORAGE_DEPOSIT);
+}
+fn prepaid_loan_terminal_slot(default: bool) {
+ let mut c=setup();active(&mut c);let before=env::storage_usage();let due=c.get_loan("k1".into()).unwrap().due_ns.0;
+ if default {ctx("lender.near",1,due+31*SECOND);let _=c.claim_default("k1".into(),U64(1),a("lender.near"));settle_policy(&mut c,false,due+31*SECOND);}
+ else {ctx("alice.near",terms().repayment.0,NOW);let _=c.repay_loan("k1".into(),U64(1));settle_policy(&mut c,false,NOW);assert_eq!(c.get_payout_credit(a("lender.near")),terms().repayment);}
+ assert_eq!(c.get_payout_credit(a("alice.near")).0,LOAN_STORAGE_DEPOSIT);
+ for who in if default {vec!["alice.near"]}else{vec!["alice.near","lender.near"]} {ctx(who,1,NOW);let _=c.claim_payout();let pending=c.get_pending_payout(a(who)).unwrap();result(PromiseResult::Successful(vec![]),NOW);assert!(c.on_payout(a(who),pending.nonce));assert!(c.payout_account_registered(a(who)));assert_eq!(c.get_payout_credit(a(who)).0,0);}
+ assert_eq!(config_required().user_liabilities.0,0);assert!(c.get_loan("k1".into()).is_none());assert!(env::storage_usage()<before);
+}
+#[test] fn prepaid_lender_slot_survives_repayment() {prepaid_loan_terminal_slot(false);}
+#[test] fn prepaid_borrower_slot_survives_default() {prepaid_loan_terminal_slot(true);}

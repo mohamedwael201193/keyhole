@@ -1,0 +1,273 @@
+   Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.80s
+     Running unittests src/lib.rs (/workspace/near_hackathon/kh-epoch/contracts/keys/target/debug/deps/keyhole_keys-06d58208ee6514bf)
+
+running 260 tests
+test p2::owner_transfer_ignores_approval_id ... ok
+test p2::duplicate_id_is_refused - should panic ... ok
+test p2::enumeration_after_transfers ... ok
+test p2::former_holder_has_no_tier ... ok
+test p2::holder_tier_moves_with_the_key ... ok
+test p2::empty_token_id_is_refused - should panic ... ok
+test p2::non_owner_cannot_transfer - should panic ... ok
+test p2::beat_keeps_token_metadata ... ok
+test p2::payout_19_rounds_to_no_royalty ... ok
+test p2::payout_20_first_unit ... ok
+test p2::payout_100 ... ok
+test p2::payout_zero ... ok
+test p2::payout_odd ... ok
+test p2::payout_1_near ... ok
+test p2::payout_needs_two_slots_with_royalty - should panic ... ok
+test p2::second_mint_to_a_holder_is_refused - should panic ... ok
+test p2::plain_transfer_moves_the_key_and_pays_no_royalty ... ok
+test p2::treasury_as_owner_takes_whole_payout ... ok
+test p2::transfer_without_one_yocto_fails - should panic ... ok
+test p2::transfer_to_self_fails - should panic ... ok
+test pledge::tests::admission_before_open_blocks_open_and_open_before_admission_blocks_admission ... ok
+test pledge::tests::approved_market_cannot_bypass_pledge ... ok
+test pledge::tests::admission_binds_authenticated_owner_even_at_current_epoch ... ok
+test pledge::tests::certificate_fixture_matches_contract_borsh ... ok
+test pledge::tests::bounded_policy_read_covers_worst_json_expansion_of_maximum_admitted_payload ... ok
+test pledge::tests::completed_admission_id_never_reopens ... ok
+test pledge::tests::bounded_resolver_handles_malformed_oversized_and_padded_acceptance_fail_closed ... ok
+test pledge::tests::all_four_pledge_phases_block_title_listing_approval_and_admission ... ok
+test pledge::tests::corrected_same_wallet_retry_after_failed_store_and_mismatched_read_never_replays_old_callback ... ok
+test pledge::tests::cancel_reopen_has_unique_nonce_and_old_certificate_cannot_fund ... ok
+test pledge::tests::consolidated_credit_ledger_preserves_new_credit_during_pending_payout ... ok
+test pledge::tests::exact_grace_boundary_allows_repay_but_not_default ... ok
+test pledge::tests::failed_registration_refunds_exact_deposit_and_corrected_retry_is_nonce_safe ... ok
+test pledge::tests::default_redirect_checks_one_key_before_title_and_keeps_unlock_lock ... ok
+test pledge::tests::funding_checks_certificate_bound_initial_default_receiver_eligibility ... ok
+test pledge::tests::funded_principal_is_atomic_backed_credit_and_debt_without_push_callback ... ok
+test pledge::tests::failed_store_with_already_matching_policy_refunds_forwarded_only_and_keeps_ready_binding ... ok
+test pledge::tests::funding_refuses_bad_signature_expiry_future_and_unbounded_freshness ... ok
+test pledge::tests::funding_rejects_each_tampered_binding_even_with_a_valid_attestor_signature ... ok
+test pledge::tests::legacy_balance_and_listing_deposits_never_become_treasury ... ok
+test pledge::tests::legacy_or_stale_policy_snapshot_cannot_unlock_a_fenced_generation ... ok
+test pledge::tests::insolvent_native_balance_fails_closed_even_with_treasury_ledger ... ok
+test pledge::tests::lazy_loan_storage_is_paid_by_borrower_bond_not_preexisting_reserves ... ok
+test pledge::tests::lending_switch_does_not_disable_repayment_or_credit ... ok
+test pledge::tests::maximum_ids_and_ten_approvals_survive_provisional_timeout ... ok
+test pledge::tests::only_future_self_treasury_sale_royalties_credit_recoverable_ledger ... ok
+test pledge::tests::missing_policy_callback_reconciles_exact_custody_enforced_generation_without_signer ... ok
+test pledge::tests::migration_preserves_layout_and_defaults_to_disabled_zero_treasury ... ok
+test pledge::tests::open_waits_for_real_controller_locked_policy_read ... ok
+test pledge::tests::minter_cannot_be_replaced_after_attestor_pin ... ok
+test pledge::tests::principal_and_policy_callbacks_are_nonce_bound_and_private ... ok
+test pledge::tests::no_administrative_or_signing_role_can_forge_a_native_callback ... ok
+test pledge::tests::permissionless_provisional_timeout_exact_boundary_preserves_approvals_and_newer_epoch ... ok
+test pledge::tests::payout_unknown_is_locked_and_only_real_private_result_can_restore_credit ... ok
+test pledge::tests::principal_credit_cannot_be_reassigned_by_a_false_failure_claim ... ok
+test pledge::tests::principal_credit_never_requires_a_delivery_oracle ... ok
+test pledge::tests::recovery_has_exact_timelock_immutable_destination_and_failed_transfer_restore ... ok
+test pledge::tests::repaid_credit_remains_backed_across_failed_pull_payout_and_unlock ... ok
+test pledge::tests::review3_default_wins_then_repay_cannot_create_credit_or_change_title ... ok
+test pledge::tests::review3_pre_migration_sale_credit_and_inflight_nonce_survive_migration ... ok
+test pledge::tests::review3_all_migrated_refund_paths_create_backed_credit_without_native_pushes ... ok
+test pledge::tests::review3_failed_sale_refund_cannot_be_counted_as_free_treasury ... ok
+test pledge::tests::retired_principal_callback_cannot_erase_debt_or_mint_lender_credit ... ok
+test pledge::tests::review3_repay_wins_then_default_cannot_seize_or_credit_twice ... ok
+test pledge::tests::review3_timeout_then_late_acceptance_must_not_report_success ... ok
+test pledge::tests::review3_timeout_then_new_transfer_must_not_make_old_chain_report_success ... ok
+test pledge::tests::review4_registration_prepays_maximum_ledger_pending_and_fixed_metadata ... ok
+test pledge::tests::review3_unknown_money_cannot_be_restored_by_title_timeout_and_remains_reserved ... ok
+test pledge::tests::round2_missing_policy_callback_recovers_only_from_exact_fenced_state ... ok
+test pledge::tests::review4_unregistered_dust_buyer_is_rejected_without_changing_title_or_liabilities ... ok
+test pledge::tests::review3_pending_new_credit_and_stale_opposite_results_conserve_liabilities ... ok
+test pledge::tests::round2_missing_principal_callback_is_eliminated_by_atomic_credit ... ok
+test pledge::tests::round2_false_principal_failure_cannot_cancel_backed_credit_or_lien ... ok
+test pledge::tests::round2_no_signer_can_override_a_live_nft_return_request ... ok
+test pledge::tests::review4_sale_split_failed_cashout_new_credit_and_migration_preserve_exact_totals ... ok
+test pledge::tests::round2_paid_credit_cannot_be_restored_three_times_by_any_outcome_signer ... ok
+test pledge::tests::round2_policy_overlapping_reads_and_old_generations_are_harmless ... ok
+test pledge::tests::round2_port_round1_unknown_token_rejects ... ok
+test pledge::tests::round2_port_round1_failed_registration_is_retryable_and_fully_credited ... ok
+test pledge::tests::round2_port_round1_lender_with_key_rejected ... ok
+test pledge::tests::round2_payout_mocked_callback_orders_and_duplicate_results_never_double_credit ... ok
+test pledge::tests::round2_registration_read_callback_orders_and_duplicates_are_safe ... ok
+test pledge::tests::round2_treasury_mocked_callback_and_duplicates_conserve_attribution ... ok
+test pledge::tests::round2_unrelated_title_timeout_cannot_change_atomic_principal_or_debt ... ok
+test pledge::tests::terminal_oracle_key_and_public_truth_selection_abi_are_removed ... ok
+test pledge::tests::treasury_recovery_never_reduces_loan_principal_credit_or_bond_liabilities ... ok
+test pledge::tests::review4_dust_sale_refunds_must_pay_for_persistent_ledger_storage ... ok
+test pledge::tests::unknown_policy_retry_replays_same_fenced_generation ... ok
+test pledge::tests::treasury_unknown_never_refunds_on_time_or_untrusted_outcome ... ok
+test pledge::tests::transient_transfer_call_receiver_cannot_pledge_list_approve_or_dispatch ... ok
+test pledge::tests::unknown_token_control_view_is_not_unlocked ... ok
+test race::after_resolve_sender_can_receive_again ... ok
+test pledge::tests::unresolved_registration_cannot_replace_wallet_or_reissue_external_action ... ok
+test pledge::tests::round2_transfer_timeout_resolver_orders_and_committed_acceptance_are_safe ... ok
+test pledge::tests::unknown_registration_receipt_never_unbinds_or_refunds_even_with_absent_read ... ok
+test race::approved_sender_marks_the_owner_not_the_market ... ok
+test race::failed_receiver_call_returns_key_and_clears_marker ... ok
+test race::mint_to_pending_sender_refused - should panic ... ok
+test pledge::tests::review4_timeout_matrix_never_accepts_stale_chain_or_mutates_newer_title ... ok
+test race::refused_transfer_call_leaves_no_marker ... ok
+test pledge::tests::value_op_storage_is_bounded_and_obsolete_finish_cannot_unlock_new_operation ... ok
+test race::returned_key_lands_on_a_sender_with_no_other_key ... ok
+test race::payout_to_pending_sender_refused - should panic ... ok
+test race::transfer_to_pending_sender_refused - should panic ... ok
+test pledge::tests::round2_policy_malformed_oversized_results_never_unlock_or_release_binding ... ok
+test race::transfer_call_marks_sender_pending_until_resolve ... ok
+test tests::bad_tier - should panic ... ok
+test tests::beat_emits_metadata_update ... ok
+test tests::init_is_private - should panic ... ok
+test tests::init_royalty_cap - should panic ... ok
+test tests::beat_empty - should panic ... ok
+test tests::beat_batch_limit - should panic ... ok
+test tests::beat_unknown - should panic ... ok
+test tests::mint_needs_storage_deposit - should panic ... ok
+test tests::beat_only_minter - should panic ... ok
+test tests::beat_counter_increments ... ok
+test tests::holder_tier_is_best_and_follows_transfer ... ok
+test tests::mint_and_views ... ok
+test tests::nep171_duplicate_token_id - should panic ... ok
+test tests::nep171_mint_event ... ok
+test tests::nep171_only_owner_transfers - should panic ... ok
+test tests::nep177_contract_metadata ... ok
+test tests::nep171_no_self_transfer - should panic ... ok
+test tests::nep171_transfer_needs_one_yocto - should panic ... ok
+test tests::nep171_unknown_token_is_none ... ok
+test tests::nep171_resolve_transfer_table ... ok
+test tests::nep177_token_carries_nep178_approvals_field ... ok
+test tests::nep177_token_metadata_kept ... ok
+test tests::nep171_transfer_event_and_owner ... ok
+test tests::nep181_from_index_past_end - should panic ... ok
+test tests::nep181_enumeration ... ok
+test tests::nep199_max_royalty_ten_percent ... ok
+test tests::nep181_counts_follow_transfers ... ok
+test tests::nep181_zero_limit - should panic ... ok
+test tests::nep199_transfer_payout_emits_event_and_splits ... ok
+test tests::nep199_payout_conserves_balance ... ok
+test tests::nep199_royalty_rounds_down_for_the_treasury ... ok
+test tests::nep181_pagination_table ... ok
+test tests::nep199_unknown_token - should panic ... ok
+test tests::nep199_treasury_as_owner_gets_all ... ok
+test tests::nep199_zero_royalty_single_payee ... ok
+test tests::non_minter_cannot_mint - should panic ... ok
+test tests::old_minter_cannot_mint - should panic ... ok
+test pledge::tests::round2_transfer_result_byte_bound_and_malformed_matrix ... ok
+test tests::old_minter_loses_power ... ok
+test tests::royalty_cap - should panic ... ok
+test tests::payout_len - should panic ... ok
+test tests::set_minter_owner ... ok
+test tests::set_royalty_only_owner - should panic ... ok
+test tests::payout_split ... ok
+test v23::cap_is_ten ... ok
+test tests::set_minter_only_owner - should panic ... ok
+test tests::set_minter_needs_yocto - should panic ... ok
+test tests::token_id_length_cap - should panic ... ok
+test tests::transfer_payout_needs_yocto - should panic ... ok
+test tests::tier_zero_rejected - should panic ... ok
+test tests::transfer_payout_moves_token ... ok
+test v23::eleventh_approval_with_msg_is_refused_before_the_callback - should panic ... ok
+test v23::refused_eleventh_changes_nothing_and_takes_no_approval_id ... ok
+test v23::tenth_approval_is_allowed ... ok
+test v23::revoke_frees_a_slot ... ok
+test v23::non_owner_gets_the_owner_error_not_the_cap_error - should panic ... ok
+test v24::lower_tier_refused - should panic ... ok
+test v23::eleventh_approval_is_refused - should panic ... ok
+test v24::minter_raises_one_to_two_to_three ... ok
+test v24::non_minter_cannot_set_tier - should panic ... ok
+test v24::emits_metadata_update_with_exact_json ... ok
+test v23::reapproving_an_approved_account_at_the_cap_is_allowed ... ok
+test v24::refused_raise_changes_nothing ... ok
+test v24::same_tier_refused - should panic ... ok
+test v24::raise_does_not_touch_supply_owner_or_metadata ... ok
+test v23::cap_is_per_holding_transfer_clears_it ... ok
+test v24::tier_four_refused - should panic ... ok
+test v24::tier_zero_refused - should panic ... ok
+test v24::owner_cannot_set_tier - should panic ... ok
+test v24::tier_survives_transfer ... ok
+test v24_sale::a_buyer_who_already_holds_a_key_is_refused - should panic ... ok
+test v24::unknown_token_refused - should panic ... ok
+test v24_sale::buy_moves_the_key_pays_the_split_and_refunds_the_excess ... ok
+test v24_sale::buy_clears_approvals_and_refunds_their_storage_to_the_seller ... ok
+test v24_sale::buy_with_too_little_is_refused - should panic ... ok
+test v24_sale::a_listed_key_can_still_earn_a_tier_and_the_buyer_holds_it ... ok
+test v24_sale::approved_market_transfer_payout_ends_the_listing ... ok
+test v24_sale::excess_storage_deposit_is_refunded_and_only_the_storage_amount_is_kept ... ok
+test v24_sale::list_by_non_owner_is_refused - should panic ... ok
+test v24_sale::exact_price_sends_no_refund_and_no_royalty_when_royalty_is_zero ... ok
+test v24_sale::list_by_owner_stores_the_listing_and_emits_key_list ... ok
+test v24_sale::key_returned_by_resolve_ends_a_listing_the_receiver_made - should panic ... ok
+test v24_sale::buy_without_a_listing_is_refused - should panic ... ok
+test v24_sale::list_unknown_token_is_refused - should panic ... ok
+test v24_sale::plain_transfer_ends_the_listing_and_refunds_the_deposit ... ok
+test v24_sale::new_listing_needs_the_storage_deposit - should panic ... ok
+test v24_sale::price_above_cap_is_refused - should panic ... ok
+test v24_sale::price_below_minimum_is_refused - should panic ... ok
+test v24_sale::nft_listings_pages_and_follows_every_exit ... ok
+test v24_sale::minimum_price_is_accepted ... ok
+test v24_sale::price_update_with_one_yocto_keeps_the_deposit ... ok
+test v24_sale::seller_cannot_buy_its_own_key - should panic ... ok
+test v24_sale::the_seller_cannot_raise_a_listed_tier - should panic ... ok
+test v24_sale::stale_listing_is_removed_refunded_and_the_buyer_gets_the_attachment_back ... ok
+test v24_sale::price_update_without_one_yocto_is_refused - should panic ... ok
+test v24_sale::resolve_that_keeps_the_key_keeps_the_listing - should panic ... ok
+test v24_sale::transfer_call_ends_the_listing_and_refunds_the_deposit ... ok
+test v24_sale::unlist_needs_one_yocto - should panic ... ok
+test v24_sale::views_for_an_unlisted_key_are_empty ... ok
+test v24_sale::sale_leaves_supply_and_config_alone ... ok
+test v24_sale::unlist_refunds_the_deposit_and_clears_the_index ... ok
+test v25_admission::begin_is_minter_only - should panic ... ok
+test v25_admission::begin_refused_while_listed - should panic ... ok
+test v24_sale::unlist_by_a_stranger_is_refused - should panic ... ok
+test v25_admission::list_refused_while_value_op_pending - should panic ... ok
+test v25_admission::mint_starts_at_epoch_zero ... ok
+test v24_sale::unlist_without_a_listing_is_refused - should panic ... ok
+test v25_admission::begin_refuses_stale_epoch - should panic ... ok
+test v24_sale::zero_page_is_refused - should panic ... ok
+test v25_admission::finish_clears_barrier_and_transfer_succeeds ... ok
+test v25_admission::transfer_bumps_epoch ... ok
+test v25_admission::sale_bumps_epoch_when_no_pending_ops ... ok
+test v2::approve_deposit_must_cover_storage - should panic ... ok
+test v2::approval_ids_increase_per_token ... ok
+test v2::approve_sets_id_one_and_is_approved ... ok
+test v2::approve_unknown_token - should panic ... ok
+test v2::approve_needs_deposit - should panic ... ok
+test v25_admission::transfer_refused_while_value_op_pending - should panic ... ok
+test v2::approve_with_msg_schedules_nft_on_approve ... ok
+test v2::approved_market_can_buy_for_itself ... ok
+test v2::approved_account_can_transfer_and_approvals_clear ... ok
+test v2::approved_market_cannot_deliver_to_holder - should panic ... ok
+test v2::migrate_is_self_only - should panic ... ok
+test v2::approved_transfer_call_is_allowed ... ok
+test v2::migrate_without_state_fails - should panic ... ok
+test v2::former_holder_can_receive_again ... ok
+test v2::migrate_turns_on_approvals_and_keeps_everything ... ok
+test v2::migrate_matches_new_prefixes ... ok
+test v2::migrate_twice_fails - should panic ... ok
+test v2::marketplace_transfer_payout_pays_treasury_five_percent ... ok
+test v2::new_uses_same_approval_prefix_as_migrate ... ok
+test v2::old_approval_dies_after_resale - should panic ... ok
+test v2::owner_transfer_payout_emits_one_event_without_authorized_id ... ok
+test v2::every_holder_has_exactly_one_key_after_many_moves ... ok
+test v2::only_owner_can_approve - should panic ... ok
+test v2::refused_transfer_leaves_state_untouched_in_a_fresh_call ... ok
+test v2::payout_follows_set_royalty ... ok
+test v2::revoke_all_clears ... ok
+test v2::revoke_only_owner - should panic ... ok
+test v2::revoke_needs_one_yocto - should panic ... ok
+test v2::revoke_all_only_owner - should panic ... ok
+test v2::revoke_removes_one ... ok
+test v2::revoked_market_cannot_transfer - should panic ... ok
+test v2::stale_approval_id_is_refused - should panic ... ok
+test v2::transfer_payout_needs_approval - should panic ... ok
+test v2::transfer_call_to_holder_refused - should panic ... ok
+test v2::transfer_payout_respects_max_len - should panic ... ok
+test v2::transfer_payout_needs_one_yocto - should panic ... ok
+test v2::transfer_payout_stale_approval_id - should panic ... ok
+test v2::transfer_payout_back_to_the_owner_is_refused - should panic ... ok
+test v2::transfer_payout_to_holder_refused - should panic ... ok
+test v2::transfer_payout_unknown_token - should panic ... ok
+test v2::unapproved_account_cannot_transfer - should panic ... ok
+test v2::transfer_to_holder_refused - should panic ... ok
+
+test result: ok. 260 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.25s
+
+   Doc-tests keyhole_keys
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

@@ -1,3 +1,5 @@
+#[path="support/payout_storage.rs"] mod payout_storage;
+use payout_storage::register_payouts;
 
 use anyhow::Result;
 use near_workspaces::types::NearToken;
@@ -9,6 +11,7 @@ async fn audit_maximum_approvals_transfer_call_gas()->Result<()> {
  let recv=w.dev_deploy(&std::fs::read("tests/fixtures/custody_policy_mock.wasm")?).await?;
  let alice=root.create_subaccount("alice").initial_balance(NearToken::from_near(50)).transact().await?.into_result()?;
  c.call("new").args_json(json!({"owner":c.id(),"minter":c.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
+ register_payouts(&c,&root,&[c.id(),alice.id()]).await?;
  let token="k".repeat(64);
  c.call("nft_mint").args_json(json!({"token_id":token,"receiver_id":alice.id(),"tier":2,"metadata":{"title":"Gas boundary"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  for i in 0..10 {
@@ -32,6 +35,7 @@ async fn audit_return_data_bomb_does_not_strand_title()->Result<()> {
  let recv=w.dev_deploy(&std::fs::read("tests/fixtures/return_bomb_receiver.wasm")?).await?;
  let alice=root.create_subaccount("alice").initial_balance(NearToken::from_near(50)).transact().await?.into_result()?;
  c.call("new").args_json(json!({"owner":c.id(),"minter":c.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
+ register_payouts(&c,&root,&[c.id(),alice.id()]).await?;
  c.call("nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":2,"metadata":{"title":"Return bomb"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let r=alice.call(c.id(),"nft_transfer_call").args_json(json!({"token_id":"k1","receiver_id":recv.id(),"msg":""})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
  let v:Value=c.view("get_control_state").args_json(json!({"token_id":"k1"})).await?.json()?;
@@ -50,6 +54,7 @@ async fn audit_return_data_bomb_at_maximum_token_and_approval_bound()->Result<()
  let recv=w.dev_deploy(&std::fs::read("tests/fixtures/return_bomb_receiver.wasm")?).await?;
  let alice=root.create_subaccount("alice").initial_balance(NearToken::from_near(50)).transact().await?.into_result()?;
  c.call("new").args_json(json!({"owner":c.id(),"minter":c.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
+ register_payouts(&c,&root,&[c.id(),alice.id()]).await?;
  let token="k".repeat(64);
  c.call("nft_mint").args_json(json!({"token_id":token,"receiver_id":alice.id(),"tier":2,"metadata":{"title":"Return bomb"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  for i in 0..10 {alice.call(c.id(),"nft_approve").args_json(json!({"token_id":token,"account_id":format!("{}{}.near","a".repeat(58),i)})).deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;}

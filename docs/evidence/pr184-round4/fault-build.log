@@ -1,0 +1,35 @@
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+• done
+
+• Checking the host environment...
+• done
+
+• Generating ABI
+ │    Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+ │     Finished `dev` profile [unoptimized] target(s) in 2.64s
+• Extracting ABI...
+• done
+
+• Building contract
+ │    Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+ │     Finished `release` profile [optimized] target(s) in 5.93s
+
+• Running an optimize for size post-step with wasm-opt ...
+    Finished wasm-opt -O in 2s 19ms
+• done
+
+✓ Contract successfully built! (in CARGO_NEAR_BUILD_ENVIRONMENT=host)
+     -                Binary: /workspace/near_hackathon/wt_pr184_fix/docs/local_only/r4-fault-build/keyhole_keys.wasm
+     -                  Size: 440.3 KB (440347 bytes)
+     - SHA-256 checksum hex : 820e2605839938dd54eeac0b53b670ee7caebde65d3cf080bd84f123c139c5e0
+     - SHA-256 checksum bs58: 9kgWoCWxruTqXYb98P7BnaFUpBUASf5stoGQmAr2BvJK
+     -                   ABI: /workspace/near_hackathon/wt_pr184_fix/docs/local_only/r4-fault-build/keyhole_keys_abi.json
+    Finished cargo near build in 11s
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked --no-embed-abi --out-dir /workspace/near_hackathon/wt_pr184_fix/docs/local_only/r4-fault-build --features callback-failure-fixture --env 'RUSTFLAGS=--remap-path-prefix=/home/box/.cargo=/cargo --remap-path-prefix=/workspace/near_hackathon/wt_pr184_fix/contracts/keys=/keyhole-contract'
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /home/box/.cargo/bin/cargo-near near self-update
