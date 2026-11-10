@@ -869,7 +869,7 @@ Built on NEAR.
 
 ## Pledge preparation — v2.5 source, NOT deployed
 
-**Borrow without opening your vault.** This branch prepares a named-lender NEAR loan against a key's sealed USDC custody account. A lender verifies the borrower's declared **raw USDC minimum**, never an exact balance or invented USD valuation. The contract checks an Ed25519 signature over a canonical, loan/nonce/token/epoch/terms/contract/network/expiry-bound certificate. The shared public test vector is [protocol/loan-certificate-v2-credit.json](protocol/loan-certificate-v2-credit.json). This is a trusted-attestor statement, not a zero-knowledge proof or independent on-chain verification of Intel measurement.
+**Borrow without opening your vault.** This branch prepares a named-lender NEAR loan against a key's sealed USDC custody account. A lender verifies the borrower's declared **raw USDC minimum**, never an exact balance or invented USD valuation. The contract checks an Ed25519 signature over a canonical, loan/nonce/token/epoch/terms/contract/network/expiry-bound certificate. The shared public test vector is [protocol/loan-certificate-v3-delivery.json](protocol/loan-certificate-v3-delivery.json). This is a trusted-attestor statement, not a zero-knowledge proof or independent on-chain verification of Intel measurement.
 
 **Why borrow rather than swap?** Short NEAR liquidity without selling USDC exposure or opening the full vault balance to a lender. This is useful only when a willing lender values those terms; swaps may be cheaper and simpler. No demand, yield or solvency is inferred from a team-wallet demonstration. NEAR debt creates NEAR/USDC FX risk, USDC can depeg, ordinary worker routes reject new swaps and withdrawals while pledged, and default forfeits the **whole confidential account**, including assets above the declared floor. There is no price oracle or partial liquidation.
 
@@ -878,6 +878,9 @@ Built on NEAR.
 - Every admitted value operation binds current owner+epoch, durable op ID/action hash and a single bounded pending record before send. A pledge, listing or provisional transfer blocks admission; admitted work blocks pledge/title movement. Old epochs and operation IDs cannot be reused.
 - Sealed floor certificates bind exact loan terms, nonce, owner epoch, wallet/policy, network/contract and a fresh60-second window. Domain `KEYHOLE_SEALED_LOAN_V2_CREDIT` deliberately rejects the old delivery-before-debt certificate.
 - Funding atomically creates the borrower's backed **pull credit** and Active debt/due date, NOT an assertion that native NEAR was delivered. The borrower must consent to credit-before-cashout economics. No principal push callback or terminal-outcome signer exists. Failed cashout restores borrower credit, not lender credit or cancelled debt.
+
+- Sealed floor certificates bind exact loan terms, nonce, owner epoch, wallet/policy, network/contract and a fresh60-second window. Domain `KEYHOLE_SEALED_LOAN_V3_DELIVERY` rejects earlier certificate domains, including credit-time activation.
+- Funding atomically creates backed borrower **pull credit** in `DisbursementPending`, with `due_ns=0`. Only the genuine success callback of the exact native principal cashout activates the loan and sets its due date. Definite failure restores borrower credit; UNKNOWN stays pending with no debt clock. No independent outcome signer or inferred-delivery activation exists.
 - Repay/default preserves custody locks until a confirmed thaw. The source uses the documented `freeze_wallet(wallet_pubkey)` / `unfreeze_wallet(wallet_pubkey)` ABI. Each dispatch is persisted first; its exact private terminal callback AND a matching controller/locked/version/digest/freeze read must complete before any later command. The sequence is local, not an asserted provider-generation feature. See SECURITY for callback-loss handling.
 - Built-in sales atomically credit seller consideration, listing-bond returns, external royalties and buyer excess to the native pull ledger. Unlist/stale-listing returns, mint/approval-storage refunds and admission excess use the same reserved credits; `claim_payout` cashes them out. [Round-three regressions](contracts/keys-sandbox/tests/review3.rs) exercise deleted recipients and callback loss.
 - Payout storage is prepaid separately: `register_payout_account(account_id?)` attaches the exact `payout_storage_cost()` (320 storage bytes; 0.0032 NEAR at the tested byte price). A sponsor can pay; the permanent slot retains full refunds, including 2 yocto, and is reused after cashout. Unregistered excess-payment purchases revert. [Round-four unit/runtime regressions](docs/evidence/pr184-round4/README.md) check funded growth across fresh buyers.
@@ -891,6 +894,30 @@ See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.
 (cd contracts/keys && cargo test --locked && ./build.sh)
 (cd contracts/keys-sandbox && cargo test --locked)
 ```
+
+Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement/fencing proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+
+
+### Measured Pledge economics — source candidate
+
+The candidate exposes `get_loan_limits()` and `get_lender_offer(token_id)`. The public lender projection checks the named lender's empty key slot and provisional-return reservation before showing funding eligibility. `fund_loan` repeats admission and certificate checks. It contains immutable terms and a six-decimal raw USDC minimum, not holder balances/history.
+
+**Refundable loan bond: 0.009 NEAR.** Remeasured after custody serialization and prepaid permanent slots (#184 `92da286`) in the actual sandbox runtime with 64-byte account/token IDs: offer **438 bytes**, funded principal credit **438**, repayment/thaw pending **448**, repaid lender cashout UNKNOWN **472**, principal cashout UNKNOWN **580 bytes (0.00580 NEAR)**. Cancel/thaw pending is **450 bytes**; default/thaw pending including the first title epoch is **574**. A 900-byte bond adds **320 bytes / 55.17%** to the measured peak. Two completed repay cycles and cancellation return to the prepaid-slot baseline; empty paid payout slots remain reusable. Their separate permanent fee is 0.0032 NEAR per account at the tested byte price and is not part of the refundable loan bond. Default additionally retains **117 bytes** for the first owner-epoch entry, overwritten on later title changes. Binding separately measured **425 bytes**. [Measurement](docs/pledge/storage-measurement.json).
+
+The ordinary ABI accepts a **7200-second term + 900-second grace**; repayment at the exact grace boundary excludes default in the same local receipt. Funding creates backed principal credit with no debt clock; the exact successful native cashout callback starts the term. Tests: `two_hour_term_and_fifteen_minute_grace_use_ordinary_abi`, `loan_limits_reject_zero_term_and_out_of_bound_duration_or_grace`, `lender_projection_checks_no_key_and_never_exposes_holder_private_data`.
+
+```bash
+(cd contracts/keys && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains && ./build.sh)
+# Sandbox-only failure fixture, never a release binary:
+(cd contracts/keys && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm)
+(cd contracts/keys-sandbox && cargo test --locked)
+node --test scripts/pledge/plan.test.mjs
+node scripts/pledge/plan.mjs
+python3 judge/gen-claims.py .
+node judge/verify-claims.mjs --offline
+```
+
+[Two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).
 
 Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
 

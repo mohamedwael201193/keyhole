@@ -6,14 +6,16 @@ use near_sdk::Gas;
 #[cfg(test)] use near_sdk::PromiseResult;
 
 pub const RECOVERY_UNLOCK_NS: u64 = 1_796_169_600_000_000_000;
-pub const LOAN_STORAGE_DEPOSIT: u128 = 50_000_000_000_000_000_000_000;
+/// 900-byte budget: maximum-ID runtime lifecycle peak 750 bytes + 150 bytes (20%).
+/// Refundable liability; code storage/registration/operating capital are separate.
+pub const LOAN_STORAGE_DEPOSIT: u128 = 9_000_000_000_000_000_000_000;
 pub const COLLATERAL_STORAGE_DEPOSIT: u128 = 20_000_000_000_000_000_000_000;
 /// Non-refundable prepaid budget per permanent payout account. Covers the maximum
 /// 151-byte ledger (including pending payout) plus <=130 bytes of fixed pre-migration metadata.
 pub const PAYOUT_STORAGE_BYTES: u64 = 320;
 pub const OPERATING_RESERVE: u128 = 100_000_000_000_000_000_000_000;
 pub const COLLATERAL_ASSET: &str = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
-pub const CERTIFICATE_DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V2_CREDIT";
+pub const CERTIFICATE_DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V3_DELIVERY";
 /// Provisional title only: no economic finality before local resolver acceptance.
 pub const TRANSFER_RESTORE_DELAY_NS:u64=300_000_000_000;
 pub const CERTIFICATE_MAX_AGE_NS: u64 = 60_000_000_000;
@@ -81,6 +83,16 @@ pub(crate) fn require_payout_account(who: &AccountId) {
 }
 
 
+/// Isolated prefix: no deployed Loan/CreditLedger/PendingPayout layout change.
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct PrincipalDelivery {
+    pub token_id: TokenId, pub loan_nonce: U64, pub principal: U128,
+    pub payout_nonce: Option<U64>,
+}
+fn principal_dispatches() -> LookupMap<TokenId, U64> { LookupMap::new(b"Pd".as_slice()) }
+
+
 #[derive(Clone, Debug)]
 #[near(serializers = [borsh, json])]
 pub struct PendingRegistration {
@@ -117,7 +129,8 @@ pub struct LoanTerms {
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers = [borsh, json])]
-pub enum LoanState { Freezing, Offered, Active, UnlockPending }
+// Append only: preserve historical Borsh discriminants.
+pub enum LoanState { Freezing, Offered, Active, UnlockPending, DisbursementPending }
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers = [borsh, json])]
@@ -158,6 +171,25 @@ pub struct LoanCertificate {
     pub floor_met: bool,
     pub frozen: bool,
     pub pending_value_ops: U64,
+}
+
+/// Public economic limits; clients read the contract rather than guessing deposits.
+#[derive(Clone, Debug)]
+#[near(serializers = [json])]
+pub struct LoanLimits {
+    pub storage_bond: U128, pub collateral_binding_deposit: U128,
+    pub min_duration_sec: U64, pub max_duration_sec: U64, pub max_grace_sec: U64,
+    pub certificate_max_age_ns: U64,
+    pub activation: String,
+}
+/// Public lender projection: no exact balance, history, private nonce or session.
+#[derive(Clone, Debug)]
+#[near(serializers = [json])]
+pub struct LenderOffer {
+    pub loan: Loan, pub asset: String, pub decimals: u8,
+    pub lender_has_no_key: bool, pub lender_has_no_return_reservation: bool,
+    pub lending_enabled: bool, pub owner_current: bool, pub funding_open: bool,
+    pub certificate_required: bool,
 }
 
 #[derive(near_sdk::serde::Deserialize)]
@@ -270,8 +302,36 @@ impl Contract {
     pub fn get_loan(&self, token_id: TokenId) -> Option<Loan> { loans().get(&token_id) }
     pub fn get_collateral_binding(&self, token_id: TokenId) -> Option<CollateralBinding> { collateral().get(&token_id) }
     pub fn get_payout_credit(&self, account_id: AccountId) -> U128 { U128(credit_ledgers().get(&account_id).map(|l|l.available).unwrap_or(0)) }
+    pub fn get_principal_delivery(&self, account_id: AccountId) -> Option<PrincipalDelivery> {
+        let ids=self.tokens.tokens_per_owner.as_ref()?.get(&account_id)?;
+        if ids.len()!=1 { return None; }
+        let token=ids.iter().next()?;let loan=loans().get(&token)?;
+        if loan.borrower!=account_id || loan.state!=LoanState::DisbursementPending { return None; }
+        Some(PrincipalDelivery { token_id:token.clone(), loan_nonce:loan.nonce, principal:loan.terms.principal, payout_nonce:principal_dispatches().get(&token) })
+    }
     pub fn get_pending_payout(&self, account_id: AccountId) -> Option<PendingPayout> { credit_ledgers().get(&account_id).and_then(|l|l.pending) }
     pub fn get_value_op(&self, token_id: TokenId, op_id: String) -> Option<ValueOp> { value_ops().get(&value_op_key(&token_id, &op_id)).filter(|op| op.op_id == op_id) }
+
+    pub fn get_loan_limits(&self) -> LoanLimits {
+        LoanLimits { storage_bond: U128(LOAN_STORAGE_DEPOSIT), collateral_binding_deposit: U128(COLLATERAL_STORAGE_DEPOSIT),
+            min_duration_sec: U64(1), max_duration_sec: U64(MAX_DURATION), max_grace_sec: U64(7 * 86_400),
+            certificate_max_age_ns: U64(CERTIFICATE_MAX_AGE_NS), activation: "successful_native_principal_cashout_callback".into() }
+    }
+
+    /// Snapshot only. fund_loan repeats checks and verifies a fresh signed certificate.
+    pub fn get_lender_offer(&self, token_id: TokenId) -> Option<LenderOffer> {
+        let l = loans().get(&token_id)?;
+        let lender_has_no_key = self.tokens.tokens_per_owner.as_ref().and_then(|m|m.get(&l.terms.lender)).map(|s|s.is_empty()).unwrap_or(true);
+        let lender_has_no_return_reservation = pending_returns(&l.terms.lender) == 0;
+        let owner_current = self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&l.borrower)
+            && self.nft_settlement_epoch(token_id.clone()) == l.owner_epoch;
+        let lending_enabled = config_required().lending_enabled;
+        let funding_open = lending_enabled && owner_current && lender_has_no_key && lender_has_no_return_reservation
+            && l.state == LoanState::Offered && !l.policy_busy && env::block_timestamp() <= l.terms.funding_deadline_ns.0
+            && self.pending_ops(&token_id) == 0 && transfer_calls().get(&token_id).is_none();
+        Some(LenderOffer { loan:l, asset:COLLATERAL_ASSET.into(), decimals:6, lender_has_no_key,
+            lender_has_no_return_reservation, lending_enabled, owner_current, funding_open, certificate_required:true })
+    }
 
     #[payable]
     pub fn set_lending_enabled(&mut self, enabled: bool) {
@@ -371,7 +431,7 @@ impl Contract {
         require_payout_account(&borrower);
         require!(listings().get(&token_id).is_none(), "unlist first");
         require!(collateral().get(&token_id).is_some_and(|b| b.ready), "collateral confinement not ready");
-        require!(env::attached_deposit().as_yoctonear() == LOAN_STORAGE_DEPOSIT, "attach exact 0.05 NEAR refundable loan bond");
+        require!(env::attached_deposit().as_yoctonear() == LOAN_STORAGE_DEPOSIT, "attach exact 0.009 NEAR refundable loan bond");
         require!(terms.lender != borrower && terms.lender != env::current_account_id(), "distinct external lender required");
         require!(terms.principal.0 > 0 && terms.principal.0 <= MAX_LIST_PRICE, "bad principal");
         require!(terms.repayment.0 >= terms.principal.0 && terms.repayment.0 <= MAX_LIST_PRICE, "bad repayment");
@@ -478,11 +538,13 @@ impl Contract {
         let sig: [u8; 64] = signature.0.try_into().unwrap_or_else(|_| env::panic_str("bad signature length"));
         let pk: [u8; 32] = c.attestor_public_key.0.clone().try_into().unwrap_or_else(|_|env::panic_str("bad attestor key"));
         require!(env::ed25519_verify(&sig, &near_sdk::borsh::to_vec(&certificate).unwrap_or_else(|_|env::panic_str("certificate encoding")), &pk), "invalid attestor signature");
-        // Principal is an immediately backed pull credit. This receipt atomically creates
-        // both the borrower's legal claim and debt; no fallible push selects principal truth.
+        // Funding locks lender principal as a backed borrower credit, but does NOT start debt.
+        // Only the exact native cashout's genuine success callback activates the clock.
+        require!(self.tokens.tokens_per_owner.as_ref().and_then(|m|m.get(&l.borrower)).is_some_and(|ids|ids.len()==1), "borrower must own exactly one key");
+        require!(principal_dispatches().get(&token_id).is_none(), "principal dispatch already pending");
         add_credit(&l.borrower,l.terms.principal.0);
         change_liabilities(&mut c,l.terms.principal.0,0);save_config(&c);
-        l.state=LoanState::Active;l.due_ns=U64(now.checked_add(l.terms.duration_sec.0*SECOND).unwrap_or_else(||env::panic_str("due overflow")));
+        l.state=LoanState::DisbursementPending;l.due_ns=U64(0);
         loans().insert(&token_id,&l);true
     }
 
@@ -538,6 +600,12 @@ impl Contract {
             env::storage_write(PRE_CREDIT_NONCE, &n.to_le_bytes()); U64(n)
         };
         let p = PendingPayout { nonce, amount: U128(amount) };
+        if let Some(delivery)=self.get_principal_delivery(who.clone()) {
+            require!(delivery.payout_nonce.is_none() && amount>=delivery.principal.0, "principal delivery invariant");
+            let loan=load_loan(&delivery.token_id,delivery.loan_nonce);
+            require!(loan.borrower==who && loan.state==LoanState::DisbursementPending && loan.due_ns.0==0, "principal loan changed");
+            principal_dispatches().insert(&delivery.token_id,&p.nonce);
+        }
         ledger.available=0;ledger.pending=Some(p.clone());save_credit(&who,&ledger);
         Promise::new(who.clone()).transfer(yocto(amount))
             .then(callback("on_payout", near_sdk::serde_json::json!({"account_id": who, "nonce": p.nonce}), 30))
@@ -617,6 +685,24 @@ impl Contract {
     fn settle_payout(&mut self,account_id:AccountId,nonce:U64,success:bool)->bool{
         let Some(mut l)=credit_ledgers().get(&account_id) else{return false;};
         let Some(p)=l.pending.as_ref() else{return false;};if p.nonce!=nonce{return false;}
+        // A preexisting unrelated payout cannot activate newly funded principal: exact nonce binding.
+        if let Some(delivery)=self.get_principal_delivery(account_id.clone()) {
+            if delivery.payout_nonce==Some(nonce) {
+                if success {
+                    require!(p.amount.0>=delivery.principal.0, "principal cashout amount mismatch");
+                    let mut loan=load_loan(&delivery.token_id,delivery.loan_nonce);
+                    require!(loan.borrower==account_id && loan.state==LoanState::DisbursementPending && loan.due_ns.0==0, "principal loan changed");
+                    let delivered_at=env::block_timestamp();
+                    loan.due_ns=U64(delivered_at.checked_add(loan.terms.duration_sec.0*SECOND).unwrap_or_else(||env::panic_str("due overflow")));
+                    loan.state=LoanState::Active;loans().insert(&delivery.token_id,&loan);
+                    principal_dispatches().remove(&delivery.token_id);
+                    emit_key_event("loan_principal_delivered",near_sdk::serde_json::json!({"token_id":delivery.token_id,"nonce":loan.nonce,"payout_nonce":nonce,"activated_at_ns":U64(delivered_at),"due_ns":loan.due_ns}));
+                } else {
+                    // Definite transfer failure: same exact credit may be claimed again, no clock.
+                    principal_dispatches().remove(&delivery.token_id);
+                }
+            }
+        }
         let amount=p.amount.0;l.pending=None;
         if success{
             if let Some(mut c)=pledge_config(){change_liabilities(&mut c,0,amount);save_config(&c);}

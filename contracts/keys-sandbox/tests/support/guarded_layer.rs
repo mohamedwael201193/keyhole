@@ -74,7 +74,7 @@ async fn floor_certificate(e:&E,l:&Layer<'_>)->Result<(Value,String)>{
  let contract_typed:LoanCertificate=serde_json::from_value(value.clone())?;assert_eq!(cert.bytes().unwrap(),near_sdk::borsh::to_vec(&contract_typed)?);
  Ok((value,cert.sign(&[7;32]).unwrap()))
 }
-async fn fund_worker(e:&E,l:&Layer<'_>)->Result<Value>{let (cert,sig)=floor_certificate(e,l).await?;e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":cert["loan_nonce"],"certificate":cert,"signature":sig})).deposit(NearToken::from_near(1)).max_gas().transact().await?.into_result()?;Ok(cert)}
+async fn fund_worker(e:&E,l:&Layer<'_>)->Result<Value>{let (cert,sig)=floor_certificate(e,l).await?;e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":cert["loan_nonce"],"certificate":cert,"signature":sig})).deposit(NearToken::from_near(1)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"DisbursementPending");e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"Active");Ok(cert)}
 #[tokio::test(flavor="multi_thread",worker_threads=2)]
 async fn guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a()->Result<()>{
  let e=setup().await?;let mut l=Layer::new(&e);let first=l.journal(&e.alice,"swap","initial swap");first.create(&mut l).unwrap();

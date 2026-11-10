@@ -464,9 +464,8 @@ pub fn validate_chain_address(chain: &str, to: &str) -> Result<(), Error> {
 /// Standard self-exit policy. Address syntax alone is NOT proof of destination ownership.
 /// NEP-413 proves the NEAR account; EIP-191 proves the same 0x holder on allowlisted EVM chains.
 pub fn self_withdraw_destination(holder:&str,chain:&str,requested:Option<&str>,scheme:&str)->Result<String,Error>{
-    let evm=false;
-    if !(scheme=="nep413"&&chain=="near"&&is_valid_account_id(holder)){return Err(err("destination_policy","no authenticated self destination for this identity/chain"));}
-    if let Some(to)=requested {validate_chain_address(chain,to)?;if if evm{!to.eq_ignore_ascii_case(holder)}else{to!=holder}{return Err(err("destination_policy","standard exit pays only the current fresh holder"));}}
+    if scheme!="nep413"||chain!="near"||!is_valid_account_id(holder){return Err(err("destination_policy","withdrawals require the current holder NEAR account"));}
+    if requested.is_some_and(|to|to!=holder){return Err(err("destination_policy","withdrawals pay only the current holder"));}
     validate_chain_address(chain,holder)?;Ok(holder.to_owned())
 }
 
