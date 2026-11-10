@@ -117,3 +117,5 @@ async fn guarded_worker_cross_layer_default_failures_and_new_holder_exit()->Resu
  guarded::drive_provider(&mut l,&exit,"sealed-mock-key",false).unwrap();l.status(&exit,"success",false);assert_eq!(guarded::drive_provider(&mut l,&exit,"sealed-mock-key",true).unwrap()["admission_finished"],true);
  l.assert_blocked(&e.alice,"old holder after exit");assert_eq!(l.executions,2);Ok(())
 }
+
+#[path="ui_harness.rs"] mod ui_harness;

@@ -10,9 +10,15 @@ import {
   PLEDGE_CTA_DISABLED,
   PLEDGE_PREVIEW_LABEL,
   createPledgeClient,
+  payoutStorageConsent,
   type Loan,
 } from "@/lib/pledgeClient";
 import "./pledge.css";
+import Link from "next/link";
+import {useWallet} from "@/lib/wallet";
+import {usePayoutStorageFee} from "@/lib/usePayoutStorageFee";
+import {LivePledge} from "./LivePledge";
+import {ComparisonCard} from "./ComparisonCard";
 
 const KEY_ART = "/heirloom/keys/k03.webp";
 const USDC_ICON = "/tokens/usdc.svg";
@@ -40,8 +46,13 @@ export function PledgeView() {
   const keys = useKeyStore();
   const client = useMemo(() => createPledgeClient(), []);
   const live = client.live && PLEDGE_LIVE;
+  const {accountId}=useWallet();
+  const payoutStorageFee=usePayoutStorageFee(client,accountId);
 
   const [mode, setMode] = useState<Mode>("form");
+  const [loadError,setLoadError]=useState("");
+  const [loaded,setLoaded]=useState(false);
+  const [chainNowNs,setChainNowNs]=useState<string|null>(null);
   const [loan, setLoan] = useState<Loan | null>(null);
 
   useEffect(() => {
@@ -54,13 +65,14 @@ export function PledgeView() {
       setLoan(null);
       return;
     }
-    let cancel = false;
-    client.getLoan(keys.primary.token_id).then((L) => {
-      if (cancel) return;
-      setLoan(L);
-      setMode(L?.state === "Active" ? "active" : "form");
-    }).catch(() => {});
-    return () => { cancel = true; };
+    let cancel = false;setLoaded(false);setChainNowNs(null);
+    const tokenId=keys.primary.token_id;
+    const refresh=()=>Promise.all([client.getLoan(tokenId),client.chainNowNs()]).then(([L,now])=>{
+      if(cancel)return;setLoan(L);setChainNowNs(now);setLoaded(true);setLoadError("");
+      if(L)setMode(["DisbursementPending","Active","UnlockPending"].includes(L.state)?"active":"form");
+    }).catch(()=>{if(!cancel){setLoaded(true);setChainNowNs(null);setLoadError("On-chain status unavailable. Do not retry a money operation; reload the original loan.");}});
+    void refresh();const timer=setInterval(()=>{if(document.visibilityState!=="hidden")void refresh();},5000);
+    return () => { cancel = true;clearInterval(timer); };
   }, [live, keys.primary, client]);
 
   const primary = keys.primary;
@@ -81,9 +93,11 @@ export function PledgeView() {
   const floorDisplay = live && loan ? formatFloor(loan) : EXAMPLE.floorUsdc;
   const borrowDisplay = live && loan ? formatNear(loan.terms.principal) : EXAMPLE.borrowNear;
   const repayDisplay = live && loan ? formatNear(loan.terms.repayment) : EXAMPLE.repayNear;
-  const dueDisplay = live && loan ? formatDue(loan.due_ns) : EXAMPLE.dueLabel;
+  const dueDisplay = live && loan ? loan.state==="DisbursementPending"?"Awaiting confirmed native delivery · no debt clock":loan.state==="UnlockPending"?"Resolution committed · terminal thaw pending":formatDue(loan.due_ns) : EXAMPLE.dueLabel;
   const lenderDisplay = live && loan ? loan.terms.lender : EXAMPLE.lender;
-  const countdownLabel = live && loan ? hoursLeftLabel(loan.due_ns) : "71h";
+  const countdownLabel = live && loan ? loan.state==="DisbursementPending"?"waiting":loan.state==="UnlockPending"?"thaw":hoursLeftLabel(loan.due_ns,chainNowNs) : "2h";
+
+  if(live) return <LivePledge role="borrower" tokenId={keys.primary?.token_id}/>;
 
   return (
     <div className={`plg${active ? " is-active" : ""}`} data-testid="pledge-page" data-live={live ? "1" : "0"}>
@@ -101,13 +115,13 @@ export function PledgeView() {
               data-testid="pledge-preview-banner"
               role="status"
             >
-              {live ? "Pledge · live wiring on" : "Example — preview · not live"}
+              {live ? "Pledge · on-chain read only · funding disabled" : "Example — preview · not live"}
             </div>
 
             <PageHeader
               eyebrow="Pledge"
               title={<>Borrow NEAR without publishing your <em>full balance</em></>}
-              lead="Your lender sees one certified minimum, not the full balance while reviewing this offer."
+              lead="A lender reviews one declared minimum; only a verified sealed certificate certifies it. The full balance stays private."
             />
 
             <details className="note" data-testid="pledge-delivery-risk"><summary>Lender delivery risk · public lending is off</summary><p>Funding is not delivery. If the borrower never claims principal, or a payout callback is UNKNOWN, capital can stay locked indefinitely. No timeout refund.</p></details>
@@ -125,7 +139,7 @@ export function PledgeView() {
                 <span className="n">2</span>
                 <p>
                   <strong>Borrow NEAR</strong>
-                  Funding creates a reserved NEAR claim. Debt starts only after confirmed native delivery.
+                  Named lender funds a backed credit. Claim it separately; the debt clock starts only on confirmed native delivery. Failed or unknown delivery accrues no debt.
                 </p>
               </li>
               <li>
@@ -141,6 +155,8 @@ export function PledgeView() {
               <span className="plg-cap-v">${caps.perTx}/trade · ${caps.daily}/day</span>
             </div>
             </aside>
+            <p><Link href={loan ? `/pledge/lend/${encodeURIComponent(loan.token_id)}` : "/pledge/lend/example"}>Review as the named lender →</Link></p>
+            <ComparisonCard input={{principal:loan?.terms.principal??"10000000000000000000000",repayment:loan?.terms.repayment??"10100000000000000000000",bond:loan?.storage_bond??"9000000000000000000000",incrementalLoanCost:"0",payoutStorageCost:payoutStorageFee,quote:null,ledger:"CONFIDENTIAL",nowMs:0}} />
           </div>
 
           <div className="plg-stage">
@@ -174,7 +190,7 @@ export function PledgeView() {
                   <div className="plg-row" data-row="pledge">
                     <div className="plg-row-top">
                       <span className="plg-row-label">You pledge</span>
-                      <span className="plg-row-hint">Certified floor · sealed</span>
+                      <span className="plg-row-hint">Declared floor · not yet verified</span>
                     </div>
                     <div className="plg-row-main">
                       <div className="plg-amt" data-testid="pledge-floor" aria-label="Floor amount">
@@ -241,6 +257,8 @@ export function PledgeView() {
                   <span className="plg-ex" data-testid="pledge-example-tag">{live ? "" : "Example"}</span>
                 </div>
 
+                <p className="plg-warn" role="note" data-testid="payout-storage-consent">{payoutStorageConsent(payoutStorageFee)}</p>
+
                 <p className="plg-warn" data-testid="pledge-warn" role="note">
                   Whole account is collateral — while pledged it can&apos;t trade, withdraw or transfer; miss repayment and the lender can claim it.
                 </p>
@@ -249,24 +267,24 @@ export function PledgeView() {
                   type="button"
                   className="plg-cta"
                   data-testid="pledge-cta"
-                  disabled={!live}
-                  aria-disabled={!live}
+                  disabled
+                  aria-disabled
                   title={!live ? PLEDGE_CTA_DISABLED : undefined}
                 >
-                  {live ? "Open request & freeze account" : PLEDGE_CTA_DISABLED}
+                  {PLEDGE_CTA_DISABLED}
                 </button>
 
                 <div className="plg-sealed-wrap">
                   <span className="plg-sealed">
                     <i className="dot" aria-hidden="true" />
-                    {live ? "Certified minimum · full balance sealed from lender while reviewing" : EXAMPLE.sealed}
+                    {live ? "Declared minimum · not yet verified · full balance private" : EXAMPLE.sealed}
                   </span>
                 </div>
               </div>
 
               <div className="plg-active-view" data-testid="pledge-active">
                 <div className="plg-active-top">
-                  <h3 className="plg-widget-h">Active loan</h3>
+                  <h3 className="plg-widget-h">{live&&loan?.state==="DisbursementPending"?"Principal delivery pending":live&&loan?.state==="UnlockPending"?"Settlement pending":"Active loan"}</h3>
                   <span className="plg-active-status">
                     <i aria-hidden="true" /> {live && loan ? String(loan.state) : "Frozen"}
                   </span>
@@ -288,12 +306,12 @@ export function PledgeView() {
                   </div>
                   <div className="plg-cd-text">
                     <p className="t" data-testid="pledge-active-due">{dueDisplay}</p>
-                    <p className="s">Repay exactly {repayDisplay} NEAR to unlock</p>
+                    <p className="s">Repayment books lender credit; custody thaw and cooldown are separate</p>
                   </div>
                 </div>
                 <div className="plg-active-grid">
                   <div className="plg-active-cell">
-                    <div className="k">Borrowed</div>
+                    <div className="k">{live&&loan?.state==="DisbursementPending"?"Principal credit, not delivery":"Borrowed"}</div>
                     <div className="v">{borrowDisplay} <img src={NEAR_ICON} alt="" /></div>
                   </div>
                   <div className="plg-active-cell">
@@ -305,14 +323,15 @@ export function PledgeView() {
                   type="button"
                   className="plg-cta"
                   data-testid="pledge-repay-cta"
-                  onClick={() => { if (!live) setMode("form"); }}
+                  disabled
+                  title="Repayment UI awaits release review; see direct contract runbook"
                 >
                   {live ? `Repay ${repayDisplay} NEAR` : `Repay ${EXAMPLE.repayNear} NEAR`}
                 </button>
                 <div className="plg-sealed-wrap" style={{ marginTop: 12 }}>
                   <span className="plg-sealed">
                     <i className="dot" aria-hidden="true" />
-                    Sealed proof still bound to this loan
+                    Funding certificate is historical after activation; current lien/freeze is a separate check
                   </span>
                 </div>
               </div>
@@ -392,10 +411,11 @@ function formatDue(dueNs: string): string {
     }).format(new Date(ms)).replace(/^/, "Due ");
   } catch { return "Due date from on-chain loan state"; }
 }
-function hoursLeftLabel(dueNs: string): string {
+function hoursLeftLabel(dueNs: string, chainNowNs:string|null): string {
   try {
     const ms = Number(BigInt(dueNs) / 1_000_000n);
-    const left = ms - Date.now();
+    if(!chainNowNs||dueNs==="0")return "pending";
+    const left = ms - Number(BigInt(chainNowNs)/1_000_000n);
     if (!Number.isFinite(left) || left <= 0) return "due";
     const h = Math.floor(left / 3_600_000);
     return h >= 24 ? `${Math.floor(h / 24)}d` : `${h}h`;

@@ -4,7 +4,7 @@
  * auth object whose signed message names that same op. `provenance` and `record` are public and
  * carry no auth (`record` is answered only for a key listed for sale). The TEE still verifies the signature, the nonce and the caps.
  */
-export const ALLOWED_OPS = ["reconcile_value_op", "loan_certificate", "info", "provenance", "record", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"] as const;
+export const ALLOWED_OPS = ["reconcile_value_op", "loan_certificate", "pledge_inventory", "info", "provenance", "record", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"] as const;
 export const MAX_BODY = 8 * 1024;
 /** A key id as the key page reads it: k + hex, or a legacy number. Mirrors KEY_ID in app/key/view.tsx. */
 const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;

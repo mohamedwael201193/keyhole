@@ -3222,17 +3222,17 @@
   },
   {
    "id": "src-gw-allow",
-   "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
-   "where": "judge/gen-claims.py:136",
+   "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, pledge_inventory, info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
+   "where": "README.md:259",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
     "type": "grep",
     "path": "web/lib/gateway.ts",
-    "pattern": "ALLOWED_OPS = \\[\"reconcile_value_op\", \"loan_certificate\", \"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
+    "pattern": "ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"withdraw\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]"
    },
    "expected": "exact list",
-   "verify": "grep -nE 'ALLOWED_OPS = \\[\"reconcile_value_op\", \"loan_certificate\", \"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
+   "verify": "grep -nE 'ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"withdraw\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]' web/lib/gateway.ts"
   },
   {
    "id": "src-gw-nocopy",
@@ -3725,6 +3725,27 @@
    },
    "expected": "`get_collateral_binding` found in source",
    "verify": "node judge/verify-claims.mjs --only test-get_collateral_binding"
+  },
+  {
+   "id": "test-get_lender_offer",
+   "claim": "Named test or symbol `get_lender_offer` exists in the source",
+   "where": "README.md:874",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "get_lender_offer",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`get_lender_offer` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-get_lender_offer"
   },
   {
    "id": "test-get_payout_credit",
@@ -4523,6 +4544,48 @@
    },
    "expected": "`parse_usd_micro` found in source",
    "verify": "node judge/verify-claims.mjs --only test-parse_usd_micro"
+  },
+  {
+   "id": "test-payout_account_registered",
+   "claim": "Named test or symbol `payout_account_registered` exists in the source",
+   "where": "SECURITY.md:408",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "payout_account_registered",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`payout_account_registered` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-payout_account_registered"
+  },
+  {
+   "id": "test-payout_storage_cost",
+   "claim": "Named test or symbol `payout_storage_cost` exists in the source",
+   "where": "SECURITY.md:408",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "payout_storage_cost",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`payout_storage_cost` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-payout_storage_cost"
   },
   {
    "id": "test-pending_return_count",
@@ -6559,7 +6622,7 @@
   {
    "id": "path-docs/evidence/integration-stack/validation.json",
    "claim": "Linked repo path docs/evidence/integration-stack/validation.json exists",
-   "where": "README.md:897",
+   "where": "README.md:916",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/validation.json",
    "check": {
@@ -6570,9 +6633,48 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/integration-stack/validation.json"
   },
   {
+   "id": "path-protocol/loan-certificate-v3-delivery.json",
+   "claim": "Linked repo path protocol/loan-certificate-v3-delivery.json exists",
+   "where": "README.md:919",
+   "evidence_type": "file",
+   "evidence": "protocol/loan-certificate-v3-delivery.json",
+   "check": {
+    "type": "path",
+    "path": "protocol/loan-certificate-v3-delivery.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v3-delivery.json"
+  },
+  {
+   "id": "path-web/tests/pledge-money.test.ts",
+   "claim": "Linked repo path web/tests/pledge-money.test.ts exists",
+   "where": "README.md:921",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-money.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-money.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-money.test.ts"
+  },
+  {
+   "id": "path-docs/pledge/TEAM_RUNBOOK.md",
+   "claim": "Linked repo path docs/pledge/TEAM_RUNBOOK.md exists",
+   "where": "README.md:925",
+   "evidence_type": "file",
+   "evidence": "docs/pledge/TEAM_RUNBOOK.md",
+   "check": {
+    "type": "path",
+    "path": "docs/pledge/TEAM_RUNBOOK.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/pledge/TEAM_RUNBOOK.md"
+  },
+  {
    "id": "path-contracts/keys/release/v2.5/identity.json",
    "claim": "Linked repo path contracts/keys/release/v2.5/identity.json exists",
-   "where": "README.md:902",
+   "where": "README.md:944",
    "evidence_type": "file",
    "evidence": "contracts/keys/release/v2.5/identity.json",
    "check": {
@@ -6585,7 +6687,7 @@
   {
    "id": "path-docs/evidence/integration-stack/artifact-repro-r2.json",
    "claim": "Linked repo path docs/evidence/integration-stack/artifact-repro-r2.json exists",
-   "where": "README.md:902",
+   "where": "README.md:944",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/artifact-repro-r2.json",
    "check": {
@@ -6598,7 +6700,7 @@
   {
    "id": "path-web/tests/integration196.test.ts",
    "claim": "Linked repo path web/tests/integration196.test.ts exists",
-   "where": "README.md:902",
+   "where": "README.md:944",
    "evidence_type": "file",
    "evidence": "web/tests/integration196.test.ts",
    "check": {
@@ -6611,7 +6713,7 @@
   {
    "id": "path-protocol/client-owner-epoch.json",
    "claim": "Linked repo path protocol/client-owner-epoch.json exists",
-   "where": "README.md:902",
+   "where": "README.md:944",
    "evidence_type": "file",
    "evidence": "protocol/client-owner-epoch.json",
    "check": {
@@ -6620,6 +6722,175 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-protocol/client-owner-epoch.json"
+  },
+  {
+   "id": "path-docs/pledge/UI_SANDBOX_RUNBOOK.md",
+   "claim": "Linked repo path docs/pledge/UI_SANDBOX_RUNBOOK.md exists",
+   "where": "README.md:974",
+   "evidence_type": "file",
+   "evidence": "docs/pledge/UI_SANDBOX_RUNBOOK.md",
+   "check": {
+    "type": "path",
+    "path": "docs/pledge/UI_SANDBOX_RUNBOOK.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/pledge/UI_SANDBOX_RUNBOOK.md"
+  },
+  {
+   "id": "path-web/tests/pledge-review-safety.test.ts",
+   "claim": "Linked repo path web/tests/pledge-review-safety.test.ts exists",
+   "where": "README.md:978",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-review-safety.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-review-safety.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-review-safety.test.ts"
+  },
+  {
+   "id": "path-web/tests/pledge-lifecycle.test.ts",
+   "claim": "Linked repo path web/tests/pledge-lifecycle.test.ts exists",
+   "where": "README.md:978",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-lifecycle.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-lifecycle.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-lifecycle.test.ts"
+  },
+  {
+   "id": "path-web/tests/pledge-review-r3.test.ts",
+   "claim": "Linked repo path web/tests/pledge-review-r3.test.ts exists",
+   "where": "README.md:989",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-review-r3.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-review-r3.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-review-r3.test.ts"
+  },
+  {
+   "id": "path-web/e2e/pledge-review-r3.spec.ts",
+   "claim": "Linked repo path web/e2e/pledge-review-r3.spec.ts exists",
+   "where": "README.md:989",
+   "evidence_type": "file",
+   "evidence": "web/e2e/pledge-review-r3.spec.ts",
+   "check": {
+    "type": "path",
+    "path": "web/e2e/pledge-review-r3.spec.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/e2e/pledge-review-r3.spec.ts"
+  },
+  {
+   "id": "path-web/tests/pledge-review-r5.test.ts",
+   "claim": "Linked repo path web/tests/pledge-review-r5.test.ts exists",
+   "where": "README.md:997",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-review-r5.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-review-r5.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-review-r5.test.ts"
+  },
+  {
+   "id": "path-web/e2e/pledge-funded.spec.ts",
+   "claim": "Linked repo path web/e2e/pledge-funded.spec.ts exists",
+   "where": "README.md:997",
+   "evidence_type": "file",
+   "evidence": "web/e2e/pledge-funded.spec.ts",
+   "check": {
+    "type": "path",
+    "path": "web/e2e/pledge-funded.spec.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/e2e/pledge-funded.spec.ts"
+  },
+  {
+   "id": "path-web/tests/pledge-integration-merge.test.ts",
+   "claim": "Linked repo path web/tests/pledge-integration-merge.test.ts exists",
+   "where": "README.md:1001",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-integration-merge.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-integration-merge.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-integration-merge.test.ts"
+  },
+  {
+   "id": "path-web/components/PayoutPanel.tsx",
+   "claim": "Linked repo path web/components/PayoutPanel.tsx exists",
+   "where": "README.md:1003",
+   "evidence_type": "file",
+   "evidence": "web/components/PayoutPanel.tsx",
+   "check": {
+    "type": "path",
+    "path": "web/components/PayoutPanel.tsx"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/components/PayoutPanel.tsx"
+  },
+  {
+   "id": "path-web/components/PayoutCredit.tsx",
+   "claim": "Linked repo path web/components/PayoutCredit.tsx exists",
+   "where": "README.md:1003",
+   "evidence_type": "file",
+   "evidence": "web/components/PayoutCredit.tsx",
+   "check": {
+    "type": "path",
+    "path": "web/components/PayoutCredit.tsx"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/components/PayoutCredit.tsx"
+  },
+  {
+   "id": "path-web/lib/pledgeMoney.ts",
+   "claim": "Linked repo path web/lib/pledgeMoney.ts exists",
+   "where": "README.md:1003",
+   "evidence_type": "file",
+   "evidence": "web/lib/pledgeMoney.ts",
+   "check": {
+    "type": "path",
+    "path": "web/lib/pledgeMoney.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/lib/pledgeMoney.ts"
+  },
+  {
+   "id": "path-web/lib/payout.ts",
+   "claim": "Linked repo path web/lib/payout.ts exists",
+   "where": "README.md:1003",
+   "evidence_type": "file",
+   "evidence": "web/lib/payout.ts",
+   "check": {
+    "type": "path",
+    "path": "web/lib/payout.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/lib/payout.ts"
+  },
+  {
+   "id": "path-web/tests/pledge-client.test.ts",
+   "claim": "Linked repo path web/tests/pledge-client.test.ts exists",
+   "where": "README.md:1005",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-client.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-client.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-client.test.ts"
   },
   {
    "id": "path-contracts/keys",

@@ -558,3 +558,14 @@
 
 /* Never clip the floating key under the shell main */
 .app-main:has(.plg) { overflow: visible; }
+
+/* Separate lender review uses the existing cream/teal dashboard, not the borrow form. */
+.plg-lender-layout {display:grid;grid-template-columns:minmax(320px,1fr) minmax(300px,1fr);gap:36px;max-width:1080px;margin-top:24px;}
+.plg-lender-card {padding:28px;position:static;}
+.plg-lender-card h2,.plg-lender-checks h2 {font-family:var(--serif);font-size:24px;}
+.plg-lender-card dl {display:grid;grid-template-columns:1fr 1.4fr;gap:12px;font-size:14px;margin:20px 0;}
+.plg-lender-card dd {margin:0;overflow-wrap:anywhere;}
+.plg-lender-checks {font-size:14px;line-height:1.6;}
+.plg-lender-checks ol {padding-left:20px;}.plg-lender-checks li {margin-bottom:12px;}
+.plg-risks p {line-height:1.5;}
+@media(max-width:760px){.plg-lender-layout{grid-template-columns:1fr;}.plg-lender-card{padding:20px;}}

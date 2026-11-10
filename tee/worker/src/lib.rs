@@ -1384,3 +1384,5 @@ pub mod guarded;
 
 /// Epoch-scoped durable ownership cooldown, separate from the public provenance format.
 pub mod ownership_sync;
+
+pub mod pledge_inventory;

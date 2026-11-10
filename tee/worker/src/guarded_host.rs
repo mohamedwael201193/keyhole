@@ -177,3 +177,25 @@ fn pending_value_identity(c:&Ctx)->Result<Value,Error>{
       }
     }Ok(Value::Null)
 }
+
+fn op_pledge_inventory(input:&Value)->Result<Value,Error>{
+ let c=authenticate(input,"pledge_inventory",true)?;
+ let token=c.token_id();let control=guard_control(&token)?;let contract=keys_contract();
+ let loan=view(&contract,"get_loan",json!({"token_id":token}))?;
+ let binding=view(&contract,"get_collateral_binding",json!({"token_id":token}))?;
+ let (key,id)=guarded_wallet(&token)?;
+ let balances=custody_get(&key,"/wallet/v1/confidential/balance")?;
+ let mut pages=Vec::new();for offset in (0..1000).step_by(100){let page=custody_get(&key,&format!("/wallet/v1/requests?limit=100&offset={offset}"))?;let total=page["total"].as_u64().ok_or_else(||err("inventory_unavailable","missing request total"))?;pages.push(page);if total<=offset+100{break;}}
+ let mut order_items=Vec::new();let mut orders_complete=false;
+ for offset in (0..=1000).step_by(100){let page=custody_get(&key,&format!("/wallet/v1/limit-orders?open=true&limit=100&offset={offset}"))?;let rows=page.as_array().filter(|a|a.len()<=100).ok_or_else(||err("inventory_unavailable","invalid open-orders page"))?;order_items.extend(rows.iter().cloned());if order_items.len()>1000{return Err(err("inventory_unavailable","open orders exceed inventory bound"));}
+ if rows.len()<100{orders_complete=true;break;}}
+ let orders=json!({"items":order_items,"complete":orders_complete});
+ let approvals=custody_get(&key,"/wallet/v1/pending_approvals")?;
+ let mut out=keyhole_worker::pledge_inventory::project(&balances,&pages,&orders,&approvals)?;
+ if !owns(&token,&c.account)?||guard_control(&token)?!=control||view(&contract,"get_loan",json!({"token_id":token}))?!=loan||view(&contract,"get_collateral_binding",json!({"token_id":token}))?!=binding{return Err(err("inventory_changed","owner/loan changed; authorize a fresh inventory"));}
+ let now=chain_now_ms()?;let limits=limits_now(&c)?;
+ let events:Vec<ProvEvent>=load_prov(&token).into_iter().map(|(e,_)|e).collect();
+ let cooldown=prov_sync_owner(&token,&c.account,now)?.max(custody_cooldown(&token,&c.account,now)?).max(cooldown_until(&events,&c.account)).filter(|u|*u>now);
+ let spent=Host.incr(&hkey(&c.cap(),&format!("spent/{}",now/86_400_000)),0)?;out["spent_today_usd_micro"]=json!(spent);
+ out["ok"]=json!(true);out["op"]=json!("pledge_inventory");out["account"]=json!(c.account);out["token_id"]=json!(token);out["owner_epoch"]=json!(control.epoch.to_string());out["confidential_id"]=json!(id);out["observed_at_ns"]=json!((now*1_000_000).to_string());out["loan"]=loan;out["binding_ready"]=json!(binding["ready"]==true);out["limits"]=json!(limits);out["withdraw_cooldown_until_ms"]=json!(cooldown);Ok(out)
+}

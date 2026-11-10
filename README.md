@@ -256,7 +256,7 @@ A definite refusal before dispatch or a provider-proven never-executed failure r
 
 **Website gateway**
 
-- **Allowlist.** [`web/lib/gateway.ts:7`](web/lib/gateway.ts) (`ALLOWED_OPS`). `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose signed `op` matches. The gateway refuses `copy` with `bad_op`, and `copy` stays on the CLI and MCP. The candidate additionally validates fresh-holder `reconcile_value_op` requests and exact public `loan_certificate` parameters; it never adds epoch fields after signing.
+- **Allowlist.** [`web/lib/gateway.ts:7`](web/lib/gateway.ts) (`ALLOWED_OPS`). `pledge_inventory` and `reconcile_value_op` are holder-authenticated; inventory never belongs to the anonymous lender projection. `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose signed `op` matches. The gateway refuses `copy` with `bad_op`, and `copy` stays on the CLI and MCP. The candidate also validates exact public `loan_certificate` parameters and never adds epoch fields after signing.
 - **Limits.** Bodies over 8 KB get HTTP 413 ([`web/app/api/worker/route.ts:23`](web/app/api/worker/route.ts)). Each IP gets 20 calls a minute, with HTTP 429 and `retry-after` ([`:21`](web/app/api/worker/route.ts)).
 - **Secrets and logs.** The OutLayer payment key is a server-only secret. Request bodies, amounts and accounts are not logged. `info` is cached for 5 minutes.
 - **Parity.** The browser signs the same NEP-413 construction as the CLI ([`web/lib/nep413.ts`](web/lib/nep413.ts)). [`web/tests/nep413.test.ts`](web/tests/nep413.test.ts) checks it byte-for-byte against the reference the TEE accepted on mainnet.
@@ -447,7 +447,7 @@ KEYHOLE's next holder surface after Swap (sidebar **Pledge**): **borrow NEAR wit
 
 - **UI shipped now** at [`/pledge`](web/app/pledge): sketch-v5 widget (Certified USDC minimum → lock connector → You borrow NEAR), real USDC/NEAR icons as **locked chips** (v1 allowlist only — no fake multi-asset picker), visible whole-account warning, tier exit-caps line, ambient motion with `prefers-reduced-motion`, morph to Active loan chrome (preview control / `?preview=active`), floating key art unclipped, dashboard density like PR #185 so the page fits **1440×900** and **1280×800** without scrolling.
 - **Not live lending.** `NEXT_PUBLIC_PLEDGE_LIVE` defaults off. The page is a clearly labelled **preview / in review**: CTA disabled with **Pledge launches after audit**; preview shows clearly labelled **Example** terms (0.50 USDC / 0.01 NEAR / 0.0101 repay) matching sketch v5; live mode uses `get_loan` only — never invents balances as live. Lender preview never requests the holder balance.
-- **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against PR #184 head `0c3c6196` method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
+- **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against the oracle-free PR #184 ABI plus the loan-limits/lender-projection source candidate method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
 - **Proof.** Unit tests mock the client and the preview markup; Playwright e2e covers nav, disabled CTA, density (no scroll at desktop sizes), and screenshots under `shots_pledge/`. Offline claims include the Pledge preview statements (`src-pledge-*`).
 
 
@@ -869,6 +869,25 @@ Built on NEAR.
 
 ## Integrated source candidate — not deployed
 
+### Two-sided Pledge source review
+
+Borrower `/pledge` links to the separate named-lender review `/pledge/lend/example` (or `/pledge/lend/<tokenId>` for read-only chain projection when enabled). The lender page uses only public `get_lender_offer` data and shows exact immutable cashflows, native lender empty-key-slot eligibility, certificate verification, whole-account default, cashout and cap/cooldown-dependent recovery stages. The borrower copy explicitly distinguishes backed credit from native delivery. New-loan controls stay disabled; a separate write gate protects wallet claims while preserving the existing cream/teal dashboard.
+
+The typed client builds exact principal/repayment deposits, a contract-supplied measured bond, full provider-registration arguments and 200-Tgas financial calls. Oracle-free state names are `Freezing`, `Offered`, `DisbursementPending`, `Active`, `UnlockPending`. Funding creates backed principal credit with no due date; only the exact genuine successful native cashout callback starts the term. Failed or UNKNOWN cashout starts no debt clock. The borrower surface refreshes final-chain state and uses final-chain time, not the browser clock, for its display.
+
+**Loan or partial swap?** The matched-portfolio card compares the same usable NEAR now and restoration of the same USDC later. A pure exact-integer model matches swap proceeds to principal minus refundable bond minus quoted upfront cash costs, then compares repayment minus confirmed full bond return against the quoted USDC-restoration cost. Thus current liquidity and final native holdings use the same basis, and cash costs are counted exactly once. It accepts same-ledger current forward/reverse quotes, separates locked bond from fees, keeps quoted fixed reverse fees fixed across hypothetical -20% / unchanged / +20% NEAR-price scenarios, and recommends a partial swap when supplied evidence supports it. Without matching current quotes it says **Comparison unavailable at this size**, rather than inventing savings. Both routes retain the NFT/address.
+
+```bash
+cd web
+npm run typecheck
+npm run lint
+npx vitest run tests/pledge-client.test.ts tests/pledge-view.test.ts tests/pledge-lender.test.ts tests/pledge-economics.test.ts tests/loan-certificate.test.ts tests/pledge-money.test.ts tests/pledge-certificate-gateway.test.ts
+npm run build
+cd ..
+```
+
+## Pledge preparation — v2.5 source, NOT deployed
+
 This local stack combines admission, guarded custody, serialized policy commands, the client preview, blinded provenance, protected sales and delivery-gated lending. Live identities in identity.json remain the deployed release, not the candidate.
 
 - Contract admission binds the current holder, ownership epoch, exact operation ID and action hash. The worker's ordinary withdrawal uses the same begin_value_op/finish_value_op driver as guarded value operations; there is no direct legacy withdrawal POST. Only the current holder's own NEAR account is a permitted withdrawal destination, including at durable provider dispatch.
@@ -895,8 +914,92 @@ node judge/verify-claims.mjs --offline
 ```
 
 The runtime suite uses real local NEAR receipts with a labelled custody mock. Verification results for this integrated head are recorded in [the integrated validation record](docs/evidence/integration-stack/validation.json). Trust, economic risks, UNKNOWN liveness and release gates are in [SECURITY.md](SECURITY.md). No local result is a claim of a published candidate or live provider confinement.
+Safety and release status: [SECURITY.md](SECURITY.md#two-sided-pledge-ui-release-gate).
+
+The lender labels a floor **Declared, not yet verified** until its pinned Ed25519 signature and exact final-chain loan template verify. The canonical encoding/signature test consumes the contract/worker's [V3 delivery-domain Borsh vector](protocol/loan-certificate-v3-delivery.json). The public request accepts only token ID and loan nonce, never another asset or minimum.
+
+The shared app shell exposes **Claim your funds** for available native credits. It reserves a versioned local pending operation before opening the connected wallet, never silently retries UNKNOWN, and checks final receipt sender/contract/method/deposit/gas/arguments plus a post-dispatch block before accepting a returned hash. Contract pending payouts still block retries. `NEXT_PUBLIC_PLEDGE_TRANSACTIONS` is a separate default-OFF write gate. [Tests](web/tests/pledge-money.test.ts).
+
+For the box's linked-dependency worktree only, the verified production build command is `cd web && KEYHOLE_TURBOPACK_ROOT=/workspace/near_hackathon npm run build`. Clean checkouts/CI keep the normal root and `npm run build`; no dependency or lockfile change is needed.
+
+[Two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).
+
+Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+
+### Guarded worker candidate — SOURCE ONLY, NOT PUBLISHED
+
+Integrated with reviewed prepaid-slot #184 head92da286 and #193 delivery-clock/custody serialization; source only, not a production rollout. Every custody swap/copy/withdraw/private transfer/wet quote uses the shared production admission/provider drivers. Persisted journals bind exact owner/epoch/nonce/body/action; an op ID/idempotency key never changes on retry. Value requests require signed decimal-string `params.owner_epoch`; legacy sessions are rejected and A→B→A cannot revive old authorizations. Provisional receivers cannot read sealed data or establish sessions; pledged legitimate holders may still read.
+
+The fresh fixed-floor certificate uses V3_DELIVERY and verifies exact binding plus the contract-confirmed local command sequence; current policy/loan/control are re-read after the private balance/inventory observation. Canonical project UUID and a single pinned nonlegacy version are required. A sealed authority-audit record must already exist; no public/automatic eligibility writer or silent legacy-wallet approval exists. This remains a fail-closed rollout gate, not self-measured code proof.
+
+Generic detached `chain_sign` is disabled in this source revision, including protected/pledged collateral, and the owner/epoch settle gate is explicit. Prior foreign signatures cannot be revoked, so foreign assets/allowances are excluded from the fixed custody-USDC certificate. This is not a claim to have changed live versions or existing credentials.
+
+**Candidate destination policy: self-exit only.** Fresh NEP-413 authorization derives the authenticated NEAR holder; EIP-191 derives the same authenticated0x holder on supported EVM chains. Unknown identity/chain mapping and any different `to` are rejected, including private-transfer bypasses and durable POST replay. Sessions cannot withdraw. Current LIVE source historically allows arbitrary well-formed holder-signed destinations: this source-only restriction has not been deployed, and old attack examples do not prove it live.
+
+The two named cross-layer tests use REAL NEAR admission/pledge/title receipts and the same production drivers as WASI, but HTTP, sealed storage, registry and eligibility observations are labelled mocks. They cover repay/default, failures/unknowns, transfer_call A→B→A and legitimate post-thaw exits, not live-provider confinement or a full WASI-host execution. Source-only native payment UNKNOWN/liveness and live confinement gates remain. No deploy/publish/funding/legacy-version retirement/key or policy change is performed.
 
 
 ### Integrated client continuity proof
 
 The v2.5 source candidate now binds final owner epochs before signatures, recovers the original custody journal across refreshes, and exposes separately consented payout-slot registration and native-credit cashout. The minter checks its prepaid slot before mint dispatch. Candidate byte identity is generated by `node scripts/gen-identity.mjs` in [`release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json); the live identity is unchanged. [Independent artifact reproduction](docs/evidence/integration-stack/artifact-repro-r2.json) records the two clean Linux builds and measured code storage. Regressions: [`integration196.test.ts`](web/tests/integration196.test.ts), [`client-owner-epoch.json`](protocol/client-owner-epoch.json), and the named terminal-history and ordinary-payout runtime tests. [Trust and rollout details](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).
+The provider mock exposes the same Boolean freeze/thaw argument shapes as the public provider contract. Native tests exercise exact-command callbacks, duplicate/late callbacks, delayed reads, terminal failures and restart. Sandbox fault builds exercise a provider mutation whose callback fails; the outstanding command remains durable across a return to the normal binary.
+
+Withdrawal cooldown is keyed by **contract + token + authoritative ownership epoch**, not just the last logged account name. First final-chain observation of a new nonzero epoch durably arms ten minutes; A→B→A cannot reuse A's old record. Status/dashboard show the effective deadline and the normal POST boundary checks it again. No ownership observation deletes or resets the token-wide daily spent counter.
+
+```bash
+(cd contracts/keys && cargo test --locked custody && cargo test --locked policy)
+(cd tee/worker && cargo test --locked ownership_sync && cargo clippy --locked --target wasm32-wasip2 -- -D warnings)
+# Full normal-release + labelled mock/fault integration:
+(cd contracts/keys && ./build.sh && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm)
+(cd contracts/keys-sandbox && cargo test --locked)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
+
+The committed candidate in `release/v2.5` is the normal build; the fault fixture is generated only for sandbox tests. No mainnet calls or worker publication occur in these commands.
+
+
+#### Guarded failure messages
+
+The web error catalog gives actionable English status for pending/provisional ownership, stale sessions, self-exit-only destinations, changed quotes and unknown custody/admission outcomes. Unknown outcomes direct the holder to reconcile the existing operation ID rather than create another send.
+
+```bash
+(cd web && npm ci && npx vitest run tests/domain.test.ts tests/p2-errors.test.ts)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
+
+### First-class Pledge UI candidate — NOT acceptance proof
+
+The live-flag UI now wires holder-authenticated complete at-risk inventory, immutable named-lender terms, batched first-use payout registration, verified-certificate funding, principal native cashout, exact repayment or eligible default, policy reconciliation/thaw, terminal credit claims and ordinary capped/cooldown self-exit. Full balances are never requested for visiting lenders; a genuine new holder can explicitly authorize them after default. Unpriced assets, pending obligations and later deposits are disclosed as whole-account collateral. A same-confidential-ledger live swap quote is unavailable and is labelled unavailable rather than replaced with a public-ledger estimate. Mobile uses deliberate Account/Action panels, not a clipped or endlessly stacked page.
+
+Default production writes remain OFF. [Sandbox UI runbook](docs/pledge/UI_SANDBOX_RUNBOOK.md) explains the real-native disposable-wallet fixture, its explicit custody/host mocks, authored browser acceptance tests and required final screenshots. An authored test, backend smoke, old preview screenshots or a green unit suite is NOT evidence that either funded browser ending ran. The draft release gate stays until that exact-head evidence exists.
+
+### Pledge UI operation guards (source candidate)
+
+The shared borrower/lender page preserves an ambiguous wallet abort/cancel as the original `UNKNOWN` intent and blocks resubmission. Only a provenance-marked local validation failure before wallet invocation can discard an unsent intent. Storage acknowledgement binds the exact displayed account, contract and fee; a changed quote clears it and the prepared charge is checked again immediately before dispatch. Manual and polled chain refreshes share fail-closed cleanup, loading gates and a bounded read-generation guard. Terminal labels use the recorded resolution, not later ownership; missing resolution displays **Closed · history unverified**. Executable regression proofs: [operation/consent/refresh negatives](web/tests/pledge-review-safety.test.ts), [receipt binding](web/tests/pledge-money.test.ts), and [resolution labels](web/tests/pledge-lifecycle.test.ts).
+
+```sh
+cd web
+npx vitest run tests/pledge-review-safety.test.ts tests/pledge-money.test.ts tests/pledge-lifecycle.test.ts
+```
+
+### PR194 R3 async/recovery regression coverage
+
+The exit flow records locally blocked, provably unsent continuations as retryable: signing again preserves the saved amount/epoch, while an uncertain worker dispatch remains non-retryable. Money admission uses browser-wide Web Locks and per-intent records with identity-checked updates and removal. Wallet routing carries the expected signer through its awaits, rechecks consent immediately before wallet invocation, and checks the returned transaction signer. Refreshes coalesce rather than overlap; polling is completion-paced with bounded error backoff, and the executable observation window starts when the read begins.
+
+Executable proofs: [negative/positive unit cases](web/tests/pledge-review-r3.test.ts) and [mounted-component/real-two-tab browser cases](web/e2e/pledge-review-r3.spec.ts), including popup/redirect recovery and reload, delayed FINAL X versus new Y, simultaneous admission, five-second reads, timeout recovery, observation age and signer switching. Run the browser cases with `cd web && npx playwright test e2e/pledge-review-r3.spec.ts --workers=1`; both configured viewports are exercised. See [security boundaries](SECURITY.md#pr194-r3-browser-coordination-and-recovery-boundaries).
+
+### Pledge recovery: one collateral lifecycle across tabs
+
+Loan opening and ordinary exits now reserve their durable intent under the **same account/contract Web Lock**, checking the opposing record inside that short critical section. The lock is released before RPC or wallet confirmation; the persisted original intent preserves exclusion, and a final pre-signing check protects asynchronous wallet routing. Saved exits retain their recovery panel even alongside an unexpected active loan, with unsafe withdrawal disabled. Nonterminal provider reconciliation explicitly remains **pending / UNKNOWN** with its original operation ID.
+
+The funded browser acceptance enforces an ordered **7 + 6 = 13 unique browser-wallet transactions**, each bound to signer, receiver, hash, ordered arguments, deposits, gas and successful native execution. Its two deliberately refused mock-provider thaw receipts are classified separately. Every response is awaited, and the resulting manifest derives counts and hashes from raw receipts, screenshots and canonical committed Git blobs. Provider admission/finish and fixture-setup transactions have their own scope, outside those thirteen wallet submissions.
+
+Executable proofs: [R5 concurrency and receipt-ledger negatives](web/tests/pledge-review-r5.test.ts), [actual two-tab/mounted recovery cases](web/e2e/pledge-review-r3.spec.ts), and [funded UI acceptance](web/e2e/pledge-funded.spec.ts). Each funded run emits `evidence.json`, `native-receipts.json`, and `manifest.json` with its exact source commit and screenshot hashes. [Security and rollout boundaries](SECURITY.md#pr194-r5-shared-lifecycle-and-evidence-boundaries).
+
+### Integrated Pledge, recovery and payout continuity
+
+The integration candidate combines the final-owner-epoch client and original-journal recovery with two-sided Pledge. Both signed `pledge_inventory` and fresh-holder `reconcile_value_op` remain in the exact gateway allowlist, while public certificate requests retain canonical token/nonce validation and their own request budget. [Gateway](web/lib/gateway.ts), [route](web/app/api/worker/route.ts), [epoch/recovery regressions](web/tests/integration196.test.ts), [merge invariants](web/tests/pledge-integration-merge.test.ts).
+
+One claim surface owns each route: Pledge uses its loan action panel, Vault pairs ordinary payout-slot onboarding with durable native cashout, and other holder routes use the shared credit panel. All cashout surfaces share the account/contract money-intent store and FINAL action/identity/dispatch-height checks; pending or UNKNOWN never grants another send. Vault labels delivery only after the successful FINAL callback proof. [Vault payout panel](web/components/PayoutPanel.tsx), [shared credit panel](web/components/PayoutCredit.tsx), [receipt guards](web/lib/pledgeMoney.ts), [callback verifier](web/lib/payout.ts), [route/guard regression](web/tests/pledge-integration-merge.test.ts).
+
+The merged client requires the current storage-bond/binding quote, keeps first-use registration and financial action in a single 220-Tgas batch, and retains the exact 13-receipt funded acceptance ledger. Contract release bytes and generated live identities remain those of the integration base. These are source invariants; each hosted run and funded manifest identifies its own tested head. [Client tests](web/tests/pledge-client.test.ts), [receipt-ledger negatives](web/tests/pledge-review-r5.test.ts), [funded acceptance](web/e2e/pledge-funded.spec.ts), [release checksums](contracts/keys/release/SHA256SUMS), [release boundaries](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).

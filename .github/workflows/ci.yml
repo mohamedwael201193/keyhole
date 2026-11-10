@@ -160,3 +160,41 @@ jobs:
           npx next start -p "$PORT" & npx -y wait-on "$BASE_URL"
           PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/p.json" npx playwright test --grep-invert "funded payment key" --reporter=list,json
           echo "| e2e (distinct, each run at 2 widths) | $(node -p "const j=require(process.env.RUNNER_TEMP+'/p.json');new Set(j.suites.flatMap(function f(s){return [...(s.specs||[]).filter(x=>x.ok).map(x=>x.file+x.title),...(s.suites||[]).flatMap(f)]})).size") |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pledge borrower and lender viewport evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pledge-shots
+          path: web/test-results/pledge-shots
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Real native sandbox / real UI funded repay and default endings
+        env:
+          PLEDGE_SANDBOX_E2E: "1"
+          NEXT_PUBLIC_PLEDGE_SANDBOX: "1"
+          NEXT_PUBLIC_PLEDGE_LIVE: "1"
+          NEXT_PUBLIC_PLEDGE_TRANSACTIONS: "1"
+          BASE_URL: http://127.0.0.1:3142
+          PLEDGE_SHOTS: test-results/pledge-final
+        run: |
+          export UI_SANDBOX_READY="$RUNNER_TEMP/pledge-sandbox.json"
+          (cd ../contracts/keys-sandbox && cargo test --locked --test pledge serve_ui_sandbox -- --ignored --nocapture > "$RUNNER_TEMP/pledge-sandbox.log" 2>&1) &
+          node -e 'const fs=require("fs");let n=0;const t=setInterval(()=>{if(fs.existsSync(process.env.UI_SANDBOX_READY)){clearInterval(t);process.exit(0)}if(++n>900){clearInterval(t);process.exit(1)}},1000)'
+          export NEXT_PUBLIC_PLEDGE_SANDBOX_RPC="$(node -p 'require(process.env.UI_SANDBOX_READY).rpc')"
+          npm run build
+          npx next start --hostname 127.0.0.1 -p 3142 > "$RUNNER_TEMP/pledge-ui.log" 2>&1 &
+          node -e 'let n=0;const t=setInterval(async()=>{try{if((await fetch(process.env.BASE_URL+"/pledge?token=k1")).ok){clearInterval(t);process.exit(0)}}catch{}if(++n>180){clearInterval(t);process.exit(1)}},1000)'
+          npx playwright test pledge-funded.spec.ts --project=desktop --workers=1 --retries=0
+      - name: Funded Pledge final screenshots / native receipts / fixture logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pledge-final
+          path: |
+            web/test-results/pledge-final
+            ${{ runner.temp }}/pledge-sandbox.log
+            ${{ runner.temp }}/pledge-ui.log
+          if-no-files-found: warn
+          retention-days: 7

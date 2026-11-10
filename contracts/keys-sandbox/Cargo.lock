@@ -1662,12 +1662,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
+ "bs58 0.5.1",
  "ed25519-dalek",
  "keyhole-keys",
  "keyhole-worker",
  "near-sdk",
  "near-workspaces",
  "serde_json",
+ "sha2",
  "tokio",
 ]
 

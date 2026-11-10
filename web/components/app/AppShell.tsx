@@ -11,6 +11,7 @@ import { KeyStoreProvider, useKeyStore } from "@/lib/keyStore";
 import { useWallet } from "@/lib/wallet";
 import { PayoutPanel } from "@/components/PayoutPanel";
 import { ValueRecovery } from "@/components/ValueRecovery";
+import { PayoutCredit } from "@/components/PayoutCredit";
 import { SessionPill } from "./SessionPill";
 
 /**
@@ -236,7 +237,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
             </p>
           </div>
         </aside>
-        <main id="main" className="app-main" tabIndex={-1}><ValueRecovery />{children}{pathname === "/vault" && <PayoutPanel />}</main>
+        <main id="main" className="app-main" tabIndex={-1}><ValueRecovery /><PayoutCredit key={accountId??"signed-out"} />{children}{pathname === "/vault" && <PayoutPanel />}</main>
       </div>
       <AppTabs pathname={pathname} hash={hash} moreOpen={open} onMore={() => setOpen((v) => !v)} />
     </div>

@@ -1,0 +1,298 @@
+{
+    "candidate_only":  true,
+    "recorded_at_cairo":  "2026-11-10T03:20:55.119845+02:00",
+    "reviewed_parents":  {
+                             "ui":  "c976895b536a2b951b10816a1c96d9dd96132992",
+                             "contract":  "f58b3eb14d3dc7d2b969eb68c00ddde34179cc79",
+                             "prepaid_slot_base":  "92da2864dd3b154fba088303f39bd11c32091f24"
+                         },
+    "local_checks":  {
+                         "web_typecheck":  "PASS",
+                         "web_lint":  {
+                                          "errors":  0,
+                                          "inherited_warnings":  10
+                                      },
+                         "web_units":  {
+                                           "files_passed":  85,
+                                           "tests_passed":  1599
+                                       },
+                         "web_production_default_off_build":  "PASS (webpack, existing dependencies)",
+                         "funded_spec_typecheck":  "PASS, not execution",
+                         "worker_units_passed":  593,
+                         "worker_native_and_wasi_strict_clippy":  "PASS",
+                         "native_sandbox_tests_passed":  45,
+                         "offline_planner_tests_passed":  7,
+                         "offline_claims":  {
+                                                "total":  537,
+                                                "pass":  243,
+                                                "fail":  0,
+                                                "error":  0,
+                                                "skip":  294
+                                            },
+                         "terminal_display":  "PASS: missing final-chain reads cannot fabricate a repaid/default/thawed ending; delayed cancellation retains its canceled resolution"
+                     },
+    "normal_contract_wasm_sha256":  "e0922b1e922f0c874e210e4a266711d4dca0e7f4e9d37f86654a23e08ce42bd3",
+    "candidate_worker_wasm_sha256":  "5036f802dda07466bfbc7a9bf0731ca1ac2b3469ff14892a34dde08b28b09ce9",
+    "deployed_identity_pins_changed":  false,
+    "native_storage_bytes":  {
+                                 "prepaid_payout_slot":  320,
+                                 "loan_peak_after_prepaid_slots":  580,
+                                 "cancel":  450,
+                                 "default":  574,
+                                 "bounded_retained_default_owner_epoch":  117
+                             },
+    "browser_acceptance":  {
+                               "completed":  true,
+                               "funded_repay_ending_executed":  true,
+                               "funded_default_ending_executed":  true,
+                               "final_screenshots":  [
+                                                         {
+                                                             "sha256":  "588da7b4f7b76ecf004f08fe99f26c442843372893c8751bf2a6c4ee7ee1eafc",
+                                                             "file":  "default_ending_exit_confirmed_borrower_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "17478be7dc2cc4ac315a787e639f094c51acb405ec56b1c4f8ec002a0aa58654",
+                                                             "file":  "default_ending_exit_confirmed_borrower_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "63589631e294dcfc736fec89a6b27299efe76d9ca348e8c172e07cac1e5e1193",
+                                                             "file":  "default_ending_exit_confirmed_borrower_390_inventory.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "3595c3fdc84c78f9b3c63b0fb6499e11058b815ba816884cbd27527ad9dc1768",
+                                                             "file":  "default_ending_exit_confirmed_lender_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "2ef2d9d6db6048f2aa381fec03ad07596570fccd174b4242f790c377ab30c0a7",
+                                                             "file":  "default_ending_exit_confirmed_lender_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "2a6e65f8d59639af47f5e9aaad4d29aec74f946ee2d11b49d31f6ea29297b48f",
+                                                             "file":  "default_ending_exit_confirmed_lender_390_inventory.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "78243957c350bf1d5ee6e061dcbf359d42e4af0a987a995c63d52a33bc11c8cb",
+                                                             "file":  "repay_ending_exit_confirmed_borrower_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "eec5af7a29fae3ced9925166d69534b3ff01ebb89f4422c99c0efaa973c8f865",
+                                                             "file":  "repay_ending_exit_confirmed_borrower_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "b7a3d99c229a2514effa2488f325fdf7523af924e58d3aa6ebb4f849f11a6d79",
+                                                             "file":  "repay_ending_exit_confirmed_borrower_390_inventory.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "c18e3b75e21bb7566c3d297b739d1a673012c80dbad76ab6bc083f6f8cc5da20",
+                                                             "file":  "repay_ending_exit_confirmed_lender_1440x900.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "a78405f30a817924f7998783d6860158d0ab0a7ce33f6654faefc09c24ae8e73",
+                                                             "file":  "repay_ending_exit_confirmed_lender_390.png"
+                                                         },
+                                                         {
+                                                             "sha256":  "e7cf0add29fff04363bccb5eb7a6d483192f91b063bc0c59f41800ccf487da8d",
+                                                             "file":  "repay_ending_exit_confirmed_lender_390_inventory.png"
+                                                         }
+                                                     ],
+                               "required_viewports":  [
+                                                          "1440x900",
+                                                          "390x844"
+                                                      ],
+                               "required_destination":  "web/test-results/pledge-final (CI artifact)",
+                               "ci_spec":  "web/e2e/pledge-funded.spec.ts",
+                               "ci_artifact":  "pledge-final",
+                               "reason":  "Executed both complete endings on Windows Node 20 with a real local native sandbox in WSL. Local loopback forwarding preserved raw RPC bytes after a WSL restart. Custody HTTP, registry and WASI host remain explicitly mocked."
+                           },
+    "release":  {
+                    "keep_pr_194_draft":  true,
+                    "production_write_gate":  "OFF",
+                    "mainnet_operations_executed":  false,
+                    "custody_fixture":  "explicit mock; native sandbox transactions/receipts and production pure guarded drivers real",
+                    "live_same_ledger_comparison":  "unavailable, explicitly labelled"
+                },
+    "ci_web_fix_verification":  {
+                                    "recorded_at_cairo":  "2026-11-10T07:35:35.3327151+02:00",
+                                    "source_parent":  "8414f13568cfb0f5a41609d172cdb9dcf3a0510c",
+                                    "source_scope":  "working tree native UI harness and funded acceptance changes",
+                                    "node":  "20.20.2",
+                                    "web_typecheck":  "PASS",
+                                    "web_lint":  {
+                                                     "errors":  0,
+                                                     "inherited_warnings":  10
+                                                 },
+                                    "web_unit_tests_passed":  1651,
+                                    "web_unit_files_passed":  87,
+                                    "production_funded_build":  "PASS: npm run build",
+                                    "native_ui_bridge_tests_passed":  3,
+                                    "funded_browser_tests_passed":  1,
+                                    "funded_browser_retries":  0,
+                                    "state_viewport_checks":  64,
+                                    "screenshots":  96,
+                                    "final_native_receipts":  13,
+                                    "negative_cases":  3,
+                                    "local_artifact_directory":  "D:\\route\\near\\KEYHOLE\\LOCAL_ONLY\\funded-ci-fixed",
+                                    "evidence_sha256":  "8003f4694956501a15819dd349ef4de0ca9dfea4b89333295fa1b58e1cc62ab7",
+                                    "native_receipts_sha256":  "1bc6054a4d56643ab5d5e148ab6be4c8cb51d27fdfa23acf8a0ed536168cc9e2",
+                                    "prior_head_failed_job":  129625115727,
+                                    "pushed_8414_failed_job":  129639722117,
+                                    "remote_fix_run":  "PASS: pushed 740d434 web job 129659273412, including funded native acceptance; completed 2026-11-10T08:04:39+02:00 Africa/Cairo"
+                                },
+    "r4_verification":  {
+                            "recorded_at_cairo":  "2026-11-10T08:20:02.9452530+02:00",
+                            "source_parent":  "740d434a9191db5934370404afa74a5a76f380ef",
+                            "source_scope":  "R4 working-tree production and regression sources committed alongside this record; no source changes after execution. SHA256 values are local file bytes; Git may normalize line endings.",
+                            "node":  "20.20.2",
+                            "web_typecheck":  "PASS",
+                            "web_lint":  {
+                                             "errors":  0,
+                                             "inherited_warnings":  10
+                                         },
+                            "web_unit":  {
+                                             "passed":  1677,
+                                             "failed":  0,
+                                             "files":  88,
+                                             "command":  "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --reporter=default --reporter=json",
+                                             "cold_load_caveat":  "One unchanged dependency import exceeded its existing five-second test deadline on a cold Windows load; the complete unchanged suite passed on rerun. No timeout/assertion was relaxed."
+                                         },
+                            "ordinary_production_browser":  {
+                                                                "passed":  173,
+                                                                "skipped":  13,
+                                                                "failed":  0,
+                                                                "flaky":  0,
+                                                                "retries":  0,
+                                                                "mounted_r3_r4_cases":  30,
+                                                                "skip_scope":  "13 inherited/project/write-gate cases; funded spec executed separately, not bypassed",
+                                                                "command":  "node node_modules/@playwright/test/cli.js test --grep-invert \"funded payment key\" --reporter=list,json --workers=1 --retries=0",
+                                                                "artifact":  "D:\\route\\near\\KEYHOLE\\LOCAL_ONLY\\r4-production-e2e.json"
+                                                            },
+                            "production_builds":  {
+                                                      "default_off":  "PASS",
+                                                      "funded_sandbox":  "PASS: npm run build on Node 20, production source unchanged",
+                                                      "sequential_execution":  true
+                                                  },
+                            "funded_browser":  {
+                                                   "passed":  1,
+                                                   "retries":  0,
+                                                   "completed":  true,
+                                                   "funded_repay_and_default":  true,
+                                                   "state_viewport_checks":  64,
+                                                   "final_native_receipts":  13,
+                                                   "negative_cases":  3,
+                                                   "screenshots":  96,
+                                                   "local_artifact_directory":  "D:\\route\\near\\KEYHOLE\\LOCAL_ONLY\\funded-r4-final",
+                                                   "evidence_sha256":  "3c92314972d5fa30b4279bf7797e8a553064dabdff7be77e6ee5527e7d2972a8",
+                                                   "native_receipts_sha256":  "f7f83f3b79540837ebcbe874f4993408630e5a94f78af98ed567eaa03cd5d534",
+                                                   "final_screenshots":  [
+                                                                             {
+                                                                                 "file":  "default_ending_exit_confirmed_borrower_1440x900.png",
+                                                                                 "sha256":  "2cc0543d7148178571d383a346a941893b545f2935cadd1fb2b5d9ebe4450c04"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "default_ending_exit_confirmed_borrower_390.png",
+                                                                                 "sha256":  "23d4b346fd62b9f791bb503247b0e95f66e293eef2bbb3b441681c099f4d53b8"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "default_ending_exit_confirmed_borrower_390_inventory.png",
+                                                                                 "sha256":  "63589631e294dcfc736fec89a6b27299efe76d9ca348e8c172e07cac1e5e1193"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "default_ending_exit_confirmed_lender_1440x900.png",
+                                                                                 "sha256":  "b0731ba7d703b994dc9226fd179f4f37ae8538a6df3d31ffca719b0402023096"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "default_ending_exit_confirmed_lender_390.png",
+                                                                                 "sha256":  "d6cb13c1cf82469a260c1aba09b778812a3470bf5e94de8dfec317ea1b9f73cd"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "default_ending_exit_confirmed_lender_390_inventory.png",
+                                                                                 "sha256":  "2a6e65f8d59639af47f5e9aaad4d29aec74f946ee2d11b49d31f6ea29297b48f"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "repay_ending_exit_confirmed_borrower_1440x900.png",
+                                                                                 "sha256":  "d8391d4f6682318392c36c07b2c301fccadae359547d3fbae8fac3e03546a251"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "repay_ending_exit_confirmed_borrower_390.png",
+                                                                                 "sha256":  "fad2201f1309903d23d0e6b43f5c258b5359b9a47aa7c39b8f6184ac23a4f84e"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "repay_ending_exit_confirmed_borrower_390_inventory.png",
+                                                                                 "sha256":  "b7a3d99c229a2514effa2488f325fdf7523af924e58d3aa6ebb4f849f11a6d79"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "repay_ending_exit_confirmed_lender_1440x900.png",
+                                                                                 "sha256":  "1448cb210cd37d50baf9ad3142945485c30664e82e6a0d4c2fd1774b395c2338"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "repay_ending_exit_confirmed_lender_390.png",
+                                                                                 "sha256":  "ab0d5b22dc388173df7f20398b45a0cf70c2496f005c7080524b1db4f90fc331"
+                                                                             },
+                                                                             {
+                                                                                 "file":  "repay_ending_exit_confirmed_lender_390_inventory.png",
+                                                                                 "sha256":  "e7cf0add29fff04363bccb5eb7a6d483192f91b063bc0c59f41800ccf487da8d"
+                                                                             }
+                                                                         ],
+                                                   "provider_scope":  "custody HTTP, registry and WASI host mocked; native contract/wallet/receipts and guarded production pure drivers real",
+                                                   "command":  "node node_modules/@playwright/test/cli.js test pledge-funded.spec.ts --project=desktop --workers=1 --retries=0"
+                                               },
+                            "source_files":  [
+                                                 {
+                                                     "file":  "SECURITY.md",
+                                                     "sha256":  "2a361f3b095c514321792cbf25a95a8f098e09329b49420bbcff4c35ba18220a"
+                                                 },
+                                                 {
+                                                     "file":  "web/app/pledge/LivePledge.tsx",
+                                                     "sha256":  "0a3d47e5df1d932ceb169775dc07ba9e9c47a7f2fdf059eb4c3d6c5025466fe9"
+                                                 },
+                                                 {
+                                                     "file":  "web/components/PayoutCredit.tsx",
+                                                     "sha256":  "b5d3d03885defa0f79533e9afd53e3aeee53740d9471889f9914a6dc3b81b861"
+                                                 },
+                                                 {
+                                                     "file":  "web/lib/pledgeExit.ts",
+                                                     "sha256":  "28dd91f262d1f863688446cefe6c7f04673ee85b9c9520828fcdec851c5160f5"
+                                                 },
+                                                 {
+                                                     "file":  "web/lib/pledgeIntentStore.ts",
+                                                     "sha256":  "d841a7736975e5fc54730daecdb89b15c8b8378a098e1069c4c17efedd10d6de"
+                                                 },
+                                                 {
+                                                     "file":  "web/lib/pledgeMoney.ts",
+                                                     "sha256":  "bd1b3abf05825393339a4d71d40b33144767b74cb885d88006509661b6e456ef"
+                                                 },
+                                                 {
+                                                     "file":  "web/lib/wallet.tsx",
+                                                     "sha256":  "a8ada2767af186c81638c316800a21c27ea46ed87f600e6c42ae4a45dca12c67"
+                                                 },
+                                                 {
+                                                     "file":  "web/lib/walletRedirect.ts",
+                                                     "sha256":  "1042ff7f0cff9e60d24461b64be943be50a66c4bba4c679a0908ee88a49a7554"
+                                                 },
+                                                 {
+                                                     "file":  "web/e2e/pledge-review-r3.spec.ts",
+                                                     "sha256":  "e2e8c45ec6e693fc72805dbf98a19ac644255b8edb63761392b9a577b16c9511"
+                                                 },
+                                                 {
+                                                     "file":  "web/e2e/site.spec.ts",
+                                                     "sha256":  "9a6ef2c97da2e692242babab6524ced79d5c8de63a0166220b45168287b5a85f"
+                                                 },
+                                                 {
+                                                     "file":  "web/e2e/support/signed-redirect.ts",
+                                                     "sha256":  "3fe285232866ef9e497be7a6a8fc4a3a104c38bb2e8b5e2032b4cdce0ec21fb1"
+                                                 },
+                                                 {
+                                                     "file":  "web/tests/pledge-review-r3.test.ts",
+                                                     "sha256":  "da95ab9da5fd9e7ed9bf82a65c1eae1dac4f51bc15e8a5f43637b99be152ade6"
+                                                 },
+                                                 {
+                                                     "file":  "web/tests/pledge-review-r4.test.ts",
+                                                     "sha256":  "72aa38d231389d8511123ef15829fa30582c825ae31221e97266c1dbc7d32f13"
+                                                 }
+                                             ],
+                            "worker":  "unchanged; worker suite not rerun for R4",
+                            "remote_r4_ci":  "not run: local commit only; no push",
+                            "cleanup":  "own production servers, RPC forwarder and native fixture stopped; local write-gate environment flags removed",
+                            "release_scope":  "Production write gates remain OFF. Human-wallet, live custody confinement and external cash delivery are not established by mocked-provider sandbox acceptance."
+                        }
+}
