@@ -7009,6 +7009,32 @@
    "verify": "node judge/verify-claims.mjs --only path-judge/reproduction.test.mjs"
   },
   {
+   "id": "path-web/tests/pledge-certificate-gateway.test.ts",
+   "claim": "Linked repo path web/tests/pledge-certificate-gateway.test.ts exists",
+   "where": "README.md:1028",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-certificate-gateway.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-certificate-gateway.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-certificate-gateway.test.ts"
+  },
+  {
+   "id": "path-contracts/keys-sandbox/tests/support/ui_harness.rs",
+   "claim": "Linked repo path contracts/keys-sandbox/tests/support/ui_harness.rs exists",
+   "where": "README.md:1028",
+   "evidence_type": "file",
+   "evidence": "contracts/keys-sandbox/tests/support/ui_harness.rs",
+   "check": {
+    "type": "path",
+    "path": "contracts/keys-sandbox/tests/support/ui_harness.rs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-contracts/keys-sandbox/tests/support/ui_harness.rs"
+  },
+  {
    "id": "path-contracts/keys",
    "claim": "Linked repo path contracts/keys exists",
    "where": "TRACK_COVERAGE.md:10",

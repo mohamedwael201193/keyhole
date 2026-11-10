@@ -35,11 +35,12 @@ async fn setup()->Result<E>{
  Ok(E{w,c,mock,alice,lender,bob,minter})
 }
 async fn now(e:&E)->u64 {e.w.view_block().await.unwrap().timestamp()}
-async fn open(e:&E)->Result<()> {
+async fn open(e:&E)->Result<()> {open_token(e,"k1").await}
+async fn open_token(e:&E,token:&str)->Result<()> {
  let ts=now(e).await;
- e.alice.call(e.c.id(),"open_loan").args_json(json!({"token_id":"k1","terms":{"lender":e.lender.id(),"principal":N.to_string(),"repayment":(11*N/10).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"1000000","funding_deadline_ns":(ts+600_000_000_000).to_string()}}))
+ e.alice.call(e.c.id(),"open_loan").args_json(json!({"token_id":token,"terms":{"lender":e.lender.id(),"principal":N.to_string(),"repayment":(11*N/10).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"1000000","funding_deadline_ns":(ts+600_000_000_000).to_string()}}))
   .deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
- assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"Offered"); Ok(())
+ assert_eq!(view(&e.c,"get_loan",json!({"token_id":token})).await["state"],"Offered"); Ok(())
 }
 async fn funding(e:&E,borrower_deleted:bool)->Result<()> {
  let ts=now(e).await;

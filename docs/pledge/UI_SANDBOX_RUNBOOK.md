@@ -4,7 +4,7 @@ Production stays pinned to `keyhole-devmo.near` with both Pledge flags OFF. This
 
 ## Existing local instance
 
-UI: `http://127.0.0.1:3142/pledge?token=k1`; lender: `http://127.0.0.1:3142/pledge/lend/k1`. Fixture server binds 127.0.0.1:3144. Public metadata: `/workspace/near_hackathon/pledge-ui-ready.json`. Disposable accounts: `ui-borrower.test.near`, `ui-lender.test.near`; fixed contract `ui-keys.test.near`; token `k1`. Use separate browser contexts/tabs and the explicitly labelled test-wallet role buttons. Keys stay only in process memory. Never attach a mainnet wallet/key. No :3100 process is touched.
+UI: `http://127.0.0.1:3142/pledge?token=k1234`; lender: `http://127.0.0.1:3142/pledge/lend/k1234`. Fixture server binds 127.0.0.1:3144. Public metadata: `/workspace/near_hackathon/pledge-ui-ready.json`. Disposable accounts: `ui-borrower.test.near`, `ui-lender.test.near`; fixed contract `ui-keys.test.near`; token `k1234`. Use separate browser contexts/tabs and the explicitly labelled test-wallet role buttons. Keys stay only in process memory. Never attach a mainnet wallet/key. No :3100 process is touched.
 
 This instance has only backend authentication smoke checks so far; no funded UI ending or final screenshot is claimed. Its temporary chain may be discarded/restarted; do not mix screenshots from different instances/heads without labelling them.
 

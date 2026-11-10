@@ -1,6 +1,8 @@
 //! Opt-in loopback real-native UI bridge. Custody HTTP/registry/WASI host are explicit mocks.
 //! Generates disposable sandbox accounts in memory; never reads a user key, env credential, or mainnet account.
 use super::*;
+// The UI fixture traverses the unchanged production KEY_ID validator.
+const UI_TOKEN:&str="k1234";
 use near_workspaces::operations::Function;
 use near_workspaces::types::Gas;
 use sha2::{Digest,Sha256};
@@ -20,13 +22,13 @@ async fn ui_setup()->Result<E>{
  let bob=account(&root,"ui-receiver").await?;let minter=account(&root,"ui-minter").await?;
  c.call("new").args_json(json!({"owner":c.id(),"minter":minter.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
  register_payouts(&c,&root,&[minter.id()]).await?;
- minter.call(c.id(),"nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":1,"metadata":{"title":"UI sandbox collateral","copies":1}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ minter.call(c.id(),"nft_mint").args_json(json!({"token_id":UI_TOKEN,"receiver_id":alice.id(),"tier":1,"metadata":{"title":"UI sandbox collateral","copies":1}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  minter.call(c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  let pk=SigningKey::from_bytes(&[7;32]).verifying_key().to_bytes();
  c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"custody_contract":mock.id(),"network":"sandbox"})).max_gas().transact().await?.into_result()?;
  c.call("set_lending_enabled").args_json(json!({"enabled":true})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
- minter.call(c.id(),"register_collateral").args_json(json!({"token_id":"k1","wallet_pubkey":format!("ed25519:{}","ab".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
- assert_eq!(view(&c,"get_collateral_binding",json!({"token_id":"k1"})).await["ready"],true);
+ minter.call(c.id(),"register_collateral").args_json(json!({"token_id":UI_TOKEN,"wallet_pubkey":format!("ed25519:{}","ab".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ assert_eq!(view(&c,"get_collateral_binding",json!({"token_id":UI_TOKEN})).await["ready"],true);
  assert_eq!(view(&c,"payout_account_registered",json!({"account_id":alice.id()})).await,false);
  assert_eq!(view(&c,"payout_account_registered",json!({"account_id":lender.id()})).await,false);
  Ok(E{w,c,mock,alice,lender,bob,minter})
@@ -48,14 +50,14 @@ fn sandbox_sign(a:&Account,op:&str,params:Value,n:u64)->Result<Value>{
 async fn private_auth(l:&mut Layer<'_>,input:&Value,op:&str)->Result<(Account,Value,Control)>{
  let auth:keyhole_worker::Auth=serde_json::from_value(input["auth"].clone())?;
  let (signed,nonce)=keyhole_worker::verify_nep413(&auth,"keyhole").map_err(|e|anyhow::anyhow!(e.message))?;
- anyhow::ensure!(signed.op==op&&signed.params["token_id"]=="k1","wrong signed op/token");
+ anyhow::ensure!(signed.op==op&&signed.params["token_id"]==UI_TOKEN,"wrong signed op/token");
  anyhow::ensure!(wall_ms().abs_diff(signed.ts_ms)<=60_000,"stale signature");
  let a=native_account(l.e,&auth.account_id)?;
  anyhow::ensure!(auth.public_key==a.secret_key().public_key().to_string(),"wrong sandbox public key");
  let access=a.view_access_key(&a.secret_key().public_key()).await?;
  anyhow::ensure!(matches!(access.permission,near_workspaces::types::AccessKeyPermission::FullAccess),"native full-access key required");
- let control=Control::parse(&view(&l.e.c,"get_control_state",json!({"token_id":"k1"})).await,"k1").map_err(|e|anyhow::anyhow!(e.message))?;
- let owner=view(&l.e.c,"nft_token",json!({"token_id":"k1"})).await;
+ let control=Control::parse(&view(&l.e.c,"get_control_state",json!({"token_id":UI_TOKEN})).await,UI_TOKEN).map_err(|e|anyhow::anyhow!(e.message))?;
+ let owner=view(&l.e.c,"nft_token",json!({"token_id":UI_TOKEN})).await;
  guarded::private_access(&control,owner["owner_id"]==a.id().as_str()).map_err(|e|anyhow::anyhow!(e.message))?;
  anyhow::ensure!(l.store.set_if_absent(&format!("ui-auth/{}/{}",a.id(),B64.encode(nonce)),b"1").unwrap(),"replayed signature");
  Ok((a,signed.params,control))
@@ -63,9 +65,9 @@ async fn private_auth(l:&mut Layer<'_>,input:&Value,op:&str)->Result<(Account,Va
 async fn worker(l:&mut Layer<'_>,input:&Value)->Result<Value>{
  let op=input["op"].as_str().unwrap_or("");
  if op=="loan_certificate"{
-  let loan=view(&l.e.c,"get_loan",json!({"token_id":"k1"})).await;
-  anyhow::ensure!(input["params"]["token_id"]=="k1"&&input["params"]["loan_nonce"]==loan["nonce"]&&loan["state"]=="Offered","wrong public loan");
-  let anchor=ui_final_block(l.e).await?;let ts=anchor.timestamp();let cert:Value=l.e.c.view("loan_certificate_template").args_json(json!({"token_id":"k1","observed_at_ns":ts.to_string(),"expires_at_ns":(ts+60_000_000_000).to_string()})).block_hash(*anchor.hash()).await?.json()?;
+  let loan=view(&l.e.c,"get_loan",json!({"token_id":UI_TOKEN})).await;
+  anyhow::ensure!(input["params"]["token_id"]==UI_TOKEN&&input["params"]["loan_nonce"]==loan["nonce"]&&loan["state"]=="Offered","wrong public loan");
+  let anchor=ui_final_block(l.e).await?;let ts=anchor.timestamp();let cert:Value=l.e.c.view("loan_certificate_template").args_json(json!({"token_id":UI_TOKEN,"observed_at_ns":ts.to_string(),"expires_at_ns":(ts+60_000_000_000).to_string()})).block_hash(*anchor.hash()).await?.json()?;
   let typed:guarded::Certificate=serde_json::from_value(cert.clone())?;
   guarded::frozen_policy(&typed,&view(&l.e.mock,"get_wallet_policy",json!({"wallet_pubkey":typed.wallet_pubkey})).await).map_err(|e|anyhow::anyhow!(e.message))?;
   anyhow::ensure!(l.balance>=typed.terms.floor_raw.parse::<u128>()?,"floor not met");
@@ -73,18 +75,18 @@ async fn worker(l:&mut Layer<'_>,input:&Value)->Result<Value>{
   return Ok(json!({"output":{"ok":true,"certificate":cert,"signature":typed.sign(&[7;32]).map_err(|e|anyhow::anyhow!(e.message))?},"call_id":"sandbox-provider-mock","status":"success"}));
  }
  let (a,params,control)=private_auth(l,input,op).await?;let ms=ui_final_block(l.e).await?.timestamp()/1_000_000;
- let cooldown=keyhole_worker::ownership_sync::observe(&mut l.store,l.e.c.id().as_str(),"k1",a.id().as_str(),control.epoch,ms).map_err(|e|anyhow::anyhow!(e.message))?;
+ let cooldown=keyhole_worker::ownership_sync::observe(&mut l.store,l.e.c.id().as_str(),UI_TOKEN,a.id().as_str(),control.epoch,ms).map_err(|e|anyhow::anyhow!(e.message))?;
  if op=="pledge_inventory"{
   let rows=l.rows.values().cloned().collect::<Vec<_>>();let balances=json!({"balances":[{"token":guarded::ASSET,"amount":l.balance.to_string(),"symbol":"USDC","decimals":6},{"token":"nep141:unpriced.test.near","amount":"123","symbol":"UNPRICED"}]});
   let mut out=keyhole_worker::pledge_inventory::project(&balances,&[json!({"total":rows.len(),"requests":rows})],&json!({"items":[],"complete":true}),&json!({"approvals":[]})).map_err(|e|anyhow::anyhow!(e.message))?;
-  out["ok"]=json!(true);out["account"]=json!(a.id());out["token_id"]=json!("k1");out["owner_epoch"]=json!(control.epoch.to_string());out["observed_at_ns"]=json!((ms*1_000_000).to_string());out["binding_ready"]=json!(true);out["limits"]=json!({"per_tx_usd_micro":1_000_000,"daily_usd_micro":5_000_000});out["spent_today_usd_micro"]=json!(2_000_000-l.balance);out["withdraw_cooldown_until_ms"]=json!(cooldown.filter(|end|*end>ms));
+  out["ok"]=json!(true);out["account"]=json!(a.id());out["token_id"]=json!(UI_TOKEN);out["owner_epoch"]=json!(control.epoch.to_string());out["observed_at_ns"]=json!((ms*1_000_000).to_string());out["binding_ready"]=json!(true);out["limits"]=json!({"per_tx_usd_micro":1_000_000,"daily_usd_micro":5_000_000});out["spent_today_usd_micro"]=json!(2_000_000-l.balance);out["withdraw_cooldown_until_ms"]=json!(cooldown.filter(|end|*end>ms));
   return Ok(json!({"output":out,"call_id":"sandbox-provider-mock","status":"success"}));
  }
  anyhow::ensure!(op=="withdraw","unsupported fixture worker op");guarded::signed_epoch(&params,control.epoch).map_err(|e|anyhow::anyhow!(e.message))?;
  keyhole_worker::ownership_sync::require_elapsed(cooldown,ms).map_err(|e|anyhow::anyhow!(e.message))?;
  anyhow::ensure!(params["token"]==guarded::ASSET&&params["chain"]=="near"&&params["to"]==a.id().as_str(),"only supported self-exit allowed");
  let amount=params["amount"].as_str().unwrap_or("").parse::<u128>()?;anyhow::ensure!(amount>0&&amount<=1_000_000&&amount<=l.balance&&2_000_000-l.balance+amount<=5_000_000,"ordinary exit caps/balance exceeded");
- let mut j=l.journal(&a,"withdraw",&format!("ui-exit:{}",input["auth"]["signature"]));j.body["amount"]=json!(amount.to_string());j.create(l).map_err(|e|anyhow::anyhow!(e.message))?;
+ let mut j=l.journal_for(UI_TOKEN,&a,"withdraw",&format!("ui-exit:{}",input["auth"]["signature"]));j.body["amount"]=json!(amount.to_string());j.create(l).map_err(|e|anyhow::anyhow!(e.message))?;
  guarded::confirm_admission(l,&j).map_err(|e|anyhow::anyhow!(e.message))?;guarded::drive_provider(l,&j,"sealed-mock-key",false).map_err(|e|anyhow::anyhow!(e.message))?;
  l.status(&j,"success",false);l.balance-=amount;
  let out=guarded::drive_provider(l,&j,"sealed-mock-key",true).map_err(|e|anyhow::anyhow!(e.message))?;
@@ -92,7 +94,7 @@ async fn worker(l:&mut Layer<'_>,input:&Value)->Result<Value>{
 }
 async fn handle(l:&mut Layer<'_>,path:&str,input:Value,counter:&mut u64)->Result<Value>{
  match path{
-  "/metadata"=>Ok(json!({"contract":l.e.c.id(),"rpc":l.e.w.rpc_addr(),"borrower":l.e.alice.id(),"lender":l.e.lender.id(),"token_id":"k1","provider":"MOCK — not a live keystore or WASI attestation"})),
+  "/metadata"=>Ok(json!({"contract":l.e.c.id(),"rpc":l.e.w.rpc_addr(),"borrower":l.e.alice.id(),"lender":l.e.lender.id(),"token_id":UI_TOKEN,"provider":"MOCK — not a live keystore or WASI attestation"})),
   "/sign"=>{let a=native_account(l.e,input["account_id"].as_str().unwrap_or(""))?;let op=input["op"].as_str().unwrap_or("");anyhow::ensure!(["pledge_inventory","withdraw","reconcile_value_op"].contains(&op),"unsupported signature intent");*counter+=1;sandbox_sign(&a,op,input["params"].clone(),*counter)},
   "/worker"=>worker(l,&input).await,
   "/advance"=>{let blocks=input["blocks"].as_u64().filter(|n|*n<=10000).ok_or_else(||anyhow::anyhow!("block range"))?;l.e.w.fast_forward(blocks).await?;Ok(json!({"now_ns":ui_final_block(l.e).await?.timestamp().to_string()}))},
@@ -129,28 +131,28 @@ async fn serve_ui_sandbox()->Result<()>{
 #[tokio::test(flavor="multi_thread",worker_threads=2)]
 async fn ui_bridge_authenticates_real_fullaccess_and_keeps_inventory_holder_only()->Result<()>{
  let e=ui_setup().await?;let mut l=Layer::new(&e);
- let auth=sandbox_sign(&e.alice,"pledge_inventory",json!({"token_id":"k1"}),1)?;
+ let auth=sandbox_sign(&e.alice,"pledge_inventory",json!({"token_id":UI_TOKEN}),1)?;
  let input=json!({"op":"pledge_inventory","auth":auth});let output=worker(&mut l,&input).await?;
  assert_eq!(output["output"]["complete"],true);assert_eq!(output["output"]["assets"].as_array().unwrap().len(),2);
  assert_eq!(output["output"]["account"],e.alice.id().as_str());assert!(worker(&mut l,&input).await.is_err(),"NEP-413 nonce cannot replay");
- let stranger=sandbox_sign(&e.lender,"pledge_inventory",json!({"token_id":"k1"}),2)?;
+ let stranger=sandbox_sign(&e.lender,"pledge_inventory",json!({"token_id":UI_TOKEN}),2)?;
  assert!(worker(&mut l,&json!({"op":"pledge_inventory","auth":stranger})).await.is_err(),"public lender cannot read exact balances");
  assert_eq!(l.post_calls,0,"inventory/auth never dispatch custody value");Ok(())
 }
 
 #[tokio::test(flavor="multi_thread",worker_threads=2)]
 async fn ui_bridge_certificate_uses_final_clock_and_exact_template()->Result<()>{
- let e=ui_setup().await?;register_payouts(&e.c,&e.alice,&[e.alice.id()]).await?;open(&e).await?;
- let mut l=Layer::new(&e);let request=json!({"op":"loan_certificate","params":{"token_id":"k1","loan_nonce":"1"}});
+ let e=ui_setup().await?;register_payouts(&e.c,&e.alice,&[e.alice.id()]).await?;open_token(&e,UI_TOKEN).await?;
+ let mut l=Layer::new(&e);let request=json!({"op":"loan_certificate","params":{"token_id":UI_TOKEN,"loan_nonce":"1"}});
  let out=worker(&mut l,&request).await?;let cert=&out["output"]["certificate"];
  let final_block=ui_final_block(&e).await?;
  assert!(cert["observed_at_ns"].as_str().unwrap().parse::<u64>()?<=final_block.timestamp(),"a real browser checks the FINAL clock, never the optimistic head");
- let expected:Value=e.c.view("loan_certificate_template").args_json(json!({"token_id":"k1","observed_at_ns":cert["observed_at_ns"],"expires_at_ns":cert["expires_at_ns"]})).block_hash(*final_block.hash()).await?.json()?;
+ let expected:Value=e.c.view("loan_certificate_template").args_json(json!({"token_id":UI_TOKEN,"observed_at_ns":cert["observed_at_ns"],"expires_at_ns":cert["expires_at_ns"]})).block_hash(*final_block.hash()).await?.json()?;
  assert_eq!(cert,&expected,"independently FINAL-read immutable loan binding");
  let typed:LoanCertificate=serde_json::from_value(cert.clone())?;
  let signature=ed25519_dalek::Signature::from_slice(&B64.decode(out["output"]["signature"].as_str().unwrap())?)?;
  SigningKey::from_bytes(&[7;32]).verifying_key().verify_strict(&near_sdk::borsh::to_vec(&typed)?,&signature)?;
- assert!(worker(&mut l,&json!({"op":"loan_certificate","params":{"token_id":"k1","loan_nonce":"2"}})).await.is_err(),"another nonce cannot borrow this certificate");
+ assert!(worker(&mut l,&json!({"op":"loan_certificate","params":{"token_id":UI_TOKEN,"loan_nonce":"2"}})).await.is_err(),"another nonce cannot borrow this certificate");
  l.balance=0;assert!(worker(&mut l,&request).await.is_err(),"public floor is still enforced");
  assert_eq!(l.post_calls,0,"public certification never dispatches provider value");Ok(())
 }

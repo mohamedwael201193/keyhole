@@ -17,9 +17,12 @@ struct Layer<'a>{e:&'a E,store:Memory,post_calls:usize,executions:usize,lose_pos
 impl<'a> Layer<'a>{
  fn new(e:&'a E)->Self{Self{e,store:Memory::default(),post_calls:0,executions:0,lose_post:false,fail_finish:false,legacy_count:1,balance:2_000_000,rows:BTreeMap::new(),bodies:BTreeMap::new()}}
  fn journal(&mut self,owner:&Account,kind:&str,label:&str)->Journal{
-  let v=sync(view(&self.e.c,"get_control_state",json!({"token_id":"k1"})));let c=Control::parse(&v,"k1").unwrap();
+  self.journal_for("k1",owner,kind,label)
+ }
+ fn journal_for(&mut self,token:&str,owner:&Account,kind:&str,label:&str)->Journal{
+  let v=sync(view(&self.e.c,"get_control_state",json!({"token_id":token})));let c=Control::parse(&v,token).unwrap();
   let hash=keyhole_worker::sha256_hex(label);let nonce=c.nonce+1;
-  Journal{contract:self.e.c.id().to_string(),token_id:"k1".into(),owner:owner.id().to_string(),epoch:c.epoch,nonce,op_id:format!("{nonce}:{hash}"),action_hash:hash,kind:kind.into(),body:match kind{"swap"|"copy"=>json!({"token_in":guarded::ASSET,"token_out":"nep141:wrap.near","amount_in":"100000","min_amount_out":"1"}),"withdraw"=>json!({"chain":"near","token":guarded::ASSET,"amount":"100000","to":owner.id()}),_=>json!({"token":guarded::ASSET,"amount":"100000","to":owner.id()})},wallet_id:"ab".repeat(32),charge:None,auth_scheme:"nep413".into(),event:Some(guarded::JournalEvent{ts_ms:1000,usd:100,source:Value::Null})}
+  Journal{contract:self.e.c.id().to_string(),token_id:token.into(),owner:owner.id().to_string(),epoch:c.epoch,nonce,op_id:format!("{nonce}:{hash}"),action_hash:hash,kind:kind.into(),body:match kind{"swap"|"copy"=>json!({"token_in":guarded::ASSET,"token_out":"nep141:wrap.near","amount_in":"100000","min_amount_out":"1"}),"withdraw"=>json!({"chain":"near","token":guarded::ASSET,"amount":"100000","to":owner.id()}),_=>json!({"token":guarded::ASSET,"amount":"100000","to":owner.id()})},wallet_id:"ab".repeat(32),charge:None,auth_scheme:"nep413".into(),event:Some(guarded::JournalEvent{ts_ms:1000,usd:100,source:Value::Null})}
  }
  fn status(&mut self,j:&Journal,status:&str,never:bool){let row=self.rows.get_mut(&j.op_id).unwrap();row["status"]=json!(status);if never{row["result"]=json!({"never_submitted":true});}}
  fn assert_blocked(&mut self,owner:&Account,label:&str){let j=self.journal(owner,"withdraw",label);let before=self.post_calls;assert!(guarded::confirm_admission(self,&j).is_err());assert!(guarded::drive_provider(self,&j,"sealed-mock-key",false).is_err());assert_eq!(self.post_calls,before);}
@@ -43,7 +46,7 @@ impl ProviderHost for Layer<'_>{
   self.registry()?;assert_eq!(key,"sealed-mock-key");j.validate_permit(&self.value_op(j)?)?;
   let c=AdmissionHost::control(self,&j.token_id)?;
   if c.pledged||c.listed||c.transfer_pending||c.epoch!=j.epoch||c.pending!=1{return Err(err("pledged","real chain control is locked"));}
-  if sync(view(&self.e.c,"nft_token",json!({"token_id":"k1"})))["owner_id"]!=j.owner{return Err(err("not_owner","real chain title changed"));}
+  if sync(view(&self.e.c,"nft_token",json!({"token_id":j.token_id})))["owner_id"]!=j.owner{return Err(err("not_owner","real chain title changed"));}
   Ok(())
  }
  fn post(&mut self,j:&Journal,_key:&str,_path:&str)->std::result::Result<(u16,Value),Error>{
