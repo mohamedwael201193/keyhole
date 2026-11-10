@@ -1,0 +1,85 @@
+TAP version 13
+# Subtest: primary recipe fetches and checks the full immutable source commit
+ok 1 - primary recipe fetches and checks the full immutable source commit
+  ---
+  duration_ms: 1.206495
+  ...
+# Subtest: exact generated checkout contains byte-identical script, receipt checker and identity
+ok 2 - exact generated checkout contains byte-identical script, receipt checker and identity
+  ---
+  duration_ms: 618.194231
+  ...
+# Subtest: no claim URL hits /api/health or OutLayer /call
+ok 3 - no claim URL hits /api/health or OutLayer /call
+  ---
+  duration_ms: 1.411114
+  ...
+# Subtest: the claims runner does not call OutLayer /call
+ok 4 - the claims runner does not call OutLayer /call
+  ---
+  duration_ms: 0.186578
+  ...
+# Subtest: full reproduction builds the untracked callback fixture before the sandbox
+ok 5 - full reproduction builds the untracked callback fixture before the sandbox
+  ---
+  duration_ms: 1.22914
+  ...
+# Subtest: full reproduction compiles the WASI host, not just native cfg
+ok 6 - full reproduction compiles the WASI host, not just native cfg
+  ---
+  duration_ms: 0.128639
+  ...
+# Subtest: judge checkout and raw paths share an immutable generated source ref
+ok 7 - judge checkout and raw paths share an immutable generated source ref
+  ---
+  duration_ms: 0.574792
+  ...
+# Subtest: all current README claim-count rows match actual offline verification
+ok 8 - all current README claim-count rows match actual offline verification
+  ---
+  duration_ms: 194.89199
+  ...
+# Subtest: successful receipts prove success
+ok 9 - successful receipts prove success
+  ---
+  duration_ms: 1.009367
+  ...
+# Subtest: a failed nested receipt cannot prove success
+ok 10 - a failed nested receipt cannot prove success
+  ---
+  duration_ms: 0.121955
+  ...
+# Subtest: intentional refusal must match its documented error
+ok 11 - intentional refusal must match its documented error
+  ---
+  duration_ms: 0.169346
+  ...
+# Subtest: an unrelated failure does not prove the documented refusal
+ok 12 - an unrelated failure does not prove the documented refusal
+  ---
+  duration_ms: 0.149403
+  ...
+# Subtest: success cannot prove refusal
+ok 13 - success cannot prove refusal
+  ---
+  duration_ms: 0.199562
+  ...
+# Subtest: failure claims without a reason fail closed
+ok 14 - failure claims without a reason fail closed
+  ---
+  duration_ms: 0.103249
+  ...
+# Subtest: unknown expectations fail closed
+ok 15 - unknown expectations fail closed
+  ---
+  duration_ms: 0.096797
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 728.983128

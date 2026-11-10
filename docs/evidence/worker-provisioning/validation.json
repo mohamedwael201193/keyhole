@@ -1,0 +1,72 @@
+{
+  "scope": "source candidate; no mainnet or paid provider execution",
+  "base_commit": "cb8179e289ad64b36ac707d433128420e2976189",
+  "candidate": {
+    "status": "source-candidate-not-published",
+    "wasm_sha256": "57419a8286c7ff50647dc52d26c1902664bd1f33518bcbc35068006b689cb46e",
+    "bytes": 1043280,
+    "recipe": "tee/worker/build.sh"
+  },
+  "reproducible_builds": {
+    "runs": 2,
+    "sha256_equal": true
+  },
+  "tests": {
+    "worker": {
+      "passed": 639,
+      "failed": 0,
+      "ignored": 0
+    },
+    "offline_plan_and_publication": {
+      "passed": 9,
+      "failed": 0
+    },
+    "judge_kit": {
+      "passed": 15,
+      "failed": 0
+    },
+    "receipt_proof": {
+      "passed": 9,
+      "failed": 0
+    },
+    "sandbox_complete": {
+      "passed": 27,
+      "failed": 0,
+      "ignored": 1
+    }
+  },
+  "clippy": {
+    "native": "pass (-D warnings)",
+    "wasm32-wasip2": "pass (-D warnings)"
+  },
+  "claims": {
+    "offline": {
+      "total": 576,
+      "pass": 282,
+      "fail": 0,
+      "error": 0,
+      "skip": 294
+    },
+    "strict_online": {
+      "total": 576,
+      "pass": 576,
+      "fail": 0,
+      "error": 0,
+      "skip": 0
+    }
+  },
+  "sandbox_fixture": {
+    "path": "contracts/keys-sandbox/tests/fixtures/callback_failure.wasm",
+    "sha256": "7c99daf302445990ad0f995b061651ea96ad84096a0d18af575ce81118746973",
+    "source_matches_prior_fixture_build": true,
+    "ui_server_test": "intentionally ignored"
+  },
+  "external_actions": {
+    "mainnet_transactions": 0,
+    "paid_calls": 0,
+    "topups": 0,
+    "pushes": 0,
+    "pull_requests": 0
+  },
+  "release_checklist": "SECURITY.md#collateral-provisioning-release-boundary"
+}

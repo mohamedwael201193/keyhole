@@ -21,7 +21,7 @@ fn guarded_minter()->Result<(String,String),Error>{
     let m=minter()?;if view(&keys_contract(),"config",json!({}))?["minter"]!=m.0{return Err(err("guard_state","minter mismatch"));}Ok(m)
 }
 fn guard_preflight(c:&Ctx)->Result<Control,Error>{
-    let control=guard_control(&c.token_id())?;control.admit()?;guarded::signed_epoch(&c.req.params,control.epoch)?;guard_registry()?;
+    provision_idle(&c.token_id())?;let control=guard_control(&c.token_id())?;control.admit()?;guarded::signed_epoch(&c.req.params,control.epoch)?;guard_registry()?;
     if view(&keys_contract(),"get_pledge_config",json!({}))?.is_null(){return Err(err("guard_state","pledge migration required; no legacy compatibility"));}
     if !owns(&c.token_id(),&c.account)?{return Err(err("not_owner","ownership changed"));}Ok(control)
 }
@@ -39,7 +39,7 @@ impl guarded::AdmissionHost for Host {
     fn value_op(&mut self,j:&Journal)->Result<Value,Error>{view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))}
     fn control(&mut self,token:&str)->Result<Control,Error>{guard_control(token)}
     fn begin(&mut self,j:&Journal)->Result<(),Error>{
-        let (mid,msk)=guarded_minter()?;let args=j.admission_args().to_string();
+        provision_idle(&j.token_id)?;let (mid,msk)=guarded_minter()?;let args=j.admission_args().to_string();
         send(&mid,&msk,&j.contract,&[Action::FunctionCall{method:"begin_value_op",args:args.as_bytes(),gas:35_000_000_000_000,deposit:guarded::ADMISSION_DEPOSIT}]).map(|_|())
     }
     fn complete(&mut self,j:&Journal,t:&Terminal)->Result<(),Error>{

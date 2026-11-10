@@ -65,13 +65,19 @@ It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
 | Contract code | NEAR RPC `view_account` | the on-chain `code_hash` equals `identity.json` |
 | State views | `config`, `contract_source_metadata`, `nft_total_supply` | owner, treasury, `config.minter` equal to the 64-hex minter in [`identity.json`](identity.json), live royalty 500 bps, NEP-330 `2.4.0`, supply ≥ 6 |
 | Attestation | `api.outlayer.ai/attestations/by-call/<info_call>` | a TDX quote is present and `executed_wasm_sha256` equals the worker hash in `identity.json`. This is an existing attestation, not a new paid call |
-| Receipt | archival NEAR RPC `tx` with `wait_until: FINAL` and the recorded signer | [`H8qJNgox…`](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV) matches hash, signer, receiver, `nft_transfer`, 1 yocto, decoded args, and the typed contract `ExecutionError` in [`judge/receipt_proof.py`](judge/receipt_proof.py) |
+| Receipt | archival NEAR RPC `tx` with `wait_until: FINAL` and the recorded signer | [`H8qJNgox…`](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV) refused `one key per account: receiver already holds a KEYHOLE key` as expected; matches hash, signer, receiver, `nft_transfer`, 1 yocto, decoded args, and the typed contract `ExecutionError` in [`judge/receipt_proof.py`](judge/receipt_proof.py) |
 
 Run on 2026-11-10 (Africa/Cairo) against mainnet: **9 PASS, 0 FAIL**. Output: [`docs/evidence/judge-zero-install/run.txt`](docs/evidence/judge-zero-install/run.txt).
 
 Only a browser? Open [/verify](https://keyhole-seven.vercel.app/verify) (attestation, Intel DCAP and revocation checks, computed in the page) and [/judge](https://keyhole-seven.vercel.app/judge).
 
 Fees and deposits for every action, and what a sealed-floor attestation does and does not prove: [**docs/COSTS_AND_RISK.md**](docs/COSTS_AND_RISK.md).
+
+### Audited collateral provisioning
+
+The source worker prepares its real provider policy inside the enclave, quotes exact storage with the minter refund beneficiary, and submits collateral with the enclave-only minter. A separately pinned, signed authority review binds the exact wallet, policy, build and owner epoch. The sealed eligibility writer runs only after the original registration is FINAL and the immutable binding matches. Holder-only exit previews retain actual provider minima without broadcasting a withdrawal.
+
+[Production path and runnable proof](docs/evidence/worker-provisioning/README.md) · [Independent-review schema](tee/worker/src/collateral.rs) · [Reproducible candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Storage, route and bounded compute accounting](docs/evidence/worker-provisioning/RESEARCH.md).
 
 <!-- IDENTITY:START -->
 ### Live mainnet identities
@@ -84,20 +90,31 @@ The live worker is `d337e822` (765,658 bytes).
 |---|---|---|
 | Contract account | `keyhole-devmo.near` | [nearblocks](https://nearblocks.io/address/keyhole-devmo.near) |
 | TEE minter | `015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443` | [`judge/0-live.sh`](judge/0-live.sh) requires `config.minter` to equal this 64-hex implicit account |
-| Contract code hash | `DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ` | deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn) |
-| Contract wasm sha256 | `b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
+| Contract version | `2.5.0` | NEP-330 `contract_source_metadata` |
+| Pledge migration | `EwKUkWju…` | [nearblocks](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa) |
+| Contract code hash | `3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b` | deploy tx [`BRuwESG8…`](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S) |
+| Contract wasm sha256 | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
 | Worker wasm sha256 | `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
 | Worker publish tx | `BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5` | [nearblocks](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
 | Live `info` call | `dc3668db-674f-4865-a2ce-272f70c41b0d` | [attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) · [verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) |
 
-These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [`contracts/keys/release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json), generated from the release artifact, and the v2.5 line of [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS).
+The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
-| Candidate (not deployed) | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
+| Contract release | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
 |---|---:|---|---:|
-| v2.5 | 485,855 | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` | 4.85855 NEAR |
+| v2.5 (live) | 485,855 | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` | 4.85855 NEAR |
 
-Measured size steps and the exact-artifact profiler report are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). [`docs/evidence/integration-stack/validation.json`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into `identity.json`. Re-run this script after changing `identity.json`.
+Strict read-only online verification, including a reproducible contract rebuild:
+
+```bash
+CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict --rebuild
+node judge/verify-claims.mjs --strict
+```
+
+Worker source candidate: `57419a8286c7ff50647dc52d26c1902664bd1f33518bcbc35068006b689cb46e` (1,043,280 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Provisioning proof](docs/evidence/worker-provisioning/README.md).
+
+Measured size steps are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [`docs/evidence/live-v2.5/all-live-views.json`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
 
 
@@ -181,7 +198,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `569 claims: 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `576 claims: 282 PASS, 0 FAIL, 0 ERROR, 294 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -225,7 +242,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (569 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo) |
+| Judge-claims machine (576 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 282 PASS, 0 FAIL, 0 ERROR, 294 SKIP (2026-11-10, Africa/Cairo) |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -774,7 +791,7 @@ Historical measurements below belong to `2f7ac1e` (on top of `7356cfa`), unless 
 | CLI tests | **53** historical cases | `cd cli && npm test`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web unit tests (Vitest) | **1256** historical cases in 65 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web e2e (Playwright) | not re-run for this README | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). CI runs them at 1440 and 390 px |
-| Claims in `docs/claims.json` | **569**: offline 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **576**: offline 282 PASS, 0 FAIL, 0 ERROR, 294 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | **216** tokens on **39** chains | live `GET keyhole-seven.vercel.app/api/tokens` (2026-11-09) |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (2026-11-09). The home page counts the five holder keys |

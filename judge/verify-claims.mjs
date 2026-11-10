@@ -3,7 +3,7 @@
 // Default mode uses public NEAR RPC, existing OutLayer attestations (GET), FastFS, the live site and the GitHub API.
 // It does not call OutLayer /call and it does not request /api/health. A passive or skipped probe is not an online PASS.
 // An approved info probe is a separate server route and is not invoked here.
-// usage: node judge/verify-claims.mjs [--only <id>] [--offline] [--json]
+// usage: node judge/verify-claims.mjs [--only <id>] [--offline] [--strict]
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
@@ -139,9 +139,9 @@ const checks = {
       const m = h.match(/"supply":(\d+)/);
       const total = Number(await view("nft_total_supply", {}));
       const own = Number(await view("nft_supply_for_owner", { account_id: "keyhole-devmo.near" }));
-      return [m && Number(m[1]) === total - own, `site ${m?.[1]} chain ${total} - contract-held ${own}`];
+      return [!!m && Number(m[1]) === total - own, `site ${m?.[1]} chain ${total} - contract-held ${own}`];
     }
-    const m = h.match(/"beats":"(\d+)"/); const live = (await view("config", {})).beats; return [m && m[1] === String(live), `site ${m?.[1]} chain ${live}`];
+    const m = h.match(/"beats":"(\d+)"/); const live = (await view("config", {})).beats; return [!!m && m[1] === String(live), `site ${m?.[1]} chain ${live}`];
   },
   async ci_run(c) {
     const r = await get(`https://api.github.com/repos/${c.repo}/actions/runs/${c.run}`, { headers: { "user-agent": "keyhole-judge" } });
@@ -176,4 +176,5 @@ list.forEach((c, i) => {
 console.log(`\n${list.length} claims: ${pass} PASS, ${fail} FAIL, ${errs} ERROR, ${skip} SKIP`);
 if (failed.length) console.log("failed: " + failed.join(", "));
 if (errored.length) console.log("error (source unreachable, not a failed claim): " + errored.join(", "));
-process.exit(fail ? 1 : errs ? 2 : 0);
+// Let piped stdout drain before exiting (the reproduction test reads the final summary).
+process.exitCode = fail ? 1 : errs ? 2 : args.includes("--strict") && skip ? 3 : 0;

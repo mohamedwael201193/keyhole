@@ -122,3 +122,34 @@ async fn guarded_worker_cross_layer_default_failures_and_new_holder_exit()->Resu
 }
 
 #[path="ui_harness.rs"] mod ui_harness;
+
+/// Real local binding receipts + production writer, with explicitly mocked
+/// custody encryption/signing and a fixture reviewer (not live TEE proof).
+#[tokio::test(flavor="multi_thread",worker_threads=2)]
+async fn collateral_provisioning_seals_only_final_binding_and_serializes_value_admission()->Result<()> {
+ use keyhole_worker::collateral::{self,Prepared,AuthorityAudit};
+ let e=setup().await?;
+ e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"provisioned","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Provisioning fixture","copies":1}}))
+  .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let p=Prepared{token_id:"provisioned".into(),owner:e.bob.id().to_string(),owner_epoch:0,worker_hash:"fe".repeat(32),wallet_pubkey:format!("ed25519:{}","cd".repeat(32)),plaintext_hash:"12".repeat(32),encrypted_data:"sealed-policy-provisioning-mock".into(),wallet_signature:"ab".repeat(64),version:1,valid_until:4_000_000_000};
+ e.minter.call(e.c.id(),"begin_value_op").args_json(json!({"token_id":p.token_id,"epoch":"0","op_id":"1:provisioning-race","action_hash":"fixture","owner_id":e.bob.id()}))
+  .deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;
+ let blocked=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).max_gas().transact().await?;
+ assert!(blocked.is_failure());assert!(view(&e.c,"get_collateral_binding",json!({"token_id":p.token_id})).await.is_null());
+ e.minter.call(e.c.id(),"finish_value_op").args_json(json!({"token_id":p.token_id,"op_id":"1:provisioning-race","success":true})).max_gas().transact().await?.into_result()?;
+ let out=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).max_gas().transact().await?.into_result()?;
+ let terminal=out.json::<bool>()?;assert!(terminal);
+ let a=AuthorityAudit{domain:collateral::DOMAIN.into(),project_uuid:guarded::PROJECT_UUID.into(),contract:e.c.id().to_string(),provision_id:p.id(),authority_audit_sha256:"ef".repeat(32),issued_at_sec:1000,expires_at_sec:1100,no_presigned_authorities:true,all_aliases_reviewed:true,old_jobs_drained:true,external_chain_authorities_reviewed:true,effective_policy_reviewed:true,reachable_quorum_verified:true};
+ let reviewer=SigningKey::from_bytes(&[44;32]);let message=serde_json::to_string(&a)?;let signature=B64.encode(reviewer.sign(format!("{}\n{message}",collateral::DOMAIN).as_bytes()).to_bytes());
+ let approved=collateral::audit(&message,&signature,&B64.encode(reviewer.verifying_key().as_bytes()),&p,e.c.id().as_str(),1001).unwrap();
+ let b=view(&e.c,"get_collateral_binding",json!({"token_id":p.token_id})).await;
+ let policy=view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":p.wallet_pubkey})).await;
+ assert!(view(&e.c,"get_pending_registration",json!({"token_id":p.token_id})).await.is_null());
+ let mut st=Memory::default();assert!(collateral::seal_eligibility(&mut st,&p,&approved,&b,&policy,e.c.id().as_str(),false).is_err());assert!(st.0.is_empty());
+ collateral::seal_eligibility(&mut st,&p,&approved,&b,&policy,e.c.id().as_str(),terminal).unwrap();
+ let ts=now(&e).await;
+ e.bob.call(e.c.id(),"open_loan").args_json(json!({"token_id":p.token_id,"terms":{"lender":e.lender.id(),"principal":N.to_string(),"repayment":(11*N/10).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"1000000","funding_deadline_ns":(ts+600_000_000_000).to_string()}}))
+  .deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
+ let ts=now(&e).await;let cert:guarded::Certificate=serde_json::from_value(view(&e.c,"loan_certificate_template",json!({"token_id":p.token_id,"observed_at_ns":ts.to_string(),"expires_at_ns":(ts+30_000_000_000).to_string()})).await)?;
+ guarded::eligible(&st.read(&keyhole_worker::tkey(&p.token_id,"confinement_v1")).unwrap(),&cert).unwrap();Ok(())
+}

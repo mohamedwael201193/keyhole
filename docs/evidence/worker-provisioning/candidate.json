@@ -1,0 +1,6 @@
+{
+  "status": "source-candidate-not-published",
+  "wasm_sha256": "57419a8286c7ff50647dc52d26c1902664bd1f33518bcbc35068006b689cb46e",
+  "bytes": 1043280,
+  "recipe": "tee/worker/build.sh"
+}

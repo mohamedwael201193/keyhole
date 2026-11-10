@@ -253,6 +253,7 @@ mod host {
 
     /// Like `send`, also returning the final outcome JSON (for calls whose return value matters).
     fn send_full(signer: &str, sk_str: &str, receiver: &str, actions: &[Action]) -> Result<(String, Value), Error> {
+        if !Store::read(&mut Host,"w/collateral_minter_pending")?.is_empty(){return Err(err("collateral_unknown","minter nonce held by collateral provisioning"));}
         let raw = bs58::decode(sk_str.trim_start_matches("ed25519:")).into_vec().map_err(|_| err("signer", "bad key"))?;
         let sk: [u8; 32] = raw[..32].try_into().unwrap();
         let pk: [u8; 32] = raw[32..64].try_into().unwrap();
@@ -478,6 +479,7 @@ mod host {
     }
 
     include!("guarded_host.rs");
+    include!("collateral_host.rs");
 
     /// USD value (micro) of `amount` of `token`, priced by a dry 1Click quote into USDC.
     fn usd_of(token: &str, amount: &str, refund: &str, now_ms: u64) -> Result<u64, Error> {
@@ -934,7 +936,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "guarded_revision":guarded::REVISION, "guarded_registry_hash":cfg("GUARDED_WORKER_HASH",""), "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -960,6 +962,11 @@ mod host {
             "withdraw" => op_withdraw(&input),
             "transfer" => op_transfer(&input),
             "loan_certificate" => op_loan_certificate(&input),
+            "prepare_collateral" => op_prepare_collateral(&input),
+            "collateral_quote" => op_collateral_quote(&input),
+            "withdraw_dry_run" => op_withdraw_dry_run(&input),
+            "provision_collateral" => op_provision_collateral(&input),
+            "reconcile_collateral" => op_reconcile_collateral(&input),
             "pledge_inventory" => op_pledge_inventory(&input),
             "reconcile_value_op" => op_reconcile_value(&input),
             "history" => op_history(&input),
