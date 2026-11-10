@@ -51,7 +51,7 @@ export type TxRoute =
   | { kind: "none" };
 
 export type TxErrorCode = "signed_out" | "unsupported_wallet" | "rejected" | "insufficient_balance" | "contract" | "bad_call" | "stale_listing" | "unknown";
-export type TxError = { code: TxErrorCode; message: string };
+export type TxError = { code: TxErrorCode; message: string; /** Set only by local validation before invoking a wallet. */ preSend?: true };
 export type SendResult = { txHash: string } | { redirect: true } | { error: TxError };
 export type BatchSendResult = SendResult | {txHash: string; error: TxError};
 
@@ -95,7 +95,7 @@ export function classifyTxText(s: string): TxError {
     return { code: "insufficient_balance", message: "The wallet does not have enough NEAR for this price and the fees." };
   }
   if (/reject|denied|declin|cancel|closed the|user closed|aborted/i.test(s)) {
-    return { code: "rejected", message: "The wallet request was closed or rejected. Nothing was sent." };
+    return { code: "rejected", message: "The wallet request was closed or rejected. Submission is unconfirmed; reconcile the original operation before retrying." };
   }
   return { code: "unknown", message: "The transaction did not complete. Nothing is confirmed on NEAR." };
 }
@@ -129,9 +129,9 @@ export async function sendKeysCall(route: TxRoute, call: KeysCall, contractId = 
 
 /** One atomic same-receiver transaction, one wallet confirmation. Never fall back to sequential sends. */
 export async function sendKeysCalls(route: TxRoute, calls: readonly KeysCall[], contractId = KEYS_CONTRACT): Promise<BatchSendResult> {
-  if (route.kind === "none") return { error: { code: "signed_out", message: "Sign in with a NEAR wallet to send this." } };
+  if (route.kind === "none") return { error: { code: "signed_out", preSend: true, message: "Sign in with a NEAR wallet to send this." } };
   if (route.kind === "ws" && route.walletId === "ethereum-wallets") {
-    return { error: { code: "unsupported_wallet", message: "Selling and buying keys is not supported for MetaMask in this build. Sign in with a NEAR wallet." } };
+    return { error: { code: "unsupported_wallet", preSend: true, message: "Selling and buying keys is not supported for MetaMask in this build. Sign in with a NEAR wallet." } };
   }
   let actions: FunctionCallAction[];
   try {
@@ -139,7 +139,7 @@ export async function sendKeysCalls(route: TxRoute, calls: readonly KeysCall[], 
     actions = calls.map(functionCallAction);
     if (calls.reduce((sum, call) => sum + BigInt(call.gas), 0n) > 300_000_000_000_000n) throw Error("Batch exceeds 300 Tgas");
   } catch (e) {
-    return { error: { code: "bad_call", message: textOf(e) } };
+    return { error: { code: "bad_call", preSend: true, message: textOf(e) } };
   }
   let outcome: unknown;
   try {

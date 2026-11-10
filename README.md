@@ -987,3 +987,12 @@ python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
 The live-flag UI now wires holder-authenticated complete at-risk inventory, immutable named-lender terms, batched first-use payout registration, verified-certificate funding, principal native cashout, exact repayment or eligible default, policy reconciliation/thaw, terminal credit claims and ordinary capped/cooldown self-exit. Full balances are never requested for visiting lenders; a genuine new holder can explicitly authorize them after default. Unpriced assets, pending obligations and later deposits are disclosed as whole-account collateral. A same-confidential-ledger live swap quote is unavailable and is labelled unavailable rather than replaced with a public-ledger estimate. Mobile uses deliberate Account/Action panels, not a clipped or endlessly stacked page.
 
 Default production writes remain OFF. [Sandbox UI runbook](docs/pledge/UI_SANDBOX_RUNBOOK.md) explains the real-native disposable-wallet fixture, its explicit custody/host mocks, authored browser acceptance tests and required final screenshots. An authored test, backend smoke, old preview screenshots or a green unit suite is NOT evidence that either funded browser ending ran. The draft release gate stays until that exact-head evidence exists.
+
+### Pledge UI operation guards (source candidate)
+
+The shared borrower/lender page preserves an ambiguous wallet abort/cancel as the original `UNKNOWN` intent and blocks resubmission. Only a provenance-marked local validation failure before wallet invocation can discard an unsent intent. Storage acknowledgement binds the exact displayed account, contract and fee; a changed quote clears it and the prepared charge is checked again immediately before dispatch. Manual and polled chain refreshes share fail-closed cleanup, loading gates and a bounded read-generation guard. Terminal labels use the recorded resolution, not later ownership; missing resolution displays **Closed · history unverified**. Executable regression proofs: [operation/consent/refresh negatives](web/tests/pledge-review-safety.test.ts), [receipt binding](web/tests/pledge-money.test.ts), and [resolution labels](web/tests/pledge-lifecycle.test.ts).
+
+```sh
+cd web
+npx vitest run tests/pledge-review-safety.test.ts tests/pledge-money.test.ts tests/pledge-lifecycle.test.ts
+```

@@ -1,1 +1,4 @@
 web/public/source/ export-ignore
+
+# Checksum sidecars are byte-compared and must remain canonical on Windows too.
+web/public/source/*.sha256 text eol=lf

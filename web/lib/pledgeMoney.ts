@@ -14,8 +14,8 @@ export async function dispatchMoney(account:string,contract:string,call:KeysCall
   const result=await send(call);
   if("txHash" in result&&typeof result.txHash==="string"){op.txHash=result.txHash;op.status="Submitted";if("error" in result)op.error=result.error.message;}
   else if("redirect" in result){op.status="AwaitingWallet";}
-  else if("error" in result&&["rejected","signed_out","unsupported_wallet","bad_call"].includes(result.error.code)){store.save(null);throw Error(result.error.message);}
-  else {op.status="UNKNOWN";}
+  else if("error" in result&&result.error.preSend===true&&["signed_out","unsupported_wallet","bad_call"].includes(result.error.code)){store.save(null);throw Error(result.error.message);}
+  else {op.status="UNKNOWN";if("error" in result)op.error=result.error.message;}
   store.save(op);return op;
  }catch(error){if(store.load()){op.status="UNKNOWN";store.save(op);}throw error;}
 }

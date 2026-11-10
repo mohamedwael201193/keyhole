@@ -15,8 +15,12 @@ it("a failed chain read cannot turn a remembered loan into a fabricated terminal
  expect(lifecycleState(null,last)).toBe("Chain state unavailable");
  expect(lifecycleState({owner:null,loan:null},last)).toBe("Chain state unavailable");
  expect(lifecycleState({owner:"borrower.near",loan:{state:"DisbursementPending"}},last)).toBe("DisbursementPending");
- expect(lifecycleState({owner:"borrower.near",loan:null},last)).toBe("Repaid · thaw confirmed");
- expect(lifecycleState({owner:"lender.near",loan:null},last)).toBe("Default · thaw confirmed");
- expect(lifecycleState({owner:"borrower.near",loan:null},{...last,state:"Offered",due_ns:"0"})).toBe("Canceled · thaw confirmed");
- expect(lifecycleState({owner:"borrower.near",loan:null},{...last,state:"UnlockPending",due_ns:"0",resolution:"canceled"})).toBe("Canceled · thaw confirmed");
+ for(const owner of ["borrower.near","lender.near","later-buyer.near"]){
+  expect(lifecycleState({owner,loan:null},last)).toBe("Closed · history unverified");
+  expect(lifecycleState({owner,loan:null},{...last,resolution:"repaid"})).toBe("Repaid · thaw confirmed");
+  expect(lifecycleState({owner,loan:null},{...last,resolution:"default_claimed"})).toBe("Default · thaw confirmed");
+  expect(lifecycleState({owner,loan:null},{...last,resolution:"canceled"})).toBe("Canceled · thaw confirmed");
+ }
+ expect(lifecycleState({owner:"borrower.near",loan:null},{...last,state:"Offered",due_ns:"0"})).toBe("Closed · history unverified");
+ expect(lifecycleState({owner:"borrower.near",loan:null},{...last,resolution:"unexpected"})).toBe("Closed · history unverified");
 });

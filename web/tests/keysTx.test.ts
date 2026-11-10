@@ -88,7 +88,7 @@ describe("typed errors", () => {
 describe("sendKeysCall routes", () => {
   it("signed out: nothing is sent", async () => {
     const r = await sendKeysCall({ kind: "none" }, LIST);
-    expect(r).toEqual({ error: { code: "signed_out", message: expect.any(String) } });
+    expect(r).toEqual({ error: { code: "signed_out", preSend: true, message: expect.any(String) } });
   });
 
   it("MetaMask (ethereum-wallets) is refused, and its wallet is never called", async () => {
