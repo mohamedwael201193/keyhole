@@ -1,4 +1,8 @@
 
+> keyhole-cli@0.1.0 build
+> tsc -p . && node -e "require('node:fs').copyFileSync('src/blocklist.json','dist/blocklist.json')"
+
+
 > keyhole-cli@0.1.0 test
 > node --test --import tsx test/*.test.ts
 
@@ -6,317 +10,380 @@ TAP version 13
 # Subtest: nep413 layout matches the worker
 ok 1 - nep413 layout matches the worker
   ---
-  duration_ms: 2.370164
+  duration_ms: 4.154535
+  type: 'test'
   ...
 # Subtest: signature verifies over sha256(payload)
 ok 2 - signature verifies over sha256(payload)
   ---
-  duration_ms: 7.617153
+  duration_ms: 6.391587
+  type: 'test'
   ...
 # Subtest: fresh nonce every request
 ok 3 - fresh nonce every request
   ---
-  duration_ms: 7.003729
+  duration_ms: 3.592643
+  type: 'test'
   ...
 # Subtest: 64-byte near-cli secret keys accepted
 ok 4 - 64-byte near-cli secret keys accepted
   ---
-  duration_ms: 2.530427
+  duration_ms: 1.164024
+  type: 'test'
   ...
 # Subtest: formatting and pnl
 ok 5 - formatting and pnl
   ---
-  duration_ms: 1.159353
+  duration_ms: 0.714159
+  type: 'test'
   ...
 # Subtest: a long-lived, active account with history is ALLOW
 ok 6 - a long-lived, active account with history is ALLOW
   ---
-  duration_ms: 2.108754
+  duration_ms: 2.441205
+  type: 'test'
   ...
 # Subtest: blocklist, missing account and invalid id are BLOCK
 ok 7 - blocklist, missing account and invalid id are BLOCK
   ---
-  duration_ms: 0.265321
+  duration_ms: 0.325759
+  type: 'test'
   ...
 # Subtest: contract code changed under 24 hours is BLOCK unless allowlisted
 ok 8 - contract code changed under 24 hours is BLOCK unless allowlisted
   ---
-  duration_ms: 0.166471
+  duration_ms: 0.134205
+  type: 'test'
   ...
 # Subtest: each WARN rule on its own
 ok 9 - each WARN rule on its own
   ---
-  duration_ms: 0.256188
+  duration_ms: 0.335756
+  type: 'test'
   ...
 # Subtest: an unknown signal is WARN, never ALLOW
 ok 10 - an unknown signal is WARN, never ALLOW
   ---
-  duration_ms: 0.114619
+  duration_ms: 0.112065
+  type: 'test'
   ...
 # Subtest: block beats warn, and every reason is kept
 ok 11 - block beats warn, and every reason is kept
   ---
-  duration_ms: 0.086321
+  duration_ms: 0.092521
+  type: 'test'
   ...
 # Subtest: foreign destinations are WARN (NEAR signals do not apply)
 ok 12 - foreign destinations are WARN (NEAR signals do not apply)
   ---
-  duration_ms: 0.080366
+  duration_ms: 0.122177
+  type: 'test'
   ...
 # Subtest: account id format
 ok 13 - account id format
   ---
-  duration_ms: 0.382289
+  duration_ms: 0.31608
+  type: 'test'
   ...
 # Subtest: blocklisted receiver is refused without any network call
 ok 14 - blocklisted receiver is refused without any network call
   ---
-  duration_ms: 1.41614
+  duration_ms: 0.831996
+  type: 'test'
   ...
 # Subtest: a missing account is BLOCK
 ok 15 - a missing account is BLOCK
   ---
-  duration_ms: 78.526251
+  duration_ms: 32.123165
+  type: 'test'
   ...
 # Subtest: an established account with history and a prior agent relationship is ALLOW
 ok 16 - an established account with history and a prior agent relationship is ALLOW
   ---
-  duration_ms: 2.022798
+  duration_ms: 1.261859
+  type: 'test'
   ...
 # Subtest: a contract whose code changed within 24 hours is BLOCK
 ok 17 - a contract whose code changed within 24 hours is BLOCK
   ---
-  duration_ms: 3.947726
+  duration_ms: 2.30826
+  type: 'test'
   ...
 # Subtest: a contract with unchanged code over a week is ALLOW
 ok 18 - a contract with unchanged code over a week is ALLOW
   ---
-  duration_ms: 2.797243
+  duration_ms: 1.674348
+  type: 'test'
   ...
 # Subtest: a contract deployed since 7 days ago shows a 7-day change (WARN), not a 24-hour one
 ok 19 - a contract deployed since 7 days ago shows a 7-day change (WARN), not a 24-hour one
   ---
-  duration_ms: 2.444978
+  duration_ms: 3.138503
+  type: 'test'
   ...
 # Subtest: pruned history (GC) makes the code signal unknown: WARN, never ALLOW
 ok 20 - pruned history (GC) makes the code signal unknown: WARN, never ALLOW
   ---
-  duration_ms: 10.908412
+  duration_ms: 1.031495
+  type: 'test'
   ...
 # Subtest: archival node down: WARN, never ALLOW
 ok 21 - archival node down: WARN, never ALLOW
   ---
-  duration_ms: 1.801126
+  duration_ms: 2.697051
+  type: 'test'
   ...
 # Subtest: allowlisted contract skips the code reads entirely
 ok 22 - allowlisted contract skips the code reads entirely
   ---
-  duration_ms: 4.681539
+  duration_ms: 0.519725
+  type: 'test'
   ...
 # Subtest: Nearblocks down: age and activity are unknown, so WARN
 ok 23 - Nearblocks down: age and activity are unknown, so WARN
   ---
-  duration_ms: 0.731988
+  duration_ms: 2.326166
+  type: 'test'
   ...
 # Subtest: account with no creation record and no txns is WARN (age unknown, activity 0)
 ok 24 - account with no creation record and no txns is WARN (age unknown, activity 0)
   ---
-  duration_ms: 5.964966
+  duration_ms: 0.473678
+  type: 'test'
   ...
 # Subtest: RPC down: existence unknown, so WARN and no contract assumptions
 ok 25 - RPC down: existence unknown, so WARN and no contract assumptions
   ---
-  duration_ms: 0.849016
+  duration_ms: 0.440628
+  type: 'test'
   ...
 # Subtest: a hanging endpoint hits the timeout and becomes WARN
 ok 26 - a hanging endpoint hits the timeout and becomes WARN
   ---
-  duration_ms: 165.601894
+  duration_ms: 154.093196
+  type: 'test'
   ...
 # Subtest: foreign destination: no network, WARN; blocklist still applies
 ok 27 - foreign destination: no network, WARN; blocklist still applies
   ---
-  duration_ms: 0.314392
+  duration_ms: 0.234866
+  type: 'test'
   ...
 # Subtest: an invalid receiver is BLOCK without a network call
 ok 28 - an invalid receiver is BLOCK without a network call
   ---
-  duration_ms: 0.176449
+  duration_ms: 0.0861
+  type: 'test'
   ...
 # Subtest: the result carries the signals, sources and a check time
 ok 29 - the result carries the signals, sources and a check time
   ---
-  duration_ms: 4.607976
+  duration_ms: 0.981837
+  type: 'test'
   ...
 # Subtest: web and CLI copies of the scoring module and blocklist are byte-identical
 ok 30 - web and CLI copies of the scoring module and blocklist are byte-identical
   ---
-  duration_ms: 0.513791
+  duration_ms: 0.34569
+  type: 'test'
   ...
 # Subtest: block: nothing is signed and the operator is not asked
 ok 31 - block: nothing is signed and the operator is not asked
   ---
-  duration_ms: 4.736792
+  duration_ms: 6.340356
+  type: 'test'
   ...
 # Subtest: warn: runs only after the operator confirms
 ok 32 - warn: runs only after the operator confirms
   ---
-  duration_ms: 0.519717
+  duration_ms: 0.312537
+  type: 'test'
   ...
 # Subtest: allow: runs without asking
 ok 33 - allow: runs without asking
   ---
-  duration_ms: 0.172707
+  duration_ms: 0.116019
+  type: 'test'
   ...
 # Subtest: alwaysConfirm asks even on allow
 ok 34 - alwaysConfirm asks even on allow
   ---
-  duration_ms: 0.170842
+  duration_ms: 0.18068
+  type: 'test'
   ...
 # Subtest: guardTarget names the receiver of each guarded op
 ok 35 - guardTarget names the receiver of each guarded op
   ---
-  duration_ms: 0.204837
+  duration_ms: 0.210354
+  type: 'test'
   ...
 # Subtest: the shipped blocklist loads and every entry has the required fields
 ok 36 - the shipped blocklist loads and every entry has the required fields
   ---
-  duration_ms: 0.334522
+  duration_ms: 0.25328
+  type: 'test'
   ...
 # Subtest: operator gate: no terminal means refuse (fail closed)
 ok 37 - operator gate: no terminal means refuse (fail closed)
   ---
-  duration_ms: 0.181233
+  duration_ms: 0.174777
+  type: 'test'
   ...
 # Subtest: operator gate: the typed code allows, anything else refuses, and the code is only written to the terminal
 ok 38 - operator gate: the typed code allows, anything else refuses, and the code is only written to the terminal
   ---
-  duration_ms: 1.563572
+  duration_ms: 1.241812
+  type: 'test'
   ...
 # Subtest: copy with no operator terminal is refused and nothing is copied
 ok 39 - copy with no operator terminal is refused and nothing is copied
   ---
-  duration_ms: 47.647565
+  duration_ms: 19.419939
+  type: 'test'
   ...
 # Subtest: copy: the operator types the code on their terminal; the result never contains it
 ok 40 - copy: the operator types the code on their terminal; the result never contains it
   ---
-  duration_ms: 16.157752
+  duration_ms: 12.741254
+  type: 'test'
   ...
 # Subtest: copy: a wrong typed code copies nothing and the result has no code
 ok 41 - copy: a wrong typed code copies nothing and the result has no code
   ---
-  duration_ms: 4.123571
+  duration_ms: 3.775399
+  type: 'test'
   ...
 # Subtest: copy: a blocked receiver is refused before the operator is asked
 ok 42 - copy: a blocked receiver is refused before the operator is asked
   ---
-  duration_ms: 3.810543
+  duration_ms: 2.734741
+  type: 'test'
   ...
 # Subtest: copy without an amount asks for one and makes no call
 ok 43 - copy without an amount asks for one and makes no call
   ---
-  duration_ms: 0.291186
+  duration_ms: 0.153103
+  type: 'test'
   ...
 # Subtest: the MCP source no longer returns or stores a confirmation code
 ok 44 - the MCP source no longer returns or stores a confirmation code
   ---
-  duration_ms: 0.330655
+  duration_ms: 0.188461
+  type: 'test'
   ...
 # Subtest: copy sends the quote's floor to the enclave as min_amount_out
 ok 45 - copy sends the quote's floor to the enclave as min_amount_out
   ---
-  duration_ms: 26.560987
+  duration_ms: 11.985861
+  type: 'test'
   ...
 # Subtest: actual CLI/MCP prepared envelope includes string epoch and token before NEP-413 signing
 ok 46 - actual CLI/MCP prepared envelope includes string epoch and token before NEP-413 signing
   ---
-  duration_ms: 9.253608
+  duration_ms: 8.727479
+  type: 'test'
   ...
 # Subtest: A-B-A refuses an old explicitly supplied epoch
 ok 47 - A-B-A refuses an old explicitly supplied epoch
   ---
-  duration_ms: 0.534622
+  duration_ms: 0.390285
+  type: 'test'
   ...
 # Subtest: read operations are not forced through guarded-value admission
 ok 48 - read operations are not forced through guarded-value admission
   ---
-  duration_ms: 0.155678
+  duration_ms: 0.094939
+  type: 'test'
   ...
 # Subtest: live v2.4 missing control view signs without an invented epoch
 ok 49 - live v2.4 missing control view signs without an invented epoch
   ---
-  duration_ms: 2.21622
+  duration_ms: 2.817745
+  type: 'test'
   ...
 # Subtest: control-view failures that are not MethodNotFound fail closed
 ok 50 - control-view failures that are not MethodNotFound fail closed
   ---
-  duration_ms: 0.875844
+  duration_ms: 0.705604
+  type: 'test'
   ...
 # Subtest: legacy fallback stays pinned to the v2.4 release, never the upgraded live identity
 ok 51 - legacy fallback stays pinned to the v2.4 release, never the upgraded live identity
   ---
-  duration_ms: 1.954595
+  duration_ms: 1.024897
+  type: 'test'
   ...
 # Subtest: Rust worker fixture is a genuine CLI signature over prepared exact params
 ok 52 - Rust worker fixture is a genuine CLI signature over prepared exact params
   ---
-  duration_ms: 15.893469
+  duration_ms: 17.114362
+  type: 'test'
   ...
 # Subtest: CLI payout exact fee consent and pending cashout guard
 ok 53 - CLI payout exact fee consent and pending cashout guard
   ---
-  duration_ms: 0.689895
+  duration_ms: 0.640448
+  type: 'test'
   ...
 # Subtest: payout legacy detection accepts only MethodNotFound
 ok 54 - payout legacy detection accepts only MethodNotFound
   ---
-  duration_ms: 0.764701
+  duration_ms: 0.646629
+  type: 'test'
   ...
 # Subtest: operator onboarding plan includes minter and exact authorized sponsorship, never signs
 ok 55 - operator onboarding plan includes minter and exact authorized sponsorship, never signs
   ---
-  duration_ms: 10.335038
+  duration_ms: 2.065498
+  type: 'test'
   ...
 # Subtest: a freshly signed report verifies and yields the fields the curator needs
 ok 56 - a freshly signed report verifies and yields the fields the curator needs
   ---
-  duration_ms: 20.993921
+  duration_ms: 8.257021
+  type: 'test'
   ...
 # Subtest: a changed field breaks the signature
 ok 57 - a changed field breaks the signature
   ---
-  duration_ms: 7.653299
+  duration_ms: 5.698457
+  type: 'test'
   ...
 # Subtest: a report signed by another key is refused
 ok 58 - a report signed by another key is refused
   ---
-  duration_ms: 14.754877
+  duration_ms: 4.074725
+  type: 'test'
   ...
 # Subtest: wrong recipient, reporter mismatch, stale and future reports are refused
 ok 59 - wrong recipient, reporter mismatch, stale and future reports are refused
   ---
-  duration_ms: 23.977674
+  duration_ms: 1.200646
+  type: 'test'
   ...
 # Subtest: evidence must be a NEAR transaction hash, and the reason must be short text
 ok 60 - evidence must be a NEAR transaction hash, and the reason must be short text
   ---
-  duration_ms: 9.893521
+  duration_ms: 6.952246
+  type: 'test'
   ...
 # Subtest: malformed fields are refused without throwing
 ok 61 - malformed fields are refused without throwing
   ---
-  duration_ms: 1.010299
+  duration_ms: 1.956257
+  type: 'test'
   ...
 # Subtest: the signature is over the NEP-413 payload, so an ordinary tx signature cannot be replayed as a report
 ok 62 - the signature is over the NEP-413 payload, so an ordinary tx signature cannot be replayed as a report
   ---
-  duration_ms: 6.547938
+  duration_ms: 12.236375
+  type: 'test'
   ...
 # Subtest: skills/keyhole/SKILL.md lists the same commands as keyhole help
 ok 63 - skills/keyhole/SKILL.md lists the same commands as keyhole help
   ---
-  duration_ms: 544.32633
+  duration_ms: 364.766626
+  type: 'test'
   ...
 1..63
 # tests 63
@@ -326,4 +393,4 @@ ok 63 - skills/keyhole/SKILL.md lists the same commands as keyhole help
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 1142.654268
+# duration_ms 754.861555

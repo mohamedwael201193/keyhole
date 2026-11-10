@@ -82,7 +82,8 @@
       "widths": [
         1440,
         390
-      ]
+      ],
+      "final_generated_identity_and_source_bundle": true
     },
     "code_only_six_nft_upgrade": {
       "pass": 1,
@@ -126,7 +127,7 @@
     "candidate_identity": "node scripts/gen-identity.mjs --worker-candidate --contract-candidate --check; node scripts/check-worker-candidate.mjs",
     "claims": "python3 judge/gen-claims.py .; node judge/verify-claims.mjs --offline; node judge/verify-claims.mjs --strict",
     "web": "npm run lint; npm run typecheck; npm test; npm run build",
-    "browser": "BASE_URL=http://127.0.0.1:3185 node node_modules/@playwright/test/cli.js test --workers=1 --grep-invert 'needs a funded payment key'"
+    "browser": "BASE_URL=http://127.0.0.1:3187 node node_modules/@playwright/test/cli.js test --workers=1 --grep-invert 'needs a funded payment key'"
   },
   "release_plan": {
     "worker_admin_native_transactions": 6,
@@ -172,9 +173,14 @@
     "workflow_yaml": "pass",
     "git_diff_check": "pass",
     "credential_pattern_hygiene": "pass; unchanged public quote signatures classified without values",
-    "prohibited_names_in_changed_text": "zero matches"
+    "prohibited_names_in_changed_text": "zero matches",
+    "source_tarball_manifest_sha_bytes_files": "pass",
+    "source_tarball_root_live_and_candidate_identities": "pass",
+    "generated_review_source_matches_archive": "pass",
+    "six_nft_fixture_archived": "pass",
+    "serialized_contract_layout_unchanged": "pass"
   },
-  "log_normalization": "Committed .log copies normalize CR/LF and trailing whitespace only; originals retained under /workspace/near_hackathon/upgrade/provisioning-r2",
+  "log_normalization": "Committed .log copies normalize CR/LF and trailing whitespace only; fresh originals retained under /workspace/near_hackathon/upgrade/provisioning-r2-final",
   "contract_upgrade": {
     "required_for_new_worker": true,
     "from": "2.5.0",
@@ -193,5 +199,12 @@
     "new_lazy_prefix": "Pr26t",
     "public_snapshot": "r2/live-upgrade-before.json",
     "proof": "r2/upgrade-code-only.log"
+  },
+  "source_commit": "a8836ffff7af313056a6ae9224c6ac4f022d50b8",
+  "source_bundle": {
+    "commit": "a8836ffff7af313056a6ae9224c6ac4f022d50b8",
+    "sha256": "3d8ada903ea5894a792e100c7f20d7f27d0c80e53046a104e51a21295dc8fafc",
+    "bytes": 6761160,
+    "files": 1003
   }
 }

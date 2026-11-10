@@ -3,4 +3,4 @@ repo wasm (base58)  3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b  (sha256 28cbe7
 OK   contract code matches the committed wasm
 config {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
 OK   minter is an implicit account (015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443); its key was generated inside the TEE (see worker op info in evidence)
-PASS strict online contract identity, actual code bytes, version and minter at final block G2Sp8KF9iVjb52VqVvCFyc81694VAFLp2zPNHXKjvx84
+PASS strict online contract identity, actual code bytes, version and minter at final block 6YEZNNiYBNetkkff6NorsysnfP3s9bPNFhAkDMXL8Q19

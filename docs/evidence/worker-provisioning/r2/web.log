@@ -40,8 +40,8 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
  Test Files  99 passed (99)
       Tests  1785 passed (1785)
-   Start at  21:39:36
-   Duration  4.80s (transform 3.55s, setup 0ms, import 9.71s, tests 10.26s, environment 6ms)
+   Start at  22:12:55
+   Duration  4.82s (transform 3.43s, setup 0ms, import 9.37s, tests 9.96s, environment 7ms)
 
 
 > keyhole-web@1.0.0 build
@@ -51,15 +51,15 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 ✓ Running next.config.ts took 28ms
 
   Creating an optimized production build ...
-✓ Compiled successfully in 906ms
+✓ Compiled successfully in 938ms
   Running TypeScript ...
-  Finished TypeScript in 5.0s ...
+  Finished TypeScript in 8.9s ...
   Collecting page data using 7 workers ...
   Generating static pages using 7 workers (0/29) ...
   Generating static pages using 7 workers (7/29)
   Generating static pages using 7 workers (14/29)
   Generating static pages using 7 workers (21/29)
-✓ Generating static pages using 7 workers (29/29) in 661ms
+✓ Generating static pages using 7 workers (29/29) in 683ms
   Finalizing page optimization ...
 
 Route (app)                 Revalidate  Expire

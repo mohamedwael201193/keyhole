@@ -1,0 +1,9 @@
+call         cefbc64e-6c08-4bfe-a165-1667d9f5f25b
+project      keyhole-devmo.near/keyhole
+executed     f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c
+measurement  2c925c27de1470a5e8b395da46b898cb90072f29388744443b2e93e7f33a5f008743144e8479efb2036c8389dd90273b
+deployed     d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41
+OK   TDX quote present (6676 chars)
+OK   registered wasm_hash == executed
+OK   executed == previous build f13efe92, superseded by d337e822
+OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c.wasm sha256 matches

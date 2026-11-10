@@ -1,0 +1,5 @@
+PASS generated review source equals archive source commit a8836ffff7af313056a6ae9224c6ac4f022d50b8
+PASS archive SHA256/byte count and 1003 regular files
+PASS exact root live worker/contract and both candidate identities
+PASS archived exact six-NFT fixture
+PASS v2.5/v2.6 serialized Contract fields/order unchanged
