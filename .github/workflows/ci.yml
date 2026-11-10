@@ -151,7 +151,8 @@ jobs:
           man = json.loads(Path("web/public/source/manifest.json").read_text())
           raw = gzip.open("web/public/source/keyhole-src.tar.gz", "rb").read()
           tf = tarfile.open(fileobj=io.BytesIO(raw))
-          member = next(n for n in tf.getnames() if n.endswith("identity.json"))
+          # Release snapshots also have identity.json: select the root identity explicitly.
+          member = "keyhole/identity.json"
           packed = json.loads(tf.extractfile(member).read())
           assert packed["worker"]["wasm_sha256"] == live["worker"]["wasm_sha256"], (packed["worker"]["wasm_sha256"], live["worker"]["wasm_sha256"])
           assert packed["contract"]["code_hash"] == live["contract"]["code_hash"], (packed["contract"]["code_hash"], live["contract"]["code_hash"])
