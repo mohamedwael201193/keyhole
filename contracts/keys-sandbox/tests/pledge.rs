@@ -1,5 +1,7 @@
-//! Local NEAR runtime + clearly-labelled mock OutLayer policy contract.
-//! Does NOT prove live keystore enforcement or retired legacy worker availability.
+#[path="support/payout_storage.rs"] mod payout_storage;
+use payout_storage::register_payouts;
+// Local NEAR runtime + clearly-labelled mock OutLayer policy contract.
+// Does NOT prove live keystore enforcement or retired legacy worker availability.
 use anyhow::Result;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use ed25519_dalek::{Signer, SigningKey};
@@ -18,6 +20,7 @@ async fn setup()->Result<E>{
  let c=w.dev_deploy(&std::fs::read(WASM)?).await?; let mock=w.dev_deploy(&std::fs::read(MOCK)?).await?;
  let alice=account(&root,"alice").await?;let lender=account(&root,"lender").await?;let bob=account(&root,"bob").await?;let minter=account(&root,"minter").await?;
  c.call("new").args_json(json!({"owner":c.id(),"minter":minter.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
+ register_payouts(&c,&root,&[minter.id(),alice.id(),lender.id(),bob.id()]).await?;
  minter.call(c.id(),"nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":2,"metadata":{"title":"Sealed collateral","copies":1}}))
   .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  minter.call(c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;

@@ -1,4 +1,6 @@
-//! Permanent round-three runtime regressions. Isolated local NEAR only.
+#[path="support/payout_storage.rs"] mod payout_storage;
+use payout_storage::register_payouts;
+// Permanent round-three runtime regressions. Isolated local NEAR only.
 use anyhow::Result;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use near_workspaces::{Account, Contract, Worker, network::Sandbox, types::NearToken};
@@ -6,8 +8,8 @@ use serde_json::{json, Value};
 const WASM: &str = "../keys/release/v2.5/keyhole_keys.wasm";
 const N: u128 = 1_000_000_000_000_000_000_000_000;
 async fn v(c: &Contract, m: &str, a: Value) -> Value { c.view(m).args_json(a).await.unwrap().json().unwrap() }
-async fn init(c: &Contract) -> Result<()> {
-    c.call("new").args_json(json!({"owner":c.id(),"minter":c.id(),"treasury":c.id(),"royalty_bps":0})).max_gas().transact().await?.into_result()?; Ok(())
+async fn init(c: &Contract, root: &Account) -> Result<()> {
+    c.call("new").args_json(json!({"owner":c.id(),"minter":c.id(),"treasury":c.id(),"royalty_bps":0})).max_gas().transact().await?.into_result()?; register_payouts(c,root,&[c.id()]).await?; Ok(())
 }
 async fn migrate(c: &Contract, root: &Account) -> Result<()> {
     c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":STANDARD.encode([7;32]),"custody_contract":"custody.near","network":"sandbox"})).max_gas().transact().await?.into_result()?; Ok(())
@@ -34,7 +36,7 @@ async fn review3_timeout_late_real_resolver_returns_false_with_and_without_new_t
         let c=w.dev_deploy(&std::fs::read(WASM)?).await?;
         let fixture=std::fs::read("tests/fixtures/yield_receiver.wasm")?;
         let sender=w.dev_deploy(&fixture).await?;let recv=w.dev_deploy(&fixture).await?;
-        init(&c).await?;mint(&c,sender.as_account()).await?;
+        init(&c,&root).await?;mint(&c,sender.as_account()).await?;
         start(&sender,&c,&recv,"old").await?;
         let p=wait_value(&c,"get_pending_transfer",json!({"token_id":"k1"})).await?;
         let deadline=p["restore_after_ns"].as_str().unwrap().parse()?;advance(&w,deadline).await?;
@@ -57,9 +59,10 @@ async fn review3_timeout_late_real_resolver_returns_false_with_and_without_new_t
 async fn sale(w:&Worker<Sandbox>,deleted:bool)->Result<(Contract,Account,Account)> {
     let root=w.root_account()?;let c=w.dev_deploy(&std::fs::read(WASM)?).await?;
     let a=new_account(&root,"seller").await?;let b=new_account(&root,"buyer").await?;
-    init(&c).await?;mint(&c,&a).await?;
+    init(&c,&root).await?;mint(&c,&a).await?;
     c.call("claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
     migrate(&c,&root).await?;
+    register_payouts(&c,&root,&[a.id(),b.id()]).await?;
     a.call(c.id(),"nft_list").args_json(json!({"token_id":"k1","price":N.to_string()})).deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;
     if deleted{a.clone().delete_account(root.id()).await?.into_result()?;}
     let r=b.call(c.id(),"nft_buy").args_json(json!({"token_id":"k1"})).deposit(NearToken::from_near(1)).max_gas().transact().await?;

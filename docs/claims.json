@@ -6345,9 +6345,22 @@
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys-sandbox/tests/review3.rs"
   },
   {
+   "id": "path-docs/evidence/pr184-round4/README.md",
+   "claim": "Linked repo path docs/evidence/pr184-round4/README.md exists",
+   "where": "README.md:870",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/pr184-round4/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/pr184-round4/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/pr184-round4/README.md"
+  },
+  {
    "id": "path-protocol/README.md",
    "claim": "Linked repo path protocol/README.md exists",
-   "where": "README.md:874",
+   "where": "README.md:875",
    "evidence_type": "file",
    "evidence": "protocol/README.md",
    "check": {
@@ -6360,7 +6373,7 @@
   {
    "id": "path-docs/evidence/pledge-oracle-free/README.md",
    "claim": "Linked repo path docs/evidence/pledge-oracle-free/README.md exists",
-   "where": "README.md:874",
+   "where": "README.md:875",
    "evidence_type": "file",
    "evidence": "docs/evidence/pledge-oracle-free/README.md",
    "check": {

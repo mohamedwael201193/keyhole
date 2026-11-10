@@ -316,6 +316,7 @@ impl Contract {
         require!(!token_id.is_empty(), "empty token_id");
         require!(token_id.len() <= 64, "token_id too long");
         self.assert_no_key(&receiver_id);
+        require_payout_account(&env::predecessor_account_id());
         // Charge mint storage (including tier) before reserving the minter excess credit.
         let before = env::storage_usage();
         self.tiers.insert(&token_id, &tier);
@@ -435,6 +436,7 @@ impl Contract {
         let caller = env::predecessor_account_id();
         let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("unknown token"));
         require!(owner == caller, "only the owner can list");
+        require_payout_account(&caller);
         self.assert_token_idle(&token_id);
         require!(self.pending_ops(&token_id) == 0, "value-op pending: finish before listing");
         require!(price.0 >= MIN_LIST_PRICE, "price below the 0.1 NEAR minimum");
@@ -485,6 +487,8 @@ impl Contract {
         let listing = listings().get(&token_id).unwrap_or_else(|| env::panic_str("no listing"));
         let owner = self.tokens.owner_by_id.get(&token_id);
         if owner.as_ref() != Some(&listing.seller) {
+            require_payout_account(&listing.seller);
+            if attached > 0 { require_payout_account(&buyer); }
             self.take_listing(&token_id);
             record_native_credit(&listing.seller, listing.deposit.0);
             if attached > 0 {
@@ -501,6 +505,9 @@ impl Contract {
         require!(buyer != seller, "the seller cannot buy its own key");
         require!(attached >= price, "attached deposit is below the listing price");
         self.assert_no_key(&buyer);
+        require_payout_account(&seller);
+        if attached > price { require_payout_account(&buyer); }
+        if self.royalty_bps > 0 && self.treasury != env::current_account_id() { require_payout_account(&self.treasury); }
         // State first: the listing is gone, then the key moves. Payout credits are recorded atomically in this receipt.
         self.take_listing(&token_id);
         self.transfer_key(&token_id, &buyer, None, Some("sale"));
@@ -564,6 +571,7 @@ impl Contract {
     #[payable]
     pub fn begin_value_op(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64, op_id: String, action_hash: String, owner_id: AccountId) {
         self.assert_minter();
+        require_payout_account(&env::predecessor_account_id());
         require!(!op_id.is_empty() && op_id.len() <= 85, "bad op_id");
         require!(!action_hash.is_empty() && action_hash.len() <= 128, "bad action_hash");
         require!(self.tokens.owner_by_id.get(&token_id).is_some(), "unknown token");
@@ -707,6 +715,7 @@ impl NonFungibleTokenCore for Contract {
         let sender = env::predecessor_account_id();
         self.end_listing(&token_id);
         let (owner, approvals) = self.tokens.internal_transfer(&sender, &receiver_id, &token_id, approval_id, memo);
+        if approvals.as_ref().is_some_and(|a| !a.is_empty()) { require_payout_account(&owner); }
         bump_owner_epoch(&token_id);
         let epoch = self.nft_settlement_epoch(token_id.clone());
         transfer_calls().insert(&token_id, &PendingTransfer { previous_owner: owner.clone(), receiver: receiver_id.clone(), epoch, approvals, restore_after_ns:near_sdk::json_types::U64(env::block_timestamp().checked_add(TRANSFER_RESTORE_DELAY_NS).unwrap_or_else(||env::panic_str("transfer timeout overflow"))) });
@@ -768,6 +777,7 @@ impl NonFungibleTokenApproval for Contract {
         require!(env::attached_deposit().as_yoctonear() >= 1, "Requires attached deposit of at least 1 yoctoNEAR");
         let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("Token not found"));
         require!(env::predecessor_account_id() == owner, "Predecessor must be token owner.");
+        require_payout_account(&owner);
         let map = self.tokens.approvals_by_id.as_mut().expect("approval management required");
         let mut approved = map.get(&token_id).unwrap_or_default();
         let next = self.tokens.next_approval_id_by_id.as_mut().expect("approval management required");
@@ -820,6 +830,32 @@ impl NonFungibleTokenMetadataProvider for Contract {
     fn nft_metadata(&self) -> NFTContractMetadata { self.metadata.get().unwrap() }
 }
 
+// Unit fixtures explicitly sponsor real public registration fees before testing other flows.
+// Attack regressions below create fresh, unregistered identities separately.
+#[cfg(test)]
+fn test_register_payouts(c: &mut Contract, accounts: &[AccountId]) {
+    use near_sdk::{test_utils::VMContextBuilder, testing_env, Gas, NearToken};
+    let previous = VMContextBuilder::new().current_account_id(env::current_account_id())
+        .predecessor_account_id(env::predecessor_account_id()).signer_account_id(env::signer_account_id())
+        .attached_deposit(env::attached_deposit()).block_timestamp(env::block_timestamp())
+        .account_balance(env::account_balance()).prepaid_gas(env::prepaid_gas()).build();
+    for who in accounts {
+        if c.payout_account_registered(who.clone()) { continue; }
+        let mut context = previous.clone(); context.attached_deposit = NearToken::from_yoctonear(c.payout_storage_cost().0);
+        context.prepaid_gas = Gas::from_tgas(300); context.account_balance = NearToken::from_near(100);
+        context.storage_usage = env::storage_usage(); testing_env!(context);
+        assert!(c.register_payout_account(Some(who.clone())));
+    }
+    let mut context = previous; context.storage_usage = env::storage_usage(); testing_env!(context);
+}
+#[cfg(test)]
+fn test_funded_contract() -> Contract {
+    let mut c = Contract::new("owner.near".parse().unwrap(), "minter.near".parse().unwrap(), "treasury.near".parse().unwrap(), 500);
+    let ids: Vec<AccountId> = ["keys.near","owner.near","minter.near","treasury.near","alice.near","bob.near","carol.near","lender.near","a.near","b.near","c.near","d.near","e.near"]
+        .iter().map(|s|s.parse().unwrap()).collect();
+    test_register_payouts(&mut c, &ids); c
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -835,9 +871,9 @@ mod tests {
     }
     fn setup() -> Contract {
         ctx("keys.near", NearToken::from_yoctonear(0));
-        Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500)
+        test_funded_contract()
     }
-    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) {
+    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) { test_register_payouts(c, &[to.parse().unwrap()]);
         ctx("minter.near", NearToken::from_millinear(100));
         c.nft_mint(id.into(), acc(to), tier, meta());
     }
@@ -1051,6 +1087,7 @@ mod tests {
     #[test]
     fn old_minter_loses_power() {
         let mut c = setup(); ctx("owner.near", NearToken::from_yoctonear(1)); c.set_minter(acc("tee.near"));
+        test_register_payouts(&mut c,&[acc("tee.near")]);
         ctx("tee.near", NearToken::from_millinear(100)); c.nft_mint("k1".into(), acc("a.near"), 1, meta());
         assert_eq!(c.nft_total_supply().0, 1);
     }
@@ -1143,8 +1180,8 @@ mod p2 {
     fn meta() -> TokenMetadata {
         TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
     }
-    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
-    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); test_funded_contract() }
+    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) { test_register_payouts(c, &[to.parse().unwrap()]); ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
     fn xfer(c: &mut Contract, from: &str, to: &str, id: &str, appr: Option<u64>) { ctx(from, NearToken::from_yoctonear(1)); c.nft_transfer(acc(to), id.into(), appr, None); }
 
     macro_rules! payout_rows { ($($name:ident: $bal:expr => $tre:expr, $own:expr;)*) => { $(#[test] fn $name() {
@@ -1243,9 +1280,9 @@ mod v2 {
     fn meta() -> TokenMetadata {
         TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
     }
-    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
-    fn mint(c: &mut Contract, id: &str, to: &str) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
-    fn approve(c: &mut Contract, owner: &str, id: &str, who: &str) { ctx(owner, NearToken::from_millinear(10)); c.nft_approve(id.into(), acc(who), None); }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); test_funded_contract() }
+    fn mint(c: &mut Contract, id: &str, to: &str) { test_register_payouts(c, &[to.parse().unwrap()]); ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
+    fn approve(c: &mut Contract, owner: &str, id: &str, who: &str) { test_register_payouts(c,&[acc(owner)]); ctx(owner, NearToken::from_millinear(10)); c.nft_approve(id.into(), acc(who), None); }
     fn yocto(who: &str) { ctx(who, NearToken::from_yoctonear(1)); }
 
     // ---- NEP-178 ----
@@ -1503,8 +1540,8 @@ mod race {
     fn meta() -> TokenMetadata {
         TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
     }
-    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
-    fn mint(c: &mut Contract, id: &str, to: &str) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); test_funded_contract() }
+    fn mint(c: &mut Contract, id: &str, to: &str) { test_register_payouts(c, &[to.parse().unwrap()]); ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
     fn send_call(c: &mut Contract, from: &str, to: &str, id: &str) { ctx(from, NearToken::from_yoctonear(1)); let _ = c.nft_transfer_call(acc(to), id.into(), None, None, "".into()); }
     fn resolve(c: &mut Contract, _from: &str, _to: &str, id: &str, ret: &[u8]) -> bool {
         testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc("keys.near")).build(),
@@ -1589,9 +1626,9 @@ mod v23 {
     fn meta() -> TokenMetadata {
         TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
     }
-    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
-    fn mint(c: &mut Contract, id: &str, to: &str) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
-    fn approve(c: &mut Contract, owner: &str, id: &str, who: &str) { ctx(owner, NearToken::from_millinear(10)); c.nft_approve(id.into(), acc(who), None); }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); test_funded_contract() }
+    fn mint(c: &mut Contract, id: &str, to: &str) { test_register_payouts(c, &[to.parse().unwrap()]); ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), 1, meta()); }
+    fn approve(c: &mut Contract, owner: &str, id: &str, who: &str) { test_register_payouts(c,&[acc(owner)]); ctx(owner, NearToken::from_millinear(10)); c.nft_approve(id.into(), acc(who), None); }
     fn revoke(c: &mut Contract, owner: &str, id: &str, who: &str) { ctx(owner, NearToken::from_yoctonear(1)); c.nft_revoke(id.into(), acc(who)); }
     fn approved(c: &Contract, id: &str) -> HashMap<AccountId, u64> { c.nft_token(id.into()).unwrap().approved_account_ids.unwrap() }
     fn fill(c: &mut Contract, owner: &str, id: &str, n: usize) { for i in 0..n { approve(c, owner, id, &format!("m{i}.near")); } }
@@ -1678,8 +1715,8 @@ mod v24 {
     fn meta() -> TokenMetadata {
         TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
     }
-    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
-    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
+    fn setup() -> Contract { ctx("keys.near", NearToken::from_yoctonear(0)); test_funded_contract() }
+    fn mint(c: &mut Contract, id: &str, to: &str, tier: u8) { test_register_payouts(c, &[to.parse().unwrap()]); ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
     fn set_tier(c: &mut Contract, id: &str, tier: u8) { ctx("minter.near", NearToken::from_yoctonear(0)); c.nft_set_tier(id.into(), tier); }
 
     #[test] fn minter_raises_one_to_two_to_three() {
@@ -1763,9 +1800,9 @@ mod v24_sale {
     fn meta() -> TokenMetadata {
         TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
     }
-    fn setup() -> Contract { ctx("keys.near", y(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
-    fn mint_tier(c: &mut Contract, id: &str, to: &str, tier: u8) { ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
-    fn mint(c: &mut Contract, id: &str, to: &str) { mint_tier(c, id, to, 2) }
+    fn setup() -> Contract { ctx("keys.near", y(0)); test_funded_contract() }
+    fn mint_tier(c: &mut Contract, id: &str, to: &str, tier: u8) { test_register_payouts(c, &[to.parse().unwrap()]); ctx("minter.near", NearToken::from_millinear(100)); c.nft_mint(id.into(), acc(to), tier, meta()); }
+    fn mint(c: &mut Contract, id: &str, to: &str) { test_register_payouts(c, &[to.parse().unwrap()]); mint_tier(c, id, to, 2) }
     fn list(c: &mut Contract, who: &str, id: &str, price: u128, dep: u128) { ctx(who, y(dep)); c.nft_list(id.into(), U128(price)); }
     fn buy(c: &mut Contract, who: &str, id: &str, dep: u128) { ctx(who, y(dep)); c.nft_buy(id.into()); }
     fn listing(c: &Contract, id: &str) -> Option<ListingView> { c.nft_listing(id.into()) }
@@ -2121,8 +2158,8 @@ mod v25_admission {
     fn meta() -> TokenMetadata {
         TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
     }
-    fn setup() -> Contract { ctx("keys.near", y(0)); Contract::new(acc("owner.near"), acc("minter.near"), acc("treasury.near"), 500) }
-    fn mint(c: &mut Contract, id: &str, to: &str) {
+    fn setup() -> Contract { ctx("keys.near", y(0)); test_funded_contract() }
+    fn mint(c: &mut Contract, id: &str, to: &str) { test_register_payouts(c, &[to.parse().unwrap()]);
         ctx("minter.near", NearToken::from_millinear(100));
         c.nft_mint(id.into(), acc(to), 2, meta());
     }
