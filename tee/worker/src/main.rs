@@ -391,11 +391,11 @@ mod host {
         let c = authenticate(input, "mint", false)?;
         if c.tier.is_some() { return Err(err("already_holder", "this account already holds a KEYHOLE key")); }
         let (mid, msk) = minter()?;
-        match view(&keys_contract(),"payout_storage_cost",json!({})) {
-            Ok(cost)=>{if view(&keys_contract(),"payout_account_registered",json!({"account_id":mid}))?!=true{return Err(err("minter_payout_unregistered",format!("Operator onboarding required: register the minter payout slot with exact {cost} yoctoNEAR nonrefundable storage. No sponsorship was charged.")));}}
-            Err(e) if e.message.contains("MethodNotFound")||e.message.contains("MethodResolveError")=>{},
+        let payout_supported = match view(&keys_contract(),"payout_storage_cost",json!({})) {
+            Ok(cost)=>{if view(&keys_contract(),"payout_account_registered",json!({"account_id":mid}))?!=true{return Err(err("minter_payout_unregistered",format!("Operator onboarding required: register the minter payout slot with exact {cost} yoctoNEAR nonrefundable storage. No sponsorship was charged.")));} true}
+            Err(e) if e.message.contains("MethodNotFound")||e.message.contains("MethodResolveError")=>false,
             Err(e)=>return Err(e),
-        }
+        };
         let (acct_raw, e) = rpc::view_account(&mid, "final");
         if !e.is_empty() { return Err(err("rpc", e)); }
         let acct: Value = serde_json::from_str(&acct_raw).unwrap_or_default();
@@ -412,15 +412,24 @@ mod host {
         let args = json!({"token_id": tid, "receiver_id": c.account, "tier": 1,
             "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1, "media": media, "media_hash": media_hash}});
         let a = args.to_string();
-        // 0.012 NEAR covers the longer metadata (media URL + hash). Excess is refunded.
+        // 0.012 NEAR covers metadata; v2.5 excess is backed minter credit, cashed out below.
         let r = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_mint", args: a.as_bytes(), gas: MINT_GAS, deposit: MINT_DEPOSIT_YOCTO }]);
         if let Err(e) = r {
             let _ = Host.incr(&format!("g/mints/{}", day), -1);
             return Err(err("mint_failed", e.message));
         }
         let tx = r.unwrap();
+        // The sealed minter cannot use a holder's wallet cashout panel. Recycle its
+        // own mint overpayment through the same pull-credit/pending contract path.
+        // This never buys a slot or changes a successful mint into a failed mint.
+        struct MinterRefund<'a> { id: &'a str, secret: &'a str }
+        impl mint_payout::Host for MinterRefund<'_> {
+            fn snapshot(&mut self)->Result<(Value,Value),Error>{Ok((view(&keys_contract(),"get_payout_credit",json!({"account_id":self.id}))?,view(&keys_contract(),"get_pending_payout",json!({"account_id":self.id}))?))}
+            fn claim(&mut self)->Result<String,Error>{send(self.id,self.secret,&keys_contract(),&[Action::FunctionCall{method:"claim_payout",args:b"{}",gas:70_000_000_000_000,deposit:1}])}
+        }
+        let payout=mint_payout::finish(&mut MinterRefund{id:&mid,secret:&msk},payout_supported);
         prov_append(&tid, "mint", &c.account, c.now_ms, &format!("mint {tx}"), &c.operation_id)?;
-        Ok(json!({"ok": true, "op": "mint", "account": c.account, "token_id": tid, "tier": 1, "tx": tx, "minter": mid}))
+        Ok(json!({"ok": true, "op": "mint", "account": c.account, "token_id": tid, "tier": 1, "tx": tx, "minter": mid,"minter_payout":payout}))
     }
 
 

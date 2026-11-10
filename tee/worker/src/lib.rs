@@ -1,6 +1,7 @@
 //! KEYHOLE worker core: pure, host-independent logic (unit-tested natively).
 //! The OutLayer host glue lives in main.rs.
 pub mod provenance;
+pub mod mint_payout;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
