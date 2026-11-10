@@ -593,12 +593,26 @@ export async function releaseGates(e = {}, trust = {}, ctx = {}) {
   });
   await add("exit_route_fee_deadline", phase==="provision-post"?"provision-post":"restore", async () => {
     await restoreProbe(e.restore, ctx);
-    must(
-      Date.parse(e.restore.output.deadline) > now * 1000 &&
-        e.restore.output.estimated_fee != null &&
-        e.restore.output.fee_token,
-      "real exit fee/deadline absent",
-    );
+    const p = JSON.parse(e.restore.input.auth.message).params,
+      o = e.restore.output;
+    // The measured adapter forwards absent optional provider fields as JSON null.
+    // Narrow exception: same-asset NEAR-native USDC to the authenticated holder,
+    // unchanged indicative output. Null means metadata absent, NOT a free or
+    // executable withdrawal. Every quoted/different-asset route keeps its checks.
+    const sameAssetNearUsdcSelf = p.chain === "near" &&
+      p.token === "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1" &&
+      p.to === ctx.token.owner_id && o.amount_out === p.amount;
+    if (sameAssetNearUsdcSelf && o.deadline === null &&
+        o.estimated_fee === null && o.fee_token === null) {
+      must(BigInt(o.min_amount_out) <= BigInt(o.amount_out),
+        "invalid same-asset indicative minimum");
+    } else {
+      must(
+        Date.parse(o.deadline) > now * 1000 &&
+          o.estimated_fee != null && o.fee_token,
+        "real exit fee/deadline absent",
+      );
+    }
   });
   await add("secret_storage_and_actual_refund", "restore", () => {
     const z = ctx.secret_merge,
