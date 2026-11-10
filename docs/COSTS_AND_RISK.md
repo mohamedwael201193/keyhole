@@ -8,15 +8,27 @@ Storage byte price used for prepaid slots is `env::storage_byte_cost()` (`10^19`
 
 ## Live mainnet (v2.4)
 
+Live delivery is a native push refund on the deployed contract. It is not the candidate's pull-credit `claim_payout` path. The rows below are the deployed v2.4 behavior. Current `contracts/keys/src/lib.rs` is the v2.5 candidate; do not read it as the live refund path. Proof of what is deployed: [contract v2.4 evidence](evidence/contract-v2-4/README.md), [identity.json](../identity.json), and [`contracts/keys/deployed/keyhole_keys.wasm`](../contracts/keys/deployed/keyhole_keys.wasm).
+
 | Action | Constant | Amount | Refundable? | Source |
 |---|---|---|---|---|
-| List a key (`nft_list`) | `LIST_STORAGE_DEPOSIT` | 0.01 NEAR (attach at least this; excess is credited back) | Yes, when the listing ends, to the seller | [`contracts/keys/src/lib.rs`](../contracts/keys/src/lib.rs) |
-| Buy a listed key (`nft_buy`) | price + `royalty_bps` | The attached deposit must cover the price. Live `config.royalty_bps` is **500** (5%), cap `MAX_ROYALTY_BPS` = 1000. Excess over the price is credited back | Listing deposit returns to the seller with the proceeds | `lib.rs` (`nft_buy`, `nft_payout`) |
-| Change list price, unlist, `set_minter`, `set_royalty` | 1 yoctoNEAR | 1 yocto | — | `lib.rs` |
-| Minimum list price | `MIN_LIST_PRICE` | 0.1 NEAR | — | `lib.rs` |
-| Mint | storage for the token | Paid by the TEE minter; excess refunded | — | `lib.rs` `nft_mint` |
+| List a key (`nft_list`) | `LIST_STORAGE_DEPOSIT` | 0.01 NEAR (attach at least this; excess is a native push refund) | Yes, when the listing ends, to the seller, as a native refund | [v2.4 evidence](evidence/contract-v2-4/README.md) |
+| Buy a listed key (`nft_buy`) | price + `royalty_bps` | The attached deposit must cover the price. Live `config.royalty_bps` is **500** (5%), cap 1000. Excess over the price is a native push refund | Listing deposit returns to the seller with the proceeds, as a native refund | [v2.4 evidence](evidence/contract-v2-4/README.md) |
+| Change list price, unlist, `set_minter`, `set_royalty` | 1 yoctoNEAR | 1 yocto | — | [v2.4 evidence](evidence/contract-v2-4/README.md) |
+| Minimum list price | `MIN_LIST_PRICE` | 0.1 NEAR | — | [v2.4 evidence](evidence/contract-v2-4/README.md) |
+| Mint | storage for the token | Paid by the TEE minter; excess is a native push refund | — | [v2.4 evidence](evidence/contract-v2-4/README.md) |
 
 A v2.4 built-in sale pays 5% to `config.treasury` (`keyhole-devmo.near`) and the rest to the seller. That live rate is not the candidate's optional zero-royalty setting.
+
+### Code storage, live and candidate
+
+Measured in [artifact-repro-r2.json](evidence/integration-stack/artifact-repro-r2.json). Not an all-in top-up. Migration state, gas, the 0.1 NEAR operating reserve, and existing liabilities are outside this table.
+
+| | Live v2.4 | Candidate v2.5 | Proof |
+|---|---:|---:|---|
+| Code bytes | 241,621 | 495,199 | [identity.json](../identity.json), [artifact-repro-r2.json](evidence/integration-stack/artifact-repro-r2.json) |
+| Code storage at 10^19 yoctoNEAR/byte | 2.41621 NEAR | 4.95199 NEAR | same records |
+| Increment over live code | — | 253,578 bytes / 2.53578 NEAR | `code_delta_vs_live_v24_near` in the artifact record |
 
 ## Candidate (v2.5, not deployed)
 

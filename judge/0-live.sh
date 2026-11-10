@@ -19,11 +19,15 @@ command -v "$PYTHONBIN" >/dev/null || { echo "FAIL missing python3 (stdlib only;
 
 HERE="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 ROOT="$(CDPATH= cd -- "$HERE/.." && pwd)"
-DEFAULT_IDENTITY_URL="${IDENTITY_URL:-https://raw.githubusercontent.com/mohamedwael201193/keyhole/main/identity.json}"
+REVIEW_REF="${KEYHOLE_REVIEW_REF:-fix/int196-r2}"
+DEFAULT_IDENTITY_URL="${IDENTITY_URL:-https://raw.githubusercontent.com/mohamedwael201193/keyhole/${REVIEW_REF}/identity.json}"
 OUTLAYER="${OUTLAYER_API:-https://api.outlayer.ai}"
-# Known mainnet refusal: holder-to-holder transfer, "one key per account".
-REFUSAL_TX="${REFUSAL_TX:-H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV}"
-REFUSAL_NEEDLE="${REFUSAL_NEEDLE:-one key per account}"
+# Recorded refusal predicate lives next to this script (stdlib Python, no packages).
+RECEIPT_PY="$HERE/receipt_proof.py"
+if [ ! -f "$RECEIPT_PY" ]; then
+  echo "FAIL missing $RECEIPT_PY. Check out ${REVIEW_REF:-fix/int196-r2}; main does not contain this judge path."
+  exit 2
+fi
 
 # Resolve identity.json: local checkout, IDENTITY_JSON, or the published raw file.
 IDENT_SRC=""
@@ -55,15 +59,18 @@ else
 fi
 
 # All RPC + JSON work in one python process so we only need curl for OutLayer.
-export IDENT OUTLAYER REFUSAL_TX REFUSAL_NEEDLE
+export IDENT OUTLAYER RECEIPT_PY
 export NEAR_RPC="${NEAR_RPC:-}"
 "$PYTHONBIN" - <<'PY'
 import json, os, sys, urllib.error, urllib.request
 
+import importlib.util
 ident_path = os.environ["IDENT"]
 outlayer = os.environ["OUTLAYER"].rstrip("/")
-refusal_tx = os.environ["REFUSAL_TX"]
-refusal_needle = os.environ["REFUSAL_NEEDLE"]
+receipt_py = os.environ["RECEIPT_PY"]
+spec = importlib.util.spec_from_file_location("receipt_proof", receipt_py)
+receipt_proof = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(receipt_proof)
 rpcs = []
 if os.environ.get("NEAR_RPC"):
     rpcs.append(os.environ["NEAR_RPC"])
@@ -183,23 +190,25 @@ try:
     else:
         want_owner = "keyhole-devmo.near"
         want_treasury = "keyhole-devmo.near"
-        want_minter_len = 64
+        pinned_minter = contract.get("minter") or ""
         problems = []
         if cfg.get("owner") != want_owner:
             problems.append("owner=%s" % cfg.get("owner"))
         if cfg.get("treasury") != want_treasury:
             problems.append("treasury=%s" % cfg.get("treasury"))
         minter = cfg.get("minter") or ""
-        if len(minter) != want_minter_len:
-            problems.append("minter is not a 64-char implicit account")
+        if not (isinstance(pinned_minter, str) and len(pinned_minter) == 64 and all(c in "0123456789abcdef" for c in pinned_minter)):
+            problems.append("identity.json minter is not 64 lowercase hex")
+        elif minter != pinned_minter:
+            problems.append("minter %s != pinned identity %s" % (minter, pinned_minter))
         # Live v2.4 royalty is 500 bps. Do not assert a candidate 0% rate.
         if cfg.get("royalty_bps") != 500:
             problems.append("royalty_bps=%s (live v2.4 is 500)" % cfg.get("royalty_bps"))
         if problems:
             bad("config() mismatch: %s" % "; ".join(problems))
         else:
-            ok("config() owner=%s treasury=%s royalty_bps=500 minter is implicit" % (
-                cfg["owner"], cfg["treasury"]))
+            ok("config() owner=%s treasury=%s royalty_bps=500 minter=%s…" % (
+                cfg["owner"], cfg["treasury"], minter[:8]))
         beats = cfg.get("beats")
         if beats is not None:
             say("      config.beats (grows) = %s" % beats)
@@ -256,33 +265,26 @@ try:
 except Exception as e:
     bad("attestation fetch failed for %s: %s" % (info_call, e))
 
-# 4. Recorded mainnet refusal receipt
+# 4. Recorded mainnet refusal receipt. FINAL, actual signer, typed contract failure.
 try:
-    # Old receipts live on archival nodes. Final RPCs often hang or return UNKNOWN_TRANSACTION.
+    proof = receipt_proof.RECORDED_REFUSAL
+    # Old receipts live on archival nodes. Ask for FINAL and the recorded signer, not the contract account.
     archival = [u for u in rpcs if "archival" in u] + [u for u in rpcs if "archival" not in u]
     outcome = rpc(
         "tx",
-        {"tx_hash": refusal_tx, "sender_account_id": account, "wait_until": "NONE"},
+        {"tx_hash": proof["hash"], "sender_account_id": proof["signer_id"], "wait_until": "FINAL"},
         urls=archival,
-        timeout=10,
+        timeout=20,
     )
     if not outcome:
         raise RuntimeError("empty tx status")
-    text = json.dumps(outcome)
-    # A failed receipt should carry the documented panic string.
-    failed = (
-        "Failure" in text
-        or "failure" in text
-        or '"status":{"Failure"' in text.replace(" ", "")
-    )
-    needle_ok = refusal_needle.lower() in text.lower()
-    if failed and needle_ok:
-        ok("tx %s… is a failed receipt containing %r" % (refusal_tx[:8], refusal_needle))
+    matched, reason = receipt_proof.matches_recorded_refusal(outcome, proof)
+    if matched:
+        ok("tx %s… is FINAL with the typed one-key refusal (%s)" % (proof["hash"][:8], reason))
     else:
-        bad("tx %s… did not show a failed receipt with %r (failed=%s needle=%s)" % (
-            refusal_tx[:8], refusal_needle, failed, needle_ok))
+        bad("tx %s… is not the pinned FINAL refusal: %s" % (proof["hash"][:8], reason))
 except Exception as e:
-    bad("tx status for %s failed: %s" % (refusal_tx, e))
+    bad("tx status for the recorded refusal failed: %s" % e)
 
 say("COUNTS %d %d %d" % (pass_n, fail_n, skip_n))
 sys.exit(1 if fail_n else 0)

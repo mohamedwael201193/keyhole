@@ -29,16 +29,22 @@ Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepar
 
 No wallet, no Rust, no `npm install`. You need `curl`, `bash` and `python3` (standard library only).
 
+`main` does not contain `judge/0-live.sh`. Clone the review branch that does. The same branch is the identity file the no-checkout path reads.
+
 ```bash
-git clone --depth 1 https://github.com/mohamedwael201193/keyhole && cd keyhole
+git clone --depth 1 --branch fix/int196-r2 https://github.com/mohamedwael201193/keyhole.git
+cd keyhole
+test -f judge/0-live.sh
 bash judge/0-live.sh
 ```
 
-No git? Download this script (this branch until it is on `main`) and run it; it fetches `identity.json` for the live identities:
+No git? Download the script and the receipt checker from that same branch, plus `identity.json` from that same branch, and run them together:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/feat/judge-path-costs/judge/0-live.sh -o keyhole-live.sh
-bash keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/fix/int196-r2/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/fix/int196-r2/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/fix/int196-r2/identity.json -o identity.json
+IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 
 It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
@@ -47,9 +53,9 @@ It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
 |---|---|---|
 | Identity | [`identity.json`](identity.json) | the live contract account, code hash, worker wasm and `info` call are named in one file |
 | Contract code | NEAR RPC `view_account` | the on-chain `code_hash` equals `identity.json` |
-| State views | `config`, `contract_source_metadata`, `nft_total_supply` | owner, treasury, implicit TEE minter, live royalty 500 bps, NEP-330 `2.4.0`, supply ≥ 6 |
-| Attestation | `api.outlayer.ai/attestations/by-call/<info_call>` | a TDX quote is present and `executed_wasm_sha256` equals the worker hash in `identity.json` |
-| Receipt | archival NEAR RPC `tx` | the recorded holder-to-holder transfer is a failed receipt with `one key per account` |
+| State views | `config`, `contract_source_metadata`, `nft_total_supply` | owner, treasury, `config.minter` equal to the 64-hex minter in [`identity.json`](identity.json), live royalty 500 bps, NEP-330 `2.4.0`, supply ≥ 6 |
+| Attestation | `api.outlayer.ai/attestations/by-call/<info_call>` | a TDX quote is present and `executed_wasm_sha256` equals the worker hash in `identity.json`. This is an existing attestation, not a new paid call |
+| Receipt | archival NEAR RPC `tx` with `wait_until: FINAL` and the recorded signer | [`H8qJNgox…`](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV) matches hash, signer, receiver, `nft_transfer`, 1 yocto, decoded args, and the typed contract `ExecutionError` in [`judge/receipt_proof.py`](judge/receipt_proof.py) |
 
 Run on 2026-11-10 (Africa/Cairo) against mainnet: **9 PASS, 0 FAIL**. Output: [`docs/evidence/judge-zero-install/run.txt`](docs/evidence/judge-zero-install/run.txt).
 
@@ -67,6 +73,7 @@ The live worker is `d337e822` (765,658 bytes).
 | Piece | Live value | Proof |
 |---|---|---|
 | Contract account | `keyhole-devmo.near` | [nearblocks](https://nearblocks.io/address/keyhole-devmo.near) |
+| TEE minter | `015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443` | [`judge/0-live.sh`](judge/0-live.sh) requires `config.minter` to equal this 64-hex implicit account |
 | Contract code hash | `DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ` | deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn) |
 | Contract wasm sha256 | `b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
@@ -74,7 +81,7 @@ The live worker is `d337e822` (765,658 bytes).
 | Worker publish tx | `BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5` | [nearblocks](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
 | Live `info` call | `dc3668db-674f-4865-a2ce-272f70c41b0d` | [attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) · [verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) |
 
-These are the **deployed** identities. Source on this branch may be a later candidate; candidate wasm hashes belong in `contracts/keys/release/SHA256SUMS` (v2.5 line) and in `docs/evidence/integration-stack/validation.json`. They are not live until they are published and written back into `identity.json`. Re-run this script after changing `identity.json`.
+These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [`docs/evidence/integration-stack/artifact-repro-r2.json`](docs/evidence/integration-stack/artifact-repro-r2.json) and the v2.5 line of [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS). [`docs/evidence/integration-stack/validation.json`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into `identity.json`. Re-run this script after changing `identity.json`.
 <!-- IDENTITY:END -->
 
 
@@ -231,7 +238,7 @@ flowchart LR
 - **Sessions.** One wallet signature starts a 30-minute grant with a $5 cap. A session can read, quote, swap, lower limits and revoke itself. It cannot withdraw or raise limits.
 - **Earned tiers.** A key rises from its own settled trades through `level_up`. Bronze to Silver (tier 1 to 2) is on mainnet. Caps follow the tier, and the contract refuses a lower value.
 - **Built-in sale and listing freeze.** `nft_list`, `nft_unlist` and `nft_buy` are in the contract. A listed key's account is frozen for value moves: the worker refuses swap and withdraw while it is listed (`listed`), and quote and chain signature refuse a key locked for sale. Balance reads still work.
-- **Verifiable builds.** The contract and the worker rebuild to the hashes committed in this repository. Every call is attested with the executed wasm hash, and the browser checks the quote.
+- **Verifiable builds.** Three different checks, with the commands in [§7](#7-verify-everything-yourself): deployed bytes match historical attestations ([identity block](#live-mainnet-identities)); the current candidate contract rebuild matches [`artifact-repro-r2.json`](docs/evidence/integration-stack/artifact-repro-r2.json); rebuilding the worker from this checkout is not the same as reproducing the deployed worker. Every call is attested with the executed wasm hash, and the browser checks the quote.
 
 ### Worker ops and their auth
 
@@ -337,7 +344,7 @@ The website's `/api/keyhole` route answers the `info` op on project `keyhole` at
 
 ### Track 10 prompt: how each requirement is met
 
-One row per requirement of the Track 10 prompt. Where a row is not fully met, the note says so.
+One row per requirement of the Track 10 prompt. Limits of a row are in [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme), next to the proof linked from the row.
 
 | Requirement | Where it is | Honest note |
 |---|---|---|
@@ -346,12 +353,10 @@ One row per requirement of the Track 10 prompt. Where a row is not fully met, th
 | Holder-only gated page | [`web/app/vault`](web/app/vault) (the page gate); owner check on every request in [`tee/worker/src/main.rs`](tee/worker/src/main.rs) | The page gate is display-only. The worker's owner check is the real control. |
 | Per-NFT history of earned, paid out and held | [`web/app/key/view.tsx`](web/app/key/view.tsx) at `/key?id=`: deposits, withdraw events and the holder list | Shipped with limits. "Paid out" counts withdraw events, not amounts. Earned amounts are private; the PnL view is opt-in. |
 | Transfer tests, including a sale in the middle of a payout | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs): `transfer_moves_the_confidential_account_to_the_new_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle`; mainnet run in [`docs/evidence/mid-payout`](docs/evidence/mid-payout/README.md) | The mid-payout unit test checks a predicate, not a send in flight. The in-flight case is shown on mainnet: the payout completed to the signer, and that holder's next request was refused `not_owner`. |
-| Threat model before coding | [`THREAT_MODEL.md`](THREAT_MODEL.md), [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) | Not met in order. The files were written after the first contract and worker code. See deviation (b). |
-| Signed record a third party can check, for a listed key | [§5 Signed record](#signed-record-for-a-listed-key), [`docs/evidence/signed-record`](docs/evidence/signed-record/README.md) | The statement is signed by the minter and shows what the enclave read on that call. It is not a complete audit of the trade log. |
+| Threat model before coding | [`THREAT_MODEL.md`](THREAT_MODEL.md), [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) | The files exist. Commit order: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme). |
+| Signed record a third party can check, for a listed key | [§5 Signed record](#signed-record-for-a-listed-key), [`docs/evidence/signed-record`](docs/evidence/signed-record/README.md) | Signed by the minter over that call. Scope: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme). |
 
-**Deviation (a): no NEAR sub-account.** Each `token_id` maps to one custody wallet held inside the OutLayer Intel TDX enclave. A NEAR sub-account would need an access key, and someone would hold that key. Here the keys never leave the enclave. The cost is that the account is not a NEAR account a wallet can open directly; it runs only through the enclave.
-
-**Deviation (b): threat model written after the code.** The contract and worker code were first committed on 2026-10-28 (`66f7070`). [`THREAT_MODEL.md`](THREAT_MODEL.md) was first committed on 2026-10-31 (`701faf4`), and [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) on 2026-11-03 (`4736e9c`). The track asked for the threat model first.
+Custody is a TEE wallet per token, not a NEAR sub-account, and the threat-model files were written after the first code. Dates and the trust boundary: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 
 ### Earned tier, then a sale
 
@@ -377,7 +382,7 @@ A listed key's holder can ask the worker for a statement that a third party can 
 | `record` call | [`b5fbed71`](https://api.outlayer.ai/attestations/by-call/b5fbed71-d497-43fe-bbd4-6e28efc4dacf) | statement: tier 2, 10 settled swaps, 5,609,200 µUSD |
 | Unlist | tx [`6Qp2F32q…`](https://nearblocks.io/txns/6Qp2F32qfBxAhJh5w1HPtmgvTiTba5k8nsfznNYfYckU) | ok |
 
-The statement shows what the enclave read on that call. It does not prove that the log is complete: the minter's signature is the trust point.
+The statement is the minter's signature over what that call read. The trust boundary of that signature: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 
 ### Control on transfer
 
@@ -565,7 +570,7 @@ Contract configuration at capture (2026-11-03; `beats` grows with each heartbeat
 
 </details>
 
-**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) prints the SHA-256 of the current source-candidate artifact. This candidate is **not deployed**. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json) and is the live hash every attestation of the published build reports as `executed_wasm_sha256` (see [the identity block](#live-mainnet-identities)); those attestations do not prove candidate behavior. To rebuild the live worker exactly, check out the commit that published it (`./verify.sh <call_id> --rebuild` on that commit). The worker's sha256 is the identity of the code; the TDX measurement in a quote names the OutLayer runtime, not the KEYHOLE code.
+**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) prints the SHA-256 of the current source-candidate artifact. This candidate is **not deployed**. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json) and is the live hash every attestation of the published build reports as `executed_wasm_sha256` (see [the identity block](#live-mainnet-identities)); those attestations do not prove candidate behavior. `./verify.sh <call_id> --rebuild` builds the checkout you have now. It equals the executed wasm only when that checkout is the commit that published the attested build. This branch is a later candidate, so a mismatch against `dc3668db` is expected. The worker's sha256 is the identity of the code; the TDX measurement in a quote names the OutLayer runtime, not the KEYHOLE code.
 
 The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` call is the one the browser verifier shows by default. Each earlier build was published with the same `add_version` method and has its own FastFS upload. [`identity.json`](identity.json) is the single source for the live build, the contract hashes and the publish transaction. `node scripts/gen-identity.mjs --check` fails CI when generated files drift.
 
@@ -597,21 +602,26 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ### The checks
 
 ```bash
-git clone https://github.com/mohamedwael201193/keyhole && cd keyhole
+git clone --depth 1 --branch fix/int196-r2 https://github.com/mohamedwael201193/keyhole.git
+cd keyhole
 
-bash ./judge/0-live.sh                   # curl + python3 only: live code hash, views, one attestation, one receipt
-node judge/verify-claims.mjs --offline   # file checks only; live checks are SKIP
-node judge/verify-claims.mjs             # all claims, live (mainnet, the site, attestations, CI)
+bash ./judge/0-live.sh                   # curl + python3 only: live code hash, views, one existing attestation, one FINAL receipt
+node judge/verify-claims.mjs --offline   # file checks only; live checks are SKIP. Does not call OutLayer /call
+node judge/verify-claims.mjs             # public reads (mainnet, site pages, existing attestations, CI). Not a paid info probe
 bash ./judge/1-contract.sh               # on-chain code_hash == committed v2.4 wasm
 bash ./judge/2-attestations.sh           # every recorded call: attested build and output hash
-./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d            # one call: TDX quote, wasm_hash == executed, FastFS bytes
-./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d --rebuild  # plus: rebuild the worker from source, compare sha256
+./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d
+# --rebuild compiles THIS checkout. It matches executed wasm only on the publishing commit.
+# Do not read a mismatch on this candidate branch as a failed live attestation.
+# ./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d --rebuild
 bash ./judge/4-live-refusals.sh          # with your own NEAR account: replay and over-cap refused right now
 ```
 
 [`judge/README.md`](judge/README.md) lists the sources each check reads (NEAR RPC, `api.outlayer.ai`, `main.fastfs.io`, the live site and the GitHub API). None of them uses keys from this project. [`docs/claims.json`](docs/claims.json) lists each claim with the file that states it, its evidence and its check.
 
-**In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. The browser run on the current info call (`dc3668db`, build `d337e822`) is not recorded yet; the last full run was on `0847b924` (build `cc8d2fa8`).
+**In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. Which browser transcript is recorded: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
+
+GET `/api/health` is passive. It does not spend compute and it does not report the enclave online. The paid check's 2026-11-10 08:31 Africa/Cairo result remains the FAIL in [validation.json](docs/evidence/integration-stack/validation.json). An approved probe is separate: [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
 
 **The CLI** ([`cli/README.md`](cli/README.md)) works with any NEAR account, and the key stays on your machine. Only signatures are sent.
 
@@ -643,7 +653,7 @@ OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f13efe926132
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `main`, in six jobs:
 
 - **contract:** `cargo test --locked`, `clippy -D warnings`, the source rebuilt and compared with the newest release wasm in SHA256SUMS, the sandbox tests, and the deployed wasm checked against the on-chain `code_hash`.
-- **worker:** `cargo test --locked`, `clippy -D warnings`, a reproducible build that must equal `DEPLOYED_SHA256`, the key-log verifier self-test, and the FastFS bytes hashed against it.
+- **worker:** `cargo test --locked`, `clippy -D warnings`, a reproducible `build.sh` compared with `DEPLOYED_SHA256`. A mismatch prints a warning and the job still succeeds ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): worker-green is not current-source equality with the live enclave. The key-log verifier self-test runs, and FastFS bytes are hashed against `DEPLOYED_SHA256`.
 - **cli:** typecheck and tests.
 - **judge-kit:** `2-attestations.sh` and `verify.sh` on a recorded call; `identity.json` drift check; `verify-claims.mjs --offline`.
 - **hygiene:** a scan for keys and tokens, and a check that none are committed.
@@ -906,7 +916,7 @@ python3 judge/gen-claims.py .
 node judge/verify-claims.mjs --offline
 ```
 
-The runtime suite uses real local NEAR receipts with a labelled custody mock. Verification results for this integrated head are recorded in [the integrated validation record](docs/evidence/integration-stack/validation.json). Trust, economic risks, UNKNOWN liveness and release gates are in [SECURITY.md](SECURITY.md). No local result is a claim of a published candidate or live provider confinement.
+The runtime suite uses real local NEAR receipts with a labelled custody mock. Current candidate contract bytes are [artifact-repro-r2.json](docs/evidence/integration-stack/artifact-repro-r2.json) (`bc12dace…`, 495,199 bytes). [validation.json](docs/evidence/integration-stack/validation.json) is the earlier local record (`ac25d889…` / 496,539 bytes) and keeps its health FAIL. Trust boundaries and release gates are in [SECURITY.md](SECURITY.md). No local result is a published candidate or live provider confinement.
 
 
 ### Integrated client continuity proof

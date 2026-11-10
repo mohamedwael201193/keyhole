@@ -1,18 +1,18 @@
 KEYHOLE judge/0-live.sh against NEAR mainnet
 Checked at: 2026-11-10, Africa/Cairo (UTC+2)
-Checkout: feat/judge-path-costs on top of origin/integration/stack a0250bc
+Checkout: fix/int196-r2 (typed FINAL receipt predicate; predecessor transcript used a log substring)
 Command: bash judge/0-live.sh
 
-identity  /workspace/near_hackathon/wt_judgepath/identity.json
+identity  /agent/repos/keyhole/identity.json
 PASS  identity.json names contract keyhole-devmo.near and worker d337e822…
 PASS  on-chain code_hash DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ == identity.json
-PASS  config() owner=keyhole-devmo.near treasury=keyhole-devmo.near royalty_bps=500 minter is implicit
+PASS  config() owner=keyhole-devmo.near treasury=keyhole-devmo.near royalty_bps=500 minter=015a0259…
       config.beats (grows) = 2
 PASS  contract_source_metadata.version == 2.4.0 (live)
 PASS  nft_total_supply == 6 (>= 6, captured 2026-11-09)
 PASS  info call dc3668db-674f-4865-a2ce-272f70c41b0d has a TDX quote (6676 chars)
 PASS  attested executed_wasm_sha256 == identity.json worker d337e822…
 PASS  registered wasm_hash == executed_wasm_sha256
-PASS  tx H8qJNgox… is a failed receipt containing 'one key per account'
+PASS  tx H8qJNgox… is FINAL with the typed one-key refusal (FINAL typed refusal)
 COUNTS 9 0 0
 ----- all steps PASS (live identities from identity.json; no wallet, no build) -----

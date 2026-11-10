@@ -27,9 +27,12 @@ jobs:
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.22.0/cargo-near-installer.sh | sh
           cargo near --version
       - run: rustup show && rustup component add clippy
-      - run: cargo test --locked
+      - name: unit tests
+        run: |
+          set -o pipefail
+          cargo test --locked 2>&1 | tee "$RUNNER_TEMP/keys-unit.txt"
       - name: count passing tests
-        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
+        run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/keys-unit.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
       - name: source rebuilds to the committed v2.5 release wasm
         run: |
@@ -49,10 +52,12 @@ jobs:
           git diff --exit-code -- tests/fixtures/custody_policy_mock.wasm
       - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + sealed pledge state), NEP-178 cap, one key, royalty sale, minter-only tier raise
         working-directory: contracts/keys-sandbox
-        run: CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1
+        run: |
+          set -o pipefail
+          CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1 2>&1 | tee "$RUNNER_TEMP/sandbox.txt"
       - name: count passing sandbox tests
         working-directory: contracts/keys-sandbox
-        run: CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
+        run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/sandbox.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - name: deployed wasm matches on-chain code_hash
         working-directory: .
         run: ./judge/1-contract.sh
@@ -63,9 +68,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup show && rustup component add clippy
-      - run: cargo test --locked
+      - name: unit tests
+        run: |
+          set -o pipefail
+          cargo test --locked 2>&1 | tee "$RUNNER_TEMP/worker-unit.txt"
       - name: count passing tests
-        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
+        run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/worker-unit.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings
       - name: lint the WASI-only custody host (native cfg excludes it)
         run: cargo clippy --locked --target wasm32-wasip2 -- -D warnings
@@ -115,6 +123,12 @@ jobs:
           git diff --exit-code -- docs/claims.json
       - name: transaction receipt proof checker regression tests
         run: node --test judge/tx-outcome.test.mjs
+      - name: strict recorded-refusal predicate
+        run: python3 judge/receipt_proof_test.py
+      - name: primary judge checkout command
+        run: node --test judge/checkout-command.test.mjs
+      - name: default claims mode does not spend on health
+        run: node --test judge/passive-claims.test.mjs
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:

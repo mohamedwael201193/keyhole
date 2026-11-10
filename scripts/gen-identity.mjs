@@ -16,6 +16,7 @@ const sha = createHash("sha256").update(wasm).digest("hex");
 const errs = [];
 if (sha !== id.contract.wasm_sha256) errs.push(`contract wasm sha256 ${sha} != identity ${id.contract.wasm_sha256}`);
 if (b58(id.contract.wasm_sha256) !== id.contract.code_hash) errs.push(`code_hash ${id.contract.code_hash} != base58(wasm_sha256) ${b58(id.contract.wasm_sha256)}`);
+if (!/^[0-9a-f]{64}$/.test(String(id.contract.minter || ""))) errs.push("contract.minter must be the 64-hex implicit account");
 if (!readFileSync(root + "contracts/keys/deployed/SHA256SUMS", "utf8").startsWith(sha)) errs.push("SHA256SUMS out of date");
 
 const w = id.worker;
@@ -34,6 +35,7 @@ The live worker is \`${w8}\` (${bytes} bytes).
 | Piece | Live value | Proof |
 |---|---|---|
 | Contract account | \`${k.account}\` | [nearblocks](https://nearblocks.io/address/${k.account}) |
+| TEE minter | \`${k.minter}\` | [\`judge/0-live.sh\`](judge/0-live.sh) requires \`config.minter\` to equal this 64-hex implicit account |
 | Contract code hash | \`${k.code_hash}\` | deploy tx [\`${tx8(k.deploy_tx)}\`](https://nearblocks.io/txns/${k.deploy_tx}) |
 | Contract wasm sha256 | \`${k.wasm_sha256}\` | [\`contracts/keys/deployed/keyhole_keys.wasm\`](contracts/keys/deployed/keyhole_keys.wasm) |
 | Worker project | \`${w.project}\` | |
@@ -41,7 +43,7 @@ The live worker is \`${w8}\` (${bytes} bytes).
 | Worker publish tx | \`${w.add_version_tx}\` | [nearblocks](https://nearblocks.io/txns/${w.add_version_tx}) |
 | Live \`info\` call | \`${w.info_call}\` | [attestation](https://api.outlayer.ai/attestations/by-call/${w.info_call}) · [verify](https://keyhole-seven.vercel.app/verify?call=${w.info_call}) |
 
-These are the **deployed** identities. Source on this branch may be a later candidate; candidate wasm hashes belong in \`contracts/keys/release/SHA256SUMS\` (v2.5 line) and in \`docs/evidence/integration-stack/validation.json\`. They are not live until they are published and written back into \`identity.json\`. Re-run this script after changing \`identity.json\`.
+These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [\`docs/evidence/integration-stack/artifact-repro-r2.json\`](docs/evidence/integration-stack/artifact-repro-r2.json) and the v2.5 line of [\`contracts/keys/release/SHA256SUMS\`](contracts/keys/release/SHA256SUMS). [\`docs/evidence/integration-stack/validation.json\`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into \`identity.json\`. Re-run this script after changing \`identity.json\`.
 <!-- IDENTITY:END -->
 `;
 

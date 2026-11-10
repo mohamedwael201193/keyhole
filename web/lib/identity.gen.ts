@@ -11,6 +11,7 @@ export const IDENTITY = {
   },
   "contract": {
     "account": "keyhole-devmo.near",
+    "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
     "code_hash": "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ",
     "wasm_sha256": "b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c",
     "deploy_tx": "84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn"

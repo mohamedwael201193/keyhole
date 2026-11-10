@@ -2,12 +2,16 @@
 
 KEYHOLE is an NFT on NEAR mainnet (`keyhole-devmo.near`, NEP-171) that is the viewing key to a confidential trading account inside an OutLayer Intel TDX enclave.
 The enclave keeps one custody wallet per `token_id`, answers only the account that owns the token right now, and enforces caps, replay and recipient checks.
-Every enclave answer carries an attestation whose executed wasm hash equals the published, reproducible build in this repository.
+Every enclave answer carries an attestation whose executed wasm hash equals the published hash in [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256). Rebuilding the worker from this branch is a later candidate. CI warns if that rebuild differs from the deployed hash and still succeeds. That warning is not a failed attestation check.
 
 ## Fastest verification (under 5 minutes, no keys, no spending, no Rust, no npm)
 
+`main` does not contain `judge/0-live.sh`. Check out the review branch:
+
 ```bash
-git clone --depth 1 https://github.com/mohamedwael201193/keyhole && cd keyhole
+git clone --depth 1 --branch fix/int196-r2 https://github.com/mohamedwael201193/keyhole.git
+cd keyhole
+test -f judge/0-live.sh
 bash judge/0-live.sh
 ```
 
@@ -26,10 +30,10 @@ zcat keyhole-src.tar.gz | git get-tar-commit-id   # the commit it was cut from (
 tar xzf keyhole-src.tar.gz && cd keyhole
 ```
 
-The tarball is `git archive` of one commit, gzip without timestamps. You do not have to trust it: the checks below tie its bytes to mainnet. `./judge/1-contract.sh` checks that the committed contract wasm hashes to the on-chain `code_hash`. `tee/worker/build.sh` rebuilds the worker to the `executed_wasm_sha256` in every attestation (`./verify.sh <call_id> --rebuild`).
+The tarball is `git archive` of one commit, gzip without timestamps. You do not have to trust it: the checks below tie its bytes to mainnet. `./judge/1-contract.sh` checks that the committed deployed contract wasm hashes to the on-chain `code_hash`. `./verify.sh <call_id>` checks that call's attestation and FastFS bytes. `./verify.sh <call_id> --rebuild` rebuilds whatever checkout you have. It equals `executed_wasm_sha256` only on the commit that published that wasm, not on this later candidate branch.
 
 ```bash
-# or: git clone https://github.com/mohamedwael201193/keyhole && cd keyhole
+# or: git clone --depth 1 --branch fix/int196-r2 https://github.com/mohamedwael201193/keyhole.git && cd keyhole
 node judge/verify-claims.mjs          # Node 18+. Checks every claim in docs/claims.json live, prints PASS/FAIL per claim
 node judge/verify-claims.mjs --only contract-code-hash   # one claim
 node judge/verify-claims.mjs --offline                   # file checks only
@@ -57,7 +61,7 @@ Values that change over time (token supply, heartbeat count, beat-key gas allowa
 | `./judge/0-live.sh` | live `code_hash` equals `identity.json`; config / metadata / supply views; one attested info call; one recorded refusal receipt. No wallet, no rebuild |
 | `./judge/1-contract.sh` | on-chain contract code equals `contracts/keys/deployed/keyhole_keys.wasm`; the minter is the TEE-held implicit account |
 | `./judge/2-attestations.sh` | each recorded call in `judge/evidence.json` ran the attested build and its published output hashes to the attested `output_hash` |
-| `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec --rebuild` | rebuild the worker from source with the pinned toolchain; its sha256 equals what the enclave executed |
+| `./verify.sh b0a6eadb-cee9-400e-8eca-8b0f4df7bcec` | attestation and FastFS bytes for that call. Add `--rebuild` only after checking out the commit that published that wasm; this branch's worker is a later candidate and CI only warns on a mismatch |
 | [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify) | the same attestation checks plus Intel DCAP and Intel PCS, computed in your browser |
 | [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge) | six guided mainnet checks: build identity, contract identity, transfer moves control, holder limits, cooldown, tier caps |
 

@@ -27,7 +27,7 @@ F=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)
 [ "$F" = "$H" ] && ok "FastFS $URL sha256 matches" || bad "FastFS sha256 $F"
 if [ "${2:-}" = "--rebuild" ]; then
   B=$("$(dirname "$0")/tee/worker/build.sh")
-  [ "$B" = "$H" ] && ok "local reproducible build matches executed wasm ($B)" || bad "local build $B differs from executed $H"
+  [ "$B" = "$H" ] && ok "local reproducible build matches executed wasm ($B)" || bad "local build $B differs from executed $H. --rebuild compiles this checkout; it matches a historical attestation only on the commit that published that wasm."
   echo "note  worker_measurement is the TDX RTMR3 measurement of the OutLayer worker image. It is not the wasm sha256."
 fi
 exit $fail

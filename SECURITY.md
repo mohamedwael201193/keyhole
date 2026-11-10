@@ -160,7 +160,7 @@ Tests: `tee/worker/src/p2harden.rs`.
 
 ## Continuity
 
-- If the OutLayer payment balance runs out, live calls stop and `/api/health` (the strip on /judge) shows "offline: payment balance empty". Attestations, FastFS wasm and on-chain state stay public and verifiable.
+- If the OutLayer payment balance runs out, a later paid worker call stops. GET `/api/health` does not spend that balance and does not report it. Attestations, FastFS wasm and on-chain state stay public and verifiable. The page strip shows that availability was not probed.
 
 ## Design decisions and trade-offs
 
@@ -377,7 +377,17 @@ Ordinary and durable withdrawals are NEAR-only to the freshly authenticated curr
 
 ### Integrated-stack online verification limitation (2026-11-10)
 
-The candidate's local PR-CI gates are separate from the public service's live readiness. At 08:31 Africa/Cairo, the deployed health endpoint returned online=false with reason=service_unfunded. The online claim requiring online=true therefore remains a real FAIL; it was not relaxed to make this verification green. No balance top-up, deployment or paid worker call was authorized or performed by this integration run. The two documented intentional contract refusals are checked for their exact failure messages, not mislabelled as successful transactions. Full online readiness needs a separately authorized operational action and another verification; offline checks do not establish it.
+The candidate's local PR-CI gates are separate from the public service's live readiness. At 08:31 Africa/Cairo, the deployed health endpoint returned online=false with reason=service_unfunded. That online claim remains a real FAIL in [validation.json](docs/evidence/integration-stack/validation.json). It was not rewritten as a pass. GET `/api/health` is now passive: it does not call OutLayer and a skipped or stale attestation is not a fresh online pass. An active probe requires `KEYHOLE_HEALTH_PROBE=1` and the approval token `spend-one-info-call`, discloses payer `keyhole-devmo.near/keyhole`, and spends one info execution from the server payment key. This change did not run that probe, did not top up a balance, and does not know whether the service is funded now. Compute funding is not contract-storage funding, minter gas, or loan principal. No balance top-up, deployment or paid worker call was authorized or performed by this integration run. The two documented intentional contract refusals are checked for their exact failure messages, not mislabelled as successful transactions. Full online readiness needs a separately authorized operational action and another verification; offline checks do not establish it.
+
+## Qualifications moved from the README
+
+**No NEAR sub-account.** Each `token_id` maps to one custody wallet held inside the OutLayer Intel TDX enclave. A NEAR sub-account would need an access key, and someone would hold that key. Here the keys never leave the enclave. The account is not a NEAR account a wallet can open directly. It runs only through the enclave.
+
+**Threat model written after the code.** The contract and worker code were first committed on 2026-10-28 (`66f7070`). [`THREAT_MODEL.md`](THREAT_MODEL.md) was first committed on 2026-10-31 (`701faf4`), and [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) on 2026-11-03 (`4736e9c`). The track asked for the threat model first.
+
+**Signed record.** The public `record` statement shows what the enclave read on that call. The minter's signature is the trust point. It is not a complete audit of the trade log. Evidence: [`docs/evidence/signed-record`](docs/evidence/signed-record/README.md).
+
+**Browser verifier transcript.** The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) drives the page. A saved full browser transcript of info call `dc3668db` (build `d337e822`) is not in the repo. The last full recorded browser run was `0847b924` (build `cc8d2fa8`). The public attestation for `dc3668db` is still the identity block's info call.
 
 
 
