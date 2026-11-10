@@ -1,5 +1,7 @@
 # Oracle-free pledge remediation — source/sandbox only
 
+> Historical oracle-removal checkpoint at `01665e8`, not the current custody implementation. The generation/provisioning extension below was replaced by [serialized custody](../serialized-custody/README.md). Preserve these pinned historical results; use the newer record for the current candidate.
+
 No terminal attestor, public truth-selection ABI, recovery service or independent financial signer remains. The floor signer is not a native-payment oracle. Funding credits backed borrower principal and starts Active debt atomically; certificates use V2_CREDIT, not the old delivery-before-debt domain. Only genuine private host callback results can settle native cashouts. Lost native callbacks stay UNKNOWN/locked; this is a safety fix, not full financial liveness or keyless-complete production proof.
 
 ## Local validation

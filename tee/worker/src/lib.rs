@@ -1359,3 +1359,6 @@ pub fn assess_level(prov: &[ProvEvent], trades: &[serde_json::Value], current: u
 }
 
 pub mod guarded;
+
+/// Epoch-scoped durable ownership cooldown, separate from the public provenance format.
+pub mod ownership_sync;

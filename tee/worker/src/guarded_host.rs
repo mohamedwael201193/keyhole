@@ -53,6 +53,13 @@ fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{guarded::settle_admi
 impl guarded::ProviderHost for Host {
     fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>{
         guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
+        // A persisted journal cannot bypass the current ownership-epoch cooldown.
+        if matches!(j.kind.as_str(),"withdraw"|"transfer") {
+            let now=chain_now_ms()?;
+            ownership_sync::require_elapsed(custody_cooldown(&j.token_id,&j.owner,now)?,now)?;
+            let evs=load_prov(&j.token_id).into_iter().map(|(e,_)|e).collect::<Vec<_>>();
+            assert_no_cooldown(&evs,&j.owner,now)?;
+        }
         let (canonical,id)=guarded_wallet(&j.token_id)?;
         if canonical!=key||id!=j.wallet_id{return Err(err("guard_journal","custody changed"));}Ok(())
     }
@@ -80,7 +87,8 @@ fn op_transfer(input:&Value)->Result<Value,Error>{
     if !is_valid_account_id(&to){return Err(err("bad_params","private transfer requires a NEAR account id"));}
     let token=s(p,"token").ok_or_else(||err("bad_params","token required"))?;let amount=digits(p,"amount")?;
     let (key,id)=guarded_wallet(&c.token_id())?;
-    prov_sync_owner(&c.token_id(),&c.account,c.now_ms);
+    let epoch_cool=prov_sync_owner(&c.token_id(),&c.account,c.now_ms)?;
+    ownership_sync::require_elapsed(epoch_cool,c.now_ms)?;
     let events=load_prov(&c.token_id()).into_iter().map(|(e,_)|e).collect::<Vec<_>>();assert_no_cooldown(&events,&c.account,c.now_ms)?;
     assert_unlocked(&Host.get(&tkey(&c.token_id(),"lock")),&c.account,c.now_ms)?;
     let usd=usd_of(&token,&amount,&id,c.now_ms)?;let lim=limits_now(&c)?;
@@ -128,7 +136,7 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     guarded::eligible(&Store::read(&mut Host,&tkey(token,"confinement_v1"))?,&cert)?;
     let (key,id)=guarded_wallet(token)?;
     let custody=guarded::text(&config,"custody_contract")?;
-    let policy=view(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?;guarded::frozen_policy(&cert,&policy,guarded::u64_field(&binding,"policy_generation")?)?;
+    let policy=view(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?;guarded::frozen_policy(&cert,&policy)?;
     certificate_inventory(&key)?;
     let balance=custody_get(&key,&format!("/wallet/v1/confidential/balance?token=nep141%3A{}",guarded::ASSET.trim_start_matches("nep141:")))?;
     guarded::fixed_floor(&cert,&balance,&id)?;

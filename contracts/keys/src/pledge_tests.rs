@@ -19,7 +19,7 @@ fn result(r: PromiseResult, now: u64) {
 }
 fn policy(frozen: bool) -> PromiseResult {
     PromiseResult::Successful(near_sdk::serde_json::to_vec(&near_sdk::serde_json::json!({
-        "owner":"keys.near", "encrypted_data":"sealed-policy", "version":1, "locked":true, "frozen":frozen, "generation_supported":true, "generation":collateral().get(&"k1".into()).map(|b|b.policy_generation.0).unwrap_or(0)
+        "owner":"keys.near", "encrypted_data":"sealed-policy", "version":1, "locked":true, "frozen":frozen
     })).unwrap())
 }
 fn setup() -> Contract {
@@ -78,10 +78,12 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
     result(policy(true),NOW); assert!(c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));
     assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
 }
-#[test] fn unknown_policy_retry_replays_same_fenced_generation() {let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();
- result(PromiseResult::Failed,NOW);assert!(!c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));
- ctx("anyone.near",0,NOW);let _=c.retry_loan_policy("k1".into(),l.nonce);assert_eq!(c.get_loan("k1".into()).unwrap().policy_sequence,l.policy_sequence);
- result(policy(true),NOW);assert!(c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));
+#[test] fn unknown_policy_action_cannot_be_redispatched_or_cleared_by_a_snapshot() {
+ let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();
+ ctx("anyone.near",0,NOW);rejected(||{let _=c.retry_loan_policy("k1".into(),l.nonce);});
+ rejected(||{let _=c.reconcile_loan_policy("k1".into(),l.nonce);});
+ result(policy(true),NOW);assert!(!c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));
+ assert!(c.get_loan("k1".into()).unwrap().policy_busy);
 }
 #[test] fn all_four_pledge_phases_block_title_listing_approval_and_admission() {
     let mut c=setup(); open(&mut c); let mut l=c.get_loan("k1".into()).unwrap();
@@ -315,10 +317,10 @@ fn registration(c:&mut Contract)->U64 {
  ctx("attacker.near",0,NOW+1000*SECOND);rejected(||{let _=c.on_collateral_stored("k1".into(),n);});
  assert_eq!(c.get_payout_credit(a("minter.near")).0,0);
 }
-#[test]fn missing_policy_callback_reconciles_exact_custody_enforced_generation_without_signer(){let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();
- ctx("anyone.near",0,NOW);let _=c.reconcile_loan_policy("k1".into(),l.nonce);
- result(policy(true),NOW);assert!(c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));
- assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+#[test]fn missing_policy_callback_stays_unknown_without_a_terminal_callback(){let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();
+ ctx("anyone.near",0,NOW+1000*SECOND);rejected(||{let _=c.reconcile_loan_policy("k1".into(),l.nonce);});
+ result(policy(true),NOW);assert!(!c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));
+ assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Freezing);
 }
 #[test]fn principal_credit_never_requires_a_delivery_oracle(){let mut c=setup();open(&mut c);settle_policy(&mut c,true,NOW);fund(&mut c);
  assert_eq!(c.get_payout_credit(a("alice.near")).0,N);assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
@@ -399,3 +401,9 @@ include!("pledge_review_round2_tests.rs");
 include!("pledge_review_round3_tests.rs");
 
 include!("pledge_review_round4_tests.rs");
+#[test]fn even_matching_provider_generation_cannot_replace_terminal_receipt(){let mut c=setup();open(&mut c);let l=c.get_loan("k1".into()).unwrap();
+ let raw=near_sdk::serde_json::json!({"owner":"keys.near","encrypted_data":"sealed-policy","version":1,"locked":true,"frozen":true,"generation_supported":true,"generation":l.policy_sequence.0});
+ result(PromiseResult::Successful(raw.to_string().into_bytes()),NOW);assert!(!c.on_loan_policy("k1".into(),l.nonce,l.policy_sequence));assert!(c.get_loan("k1".into()).unwrap().policy_busy);
+}
+
+include!("custody_serialization_tests.rs");

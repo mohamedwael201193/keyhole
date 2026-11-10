@@ -99,6 +99,7 @@ pub struct CollateralBinding {
     pub encrypted_policy_hash: Base64VecU8,
     pub policy_version: U64,
     pub ready: bool,
+    /// Monotonic LOCAL command sequence; the provider does not implement generation fencing.
     pub policy_generation:U64,
 }
 
@@ -161,7 +162,7 @@ pub struct LoanCertificate {
 
 #[derive(near_sdk::serde::Deserialize)]
 #[serde(crate = "near_sdk::serde")]
-struct PolicyView { owner: AccountId, encrypted_data: String, frozen: bool, version: u64, locked: bool, #[serde(default)] generation:u64, #[serde(default)] generation_supported:bool, #[serde(default)] registration_nonce:U64, #[serde(default)] registration_deposit:U128 }
+struct PolicyView { owner: AccountId, encrypted_data: String, frozen: bool, version: u64, locked: bool }
 
 pub(crate) fn callback_failure_fixture() {
     #[cfg(feature = "callback-failure-fixture")]
@@ -173,7 +174,7 @@ fn policy_result() -> Option<PolicyView> {
     bounded_result(32_768).and_then(|v| near_sdk::serde_json::from_slice(&v).ok())
 }
 fn policy_matches(p: &PolicyView, b: &CollateralBinding) -> bool {
-    p.owner == env::current_account_id() && p.locked && p.generation_supported && p.version == b.policy_version.0
+    p.owner == env::current_account_id() && p.locked && p.version == b.policy_version.0
         && env::sha256(p.encrypted_data.as_bytes()) == b.encrypted_policy_hash.0
 }
 fn call(target: AccountId, method: &str, args: near_sdk::serde_json::Value, deposit: u128, gas: u64) -> Promise {
@@ -312,7 +313,7 @@ impl Contract {
         change_liabilities(&mut c, dep, 0); save_config(&c);
         call(c.custody_contract, "store_wallet_policy", near_sdk::serde_json::json!({
             "wallet_pubkey": wallet_pubkey, "encrypted_data": encrypted_data, "wallet_signature": wallet_signature,
-            "version": version, "locked": true, "valid_until": valid_until, "storage_refund_to": self.minter,"registration_nonce":nonce,
+            "version": version, "locked": true, "valid_until": valid_until, "storage_refund_to": self.minter,
         }), dep - COLLATERAL_STORAGE_DEPOSIT, 35)
             .then(callback("on_collateral_stored", near_sdk::serde_json::json!({"token_id": token_id, "nonce": nonce}), 65))
     }
@@ -339,12 +340,9 @@ impl Contract {
         let Some(v) = bounded_result(32_768) else { return false; };
         let Ok(policy) = near_sdk::serde_json::from_slice::<Option<PolicyView>>(&v) else { return false; };
         let mut c = config_required();
-        if r.store_succeeded.is_none(){
-            // Audited provider extension: these fields are written atomically WITH accepting
-            // this exact deposit/provisioning call, never inferred from absence or a balance.
-            if !policy.as_ref().is_some_and(|p|policy_matches(p,&b)&&p.registration_nonce==nonce&&p.registration_deposit==r.forwarded){return false;}
-            change_liabilities(&mut c,0,r.forwarded.0);
-        }
+        // A Boolean snapshot cannot prove this exact earlier store receipt is terminal,
+        // or account for its forwarded deposit. Lost callback => UNKNOWN, no new action.
+        if r.store_succeeded.is_none() { return false; }
         if policy.as_ref().is_some_and(|p| policy_matches(p, &b)) {
             b.ready = true; collateral().insert(&token_id, &b); registrations().remove(&token_id);
             change_liabilities(&mut c, 0, COLLATERAL_STORAGE_DEPOSIT); save_config(&c); return true;
@@ -397,13 +395,14 @@ impl Contract {
         let c=config_required();let mut l=loans().get(&token).unwrap_or_else(||env::panic_str("no loan"));
         require!((freeze&&l.state==LoanState::Freezing)||(!freeze&&l.state==LoanState::UnlockPending),"wrong custody transition");
         let mut b=collateral().get(&token).unwrap_or_else(||env::panic_str("unbound collateral"));
-        if !l.policy_busy {
-            b.policy_generation=U64(b.policy_generation.0.checked_add(1).unwrap_or_else(||env::panic_str("policy generation overflow")));
-            collateral().insert(&token,&b);l.policy_sequence=b.policy_generation;
-        }
-        // Unknown action retries are the SAME fenced command, never a new generation.
+        // The upstream provider has no generation/idempotency fence. Never redispatch
+        // an unknown command, even in the same direction. Persist BEFORE dispatch;
+        // a lost action callback keeps this lock until reviewed incident repair.
+        require!(!l.policy_busy, "custody command UNKNOWN/pending: do not redispatch");
+        b.policy_generation=U64(b.policy_generation.0.checked_add(1).unwrap_or_else(||env::panic_str("policy sequence overflow")));
+        collateral().insert(&token,&b);l.policy_sequence=b.policy_generation;
         l.policy_busy=true;l.policy_call_complete=false;loans().insert(&token,&l);
-        call(c.custody_contract,"set_wallet_frozen",near_sdk::serde_json::json!({"wallet_pubkey":b.wallet_pubkey,"generation":l.policy_sequence,"frozen":freeze}),0,20)
+        call(c.custody_contract,if freeze {"freeze_wallet"} else {"unfreeze_wallet"},near_sdk::serde_json::json!({"wallet_pubkey":b.wallet_pubkey}),0,20)
             .then(callback("on_policy_action",near_sdk::serde_json::json!({"token_id":token,"nonce":l.nonce,"sequence":l.policy_sequence}),65))
     }
 
@@ -422,7 +421,7 @@ impl Contract {
     /// Read-only reconciliation is allowed after the provider receipt callback recorded terminal completion.
     pub fn reconcile_loan_policy(&self, token_id: TokenId, nonce: U64) -> Promise {
         let l = load_loan(&token_id, nonce);
-        require!(l.policy_busy, "no pending policy action");
+        require!(l.policy_busy && l.policy_call_complete, "custody command UNKNOWN: exact terminal callback required");
         self.read_loan_policy(token_id, l)
     }
     fn read_loan_policy(&self, token: TokenId, l: Loan) -> Promise {
@@ -435,10 +434,10 @@ impl Contract {
     pub fn on_loan_policy(&mut self, token_id: TokenId, nonce: U64, sequence: U64) -> bool {
         private_callback();
         let Some(mut l) = loans().get(&token_id) else { return false; };
-        if l.nonce != nonce || l.policy_sequence != sequence || !l.policy_busy { return false; }
+        if l.nonce != nonce || l.policy_sequence != sequence || !l.policy_busy || !l.policy_call_complete { return false; }
         let Some(b) = collateral().get(&token_id) else { return false; };
         let Some(p) = policy_result() else { return false; };
-        if !policy_matches(&p, &b) || p.generation!=l.policy_sequence.0 { return false; }
+        if !policy_matches(&p, &b) { return false; }
         l.policy_busy = false; l.policy_call_complete = false;
         if l.state == LoanState::Freezing && p.frozen { l.state = LoanState::Offered; }
         if l.state == LoanState::UnlockPending && !p.frozen {
@@ -609,7 +608,7 @@ impl Contract {
     }
     fn settle_policy_action(&mut self, token_id: TokenId, nonce: U64, sequence: U64) -> PromiseOrValue<bool> {
         let Some(mut l) = loans().get(&token_id) else { return PromiseOrValue::Value(false); };
-        if l.nonce != nonce || l.policy_sequence != sequence || !l.policy_busy { return PromiseOrValue::Value(false); }
+        if l.nonce != nonce || l.policy_sequence != sequence || !l.policy_busy || l.policy_call_complete { return PromiseOrValue::Value(false); }
         // A failed action may mean it was already frozen/thawed. Its receipt is now terminal; verify exact state.
         l.policy_call_complete = true; loans().insert(&token_id, &l);
         PromiseOrValue::Promise(self.read_loan_policy(token_id, l))
