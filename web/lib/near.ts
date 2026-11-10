@@ -48,6 +48,14 @@ export function pillAccount(a: string): string {
   return name.length > 10 ? `${name.slice(0, 9)}…` : name;
 }
 
+/** App-header account: keep the start and the end, so a long name is not cut off at the suffix. */
+export function compactAccount(a: string): string {
+  if (/^[0-9a-f]{64}$/.test(a) || /^0x[0-9a-fA-F]{40}$/.test(a)) return shortAccount(a, 4);
+  const name = a.replace(/\.near$/, "");
+  if (name.length <= 12) return name;
+  return `${name.slice(0, 6)}…${name.slice(-4)}`;
+}
+
 /** Short, readable key id for titles: "k5f4750858f328940" -> "5f47". */
 export function shortKeyId(id: string): string {
   const core = id.replace(/^k/, "");

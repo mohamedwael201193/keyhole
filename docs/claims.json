@@ -6724,6 +6724,19 @@
    "verify": "node judge/verify-claims.mjs --only path-protocol/client-owner-epoch.json"
   },
   {
+   "id": "path-web/tests/pledge-labels.test.ts",
+   "claim": "Linked repo path web/tests/pledge-labels.test.ts exists",
+   "where": "README.md:972",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-labels.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-labels.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-labels.test.ts"
+  },
+  {
    "id": "path-docs/pledge/UI_SANDBOX_RUNBOOK.md",
    "claim": "Linked repo path docs/pledge/UI_SANDBOX_RUNBOOK.md exists",
    "where": "README.md:974",
