@@ -1,0 +1,11 @@
+
+Running 2 tests using 2 workers
+
+(node:3063080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3063079) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [mobile] › e2e/live-v25.spec.ts:4:5 › live v2.5: finalized public views retain their browser contract (1.4s)
+  ✓  2 [desktop] › e2e/live-v25.spec.ts:4:5 › live v2.5: finalized public views retain their browser contract (1.9s)
+
+  2 passed (2.6s)

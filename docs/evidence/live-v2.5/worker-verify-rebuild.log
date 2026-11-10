@@ -1,0 +1,87 @@
+call         dc3668db-674f-4865-a2ce-272f70c41b0d
+project      keyhole-devmo.near/keyhole
+executed     d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41
+measurement  5bb8cf0af5012f89f3ad9efe21e660954b65970bc6f9deb18eb3d1a185c764c5c5452711f607b5eab6cb04ac79282a84
+deployed     d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41
+OK   TDX quote present (6676 chars)
+OK   registered wasm_hash == executed
+OK   executed == published build d337e822
+OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41.wasm sha256 matches
+   Compiling zeroize v1.9.1
+   Compiling generic-array v0.14.7
+   Compiling typenum v1.20.1
+   Compiling subtle v2.6.1
+   Compiling zerofrom v0.1.8
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling const-oid v0.9.6
+   Compiling yoke v0.8.4
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling zerovec v0.11.9
+   Compiling digest v0.10.7
+   Compiling wasi v0.11.1+wasi-snapshot-preview1
+   Compiling getrandom v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling tinystr v0.8.5
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling icu_locale_core v2.4.0
+   Compiling zerotrie v0.2.5
+   Compiling potential_utf v0.1.6
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.4.0
+   Compiling icu_properties_data v2.4.0
+   Compiling icu_collections v2.4.0
+   Compiling icu_provider v2.4.0
+   Compiling serde_core v1.0.229
+   Compiling smallvec v1.16.4
+   Compiling bitflags v2.13.2
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling signature v2.2.0
+   Compiling ff v0.13.1
+   Compiling der v0.7.10
+   Compiling percent-encoding v2.3.2
+   Compiling base16ct v0.2.0
+   Compiling sec1 v0.7.3
+   Compiling wit-bindgen-rt v0.33.0
+   Compiling wit-bindgen v0.57.1
+   Compiling form_urlencoded v1.2.2
+   Compiling serde v1.0.229
+   Compiling group v0.13.0
+   Compiling idna_adapter v1.2.2
+   Compiling crypto-bigint v0.5.5
+   Compiling hmac v0.12.1
+   Compiling itoa v1.0.18
+   Compiling wit-bindgen-rt v0.36.0
+   Compiling rfc6979 v0.4.0
+   Compiling elliptic-curve v0.13.8
+   Compiling idna v1.1.0
+   Compiling curve25519-dalek v4.1.3
+   Compiling sha2 v0.10.9
+   Compiling anyhow v1.0.104
+   Compiling zmij v1.0.23
+   Compiling ryu v1.0.23
+   Compiling serde_urlencoded v0.7.1
+   Compiling getrandom v0.3.4
+   Compiling wasi v0.13.3+wasi-0.2.2
+   Compiling wasip2 v1.0.4+wasi-0.2.12
+   Compiling url v2.5.8
+   Compiling ecdsa v0.16.9
+   Compiling ed25519 v2.2.3
+   Compiling serde_json v1.0.154
+   Compiling keccak v0.1.6
+   Compiling memchr v2.8.3
+   Compiling sha3 v0.10.9
+   Compiling ed25519-dalek v2.2.0
+   Compiling wit-bindgen v0.36.0
+   Compiling k256 v0.13.4
+   Compiling wasi-http-client v0.2.1
+   Compiling bs58 v0.5.1
+   Compiling hex v0.4.3
+   Compiling base64 v0.22.1
+   Compiling keyhole-worker v0.1.0 (/workspace/near_hackathon/wt_live_v25/tee/worker)
+    Finished `release` profile [optimized] target(s) in 26.15s
+FAIL local build 59379cfecd2af439f2eea7a175aa418ebbf43fbcb8e0fd22a99fdf10db37145a differs from executed d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41. --rebuild compiles this checkout; it matches a historical attestation only on the commit that published that wasm.
+note  worker_measurement is the TDX RTMR3 measurement of the OutLayer worker image. It is not the wasm sha256.

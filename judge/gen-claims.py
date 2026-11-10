@@ -25,12 +25,12 @@ def where(doc, needle):
 ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
 # ---------------- contract (live RPC) ----------------
-add("contract-code-hash", "On-chain code_hash DEXHHyEM…SiZZ of keyhole-devmo.near (contract v2.4, live since 2026-11-08) is the base58 sha256 of the committed contracts/keys/deployed/keyhole_keys.wasm", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
-    {"type":"code_hash","account":"keyhole-devmo.near","wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":K["code_hash"]}, "code_hash == base58(sha256(wasm)) == DEXHHyEM…SiZZ", "./judge/1-contract.sh")
-add("contract-wasm-sha", "Deployed contract wasm is 241,621 bytes with sha256 b5c30849…1a1e5c", where(RD,"241,621 bytes"), "file", "contracts/keys/deployed/keyhole_keys.wasm",
-    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":K["wasm_sha256"],"bytes":241621}, "sha256 b5c30849…1a1e5c, 241621 bytes", "sha256sum contracts/keys/deployed/keyhole_keys.wasm && wc -c contracts/keys/deployed/keyhole_keys.wasm")
-add("contract-source-version", "NEP-330 contract_source_metadata of keyhole-devmo.near reports version 2.4.0 (live since 2026-11-08)", where(RD,"version `2.4.0`"), "mainnet view", "keyhole-devmo.near contract_source_metadata()",
-    {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":"2.4.0"}, "version == 2.4.0")
+add("contract-code-hash", f"Mainnet code_hash {K['code_hash']} equals base58 sha256 of the committed deployed contract", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
+    {"type":"code_hash","account":K["account"],"wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":K["code_hash"]}, "chain == committed deployed wasm == identity", "bash judge/1-contract.sh --strict --rebuild")
+add("contract-wasm-sha", f"Deployed contract wasm is {K['bytes']:,} bytes with sha256 {K['wasm_sha256']}", where(RD,K["wasm_sha256"]), "file", "contracts/keys/deployed/keyhole_keys.wasm",
+    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":K["wasm_sha256"],"bytes":K["bytes"]}, f"sha256 {K['wasm_sha256']}, {K['bytes']} bytes")
+add("contract-source-version", f"NEP-330 mainnet source metadata reports version {K['version']}", where(RD,K["version"]), "mainnet view", "contract_source_metadata()",
+    {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":K["version"]}, f"version == {K['version']}")
 cfg = {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}
 for k,v in cfg.items():
     add(f"config-{k}", f"Contract config.{k} is {v}", where(RD,'"royalty_bps":500'), "mainnet view", "keyhole-devmo.near config()",
@@ -180,6 +180,7 @@ for d in DOCS:
             if not p: continue
             add(f"path-{p}", f"Linked repo path {p} exists", f"{d}:{i}", "file", p, {"type":"path","path":p}, "path exists")
 # ---------------- live site ----------------
+# The homepage no longer displays heartbeats. Do not fabricate a site-vs-chain claim for an absent stat.
 for p in ["/","/judge","/verify","/settle","/gallery","/mint","/vault","/ask","/atlas","/identity","/pnl","/key?id=k5f4750858f328940"]:
     add(f"site-{p}", f"Live page {p} serves", where(RD, "| `"+p.split('?')[0]+"` |") if p not in ("/key?id=k5f4750858f328940",) else where(TC,"k5f4750858f328940"), "live site", SITE+p,
         {"type":"http","url":SITE+p,"status":200}, "HTTP 200")
@@ -188,7 +189,6 @@ add("site-ar-redirect","/ar/… redirects to the same path without the prefix an
 for h,v in [("strict-transport-security","max-age=63072000; includeSubDomains; preload"),("x-content-type-options","nosniff"),("content-security-policy","frame-ancestors 'none'"),("referrer-policy","strict-origin-when-cross-origin"),("permissions-policy","camera=()")]:
     add(f"site-hdr-{h}",f"Site sends {h}: …{v}",where(RD,"CSP, HSTS (2 years, preload)"),"live site",SITE,{"type":"header","url":SITE+"/","header":h,"contains":v},f"{h} contains {v}","curl -sI "+SITE)
 add("site-supply-live","Home page key count equals nft_total_supply minus the contract-held test key",where(RD,"The home page key count is `nft_total_supply` minus the test key the contract holds"),"live site",SITE,{"type":"site_vs_chain","field":"supply","method":"nft_total_supply"},"home count == total - contract-held")
-add("site-beats-live","Home page heartbeats equal config.beats",where(RD,"`nft_total_supply`, `config`"),"live site",SITE,{"type":"site_vs_chain","field":"beats","method":"config"},"home beats == chain beats")
 add("site-hash","Home page names the live build d337e822",where(RD,"KEYHOLE worker d337e822"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"d337e822"},"home carries d337e822")
 import glob
 for f in sorted(glob.glob("web/app/**/*.tsx",recursive=True)+glob.glob("web/lib/**/*.ts",recursive=True)+glob.glob("web/components/**/*.tsx",recursive=True)+glob.glob("docs/evidence/**/README.md",recursive=True)):

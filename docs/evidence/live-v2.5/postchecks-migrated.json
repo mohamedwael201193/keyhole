@@ -1,0 +1,266 @@
+{
+  "mode": "migrated",
+  "status": "PASS",
+  "protocol_version": 88,
+  "gas_price": "100000000",
+  "at": "2026-11-10T19:38:24.526194+02:00",
+  "account": {
+    "amount": "5299576661423691162621661",
+    "block_hash": "Adv2hKwqBBS4kx3SjM2VcWYbdAQGddgJhC1WkHJCTRoe",
+    "block_height": 223948546,
+    "code_hash": "3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b",
+    "locked": "0",
+    "storage_paid_at": 0,
+    "storage_usage": 492179
+  },
+  "sha256": "28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce",
+  "tokens": [
+    {
+      "token_id": "0",
+      "owner_id": "keyhole-devmo.near",
+      "metadata": {
+        "title": "KEYHOLE Key #0 (test)",
+        "description": "Test viewing key",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k0642e7964b2fb515",
+      "owner_id": "476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k102a806df6867547",
+      "owner_id": "0xf76e6b0920e9332ff4410f6dd53f01722abc71a3",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": "https://keyhole-seven.vercel.app/heirloom/keys/k08.webp",
+        "media_hash": "wkprKA5JUUtPRrxG0EkmaTnfHFgW1Zv469wlZN4eyJg=",
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k22b07f20ff167d8d",
+      "owner_id": "a838e946d80014f0c9a99911ad9802e7f88e80b87536fce86a46e1c03b3292f4",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": "https://keyhole-seven.vercel.app/heirloom/keys/k08.webp",
+        "media_hash": "wkprKA5JUUtPRrxG0EkmaTnfHFgW1Zv469wlZN4eyJg=",
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k5f4750858f328940",
+      "owner_id": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k857b6b68facc0f94",
+      "owner_id": "a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    }
+  ],
+  "metadata": {
+    "version": "2.5.0",
+    "link": "https://github.com/mohamedwael201193/keyhole",
+    "standards": [
+      {
+        "standard": "nep171",
+        "version": "1.2.0"
+      },
+      {
+        "standard": "nep177",
+        "version": "2.0.0"
+      },
+      {
+        "standard": "nep178",
+        "version": "1.0.0"
+      },
+      {
+        "standard": "nep181",
+        "version": "1.0.0"
+      },
+      {
+        "standard": "nep199",
+        "version": "2.1.0"
+      },
+      {
+        "standard": "nep330",
+        "version": "1.2.0"
+      }
+    ],
+    "build_info": null
+  },
+  "checks": {
+    "pledge_config": {
+      "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+      "recovery_unlock_ns": "1796169600000000000",
+      "attestor_public_key": "AVoCWQaln59Ayhfa8qPGHF5jo3wIHHUjCHDKpqgqxEM=",
+      "custody_contract": "outlayer.near",
+      "network": "mainnet",
+      "lending_enabled": false,
+      "next_loan_nonce": "0",
+      "next_payout_nonce": "0",
+      "treasury_available": "0",
+      "user_liabilities": "0",
+      "treasury_pending": null
+    },
+    "loan_limits": {
+      "storage_bond": "9000000000000000000000",
+      "collateral_binding_deposit": "20000000000000000000000",
+      "min_duration_sec": "1",
+      "max_duration_sec": "2592000",
+      "max_grace_sec": "604800",
+      "certificate_max_age_ns": "60000000000",
+      "activation": "successful_native_principal_cashout_callback"
+    },
+    "payout_storage_cost": "3200000000000000000000",
+    "0": {
+      "owner": "keyhole-devmo.near",
+      "control": {
+        "token_id": "0",
+        "owner_epoch": "0",
+        "pending_value_ops": "0",
+        "listed": false,
+        "transfer_pending": false,
+        "pledged": false,
+        "value_op_nonce": "0"
+      }
+    },
+    "k0642e7964b2fb515": {
+      "owner": "476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8",
+      "control": {
+        "token_id": "k0642e7964b2fb515",
+        "owner_epoch": "0",
+        "pending_value_ops": "0",
+        "listed": false,
+        "transfer_pending": false,
+        "pledged": false,
+        "value_op_nonce": "0"
+      }
+    },
+    "k102a806df6867547": {
+      "owner": "0xf76e6b0920e9332ff4410f6dd53f01722abc71a3",
+      "control": {
+        "token_id": "k102a806df6867547",
+        "owner_epoch": "0",
+        "pending_value_ops": "0",
+        "listed": false,
+        "transfer_pending": false,
+        "pledged": false,
+        "value_op_nonce": "0"
+      }
+    },
+    "k22b07f20ff167d8d": {
+      "owner": "a838e946d80014f0c9a99911ad9802e7f88e80b87536fce86a46e1c03b3292f4",
+      "control": {
+        "token_id": "k22b07f20ff167d8d",
+        "owner_epoch": "0",
+        "pending_value_ops": "0",
+        "listed": false,
+        "transfer_pending": false,
+        "pledged": false,
+        "value_op_nonce": "0"
+      }
+    },
+    "k5f4750858f328940": {
+      "owner": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+      "control": {
+        "token_id": "k5f4750858f328940",
+        "owner_epoch": "0",
+        "pending_value_ops": "0",
+        "listed": false,
+        "transfer_pending": false,
+        "pledged": false,
+        "value_op_nonce": "0"
+      }
+    },
+    "k857b6b68facc0f94": {
+      "owner": "a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da",
+      "control": {
+        "token_id": "k857b6b68facc0f94",
+        "owner_epoch": "0",
+        "pending_value_ops": "0",
+        "listed": false,
+        "transfer_pending": false,
+        "pledged": false,
+        "value_op_nonce": "0"
+      }
+    }
+  },
+  "state_rows": 47,
+  "full_access_keys": 2,
+  "post_migration_storage_bound": 492179,
+  "balance_NEAR": "5.299576661423691162621661",
+  "balance_minus_projected_migration_storage_NEAR": "0.377786661423691162621661"
+}
