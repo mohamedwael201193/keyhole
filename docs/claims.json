@@ -7061,6 +7061,19 @@
    "verify": "node judge/verify-claims.mjs --only path-web/e2e/support/final-receipt.ts"
   },
   {
+   "id": "path-web/tests/locked-hashes.test.ts",
+   "claim": "Linked repo path web/tests/locked-hashes.test.ts exists",
+   "where": "README.md:1032",
+   "evidence_type": "file",
+   "evidence": "web/tests/locked-hashes.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/locked-hashes.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/locked-hashes.test.ts"
+  },
+  {
    "id": "path-contracts/keys",
    "claim": "Linked repo path contracts/keys exists",
    "where": "TRACK_COVERAGE.md:10",
