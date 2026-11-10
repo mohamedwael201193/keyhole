@@ -1,0 +1,149 @@
+[
+  {
+    "name": "info",
+    "op": "info",
+    "call_id": "f43c0dc6-d34a-4c86-b189-2b7feba9b0fa",
+    "status": "SUCCESS",
+    "limit_micro_usd": 40000,
+    "actual_cost_micro_usd": 1003,
+    "at_cairo": "2026-11-11T01:38:25+02:00",
+    "attestation": {
+      "project_id": "keyhole-devmo.near/keyhole",
+      "wasm_hash": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "executed_wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "input_hash": "b178a361d660e91ab33b0dd0fe445e0d1c71fa55bb0a8b5252f5270ff7563ec9",
+      "output_hash": "e7fb60372ffdda802b9d5326864fb2b9a8decefe9bad670c72566b9ae3c864f3",
+      "worker_measurement": "0b8e9cb5c93f5a029a6d954c49bb63407755db0243bd9e0e27bcbf11553198b3d8fcf5a7ae0538f60c92121c194c2689"
+    },
+    "tdx_quote_characters": 6676,
+    "output": {
+      "global_mints_per_day": 25,
+      "global_per_minute": 120,
+      "guarded_registry_hash": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "guarded_revision": "keyhole-guarded-custody-v1",
+      "keys_contract": "keyhole-devmo.near",
+      "limits": {
+        "1": {
+          "daily_usd_micro": 5000000,
+          "per_minute_calls": 6,
+          "per_tx_usd_micro": 1000000
+        },
+        "2": {
+          "daily_usd_micro": 50000000,
+          "per_minute_calls": 12,
+          "per_tx_usd_micro": 10000000
+        },
+        "3": {
+          "daily_usd_micro": 500000000,
+          "per_minute_calls": 30,
+          "per_tx_usd_micro": 100000000
+        }
+      },
+      "minter_account": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+      "nep413_recipient": "keyhole",
+      "ok": true,
+      "op": "info",
+      "ops": [
+        "info",
+        "status",
+        "quote",
+        "mint",
+        "account",
+        "balance",
+        "swap",
+        "copy",
+        "withdraw",
+        "transfer",
+        "loan_certificate",
+        "prepare_collateral",
+        "collateral_quote",
+        "provision_collateral",
+        "reconcile_collateral",
+        "reconcile_minter_send",
+        "withdraw_dry_run",
+        "pledge_inventory",
+        "reconcile_value_op",
+        "history",
+        "provenance",
+        "record",
+        "lock",
+        "prove",
+        "limits",
+        "pnl",
+        "sweep_minter",
+        "chain_address",
+        "chain_sign",
+        "add_beat_key",
+        "del_beat_key",
+        "dashboard",
+        "level_up",
+        "session",
+        "session_revoke"
+      ],
+      "raise_delay_ms": 86400000,
+      "session": {
+        "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet",
+        "max_ms": 1800000,
+        "ops": [
+          "status",
+          "quote",
+          "account",
+          "balance",
+          "swap",
+          "copy",
+          "history",
+          "pnl",
+          "limits",
+          "dashboard",
+          "level_up",
+          "session_revoke"
+        ],
+        "start_op": "session"
+      },
+      "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes",
+      "transfer_cooldown_ms": 600000,
+      "version": "keyhole-worker/0.2.0"
+    }
+  },
+  {
+    "name": "restore",
+    "op": "withdraw_dry_run",
+    "call_id": "36a2f1be-77ec-44c0-a043-43cd5c6f19b3",
+    "status": "SUCCESS",
+    "limit_micro_usd": 10000,
+    "actual_cost_micro_usd": 1009,
+    "at_cairo": "2026-11-11T01:39:18+02:00",
+    "attestation": {
+      "project_id": "keyhole-devmo.near/keyhole",
+      "wasm_hash": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "executed_wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "input_hash": "9d719c262b448ee5552a0c0d8a8a9be0ea6306fa7e33aacb76ae1c5e916c4ae2",
+      "output_hash": "04d537c7e36c60f24587661047ab3a795ca648e69444db31cdd72df690a4c388",
+      "worker_measurement": "330098d63ba059dd6432f4d13acea03620c6030d530dbf24a0524838ce12f33ff2698a774aca5ef5b0684a05cc3c3cfc"
+    },
+    "tdx_quote_characters": 6676,
+    "output": {
+      "amount": "100000",
+      "amount_out": "100000",
+      "approval_and_cooldown_must_be_verified": true,
+      "bind": {
+        "account": "keyhole-devmo.near",
+        "nonce": "1gWP8XCxy5J0lM8wOJJ6hoqFWJVHAFNa9vTyIhZyAFY=",
+        "req_sha256": "584a81f36bd2c5ccb480867ecc7ebd1a1709415e39b49d9661bd92af38b2d794",
+        "token_id": "0"
+      },
+      "broadcast": false,
+      "chain": "near",
+      "deadline": null,
+      "estimated_fee": null,
+      "fee_token": null,
+      "hint": null,
+      "min_amount_out": "99000",
+      "ok": true,
+      "op": "withdraw_dry_run",
+      "time_estimate_seconds": 10,
+      "to": "keyhole-devmo.near",
+      "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"
+    }
+  }
+]

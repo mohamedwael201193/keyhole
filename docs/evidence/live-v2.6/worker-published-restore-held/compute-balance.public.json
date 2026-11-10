@@ -1,0 +1,14 @@
+{
+  "at_cairo": "2026-11-11T01:43:28.214201+02:00",
+  "payment_owner": "keyhole-devmo.near",
+  "nonce": 1,
+  "balance": {
+    "owner": "keyhole-devmo.near",
+    "nonce": 1,
+    "initial_balance": "1288694",
+    "spent": "776049",
+    "reserved": "0",
+    "available": "512645",
+    "last_used_at_cairo": "2026-11-11T01:39:22.906589+02:00"
+  }
+}

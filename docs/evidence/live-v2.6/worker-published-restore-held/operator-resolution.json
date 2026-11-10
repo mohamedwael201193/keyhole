@@ -1,0 +1,50 @@
+{
+  "state": "REJECTED_400_NOT_DISPATCHED",
+  "authority": "Explicit operator review/instruction, 2026-11-11 01:32 Africa/Cairo",
+  "at_cairo": "2026-11-11 01:33:56 Africa/Cairo",
+  "verified_block": {
+    "hash": "8CzzzBcWh2YvKwnwHXuVTKdm5TGHHkPx1vw8fZcN7WYr",
+    "height": 223985605
+  },
+  "nonce_unchanged": 221777577000134,
+  "metadata_unchanged": true,
+  "original_response_body": "Not retained by original CLI; not reconstructed or invented.",
+  "validation_evidence": "Official NearSigner uses broadcast_tx_commit; dRPC diagnostic returns HTTP400 JSON-RPC -32601 method is not available for both parameter shapes. Compatible FastNEAR reaches Borsh validation.",
+  "original_request_redacted": {
+    "rpc": "https://near.drpc.org",
+    "method": "broadcast_tx_commit",
+    "params": [
+      "[signed transaction withheld; original not retained]"
+    ],
+    "signed_transaction_semantics": {
+      "signer": "keyhole-devmo.near",
+      "receiver": "outlayer.near",
+      "function": "store_secrets",
+      "gas": "50000000000000",
+      "deposit": "100000000000000000000000",
+      "accessor": {
+        "Project": {
+          "project_id": "keyhole-devmo.near/keyhole"
+        }
+      },
+      "profile": "default",
+      "encrypted_secrets": "[withheld]",
+      "access": "unchanged owner whitelist",
+      "vault_id": null
+    }
+  },
+  "correction": "Same official CLI and same secret merge; set OUTLAYER_RPC_URL=https://free.rpc.fastnear.com, which supports its documented legacy broadcast method.",
+  "prior_scan": {
+    "before_height": 223984828,
+    "scan_end_height": 223985047,
+    "scan_last_height": 223984828,
+    "blocks_scanned": 220,
+    "chunk_reads": 91,
+    "signer_shard": 7,
+    "original_nonce": "221777577000135",
+    "nonce_after_scan": 221777577000134,
+    "matching_hashes": [],
+    "state": "UNKNOWN_NO_AUTOMATIC_RETRY",
+    "one_official_cli_invocation": true
+  }
+}

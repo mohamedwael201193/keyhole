@@ -1,0 +1,51 @@
+{
+  "step": "registry-3",
+  "hash": "ASrFYcEWadak9pF9vPpyfG6KhvyuCCtB7XmYtangTWWQ",
+  "status": "FINAL_SUCCESS",
+  "fees_yocto": "3138726372397700000000",
+  "storage_refund_yocto": "39600000000000000000000",
+  "verified_refund_receipts": [
+    {
+      "id": "eiXYAPV5xGjfiQxUMqUAWNgMxVuTUeqUY8ztmPTSRrX",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "8atjFqR98XvM8HMAn4qYVqudr8AAXt75FWQbmmpyPpdz",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "3W6RYMMz5kMGx5P7MPgZfeRm83p7iqzHFHMRPLK6ZwsX",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "Bw9NxP4zuyDzCnbBgteafYq8MoJX21f32eCi3FajjVjJ",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "FFbya3pvU5tYfEpHXcp59VgR2ZcWyeWiJ2wejbJVkcwp",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "7R59SgRmaxgXd7e8jFcGpJZqRKtuLgpnv9LmntrpYHwr",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "8RTdVm3mE1QFkN9RRxdXUzFaB7EcMwqpQ9SYRNVWqStm",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "FmKnaNU3AzfBu3g5hobCS8fDSDEa22Ppzwox3QgZRgkt",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "CDL2XYbLRniqEdhyvvFVfSQ9UQhrKZfjCK7yWiF72LFv",
+      "amount": "4400000000000000000000"
+    }
+  ],
+  "versions_remaining": 1,
+  "project_uuid": "p000000000000004b",
+  "active_version": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+  "block_height": 223985927,
+  "at_cairo": "2026-11-11 01:36:59 Africa/Cairo",
+  "blocks_after_publication_capture": 79
+}
