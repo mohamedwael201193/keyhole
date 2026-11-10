@@ -26,7 +26,8 @@ export type LoanState =
   | "Freezing"
   | "Offered"
   | "Active"
-  | "UnlockPending";
+  | "UnlockPending"
+  | "DisbursementPending";
 
 export type Loan = {
   token_id: TokenId;
@@ -129,23 +130,23 @@ export type RegisterCollateralArgs = {
 };
 
 /** Build a FunctionCall payload for open_loan. Does not send. */
-export function buildOpenLoan(args: OpenLoanArgs) {
-  return { method: "open_loan" as const, args, deposit: "1", gas: String(100 * 10 ** 12) };
+export function buildOpenLoan(args: OpenLoanArgs, storageBondYocto: U128 = "9000000000000000000000") {
+  return { method: "open_loan" as const, args, deposit: "1", gas: String(300 * 10 ** 12) };
 }
 export function buildFundLoan(args: FundLoanArgs) {
-  return { method: "fund_loan" as const, args, deposit: "0", gas: String(100 * 10 ** 12) };
+  return { method: "fund_loan" as const, args, deposit: args.certificate.terms.principal, gas: String(300 * 10 ** 12) };
 }
 export function buildRepayLoan(args: LoanRefArgs, repaymentYocto: U128) {
-  return { method: "repay_loan" as const, args, deposit: repaymentYocto, gas: String(100 * 10 ** 12) };
+  return { method: "repay_loan" as const, args, deposit: repaymentYocto, gas: String(300 * 10 ** 12) };
 }
 export function buildCancelLoan(args: LoanRefArgs) {
-  return { method: "cancel_loan" as const, args, deposit: "1", gas: String(50 * 10 ** 12) };
+  return { method: "cancel_loan" as const, args, deposit: "1", gas: String(300 * 10 ** 12) };
 }
 export function buildClaimDefault(args: ClaimDefaultArgs) {
-  return { method: "claim_default" as const, args, deposit: "1", gas: String(100 * 10 ** 12) };
+  return { method: "claim_default" as const, args, deposit: "1", gas: String(300 * 10 ** 12) };
 }
-export function buildRegisterCollateral(args: RegisterCollateralArgs) {
-  return { method: "register_collateral" as const, args, deposit: "1", gas: String(100 * 10 ** 12) };
+export function buildRegisterCollateral(args: RegisterCollateralArgs, policyAndBindingDeposit: U128) {
+  return { method: "register_collateral" as const, args, deposit: policyAndBindingDeposit, gas: String(300 * 10 ** 12) };
 }
 
 export type PledgeClientOpts = {

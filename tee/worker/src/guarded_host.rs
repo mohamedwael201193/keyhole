@@ -57,7 +57,7 @@ impl guarded::ProviderHost for Host {
         if matches!(j.kind.as_str(),"withdraw"|"transfer") {
             let now=chain_now_ms()?;
             ownership_sync::require_elapsed(custody_cooldown(&j.token_id,&j.owner,now)?,now)?;
-            let evs=load_prov(&j.token_id).into_iter().map(|(e,_)|e).collect::<Vec<_>>();
+            let evs=load_prov(&j.token_id)?.into_iter().map(|(e,_)|e).collect::<Vec<_>>();
             assert_no_cooldown(&evs,&j.owner,now)?;
         }
         let (canonical,id)=guarded_wallet(&j.token_id)?;
@@ -89,7 +89,7 @@ fn op_transfer(input:&Value)->Result<Value,Error>{
     let (key,id)=guarded_wallet(&c.token_id())?;
     let epoch_cool=prov_sync_owner(&c.token_id(),&c.account,c.now_ms)?;
     ownership_sync::require_elapsed(epoch_cool,c.now_ms)?;
-    let events=load_prov(&c.token_id()).into_iter().map(|(e,_)|e).collect::<Vec<_>>();assert_no_cooldown(&events,&c.account,c.now_ms)?;
+    let events=load_prov(&c.token_id())?.into_iter().map(|(e,_)|e).collect::<Vec<_>>();assert_no_cooldown(&events,&c.account,c.now_ms)?;
     assert_unlocked(&Host.get(&tkey(&c.token_id(),"lock")),&c.account,c.now_ms)?;
     let usd=usd_of(&token,&amount,&id,c.now_ms)?;let lim=limits_now(&c)?;
     let charge=charge_spend(&mut Host,&c.cap(),&lim,None,usd,c.now_ms)?;

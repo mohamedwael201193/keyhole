@@ -1002,8 +1002,8 @@ fn host_withdraw_checks_final_owner_before_custody_and_derives_send_receiver() {
     let op = src.split("fn op_withdraw(").nth(1).unwrap().split("fn load_prov(").next().unwrap();
     let guard = op.find("assert_withdraw_to(&chain, &to, &c.account, nft.get(\"owner_id\")").unwrap();
     assert!(op[..guard].contains("let nft = view(&keys_contract(), \"nft_token\""));
-    assert!(guard < op.find("c.wallet()?").unwrap());
+    assert!(guard < op.find("guarded_wallet(").unwrap());
     assert!(guard < op.find("charge_spend(").unwrap());
-    assert!(op.find("settle_gate(").unwrap() < op.find("let r = wallet_op(").unwrap());
-    assert!(op.contains("json!({\"chain\": \"near\", \"to\": c.account"));
+    assert!(op.find("settle_gate(").unwrap() < op.find("guard_provider(").unwrap());
+    assert!(op.contains("guard_begin(&c,input,\"withdraw\""));
 }

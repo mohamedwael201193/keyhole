@@ -21,14 +21,14 @@ const terms: LoanTerms = {
   lender: "lender.near",
   principal: "10000000000000000000000",
   repayment: "10100000000000000000000",
-  duration_sec: "259200",
-  grace_sec: "3600",
+  duration_sec: "7200",
+  grace_sec: "900",
   floor_raw: "500000",
   funding_deadline_ns: "1",
 };
 
 const cert: LoanCertificate = {
-  domain: "KEYHOLE_SEALED_LOAN_V2_CREDIT",
+  domain: "KEYHOLE_SEALED_LOAN_V3_DELIVERY",
   network: "mainnet",
   contract: "keyhole-devmo.near",
   token_id: "0",
@@ -74,7 +74,7 @@ describe("pledgeClient method surface (oracle-free contract candidate)", () => {
     expect(buildRepayLoan({ token_id: "0", nonce: "1" }, terms.repayment).deposit).toBe(terms.repayment);
     expect(buildCancelLoan({ token_id: "0", nonce: "1" }).method).toBe("cancel_loan");
     expect(buildClaimDefault({ token_id: "0", nonce: "1", receiver_id: "lender.near" }).method).toBe("claim_default");
-    expect(buildRegisterCollateral({ token_id: "0", wallet_pubkey: "ed25519:ab", encrypted_data: "x" }).method).toBe(
+    expect(buildRegisterCollateral({ token_id: "0", wallet_pubkey: "ed25519:ab", encrypted_data: "x", wallet_signature: "ab".repeat(64), version: 1, valid_until: 4000000000 }, "100000000000000000000000").method).toBe(
       "register_collateral",
     );
   });
@@ -117,7 +117,7 @@ describe("feature flag ON", () => {
 
 describe("oracle-free credit lifecycle ABI", () => {
   it("uses current contract phases and optional pending native claim without an outcome-signer role", async () => {
-    const phases: LoanState[] = ["Freezing", "Offered", "Active", "UnlockPending"];
+    const phases: LoanState[] = ["Freezing", "Offered", "DisbursementPending", "Active", "UnlockPending"];
     const config: PledgeConfig = {
       recovery_account: "recovery.near", recovery_unlock_ns: "1796169600000000000",
       attestor_public_key: "floor-key-only", custody_contract: "custody.near", network: "sandbox",
@@ -126,8 +126,10 @@ describe("oracle-free credit lifecycle ABI", () => {
     };
     const client=createPledgeClient({live:true,view:(async (method:string) => method === "get_pledge_config" ? config : null) as never});
     expect((await client.getPledgeConfig())?.treasury_pending).toEqual({nonce:"2",amount:"100"});
-    expect(phases).toEqual(["Freezing", "Offered", "Active", "UnlockPending"]);
+    expect(phases).toEqual(["Freezing", "Offered", "DisbursementPending", "Active", "UnlockPending"]);
     expect(PLEDGE_CHANGE_METHODS).not.toContain("reconcile_terminal_outcome");
     expect(PLEDGE_VIEW_METHODS).not.toContain("terminal_attestor_public_key");
   });
 });
+
+ it("binds the integrated refundable bond, lender principal and callback gas",()=>{ expect(buildOpenLoan({token_id:"0",terms}).deposit).toBe("9000000000000000000000"); expect(buildOpenLoan({token_id:"0",terms}).gas).toBe("300000000000000"); expect(buildFundLoan({token_id:"0",nonce:"1",certificate:cert,signature:"s"}).deposit).toBe(terms.principal); });
