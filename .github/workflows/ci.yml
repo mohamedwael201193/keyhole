@@ -1,7 +1,7 @@
 name: ci
 on:
   push:
-    branches: [main, feat/worker-pledge-admission]
+    branches: [main, feat/worker-pledge-admission, feat/pledge-first-class, feat/pledge-two-sided]
   pull_request:
 # Runs on GitHub-hosted runners. Only pushes and same-repo PRs run; fork PRs are skipped and there is no pull_request_target.
 permissions:
