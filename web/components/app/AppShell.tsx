@@ -9,6 +9,7 @@ import { KEYS_CONTRACT } from "@/lib/config";
 import { useI18n } from "@/lib/i18n";
 import { KeyStoreProvider, useKeyStore } from "@/lib/keyStore";
 import { useWallet } from "@/lib/wallet";
+import { PayoutCredit } from "@/components/PayoutCredit";
 import { SessionPill } from "./SessionPill";
 
 /**
@@ -234,7 +235,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
             </p>
           </div>
         </aside>
-        <main id="main" className="app-main" tabIndex={-1}>{children}</main>
+        <main id="main" className="app-main" tabIndex={-1}><PayoutCredit key={accountId??"signed-out"} />{children}</main>
       </div>
       <AppTabs pathname={pathname} hash={hash} moreOpen={open} onMore={() => setOpen((v) => !v)} />
     </div>

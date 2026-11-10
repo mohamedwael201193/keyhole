@@ -63,7 +63,7 @@ describe("pledgeClient method surface (PR #184 head 0c3c6196)", () => {
   });
 
   it("exposes the view methods get_pledge_config, get_loan, get_collateral_binding", () => {
-    expect([...PLEDGE_VIEW_METHODS]).toEqual(["get_pledge_config", "get_loan", "get_collateral_binding", "get_loan_limits", "get_lender_offer", "get_payout_credit", "get_pending_payout"]);
+    expect([...PLEDGE_VIEW_METHODS]).toEqual(["get_pledge_config", "get_loan", "get_collateral_binding", "get_loan_limits", "get_lender_offer", "get_payout_credit", "get_pending_payout", "get_principal_delivery", "loan_certificate_template"]);
   });
 
   it("builds open_loan / fund_loan / repay_loan / cancel_loan / claim_default / register_collateral payloads", () => {
@@ -116,3 +116,5 @@ it("builds the exact funded principal, measured bond and >=180 Tgas (not placeho
  const o=buildOpenLoan({token_id:"0",terms},"9000000000000000000000");expect(o.deposit).toBe("9000000000000000000000");expect(BigInt(o.gas)).toBeGreaterThanOrEqual(180000000000000n);
  const f=buildFundLoan({token_id:"0",nonce:"1",certificate:cert,signature:"sig"});expect(f.deposit).toBe(terms.principal);expect(BigInt(f.gas)).toBeGreaterThanOrEqual(180000000000000n);
 });
+
+it("separates an explicit reviewed write gate from live reads, and keeps preview unable to dispatch",()=>{expect(createPledgeClient({live:false,transactionsEnabled:true}).canTransact()).toBe(false);expect(createPledgeClient({live:true,transactionsEnabled:false}).canTransact()).toBe(false);expect(createPledgeClient({live:true,transactionsEnabled:true}).canTransact()).toBe(true);});

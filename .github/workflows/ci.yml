@@ -1,7 +1,7 @@
 name: ci
 on:
   push:
-    branches: [main]
+    branches: [main, feat/pledge-first-class, feat/pledge-two-sided]
   pull_request:
 # Runs on GitHub-hosted runners. Only pushes and same-repo PRs run; fork PRs are skipped and there is no pull_request_target.
 permissions:
@@ -142,3 +142,12 @@ jobs:
           npx next start -p "$PORT" & npx -y wait-on "$BASE_URL"
           PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/p.json" npx playwright test --grep-invert "funded payment key" --reporter=list,json
           echo "| e2e (distinct, each run at 2 widths) | $(node -p "const j=require(process.env.RUNNER_TEMP+'/p.json');new Set(j.suites.flatMap(function f(s){return [...(s.specs||[]).filter(x=>x.ok).map(x=>x.file+x.title),...(s.suites||[]).flatMap(f)]})).size") |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pledge borrower and lender viewport evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pledge-shots
+          path: web/test-results/pledge-shots
+          if-no-files-found: ignore
+          retention-days: 7

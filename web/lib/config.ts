@@ -34,3 +34,6 @@ export const acctAlt = (a: string) => `${ALT_EXPLORER}/wallet-explorer/${a}`;
  * Set NEXT_PUBLIC_PLEDGE_LIVE=1 only in explicit staging after the gate.
  */
 export const PLEDGE_LIVE = process.env.NEXT_PUBLIC_PLEDGE_LIVE === "1";
+
+/** Separate write gate. Default OFF; enable only after exact contract/worker/UI release review. */
+export const PLEDGE_TRANSACTIONS = process.env.NEXT_PUBLIC_PLEDGE_TRANSACTIONS === "1";

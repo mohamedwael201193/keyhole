@@ -59,3 +59,5 @@ describe("PledgeView preview (flag OFF)", () => {
     expect(view).not.toMatch(/\b(hyperliquid|aave|compound|morpho|euler|venus|benqi)\b/i);
   });
 });
+
+it("never labels an unsigned live floor certified or turns a zero due into an expired browser clock",()=>{const src=readFileSync(new URL("../app/pledge/view.tsx",import.meta.url),"utf8");expect(src).toContain("Awaiting confirmed native delivery · no debt clock");expect(src).toContain("Declared minimum · not yet verified");expect(src).toContain("client.chainNowNs()");expect(src).not.toContain("ms - Date.now()");});

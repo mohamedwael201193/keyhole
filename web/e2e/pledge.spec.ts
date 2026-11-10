@@ -69,3 +69,20 @@ test.describe("Pledge dashboard", () => {
     await expect(page.getByTestId("app-title")).toHaveText("Pledge");
   });
 });
+
+for(const [project,width,height,label] of [["desktop",1440,900,"1440x900"],["mobile",390,844,"390"]] as const){
+ test(`lender ${label}: public floor is declared until sealed verification`,async({page},info)=>{
+  test.skip(info.project.name!==project,"matching viewport");
+  await page.setViewportSize({width,height});
+  const privateRequests:string[]=[];
+  page.on("request",r=>{if(/\/api\/worker/.test(r.url()))privateRequests.push(r.postData()??"");});
+  await page.goto("/pledge/lend/example");
+  await expect(page.getByTestId("lender-page")).toBeVisible();
+  await expect(page.getByText("Declared, not yet verified",{exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Verify sealed certificate",exact:true})).toBeDisabled();
+  await expect(page.getByRole("button",{name:"Funding disabled pending release review",exact:true})).toBeDisabled();
+  await expect(page.getByText(/Whole account is collateral/)).toBeVisible();
+  expect(privateRequests).toEqual([]);
+  await shot(page,`lender_${label}`);
+ });
+}

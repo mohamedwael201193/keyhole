@@ -866,17 +866,17 @@ Built on NEAR.
 
 ### Two-sided Pledge source review
 
-Borrower `/pledge` links to the separate named-lender review `/pledge/lend/example` (or `/pledge/lend/<tokenId>` for read-only chain projection when enabled). The lender page uses only public `get_lender_offer` data and shows exact immutable cashflows, native lender empty-key-slot eligibility, certificate verification, whole-account default, cashout and cap/cooldown-dependent recovery stages. The borrower copy explicitly distinguishes backed credit from native delivery. The UI presents disabled transaction controls while preserving the existing cream/teal dashboard.
+Borrower `/pledge` links to the separate named-lender review `/pledge/lend/example` (or `/pledge/lend/<tokenId>` for read-only chain projection when enabled). The lender page uses only public `get_lender_offer` data and shows exact immutable cashflows, native lender empty-key-slot eligibility, certificate verification, whole-account default, cashout and cap/cooldown-dependent recovery stages. The borrower copy explicitly distinguishes backed credit from native delivery. New-loan controls stay disabled; a separate write gate protects wallet claims while preserving the existing cream/teal dashboard.
 
-The typed client builds exact principal/repayment deposits, a contract-supplied measured bond, full provider-registration arguments and 200-Tgas financial calls. Oracle-free state names are `Freezing`, `Offered`, `Active`, `UnlockPending`.
+The typed client builds exact principal/repayment deposits, a contract-supplied measured bond, full provider-registration arguments and 200-Tgas financial calls. Oracle-free state names are `Freezing`, `Offered`, `DisbursementPending`, `Active`, `UnlockPending`. Funding creates backed principal credit with no due date; only the exact genuine successful native cashout callback starts the term. Failed or UNKNOWN cashout starts no debt clock. The borrower surface refreshes final-chain state and uses final-chain time, not the browser clock, for its display.
 
-**Loan or partial swap?** The matched-portfolio card compares the same usable NEAR now and restoration of the same USDC later. A pure exact-integer model accepts same-ledger current forward/reverse quotes, separates locked bond from fees, keeps quoted fixed reverse fees fixed across hypothetical -20% / unchanged / +20% NEAR-price scenarios, and recommends a partial swap when supplied evidence supports it. Without matching current quotes it says **Comparison unavailable at this size**, rather than inventing savings. Both routes retain the NFT/address.
+**Loan or partial swap?** The matched-portfolio card compares the same usable NEAR now and restoration of the same USDC later. A pure exact-integer model matches swap proceeds to principal minus refundable bond minus quoted upfront cash costs, then compares repayment minus confirmed full bond return against the quoted USDC-restoration cost. Thus current liquidity and final native holdings use the same basis, and cash costs are counted exactly once. It accepts same-ledger current forward/reverse quotes, separates locked bond from fees, keeps quoted fixed reverse fees fixed across hypothetical -20% / unchanged / +20% NEAR-price scenarios, and recommends a partial swap when supplied evidence supports it. Without matching current quotes it says **Comparison unavailable at this size**, rather than inventing savings. Both routes retain the NFT/address.
 
 ```bash
 cd web
 npm run typecheck
 npm run lint
-npx vitest run tests/pledge-client.test.ts tests/pledge-view.test.ts tests/pledge-lender.test.ts tests/pledge-economics.test.ts
+npx vitest run tests/pledge-client.test.ts tests/pledge-view.test.ts tests/pledge-lender.test.ts tests/pledge-economics.test.ts tests/loan-certificate.test.ts tests/pledge-money.test.ts tests/pledge-certificate-gateway.test.ts
 npm run build
 cd ..
 python3 judge/gen-claims.py .
@@ -884,3 +884,9 @@ node judge/verify-claims.mjs --offline
 ```
 
 Safety and release status: [SECURITY.md](SECURITY.md#two-sided-pledge-ui-release-gate).
+
+The lender labels a floor **Declared, not yet verified** until its pinned Ed25519 signature and exact final-chain loan template verify. The canonical encoding/signature test consumes the contract/worker's [V3 delivery-domain Borsh vector](protocol/loan-certificate-v3-delivery.json). The public request accepts only token ID and loan nonce, never another asset or minimum.
+
+The shared app shell exposes **Claim your funds** for available native credits. It reserves a versioned local pending operation before opening the connected wallet, never silently retries UNKNOWN, and checks final receipt sender/contract/method/deposit/gas/arguments plus a post-dispatch block before accepting a returned hash. Contract pending payouts still block retries. `NEXT_PUBLIC_PLEDGE_TRANSACTIONS` is a separate default-OFF write gate. [Tests](web/tests/pledge-money.test.ts).
+
+For the box's linked-dependency worktree only, the verified production build command is `cd web && KEYHOLE_TURBOPACK_ROOT=/workspace/near_hackathon npm run build`. Clean checkouts/CI keep the normal root and `npm run build`; no dependency or lockfile change is needed.

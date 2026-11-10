@@ -4,7 +4,7 @@
  * Live calls stay behind PLEDGE_LIVE; when the flag is off this module still exports the shapes
  * so the UI and unit tests can bind against the real contract API without talking to mainnet.
  */
-import { KEYS_CONTRACT, PLEDGE_LIVE, RPC_URL } from "./config";
+import { KEYS_CONTRACT, PLEDGE_LIVE, PLEDGE_TRANSACTIONS, RPC_URL } from "./config";
 
 /** NEAR JSON stringified u128 / u64 wrappers as the contract serde uses them. */
 export type U128 = string;
@@ -22,7 +22,7 @@ export type LoanTerms = {
   funding_deadline_ns: U64;
 };
 
-export type LoanState = "Freezing" | "Offered" | "Active" | "UnlockPending";
+export type LoanState = "Freezing" | "Offered" | "DisbursementPending" | "Active" | "UnlockPending";
 
 export type Loan = {
   token_id: TokenId;
@@ -47,12 +47,20 @@ export type PledgeConfig = {
   network: string;
   lending_enabled: boolean;
   next_loan_nonce: U64;
+  next_payout_nonce: U64;
+  treasury_available: U128;
+  user_liabilities: U128;
+  treasury_pending: PendingPayout | null;
 };
+
+export type PendingPayout = {nonce: U64; amount: U128};
 
 export type CollateralBinding = {
   wallet_pubkey: string;
   encrypted_policy_hash: string;
   policy_version: U64;
+  /** Local sequence, not a provider generation guarantee. */
+  policy_generation: U64;
   ready: boolean;
 };
 
@@ -100,6 +108,8 @@ export const PLEDGE_VIEW_METHODS = [
   "get_lender_offer",
   "get_payout_credit",
   "get_pending_payout",
+  "get_principal_delivery",
+  "loan_certificate_template",
 ] as const;
 
 export type PledgeChangeMethod = (typeof PLEDGE_CHANGE_METHODS)[number];
@@ -152,6 +162,8 @@ export function buildClaimPayout() { return {method: "claim_payout" as const, ar
 export type PledgeClientOpts = {
   /** Override the live flag (tests). Defaults to PLEDGE_LIVE from config. */
   live?: boolean;
+  transactionsEnabled?: boolean;
+  chainNowNs?: () => Promise<U64>;
   contractId?: string;
   rpcUrl?: string;
   /** Injected view fn for tests. */
@@ -206,6 +218,15 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
   return {
     live,
     contractId,
+    rpcUrl,
+    async chainNowNs():Promise<U64>{
+      if(!live)throw Error("Preview has no live clock");
+      if(opts.chainNowNs)return opts.chainNowNs();
+      const response=await fetch(rpcUrl,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:"pledge-clock",method:"block",params:{finality:"final"}})});
+      const j=await response.json();const n=j.result?.header?.timestamp_nanosec;
+      if(!response.ok||j.error||typeof n!=="string"||!/^\d+$/.test(n))throw Error("Final chain clock unavailable");
+      return n;
+    },
     methods: { change: PLEDGE_CHANGE_METHODS, view: PLEDGE_VIEW_METHODS },
     buildOpenLoan,
     buildFundLoan,
@@ -214,13 +235,15 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
     buildClaimDefault,
     buildRegisterCollateral,
     buildClaimPayout,
+    async getPrincipalDelivery(account_id:AccountId):Promise<{token_id:TokenId;loan_nonce:U64;principal:U128;payout_nonce:U64|null}|null>{return live?viewFn("get_principal_delivery",{account_id}):null;},
+    async getCertificateTemplate(token_id:TokenId,observed_at_ns:U64,expires_at_ns:U64):Promise<LoanCertificate|null>{return live?viewFn("loan_certificate_template",{token_id,observed_at_ns,expires_at_ns}):null;},
     async getLoanLimits(): Promise<LoanLimits | null> { return live ? viewFn<LoanLimits>("get_loan_limits", {}) : null; },
     async getLenderOffer(token_id: TokenId): Promise<LenderOffer | null> { return live ? viewFn<LenderOffer | null>("get_lender_offer", {token_id}) : null; },
     async getPayoutCredit(account_id: AccountId): Promise<U128 | null> { return live ? viewFn<U128>("get_payout_credit", {account_id}) : null; },
     async getPendingPayout(account_id: AccountId): Promise<{nonce: U64; amount: U128} | null> { return live ? viewFn<{nonce: U64; amount: U128} | null>("get_pending_payout", {account_id}) : null; },
     /** Read-only candidate: stays false until separate certificate/wallet release review. */
     canTransact(): boolean {
-      return false; // Read-only candidate: verified certificate/wallet release gate is not implemented.
+      return live && (opts.transactionsEnabled ?? PLEDGE_TRANSACTIONS);
     },
     async getPledgeConfig(): Promise<PledgeConfig | null> {
       if (!live) return null;

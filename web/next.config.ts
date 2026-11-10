@@ -11,6 +11,9 @@ const csp = [
   "frame-ancestors 'none'",
 ].join("; ");
 const config: NextConfig = {
+  // Explicit local worktree root containing both checkout and linked dependencies.
+  // CI/deployments omit this env and retain the normal hermetic project root.
+  ...(process.env.KEYHOLE_TURBOPACK_ROOT ? { turbopack: {root:process.env.KEYHOLE_TURBOPACK_ROOT} } : {}),
   poweredByHeader: false,
   reactStrictMode: true,
   outputFileTracingIncludes: {

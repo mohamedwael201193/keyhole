@@ -1,0 +1,55 @@
+import type {KeysCall,SendResult} from "./keysTx";
+export type MoneyOperation={account:string;contract:string;call:KeysCall;status:"AwaitingWallet"|"Submitted"|"UNKNOWN";minBlockHeight:string;txHash?:string};
+export type MoneyStore={load():MoneyOperation|null;save(op:MoneyOperation|null):void};
+export function browserMoneyStore(account:string,contract:string):MoneyStore {
+ const key=`keyhole:pledge-money:v1:${contract}:${account}`;
+ return {load(){const raw=localStorage.getItem(key);if(!raw)return null;if(raw.length>16384)throw Error("Pending operation storage is invalid");const op=JSON.parse(raw) as MoneyOperation;if(op.account!==account||op.contract!==contract)throw Error("Pending operation identity mismatch");return op;},save(op){if(op)localStorage.setItem(key,JSON.stringify(op));else localStorage.removeItem(key);}};
+}
+/** Persist BEFORE opening a wallet or following its redirect. No automatic retry on network/receipt uncertainty. */
+export async function dispatchMoney(account:string,contract:string,call:KeysCall,store:MoneyStore,send:(call:KeysCall)=>Promise<SendResult>,minBlockHeight:string):Promise<MoneyOperation|null> {
+ if(store.load())throw Error("An earlier money operation is unresolved. Refresh its original receipt; do not resend.");
+ if(!/^\d+$/.test(minBlockHeight)||BigInt(minBlockHeight)<=0n)throw Error("Final chain dispatch anchor unavailable");
+ const op:MoneyOperation={account,contract,call,status:"AwaitingWallet",minBlockHeight};store.save(op);
+ try {
+  const result=await send(call);
+  if("txHash" in result){op.txHash=result.txHash;op.status="Submitted";}
+  else if("redirect" in result){op.status="AwaitingWallet";}
+  else if(["rejected","signed_out","unsupported_wallet","bad_call"].includes(result.error.code)){store.save(null);throw Error(result.error.message);}
+  else {op.status="UNKNOWN";}
+  store.save(op);return op;
+ }catch(error){if(store.load()){op.status="UNKNOWN";store.save(op);}throw error;}
+}
+function stable(value:unknown):string {
+ if(Array.isArray(value))return `[${value.map(stable).join(",")}]`;
+ if(value&&typeof value==="object")return `{${Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${JSON.stringify(k)}:${stable(v)}`).join(",")}}`;
+ return JSON.stringify(value);
+}
+/** Binds the finalized transaction to the persisted sender/contract/call; URL hashes are never trusted alone. */
+export function matchesMoneyReceipt(op:MoneyOperation,result:unknown):boolean {
+ try {
+  const r=result as {final_execution_status?:string;transaction?:{hash?:string;signer_id?:string;receiver_id?:string;actions?:{FunctionCall?:{method_name?:string;deposit?:string;gas?:number|string;args?:string}}[]}};
+  const tx=r.transaction,actions=tx?.actions;
+  if(r.final_execution_status!=="FINAL"||!tx||tx.hash!==op.txHash||tx.signer_id!==op.account||tx.receiver_id!==op.contract||actions?.length!==1)return false;
+  const call=actions[0].FunctionCall;
+  if(!call||call.method_name!==op.call.method||call.deposit!==op.call.deposit||String(call.gas)!==op.call.gas||typeof call.args!=="string")return false;
+  const json=new TextDecoder().decode(Uint8Array.from(atob(call.args),x=>x.charCodeAt(0)));
+  return stable(JSON.parse(json))===stable(op.call.args);
+ }catch{return false;}
+}
+export async function finalMoneyReceipt(op:MoneyOperation,rpcUrl:string):Promise<boolean> {
+ if(!op.txHash)return false;
+ const response=await fetch(rpcUrl,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:"pledge-receipt",method:"tx",params:{tx_hash:op.txHash,sender_account_id:op.account,wait_until:"FINAL"}}),signal:AbortSignal.timeout(20_000)});
+ const json=await response.json();if(!response.ok||json.error||!matchesMoneyReceipt(op,json.result))return false;
+ // Reject a replayed older same-method transaction hash from a forged redirect URL.
+ const blockHash=json.result?.transaction_outcome?.block_hash;if(typeof blockHash!=="string"||!/^\d+$/.test(op.minBlockHeight))return false;
+ const block=await fetch(rpcUrl,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:"pledge-receipt-block",method:"block",params:{block_id:blockHash}}),signal:AbortSignal.timeout(20_000)});
+ const header=(await block.json()).result?.header;
+ return block.ok&&header?.hash===blockHash&&Number.isSafeInteger(header.height)&&BigInt(header.height)>=BigInt(op.minBlockHeight);
+}
+
+export async function nextFinalBlockHeight(rpcUrl:string):Promise<string>{
+ const response=await fetch(rpcUrl,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:"pledge-dispatch-anchor",method:"block",params:{finality:"final"}}),signal:AbortSignal.timeout(20_000)});
+ const j=await response.json(),height=j.result?.header?.height;
+ if(!response.ok||j.error||!Number.isSafeInteger(height)||height<0)throw Error("Final dispatch block unavailable");
+ return (BigInt(height)+1n).toString();
+}

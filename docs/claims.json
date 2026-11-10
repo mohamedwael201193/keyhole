@@ -3220,17 +3220,17 @@
   },
   {
    "id": "src-gw-allow",
-   "claim": "Gateway allowlist: info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
+   "claim": "Gateway allowlist: info, provenance, record, loan_certificate, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
    "where": "judge/gen-claims.py:128",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
     "type": "grep",
     "path": "web/lib/gateway.ts",
-    "pattern": "ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
+    "pattern": "ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"loan_certificate\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
    },
    "expected": "exact list",
-   "verify": "grep -nE 'ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
+   "verify": "grep -nE 'ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"loan_certificate\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
   },
   {
    "id": "src-gw-nocopy",
@@ -6385,6 +6385,32 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-LICENSE"
+  },
+  {
+   "id": "path-protocol/loan-certificate-v3-delivery.json",
+   "claim": "Linked repo path protocol/loan-certificate-v3-delivery.json exists",
+   "where": "README.md:888",
+   "evidence_type": "file",
+   "evidence": "protocol/loan-certificate-v3-delivery.json",
+   "check": {
+    "type": "path",
+    "path": "protocol/loan-certificate-v3-delivery.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-protocol/loan-certificate-v3-delivery.json"
+  },
+  {
+   "id": "path-web/tests/pledge-money.test.ts",
+   "claim": "Linked repo path web/tests/pledge-money.test.ts exists",
+   "where": "README.md:890",
+   "evidence_type": "file",
+   "evidence": "web/tests/pledge-money.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/pledge-money.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/pledge-money.test.ts"
   },
   {
    "id": "path-contracts/keys",
