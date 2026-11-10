@@ -7035,6 +7035,32 @@
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys-sandbox/tests/support/ui_harness.rs"
   },
   {
+   "id": "path-web/tests/funded-final-observer.test.ts",
+   "claim": "Linked repo path web/tests/funded-final-observer.test.ts exists",
+   "where": "README.md:1030",
+   "evidence_type": "file",
+   "evidence": "web/tests/funded-final-observer.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/funded-final-observer.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/funded-final-observer.test.ts"
+  },
+  {
+   "id": "path-web/e2e/support/final-receipt.ts",
+   "claim": "Linked repo path web/e2e/support/final-receipt.ts exists",
+   "where": "README.md:1030",
+   "evidence_type": "file",
+   "evidence": "web/e2e/support/final-receipt.ts",
+   "check": {
+    "type": "path",
+    "path": "web/e2e/support/final-receipt.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/e2e/support/final-receipt.ts"
+  },
+  {
    "id": "path-contracts/keys",
    "claim": "Linked repo path contracts/keys exists",
    "where": "TRACK_COVERAGE.md:10",

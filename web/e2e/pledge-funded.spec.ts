@@ -5,6 +5,7 @@ import {createHash} from "node:crypto";
 import {execFileSync} from "node:child_process";
 import type {KeysCall} from "../lib/keysTx";
 import type {CertificateEnvelope} from "../lib/loanCertificate";
+import {readFinalReceipt} from "./support/final-receipt";
 import {assertFundedWalletLedger,type WalletSubmission,type FinalWalletReceipt,type WalletRole} from "./support/pledge-ledger";
 const shots=process.env.PLEDGE_SHOTS||join(process.cwd(),"test-results","pledge-final");
 /** No page.route/RPC mocks. Native calls and receipts come from the real sandbox node.
@@ -86,12 +87,18 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   // Drain every observed response deterministically, including unexpected extra submissions.
   const collected=await Promise.all(observed.map(async x=>{const r=await x.request.response();expect(r?.ok()).toBeTruthy();const j=await r!.json();expect(j.error).toBeFalsy();return {role:x.role,hash:j.transaction.hash};}));
   expect(collected).toEqual(submissions.map(({role,hash})=>({role,hash})));
-  const nativeReceipts:FinalWalletReceipt[]=await Promise.all(submissions.map(x=>rpc("tx",{tx_hash:x.hash,sender_account_id:x.account,wait_until:"FINAL"})));
+  // Bound load on the local node. Only read the original identity again on a timeout;
+  // never substitute a wallet hash, a pending reply, or a second submission for FINAL.
+  const nativeReceipts:FinalWalletReceipt[]=[];
+  for(const x of submissions)nativeReceipts.push(await readFinalReceipt(async()=>{
+   const response=await request.post(meta.rpc,{data:{jsonrpc:"2.0",id:"final-ledger",method:"tx",params:{tx_hash:x.hash,sender_account_id:x.account,wait_until:"FINAL"}}});
+   expect(response.ok()).toBeTruthy();return response.json();
+  }));
   assertFundedWalletLedger(submissions,nativeReceipts);
   evidence.native_receipts=nativeReceipts;expect(evidence.states).toHaveLength(64);expect(evidence.negatives).toHaveLength(3);
   const pngs=readdirSync(shots).filter(x=>x.endsWith(".png"));expect(pngs).toHaveLength(96);
   const sha=(bytes:Buffer)=>createHash("sha256").update(bytes).digest("hex");
-  const committedFiles=["web/app/pledge/LivePledge.tsx","web/lib/pledgeExit.ts","web/lib/pledgeIntentStore.ts","web/lib/pledgeMoney.ts","web/lib/keysTx.ts","web/e2e/pledge-funded.spec.ts","web/e2e/support/pledge-ledger.ts","contracts/keys-sandbox/tests/support/ui_harness.rs"];
+  const committedFiles=["web/app/pledge/LivePledge.tsx","web/lib/pledgeExit.ts","web/lib/pledgeIntentStore.ts","web/lib/pledgeMoney.ts","web/lib/keysTx.ts","web/e2e/pledge-funded.spec.ts","web/e2e/support/pledge-ledger.ts","web/e2e/support/final-receipt.ts","contracts/keys-sandbox/tests/support/ui_harness.rs"];
   const git=(...args:string[])=>execFileSync("git",args,{cwd:join(process.cwd(),"..")});
   const sources=committedFiles.map(file=>({file,sha256:sha(git("show",`HEAD:${file}`))}));
   // Canonical committed blobs, never re-encoded git-show text or OS-local CRLF bytes.
