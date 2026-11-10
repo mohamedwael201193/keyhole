@@ -47,11 +47,13 @@ describe("the top bar fits a phone (source contract)", () => {
     expect(css).toContain(".app-top .cw:not(:disabled):hover { background: var(--primary-hover); }");
   });
 
-  it("on phones the session pill is icon and minutes, the account name truncates at 120px, and the network pill is hidden", () => {
+  it("on phones the session pill is icon and minutes, the account pill is an avatar plus a short name, and the network pill is hidden", () => {
     expect(css).toMatch(/@media \(max-width: 599px\) \{[\s\S]*\.app-top \.sp-pill \.sp-word, \.app-top \.sp-pill \.sp-sep \{ display: none; \}/);
     expect(css).toMatch(/\.app-top \.sp-unit::after \{ content: "m";/);
-    expect(css).toMatch(/\.app-top \.acct \.cw \{ max-width: 120px;/);
-    expect(css).toMatch(/\.app-top \.acct \.cw-full \{[^}]*text-overflow: ellipsis;/);
+    expect(css).toMatch(/\.app-top \.acct \.cw-full \{ display: none; \}/);
+    expect(css).toMatch(/\.app-top \.acct \.cw-short \{ display: inline; white-space: nowrap; \}/);
+    expect(css).toMatch(/\.app-top \.cw-avatar \{ display: grid;/);
+    expect(css).not.toMatch(/\.app-top \.acct \.cw \{ max-width: 120px;/);
     expect(css).toMatch(/@media \(max-width: 599px\) \{[\s\S]*\.app-top \.app-net \{ display: none; \}/);
   });
 
