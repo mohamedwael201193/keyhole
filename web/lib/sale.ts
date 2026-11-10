@@ -5,6 +5,7 @@
 import { KEYS_CONTRACT } from "./config";
 import { nearView } from "./rpc";
 import { toBaseUnits } from "./assets";
+import { isMethodNotFound } from "./rpcError";
 
 /** Contract limits (contracts/keys/src/lib.rs): 0.1 NEAR minimum, 100 000 NEAR cap. */
 export const MIN_PRICE_YOCTO = 10n ** 23n;
@@ -18,9 +19,9 @@ export type Listing = { token_id: string; seller: string; price: string };
 /** Whether the keys contract has the sale methods. "unknown" when the probe failed for another reason (network, RPC). */
 export type SaleSupport = "checking" | "open" | "v23" | "unknown";
 
-/** A MethodNotFound from the RPC means the deployed contract predates v2.4 (no sale methods). Anything else is unknown. */
+/** A definitive MethodNotFound means the deployed contract predates v2.4 (no sale methods). Anything else is unknown. */
 export function supportFromError(message: string): "v23" | "unknown" {
-  return /MethodNotFound|MethodResolveError|method not found/i.test(message) ? "v23" : "unknown";
+  return isMethodNotFound(message) ? "v23" : "unknown";
 }
 
 /** Reads nft_listings with limit 1. Resolves "open" or "v23"; a failed read resolves "unknown" (never "v23"). */

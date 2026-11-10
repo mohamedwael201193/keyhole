@@ -21,9 +21,85 @@
 Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepared source/sandbox features are not live. Contract and worker author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
 
 
-> **NOT DEPLOYED:** the [sealed pledge/admission v2.5 candidate](#pledge-preparation--v25-source-not-deployed) is source/sandbox work only; current mainnet remains v2.4 and lending is not live.
+> **NOT DEPLOYED:** the [v2.5 source candidate](#integrated-source-candidate--not-deployed) (sealed pledge, protected sale, holder-only withdrawal) is source/sandbox work only; current mainnet remains contract v2.4 and lending is not live.
 
-**Contents:** [2 Proven](#2-proven-on-near-mainnet) · [3 Try it](#3-try-it) · [3a Real vs simulated](#3a-real-vs-simulated) · [4 How it works](#4-how-it-works) · [5 Why an NFT that does something](#5-why-this-is-an-nft-that-does-something) · [6 NEAR stack](#6-near-stack-used) · [7 Verify](#7-verify-everything-yourself) · [8 Security](#8-security-model) · [9 Numbers](#9-numbers) · [10 Built during the hackathon](#10-built-during-the-hackathon) · [11 Repo map](#11-repo-map) · [12 License](#12-license)
+**Contents:** [1 Verify in 5 minutes](#1-verify-in-5-minutes-zero-install) · [2 Proven](#2-proven-on-near-mainnet) · [3 Try it](#3-try-it) · [3a Real vs simulated](#3a-real-vs-simulated) · [4 How it works](#4-how-it-works) · [5 Why an NFT that does something](#5-why-this-is-an-nft-that-does-something) · [6 NEAR stack](#6-near-stack-used) · [7 Verify](#7-verify-everything-yourself) · [8 Security](#8-security-model) · [9 Numbers](#9-numbers) · [10 Built during the hackathon](#10-built-during-the-hackathon) · [11 Repo map](#11-repo-map) · [12 License](#12-license)
+
+## 1. Verify in 5 minutes (zero install)
+
+No wallet, no Rust, no `npm install`. You need `curl`, `bash` and `python3` (standard library only).
+
+Use the immutable source commit recorded in [`identity.json`](identity.json). The checkout and no-checkout paths below are generated together by [`scripts/gen-identity.mjs`](scripts/gen-identity.mjs).
+
+<!-- JUDGE-CHECKOUT:START -->
+```bash
+git init keyhole && cd keyhole
+git remote add origin https://github.com/mohamedwael201193/keyhole.git
+git fetch --depth 1 origin 9f872b704317d5a9bbedbcc55ff29535d4d363bc
+git checkout --detach FETCH_HEAD
+test "$(git rev-parse HEAD)" = "9f872b704317d5a9bbedbcc55ff29535d4d363bc"
+```
+<!-- JUDGE-CHECKOUT:END -->
+
+```bash
+test -f judge/0-live.sh
+bash judge/0-live.sh
+```
+
+No git? Download all three files from that same immutable source commit and run them together:
+
+<!-- JUDGE-RAW:START -->
+```bash
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/9f872b704317d5a9bbedbcc55ff29535d4d363bc/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/9f872b704317d5a9bbedbcc55ff29535d4d363bc/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/9f872b704317d5a9bbedbcc55ff29535d4d363bc/identity.json -o identity.json
+IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
+```
+<!-- JUDGE-RAW:END -->
+
+It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
+
+| Step | What it reads | PASS means |
+|---|---|---|
+| Identity | [`identity.json`](identity.json) | the live contract account, code hash, worker wasm and `info` call are named in one file |
+| Contract code | NEAR RPC `view_account` | the on-chain `code_hash` equals `identity.json` |
+| State views | `config`, `contract_source_metadata`, `nft_total_supply` | owner, treasury, `config.minter` equal to the 64-hex minter in [`identity.json`](identity.json), live royalty 500 bps, NEP-330 `2.4.0`, supply ≥ 6 |
+| Attestation | `api.outlayer.ai/attestations/by-call/<info_call>` | a TDX quote is present and `executed_wasm_sha256` equals the worker hash in `identity.json`. This is an existing attestation, not a new paid call |
+| Receipt | archival NEAR RPC `tx` with `wait_until: FINAL` and the recorded signer | [`H8qJNgox…`](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV) matches hash, signer, receiver, `nft_transfer`, 1 yocto, decoded args, and the typed contract `ExecutionError` in [`judge/receipt_proof.py`](judge/receipt_proof.py) |
+
+Run on 2026-11-10 (Africa/Cairo) against mainnet: **9 PASS, 0 FAIL**. Output: [`docs/evidence/judge-zero-install/run.txt`](docs/evidence/judge-zero-install/run.txt).
+
+Only a browser? Open [/verify](https://keyhole-seven.vercel.app/verify) (attestation, Intel DCAP and revocation checks, computed in the page) and [/judge](https://keyhole-seven.vercel.app/judge).
+
+Fees and deposits for every action, and what a sealed-floor attestation does and does not prove: [**docs/COSTS_AND_RISK.md**](docs/COSTS_AND_RISK.md).
+
+<!-- IDENTITY:START -->
+### Live mainnet identities
+
+This block is generated from [`identity.json`](identity.json) by `node scripts/gen-identity.mjs`. Do not edit it by hand.
+
+The live worker is `d337e822` (765,658 bytes).
+
+| Piece | Live value | Proof |
+|---|---|---|
+| Contract account | `keyhole-devmo.near` | [nearblocks](https://nearblocks.io/address/keyhole-devmo.near) |
+| TEE minter | `015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443` | [`judge/0-live.sh`](judge/0-live.sh) requires `config.minter` to equal this 64-hex implicit account |
+| Contract code hash | `DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ` | deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn) |
+| Contract wasm sha256 | `b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
+| Worker project | `keyhole-devmo.near/keyhole` | |
+| Worker wasm sha256 | `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
+| Worker publish tx | `BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5` | [nearblocks](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
+| Live `info` call | `dc3668db-674f-4865-a2ce-272f70c41b0d` | [attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) · [verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) |
+
+These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [`contracts/keys/release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json), generated from the release artifact, and the v2.5 line of [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS).
+
+| Candidate (not deployed) | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
+|---|---:|---|---:|
+| v2.5 | 485,855 | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` | 4.85855 NEAR |
+
+Measured size steps and the exact-artifact profiler report are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). [`docs/evidence/integration-stack/validation.json`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into `identity.json`. Re-run this script after changing `identity.json`.
+<!-- IDENTITY:END -->
+
 
 ---
 
@@ -105,7 +181,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `530 claims: 236 PASS, 0 FAIL, 0 ERROR, 294 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `569 claims: 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -130,7 +206,7 @@ Each step says whether it **moves real value on mainnet**.
 | 4 | Open **1 · Fund**, enter an amount, click **Get deposit address**, approve the signature | **Deposit address** and the address. That signature is not a transfer | Only if you send. Sending from your wallet is a normal transfer that pays gas on the source chain. The site sends nothing. You can fund from any chain through NEAR Intents 1Click |
 | 5 | Click **Read balance** and approve the signature | The total in USD, or token amounts if nothing is priced. A held asset with no price shows as "+ … unpriced". The note says "Read from the enclave with your signature." | No |
 | 6 | Open **2 · Trade**, pick a token (any of 216 tokens on 39 chains), click **Get attested quote**, then **Sign & trade** | The receipt shows **You give**, **You get**, **Price** and **Cap**. The result card starts with "Traded", names the amount out, and has a status and **Verify** | **Yes.** The swap runs on mainnet inside your account, within caps: Bronze is $1 per trade and $5 per UTC day |
-| 7 | Open **3 · Withdraw**, enter an amount, click **Sign & withdraw** and approve a fresh signature | "Withdrawn", naming the UI-selected connected account. The API also permits other well-formed destinations explicitly authorized by a fresh holder signature | **Yes.** Funds leave the account to the connected wallet |
+| 7 | Open **3 · Withdraw**, enter an amount, click **Sign & withdraw** and approve a fresh signature | "Withdrawn", naming the UI-selected connected account. On the **live** worker, a fresh holder signature may also name another well-formed destination. The undeployed candidate restricts withdrawal to the current holder's own NEAR account ([SECURITY.md](SECURITY.md#candidate-self-exit-destination-boundary--not-live)) | **Yes.** Funds leave the account to the connected wallet |
 | 8 | Open the **Verify** link on any result | "The enclave is genuine." and `data-match="true"` | No |
 | 9 | Open [/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940) and read **Check a key before you buy it** | The current holder, the latest transfer, the transfer cooldown and the seller lock, from the enclave's signed log. The holder can also share a signed statement that the account holds at least a stated amount | No |
 
@@ -149,7 +225,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (530 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 236 PASS, 0 FAIL, 294 SKIP (2026-11-10, Africa/Cairo) |
+| Judge-claims machine (569 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo) |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -178,7 +254,7 @@ flowchart LR
 - **Sessions.** One wallet signature starts a 30-minute grant with a $5 cap. A session can read, quote, swap, lower limits and revoke itself. It cannot withdraw or raise limits.
 - **Earned tiers.** A key rises from its own settled trades through `level_up`. Bronze to Silver (tier 1 to 2) is on mainnet. Caps follow the tier, and the contract refuses a lower value.
 - **Built-in sale and listing freeze.** `nft_list`, `nft_unlist` and `nft_buy` are in the contract. A listed key's account is frozen for value moves: the worker refuses swap and withdraw while it is listed (`listed`), and quote and chain signature refuse a key locked for sale. Balance reads still work.
-- **Verifiable builds.** The contract and the worker rebuild to the hashes committed in this repository. Every call is attested with the executed wasm hash, and the browser checks the quote.
+- **Verifiable builds.** Three different checks, with the commands in [§7](#7-verify-everything-yourself): deployed bytes match historical attestations ([identity block](#live-mainnet-identities)); the current candidate contract rebuild matches its [generated release identity](contracts/keys/release/v2.5/identity.json); rebuilding the worker from this checkout is not the same as reproducing the deployed worker. Every call is attested with the executed wasm hash, and the browser checks the quote.
 
 ### Worker ops and their auth
 
@@ -256,7 +332,7 @@ A definite refusal before dispatch or a provider-proven never-executed failure r
 
 **Website gateway**
 
-- **Allowlist.** [`web/lib/gateway.ts:7`](web/lib/gateway.ts) (`ALLOWED_OPS`). `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose signed `op` matches. The gateway refuses `copy` with `bad_op`, and `copy` stays on the CLI and MCP. The candidate additionally validates fresh-holder `reconcile_value_op` requests and exact public `loan_certificate` parameters; it never adds epoch fields after signing.
+- **Allowlist.** [`web/lib/gateway.ts:7`](web/lib/gateway.ts) (`ALLOWED_OPS`). `pledge_inventory` and `reconcile_value_op` are holder-authenticated; inventory never belongs to the anonymous lender projection. `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose signed `op` matches. The gateway refuses `copy` with `bad_op`, and `copy` stays on the CLI and MCP. The candidate also validates exact public `loan_certificate` parameters and never adds epoch fields after signing.
 - **Limits.** Bodies over 8 KB get HTTP 413 ([`web/app/api/worker/route.ts:23`](web/app/api/worker/route.ts)). Each IP gets 20 calls a minute, with HTTP 429 and `retry-after` ([`:21`](web/app/api/worker/route.ts)).
 - **Secrets and logs.** The OutLayer payment key is a server-only secret. Request bodies, amounts and accounts are not logged. `info` is cached for 5 minutes.
 - **Parity.** The browser signs the same NEP-413 construction as the CLI ([`web/lib/nep413.ts`](web/lib/nep413.ts)). [`web/tests/nep413.test.ts`](web/tests/nep413.test.ts) checks it byte-for-byte against the reference the TEE accepted on mainnet.
@@ -284,7 +360,7 @@ The website's `/api/keyhole` route answers the `info` op on project `keyhole` at
 
 ### Track 10 prompt: how each requirement is met
 
-One row per requirement of the Track 10 prompt. Where a row is not fully met, the note says so.
+One row per requirement of the Track 10 prompt. Limits of a row are in [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme), next to the proof linked from the row.
 
 | Requirement | Where it is | Honest note |
 |---|---|---|
@@ -293,12 +369,10 @@ One row per requirement of the Track 10 prompt. Where a row is not fully met, th
 | Holder-only gated page | [`web/app/vault`](web/app/vault) (the page gate); owner check on every request in [`tee/worker/src/main.rs`](tee/worker/src/main.rs) | The page gate is display-only. The worker's owner check is the real control. |
 | Per-NFT history of earned, paid out and held | [`web/app/key/view.tsx`](web/app/key/view.tsx) at `/key?id=`: deposits, withdraw events and the holder list | Shipped with limits. "Paid out" counts withdraw events, not amounts. Earned amounts are private; the PnL view is opt-in. |
 | Transfer tests, including a sale in the middle of a payout | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs): `transfer_moves_the_confidential_account_to_the_new_holder`, `transfer_while_withdraw_is_pending_does_not_send`, `invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle`; mainnet run in [`docs/evidence/mid-payout`](docs/evidence/mid-payout/README.md) | The mid-payout unit test checks a predicate, not a send in flight. The in-flight case is shown on mainnet: the payout completed to the signer, and that holder's next request was refused `not_owner`. |
-| Threat model before coding | [`THREAT_MODEL.md`](THREAT_MODEL.md), [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) | Not met in order. The files were written after the first contract and worker code. See deviation (b). |
-| Signed record a third party can check, for a listed key | [§5 Signed record](#signed-record-for-a-listed-key), [`docs/evidence/signed-record`](docs/evidence/signed-record/README.md) | The statement is signed by the minter and shows what the enclave read on that call. It is not a complete audit of the trade log. |
+| Threat model before coding | [`THREAT_MODEL.md`](THREAT_MODEL.md), [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) | The files exist. Commit order: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme). |
+| Signed record a third party can check, for a listed key | [§5 Signed record](#signed-record-for-a-listed-key), [`docs/evidence/signed-record`](docs/evidence/signed-record/README.md) | Signed by the minter over that call. Scope: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme). |
 
-**Deviation (a): no NEAR sub-account.** Each `token_id` maps to one custody wallet held inside the OutLayer Intel TDX enclave. A NEAR sub-account would need an access key, and someone would hold that key. Here the keys never leave the enclave. The cost is that the account is not a NEAR account a wallet can open directly; it runs only through the enclave.
-
-**Deviation (b): threat model written after the code.** The contract and worker code were first committed on 2026-10-28 (`66f7070`). [`THREAT_MODEL.md`](THREAT_MODEL.md) was first committed on 2026-10-31 (`701faf4`), and [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) on 2026-11-03 (`4736e9c`). The track asked for the threat model first.
+Custody is a TEE wallet per token, not a NEAR sub-account, and the threat-model files were written after the first code. Dates and the trust boundary: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 
 ### Earned tier, then a sale
 
@@ -324,7 +398,7 @@ A listed key's holder can ask the worker for a statement that a third party can 
 | `record` call | [`b5fbed71`](https://api.outlayer.ai/attestations/by-call/b5fbed71-d497-43fe-bbd4-6e28efc4dacf) | statement: tier 2, 10 settled swaps, 5,609,200 µUSD |
 | Unlist | tx [`6Qp2F32q…`](https://nearblocks.io/txns/6Qp2F32qfBxAhJh5w1HPtmgvTiTba5k8nsfznNYfYckU) | ok |
 
-The statement shows what the enclave read on that call. It does not prove that the log is complete: the minter's signature is the trust point.
+The statement is the minter's signature over what that call read. The trust boundary of that signature: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 
 ### Control on transfer
 
@@ -380,12 +454,12 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | Ask | Where KEYHOLE does it | Status |
 |---|---|---|
 | NEAR AI Cloud, OpenAI-compatible, TEE-hosted model | [`web/app/api/ai/route.ts`](web/app/api/ai/route.ts). Model `Qwen/Qwen3.6-35B-A3B-FP8` ([`web/lib/ai.ts:5`](web/lib/ai.ts)). The key is in a server env var. Live: [/ask](https://keyhole-seven.vercel.app/ask) | shipped |
-| Attestation with a fresh nonce, verified per the docs, with a checks panel | The browser makes a 32-byte nonce ([`web/lib/ai.ts`](web/lib/ai.ts)). `checkReply` ([`:78`](web/lib/ai.ts)) runs 7 checks: nonce in the TDX quote, signer in the quote, nonce echo, request hash, response hash, model match, ECDSA signature. The DCAP panel ([`web/app/ask/view.tsx:113`](web/app/ask/view.tsx)) runs the Intel DCAP checks on the model's TDX quote up to the pinned Intel root, and the GPU nonce echo | partial (see below) |
+| Attestation with a fresh nonce, verified per the docs, with a checks panel | The browser makes a 32-byte nonce ([`web/lib/ai.ts`](web/lib/ai.ts)). `checkReply` ([`:78`](web/lib/ai.ts)) runs 7 checks: nonce in the TDX quote, signer in the quote, nonce echo, request hash, response hash, model match, ECDSA signature. The DCAP panel ([`web/app/ask/view.tsx:113`](web/app/ask/view.tsx)) runs the Intel DCAP checks on the model's TDX quote up to the pinned Intel root, and the GPU nonce echo | [verification scope](SECURITY.md#7-ask-checks-are-partial) |
 | Keep nothing server side | Responses are `no-store` ([`web/app/api/ai/route.ts:25`](web/app/api/ai/route.ts)). Prompts are capped at 400 characters and rate limited | shipped |
 | Confidential computation | Every account operation runs in an Intel TDX enclave. [/verify](https://keyhole-seven.vercel.app/verify) runs 37 checks in the browser: 6 attestation, 19 Intel DCAP, 12 Intel revocation and TCB ([`web/components/judge/CallVerifier.tsx`](web/components/judge/CallVerifier.tsx) · live pack on `/verify`) | shipped |
 | Fictional sample documents | Sample chips on /ask, and the poisoned-note test in the [prompt-injection log](docs/evidence/prompt-injection/README.md) | shipped |
 
-**What /ask verifies, exactly.** The browser checks the nonce bindings, the signature over the exact request and response bytes, the model, the Intel DCAP chain of the model's TDX quote, and that every NVIDIA GPU report echoes the nonce. **It does not check the NVIDIA certificate chain or the GPU measurements in the browser.** Those come from the downloaded evidence, which you check with NEAR AI's verifier ([how](https://docs.near.ai/cloud/verification/cloud-api/model-attestations)). The `/ask` answer is not tied to a trading account. It is a general assistant.
+**What /ask verifies.** Nonce bindings, exact request/response signatures, model identity, Intel DCAP and GPU nonce echo: [browser verifier](web/lib/ai.ts), [regressions](web/tests/ai.test.ts), and [verification scope](SECURITY.md#7-ask-checks-are-partial).
 
 </details>
 
@@ -412,7 +486,7 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | Agent signs with a scoped key, and the limits are explained | Function-call key on the minter, allowed only `beat` on `keyhole-devmo.near`, 0.05 NEAR gas allowance, no deposit or transfer. Added by the enclave on the owner's signed request ([`op_beat_key`, `tee/worker/src/main.rs:879`](tee/worker/src/main.rs)). Holder requests still need a full-access key of the NFT owner ([§8](#8-security-model)) | partial (only the beat key is scoped) |
 | Agent wallet with a policy (NEAR Intents Agent API) | The Bronze caps written as an Agent API policy on the demo partner deployment (swap only, $1 per swap and $5 per day on USDC, six routed assets). [/settle](https://keyhole-seven.vercel.app/settle) compares the live policy with the caps. Tests: [`web/tests/agentPolicy.test.ts`](web/tests/agentPolicy.test.ts) | shipped (demo partner) |
 | Attack demo: a prompt-injected agent tries to pay a bad address, with a log | Six mainnet attack calls, all stopped ([evidence](docs/evidence/prompt-injection/README.md)) | shipped |
-| Counterparty check, allow / warn / block, with signals and a shared blocklist | `cli/src/counterparty.ts` (identical copy in [`web/lib/counterparty.ts`](web/lib/counterparty.ts)), served read-only by [`GET /api/check`](web/app/api/check/route.ts). Guards `withdraw`, `quote --execute` and MCP `copy`. Blocklist in [`security/blocklist.json`](security/blocklist.json). Tests: [`cli/test/counterparty.test.ts`](cli/test/counterparty.test.ts), [`cli/test/guard.test.ts`](cli/test/guard.test.ts), [`web/tests/check.test.ts`](web/tests/check.test.ts) | partial (advisory; not enforced in the TEE) |
+| Counterparty check, allow / warn / block, with signals and a shared blocklist | `cli/src/counterparty.ts` (identical copy in [`web/lib/counterparty.ts`](web/lib/counterparty.ts)), served read-only by [`GET /api/check`](web/app/api/check/route.ts). Guards `withdraw`, `quote --execute` and MCP `copy`. Blocklist in [`security/blocklist.json`](security/blocklist.json). Tests: [`cli/test/counterparty.test.ts`](cli/test/counterparty.test.ts), [`cli/test/guard.test.ts`](cli/test/guard.test.ts), [`web/tests/check.test.ts`](web/tests/check.test.ts) | [scope and trust](SECURITY.md#counterparty-check-boundary) |
 | Attack demo on the guard: a scripted agent obeys an injected instruction, and the guard refuses before signing | [`scripts/attack-demo.mts`](scripts/attack-demo.mts). The signer is a stub that throws, and the run asserts it was never called. Log: [`docs/evidence/attack-demo/2026-11-07.log`](docs/evidence/attack-demo/2026-11-07.log). Refusals only: the worker does not pay third parties yet | partial |
 | TEE attestation | [/verify](https://keyhole-seven.vercel.app/verify), [`verify.sh`](verify.sh), [judge kit](judge/README.md) | shipped |
 
@@ -433,7 +507,7 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | WARN | `signal unavailable: …` | a signal could not be read |
 | ALLOW | none | everything else |
 
-Limits of this check: it is advisory. Anyone with the full-access key can sign without it. A new address with history can still be a scam, so ALLOW is not safety. Nearblocks returned HTTP 429 after a short burst of test checks, and a 429 is a WARN. Comparing code hashes proves that code differs between two points in time; it does not count deploys.
+[Counterparty-check scope and trust assumptions](SECURITY.md#counterparty-check-boundary), with [guard regressions](cli/test/guard.test.ts) and [signal tests](cli/test/counterparty.test.ts).
 
 **Reporting a bad receiver.** An agent reports with a NEP-413 signed JSON made by `signReport` ([`cli/src/report.ts`](cli/src/report.ts)), recipient `keyhole-blocklist`. A curator checks it with `verifyReport`, confirms on chain that the public key is a full-access key of the reporter, and only then adds the entry by pull request, to [`security/blocklist.json`](security/blocklist.json) and its two copies. Nothing is added automatically, and reports are not written on chain. The demo entry `keyhole-demo-blocked.near` is labelled as a demo, not a real account.
 
@@ -447,7 +521,7 @@ KEYHOLE's next holder surface after Swap (sidebar **Pledge**): **borrow NEAR wit
 
 - **UI shipped now** at [`/pledge`](web/app/pledge): sketch-v5 widget (Certified USDC minimum → lock connector → You borrow NEAR), real USDC/NEAR icons as **locked chips** (v1 allowlist only — no fake multi-asset picker), visible whole-account warning, tier exit-caps line, ambient motion with `prefers-reduced-motion`, morph to Active loan chrome (preview control / `?preview=active`), floating key art unclipped, dashboard density like PR #185 so the page fits **1440×900** and **1280×800** without scrolling.
 - **Not live lending.** `NEXT_PUBLIC_PLEDGE_LIVE` defaults off. The page is a clearly labelled **preview / in review**: CTA disabled with **Pledge launches after audit**; preview shows clearly labelled **Example** terms (0.50 USDC / 0.01 NEAR / 0.0101 repay) matching sketch v5; live mode uses `get_loan` only — never invents balances as live. Lender preview never requests the holder balance.
-- **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against PR #184 head `0c3c6196` method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
+- **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against the oracle-free PR #184 ABI plus the loan-limits/lender-projection source candidate method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
 - **Proof.** Unit tests mock the client and the preview markup; Playwright e2e covers nav, disabled CTA, density (no scroll at desktop sizes), and screenshots under `shots_pledge/`. Offline claims include the Pledge preview statements (`src-pledge-*`).
 
 
@@ -499,7 +573,7 @@ Contract configuration at capture (2026-11-03; `beats` grows with each heartbeat
 {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
 ```
 
-`contracts/keys/deployed/keyhole_keys.wasm` is the code on the account. It is v2.4, checked against the on-chain code hash by `judge/1-contract.sh`. The sha256 table is in [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS). Build the **undeployed candidate**, not the live v2.4 source, with `cd contracts/keys && ./build.sh` (official rustup Linux target, rustc 1.86.0 through `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2, Binaryen 123); CI rebuilds the source and compares it with the newest entry in `release/SHA256SUMS`.
+`contracts/keys/deployed/keyhole_keys.wasm` is the code on the account. It is v2.4, checked against the on-chain code hash by `judge/1-contract.sh` and `judge/0-live.sh`. The sha256 table is in [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS). Build the **undeployed candidate**, not the live v2.4 source, with `cd contracts/keys && ./build.sh` (official rustup Linux target, rustc 1.86.0 through `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2, Binaryen 123); CI rebuilds the source and compares it with the newest (`v2.5`) entry in `release/SHA256SUMS`.
 
 <details>
 <summary><b>Contract details</b></summary>
@@ -512,7 +586,7 @@ Contract configuration at capture (2026-11-03; `beats` grows with each heartbeat
 
 </details>
 
-**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) prints the SHA-256 of the current source-candidate artifact. This candidate is **not deployed**. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) still holds live hash `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41`, which live attestations report as `executed_wasm_sha256`; those attestations do not prove candidate behavior. The worker's sha256 is the identity of the code; the TDX measurement in a quote names the OutLayer runtime, not the KEYHOLE code.
+**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) prints the SHA-256 of the current source-candidate artifact. This candidate is **not deployed**. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json) and is the live hash every attestation of the published build reports as `executed_wasm_sha256` (see [the identity block](#live-mainnet-identities)); those attestations do not prove candidate behavior. `./verify.sh <call_id> --rebuild` builds the checkout you have now. It equals the executed wasm only when that checkout is the commit that published the attested build. This branch is a later candidate, so a mismatch against `dc3668db` is expected. The worker's sha256 is the identity of the code; the TDX measurement in a quote names the OutLayer runtime, not the KEYHOLE code.
 
 The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` call is the one the browser verifier shows by default. Each earlier build was published with the same `add_version` method and has its own FastFS upload. [`identity.json`](identity.json) is the single source for the live build, the contract hashes and the publish transaction. `node scripts/gen-identity.mjs --check` fails CI when generated files drift.
 
@@ -543,21 +617,35 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 
 ### The checks
 
+<!-- JUDGE-CHECKOUT:START -->
 ```bash
-git clone https://github.com/mohamedwael201193/keyhole && cd keyhole
+git init keyhole && cd keyhole
+git remote add origin https://github.com/mohamedwael201193/keyhole.git
+git fetch --depth 1 origin 9f872b704317d5a9bbedbcc55ff29535d4d363bc
+git checkout --detach FETCH_HEAD
+test "$(git rev-parse HEAD)" = "9f872b704317d5a9bbedbcc55ff29535d4d363bc"
+```
+<!-- JUDGE-CHECKOUT:END -->
 
-node judge/verify-claims.mjs --offline   # file checks only; live checks are SKIP
-node judge/verify-claims.mjs             # all claims, live (mainnet, the site, attestations, CI)
+```bash
+
+bash ./judge/0-live.sh                   # curl + python3 only: live code hash, views, one existing attestation, one FINAL receipt
+node judge/verify-claims.mjs --offline   # file checks only; live checks are SKIP. Does not call OutLayer /call
+node judge/verify-claims.mjs             # public reads (mainnet, site pages, existing attestations, CI). Not a paid info probe
 bash ./judge/1-contract.sh               # on-chain code_hash == committed v2.4 wasm
 bash ./judge/2-attestations.sh           # every recorded call: attested build and output hash
-./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d            # one call: TDX quote, wasm_hash == executed, FastFS bytes
-./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d --rebuild  # plus: rebuild the worker from source, compare sha256
+./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d
+# --rebuild compiles THIS checkout. It matches executed wasm only on the publishing commit.
+# Do not read a mismatch on this candidate branch as a failed live attestation.
+# ./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d --rebuild
 bash ./judge/4-live-refusals.sh          # with your own NEAR account: replay and over-cap refused right now
 ```
 
 [`judge/README.md`](judge/README.md) lists the sources each check reads (NEAR RPC, `api.outlayer.ai`, `main.fastfs.io`, the live site and the GitHub API). None of them uses keys from this project. [`docs/claims.json`](docs/claims.json) lists each claim with the file that states it, its evidence and its check.
 
-**In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. The browser run on the current info call (`dc3668db`, build `d337e822`) is not recorded yet; the last full run was on `0847b924` (build `cc8d2fa8`).
+**In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. Which browser transcript is recorded: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
+
+GET `/api/health` is passive. The browser reads it once and keeps unprobed availability unknown; it never retries into a paid probe. It does not spend compute and it does not report the enclave online. The paid check's 2026-11-10 08:31 Africa/Cairo result remains the FAIL in [validation.json](docs/evidence/integration-stack/validation.json). The HTTP surface has a permanent zero compute budget, including POST; replay and concurrent refusals are covered by [health-route tests](web/tests/health-route.test.ts). Operator verification is separate: [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
 
 **The CLI** ([`cli/README.md`](cli/README.md)) works with any NEAR account, and the key stays on your machine. Only signatures are sent.
 
@@ -589,7 +677,7 @@ OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f13efe926132
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `main`, in six jobs:
 
 - **contract:** `cargo test --locked`, `clippy -D warnings`, the source rebuilt and compared with the newest release wasm in SHA256SUMS, the sandbox tests, and the deployed wasm checked against the on-chain `code_hash`.
-- **worker:** `cargo test --locked`, `clippy -D warnings`, a reproducible build that must equal `DEPLOYED_SHA256`, the key-log verifier self-test, and the FastFS bytes hashed against it.
+- **worker:** `cargo test --locked`, `clippy -D warnings`, a reproducible `build.sh` compared with `DEPLOYED_SHA256`. A mismatch prints a warning and the job still succeeds ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): worker-green is not current-source equality with the live enclave. The key-log verifier self-test runs, and FastFS bytes are hashed against `DEPLOYED_SHA256`.
 - **cli:** typecheck and tests.
 - **judge-kit:** `2-attestations.sh` and `verify.sh` on a recorded call; `identity.json` drift check; `verify-claims.mjs --offline`.
 - **hygiene:** a scan for keys and tokens, and a check that none are committed.
@@ -670,49 +758,7 @@ Only the holder of a key can make the enclave act for that key's account. Every 
 
 Read [THREAT_MODEL.md](THREAT_MODEL.md) for the ownership-change threats, [docs/TRANSFER_THREAT_MODEL.md](docs/TRANSFER_THREAT_MODEL.md) for transfers, and [SECURITY.md](SECURITY.md) for the STRIDE table, the invariants and the audit checklist. The known limits are written up as design decisions, each with its reason and mitigation, in [SECURITY.md](SECURITY.md#design-decisions-and-trade-offs).
 
-<details>
-<summary><b>Detail: what a broken TEE exposes, privacy, the browser, agents, operator keys</b></summary>
-
-**What if TDX is broken.** An attestation proves which code ran only while the enclave is genuine. If an attacker broke Intel TDX, a forged quote could pass every check on this page. Then the attacker could read the sealed keys and act for any custody wallet. The blast radius is:
-
-- **Confidential balances in custody wallets.** These are the funds that are not on the NEAR chain. All of them would be exposed.
-- **Minting.** The minter key is sealed in the same enclave, so an attacker could mint keys.
-- **The contract account is the royalty treasury.** `config.treasury` is `keyhole-devmo.near`, which is the contract account itself. Royalties from built-in sales and from royalty payouts therefore accrue to the contract account, and so do the 0.01 NEAR listing deposits of open listings until they end. The owner can change the treasury and the rate with `set_royalty`, and that change applies at buy time to open listings too, because `nft_buy` reads the current treasury and rate.
-
-Caps and locks are enforced by the enclave, so they do not stop an attacker who runs outside it. The practical limit is to keep balances small. Custody is also run through OutLayer's custody API, so OutLayer is part of the trust base (see [SECURITY.md](SECURITY.md#design-decisions-and-trade-offs)).
-
-**Privacy**
-
-- **Balances and history** live in TEE encrypted storage under the holder's key. They are readable only by a signed request from the full-access key of the account that holds the key NFT.
-- **Swaps** use 1Click `confidentiality: basic | advanced`. The solvers still see the asset pair and amount of each quote. Cross-chain settlement works both ways it can end: 0.004 SOL became 0.367068 USDC at `keyhole-devmo.near`, and an order with no liquidity came back as a refund ([`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md)).
-- **No KYC and no region.** Three ways in: a NEAR wallet, MetaMask, or Google or email on [/start](https://keyhole-seven.vercel.app/start), which goes through Privy.
-- **The gateway keeps no record.** It does not log bodies, amounts or accounts.
-- **Wallets sign messages, not transactions.** Signing costs no gas and moves no funds.
-- **Public reads.** The website caches public contract reads for 60 seconds. `nft_tokens_for_owner` is not cached.
-
-**Browser and site.** [`web/next.config.ts`](web/next.config.ts) sets a Content-Security-Policy with `frame-ancestors 'none'`, HSTS (2 years, preload), `nosniff` and strict referrer and permissions policies. `curl -I https://keyhole-seven.vercel.app` shows them.
-
-**Agents.** Do not give an agent your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 hours), and lock the key while you are away. The worker then enforces, inside the TEE: the exact signed payout destination, per-trade and per-day caps, one use per signature, the transfer cooldown, and the lock. The MCP `copy` tool needs the operator's confirmation on their own terminal. The attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md) records the specific historical malformed/over-cap/replay/tamper refusals shown there; it is NOT a destination allowlist or a guarantee against a fresh valid in-cap holder-signed malicious payout.
-
-**Function-call keys, precisely.**
-
-- The beat key `ed25519:9FiNXX2M…` on the minter (`015a0259…c443`) is a FunctionCall key. Its receiver is `keyhole-devmo.near`, its only method is `beat`, and its remaining allowance was 0.0498 NEAR on 2026-11-07 (read over RPC `view_access_key_list`).
-- It cannot transfer NEAR, attach a deposit, add or delete keys, or call any method except `beat`. A different method is refused with `MethodNameMismatch`. Its allowance is the only NEAR it can spend, as gas, and the owner revokes it with `del_beat_key`.
-- It is not the payment key. The worker refuses function-call keys for holder requests (`key_not_owned`), so `withdraw`, `quote --execute` and `copy` still need a holder's full-access key.
-
-**Operator keys on the contract account.** `keyhole-devmo.near` holds two full-access keys and one function-call key (RPC, 2026-11-09). The table lists each key and its stated purpose. The contract has no multisig and is not locked.
-
-| Account | Key | Permission | Stated purpose |
-|---|---|---|---|
-| `keyhole-devmo.near` (contract) | `ed25519:7N1fLo9M…` | FullAccess | Deploy and publish key. The earlier revision of this README says it is kept offline and never on the website or in the worker |
-| `keyhole-devmo.near` | `ed25519:8NP9x5eF…` | **FullAccess** | The owner's second wallet key: Meteor Wallet holds it for this account (it is the key Meteor lists for `keyhole-devmo.near` at sign-in). Same owner as the key above; an operator key, listed in [SECURITY.md](SECURITY.md#design-decisions-and-trade-offs) |
-| `keyhole-devmo.near` | `ed25519:FNe2aYtz…` | **FunctionCall** to `social`, methods `__fastdata_kv` and `__fastdata_fastfs`, 1 NEAR allowance | Uploads the worker wasm to FastFS. It cannot transfer NEAR, call the contract or add keys |
-| minter `015a0259…c443` (implicit) | `ed25519:6H1iG1oH…` | FullAccess | Generated and held inside the TEE (OutLayer secret). The minter signs mints, PnL statements and log heads. The contract only lets this account mint |
-| minter `015a0259…c443` | `ed25519:9FiNXX2M…` (beat key) | **FunctionCall** to `keyhole-devmo.near`, method `beat` only, 0.05 NEAR allowance | Lets an off-enclave agent emit the per-key heartbeat. Added by the enclave on the owner's signed `add_beat_key` ([AddKey tx](https://nearblocks.io/txns/DXH756vmgj8GTDz6fUwnfgaUuC7vCi1vu6VaX5heoDww)). Remaining allowance 0.0498 NEAR on 2026-11-07 |
-
-The first full-access key is described in the repository as the deploy and publish key, kept offline and never on the website or in the worker.
-
-</details>
+Detailed trust boundaries (a broken TEE, privacy limits, the browser, agents, function-call keys, the operator keys on the contract account) are in [SECURITY.md › Trust detail](SECURITY.md#trust-detail-moved-from-the-readme).
 
 ---
 
@@ -725,10 +771,10 @@ Historical measurements below belong to `2f7ac1e` (on top of `7356cfa`), unless 
 | Keys contract unit tests | **140** pass | `cd contracts/keys && cargo test --locked` (measured 2026-11-09) |
 | Keys contract sandbox tests | **9** test functions in [`contracts/keys-sandbox/tests/upgrade.rs`](contracts/keys-sandbox/tests/upgrade.rs) | counted, not run here. The near-workspaces sandbox binary is available only on Linux and macOS, so CI runs them |
 | TEE worker unit tests | **511** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
-| CLI tests | **53** cases; 52 pass here | `cd cli && npm test`. The one failure is a checkout artefact: [`skills/keyhole/SKILL.md`](skills/keyhole/SKILL.md) is LF in git, but this Windows checkout has CRLF (`core.autocrlf` is on), and the test's regex expects LF |
-| Web unit tests (Vitest) | **1256** cases in 65 files; 1254 pass in the full run | `cd web && npx vitest run`. One failure is the same CRLF artefact, in [`web/tests/sourceTarball.test.ts`](web/tests/sourceTarball.test.ts) (the `.sha256` file has CRLF here). One Meteor test timed out at 5 s while other work was running; it passes alone (10 of 10) |
+| CLI tests | **53** historical cases | `cd cli && npm test`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
+| Web unit tests (Vitest) | **1256** historical cases in 65 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web e2e (Playwright) | not re-run for this README | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). CI runs them at 1440 and 390 px |
-| Claims in `docs/claims.json` | **530**: offline 236 PASS, 0 FAIL, 0 ERROR, 294 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **569**: offline 276 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | **216** tokens on **39** chains | live `GET keyhole-seven.vercel.app/api/tokens` (2026-11-09) |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (2026-11-09). The home page counts the five holder keys |
@@ -821,8 +867,8 @@ contracts/keys-sandbox/  near-workspaces upgrade and sale tests
 tee/worker/           TEE worker (Rust, wasm32-wasip2), build.sh, DEPLOYED_SHA256, verify-log.mjs
 cli/                  keyhole CLI and MCP server (TypeScript)
 web/                  website and gateway (Next.js), tests/, e2e/, screenshots/
-judge/                judge kit (1-contract, 2-attestations, 4-live-refusals, claims checker)
-docs/                 claims.json, threat model, evidence/ (mainnet proofs), images/
+judge/                judge kit (`0-live.sh` zero-install check, 1-contract, 2-attestations, 4-live-refusals, claims checker)
+docs/                 claims.json, COSTS_AND_RISK.md, threat model, evidence/ (mainnet proofs), images/
 scripts/              identity generator, attack demo, test count
 security/             shared counterparty blocklist
 skills/keyhole/       agent skill file
@@ -869,23 +915,45 @@ Built on NEAR.
 
 ## Integrated source candidate — not deployed
 
+### Two-sided Pledge source review
+
+Borrower `/pledge` links to the separate named-lender review `/pledge/lend/example` (or `/pledge/lend/<tokenId>` for read-only chain projection when enabled). The lender page uses only public `get_lender_offer` data and shows exact immutable cashflows, native lender empty-key-slot eligibility, certificate verification, whole-account default, cashout and cap/cooldown-dependent recovery stages. The borrower copy explicitly distinguishes backed credit from native delivery. A separate default-OFF production write gate protects loan actions and wallet claims while preserving the existing cream/teal dashboard. [Write-gate tests](web/tests/pledge-client.test.ts).
+
+The typed client builds exact principal/repayment deposits, a contract-supplied measured bond, full provider-registration arguments and 200-Tgas financial calls. Oracle-free state names are `Freezing`, `Offered`, `DisbursementPending`, `Active`, `UnlockPending`. Funding creates backed principal credit with no due date; only the exact genuine successful native cashout callback starts the term. Failed or UNKNOWN cashout starts no debt clock. The borrower surface refreshes final-chain state and uses final-chain time, not the browser clock, for its display.
+
+**Loan or partial swap?** The matched-portfolio card compares the same usable NEAR now and restoration of the same USDC later. A pure exact-integer model matches swap proceeds to principal minus refundable bond minus quoted upfront cash costs, then compares repayment minus confirmed full bond return against the quoted USDC-restoration cost. Thus current liquidity and final native holdings use the same basis, and cash costs are counted exactly once. It accepts same-ledger current forward/reverse quotes, separates locked bond from fees, keeps quoted fixed reverse fees fixed across hypothetical -20% / unchanged / +20% NEAR-price scenarios, and recommends a partial swap when supplied evidence supports it. Without matching current quotes it says **Comparison unavailable at this size**, rather than inventing savings. Both routes retain the NFT/address. On the live borrower page that same honesty is collapsed behind **Compare with a swap**: the note says no savings estimate is shown. The lender page does not show the comparison.
+
+```bash
+cd web
+npm run typecheck
+npm run lint
+npx vitest run tests/pledge-client.test.ts tests/pledge-view.test.ts tests/pledge-lender.test.ts tests/pledge-economics.test.ts tests/loan-certificate.test.ts tests/pledge-money.test.ts tests/pledge-certificate-gateway.test.ts
+npm run build
+cd ..
+```
+
+## Pledge preparation — v2.5 source, NOT deployed
+
 This local stack combines admission, guarded custody, serialized policy commands, the client preview, blinded provenance, protected sales and delivery-gated lending. Live identities in identity.json remain the deployed release, not the candidate.
 
 - Contract admission binds the current holder, ownership epoch, exact operation ID and action hash. The worker's ordinary withdrawal uses the same begin_value_op/finish_value_op driver as guarded value operations; there is no direct legacy withdrawal POST. Only the current holder's own NEAR account is a permitted withdrawal destination, including at durable provider dispatch.
 - Custody freeze/thaw uses the documented Boolean ABI, with one outstanding command. Both the exact genuine terminal callback and a matching policy read are needed before another command. Epoch-keyed ten-minute cooldown handles A→B→A without resetting token-wide daily spend.
 - Loan funding creates backed borrower credit in DisbursementPending with due_ns=0. Only the exact principal cashout's genuine successful native callback activates Active debt and starts the agreed term. Failed native delivery restores credit without starting debt; UNKNOWN does not start debt or allow a new send.
-- The refundable loan bond is 0.009 NEAR. The offline plan uses 7200-second terms plus 900-second grace. The permanent payout slot is a separate nonrefundable 320-byte charge (0.0032 NEAR at the tested byte price); duplicate registration rejects atomically without erasing credit or charging twice.
+- The refundable loan bond is 0.009 NEAR (`LOAN_STORAGE_DEPOSIT`). The contract accepts any term from 1 second to 30 days and grace up to 7 days; the reviewed offline plan uses a 7200-second term plus 900-second grace. Per-action amounts: [docs/COSTS_AND_RISK.md](docs/COSTS_AND_RISK.md). The permanent payout slot is a separate nonrefundable 320-byte charge (0.0032 NEAR at the tested byte price); duplicate registration rejects atomically without erasing credit or charging twice.
 - Loan floor certificates use KEYHOLE_SEALED_LOAN_V3_DELIVERY and bind the raw USDC minimum, wallet, policy, holder, epoch, nonce, exact terms, network, contract and expiry. Protected sale certificates have a separate buyer-bound domain. Seller price credit and title settle in one local receipt; actual seller native cashout is separate.
 - adopt_zero_royalty is an explicit owner-authorized source method. At zero, NEP-199 returns the entire declared balance to the seller. NEP-171/177/178 behavior remains covered by contract/runtime suites.
 - V2 event commitments use secure random private openings and immutable encrypted rows. V1 history remains verifiable; holder history opens only that holder's rows. Public projections do not expose openings.
 - The preview client keeps the floor public key and treasury/config fields, models DisbursementPending, and builds exact principal and bond deposits. Preview remains disabled by default.
 
-Reproduce without wallets, deployments or spending:
+Reproduce without wallets, deployments or spending. Use Node **22.22.2** (`web/.nvmrc`) and npm **10.8.2**, the same pinned pair as the web CI job:
 
 ```bash
+export CARGO_BUILD_JOBS=1 NODE_OPTIONS=--max-old-space-size=3072
 (cd contracts/keys && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains && ./build.sh)
+# Fault injection is sandbox-only, never a release/deploy artifact:
+(cd contracts/keys && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm && ./build.sh && cmp target/near/keyhole_keys.wasm release/v2.5/keyhole_keys.wasm)
 (cd contracts/keys-sandbox && ./build-policy-mock.sh && cargo test --locked -- --test-threads=1)
-(cd tee/worker && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings && node verify-log.mjs --self-test)
+(cd tee/worker && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings && cargo clippy --locked --target wasm32-wasip2 -- -D warnings && ./build.sh && node verify-log.mjs --self-test)
 (cd web && npm ci && npm run lint && npm run typecheck && npm test && npm run build)
 (cd cli && npm ci && npm test && npx tsc -p . --noEmit)
 node --test scripts/pledge/plan.test.mjs
@@ -894,9 +962,93 @@ python3 judge/gen-claims.py .
 node judge/verify-claims.mjs --offline
 ```
 
-The runtime suite uses real local NEAR receipts with a labelled custody mock. Verification results for this integrated head are recorded in [the integrated validation record](docs/evidence/integration-stack/validation.json). Trust, economic risks, UNKNOWN liveness and release gates are in [SECURITY.md](SECURITY.md). No local result is a claim of a published candidate or live provider confinement.
+The runtime suite uses real local NEAR receipts with a labelled custody mock. Current candidate contract bytes and code-storage cost are generated in the [identity block](#live-mainnet-identities), with [measured size steps and profiling](docs/evidence/integration-stack/contract-size.md). [validation.json](docs/evidence/integration-stack/validation.json) is the earlier local record (`ac25d889…` / 496,539 bytes) and keeps its health FAIL. Trust boundaries and release gates are in [SECURITY.md](SECURITY.md). No local result is a published candidate or live provider confinement.
+Safety and release status: [SECURITY.md](SECURITY.md#two-sided-pledge-ui-release-gate).
+
+Before a public loan exists the floor is **Declared, not yet verified**. An open offer that is not yet checked says **Minimum to verify · not a current balance**. After the pinned Ed25519 signature and exact final-chain loan template verify, the live page says **Verified minimum · sealed signature verified**. A funded loan shows **Loan minimum · not a current balance**. None of these is a fresh balance, and an expired proof is not relabelled as one. The canonical encoding/signature test consumes the contract/worker's [V3 delivery-domain Borsh vector](protocol/loan-certificate-v3-delivery.json). The public request accepts only token ID and loan nonce, never another asset or minimum.
+
+The shared app shell exposes **Claim your funds** for available native credits. It reserves a versioned local pending operation before opening the connected wallet, never silently retries UNKNOWN, and checks final receipt sender/contract/method/deposit/gas/arguments plus a post-dispatch block before accepting a returned hash. Contract pending payouts still block retries. `NEXT_PUBLIC_PLEDGE_TRANSACTIONS` is a separate default-OFF write gate. [Tests](web/tests/pledge-money.test.ts).
+
+Clean checkouts, CI and the isolated box install use `cd web && npm run build` with the normal project root. Linked-dependency worktrees may explicitly set `KEYHOLE_TURBOPACK_ROOT` to their common checkout/dependency parent. Use Node 22.22.2 (`web/.nvmrc`) and npm 10.8.2; [dependency compatibility proof](docs/evidence/integration-stack/wallet-dependencies-r4.md) covers clean installation and wallet schemas.
+
+[Two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).
+
 
 
 ### Integrated client continuity proof
 
 The v2.5 source candidate now binds final owner epochs before signatures, recovers the original custody journal across refreshes, and exposes separately consented payout-slot registration and native-credit cashout. The minter checks its prepaid slot before mint dispatch. Candidate byte identity is generated by `node scripts/gen-identity.mjs` in [`release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json); the live identity is unchanged. [Independent artifact reproduction](docs/evidence/integration-stack/artifact-repro-r2.json) records the two clean Linux builds and measured code storage. Regressions: [`integration196.test.ts`](web/tests/integration196.test.ts), [`client-owner-epoch.json`](protocol/client-owner-epoch.json), and the named terminal-history and ordinary-payout runtime tests. [Trust and rollout details](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).
+The provider mock exposes the same Boolean freeze/thaw argument shapes as the public provider contract. Native tests exercise exact-command callbacks, duplicate/late callbacks, delayed reads, terminal failures and restart. Sandbox fault builds exercise a provider mutation whose callback fails; the outstanding command remains durable across a return to the normal binary.
+
+Withdrawal cooldown is keyed by **contract + token + authoritative ownership epoch**, not just the last logged account name. First final-chain observation of a new nonzero epoch durably arms ten minutes; A→B→A cannot reuse A's old record. Status/dashboard show the effective deadline and the normal POST boundary checks it again. No ownership observation deletes or resets the token-wide daily spent counter.
+
+```bash
+(cd contracts/keys && cargo test --locked custody && cargo test --locked policy)
+(cd tee/worker && cargo test --locked ownership_sync && cargo clippy --locked --target wasm32-wasip2 -- -D warnings)
+# For the complete normal-release + labelled mock/fault integration,
+# use the single full reproduction fence under “Pledge preparation” above.
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
+
+The committed candidate in `release/v2.5` is the normal build; the fault fixture is generated only for sandbox tests. No mainnet calls or worker publication occur in these commands.
+
+
+#### Guarded failure messages
+
+The web error catalog gives actionable English status for pending/provisional ownership, stale sessions, self-exit-only destinations, changed quotes and unknown custody/admission outcomes. Unknown outcomes direct the holder to reconcile the existing operation ID rather than create another send.
+
+```bash
+(cd web && npm ci && npx vitest run tests/domain.test.ts tests/p2-errors.test.ts)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
+
+### First-class Pledge UI candidate — NOT acceptance proof
+
+The live-flag UI now wires holder-authenticated complete at-risk inventory, immutable named-lender terms, batched first-use payout registration, verified-certificate funding, principal native cashout, exact repayment or eligible default, policy reconciliation/thaw, terminal credit claims and ordinary capped/cooldown self-exit. Full balances are never requested for visiting lenders; a genuine new holder can explicitly authorize them after default. Unpriced assets, pending obligations and later deposits are disclosed as whole-account collateral. A token with no decimals is shown as **Other token**, **Value unknown**, **Included in your collateral**, and **Amount unavailable in token units**. The full id and “base units · decimals unavailable” sit in a keyboard-reachable Token details disclosure, with a copy control. It is not turned into a dollar amount or a token count. A same-ledger swap quote is not part of this release. The borrower opens **Compare with a swap** to read that no savings estimate is shown. The lender does not see that note. Visible loan states use plain labels (**Locking account…**, **Offer open**, **Funds ready to claim**, **Loan active**, **Unlocking…**). Freezing says **Retry account lock**, not an unlock. A lender waiting on undisbursed principal sees **Waiting for borrower to claim**, not a claim of that principal. A pending cashout says **Cashout pending; checking chain**. The badge, step and heading say to wait and check the chain, and the page offers no claim action while that payout is pending. It does not say the funds are still in the contract or already delivered. A token with known decimals uses its metadata symbol, or a short id when that symbol is missing. The full protocol id stays in Token details. The nonce for that payout stays under **Technical details**, with the raw enum and owner epoch. Account status reads **Lock not confirmed**, **Locked while pledged**, **Unlocking**, or **Available**. Repay-by times include seconds in Africa/Cairo. On a 390px-wide screen, body text is at least 14px, supporting text at least 12px, and pledge controls are at least 44px tall. The header account control is an avatar plus a short name that can shrink instead of widening the page. The header says **Sandbox** on an isolated sandbox build and **NEAR mainnet** only on mainnet. Mobile uses deliberate Account and Action panels. Horizontal overflow is guarded; vertical scroll is allowed so the type stays readable. Label map: [web/tests/pledge-labels.test.ts](web/tests/pledge-labels.test.ts). Earlier funded receipts belong to the head that produced them, not to a later UI commit.
+
+Default production writes remain OFF. [Sandbox UI runbook](docs/pledge/UI_SANDBOX_RUNBOOK.md) explains the real-native disposable-wallet fixture, its explicit custody/host mocks, authored browser acceptance tests and required final screenshots. An authored test, backend smoke, old preview screenshots or a green unit suite is NOT evidence that either funded browser ending ran. The draft release gate stays until that exact-head evidence exists.
+
+### Pledge UI operation guards (source candidate)
+
+The shared borrower/lender page preserves an ambiguous wallet abort/cancel as the original `UNKNOWN` intent and blocks resubmission. Only a provenance-marked local validation failure before wallet invocation can discard an unsent intent. Storage acknowledgement binds the exact displayed account, contract and fee; a changed quote clears it and the prepared charge is checked again immediately before dispatch. Manual and polled chain refreshes share fail-closed cleanup, loading gates and a bounded read-generation guard. Terminal labels use the recorded resolution, not later ownership. They read **Repaid · unlock confirmed**, **Loan defaulted · unlock confirmed**, and **Canceled · unlock confirmed**. Missing resolution still displays **Closed · history unverified**. Pending and UNKNOWN stay pending and UNKNOWN. Executable regression proofs: [operation/consent/refresh negatives](web/tests/pledge-review-safety.test.ts), [receipt binding](web/tests/pledge-money.test.ts), and [resolution labels](web/tests/pledge-lifecycle.test.ts).
+
+```sh
+cd web
+npx vitest run tests/pledge-review-safety.test.ts tests/pledge-money.test.ts tests/pledge-lifecycle.test.ts
+```
+
+### PR194 R3 async/recovery regression coverage
+
+The exit flow records locally blocked, provably unsent continuations as retryable: signing again preserves the saved amount/epoch, while an uncertain worker dispatch remains non-retryable. Money admission uses browser-wide Web Locks and per-intent records with identity-checked updates and removal. Wallet routing carries the expected signer through its awaits, rechecks consent immediately before wallet invocation, and checks the returned transaction signer. Refreshes coalesce rather than overlap; polling is completion-paced with bounded error backoff, and the executable observation window starts when the read begins.
+
+Executable proofs: [negative/positive unit cases](web/tests/pledge-review-r3.test.ts) and [mounted-component/real-two-tab browser cases](web/e2e/pledge-review-r3.spec.ts), including popup/redirect recovery and reload, delayed FINAL X versus new Y, simultaneous admission, five-second reads, timeout recovery, observation age and signer switching. Run the browser cases with `cd web && npx playwright test e2e/pledge-review-r3.spec.ts --workers=1`; both configured viewports are exercised. See [security boundaries](SECURITY.md#pr194-r3-browser-coordination-and-recovery-boundaries).
+
+### Pledge recovery: one collateral lifecycle across tabs
+
+Loan opening and ordinary exits now reserve their durable intent under the **same account/contract Web Lock**, checking the opposing record inside that short critical section. The lock is released before RPC or wallet confirmation; the persisted original intent preserves exclusion, and a final pre-signing check protects asynchronous wallet routing. Saved exits retain their recovery panel even alongside an unexpected active loan, with unsafe withdrawal disabled. Nonterminal provider reconciliation explicitly remains **pending / UNKNOWN** with its original operation ID.
+
+The funded browser acceptance enforces an ordered **7 + 6 = 13 unique browser-wallet transactions**, each bound to signer, receiver, hash, ordered arguments, deposits, gas and successful native execution. Its two deliberately refused mock-provider thaw receipts are classified separately. Every response is awaited, and the resulting manifest derives counts and hashes from raw receipts, screenshots and canonical committed Git blobs. Provider admission/finish and fixture-setup transactions have their own scope, outside those thirteen wallet submissions.
+
+Executable proofs: [R5 concurrency and receipt-ledger negatives](web/tests/pledge-review-r5.test.ts), [actual two-tab/mounted recovery cases](web/e2e/pledge-review-r3.spec.ts), and [funded UI acceptance](web/e2e/pledge-funded.spec.ts). Each funded run emits `evidence.json`, `native-receipts.json`, and `manifest.json` with its exact source commit and screenshot hashes. [Security and rollout boundaries](SECURITY.md#pr194-r5-shared-lifecycle-and-evidence-boundaries).
+
+### Integrated Pledge, recovery and payout continuity
+
+The integration candidate combines the final-owner-epoch client and original-journal recovery with two-sided Pledge. Both signed `pledge_inventory` and fresh-holder `reconcile_value_op` remain in the exact gateway allowlist, while public certificate requests retain canonical token/nonce validation and their own request budget. [Gateway](web/lib/gateway.ts), [route](web/app/api/worker/route.ts), [epoch/recovery regressions](web/tests/integration196.test.ts), [merge invariants](web/tests/pledge-integration-merge.test.ts).
+
+One claim surface owns each route: Pledge uses its loan action panel, Vault pairs ordinary payout-slot onboarding with durable native cashout, and other holder routes use the shared credit panel. All cashout surfaces share the account/contract money-intent store and FINAL action/identity/dispatch-height checks; pending or UNKNOWN never grants another send. Vault labels delivery only after the successful FINAL callback proof. [Vault payout panel](web/components/PayoutPanel.tsx), [shared credit panel](web/components/PayoutCredit.tsx), [receipt guards](web/lib/pledgeMoney.ts), [callback verifier](web/lib/payout.ts), [route/guard regression](web/tests/pledge-integration-merge.test.ts).
+
+The merged client requires the current storage-bond/binding quote, keeps first-use registration and financial action in a single 220-Tgas batch, and retains the exact 13-receipt funded acceptance ledger. Contract release bytes and generated live identities remain those of the integration base. These are source invariants; each hosted run and funded manifest identifies its own tested head. [Client tests](web/tests/pledge-client.test.ts), [receipt-ledger negatives](web/tests/pledge-review-r5.test.ts), [funded acceptance](web/e2e/pledge-funded.spec.ts), [release checksums](contracts/keys/release/SHA256SUMS), [release boundaries](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).
+
+### Final integration regression proofs
+
+Public health cannot dispatch paid compute, even with stale opt-in flags: [GET and refused/replayed/concurrent POST tests](web/tests/health-route.test.ts). Inventory propagates provenance-load failures before iteration in the actual [WASI host](tee/worker/src/guarded_host.rs); the [dedicated WASI clippy and build gates](.github/workflows/ci.yml) check the production target. The [Revoke browser tests](web/e2e/site.spec.ts) retain real hit testing, keyboard focus, one revoke call and token deletion for both an epoch-bound v2.5 session and an explicitly pinned legacy-profile fixture. The [full reproduction fence](#pledge-preparation--v25-source-not-deployed) builds the callback-failure fixture before sandbox tests and restores byte-identical normal output; [recipe regression tests](judge/reproduction.test.mjs) keep that ordering executable. Operational boundaries remain in [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
+
+The real-native funded fixture mints the canonical public token ID returned in its metadata; the browser follows that exact ID through certificate issuance, funding, native cashout and both guarded exits. It does not widen the production token validator to accommodate a short synthetic ID. [Fixture/gateway regression](web/tests/pledge-certificate-gateway.test.ts), [native fixture](contracts/keys-sandbox/tests/support/ui_harness.rs), [13-receipt acceptance](web/e2e/pledge-funded.spec.ts).
+
+The funded evidence collector captures each original transaction hash/signer as genuine FINAL immediately after submission, before later sandbox clock advances, and reads serially and permits at most three read-only attempts for the node's explicit timeout error (including its HTTP 408 JSON-RPC timeout response). It accepts only a genuine FINAL response; missing, pending, other RPC errors and exhausted reads fail closed, before the unchanged 13-transaction action/identity ledger. [Observer negatives](web/tests/funded-final-observer.test.ts), [collector](web/e2e/support/final-receipt.ts), [receipt-ledger negatives](web/tests/pledge-review-r5.test.ts).
+
+Clean web installs honor the upstream NEAR signer/transaction/curve hash pins and keep the application's hash v2 separate. The unnecessary inherited hash overrides are removed; the npm 10 and npm 11 resolvers now accept the same lockfile. [Lock-resolution regression](web/tests/locked-hashes.test.ts); reproduce with the full fence's unchanged `npm ci` command.
+
+Dependency-policy context for clean reproduction is kept in [SECURITY.md](SECURITY.md#clean-install-dependency-advisory-boundary).
+
+The wallet lifecycle and two-tab notification checks are reproducible from the [R5 repair proof](docs/evidence/integration-stack/r5-lifecycle-notification.md), [exact patch lifecycle tests](web/tests/wallet-patch-lifecycle.test.ts), and [real-browser storage regressions](web/e2e/pledge-review-r3.spec.ts).

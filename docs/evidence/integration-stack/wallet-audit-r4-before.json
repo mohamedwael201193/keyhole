@@ -1,0 +1,1811 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@ethersproject/signing-key": {
+      "name": "@ethersproject/signing-key",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "elliptic"
+      ],
+      "effects": [
+        "@ethersproject/transactions"
+      ],
+      "range": "<=5.8.0",
+      "nodes": [
+        "node_modules/@ethersproject/signing-key"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@ethersproject/transactions": {
+      "name": "@ethersproject/transactions",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@ethersproject/signing-key"
+      ],
+      "effects": [
+        "@walletconnect/utils"
+      ],
+      "range": "<=5.8.0",
+      "nodes": [
+        "node_modules/@ethersproject/transactions"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@gemini-wallet/core": {
+      "name": "@gemini-wallet/core",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@metamask/rpc-errors"
+      ],
+      "effects": [
+        "@wagmi/connectors"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@gemini-wallet/core"
+      ],
+      "fixAvailable": true
+    },
+    "@here-wallet/core": {
+      "name": "@here-wallet/core",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@near-js/utils",
+        "bn.js"
+      ],
+      "effects": [
+        "@near-wallet-selector/here-wallet"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@here-wallet/core"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/here-wallet",
+        "version": "7.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@metamask/rpc-errors": {
+      "name": "@metamask/rpc-errors",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@metamask/utils"
+      ],
+      "effects": [
+        "@gemini-wallet/core"
+      ],
+      "range": ">=6.3.1",
+      "nodes": [
+        "node_modules/@gemini-wallet/core/node_modules/@metamask/rpc-errors",
+        "node_modules/@metamask/rpc-errors"
+      ],
+      "fixAvailable": true
+    },
+    "@metamask/sdk": {
+      "name": "@metamask/sdk",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@metamask/sdk-communication-layer",
+        {
+          "source": 1107594,
+          "name": "@metamask/sdk",
+          "dependency": "@metamask/sdk",
+          "title": "MetaMask SDK indirectly exposed via malicious debug@4.4.2 dependency",
+          "url": "https://github.com/advisories/GHSA-qj3p-xc97-xw74",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-506"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": ">=0.16.0 <=0.33.0"
+        },
+        "uuid"
+      ],
+      "effects": [
+        "@wagmi/connectors"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@metamask/sdk"
+      ],
+      "fixAvailable": true
+    },
+    "@metamask/sdk-communication-layer": {
+      "name": "@metamask/sdk-communication-layer",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1107592,
+          "name": "@metamask/sdk-communication-layer",
+          "dependency": "@metamask/sdk-communication-layer",
+          "title": "MetaMask SDK indirectly exposed via malicious debug@4.4.2 dependency",
+          "url": "https://github.com/advisories/GHSA-qj3p-xc97-xw74",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-506"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": ">=0.16.0 <=0.33.0"
+        },
+        "uuid"
+      ],
+      "effects": [
+        "@metamask/sdk"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@metamask/sdk-communication-layer"
+      ],
+      "fixAvailable": true
+    },
+    "@metamask/utils": {
+      "name": "@metamask/utils",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "uuid"
+      ],
+      "effects": [
+        "@metamask/rpc-errors"
+      ],
+      "range": "8.4.0 - 12.0.0",
+      "nodes": [
+        "node_modules/@gemini-wallet/core/node_modules/@metamask/utils",
+        "node_modules/@metamask/eth-json-rpc-provider/node_modules/@metamask/json-rpc-engine/node_modules/@metamask/utils",
+        "node_modules/@metamask/rpc-errors/node_modules/@metamask/utils",
+        "node_modules/@metamask/utils"
+      ],
+      "fixAvailable": true
+    },
+    "@meteorwallet/sdk": {
+      "name": "@meteorwallet/sdk",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@near-js/accounts",
+        "@near-js/crypto",
+        "@near-js/keystores",
+        "@near-js/keystores-browser",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-js/transactions",
+        "nanoid",
+        "near-api-js",
+        "query-string"
+      ],
+      "effects": [
+        "@near-wallet-selector/meteor-wallet"
+      ],
+      "range": "0.3.7 - 0.3.9 || >=0.5.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/@meteorwallet/sdk"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/accounts": {
+      "name": "@near-js/accounts",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/keystores",
+        "@near-js/providers",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-js/transactions"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@near-wallet-selector/my-near-wallet",
+        "@near-wallet-selector/sender",
+        "near-api-js"
+      ],
+      "range": ">=1.2.2",
+      "nodes": [
+        "node_modules/@near-js/accounts",
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@near-js/accounts",
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/near-api-js/node_modules/@near-js/accounts",
+        "node_modules/@near-wallet-selector/my-near-wallet/node_modules/@near-js/accounts",
+        "node_modules/@near-wallet-selector/sender/node_modules/@near-js/accounts"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/crypto": {
+      "name": "@near-js/crypto",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "secp256k1"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@near-js/accounts",
+        "@near-js/keystores",
+        "@near-js/keystores-browser",
+        "@near-js/keystores-node",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-js/transactions",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/intear-wallet",
+        "@near-wallet-selector/ledger",
+        "@near-wallet-selector/my-near-wallet",
+        "@near-wallet-selector/nightly",
+        "@near-wallet-selector/wallet-connect",
+        "@near-wallet-selector/wallet-utils",
+        "near-api-js"
+      ],
+      "range": ">=1.3.0-next.0",
+      "nodes": [
+        "node_modules/@near-js/accounts/node_modules/@near-js/crypto",
+        "node_modules/@near-js/crypto",
+        "node_modules/@near-js/keystores-browser/node_modules/@near-js/crypto",
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@near-js/crypto",
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/@meteorwallet/sdk/node_modules/@near-js/crypto"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/keystores": {
+      "name": "@near-js/keystores",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@near-js/accounts",
+        "@near-js/keystores-browser",
+        "@near-js/keystores-node",
+        "@near-js/signers",
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/intear-wallet",
+        "@near-wallet-selector/wallet-connect",
+        "near-api-js"
+      ],
+      "range": ">=0.1.0-next.0",
+      "nodes": [
+        "node_modules/@near-js/accounts/node_modules/@near-js/keystores",
+        "node_modules/@near-js/keystores",
+        "node_modules/@near-js/keystores-browser/node_modules/@near-js/keystores",
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@near-js/keystores",
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/@meteorwallet/sdk/node_modules/@near-js/keystores"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/keystores-browser": {
+      "name": "@near-js/keystores-browser",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/keystores"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/meteor-wallet",
+        "@near-wallet-selector/wallet-connect",
+        "near-api-js"
+      ],
+      "range": ">=0.1.0-next.0",
+      "nodes": [
+        "node_modules/@near-js/keystores-browser",
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/@meteorwallet/sdk/node_modules/@near-js/keystores-browser",
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/near-api-js/node_modules/@near-js/keystores-browser"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/keystores-node": {
+      "name": "@near-js/keystores-node",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/keystores"
+      ],
+      "effects": [
+        "near-api-js"
+      ],
+      "range": ">=0.0.13",
+      "nodes": [
+        "node_modules/@near-js/keystores-node"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/providers": {
+      "name": "@near-js/providers",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/transactions"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@near-js/accounts",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/intear-wallet",
+        "@near-wallet-selector/my-near-wallet",
+        "@near-wallet-selector/wallet-utils",
+        "near-api-js"
+      ],
+      "range": ">=0.2.3",
+      "nodes": [
+        "node_modules/@near-js/accounts/node_modules/@near-js/providers",
+        "node_modules/@near-js/providers",
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@near-js/providers",
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/@meteorwallet/sdk/node_modules/@near-js/providers"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/signers": {
+      "name": "@near-js/signers",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/keystores",
+        "@near-js/transactions"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@near-js/accounts",
+        "@near-js/transactions",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/nightly",
+        "@near-wallet-selector/wallet-connect",
+        "@near-wallet-selector/wallet-utils",
+        "near-api-js"
+      ],
+      "range": ">=0.1.5",
+      "nodes": [
+        "node_modules/@near-js/accounts/node_modules/@near-js/signers",
+        "node_modules/@near-js/signers",
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@near-js/signers"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/transactions": {
+      "name": "@near-js/transactions",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/signers"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@near-js/accounts",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/intear-wallet",
+        "@near-wallet-selector/ledger",
+        "@near-wallet-selector/my-near-wallet",
+        "@near-wallet-selector/nightly",
+        "@near-wallet-selector/wallet-connect",
+        "@near-wallet-selector/wallet-utils",
+        "near-api-js"
+      ],
+      "range": ">=1.2.3",
+      "nodes": [
+        "node_modules/@near-js/accounts/node_modules/@near-js/transactions",
+        "node_modules/@near-js/transactions",
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@near-js/transactions",
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/@meteorwallet/sdk/node_modules/@near-js/transactions"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-js/utils": {
+      "name": "@near-js/utils",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "bs58"
+      ],
+      "effects": [
+        "@here-wallet/core"
+      ],
+      "range": "0.0.5 - 1.0.1",
+      "nodes": [
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/@near-js/utils"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/here-wallet",
+        "version": "7.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/core": {
+      "name": "@near-wallet-selector/core",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-js/transactions"
+      ],
+      "effects": [
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/here-wallet",
+        "@near-wallet-selector/intear-wallet",
+        "@near-wallet-selector/ledger",
+        "@near-wallet-selector/meteor-wallet",
+        "@near-wallet-selector/modal-ui",
+        "@near-wallet-selector/my-near-wallet",
+        "@near-wallet-selector/nightly",
+        "@near-wallet-selector/sender",
+        "@near-wallet-selector/wallet-connect",
+        "@near-wallet-selector/wallet-utils"
+      ],
+      "range": "8.9.13 - 8.9.14 || >=9.1.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/core"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/core",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/ethereum-wallets": {
+      "name": "@near-wallet-selector/ethereum-wallets",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/keystores",
+        "@near-js/keystores-browser",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-js/transactions",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/wallet-utils"
+      ],
+      "effects": [],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/ethereum-wallets"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/ethereum-wallets",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/here-wallet": {
+      "name": "@near-wallet-selector/here-wallet",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "@here-wallet/core",
+        "@near-wallet-selector/core"
+      ],
+      "effects": [],
+      "range": ">=7.4.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/here-wallet"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/here-wallet",
+        "version": "7.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/intear-wallet": {
+      "name": "@near-wallet-selector/intear-wallet",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/keystores",
+        "@near-js/providers",
+        "@near-js/transactions",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/wallet-utils"
+      ],
+      "effects": [],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/intear-wallet"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/intear-wallet",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/ledger": {
+      "name": "@near-wallet-selector/ledger",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/transactions",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/wallet-utils"
+      ],
+      "effects": [],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/ledger"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/ledger",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/meteor-wallet": {
+      "name": "@near-wallet-selector/meteor-wallet",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@meteorwallet/sdk",
+        "@near-js/keystores-browser",
+        "@near-wallet-selector/core"
+      ],
+      "effects": [],
+      "range": ">=9.3.1",
+      "nodes": [
+        "node_modules/@near-wallet-selector/meteor-wallet"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/modal-ui": {
+      "name": "@near-wallet-selector/modal-ui",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-wallet-selector/core"
+      ],
+      "effects": [],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/modal-ui"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/modal-ui",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/my-near-wallet": {
+      "name": "@near-wallet-selector/my-near-wallet",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-js/accounts",
+        "@near-js/crypto",
+        "@near-js/providers",
+        "@near-js/transactions",
+        "@near-wallet-selector/core"
+      ],
+      "effects": [],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/my-near-wallet"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/my-near-wallet",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/nightly": {
+      "name": "@near-wallet-selector/nightly",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/signers",
+        "@near-js/transactions",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/wallet-utils"
+      ],
+      "effects": [],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/nightly"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/nightly",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/sender": {
+      "name": "@near-wallet-selector/sender",
+      "severity": "low",
+      "isDirect": true,
+      "via": [
+        "@near-js/accounts",
+        "@near-wallet-selector/core"
+      ],
+      "effects": [],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/sender"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/sender",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/wallet-connect": {
+      "name": "@near-wallet-selector/wallet-connect",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/keystores",
+        "@near-js/keystores-browser",
+        "@near-js/signers",
+        "@near-js/transactions",
+        "@near-wallet-selector/core",
+        "@near-wallet-selector/wallet-utils",
+        "@walletconnect/sign-client"
+      ],
+      "effects": [],
+      "range": ">=9.0.3",
+      "nodes": [
+        "node_modules/@near-wallet-selector/wallet-connect"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/wallet-connect",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@near-wallet-selector/wallet-utils": {
+      "name": "@near-wallet-selector/wallet-utils",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/crypto",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-js/transactions",
+        "@near-wallet-selector/core"
+      ],
+      "effects": [
+        "@near-wallet-selector/ethereum-wallets",
+        "@near-wallet-selector/intear-wallet",
+        "@near-wallet-selector/ledger",
+        "@near-wallet-selector/nightly",
+        "@near-wallet-selector/wallet-connect"
+      ],
+      "range": ">=10.0.0-beta.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/wallet-utils"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/intear-wallet",
+        "version": "9.5.4",
+        "isSemVerMajor": true
+      }
+    },
+    "@privy-io/react-auth": {
+      "name": "@privy-io/react-auth",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@walletconnect/ethereum-provider",
+        "x402"
+      ],
+      "effects": [],
+      "range": ">=2.19.3",
+      "nodes": [
+        "node_modules/@privy-io/react-auth"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit": {
+      "name": "@reown/appkit",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@reown/appkit-controllers",
+        "@reown/appkit-core",
+        "@reown/appkit-pay",
+        "@reown/appkit-scaffold-ui",
+        "@reown/appkit-ui",
+        "@reown/appkit-utils",
+        "@reown/appkit-wallet",
+        "@walletconnect/universal-provider",
+        "@walletconnect/universal-provider",
+        "@walletconnect/utils"
+      ],
+      "effects": [
+        "@reown/appkit-adapter-wagmi",
+        "@walletconnect/ethereum-provider"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit",
+        "node_modules/@reown/appkit",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit-adapter-wagmi": {
+      "name": "@reown/appkit-adapter-wagmi",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@reown/appkit",
+        "@reown/appkit-core",
+        "@reown/appkit-scaffold-ui",
+        "@reown/appkit-utils",
+        "@reown/appkit-wallet",
+        "@walletconnect/universal-provider",
+        "@walletconnect/utils"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/@reown/appkit-adapter-wagmi"
+      ],
+      "fixAvailable": false
+    },
+    "@reown/appkit-controllers": {
+      "name": "@reown/appkit-controllers",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@reown/appkit-wallet",
+        "@walletconnect/universal-provider"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-pay",
+        "@reown/appkit-scaffold-ui",
+        "@reown/appkit-ui",
+        "@reown/appkit-utils"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-controllers",
+        "node_modules/@reown/appkit-controllers"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit-core": {
+      "name": "@reown/appkit-core",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@reown/appkit-wallet",
+        "@walletconnect/universal-provider"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-adapter-wagmi",
+        "@reown/appkit-scaffold-ui",
+        "@reown/appkit-utils"
+      ],
+      "range": "<=1.7.0-rc.4.0",
+      "nodes": [
+        "node_modules/@reown/appkit-core"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit-pay": {
+      "name": "@reown/appkit-pay",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@reown/appkit-controllers",
+        "@reown/appkit-ui",
+        "@reown/appkit-utils"
+      ],
+      "effects": [
+        "@reown/appkit"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-pay",
+        "node_modules/@reown/appkit-pay"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit-scaffold-ui": {
+      "name": "@reown/appkit-scaffold-ui",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@reown/appkit-controllers",
+        "@reown/appkit-core",
+        "@reown/appkit-ui",
+        "@reown/appkit-utils",
+        "@reown/appkit-wallet"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-adapter-wagmi"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-scaffold-ui",
+        "node_modules/@reown/appkit-scaffold-ui",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-scaffold-ui"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit-ui": {
+      "name": "@reown/appkit-ui",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@reown/appkit-controllers",
+        "@reown/appkit-wallet"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-pay",
+        "@reown/appkit-scaffold-ui"
+      ],
+      "range": ">=1.7.1-449657bc8f95adcfd295a2e883c4bcd439045044.0",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-ui",
+        "node_modules/@reown/appkit-pay/node_modules/@reown/appkit-ui",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-ui"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit-utils": {
+      "name": "@reown/appkit-utils",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@reown/appkit-controllers",
+        "@reown/appkit-core",
+        "@reown/appkit-wallet",
+        "@walletconnect/universal-provider",
+        "@walletconnect/universal-provider"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-adapter-wagmi",
+        "@reown/appkit-pay",
+        "@reown/appkit-scaffold-ui"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-utils",
+        "node_modules/@reown/appkit-pay/node_modules/@reown/appkit-utils",
+        "node_modules/@reown/appkit-utils",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-utils"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@reown/appkit-wallet": {
+      "name": "@reown/appkit-wallet",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "zod"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-adapter-wagmi",
+        "@reown/appkit-controllers",
+        "@reown/appkit-core",
+        "@reown/appkit-scaffold-ui",
+        "@reown/appkit-ui",
+        "@reown/appkit-utils"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-wallet",
+        "node_modules/@reown/appkit-controllers/node_modules/@reown/appkit-wallet",
+        "node_modules/@reown/appkit-pay/node_modules/@reown/appkit-wallet",
+        "node_modules/@reown/appkit-wallet",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-wallet"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@wagmi/connectors": {
+      "name": "@wagmi/connectors",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "@gemini-wallet/core",
+        "@metamask/sdk",
+        "@walletconnect/ethereum-provider"
+      ],
+      "effects": [
+        "wagmi"
+      ],
+      "range": "<=0.0.0-wc-links-20240926225814 || 4.1.27 - 4.3.10 || 5.0.1 - 7.1.7",
+      "nodes": [
+        "node_modules/@wagmi/connectors",
+        "node_modules/wagmi/node_modules/@wagmi/connectors"
+      ],
+      "fixAvailable": true
+    },
+    "@walletconnect/core": {
+      "name": "@walletconnect/core",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@walletconnect/utils",
+        "@walletconnect/utils"
+      ],
+      "effects": [
+        "@walletconnect/sign-client"
+      ],
+      "range": "2.15.0-canary-1b3068 - 2.21.9",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-controllers/node_modules/@walletconnect/core",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-utils/node_modules/@walletconnect/core",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit/node_modules/@walletconnect/core",
+        "node_modules/@reown/appkit-controllers/node_modules/@walletconnect/core",
+        "node_modules/@reown/appkit-pay/node_modules/@walletconnect/core",
+        "node_modules/@walletconnect/core",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-utils/node_modules/@walletconnect/core",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit/node_modules/@walletconnect/core",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@walletconnect/core",
+        "node_modules/@walletconnect/universal-provider/node_modules/@walletconnect/core"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@walletconnect/ethereum-provider": {
+      "name": "@walletconnect/ethereum-provider",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@reown/appkit",
+        "@walletconnect/sign-client",
+        "@walletconnect/universal-provider",
+        "@walletconnect/utils"
+      ],
+      "effects": [
+        "@privy-io/react-auth",
+        "@wagmi/connectors"
+      ],
+      "range": "0.0.0-canary-rollup.0 || 2.17.1-canary-0 - 2.17.1-canary-appkit.0 || 2.17.4-canary-ak-1 - 2.17.4-canary-ak-4 || 2.18.0-canary-ak-1 - 2.18.0-rc-1 || 2.18.1-canary-exp-1 - 2.18.1-rc-1 || >=2.19.0-canary-ak-1",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@walletconnect/ethereum-provider",
+        "node_modules/@walletconnect/ethereum-provider"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@walletconnect/sign-client": {
+      "name": "@walletconnect/sign-client",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        "@walletconnect/core",
+        "@walletconnect/core",
+        "@walletconnect/utils",
+        "@walletconnect/utils"
+      ],
+      "effects": [
+        "@near-wallet-selector/wallet-connect",
+        "@walletconnect/ethereum-provider",
+        "@walletconnect/universal-provider"
+      ],
+      "range": "2.15.0-canary-1b3068 - 2.21.9",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-controllers/node_modules/@walletconnect/sign-client",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-utils/node_modules/@walletconnect/sign-client",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit/node_modules/@walletconnect/sign-client",
+        "node_modules/@reown/appkit-controllers/node_modules/@walletconnect/sign-client",
+        "node_modules/@reown/appkit-pay/node_modules/@walletconnect/sign-client",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-utils/node_modules/@walletconnect/sign-client",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit/node_modules/@walletconnect/sign-client",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@walletconnect/sign-client",
+        "node_modules/@walletconnect/sign-client",
+        "node_modules/@walletconnect/universal-provider/node_modules/@walletconnect/sign-client"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@walletconnect/universal-provider": {
+      "name": "@walletconnect/universal-provider",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@walletconnect/sign-client",
+        "@walletconnect/sign-client",
+        "@walletconnect/utils",
+        "@walletconnect/utils",
+        "lodash"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-adapter-wagmi",
+        "@reown/appkit-controllers",
+        "@reown/appkit-core",
+        "@reown/appkit-utils",
+        "@walletconnect/ethereum-provider"
+      ],
+      "range": "2.15.0-canary-1b3068 - 2.21.9",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-controllers/node_modules/@walletconnect/universal-provider",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-utils/node_modules/@walletconnect/universal-provider",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit/node_modules/@walletconnect/universal-provider",
+        "node_modules/@reown/appkit-controllers/node_modules/@walletconnect/universal-provider",
+        "node_modules/@reown/appkit-pay/node_modules/@walletconnect/universal-provider",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-utils/node_modules/@walletconnect/universal-provider",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit/node_modules/@walletconnect/universal-provider",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@walletconnect/universal-provider",
+        "node_modules/@walletconnect/universal-provider"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "@walletconnect/utils": {
+      "name": "@walletconnect/utils",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@ethersproject/transactions",
+        "elliptic",
+        "query-string",
+        "viem"
+      ],
+      "effects": [
+        "@reown/appkit",
+        "@reown/appkit-adapter-wagmi",
+        "@walletconnect/core",
+        "@walletconnect/ethereum-provider",
+        "@walletconnect/sign-client",
+        "@walletconnect/universal-provider"
+      ],
+      "range": "1.2.3-1.3.0-rc.0.0 - 2.21.9",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-controllers/node_modules/@walletconnect/utils",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-utils/node_modules/@walletconnect/utils",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit/node_modules/@walletconnect/utils",
+        "node_modules/@reown/appkit-adapter-wagmi/node_modules/@walletconnect/utils",
+        "node_modules/@reown/appkit-controllers/node_modules/@walletconnect/utils",
+        "node_modules/@reown/appkit-pay/node_modules/@walletconnect/utils",
+        "node_modules/@reown/appkit/node_modules/@walletconnect/utils",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-utils/node_modules/@walletconnect/utils",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit/node_modules/@walletconnect/utils",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@walletconnect/utils",
+        "node_modules/@walletconnect/universal-provider/node_modules/@walletconnect/utils",
+        "node_modules/@walletconnect/utils"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "abitype": {
+      "name": "abitype",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "zod"
+      ],
+      "effects": [
+        "viem"
+      ],
+      "range": "<=0.0.0-main-20230430000127 || 0.7.0-canary.20230307T162852 - 1.0.9",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-controllers/node_modules/abitype",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-utils/node_modules/abitype",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit/node_modules/abitype",
+        "node_modules/@reown/appkit-controllers/node_modules/abitype",
+        "node_modules/@reown/appkit-pay/node_modules/abitype",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/abitype",
+        "node_modules/@walletconnect/utils/node_modules/abitype"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "base-x": {
+      "name": "base-x",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1104177,
+          "name": "base-x",
+          "dependency": "base-x",
+          "title": "Homograph attack allows Unicode lookalike characters to bypass validation.",
+          "url": "https://github.com/advisories/GHSA-xq7p-g2vc-g82p",
+          "severity": "high",
+          "cwe": [
+            "CWE-1007"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": "<=3.0.10"
+        }
+      ],
+      "effects": [
+        "bs58"
+      ],
+      "range": "<=3.0.10",
+      "nodes": [
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/base-x"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/here-wallet",
+        "version": "7.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "bn.js": {
+      "name": "bn.js",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1113441,
+          "name": "bn.js",
+          "dependency": "bn.js",
+          "title": "bn.js affected by an infinite loop",
+          "url": "https://github.com/advisories/GHSA-378v-28hj-76wf",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-835"
+          ],
+          "cvss": {
+            "score": 5.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+          },
+          "range": ">=5.0.0 <5.2.3"
+        }
+      ],
+      "effects": [
+        "@here-wallet/core"
+      ],
+      "range": "5.0.0 - 5.2.2",
+      "nodes": [
+        "node_modules/bn.js"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/here-wallet",
+        "version": "7.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "bs58": {
+      "name": "bs58",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "base-x"
+      ],
+      "effects": [
+        "@near-js/utils"
+      ],
+      "range": "3.0.0 - 4.0.0",
+      "nodes": [
+        "node_modules/@near-wallet-selector/here-wallet/node_modules/bs58"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/here-wallet",
+        "version": "7.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "decode-uri-component": {
+      "name": "decode-uri-component",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1147955,
+          "name": "decode-uri-component",
+          "dependency": "decode-uri-component",
+          "title": "decode-uri-component: Denial of service via exponential decoding of malformed percent-encoded input",
+          "url": "https://github.com/advisories/GHSA-vcc3-ghjq-m6fr",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-400",
+            "CWE-405",
+            "CWE-407",
+            "CWE-1176"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": "<=0.4.2"
+        },
+        {
+          "source": 1243857,
+          "name": "decode-uri-component",
+          "dependency": "decode-uri-component",
+          "title": "decode-uri-component vulnerable to denial of service via quadratic replacement of percent-encoded runs",
+          "url": "https://github.com/advisories/GHSA-qr28-fpjm-wq7f",
+          "severity": "high",
+          "cwe": [
+            "CWE-400",
+            "CWE-407"
+          ],
+          "cvss": {
+            "score": 0,
+            "vectorString": null
+          },
+          "range": "<=0.5.0"
+        }
+      ],
+      "effects": [
+        "query-string"
+      ],
+      "range": "<=0.5.0",
+      "nodes": [
+        "node_modules/decode-uri-component"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "elliptic": {
+      "name": "elliptic",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1112030,
+          "name": "elliptic",
+          "dependency": "elliptic",
+          "title": "Elliptic Uses a Cryptographic Primitive with a Risky Implementation",
+          "url": "https://github.com/advisories/GHSA-848j-6mx2-7j84",
+          "severity": "low",
+          "cwe": [
+            "CWE-1240"
+          ],
+          "cvss": {
+            "score": 5.6,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:L"
+          },
+          "range": "<=6.6.1"
+        }
+      ],
+      "effects": [
+        "@ethersproject/signing-key",
+        "@walletconnect/utils",
+        "secp256k1"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/elliptic"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "lodash": {
+      "name": "lodash",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1115806,
+          "name": "lodash",
+          "dependency": "lodash",
+          "title": "lodash vulnerable to Code Injection via `_.template` imports key names",
+          "url": "https://github.com/advisories/GHSA-r5fr-rjxr-66jc",
+          "severity": "high",
+          "cwe": [
+            "CWE-94"
+          ],
+          "cvss": {
+            "score": 8.1,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
+          },
+          "range": ">=4.0.0 <=4.17.23"
+        },
+        {
+          "source": 1244531,
+          "name": "lodash",
+          "dependency": "lodash",
+          "title": "Lodash has Prototype Pollution Vulnerability in `_.unset`, `_.omit`, and `_.pullAt` functions",
+          "url": "https://github.com/advisories/GHSA-xxjr-mmjv-4gpg",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-1321"
+          ],
+          "cvss": {
+            "score": 6.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L"
+          },
+          "range": ">=4.0.0 <=4.17.22"
+        }
+      ],
+      "effects": [
+        "@walletconnect/universal-provider"
+      ],
+      "range": "4.0.0 - 4.17.23",
+      "nodes": [
+        "node_modules/lodash"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "nanoid": {
+      "name": "nanoid",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1138810,
+          "name": "nanoid",
+          "dependency": "nanoid",
+          "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+          "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+          "severity": "high",
+          "cwe": [
+            "CWE-835"
+          ],
+          "cvss": {
+            "score": 5.9,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": ">=4.0.0 <5.1.16"
+        },
+        {
+          "source": 1139455,
+          "name": "nanoid",
+          "dependency": "nanoid",
+          "title": "nanoid: custom generators can loop indefinitely when size is zero",
+          "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+          "severity": "high",
+          "cwe": [
+            "CWE-835"
+          ],
+          "cvss": {
+            "score": 5.9,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": ">=4.0.0 <5.1.6"
+        },
+        {
+          "source": 1153188,
+          "name": "nanoid",
+          "dependency": "nanoid",
+          "title": "nanoid: Integer Overflow or Wraparound",
+          "url": "https://github.com/advisories/GHSA-xwg4-73v4-xw9w",
+          "severity": "high",
+          "cwe": [
+            "CWE-190"
+          ],
+          "cvss": {
+            "score": 7.4,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N"
+          },
+          "range": ">=4.0.0 <5.1.11"
+        }
+      ],
+      "effects": [
+        "@meteorwallet/sdk"
+      ],
+      "range": "4.0.0 - 5.1.15",
+      "nodes": [
+        "node_modules/nanoid"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "near-api-js": {
+      "name": "near-api-js",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "@near-js/accounts",
+        "@near-js/crypto",
+        "@near-js/keystores",
+        "@near-js/keystores-browser",
+        "@near-js/keystores-node",
+        "@near-js/providers",
+        "@near-js/signers",
+        "@near-js/transactions"
+      ],
+      "effects": [
+        "@meteorwallet/sdk"
+      ],
+      "range": "4.0.4 - 6.5.1",
+      "nodes": [
+        "node_modules/@near-wallet-selector/meteor-wallet/node_modules/near-api-js"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "query-string": {
+      "name": "query-string",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "decode-uri-component"
+      ],
+      "effects": [
+        "@meteorwallet/sdk",
+        "@walletconnect/utils"
+      ],
+      "range": "5.0.0 - 9.4.1",
+      "nodes": [
+        "node_modules/query-string"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "secp256k1": {
+      "name": "secp256k1",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        "elliptic"
+      ],
+      "effects": [
+        "@near-js/crypto"
+      ],
+      "range": ">=2.0.0",
+      "nodes": [
+        "node_modules/secp256k1"
+      ],
+      "fixAvailable": {
+        "name": "@near-wallet-selector/meteor-wallet",
+        "version": "9.3.0",
+        "isSemVerMajor": true
+      }
+    },
+    "uuid": {
+      "name": "uuid",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1119441,
+          "name": "uuid",
+          "dependency": "uuid",
+          "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+          "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-787",
+            "CWE-1285"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N"
+          },
+          "range": "<11.1.1"
+        }
+      ],
+      "effects": [
+        "@metamask/sdk",
+        "@metamask/sdk-communication-layer",
+        "@metamask/utils"
+      ],
+      "range": "<11.1.1",
+      "nodes": [
+        "node_modules/@gemini-wallet/core/node_modules/uuid",
+        "node_modules/@metamask/eth-json-rpc-provider/node_modules/uuid",
+        "node_modules/@metamask/rpc-errors/node_modules/uuid",
+        "node_modules/@metamask/utils/node_modules/uuid",
+        "node_modules/uuid"
+      ],
+      "fixAvailable": true
+    },
+    "viem": {
+      "name": "viem",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "abitype",
+        "ws"
+      ],
+      "effects": [
+        "@walletconnect/utils"
+      ],
+      "range": "<=0.0.0-wagmiv2-20230628182101 || 0.1.10 - 2.49.3",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-controllers/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit-utils/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@privy-io/react-auth/node_modules/@reown/appkit/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@reown/appkit-controllers/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@reown/appkit-pay/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit-utils/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@reown/appkit/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/@walletconnect/utils/node_modules/viem",
+        "node_modules/@walletconnect/utils/node_modules/viem"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "wagmi": {
+      "name": "wagmi",
+      "severity": "moderate",
+      "isDirect": true,
+      "via": [
+        "@wagmi/connectors"
+      ],
+      "effects": [],
+      "range": "<=0.0.0-wc-links-20240926225814 || 2.5.21 - 2.7.1 || 2.8.1 - 2.8.8 || 2.9.1 - 2.17.0",
+      "nodes": [
+        "node_modules/wagmi"
+      ],
+      "fixAvailable": true
+    },
+    "ws": {
+      "name": "ws",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1119108,
+          "name": "ws",
+          "dependency": "ws",
+          "title": "ws: Uninitialized memory disclosure",
+          "url": "https://github.com/advisories/GHSA-58qx-3vcg-4xpx",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-908"
+          ],
+          "cvss": {
+            "score": 4.4,
+            "vectorString": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "range": ">=8.0.0 <8.20.1"
+        },
+        {
+          "source": 1123259,
+          "name": "ws",
+          "dependency": "ws",
+          "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks",
+          "url": "https://github.com/advisories/GHSA-96hv-2xvq-fx4p",
+          "severity": "high",
+          "cwe": [
+            "CWE-400",
+            "CWE-770",
+            "CWE-1050"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": ">=8.0.0 <8.21.0"
+        }
+      ],
+      "effects": [
+        "viem"
+      ],
+      "range": "8.0.0 - 8.20.1",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/ws",
+        "node_modules/@reown/appkit-controllers/node_modules/ws",
+        "node_modules/@reown/appkit-pay/node_modules/ws",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/ws",
+        "node_modules/@walletconnect/utils/node_modules/ws"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "x402": {
+      "name": "x402",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "zod"
+      ],
+      "effects": [
+        "@privy-io/react-auth"
+      ],
+      "range": ">=0.1.0",
+      "nodes": [
+        "node_modules/x402"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    },
+    "zod": {
+      "name": "zod",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1243066,
+          "name": "zod",
+          "dependency": "zod",
+          "title": "Zod can exhaust memory while validating oversized constrained collections",
+          "url": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5",
+          "severity": "high",
+          "cwe": [
+            "CWE-770"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": "<4.6.6"
+        }
+      ],
+      "effects": [
+        "@reown/appkit-wallet",
+        "abitype",
+        "x402"
+      ],
+      "range": "<4.6.6",
+      "nodes": [
+        "node_modules/@privy-io/react-auth/node_modules/zod",
+        "node_modules/@reown/appkit-controllers/node_modules/zod",
+        "node_modules/@reown/appkit-pay/node_modules/zod",
+        "node_modules/@reown/appkit-wallet/node_modules/zod",
+        "node_modules/@walletconnect/ethereum-provider/node_modules/zod",
+        "node_modules/@walletconnect/utils/node_modules/zod",
+        "node_modules/x402/node_modules/zod"
+      ],
+      "fixAvailable": {
+        "name": "@privy-io/react-auth",
+        "version": "3.6.1",
+        "isSemVerMajor": true
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 22,
+      "moderate": 13,
+      "high": 28,
+      "critical": 0,
+      "total": 63
+    },
+    "dependencies": {
+      "prod": 1026,
+      "dev": 437,
+      "optional": 155,
+      "peer": 24,
+      "peerOptional": 0,
+      "total": 1525
+    }
+  }
+}

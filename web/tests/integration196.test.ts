@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { prepareGuardedRequest } from "@/lib/guardedRequest";
+import { LIVE_V24_CODE_HASH, prepareGuardedRequest } from "@/lib/guardedRequest";
 import { buildMessage } from "@/lib/nep413";
-import { sessionAuth, loadSession, type Session } from "@/lib/session";
+import { sessionAuth, sessionFromGrant, loadSession, saveSession, type Session } from "@/lib/session";
 import { checkBody } from "@/lib/gateway";
 import { rememberRecovery, recoveries } from "@/lib/valueRecovery";
 import { readPayout, registerPayoutCall, claimPayoutCall, payoutReceiptFinal } from "@/lib/payout";
@@ -28,6 +28,31 @@ describe("signed epoch end to end",()=>{
     await expect(prepareGuardedRequest("swap","alice.near",{},undefined,read("7","bob.near"))).rejects.toThrow("not_owner");
   });
   it("drops pre-upgrade sessions lacking a returned epoch",()=>{const st=memory();st.setItem("kh_session_v1",JSON.stringify({...session,owner_epoch:undefined}));expect(loadSession("alice.near",0,st)).toBeNull();});
+  it("live v2.4 MethodNotFound keeps the legacy envelope and does not invent an epoch",async()=>{
+    const missing=new Error("wasm execution failed with error: FunctionCallError(MethodResolveError(MethodNotFound))");
+    const read24=vi.fn(async(m:string)=>{ if(m==="nft_tokens_for_owner") return [{token_id:"k1234"}]; if(m==="nft_token") return {owner_id:"alice.near"}; if(m==="get_control_state") throw missing; throw new Error("unexpected "+m); });
+    const hash=vi.fn(async()=>LIVE_V24_CODE_HASH);
+    const p=await prepareGuardedRequest("swap","alice.near",{owner_epoch:"0"},undefined,read24 as any,hash);
+    expect(p).toEqual({token_id:"k1234"});
+    expect(p).not.toHaveProperty("owner_epoch");
+    expect(JSON.parse(buildMessage("swap","alice.near",p,1000)).params.owner_epoch).toBeUndefined();
+    const grant=sessionFromGrant({ok:true,session_token:"t",account:"alice.near",token_id:"k1234",exp_ms:999999,max_usd_micro:1},"k1234","v2.4");
+    expect(grant?.profile).toBe("v2.4");
+    expect(grant).not.toHaveProperty("owner_epoch");
+    const st=memory(); saveSession(grant!,st);
+    expect(loadSession("alice.near",0,st)?.profile).toBe("v2.4");
+    expect(JSON.parse(sessionAuth(grant!,"swap",{},1).message).params).toEqual({token_id:"k1234"});
+  });
+  it("does not treat transport, invalid signature, a bare resolver error, or an unpinned hash as v2.4",async()=>{
+    const base=(err:Error)=>vi.fn(async(m:string)=>{ if(m==="nft_token") return {owner_id:"alice.near"}; if(m==="get_control_state") throw err; throw new Error(m); });
+    const hash=vi.fn(async()=>LIVE_V24_CODE_HASH);
+    await expect(prepareGuardedRequest("swap","alice.near",{token_id:"k1234"},undefined,base(new Error("timeout")) as any,hash)).rejects.toThrow("timeout");
+    await expect(prepareGuardedRequest("swap","alice.near",{token_id:"k1234"},undefined,base(new Error("MethodResolveError(MethodInvalidSignature)")) as any,hash)).rejects.toThrow("MethodInvalidSignature");
+    await expect(prepareGuardedRequest("swap","alice.near",{token_id:"k1234"},undefined,base(new Error("MethodResolveError")) as any,hash)).rejects.toThrow("MethodResolveError");
+    await expect(prepareGuardedRequest("swap","alice.near",{token_id:"k1234"},undefined,base(new Error("FunctionCallError(MethodResolveError(MethodNotFound))")) as any,async()=>"not-the-live-hash")).rejects.toThrow("unpinned_contract");
+    expect(hash).not.toHaveBeenCalled();
+    expect(sessionFromGrant({ok:true,session_token:"t",account:"alice.near",exp_ms:1,max_usd_micro:1,owner_epoch:"0"},"k1234","v2.4")).toBeNull();
+  });
 });
 describe("hosted custody recovery",()=>{
   it("requires signed exact journal identity and fresh holder auth",()=>{
@@ -55,7 +80,13 @@ describe("ordinary-flow payout onboarding",()=>{
   const reader=(registered=false,pending:any=null)=>vi.fn(async(m:string)=>({payout_storage_cost:"3200000000000000000000",payout_account_registered:registered,get_payout_credit:"10",get_pending_payout:pending}[m])) as any;
   it("requires exact explicit fee; duplicate slot cannot be silently recharged",async()=>{const s=await readPayout("alice.near",reader());expect(()=>registerPayoutCall(s,"0")).toThrow();expect(registerPayoutCall(s,"3200000000000000000000").deposit).toBe("3200000000000000000000");expect(()=>registerPayoutCall({...s,registered:true} as any,"3200000000000000000000")).toThrow();});
   it("claims only available registered credit and refuses a pending UNKNOWN payout",async()=>{expect(claimPayoutCall(await readPayout("alice.near",reader(true))).method).toBe("claim_payout");expect(()=>claimPayoutCall({supported:true,registered:true,cost:"1",credit:"5",pending:{nonce:"1",amount:"10"}})).toThrow();});
-  it("v2.4 detection requires MethodNotFound, never a network failure",async()=>{expect(await readPayout("alice.near",vi.fn().mockRejectedValue(new Error("MethodNotFound")) as any)).toEqual({supported:false});await expect(readPayout("alice.near",vi.fn().mockRejectedValue(new Error("timeout")) as any)).rejects.toThrow("timeout");});
+  it("v2.4 detection requires MethodNotFound, never a sibling resolver or transport error",async()=>{
+    expect(await readPayout("alice.near",vi.fn().mockRejectedValue(new Error("wasm execution failed with error: FunctionCallError(MethodResolveError(MethodNotFound))")) as any)).toEqual({supported:false});
+    for (const message of ["MethodResolveError(MethodInvalidSignature)","MethodResolveError","method not found","timeout","fetch failed"]) {
+      await expect(readPayout("alice.near",vi.fn().mockRejectedValue(new Error(message)) as any)).rejects.toThrow(message);
+    }
+    await expect(readPayout("alice.near",vi.fn(async()=>"not-digits") as any)).rejects.toThrow("Invalid payout state");
+  });
   it("does not label wallet hash, optimistic status or callback failure as cash delivered",()=>{
     const j={final_execution_status:"FINAL",transaction:{signer_id:"alice.near",receiver_id:KEYS_CONTRACT,actions:[{FunctionCall:{method_name:"claim_payout"}}]},status:{SuccessValue:"dHJ1ZQ=="},receipts_outcome:[{outcome:{status:{SuccessValue:""}}},{outcome:{status:{SuccessValue:"dHJ1ZQ=="}}}]};
     expect(payoutReceiptFinal(j,"alice.near")).toBe(true);

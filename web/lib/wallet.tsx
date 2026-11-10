@@ -1,14 +1,16 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {SandboxWalletProvider} from "./sandboxWallet";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { WalletSelector, WalletModuleFactory } from "@near-wallet-selector/core";
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
+import {parseWalletRedirect} from "./walletRedirect";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
-import { NEP413_RECIPIENT } from "./config";
-import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
+import { PLEDGE_SANDBOX, NEP413_RECIPIENT } from "./config";
+import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionFromGrant, sessionParams, type Session } from "./session";
 import { readPayout } from "./payout";
-import { decimalEpoch, guardedValueOp, prepareGuardedRequest } from "./guardedRequest";
+import { contractProfile, guardedValueOp, prepareGuardedRequest } from "./guardedRequest";
 import { callWorker } from "./worker";
-import { sendKeysCall, type KeysCall, type SendResult, type TxRoute, type TxWallet } from "./keysTx";
+import { sendKeysCall, sendRoutedKeysCalls, type TxConsent, type KeysCall, type SendResult, type BatchSendResult, type TxRoute, type TxWallet } from "./keysTx";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
@@ -40,7 +42,7 @@ async function revokeStored(account: string | null) {
 
 export class SignError extends Error { constructor(public code: string) { super(code); } }
 
-interface WalletCtx {
+export interface WalletCtx {
   accountId: string | null;
   ready: boolean;
   /** A wallet from an earlier visit is being restored; show a neutral pill, not "Connect wallet". */
@@ -79,6 +81,7 @@ interface WalletCtx {
   revokeSession: () => Promise<void>;
   /** Sends one FunctionCall to the keys contract from the signed-in account, through the wallet it signed in with (lib/keysTx.ts). */
   sendTx: (call: KeysCall) => Promise<SendResult>;
+  sendTxBatch: (calls: readonly KeysCall[], consent?:TxConsent) => Promise<BatchSendResult>;
 }
 const Ctx = createContext<WalletCtx | null>(null);
 const PENDING = "kh_pending_sign";
@@ -223,9 +226,11 @@ async function init(): Promise<{ selector: WalletSelector; modal: WalletSelector
   return { selector, modal };
 }
 
-export function WalletProvider({ children }: { children: ReactNode }) {
+export function WalletProvider({ children }: { children: ReactNode }) {return PLEDGE_SANDBOX?<SandboxWalletProvider context={Ctx}>{children}</SandboxWalletProvider>:<NativeWalletProvider>{children}</NativeWalletProvider>;}
+function NativeWalletProvider({ children }: { children: ReactNode }) {
   const ref = useRef<{ selector: WalletSelector; modal: WalletSelectorModal } | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const currentAccount=useRef(accountId);useLayoutEffect(()=>{currentAccount.current=accountId;},[accountId]);
   const [ready, setReady] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [mismatch, setMismatch] = useState<string | null>(null);
@@ -293,13 +298,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const h = new URLSearchParams(location.hash.slice(1));
     const saved = sessionStorage.getItem(PENDING);
     if (h.get("signature") && saved) {
-      const s = JSON.parse(saved) as { message: string; nonce: string; ctx?: OpResume | null; callbackUrl?: string };
-      const signed = { account_id: h.get("accountId") || "", public_key: h.get("publicKey") || "", signature: h.get("signature") || "",
-        nonce: s.nonce, message: s.message, recipient: NEP413_RECIPIENT };
-      // The callback the wallet was given is part of the signed payload only if the wallet kept it (checked here).
-      const cb = s.callbackUrl ? signedCallbackUrl(signed, s.callbackUrl) : undefined;
-      setPending({ ...signed, ...(cb ? { callback_url: cb } : {}), ctx: s.ctx });
-      sessionStorage.removeItem(PENDING);
+      const recovered=parseWalletRedirect<OpResume|null>(saved,location.hash);
+      if(recovered){setPending(recovered);sessionStorage.removeItem(PENDING);}
+      // An invalid/old callback must NOT consume the newer saved challenge.
       history.replaceState(null, "", location.pathname + location.search);
     }
     const resume = privyEnabled() ? privyResume(location.search, Object.keys(localStorage)) : null;
@@ -437,8 +438,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const finishSession = useCallback(async (auth: SignedAuth, tokenId: string) => {
     const r = await callWorker("session", auth);
     const o = r.output;
-    if (r.error || !o?.ok || typeof o.session_token !== "string" || !decimalEpoch(o.owner_epoch)) return { ok: false as const, code: r.error?.code || "session_failed" };
-    const s: Session = { token: o.session_token, account: String(o.account), token_id: String(o.token_id ?? tokenId), exp_ms: Number(o.exp_ms), max_usd_micro: Number(o.max_usd_micro), owner_epoch: o.owner_epoch };
+    if (r.error || !o?.ok || typeof o.session_token !== "string") return { ok: false as const, code: r.error?.code || "session_failed" };
+    const token = String(o.token_id ?? tokenId);
+    // A returned decimal epoch is the guarded v2.5 grant. Do not invent one.
+    // A grant with no epoch is accepted only after the pinned live v2.4 contract is detected.
+    let profile: "v2.4" | "v2.5" = "v2.5";
+    if (o.owner_epoch == null) {
+      try { profile = await contractProfile(token); }
+      catch { return { ok: false as const, code: "session_failed" }; }
+    }
+    const s = sessionFromGrant(o, token, profile);
+    if (!s) return { ok: false as const, code: "session_failed" };
     saveSession(s); setSession(s);
     return { ok: true as const };
   }, []);
@@ -486,19 +496,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!accountId) return { kind: "none" };
     if (owner.current === "privy") {
       const signer = privy.current?.signer;
-      return signer ? { kind: "privy", accountId, signer } : { kind: "none" };
+      return signer ? { kind: "privy", accountId, signer, assertCurrent:()=>{if(currentAccount.current!==accountId||owner.current!=="privy"||privy.current?.accountId!==accountId||privy.current?.signer!==signer)throw Error("Signer changed after consent; nothing was sent.");} } : { kind: "none" };
     }
     if (owner.current === "nc") {
       const nc = await nearConnector();
       const w = await nc.wallet().catch(() => null);
-      return w ? { kind: "nc", accountId, wallet: w as unknown as TxWallet } : { kind: "none" };
+      if(!w)return {kind:"none"};
+      const accounts=await w.getAccounts();
+      if(!accounts.some(a=>a.accountId===accountId))throw Error("Signer changed after consent; nothing was sent.");
+      return { kind: "nc", accountId, wallet: w as unknown as TxWallet,assertCurrent:()=>{if(currentAccount.current!==accountId||owner.current!=="nc")throw Error("Signer changed after consent; nothing was sent.");} };
     }
     await ensure();
     const st = ref.current!.selector.store.getState();
     const acc = st.accounts.find((a) => a.active)?.accountId;
     if (!acc) return { kind: "none" };
     const w = await ref.current!.selector.wallet();
-    return { kind: "ws", accountId: acc, walletId: st.selectedWalletId ?? "", wallet: w as unknown as TxWallet, callbackUrl: location.href.split("#")[0] };
+    return { kind: "ws", accountId: acc, walletId: st.selectedWalletId ?? "", wallet: w as unknown as TxWallet, callbackUrl: location.href.split("#")[0],assertCurrent:()=>{const current=ref.current!.selector.store.getState();if(current.accounts.find(a=>a.active)?.accountId!==acc||current.selectedWalletId!==st.selectedWalletId||owner.current!=="ws"||currentAccount.current!==accountId)throw Error("Signer changed after consent; nothing was sent.");} };
   }, [accountId, ensure]);
   const sendTx = useCallback(async (call: KeysCall): Promise<SendResult> => {
     if (accountId && /^(nft_(list|buy|approve|revoke|revoke_all|transfer|transfer_call|transfer_payout))$/.test(call.method)) {
@@ -510,7 +523,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return sendKeysCall(await txRoute(), call);
   }, [txRoute, accountId]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectMeteor: () => connectSelectorWallet("meteor-wallet"), connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession, sendTx }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
+  const sendTxBatch = useCallback(async (calls: readonly KeysCall[], consent?:TxConsent): Promise<BatchSendResult> => sendRoutedKeysCalls(txRoute,calls,consent??{expectedSigner:accountId??""}), [txRoute,accountId]);
+
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectMeteor: () => connectSelectorWallet("meteor-wallet"), connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession, sendTx, sendTxBatch }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {

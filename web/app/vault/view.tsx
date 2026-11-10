@@ -393,7 +393,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     ? <StatusChip tone="success">Enclave live</StatusChip>
     : online === false
       ? <StatusChip tone="error">Not reachable</StatusChip>
-      : <StatusChip tone="neutral" testid="enclave-checking">Checking the enclave</StatusChip>;
+      : <StatusChip tone="neutral" testid="enclave-checking">Not probed</StatusChip>;
 
   const proofAttestation = lastRes ? (lastVerified === true ? "verified" : lastVerified === false ? "not-verified" : "unread") : "unread";
 

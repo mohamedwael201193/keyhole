@@ -91,6 +91,7 @@ export function KeyStoreProvider({ children }: { children: ReactNode }) {
   const [snap, setSnap] = useState<Snap>(EMPTY);
   const [round, setRound] = useState(0);
   const force = useRef(false);
+  useEffect(()=>{const changed=()=>{force.current=true;setRound(n=>n+1);};window.addEventListener("keyhole:keys-changed",changed);return()=>window.removeEventListener("keyhole:keys-changed",changed);},[]);
 
   useEffect(() => {
     if (!accountId) { setSnap(EMPTY); return; }

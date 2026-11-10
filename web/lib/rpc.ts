@@ -1,7 +1,7 @@
-import { KEYS_CONTRACT, RPC_URL } from "./config";
+import { KEYS_CONTRACT, RPC_URL, PLEDGE_SANDBOX } from "./config";
 
 /** Official mainnet, then a public fallback. Each attempt gives up quickly. */
-export const NEAR_RPCS = [RPC_URL, "https://free.rpc.fastnear.com"];
+export const NEAR_RPCS = PLEDGE_SANDBOX?[RPC_URL]:[RPC_URL, "https://free.rpc.fastnear.com"];
 const TTL = 60_000;
 const cache = new Map<string, { at: number; value: unknown }>();
 const inflight = new Map<string, Promise<unknown>>();

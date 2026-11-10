@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// verify-claims.mjs: check every claim in docs/claims.json, read-only.
-// Uses public NEAR RPC, OutLayer, FastFS, the live site and the GitHub API. No keys, no writes, no spending.
+// verify-claims.mjs: check every claim in docs/claims.json.
+// Default mode uses public NEAR RPC, existing OutLayer attestations (GET), FastFS, the live site and the GitHub API.
+// It does not call OutLayer /call and it does not request /api/health. A passive or skipped probe is not an online PASS.
+// An approved info probe is a separate server route and is not invoked here.
 // usage: node judge/verify-claims.mjs [--only <id>] [--offline] [--json]
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";

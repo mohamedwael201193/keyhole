@@ -5,12 +5,14 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { KeyholeLogo } from "@/components/KeyholeLogo";
 import { AccountControl } from "@/components/AccountControl";
 import { TxLink } from "@/components/TxLink";
-import { KEYS_CONTRACT } from "@/lib/config";
+import { KEYS_CONTRACT, PLEDGE_SANDBOX } from "@/lib/config";
+import { networkPillDetail, networkPillLabel } from "@/lib/networkLabel";
 import { useI18n } from "@/lib/i18n";
 import { KeyStoreProvider, useKeyStore } from "@/lib/keyStore";
 import { useWallet } from "@/lib/wallet";
 import { PayoutPanel } from "@/components/PayoutPanel";
 import { ValueRecovery } from "@/components/ValueRecovery";
+import { PayoutCredit } from "@/components/PayoutCredit";
 import { SessionPill } from "./SessionPill";
 
 /**
@@ -190,6 +192,8 @@ function AppShellFrame({ children }: { children: ReactNode }) {
   const mint = !!accountId && keys.status === "ready" && keys.keys.length === 0;
   const [hash, setHash] = useState("");
   const [open, setOpen] = useState(false);
+  const network = networkPillLabel(PLEDGE_SANDBOX);
+  const networkDetail = networkPillDetail(PLEDGE_SANDBOX);
 
   // The hash is not part of usePathname(), and a client link to the same page does not fire hashchange. Read it on
   // route change, on back and forward, and when a shell link is pressed (onNavigate below).
@@ -217,7 +221,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
         </Link>
         <p className="app-title" data-testid="app-title">{pageTitle(pathname)}</p>
         <div className="app-top-end">
-          <span className="app-net" data-testid="network-pill"><i aria-hidden="true" />NEAR mainnet</span>
+          <span className="app-net" data-testid="network-pill" title={networkDetail}><i aria-hidden="true" />{network}</span>
           <SessionPill />
           <AccountControl />
         </div>
@@ -226,7 +230,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
         <aside id="app-side" className={`app-side${open ? " open" : ""}`} aria-label="App">
           <AppNav pathname={pathname} hash={hash} mint={mint} onNavigate={(href) => { setHash(hashOf(href)); setOpen(false); }} />
           <div className="app-foot">
-            <p className="app-net-line"><i aria-hidden="true" />NEAR mainnet</p>
+            <p className="app-net-line" title={networkDetail}><i aria-hidden="true" />{network}</p>
             <Link href="/" className="app-back" data-testid="app-back">← Back to site</Link>
             <Link href="/verify" className="app-proof" data-testid="app-proof">Proof</Link>
             <p className="app-legal">
@@ -236,7 +240,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
             </p>
           </div>
         </aside>
-        <main id="main" className="app-main" tabIndex={-1}><ValueRecovery />{children}{pathname === "/vault" && <PayoutPanel />}</main>
+        <main id="main" className="app-main" tabIndex={-1}><ValueRecovery /><PayoutCredit key={accountId??"signed-out"} />{children}{pathname === "/vault" && <PayoutPanel />}</main>
       </div>
       <AppTabs pathname={pathname} hash={hash} moreOpen={open} onMore={() => setOpen((v) => !v)} />
     </div>

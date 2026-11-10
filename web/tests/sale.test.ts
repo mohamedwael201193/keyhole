@@ -51,6 +51,9 @@ describe("feature detection", () => {
   it("any other failure is unknown, never v2.3", () => {
     expect(supportFromError("fetch failed")).toBe("unknown");
     expect(supportFromError("rpc")).toBe("unknown");
+    expect(supportFromError("FunctionCallError(MethodResolveError(MethodInvalidSignature))")).toBe("unknown");
+    expect(supportFromError("MethodResolveError")).toBe("unknown");
+    expect(supportFromError("method not found")).toBe("unknown");
   });
 });
 

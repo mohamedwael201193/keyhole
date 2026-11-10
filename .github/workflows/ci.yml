@@ -27,9 +27,12 @@ jobs:
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.22.0/cargo-near-installer.sh | sh
           cargo near --version
       - run: rustup show && rustup component add clippy
-      - run: cargo test --locked
+      - name: unit tests
+        run: |
+          set -o pipefail
+          cargo test --locked 2>&1 | tee "$RUNNER_TEMP/keys-unit.txt"
       - name: count passing tests
-        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
+        run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/keys-unit.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
       - name: source rebuilds to the committed v2.5 release wasm
         run: |
@@ -49,10 +52,12 @@ jobs:
           git diff --exit-code -- tests/fixtures/custody_policy_mock.wasm
       - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + sealed pledge state), NEP-178 cap, one key, royalty sale, minter-only tier raise
         working-directory: contracts/keys-sandbox
-        run: CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1
+        run: |
+          set -o pipefail
+          CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1 2>&1 | tee "$RUNNER_TEMP/sandbox.txt"
       - name: count passing sandbox tests
         working-directory: contracts/keys-sandbox
-        run: CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
+        run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/sandbox.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - name: deployed wasm matches on-chain code_hash
         working-directory: .
         run: ./judge/1-contract.sh
@@ -63,9 +68,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup show && rustup component add clippy
-      - run: cargo test --locked
+      - name: unit tests
+        run: |
+          set -o pipefail
+          cargo test --locked 2>&1 | tee "$RUNNER_TEMP/worker-unit.txt"
       - name: count passing tests
-        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
+        run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/worker-unit.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings
       - name: lint the WASI-only custody host (native cfg excludes it)
         run: cargo clippy --locked --target wasm32-wasip2 -- -D warnings
@@ -101,6 +109,8 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
+      - name: zero-install live path (curl + python3; code hash, views, one attestation, one receipt)
+        run: ./judge/0-live.sh
       - run: ./judge/2-attestations.sh
       - run: ./verify.sh "$(jq -r '.[0].call_id' judge/evidence.json)"
       - uses: actions/setup-node@v4
@@ -113,6 +123,14 @@ jobs:
           git diff --exit-code -- docs/claims.json
       - name: transaction receipt proof checker regression tests
         run: node --test judge/tx-outcome.test.mjs
+      - name: strict recorded-refusal predicate
+        run: python3 judge/receipt_proof_test.py
+      - name: primary judge checkout command
+        run: node --test judge/checkout-command.test.mjs
+      - name: full reproduction prepares sandbox fixtures and compiles WASI
+        run: node --test judge/reproduction.test.mjs
+      - name: default claims mode does not spend on health
+        run: node --test judge/passive-claims.test.mjs
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:
@@ -146,7 +164,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: web/package-lock.json }
+        with: { node-version: 22.22.2, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm install --global npm@10.8.2
+      - run: node --version && npm --version
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
@@ -156,7 +176,47 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: e2e against the local production build (reads mainnet live)
         run: |
-          PORT="${KH_E2E_PORT:-3100}"; export BASE_URL="http://localhost:$PORT"
-          npx next start -p "$PORT" & npx -y wait-on "$BASE_URL"
+          PORT="${KH_E2E_PORT:-3174}"; export BASE_URL="http://localhost:$PORT"
+          npx next start -p "$PORT" & UI_PID=$!
+          trap 'kill "$UI_PID" 2>/dev/null || true' EXIT
+          npx -y wait-on "$BASE_URL"
           PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/p.json" npx playwright test --grep-invert "funded payment key" --reporter=list,json
           echo "| e2e (distinct, each run at 2 widths) | $(node -p "const j=require(process.env.RUNNER_TEMP+'/p.json');new Set(j.suites.flatMap(function f(s){return [...(s.specs||[]).filter(x=>x.ok).map(x=>x.file+x.title),...(s.suites||[]).flatMap(f)]})).size") |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pledge borrower and lender viewport evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pledge-shots
+          path: web/test-results/pledge-shots
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Real native sandbox / real UI funded repay and default endings
+        env:
+          PLEDGE_SANDBOX_E2E: "1"
+          NEXT_PUBLIC_PLEDGE_SANDBOX: "1"
+          NEXT_PUBLIC_PLEDGE_LIVE: "1"
+          NEXT_PUBLIC_PLEDGE_TRANSACTIONS: "1"
+          BASE_URL: http://127.0.0.1:3142
+          PLEDGE_SHOTS: test-results/pledge-final
+        run: |
+          export UI_SANDBOX_READY="$RUNNER_TEMP/pledge-sandbox.json"
+          (cd ../contracts/keys-sandbox && cargo test --locked --test pledge serve_ui_sandbox -- --ignored --nocapture > "$RUNNER_TEMP/pledge-sandbox.log" 2>&1) &
+          node -e 'const fs=require("fs");let n=0;const t=setInterval(()=>{if(fs.existsSync(process.env.UI_SANDBOX_READY)){clearInterval(t);process.exit(0)}if(++n>900){clearInterval(t);process.exit(1)}},1000)'
+          export NEXT_PUBLIC_PLEDGE_SANDBOX_RPC="$(node -p 'require(process.env.UI_SANDBOX_READY).rpc')"
+          npm run build
+          npx next start --hostname 127.0.0.1 -p 3142 > "$RUNNER_TEMP/pledge-ui.log" 2>&1 &
+          node -e 'let n=0;const t=setInterval(async()=>{try{if((await fetch(process.env.BASE_URL+"/pledge?token=k1")).ok){clearInterval(t);process.exit(0)}}catch{}if(++n>180){clearInterval(t);process.exit(1)}},1000)'
+          npx playwright test pledge-funded.spec.ts --project=desktop --workers=1 --retries=0
+      - name: Funded Pledge final screenshots / native receipts / fixture logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pledge-final
+          path: |
+            web/test-results/pledge-final
+            ${{ runner.temp }}/pledge-sandbox.log
+            ${{ runner.temp }}/pledge-ui.log
+          if-no-files-found: warn
+          retention-days: 7

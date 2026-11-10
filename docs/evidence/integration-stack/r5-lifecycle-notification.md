@@ -1,0 +1,25 @@
+# R5 lifecycle and browser-observer repair
+
+## Exact postinstall states
+
+The old repeat guard counted four newly expanded x402 records but ignored the two identical explicit records already present in each pristine entry. Thus a correct patched file had six matches and was wrongly rejected. This was a lifecycle defect, not a new payment-schema defect.
+
+The [patch manifest](../../../web/scripts/wallet-dependency-patches.json) now binds every complete pristine and patched file. Pristine bytes were obtained from the two registry archives named by the lockfile and checked against their SHA512 integrity before the fingerprints and reverse offsets were generated. [The runner](../../../web/scripts/patch-wallet-deps.mjs) accepts only one of those exact forms, validates versions, preflights every file before writing and verifies each generated output. It does not accept `>=` counts, arbitrary six-match content, mixed unknown content or changed versions. Known mixed pristine/patched files can resume safely. The bytes produced for the ten consumers are unchanged from the reviewed R4 migration; no dependency versions or application runtime modules change.
+
+[Seven offline lifecycle regressions](../../../web/tests/wallet-patch-lifecycle.test.ts) reconstruct each real pristine ESM/CJS entry from installed bytes using small offset-only reverse deltas, verify the pristine digest, patch once and run twice more with byte equality. They also cover the baseline-two/total-six records, pristine and patched corruption, version drift, missing consumers, preflight/no-partial-write and mixed known-state resumption. No registry request or SDK source redistribution is needed by the tests.
+
+## Notification root cause
+
+The `?bare` fixture intentionally skips React mounting. Therefore this was not an animation or notification-component mount race. It constructed/subscribed the stores but did not perform their initial durable read before the two dispatches raced. Chromium's first `localStorage` read initializes its cache and **rebinds the observer at the GetAll snapshot**, replacing the earlier observer pipe. A write racing that initial read can become visible in the snapshot without its earlier notification being delivered. [Chromium CachedStorageArea::EnsureLoaded](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/third_party/blink/renderer/modules/storage/cached_storage_area.cc) documents that observer/snapshot synchronization explicitly.
+
+This was reproduced, not inferred from a single CI timeout: the unchanged test failed **4/100** no-retry desktop stress runs; native/custom-event instrumentation reproduced **1/100**. In the instrumented failure the winner had one wallet call and two local custom notifications; the loser had zero wallet calls, zero native/custom notifications, yet read the identical persisted AwaitingWallet ID. Both documents were complete, visible and on the same origin with no held/pending Web Locks. An initial-read barrier then passed **100/100** under the same concurrent stress. These observations isolate first-read/observer initialization rather than duplicated dispatch or UI rendering.
+
+[The corrected test](../../../web/e2e/pledge-review-r3.spec.ts) synchronously reads and asserts an empty store in **both** tabs before either may publish, matching the mounted component's initial observation. It still races both real Web Lock contenders and keeps the original one-admission, one-wallet and positive-notification assertions. It additionally checks notifications in **both** tabs and binds their observed IDs to the actual winning operation. Two forced winner-order regressions cover either publisher finishing before the contender starts. No sleep, timeout increase, fabricated storage event, retry change or production lock change is used.
+
+## Separate reload-fixture race found by the no-retry full suite
+
+The first complete local no-retry suite also exposed an unrelated Vault cashout fixture failure: its mocked RPC route called `page.evaluate` while `page.reload()` destroyed the old execution context. This was a mock-backend/document-lifetime coupling, not a failed payout guard. [Both ordinary payout fixtures](../../../web/e2e/integration196.spec.ts) now keep their backend registration/claim state in the test process, updated through an awaited browser binding **only when the actual mock wallet transport is invoked**. The route no longer evaluates a navigating document or infers settlement from a reserved local intent. All original wallet-call, durable UNKNOWN, foreign-signer, pending-chain, FINAL/callback and reload/no-resend assertions remain unchanged. No application code or financial rule changes.
+
+## Execution
+
+The final local-head report records clean `npm ci` followed by two `npm run postinstall` executions, complete web gates, and thirty no-retry repetitions of all three notification orderings at both configured viewports. This is browser/storage/native-install evidence, not a mainnet transaction, live external wallet or custody-confinement certification.

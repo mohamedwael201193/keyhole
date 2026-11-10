@@ -33,8 +33,8 @@ pub struct SaleCertificate {
 pub(crate) fn sales()->LookupMap<TokenId,Sale>{LookupMap::new(b"Ss".as_slice())}
 fn enabled()->bool{env::storage_read(ENABLED).as_deref()==Some(&[1])}
 fn load(token:&TokenId,nonce:U64)->Sale{let s=sales().get(token).unwrap_or_else(||env::panic_str("no protected sale"));require!(s.nonce==nonce,"sale nonce mismatch");s}
-fn call(target:AccountId,method:&str,args:near_sdk::serde_json::Value,gas:u64)->Promise{Promise::new(target).function_call(method.into(),args.to_string().into_bytes(),yocto(0),Gas::from_tgas(gas))}
-fn cb(method:&str,args:near_sdk::serde_json::Value,gas:u64)->Promise{call(env::current_account_id(),method,args,gas)}
+fn call(target:AccountId,method:&str,args:String,gas:u64)->Promise{Promise::new(target).function_call(method.into(),args.into_bytes(),yocto(0),Gas::from_tgas(gas))}
+fn cb(method:&str,args:String,gas:u64)->Promise{call(env::current_account_id(),method,args,gas)}
 fn enough_gas(){require!(env::prepaid_gas()>=Gas::from_tgas(180),"attach at least 180 Tgas");}
 
 #[near]
@@ -70,8 +70,8 @@ impl Contract {
   s.policy_busy=true;s.policy_call_complete=false;sales().insert(&token,&s);
   let c=config_required();let b=collateral().get(&token).unwrap_or_else(||env::panic_str("unbound collateral"));
   // Exact documented real-provider ABI: terminal receipt callback is the ordering fence.
-  call(c.custody_contract,if freeze{"freeze_wallet"}else{"unfreeze_wallet"},near_sdk::serde_json::json!({"wallet_pubkey":b.wallet_pubkey}),20)
-   .then(cb("on_sale_policy_action",near_sdk::serde_json::json!({"token_id":token,"nonce":s.nonce,"sequence":s.policy_sequence}),65))
+  call(c.custody_contract,if freeze{"freeze_wallet"}else{"unfreeze_wallet"},json_object!({"wallet_pubkey":b.wallet_pubkey}),20)
+   .then(cb("on_sale_policy_action",json_object!({"token_id":token,"nonce":s.nonce,"sequence":s.policy_sequence}),65))
  }
  #[private]
  pub fn on_sale_policy_action(&mut self,token_id:TokenId,nonce:U64,sequence:U64)->PromiseOrValue<bool>{
@@ -87,8 +87,8 @@ impl Contract {
  fn read_sale_policy(&self,token:TokenId,s:Sale)->Promise{
   require!(s.policy_busy&&s.policy_call_complete,"sale policy outcome unknown: cannot reconcile by view");
   let c=config_required();let b=collateral().get(&token).unwrap_or_else(||env::panic_str("unbound collateral"));
-  call(c.custody_contract,"get_wallet_policy",near_sdk::serde_json::json!({"wallet_pubkey":b.wallet_pubkey}),15)
-   .then(cb("on_sale_policy_view",near_sdk::serde_json::json!({"token_id":token,"nonce":s.nonce,"sequence":s.policy_sequence}),30))
+  call(c.custody_contract,"get_wallet_policy",json_object!({"wallet_pubkey":b.wallet_pubkey}),15)
+   .then(cb("on_sale_policy_view",json_object!({"token_id":token,"nonce":s.nonce,"sequence":s.policy_sequence}),30))
  }
  pub fn reconcile_sale_policy(&self,token_id:TokenId,nonce:U64)->Promise{let s=load(&token_id,nonce);self.read_sale_policy(token_id,s)}
  pub fn retry_sale_policy(&mut self,token_id:TokenId,nonce:U64)->Promise{enough_gas();let s=load(&token_id,nonce);self.start_sale_policy(token_id,s.state==SaleState::Freezing)}
@@ -127,7 +127,7 @@ impl Contract {
   add_credit(&s.seller,s.seller_net.0);change_liabilities(&mut c,s.seller_net.0,0);save_config(&c);
   self.transfer_key_unlocked(&token_id,&s.terms.buyer,None,Some("protected sale"));
   s.sold=true;s.current_holder=s.terms.buyer.clone();s.state=SaleState::UnlockPending;sales().insert(&token_id,&s);
-  emit_key_event("protected_sale",near_sdk::serde_json::json!({"token_id":token_id,"nonce":nonce,"seller":s.seller,"buyer":s.terms.buyer,"price":s.terms.price,"seller_net":s.seller_net,"royalty_bps":0}));
+  emit_key_event("protected_sale",json_object!({"token_id":token_id,"nonce":nonce,"seller":s.seller,"buyer":s.terms.buyer,"price":s.terms.price,"seller_net":s.seller_net,"royalty_bps":0}));
   self.start_sale_policy(token_id,false)
  }
  #[payable]

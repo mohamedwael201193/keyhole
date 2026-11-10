@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
-import { pillAccount, shortAccount } from "@/lib/near";
+import { compactAccount, shortAccount } from "@/lib/near";
 import { acct } from "@/lib/config";
 import { copyText } from "@/lib/copyText";
 
@@ -43,7 +43,7 @@ export function AccountControl() {
     return (
       <div className="acct" ref={acctRef}>
         {mismatch && <button type="button" className="cw warn" data-testid="wallet-mismatch" title={`MetaMask is on ${mismatch}, but this site is connected as ${accountId}. Reconnect to switch.`} onClick={() => { void disconnect().then(() => connect()); }}>MetaMask switched · reconnect</button>}
-        <button type="button" className="cw" aria-expanded={menu} aria-controls="acct-menu" data-testid="account" onClick={() => setMenu((v) => !v)} title={accountId}><span className="cw-full">{shortAccount(accountId, 4)}</span><span className="cw-short">{pillAccount(accountId)}</span></button>
+        <button type="button" className="cw" aria-expanded={menu} aria-controls="acct-menu" aria-label={accountId} data-testid="account" onClick={() => setMenu((v) => !v)} title={accountId}><span className="cw-avatar" aria-hidden="true">{accountId.replace(/[^a-z0-9]/gi, "").slice(0, 1).toUpperCase()}</span><span className="cw-full">{shortAccount(accountId, 4)}</span><span className="cw-short">{compactAccount(accountId)}</span></button>
         {menu && (
           <div id="acct-menu" className="acct-menu" role="menu" data-testid="account-menu">
             <p className="id" data-testid="account-id">{accountId}</p>
