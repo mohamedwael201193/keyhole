@@ -200,9 +200,11 @@ test("generator transition preserves historical migration, six owners and immuta
       { info: { call_id: "fixture-info" } },
     );
   assert.equal(w.info_call, "fixture-info");
+  // The production identity may already be v2.6 after a real release.
+  // Keep this negative case explicitly on the pre-upgrade contract identity.
   assert.throws(() =>
     promotedWorker(
-      id,
+      { ...id, contract: { ...id.contract, version: "2.5.0", wasm_sha256: e.before.code.sha256 } },
       {
         ctx: {
           snapshot: {
