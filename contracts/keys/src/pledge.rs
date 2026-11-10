@@ -98,7 +98,9 @@ fn principal_dispatches() -> LookupMap<TokenId, U64> { LookupMap::new(b"Pd".as_s
 pub struct PendingRegistration {
     pub nonce: U64, pub payer: AccountId, pub forwarded: U128, pub store_succeeded: Option<bool>,
 }
-fn registrations() -> LookupMap<TokenId, PendingRegistration> { LookupMap::new(b"Pr".as_slice()) }
+pub(crate) fn registrations() -> LookupMap<TokenId, PendingRegistration> { LookupMap::new(b"Pr".as_slice()) }
+fn registration_terminals()->LookupMap<TokenId,U64>{LookupMap::new(b"Pr26t".as_slice())}
+pub(crate) fn registration_busy(token:&TokenId)->bool{registrations().get(token).is_some_and(|r|registration_terminals().get(token)!=Some(r.nonce))}
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers = [borsh, json])]
 pub struct PendingPayout { pub nonce: U64, pub amount: U128 }
@@ -343,11 +345,12 @@ impl Contract {
     /// Payload/ABI follows OutLayer contract/src/wallet.rs store_wallet_policy:v2. No live call is made by tests.
     #[payable]
     pub fn register_collateral(&mut self, token_id: TokenId, wallet_pubkey: String, encrypted_data: String,
-        wallet_signature: String, version: u64, valid_until: u64) -> Promise {
+        wallet_signature: String, version: u64, valid_until: u64, expected_owner_id: AccountId, expected_owner_epoch: U64) -> Promise {
         enough_gas(); self.assert_minter(); self.assert_can_change_owner(&token_id);
         require_payout_account(&env::predecessor_account_id());
         let mut c = config_required();
-        require!(self.tokens.owner_by_id.get(&token_id).is_some(), "unknown token");
+        require!(self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&expected_owner_id), "collateral owner CAS mismatch");
+        require!(self.nft_settlement_epoch(token_id.clone()) == expected_owner_epoch, "collateral epoch CAS mismatch");
         require!(listings().get(&token_id).is_none(), "unlist first");
         let hex = wallet_pubkey.strip_prefix("ed25519:").unwrap_or_else(||env::panic_str("only Ed25519 collateral"));
         require!(hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)), "canonical wallet key required");
@@ -362,7 +365,7 @@ impl Contract {
             // Corrected artifact for SAME not-yet-eligible wallet, only after definite failed action.
             // New global nonce invalidates any old in-flight read. Original bond becomes backed pull credit.
             add_credit(&r.payer, COLLATERAL_STORAGE_DEPOSIT);
-            collateral().remove(&token_id); bound_wallets().remove(&wallet_pubkey); registrations().remove(&token_id);
+            collateral().remove(&token_id); bound_wallets().remove(&wallet_pubkey); registrations().remove(&token_id); registration_terminals().remove(&token_id);
         }
         require!(bound_wallets().get(&wallet_pubkey).is_none(), "wallet already bound");
         let b = CollateralBinding { wallet_pubkey: wallet_pubkey.clone(), encrypted_policy_hash: Base64VecU8(env::sha256(encrypted_data.as_bytes())), policy_version: U64(version), ready: false, policy_generation:U64(0) };
@@ -396,26 +399,29 @@ impl Contract {
         private_callback();
         let Some(r) = registrations().get(&token_id) else { return false; };
         if r.nonce != nonce { return false; }
+        if r.store_succeeded.is_none() { return false; }
+        registration_terminals().insert(&token_id,&nonce);
         let Some(mut b) = collateral().get(&token_id) else { return false; };
         let Some(v) = bounded_result(32_768) else { return false; };
         let Ok(policy) = near_sdk::serde_json::from_slice::<Option<PolicyView>>(&v) else { return false; };
         let mut c = config_required();
-        // A Boolean snapshot cannot prove this exact earlier store receipt is terminal,
-        // or account for its forwarded deposit. Lost callback => UNKNOWN, no new action.
-        if r.store_succeeded.is_none() { return false; }
+        // Terminal marker is nonce-scoped; stale callbacks cannot unlock a new install.
         if policy.as_ref().is_some_and(|p| policy_matches(p, &b)) {
-            b.ready = true; collateral().insert(&token_id, &b); registrations().remove(&token_id);
+            b.ready = true; collateral().insert(&token_id, &b); registrations().remove(&token_id); registration_terminals().remove(&token_id);
             change_liabilities(&mut c, 0, COLLATERAL_STORAGE_DEPOSIT); save_config(&c); return true;
         }
         if policy.is_none() && r.store_succeeded == Some(false) {
             // Both original provider receipt and authoritative absence are known. No unknown action can rebind later.
-            collateral().remove(&token_id); bound_wallets().remove(&b.wallet_pubkey); registrations().remove(&token_id);
+            collateral().remove(&token_id); bound_wallets().remove(&b.wallet_pubkey); registrations().remove(&token_id); registration_terminals().remove(&token_id);
             add_credit(&r.payer, COLLATERAL_STORAGE_DEPOSIT); // forwarded amount was already restored exactly once
         }
         false
     }
 
+    pub fn collateral_registration_protocol(&self) -> u32 { 2 }
+
     pub(crate) fn assert_token_idle(&self, token_id: &TokenId) {
+        require!(!registration_busy(token_id), "collateral provisioning pending: token locked");
         require!(sale::sales().get(token_id).is_none(), "protected sale pending: token locked");
         require!(loans().get(token_id).is_none(), "pledged: ownership and value operations locked");
         require!(transfer_calls().get(token_id).is_none(), "transfer-call pending: token locked");

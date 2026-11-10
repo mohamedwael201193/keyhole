@@ -251,35 +251,7 @@ mod host {
         send_full(signer, sk_str, receiver, actions).map(|(h, _)| h)
     }
 
-    /// Like `send`, also returning the final outcome JSON (for calls whose return value matters).
-    fn send_full(signer: &str, sk_str: &str, receiver: &str, actions: &[Action]) -> Result<(String, Value), Error> {
-        let raw = bs58::decode(sk_str.trim_start_matches("ed25519:")).into_vec().map_err(|_| err("signer", "bad key"))?;
-        let sk: [u8; 32] = raw[..32].try_into().unwrap();
-        let pk: [u8; 32] = raw[32..64].try_into().unwrap();
-        let pk_str = format!("ed25519:{}", bs58::encode(pk).into_string());
-        let (ak, e) = rpc::view_access_key(signer, &pk_str, "final");
-        if !e.is_empty() { return Err(err("signer", format!("access key: {}", e))); }
-        let ak: Value = serde_json::from_str(&ak).unwrap_or_default();
-        let nonce = ak.pointer("/nonce").or(ak.pointer("/result/nonce")).and_then(|v| v.as_u64()).ok_or_else(|| err("signer", "no nonce"))?;
-        let (b, e) = rpc::block("final");
-        if !e.is_empty() { return Err(err("rpc", e)); }
-        let b: Value = serde_json::from_str(&b).unwrap_or_default();
-        let h = b.pointer("/header/hash").or(b.pointer("/result/header/hash")).and_then(|v| v.as_str()).ok_or_else(|| err("rpc", "no block hash"))?;
-        let bh: [u8; 32] = bs58::decode(h).into_vec().ok().and_then(|v| v.try_into().ok()).ok_or_else(|| err("rpc", "bad block hash"))?;
-        let tx = encode_tx(signer, &pk, nonce + 1, receiver, &bh, actions);
-        let signed = sign_tx(&sk, &tx);
-        use base64::Engine;
-        let (r, e) = rpc::send_tx(&base64::engine::general_purpose::STANDARD.encode(&signed), "FINAL");
-        if !e.is_empty() { return Err(err("tx_failed", e.chars().take(300).collect::<String>())); }
-        let v: Value = serde_json::from_str(&r).unwrap_or_default();
-        let st = v.pointer("/status").or(v.pointer("/result/status")).cloned().unwrap_or_default();
-        if st.get("Failure").is_some() { return Err(err("tx_failed", st.to_string().chars().take(300).collect::<String>())); }
-        if let Some(e) = v.get("error") { return Err(err("tx_failed", e.to_string().chars().take(300).collect::<String>())); }
-        let hash = v.pointer("/transaction/hash").or(v.pointer("/result/transaction/hash")).or(v.pointer("/transaction_outcome/id"))
-            .and_then(|x| x.as_str()).map(|x| x.to_string())
-            .or_else(|| if !r.trim().is_empty() && !r.trim_start().starts_with('{') { Some(r.trim().trim_matches('"').to_string()) } else { None });
-        match hash { Some(h) if !h.is_empty() => Ok((h, v)), _ => Err(err("tx_failed", format!("no tx hash; rpc said: {}", r.chars().take(300).collect::<String>()))) }
-    }
+    include!("native_host.rs");
 
     fn iso(ms: u64) -> String {
         let s = ms / 1000;
@@ -478,6 +450,7 @@ mod host {
     }
 
     include!("guarded_host.rs");
+    include!("collateral_host.rs");
 
     /// USD value (micro) of `amount` of `token`, priced by a dry 1Click quote into USDC.
     fn usd_of(token: &str, amount: &str, refund: &str, now_ms: u64) -> Result<u64, Error> {
@@ -934,7 +907,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "guarded_revision":guarded::REVISION, "guarded_registry_hash":cfg("GUARDED_WORKER_HASH",""), "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","reconcile_minter_send","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -960,6 +933,12 @@ mod host {
             "withdraw" => op_withdraw(&input),
             "transfer" => op_transfer(&input),
             "loan_certificate" => op_loan_certificate(&input),
+            "prepare_collateral" => op_prepare_collateral(&input),
+            "collateral_quote" => op_collateral_quote(&input),
+            "withdraw_dry_run" => op_withdraw_dry_run(&input),
+            "provision_collateral" => op_provision_collateral(&input),
+            "reconcile_collateral" => op_reconcile_collateral(&input),
+            "reconcile_minter_send" => op_reconcile_minter_send(&input),
             "pledge_inventory" => op_pledge_inventory(&input),
             "reconcile_value_op" => op_reconcile_value(&input),
             "history" => op_history(&input),

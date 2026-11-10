@@ -1386,3 +1386,9 @@ pub mod guarded;
 pub mod ownership_sync;
 
 pub mod pledge_inventory;
+
+/// Audited enclave-only collateral provisioning.
+pub mod collateral;
+
+pub mod receipts;
+pub mod native_send;

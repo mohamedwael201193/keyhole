@@ -1,0 +1,36 @@
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+• done
+
+• Checking the host environment...
+• done
+
+• Generating ABI
+ │     Finished `dev` profile [unoptimized] target(s) in 0.08s
+• Extracting ABI...
+• done
+
+• Building contract
+ │    Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_worker_prov/contracts/keys)
+ │     Finished `release` profile [optimized] target(s) in 4.75s
+
+• Running an optimize for size post-step with wasm-opt ...
+    Finished wasm-opt -O in 846ms
+• done
+
+✓ Contract successfully built! (in CARGO_NEAR_BUILD_ENVIRONMENT=host)
+     -                Binary: /workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/near/keyhole_keys.wasm
+     -                  Size: 493.8 KB (493810 bytes)
+     - SHA-256 checksum hex : 3ea74a96bf6d04e6407c6793d3616029e30c84086942917fbeaacdcbcd429db4
+     - SHA-256 checksum bs58: 5DaENhxzYvfbJUjpC7TP9MpYeU9jpiTmYoj3tM8BRZ5D
+     -                   ABI: /workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/near/keyhole_keys_abi.json
+    Finished cargo near build in 5s
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked --no-embed-abi --env 'RUSTFLAGS=--remap-path-prefix=/home/box/.cargo=/cargo --remap-path-prefix=/workspace/near_hackathon/wt_worker_prov/contracts/keys=/keyhole-contract'
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /home/box/.cargo/bin/cargo-near near self-update
+/home/box/.cache/keyhole/binaryen-version_123/bin/wasm-opt: OK
+54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a  target/near/keyhole_keys.wasm

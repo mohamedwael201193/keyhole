@@ -1,0 +1,327 @@
+{
+  "at": "2026-11-10T20:14:55.897632+02:00",
+  "block": "7uYU2U1qRcYDzkEzTA1dASjgiUyRq9C1E8pE1kEzzVz6",
+  "views": [
+    {
+      "method": "get_pricing_full",
+      "args": {},
+      "value": {
+        "base_fee": "1000000000000000000000",
+        "per_million_instructions_fee": "100000000000000",
+        "per_ms_fee": "100000000000000000",
+        "per_compile_ms_fee": "100000000000000000",
+        "base_fee_usd": "1000",
+        "per_million_instructions_fee_usd": "1",
+        "per_sec_fee_usd": "1",
+        "per_compile_ms_fee_usd": "10"
+      }
+    },
+    {
+      "method": "get_project_pricing",
+      "args": {
+        "project_id": "keyhole-devmo.near/keyhole"
+      },
+      "value": null
+    },
+    {
+      "method": "list_versions",
+      "args": {
+        "project_id": "keyhole-devmo.near/keyhole",
+        "limit": 100
+      },
+      "value": [
+        {
+          "wasm_hash": "8136a3fdd21505ddcc4bf23862de2fecaa468c7508ac8aa88b0129e1b350a530",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/8136a3fdd21505ddcc4bf23862de2fecaa468c7508ac8aa88b0129e1b350a530.wasm",
+              "hash": "8136a3fdd21505ddcc4bf23862de2fecaa468c7508ac8aa88b0129e1b350a530",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793124564786701492,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "dd5fbaa1007525943a7198d23642387ce4e9f4474b6ae97501caf20df2542cd1",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/dd5fbaa1007525943a7198d23642387ce4e9f4474b6ae97501caf20df2542cd1.wasm",
+              "hash": "dd5fbaa1007525943a7198d23642387ce4e9f4474b6ae97501caf20df2542cd1",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793124827945788721,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "0de7f1b7c3742690069c2ddbbdc4ab0a1d8982f320d91bb74161e8288d6b5fae",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/0de7f1b7c3742690069c2ddbbdc4ab0a1d8982f320d91bb74161e8288d6b5fae.wasm",
+              "hash": "0de7f1b7c3742690069c2ddbbdc4ab0a1d8982f320d91bb74161e8288d6b5fae",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793125114485044947,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "42a1a1adeb38f33d7d0b386cc4f617836e182ec8a17566dceace2698df0e3805",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/42a1a1adeb38f33d7d0b386cc4f617836e182ec8a17566dceace2698df0e3805.wasm",
+              "hash": "42a1a1adeb38f33d7d0b386cc4f617836e182ec8a17566dceace2698df0e3805",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793125194710051071,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "25eac768ae01452754adcab7429bfade7b9a548c95a8fe427a878ee2028e167e",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/25eac768ae01452754adcab7429bfade7b9a548c95a8fe427a878ee2028e167e.wasm",
+              "hash": "25eac768ae01452754adcab7429bfade7b9a548c95a8fe427a878ee2028e167e",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793125262996458465,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "3ea56ee6078f019ba4c2880d0603dc01f30dad7a3716db158515a5accda8544c",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/3ea56ee6078f019ba4c2880d0603dc01f30dad7a3716db158515a5accda8544c.wasm",
+              "hash": "3ea56ee6078f019ba4c2880d0603dc01f30dad7a3716db158515a5accda8544c",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793125350169140527,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "a35bf5d59a5dc4fea49b747e5ce9a5c44afce6cad9f5f82ff5b88b35a9c8725e",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/a35bf5d59a5dc4fea49b747e5ce9a5c44afce6cad9f5f82ff5b88b35a9c8725e.wasm",
+              "hash": "a35bf5d59a5dc4fea49b747e5ce9a5c44afce6cad9f5f82ff5b88b35a9c8725e",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793125443035726518,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c.wasm",
+              "hash": "f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793125744924255243,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a.wasm",
+              "hash": "b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793232195016244950,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78.wasm",
+              "hash": "38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793479126582646206,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2.wasm",
+              "hash": "67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793493384227645430,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693.wasm",
+              "hash": "6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793504156425243521,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "452df1fd4f69fac618da0a5c11f9b8b5a9f7b0c1c95d5785850dd4746c5c134d",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/452df1fd4f69fac618da0a5c11f9b8b5a9f7b0c1c95d5785850dd4746c5c134d.wasm",
+              "hash": "452df1fd4f69fac618da0a5c11f9b8b5a9f7b0c1c95d5785850dd4746c5c134d",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793639056067214423,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381.wasm",
+              "hash": "f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793685115416848023,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4.wasm",
+              "hash": "09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793691564309318031,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e.wasm",
+              "hash": "a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793702679436683022,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "cff9fd3c4937ad5255cef8cda6f269d62f564af72cea65950471b94459aeb1bc",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/cff9fd3c4937ad5255cef8cda6f269d62f564af72cea65950471b94459aeb1bc.wasm",
+              "hash": "cff9fd3c4937ad5255cef8cda6f269d62f564af72cea65950471b94459aeb1bc",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793732768542747046,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "94c355ffa318ec0e6cafc5268afb6968c91cad5c99ebd343e14f9b85f2bca9ed",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/94c355ffa318ec0e6cafc5268afb6968c91cad5c99ebd343e14f9b85f2bca9ed.wasm",
+              "hash": "94c355ffa318ec0e6cafc5268afb6968c91cad5c99ebd343e14f9b85f2bca9ed",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1793748379518589672,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b.wasm",
+              "hash": "ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1794025386024424332,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8.wasm",
+              "hash": "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1794078134002571649,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c.wasm",
+              "hash": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1794181573021277123,
+          "is_active": false
+        },
+        {
+          "wasm_hash": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+          "source": {
+            "WasmUrl": {
+              "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41.wasm",
+              "hash": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+              "build_target": "wasm32-wasip2"
+            }
+          },
+          "added_at": 1794197126712396778,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "method": "get_project",
+      "args": {
+        "project_id": "keyhole-devmo.near/keyhole"
+      },
+      "value": {
+        "uuid": "p000000000000004b",
+        "owner": "keyhole-devmo.near",
+        "name": "keyhole",
+        "project_id": "keyhole-devmo.near/keyhole",
+        "active_version": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+        "created_at": 1793124564786701492,
+        "storage_deposit": "2670000000000000000000"
+      }
+    }
+  ],
+  "balance": {
+    "owner": "keyhole-devmo.near",
+    "nonce": 1,
+    "initial_balance": "1288694",
+    "spent": "774037",
+    "reserved": "0",
+    "available": "514657",
+    "last_used_at": "2026-11-10T17:31:11.901725+00:00"
+  },
+  "gas_price": {
+    "gas_price": "100000000"
+  }
+}

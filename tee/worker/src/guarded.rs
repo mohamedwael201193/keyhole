@@ -273,7 +273,7 @@ impl Certificate {
         }Ok(())
     }
 }
-/// Provisioned only by a separate, approved confinement audit; no public writer or automatic legacy backfill.
+/// Written only by the signature-verified collateral provisioner after exact FINAL registration; no automatic legacy backfill.
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Eligibility {pub revision:String,pub wallet_pubkey:String,pub policy_hash:String,pub policy_version:String,pub authority_audit_sha256:String,pub no_presigned_authorities:bool}

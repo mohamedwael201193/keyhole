@@ -4,12 +4,12 @@ import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-const section = readme.split("## Pledge reproduction — live v2.5 contract, guarded worker not published")[1];
+const section = readme.split("## Pledge reproduction —")[1];
 const fence = section.split("```bash\n")[1].split("```")[0];
 test("full reproduction builds the untracked callback fixture before the sandbox", () => {
   const build = fence.indexOf("./build.sh --features callback-failure-fixture");
   const copy = fence.indexOf("cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm");
-  const normal = fence.indexOf("&& ./build.sh && cmp target/near/keyhole_keys.wasm release/v2.5/keyhole_keys.wasm", copy);
+  const normal = fence.indexOf("&& ./build.sh && cmp target/near/keyhole_keys.wasm release/v2.6/keyhole_keys.wasm", copy);
   const sandbox = fence.indexOf("cd contracts/keys-sandbox");
   assert.ok(build >= 0 && copy > build && normal > copy && sandbox > normal);
   assert.match(fence, /build-policy-mock\.sh && cargo test --locked -- --test-threads=1/);
@@ -37,4 +37,12 @@ test("all current README claim-count rows match actual offline verification", ()
   assert.ok(readme.includes(`${total} claims: ${pass} PASS, 0 FAIL, 0 ERROR, ${skip} SKIP`));
   assert.ok(readme.includes(`Judge-claims machine (${total} claims)`));
   assert.ok(readme.includes(`**${total}**: offline ${pass} PASS, 0 FAIL, 0 ERROR, ${skip} SKIP`));
+});
+
+test("live and source candidates stay distinct and presentation has no visible dates", () => {
+  const visible = readme.replace(/\]\([^\n]*?\)/g, "](...)");
+  assert.doesNotMatch(visible, /\b20\d{2}-\d{2}-\d{2}\b/);
+  assert.doesNotMatch(visible, /health FAIL|result remains the FAIL|mainnet remains v2\.4|v2\.4[^\n]*live now/);
+  assert.match(readme, /Contract source candidate \*\*2\.6\.0\*\*, not deployed/);
+  assert.match(readme, /worker-provisioning\/R2\.md/);
 });

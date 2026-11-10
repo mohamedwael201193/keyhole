@@ -19,6 +19,12 @@ let infoCache: { at: number; body: unknown } | null = null;
  * replay checks happen inside the TEE.
  */
 export async function POST(req: NextRequest) {
+  // Admission barrier covers both /api/worker and its /api/keyhole alias, even
+  // cached info. Deploy and exercise it BEFORE an approved cutover starts.
+  if (process.env.KEYHOLE_MAINTENANCE === "1") return NextResponse.json(
+    { ok: false, error: { code: "maintenance" } },
+    { status: 503, headers: { "cache-control": "no-store", "retry-after": "60" } },
+  );
   const ip = clientIp(req.headers);
   const rl = perIp(ip);
   if (!rl.ok) return NextResponse.json({ ok: false, error: { code: "rate_limited", retry_after: rl.retryAfter } }, { status: 429, headers: { "retry-after": String(rl.retryAfter) } });

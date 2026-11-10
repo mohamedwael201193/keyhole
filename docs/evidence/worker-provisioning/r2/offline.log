@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: candidate equality requires rebuilt bytes and every independent mirror
+ok 1 - candidate equality requires rebuilt bytes and every independent mirror
+  ---
+  duration_ms: 0.682645
+  type: 'test'
+  ...
+# Subtest: a changed worker cannot pass with stale identity or manifest
+ok 2 - a changed worker cannot pass with stale identity or manifest
+  ---
+  duration_ms: 0.200479
+  type: 'test'
+  ...
+# Subtest: wrong size or any stale candidate mirror fails
+ok 3 - wrong size or any stale candidate mirror fails
+  ---
+  duration_ms: 0.163069
+  type: 'test'
+  ...
+# Subtest: resume every atomic registry milestone without repeating successful batches
+ok 4 - resume every atomic registry milestone without repeating successful batches
+  ---
+  duration_ms: 1.954298
+  type: 'test'
+  ...
+# Subtest: interruption before upload and secret merge remains in maintenance
+ok 5 - interruption before upload and secret merge remains in maintenance
+  ---
+  duration_ms: 0.191218
+  type: 'test'
+  ...
+# Subtest: UNKNOWN, missing barrier, partial registry or namespace mismatch never resumes sends
+ok 6 - UNKNOWN, missing barrier, partial registry or namespace mismatch never resumes sends
+  ---
+  duration_ms: 0.142148
+  type: 'test'
+  ...
+# Subtest: info alone cannot reopen; exact guarded runtime and client restoration gates are mandatory
+ok 7 - info alone cannot reopen; exact guarded runtime and client restoration gates are mandatory
+  ---
+  duration_ms: 0.976469
+  type: 'test'
+  ...
+# Subtest: simple payload matches official Borsh variant, path, optional content and MIME
+ok 8 - simple payload matches official Borsh variant, path, optional content and MIME
+  ---
+  duration_ms: 1.762261
+  type: 'test'
+  ...
+# Subtest: interrupted multi-chunk upload retains same nonce, offsets and exact bytes
+ok 9 - interrupted multi-chunk upload retains same nonce, offsets and exact bytes
+  ---
+  duration_ms: 6.350181
+  type: 'test'
+  ...
+# Subtest: chunk threshold and fixed nonce reject accidental invalid journals
+ok 10 - chunk threshold and fixed nonce reject accidental invalid journals
+  ---
+  duration_ms: 3.594762
+  type: 'test'
+  ...
+# Subtest: offline batch uses distinct new team identities and exact tiny amounts
+ok 11 - offline batch uses distinct new team identities and exact tiny amounts
+  ---
+  duration_ms: 1.038328
+  type: 'test'
+  ...
+# Subtest: ordinary two-hour terms, grace, fresh certificate and UNKNOWN stop are explicit
+ok 12 - ordinary two-hour terms, grace, fresh certificate and UNKNOWN stop are explicit
+  ---
+  duration_ms: 1.058692
+  type: 'test'
+  ...
+# Subtest: new accounts cannot exceed native account identifier limit
+ok 13 - new accounts cannot exceed native account identifier limit
+  ---
+  duration_ms: 0.22252
+  type: 'test'
+  ...
+# Subtest: gross loan-stage attachments reconcile exactly without relabeling capital as fees
+ok 14 - gross loan-stage attachments reconcile exactly without relabeling capital as fees
+  ---
+  duration_ms: 0.20705
+  type: 'test'
+  ...
+# Subtest: first actions batch permanent prepaid slots without shrinking principal or refundable loan bond
+ok 15 - first actions batch permanent prepaid slots without shrinking principal or refundable loan bond
+  ---
+  duration_ms: 0.203271
+  type: 'test'
+  ...
+# Subtest: two ordinary exits preserve enough same-account USDC for the second fixed-floor loan
+ok 16 - two ordinary exits preserve enough same-account USDC for the second fixed-floor loan
+  ---
+  duration_ms: 1.02073
+  type: 'test'
+  ...
+# Subtest: full pilot separately counts worker admission reserve and optional pinned-minter onboarding
+ok 17 - full pilot separately counts worker admission reserve and optional pinned-minter onboarding
+  ---
+  duration_ms: 0.23801
+  type: 'test'
+  ...
+# Subtest: publishing plan retires each old version exactly once, without recreating project
+ok 18 - publishing plan retires each old version exactly once, without recreating project
+  ---
+  duration_ms: 2.613077
+  type: 'test'
+  ...
+# Subtest: planner refuses changed snapshot, unsafe hashes, duplicate removals and removing candidate
+ok 19 - planner refuses changed snapshot, unsafe hashes, duplicate removals and removing candidate
+  ---
+  duration_ms: 0.395279
+  type: 'test'
+  ...
+# Subtest: saved original hash verifies canonical signature without loading any key
+ok 20 - saved original hash verifies canonical signature without loading any key
+  ---
+  duration_ms: 3.302162
+  type: 'test'
+  ...
+# Subtest: changed original bytes/signature cannot be journalled as genuine
+ok 21 - changed original bytes/signature cannot be journalled as genuine
+  ---
+  duration_ms: 1.138618
+  type: 'test'
+  ...
+# Subtest: unsupported owner/key/version or malformed saved file fails closed
+ok 22 - unsupported owner/key/version or malformed saved file fails closed
+  ---
+  duration_ms: 0.813449
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 88.405857

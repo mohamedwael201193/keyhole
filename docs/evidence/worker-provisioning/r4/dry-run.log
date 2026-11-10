@@ -1,0 +1,9 @@
+DRY_RUN ONLY account=keyhole-devmo.near
+PASS candidate 54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a bytes=487260
+PASS rollback contracts/keys/release/v2.5/keyhole_keys.wasm 28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce
+PASS finalized before block=223976368 NFTs=6 epochs=6 credit_accounts=8 raw_rows=47
+PLAN exactly 1 DeployContract; 0 new/migrate/migrate_pledge; no signing or broadcast
+POST original FINAL receipt graph + exact code + all raw rows/NFTs/owners/epochs/credits/config equality
+FAIL maintenance_and_submitter_drain: required before execution
+FAIL native_all_in_approval: required before execution
+RESULT NOT_AUTHORIZED; mainnet readiness=false; candidates remain non-live

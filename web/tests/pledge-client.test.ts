@@ -76,7 +76,11 @@ describe("pledgeClient method surface (oracle-free contract candidate)", () => {
     expect(buildRepayLoan({ token_id: "0", nonce: "1" }, terms.repayment).deposit).toBe(terms.repayment);
     expect(buildCancelLoan({ token_id: "0", nonce: "1" }).method).toBe("cancel_loan");
     expect(buildClaimDefault({ token_id: "0", nonce: "1", receiver_id: "lender.near" }).method).toBe("claim_default");
-    expect(buildRegisterCollateral({ token_id: "0", wallet_pubkey: "ed25519:ab", encrypted_data: "x", wallet_signature: "ab".repeat(64), version: 1, valid_until: 4000000000 }, "100000000000000000000000").method).toBe(
+    const cas = { token_id: "0", wallet_pubkey: "ed25519:ab", encrypted_data: "x", wallet_signature: "ab".repeat(64), version: 1, valid_until: 4000000000, expected_owner_id: "alice.near", expected_owner_epoch: "4" };
+    expect(buildRegisterCollateral(cas, "100000000000000000000000").args).toEqual(cas);
+    for (const epoch of ["", "-1", "04", "18446744073709551616"]) expect(() => buildRegisterCollateral({...cas,expected_owner_epoch:epoch}, "100000000000000000000000")).toThrow(/epoch/);
+    expect(() => buildRegisterCollateral({...cas,expected_owner_id:""}, "100000000000000000000000")).toThrow(/owner/);
+    expect(buildRegisterCollateral({ token_id: "0", wallet_pubkey: "ed25519:ab", encrypted_data: "x", wallet_signature: "ab".repeat(64), version: 1, valid_until: 4000000000, expected_owner_id: "alice.near", expected_owner_epoch: "4" }, "100000000000000000000000").method).toBe(
       "register_collateral",
     );
   });

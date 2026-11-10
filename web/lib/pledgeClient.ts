@@ -128,6 +128,7 @@ export type FundLoanArgs = {
 };
 export type LoanRefArgs = { token_id: TokenId; nonce: U64 };
 export type ClaimDefaultArgs = { token_id: TokenId; nonce: U64; receiver_id: AccountId };
+/** Source v2.6 minter ABI; provisioning also checks protocol 2 inside the worker. */
 export type RegisterCollateralArgs = {
   token_id: TokenId;
   wallet_pubkey: string;
@@ -135,6 +136,8 @@ export type RegisterCollateralArgs = {
   wallet_signature: string;
   version: number;
   valid_until: number;
+  expected_owner_id: AccountId;
+  expected_owner_epoch: U64;
 };
 
 /** Build a FunctionCall payload for open_loan. Does not send. */
@@ -156,6 +159,7 @@ export function buildClaimDefault(args: ClaimDefaultArgs) {
 }
 export function buildRegisterCollateral(args: RegisterCollateralArgs, policyAndBindingDeposit: U128) {
   if (!/^\d+$/.test(policyAndBindingDeposit) || BigInt(policyAndBindingDeposit) <= 0n) throw Error("Exact provider plus binding deposit required");
+  if (!args.expected_owner_id || !/^(0|[1-9]\d*)$/.test(args.expected_owner_epoch ?? "") || BigInt(args.expected_owner_epoch) > 18446744073709551615n) throw Error("Final owner and exact u64 ownership epoch required for collateral CAS");
   return { method: "register_collateral" as const, args, deposit: policyAndBindingDeposit, gas: "200000000000000" };
 }
 

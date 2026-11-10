@@ -1,0 +1,7 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s
+     Running tests/upgrade.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/upgrade-c470926f681c21e1)
+
+running 1 test
+test v2_6_plain_code_upgrade_preserves_six_live_nfts_owners_and_pledge_state ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 9.42s

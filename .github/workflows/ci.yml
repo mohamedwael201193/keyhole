@@ -34,12 +34,13 @@ jobs:
       - name: count passing tests
         run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/keys-unit.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
-      - name: source rebuilds to the committed v2.5 release wasm
+      - name: source rebuilds to the committed v2.6 candidate wasm
         run: |
           (cd release && sha256sum -c SHA256SUMS)
           ./build.sh >/dev/null
+          node ../../scripts/gen-identity.mjs --contract-candidate --check
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
-          want=$(grep ' v2.5/' release/SHA256SUMS | cut -d' ' -f1)
+          want=$(grep ' v2.6/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
       - name: build sandbox-only callback failure fixture (never deploy)
         run: |
@@ -60,7 +61,7 @@ jobs:
         run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/sandbox.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - name: deployed wasm matches on-chain code_hash
         working-directory: .
-        run: ./judge/1-contract.sh
+        run: ./judge/1-contract.sh --strict
   worker:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
@@ -77,9 +78,11 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings
       - name: lint the WASI-only custody host (native cfg excludes it)
         run: cargo clippy --locked --target wasm32-wasip2 -- -D warnings
-      - name: reproducible wasm, compared with the deployed hash
+      - name: reproducible wasm equals candidate bytes; live hash is separate
         run: |
           got=$(./build.sh)
+          node ../../scripts/check-worker-candidate.mjs
+          node --test ../../scripts/check-worker-candidate.test.mjs
           want=$(tr -d '[:space:]' < DEPLOYED_SHA256)
           echo "built    $got"
           echo "deployed $want"
@@ -125,6 +128,8 @@ jobs:
         run: node --test judge/tx-outcome.test.mjs
       - name: strict recorded-refusal predicate
         run: python3 judge/receipt_proof_test.py
+      - name: strict rebuild semantics and publication recovery regressions
+        run: node --test judge/contract-rebuild.test.mjs scripts/pledge/*.test.mjs scripts/release/*.test.mjs
       - name: primary judge checkout command
         run: node --test judge/checkout-command.test.mjs
       - name: full reproduction prepares sandbox fixtures and compiles WASI
@@ -141,7 +146,7 @@ jobs:
       # docs/evidence/oneclick-sol holds 1Click's own public quote signatures (ed25519:…), kept so the quotes stay verifiable
       - name: no secrets or keys committed
         run: |
-          ! git grep -nE 'wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|eyJhbGci[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE' -- . ':!cli/package-lock.json' ':!docs/evidence/oneclick-sol/*.json'
+          ! git grep -lE 'wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|eyJhbGci[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE' -- . ':!cli/package-lock.json' ':!docs/evidence/oneclick-sol/*.json'
       - name: source tarball identity matches identity.json (worker wasm + contract code hash)
         run: |
           python3 - <<'PY'
@@ -156,6 +161,8 @@ jobs:
           packed = json.loads(tf.extractfile(member).read())
           assert packed["worker"]["wasm_sha256"] == live["worker"]["wasm_sha256"], (packed["worker"]["wasm_sha256"], live["worker"]["wasm_sha256"])
           assert packed["contract"]["code_hash"] == live["contract"]["code_hash"], (packed["contract"]["code_hash"], live["contract"]["code_hash"])
+          assert packed.get("worker_candidate") == live.get("worker_candidate"), "source bundle worker candidate drift"
+          assert packed.get("contract_candidate") == live.get("contract_candidate"), "source bundle contract candidate drift"
           print(f"OK source@{man['commit'][:12]} worker={live['worker']['wasm_sha256'][:8]} contract={live['contract']['code_hash'][:8]}")
           PY
   web:

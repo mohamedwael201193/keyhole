@@ -1,0 +1,66 @@
+{
+  "status": "local-source-validation-not-mainnet-authorization",
+  "rust_trees_unchanged_from": "240db78d985327d2fd7a878acb2c0aad5b0af3ae",
+  "worker": {
+    "pass": 656,
+    "fail": 0,
+    "sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+    "bytes": 1085333
+  },
+  "contract": {
+    "pass": 306,
+    "fail": 0,
+    "sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "bytes": 487260
+  },
+  "sandbox": {
+    "pass": 59,
+    "fail": 0,
+    "ignored": 1
+  },
+  "node_judge_planners_equality_and_release": {
+    "pass": 112,
+    "fail": 0
+  },
+  "python_receipts": {
+    "pass": 9,
+    "fail": 0
+  },
+  "cli": {
+    "pass": 63,
+    "fail": 0
+  },
+  "web": {
+    "pass": 1785,
+    "files": 99,
+    "lint_errors": 0,
+    "lint_existing_warnings": 10,
+    "types": "PASS",
+    "build": "PASS"
+  },
+  "mainnet_readiness": false,
+  "mainnet_transactions": 0,
+  "real_signatures": 0,
+  "paid_calls": 0,
+  "credential_access": false,
+  "claims": {
+    "total": 584,
+    "strict_pass": 584,
+    "offline_pass": 290,
+    "offline_skip": 294,
+    "fail": 0,
+    "error": 0
+  },
+  "two_builds": "R2 identical hashes retained: no Rust or Wasm tree changed in R3; no new rebuild is claimed",
+  "live_judge": {
+    "pass": 9,
+    "fail": 0,
+    "skip": 0
+  },
+  "recorded_attestation_rows": {
+    "ok": 26
+  },
+  "source_commit": "3587b6704c68cf6835fd5102822ba5dfb4f94662",
+  "source_archive_sha256": "fb7ed352a846f748effc93b7b547c13e631939642d09b3cb55bb26309e1c0887",
+  "source_archive_files": 1031
+}

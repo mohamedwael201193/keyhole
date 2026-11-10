@@ -27,7 +27,7 @@ async fn ui_setup()->Result<E>{
  let pk=SigningKey::from_bytes(&[7;32]).verifying_key().to_bytes();
  c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"custody_contract":mock.id(),"network":"sandbox"})).max_gas().transact().await?.into_result()?;
  c.call("set_lending_enabled").args_json(json!({"enabled":true})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
- minter.call(c.id(),"register_collateral").args_json(json!({"token_id":UI_TOKEN,"wallet_pubkey":format!("ed25519:{}","ab".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ minter.call(c.id(),"register_collateral").args_json(json!({"token_id":UI_TOKEN,"wallet_pubkey":format!("ed25519:{}","ab".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64,"expected_owner_id":alice.id(),"expected_owner_epoch":"0"})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&c,"get_collateral_binding",json!({"token_id":UI_TOKEN})).await["ready"],true);
  assert_eq!(view(&c,"payout_account_registered",json!({"account_id":alice.id()})).await,false);
  assert_eq!(view(&c,"payout_account_registered",json!({"account_id":lender.id()})).await,false);

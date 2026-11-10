@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: offline batch uses distinct new team identities and exact tiny amounts
+ok 1 - offline batch uses distinct new team identities and exact tiny amounts
+  ---
+  duration_ms: 1.64201
+  ...
+# Subtest: ordinary two-hour terms, grace, fresh certificate and UNKNOWN stop are explicit
+ok 2 - ordinary two-hour terms, grace, fresh certificate and UNKNOWN stop are explicit
+  ---
+  duration_ms: 0.287676
+  ...
+# Subtest: new accounts cannot exceed native account identifier limit
+ok 3 - new accounts cannot exceed native account identifier limit
+  ---
+  duration_ms: 0.217499
+  ...
+# Subtest: gross loan-stage attachments reconcile exactly without relabeling capital as fees
+ok 4 - gross loan-stage attachments reconcile exactly without relabeling capital as fees
+  ---
+  duration_ms: 0.192182
+  ...
+# Subtest: first actions batch permanent prepaid slots without shrinking principal or refundable loan bond
+ok 5 - first actions batch permanent prepaid slots without shrinking principal or refundable loan bond
+  ---
+  duration_ms: 0.284883
+  ...
+# Subtest: two ordinary exits preserve enough same-account USDC for the second fixed-floor loan
+ok 6 - two ordinary exits preserve enough same-account USDC for the second fixed-floor loan
+  ---
+  duration_ms: 0.884657
+  ...
+# Subtest: full pilot separately counts worker admission reserve and optional pinned-minter onboarding
+ok 7 - full pilot separately counts worker admission reserve and optional pinned-minter onboarding
+  ---
+  duration_ms: 0.222936
+  ...
+# Subtest: publishing plan retires each old version exactly once, without recreating project
+ok 8 - publishing plan retires each old version exactly once, without recreating project
+  ---
+  duration_ms: 1.950155
+  ...
+# Subtest: planner refuses changed snapshot, unsafe hashes, duplicate removals and removing candidate
+ok 9 - planner refuses changed snapshot, unsafe hashes, duplicate removals and removing candidate
+  ---
+  duration_ms: 0.283922
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 141.884877

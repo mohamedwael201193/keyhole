@@ -1,0 +1,62 @@
+   Compiling keyhole-worker v0.1.0 (/workspace/near_hackathon/wt_worker_prov/tee/worker)
+   Compiling keyhole-keys-sandbox v0.1.0 (/workspace/near_hackathon/wt_worker_prov/contracts/keys-sandbox)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.53s
+     Running tests/pledge.rs (/workspace/near_hackathon/upgrade/sandbox-target/debug/deps/pledge-249bff5fe19e1856)
+
+running 27 tests
+test actual_failed_native_cashout_and_lost_callback_stays_unknown_not_double_credited ... FAILED
+test actual_failed_registration_refunds_forwarded_deposit_and_allows_corrected_retry ... ok
+test actual_failed_resolver_has_permissionless_provisional_timeout_not_economic_rollback ... FAILED
+test actual_lost_freeze_callback_stays_unknown_and_cannot_dispatch_an_opposite_command ... FAILED
+test actual_lost_registration_callback_stays_unknown_after_successful_provider ... FAILED
+test actual_lost_thaw_and_lost_payout_callbacks_preserve_lien_and_native_liabilities ... FAILED
+test admission_and_pledge_both_receipt_orderings_are_serialized ... ok
+test admission_storage_is_bounded_and_stale_finish_cannot_unlock_new_op ... ok
+test boolean_provider_freeze_thaw_then_next_freeze_uses_monotonic_local_sequence ... ok
+test captured_v24_state_migrates_without_reclassifying_legacy_balance ... ok
+test deleted_payout_recipient_restores_exact_lender_credit_on_real_runtime ... ok
+test failed_principal_cashout_restores_borrower_credit_without_starting_debt ... ok
+test guarded_layer::guarded_worker_cross_layer_default_failures_and_new_holder_exit ... ok
+test guarded_layer::guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a ... ok
+test guarded_layer::ui_harness::serve_ui_sandbox ... ignored, opt-in loopback UI harness; intentionally waits for real UI actions
+test guarded_layer::ui_harness::ui_bridge_authenticates_real_fullaccess_and_keeps_inventory_holder_only ... ok
+test guarded_layer::ui_harness::ui_bridge_certificate_uses_final_clock_and_exact_template ... ok
+test guarded_layer::ui_harness::ui_bridge_transaction_reports_actual_native_signer ... ok
+test measured_max_identifier_cancel_and_default_paths_release_storage ... ok
+test measured_max_identifier_loan_storage_and_terminal_cleanup ... ok
+test measured_max_identifier_repaid_lender_cashout_unknown ... ok
+test native_principal_delivery_not_funding_starts_the_real_clock ... ok
+test prepaid_slots_join_first_loan_actions_atomically_and_preserve_full_terminal_credits ... ok
+test sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked ... ok
+test sealed_loan_repay_unlock_and_native_credit_conservation ... ok
+test successful_principal_transfer_with_lost_callback_never_starts_debt_from_a_guess ... ok
+test token_transfer_call_lock_refuses_reentrant_loan_then_resolves_cleanly ... ok
+
+failures:
+
+---- actual_failed_native_cashout_and_lost_callback_stays_unknown_not_double_credited stdout ----
+Error: No such file or directory (os error 2)
+
+---- actual_failed_resolver_has_permissionless_provisional_timeout_not_economic_rollback stdout ----
+Error: No such file or directory (os error 2)
+
+---- actual_lost_freeze_callback_stays_unknown_and_cannot_dispatch_an_opposite_command stdout ----
+Error: No such file or directory (os error 2)
+
+---- actual_lost_registration_callback_stays_unknown_after_successful_provider stdout ----
+Error: No such file or directory (os error 2)
+
+---- actual_lost_thaw_and_lost_payout_callbacks_preserve_lien_and_native_liabilities stdout ----
+Error: No such file or directory (os error 2)
+
+
+failures:
+    actual_failed_native_cashout_and_lost_callback_stays_unknown_not_double_credited
+    actual_failed_resolver_has_permissionless_provisional_timeout_not_economic_rollback
+    actual_lost_freeze_callback_stays_unknown_and_cannot_dispatch_an_opposite_command
+    actual_lost_registration_callback_stays_unknown_after_successful_provider
+    actual_lost_thaw_and_lost_payout_callbacks_preserve_lien_and_native_liabilities
+
+test result: FAILED. 21 passed; 5 failed; 1 ignored; 0 measured; 0 filtered out; finished in 349.89s
+
+error: test failed, to rerun pass `--test pledge`
