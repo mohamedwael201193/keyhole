@@ -1,7 +1,7 @@
 name: ci
 on:
   push:
-    branches: [main]
+    branches: [main, feat/worker-pledge-admission]
   pull_request:
 # Runs on GitHub-hosted runners. Only pushes and same-repo PRs run; fork PRs are skipped and there is no pull_request_target.
 permissions:
@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: contracts/keys } }
-    # Retain the historical release toolchain home. v2.5 build.sh remaps registry/crate
-    # paths and omits optional embedded ABI; the off-chain ABI JSON is still generated.
+    # Retain the historical release toolchain home; build.sh remaps crate/registry paths
+    # and omits optional embedded ABI while still generating off-chain ABI JSON.
     env:
       CARGO_HOME: /home/box/.cargo
     steps:
@@ -61,6 +61,8 @@ jobs:
       - name: count passing tests
         run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings
+      - name: lint the WASI-only custody host (native cfg excludes it)
+        run: cargo clippy --locked --target wasm32-wasip2 -- -D warnings
       - name: reproducible wasm, compared with the deployed hash
         run: |
           got=$(./build.sh)

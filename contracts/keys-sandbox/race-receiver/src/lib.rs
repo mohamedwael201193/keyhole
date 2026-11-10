@@ -29,9 +29,12 @@ impl Receiver {
     /// Always asks for the key to be returned, whatever the inner transfer did.
     #[private]
     pub fn after(&mut self) -> bool {
-        let success = matches!(env::promise_result(0), near_sdk::PromiseResult::Successful(_));
+        let result=env::promise_result(0);
+        if let near_sdk::PromiseResult::Successful(bytes)=&result {env::storage_write(b"attack_result",bytes);}
+        let success = matches!(result, near_sdk::PromiseResult::Successful(_));
         env::storage_write(b"attack_success", &[u8::from(success)]); true
     }
+    pub fn attack_result(&self)->Option<near_sdk::serde_json::Value>{env::storage_read(b"attack_result").and_then(|b|near_sdk::serde_json::from_slice(&b).ok())}
     pub fn attack_succeeded(&self) -> bool { env::storage_read(b"attack_success").as_deref() == Some(&[1]) }
 
     // TEST MOCK ONLY: models documented policy controller/freeze metadata and receipt failures.

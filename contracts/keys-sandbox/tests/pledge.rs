@@ -247,3 +247,6 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
  let stale=e.c.as_account().call(e.mock.id(),"set_wallet_frozen").args_json(json!({"wallet_pubkey":wallet,"generation":"1","frozen":true})).max_gas().transact().await?;assert!(stale.is_failure());
  let policy=view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":wallet})).await;assert_eq!(policy["frozen"],false);assert!(policy["generation"].as_u64().unwrap()>=2);Ok(())
 }
+
+#[path="support/guarded_layer.rs"]
+mod guarded_layer;

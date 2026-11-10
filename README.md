@@ -129,7 +129,7 @@ Each step says whether it **moves real value on mainnet**.
 | 4 | Open **1 · Fund**, enter an amount, click **Get deposit address**, approve the signature | **Deposit address** and the address. That signature is not a transfer | Only if you send. Sending from your wallet is a normal transfer that pays gas on the source chain. The site sends nothing. You can fund from any chain through NEAR Intents 1Click |
 | 5 | Click **Read balance** and approve the signature | The total in USD, or token amounts if nothing is priced. A held asset with no price shows as "+ … unpriced". The note says "Read from the enclave with your signature." | No |
 | 6 | Open **2 · Trade**, pick a token (any of 216 tokens on 39 chains), click **Get attested quote**, then **Sign & trade** | The receipt shows **You give**, **You get**, **Price** and **Cap**. The result card starts with "Traded", names the amount out, and has a status and **Verify** | **Yes.** The swap runs on mainnet inside your account, within caps: Bronze is $1 per trade and $5 per UTC day |
-| 7 | Open **3 · Withdraw**, enter an amount, click **Sign & withdraw** and approve a fresh signature | "Withdrawn", naming the connected account. The worker refuses any other destination | **Yes.** Funds leave the account to the connected wallet |
+| 7 | Open **3 · Withdraw**, enter an amount, click **Sign & withdraw** and approve a fresh signature | "Withdrawn", naming the UI-selected connected account. The API also permits other well-formed destinations explicitly authorized by a fresh holder signature | **Yes.** Funds leave the account to the connected wallet |
 | 8 | Open the **Verify** link on any result | "The enclave is genuine." and `data-match="true"` | No |
 | 9 | Open [/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940) and read **Check a key before you buy it** | The current holder, the latest transfer, the transfer cooldown and the seller lock, from the enclave's signed log. The holder can also share a signed statement that the account holds at least a stated amount | No |
 
@@ -680,7 +680,7 @@ Caps and locks are enforced by the enclave, so they do not stop an attacker who 
 
 **Browser and site.** [`web/next.config.ts`](web/next.config.ts) sets a Content-Security-Policy with `frame-ancestors 'none'`, HSTS (2 years, preload), `nosniff` and strict referrer and permissions policies. `curl -I https://keyhole-seven.vercel.app` shows them.
 
-**Agents.** Do not give an agent your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 hours), and lock the key while you are away. The worker then enforces, inside the TEE: payouts only to the signing holder, per-trade and per-day caps, one use per signature, the transfer cooldown, and the lock. The MCP `copy` tool needs the operator's confirmation on their own terminal. The attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md) shows an agent that obeys an injected "send everything to attacker.near" refused on every path.
+**Agents.** Do not give an agent your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 hours), and lock the key while you are away. The worker then enforces, inside the TEE: the exact signed payout destination, per-trade and per-day caps, one use per signature, the transfer cooldown, and the lock. The MCP `copy` tool needs the operator's confirmation on their own terminal. The attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md) records the specific historical malformed/over-cap/replay/tamper refusals shown there; it is NOT a destination allowlist or a guarantee against a fresh valid in-cap holder-signed malicious payout.
 
 **Function-call keys, precisely.**
 
@@ -880,3 +880,25 @@ See [protocol](protocol/README.md) for exact interfaces, [SECURITY.md](SECURITY.
 ```
 
 Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement/fencing proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+
+### Guarded worker candidate — SOURCE ONLY, NOT PUBLISHED
+
+Stacked on oracle-free #184 head01665e8; neither PR is merged. Every custody swap/copy/withdraw/private transfer/wet quote uses the shared production admission/provider drivers. Persisted journals bind exact owner/epoch/nonce/body/action; an op ID/idempotency key never changes on retry. Value requests require signed decimal-string `params.owner_epoch`; legacy sessions are rejected and A→B→A cannot revive old authorizations. Provisional receivers cannot read sealed data or establish sessions; pledged legitimate holders may still read.
+
+The fresh fixed-floor certificate uses V2_CREDIT and verifies exact binding plus supported custody generation; current policy/loan/control are re-read after the private balance/inventory observation. Canonical project UUID and a single pinned nonlegacy version are required. A sealed authority-audit record must already exist; no public/automatic eligibility writer or silent legacy-wallet approval exists. This remains a fail-closed rollout gate, not self-measured code proof.
+
+Generic detached `chain_sign` is disabled in this source revision, including protected/pledged collateral, and the owner/epoch settle gate is explicit. Prior foreign signatures cannot be revoked, so foreign assets/allowances are excluded from the fixed custody-USDC certificate. This is not a claim to have changed live versions or existing credentials.
+
+**Candidate destination policy: self-exit only.** Fresh NEP-413 authorization derives the authenticated NEAR holder; EIP-191 derives the same authenticated0x holder on supported EVM chains. Unknown identity/chain mapping and any different `to` are rejected, including private-transfer bypasses and durable POST replay. Sessions cannot withdraw. Current LIVE source historically allows arbitrary well-formed holder-signed destinations: this source-only restriction has not been deployed, and old attack examples do not prove it live.
+
+The two named cross-layer tests use REAL NEAR admission/pledge/title receipts and the same production drivers as WASI, but HTTP, sealed storage, registry and eligibility observations are labelled mocks. They cover repay/default, failures/unknowns, transfer_call A→B→A and legitimate post-thaw exits, not live-provider confinement or a full WASI-host execution. Source-only native payment UNKNOWN/liveness and new provider ABI gates from #184 remain. No deploy/publish/funding/legacy-version retirement/key or policy change is performed.
+
+
+#### Guarded failure messages
+
+The web error catalog gives actionable English status for pending/provisional ownership, stale sessions, self-exit-only destinations, changed quotes and unknown custody/admission outcomes. Unknown outcomes direct the holder to reconcile the existing operation ID rather than create another send.
+
+```bash
+(cd web && npm ci && npx vitest run tests/domain.test.ts tests/p2-errors.test.ts)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
