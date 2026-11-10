@@ -237,5 +237,23 @@
   "lint": {
     "errors": 0,
     "preexisting_warnings": 10
+  },
+  "immutable_judge_source_commit": "211e8e17fe7de25c54435f6ac2d3410e843e0f00",
+  "final_metadata_refresh": {
+    "scope": "generated immutable judge refs only; no executable behavior changed from first evidence commit",
+    "production_build": "PASS after source-ref refresh",
+    "live_browser_tests": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "strict_online_contract": "PASS after source-ref refresh",
+    "server_cleanup": {
+      "head": "211e8e17fe7de25c54435f6ac2d3410e843e0f00",
+      "pid": 3063041,
+      "returncode": 143,
+      "port": 3186,
+      "cleaned_up": true
+    }
   }
 }

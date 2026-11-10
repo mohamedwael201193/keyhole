@@ -21,7 +21,7 @@ export const IDENTITY = {
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "cb8179e289ad64b36ac707d433128420e2976189"
+    "source_commit": "211e8e17fe7de25c54435f6ac2d3410e843e0f00"
   }
 } as const;
 export const WORKER_SHA256 = IDENTITY.worker.wasm_sha256;
