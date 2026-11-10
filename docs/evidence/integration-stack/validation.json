@@ -1,0 +1,45 @@
+{
+  "scope": "Local Windows PC with WSL; source candidate only, no deploy, spend or secret access",
+  "status": "verification in progress",
+  "contract": {
+    "unit_pass": 303,
+    "strict_clippy": "PASS",
+    "wasm_bytes": 496539,
+    "wasm_sha256": "ac25d8899561d7ee109d69aca22792b3d7836123f6d815a85d897c8a24558538",
+    "linux_build_sh": "PASS"
+  },
+  "worker": {
+    "unit_pass": 605,
+    "native_clippy": "PASS",
+    "wasi_clippy": "PASS",
+    "wasm_bytes": 903430,
+    "wasm_sha256": "a05f7162f687d8382f40bc1595bb197a0ea17f6ab1b9627b746ee31840de0aab"
+  },
+  "cli": {
+    "tests_pass": 53,
+    "typecheck": "PASS"
+  },
+  "offline_loan_plan": {
+    "tests_pass": 5
+  },
+  "judge_kit": {
+    "attestations": "PASS",
+    "historical_fastfs": "PASS",
+    "live_deployed_contract_hash": "PASS",
+    "identity": "PASS"
+  },
+  "hygiene": {
+    "secret_scan": "PASS",
+    "source_tarball_live_identity": "PASS"
+  },
+  "claims": {
+    "total": 524,
+    "pass": 230,
+    "fail": 0,
+    "error": 0,
+    "offline_skip": 294
+  },
+  "sandbox": "RUNNING",
+  "web": "PENDING",
+  "live_identity": "unchanged; candidate hashes are not deployed identities"
+}

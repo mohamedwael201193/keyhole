@@ -648,7 +648,6 @@ mod host {
         if last.owner==owner && last.v==2 && last.owner_epoch==epoch {return Ok(until);}
         if last.owner==owner && last.v==1 && epoch==0 {return Ok(until);}
         prov_append(token,"transfer",owner,ts,&format!("transfer epoch {epoch}"), &format!("owner-phase:{epoch}"))?;
-        set_epoch(token,epoch);
         Ok(until)
     }
 

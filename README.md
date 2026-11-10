@@ -718,7 +718,7 @@ The first full-access key is described in the repository as the deploy and publi
 
 ## 9. Numbers
 
-Every count below was measured on this commit (`2f7ac1e`, on top of `7356cfa`) unless the row says otherwise. Windows checkout notes are at the end of the table.
+Historical measurements below belong to `2f7ac1e` (on top of `7356cfa`), unless a row says otherwise. They are not the integrated-candidate totals; see the integrated validation record at the end.
 
 | Component | Count | How it was measured |
 |---|---|---|
