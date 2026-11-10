@@ -1,6 +1,11 @@
 import type {SignedAuth} from "./nep413";
-import type {IntentIdentity,IntentStore} from "./pledgeIntentStore";
+import {createBrowserIntentStore,browserIntentEnvironment,pledgeLifecycleScope,type IntentIdentity,type IntentStore,type IntentEnvironment} from "./pledgeIntentStore";
+import {browserMoneyStore} from "./pledgeMoney";
 export type ExitRecord=IntentIdentity&{account:string;token:string;epoch:string;amount:string;value_op_id?:string;status:"AwaitingSignature"|"Retryable"|"UNKNOWN"|"Pending";intent?:"withdraw"|"reconcile_value_op"};
+/** The exit and native-open check/reservation share ONE short browser-wide lock. */
+export function browserExitStore(account:string,contract:string,token:string,env:IntentEnvironment=browserIntentEnvironment()):IntentStore<ExitRecord> {
+ return createBrowserIntentStore<ExitRecord>(`keyhole:pledge-exit:v1:${contract}:${account}:${token}`,op=>{if(op.account!==account||op.token!==token)throw Error("Exit identity mismatch");},env,{scope:pledgeLifecycleScope(account,contract),check:()=>{if(browserMoneyStore(account,contract,env).load()?.call.method==="open_loan")throw Error("Original loan opening unresolved; do not start an exit.");}});
+}
 export const PLEDGE_EXIT_USDC="nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 export const retryableExit=(op:ExitRecord|null)=>!!op&&op.intent==="withdraw"&&!op.value_op_id&&["AwaitingSignature","Retryable"].includes(op.status);
 /** An unsent signature is regenerable from the immutable intent. Auth is never stored in localStorage. */

@@ -7,6 +7,8 @@ export type IntentStore<T extends IntentIdentity>={
  clearVerified(expected:T,verify:(snapshot:T)=>Promise<boolean>):Promise<boolean>;
  subscribe(listener:()=>void):()=>void;
 };
+export type IntentAdmission<T>={scope:string;check:(value:T)=>void};
+export const pledgeLifecycleScope=(account:string,contract:string)=>`keyhole:pledge-lifecycle:v1:${contract}:${account}`;
 export type IntentEnvironment={
  storage:Storage;session:Pick<Storage,"getItem"|"setItem">;
  locks:{request<T>(name:string,callback:()=>T|Promise<T>):Promise<T>}|undefined;
@@ -14,7 +16,7 @@ export type IntentEnvironment={
 };
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 /** Per-intent records plus browser-wide admission serialization. No racy localStorage lock fallback. */
-export function createBrowserIntentStore<T extends IntentIdentity>(scope:string,validate:(value:T)=>void,env:IntentEnvironment):IntentStore<T> {
+export function createBrowserIntentStore<T extends IntentIdentity>(scope:string,validate:(value:T)=>void,env:IntentEnvironment,admission?:IntentAdmission<T>):IntentStore<T> {
  const prefix=scope+":intent:",ownerKey="keyhole:pledge-tab:v2";
  let owner=env.session.getItem(ownerKey);
  if(!owner){owner=env.uuid();env.session.setItem(ownerKey,owner);}
@@ -24,7 +26,7 @@ export function createBrowserIntentStore<T extends IntentIdentity>(scope:string,
  const load=()=>{const legacy=read(scope);if(legacy)return legacy;for(const key of keys()){const value=read(key);if(value)return value;}return null;};
  const exclusive=<R,>(job:()=>R|Promise<R>):Promise<R>=>{
   if(!env.locks)return Promise.reject(Error("Cross-tab Web Locks unavailable. Money actions are disabled; use a supported secure browser."));
-  return env.locks.request(scope+":admission",job);
+  return env.locks.request((admission?.scope??scope)+":admission",job);
  };
  const keyOf=(value:T)=>value.id?prefix+value.id:scope;
  const owned=(value:T)=>!value.owner||value.owner===ownerId; // legacy records have no owner; exact-record recovery only
@@ -32,6 +34,7 @@ export function createBrowserIntentStore<T extends IntentIdentity>(scope:string,
  return {
   load,
   reserve:value=>exclusive(()=>{
+   admission?.check(value);
    if(load())throw Error("An earlier money operation is unresolved. Refresh its original receipt; do not resend.");
    const next={...value,id:env.uuid(),owner:ownerId};validate(next);env.storage.setItem(keyOf(next),JSON.stringify(next));env.changed();return next;
   }),
