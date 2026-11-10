@@ -33,6 +33,7 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
       - name: source rebuilds to the committed v2.5 release wasm
         run: |
+          (cd release && sha256sum -c SHA256SUMS)
           ./build.sh >/dev/null
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
           want=$(grep ' v2.5/' release/SHA256SUMS | cut -d' ' -f1)
@@ -104,6 +105,10 @@ jobs:
         with: { node-version: 20 }
       - name: identity.json is the single source of build identities (generated files in sync, wasm sha + base58 code hash agree)
         run: node scripts/gen-identity.mjs --check
+      - name: claims.json regenerates from current documentation
+        run: |
+          python3 judge/gen-claims.py .
+          git diff --exit-code -- docs/claims.json
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:

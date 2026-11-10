@@ -3809,6 +3809,111 @@
    "verify": "node judge/verify-claims.mjs --only test-holder_tier_is_best_and_follows_transfer"
   },
   {
+   "id": "test-holder_withdraw_pays_only_self_on_near",
+   "claim": "Named test or symbol `holder_withdraw_pays_only_self_on_near` exists in the source",
+   "where": "SECURITY.md:36",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "holder_withdraw_pays_only_self_on_near",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`holder_withdraw_pays_only_self_on_near` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-holder_withdraw_pays_only_self_on_near"
+  },
+  {
+   "id": "test-holder_withdraw_rejects_another_receiver",
+   "claim": "Named test or symbol `holder_withdraw_rejects_another_receiver` exists in the source",
+   "where": "SECURITY.md:36",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "holder_withdraw_rejects_another_receiver",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`holder_withdraw_rejects_another_receiver` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-holder_withdraw_rejects_another_receiver"
+  },
+  {
+   "id": "test-holder_withdraw_rejects_mismatched_chain_even_with_valid_external_address",
+   "claim": "Named test or symbol `holder_withdraw_rejects_mismatched_chain_even_with_valid_external_address` exists in the source",
+   "where": "SECURITY.md:36",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "holder_withdraw_rejects_mismatched_chain_even_with_valid_external_address",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`holder_withdraw_rejects_mismatched_chain_even_with_valid_external_address` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-holder_withdraw_rejects_mismatched_chain_even_with_valid_external_address"
+  },
+  {
+   "id": "test-holder_withdraw_rejects_non_owner_and_missing_token",
+   "claim": "Named test or symbol `holder_withdraw_rejects_non_owner_and_missing_token` exists in the source",
+   "where": "SECURITY.md:36",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "holder_withdraw_rejects_non_owner_and_missing_token",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`holder_withdraw_rejects_non_owner_and_missing_token` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-holder_withdraw_rejects_non_owner_and_missing_token"
+  },
+  {
+   "id": "test-holder_withdraw_rejects_old_holder_after_transfer",
+   "claim": "Named test or symbol `holder_withdraw_rejects_old_holder_after_transfer` exists in the source",
+   "where": "SECURITY.md:36",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "holder_withdraw_rejects_old_holder_after_transfer",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`holder_withdraw_rejects_old_holder_after_transfer` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-holder_withdraw_rejects_old_holder_after_transfer"
+  },
+  {
    "id": "test-init_is_private",
    "claim": "Named test or symbol `init_is_private` exists in the source",
    "where": "SECURITY.md:38",
@@ -4815,27 +4920,6 @@
    },
    "expected": "`valid_signature_passes` found in source",
    "verify": "node judge/verify-claims.mjs --only test-valid_signature_passes"
-  },
-  {
-   "id": "test-withdraw_destination_must_be_a_valid_address_for_its_chain",
-   "claim": "Named test or symbol `withdraw_destination_must_be_a_valid_address_for_its_chain` exists in the source",
-   "where": "SECURITY.md:36",
-   "evidence_type": "test file",
-   "evidence": "tee/worker/src, contracts/keys/src, web",
-   "check": {
-    "type": "symbol",
-    "name": "withdraw_destination_must_be_a_valid_address_for_its_chain",
-    "dirs": [
-     "tee/worker/src",
-     "contracts/keys/src",
-     "contracts/keys-sandbox/tests",
-     "web/lib",
-     "web/app",
-     "cli/src"
-    ]
-   },
-   "expected": "`withdraw_destination_must_be_a_valid_address_for_its_chain` found in source",
-   "verify": "node judge/verify-claims.mjs --only test-withdraw_destination_must_be_a_valid_address_for_its_chain"
   },
   {
    "id": "test-withdraw_waits_after_a_transfer_only_for_the_new_owner",
@@ -7715,7 +7799,7 @@
   {
    "id": "site-37",
    "claim": "Home and /verify advertise 37 in-browser checks",
-   "where": "judge/gen-claims.py:186",
+   "where": "judge/gen-claims.py:188",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
    "check": {
