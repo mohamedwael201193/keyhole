@@ -1389,3 +1389,6 @@ pub mod pledge_inventory;
 
 /// Audited enclave-only collateral provisioning.
 pub mod collateral;
+
+pub mod receipts;
+pub mod native_send;

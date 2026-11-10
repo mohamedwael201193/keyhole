@@ -295,7 +295,7 @@ fn rejected<F: FnOnce()>(f: F) { assert!(catch_unwind(AssertUnwindSafe(f)).is_er
 
 fn registration(c:&mut Contract)->U64 {
     ctx("minter.near",N/10,NOW);
-    let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60);
+    let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));
     registrations().get(&"k1".into()).unwrap().nonce
 }
 #[test]fn unknown_token_control_view_is_not_unlocked(){let c=setup();rejected(||{c.get_control_state("missing".into());});}
@@ -329,7 +329,7 @@ fn registration(c:&mut Contract)->U64 {
     assert!(c.get_collateral_binding("k1".into()).unwrap().ready);
     assert_eq!(c.get_payout_credit(a("minter.near")).0,N/10-COLLATERAL_STORAGE_DEPOSIT);
     assert_eq!(config_required().user_liabilities,c.get_payout_credit(a("minter.near")));
-    ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60);});
+    ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));});
 }
 #[test]fn unknown_registration_receipt_never_unbinds_or_refunds_even_with_absent_read(){let mut c=setup();collateral().remove(&"k1".into());let n=registration(&mut c);
  result(PromiseResult::Successful(b"null".to_vec()),NOW);assert!(!c.on_collateral_checked("k1".into(),n));
@@ -396,7 +396,7 @@ fn registration(c:&mut Contract)->U64 {
     let mut c=setup();collateral().remove(&"k1".into());let n=registration(&mut c);
     rejected(||{registration(&mut c);});assert_eq!(registrations().get(&"k1".into()).unwrap().nonce,n);
     result(PromiseResult::Failed,NOW);let _=c.on_collateral_stored("k1".into(),n);
-    ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","cd".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60);});
+    ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","cd".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));});
     assert_eq!(registrations().get(&"k1".into()).unwrap().nonce,n);
 }
 
@@ -497,3 +497,16 @@ fn prepaid_loan_terminal_slot(default: bool) {
 }
 #[test] fn prepaid_lender_slot_survives_repayment() {prepaid_loan_terminal_slot(false);}
 #[test] fn prepaid_borrower_slot_survives_default() {prepaid_loan_terminal_slot(true);}
+
+#[test] fn collateral_cas_rejects_transfer_and_a_b_a_epoch_bounce(){
+ let mut c=setup();collateral().remove(&"k1".into());ctx("alice.near",1,NOW);c.nft_transfer(a("bob.near"),"k1".into(),None,None);
+ ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));});assert!(c.get_pending_registration("k1".into()).is_none());
+ ctx("bob.near",1,NOW);c.nft_transfer(a("alice.near"),"k1".into(),None,None);ctx("minter.near",N/10,NOW);rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));});assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn registration_reservation_blocks_title_value_listing_and_loan_until_terminal(){
+ let mut c=setup();collateral().remove(&"k1".into());let n=registration(&mut c);
+ ctx("alice.near",1,NOW);rejected(||c.nft_transfer(a("bob.near"),"k1".into(),None,None));ctx("minter.near",N/100,NOW);rejected(||c.begin_value_op("k1".into(),U64(0),"1:action".into(),"hash".into(),a("alice.near")));
+ ctx("alice.near",N/100,NOW);rejected(||c.nft_list("k1".into(),U128(N)));ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW);rejected(||{let _=c.open_loan("k1".into(),terms());});
+ result(PromiseResult::Successful(vec![]),NOW);let _=c.on_collateral_stored("k1".into(),n);ctx("alice.near",1,NOW);rejected(||c.nft_transfer(a("bob.near"),"k1".into(),None,None));
+ result(policy(false),NOW);assert!(c.on_collateral_checked("k1".into(),n));ctx("alice.near",1,NOW);c.nft_transfer(a("bob.near"),"k1".into(),None,None);assert_eq!(c.get_control_state("k1".into()).owner_epoch.0,1);
+}

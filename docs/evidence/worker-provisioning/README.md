@@ -1,23 +1,13 @@
 # Collateral provisioning proof
 
-The worker contains an enclave-only, signed-holder provisioning path, a separately approved confinement-audit writer, actual-payload storage quotation and holder-only exit previews. Author: **devmo**.
+Current local repair: [R2 root-fix map and validation](R2.md). Main's merged PR202 fixes are integrated; no mainnet or paid action was taken.
 
-- [Production dispatcher](../../../tee/worker/src/collateral_host.rs): `prepare_collateral` → `collateral_quote` → `provision_collateral` → `reconcile_collateral`. Policy ciphertext, reusable wallet signature, API key and minter key stay sealed; public outputs are non-reusable identifiers, quotes and receipt hashes.
-- [Production validators](../../../tee/worker/src/collateral.rs): provider Ed25519 verification over the actual caller-bound v2 message; a separately pinned review key approves the exact plan, build, wallet and epoch; immutable eligibility writes follow only the original FINAL registration and exact controller/policy/binding readback.
-- [Worker regression tests](../../../tee/worker/src/collateral/tests.rs), [real local NEAR integration](../../../contracts/keys-sandbox/tests/support/guarded_layer.rs), [validation record](validation.json), [worker log](worker-tests.log), [sandbox log](sandbox-all.log), [offline log](offline-tests.log).
-- [Generated source identity](candidate.json), [first rebuild](build1.sha256), [second rebuild](build2.sha256). Live worker identity remains separate in `identity.json`.
-- [Read-only research and cost accounting](RESEARCH.md), [future execution sequence](RUNBOOK_DELTA.md), [unsigned publication batches](publish-plan.json), [planner tests](../../../scripts/pledge/publish-plan.test.mjs).
+- [CAS contract candidate](../../../contracts/keys/release/v2.6/identity.json) · [owner/epoch and pending-reservation source](../../../contracts/keys/src/pledge.rs) · [real sandbox boundary](../../../contracts/keys-sandbox/tests/support/guarded_layer.rs).
+- [Production dispatcher](../../../tee/worker/src/collateral_host.rs) and [shared actual native-send/sign/journal protocol](../../../tee/worker/src/native_send.rs) · [thin WASI adapter](../../../tee/worker/src/native_host.rs).
+- [Closed receipt graph](../../../tee/worker/src/receipts.rs) · [audit/policy validators and immutable writer](../../../tee/worker/src/collateral.rs) · [regressions](../../../tee/worker/src/collateral/tests.rs).
+- [Generated worker candidate](candidate.json) · [current validation](validation.json) · [actual dual rebuild log](r2/worker-repro-complete.log). Live identity remains separate.
+- [Read-only research and cost table](RESEARCH.md) · [maintenance and exact interruption recovery](RUNBOOK_DELTA.md) · [unsigned publication plan](publish-plan.json).
 
-Reproduce locally, sequentially:
+Run the single complete reproduction fence in the [root README](../../../README.md#pledge-reproduction--live-v25-contract-guarded-worker-not-published). It builds the normal v2.6 artifact and sandbox-only fault fixture, restores normal byte identity, runs the full sandbox and compiles the actual WASI host. Candidate equality is a failing CI gate, not a warning about live/source drift.
 
-```bash
-(cd tee/worker && CARGO_BUILD_JOBS=1 cargo test --locked -- --test-threads=1)
-node --test scripts/pledge/*.test.mjs
-(cd contracts/keys-sandbox && CARGO_BUILD_JOBS=1 cargo test --locked --test pledge -- --test-threads=1)
-CARGO_BUILD_JOBS=1 bash tee/worker/build.sh
-node scripts/gen-identity.mjs --worker-candidate --check
-python3 judge/gen-claims.py .
-node judge/verify-claims.mjs --offline
-```
-
-[First missing-fixture diagnostic](sandbox-missing-fixture-diagnostic.log) is retained. Sandbox preparation follows the CI recipe: build its labelled callback-failure fixture before running the complete suite. HTTP custody, encrypted storage and provider policy in sandbox are explicit fixtures; actual NEAR contract execution establishes receipt ordering and value-admission serialization. The audit, receipt and policy validators are the same production library used by the WASI dispatcher. Deployment/release gates and trust boundaries are recorded in [SECURITY.md](../../../SECURITY.md).
+Historical R1 raw evidence is retained: [worker tests](worker-tests.log), [sandbox tests](sandbox-all.log), [first hash](build1.sha256), [second hash](build2.sha256), [fixture diagnostic](sandbox-missing-fixture-diagnostic.log). Those are not the new candidate's final results. Detailed qualifications and remaining release gates: [SECURITY.md](../../../SECURITY.md#r2-provisioning-repair-and-cutover-boundary).

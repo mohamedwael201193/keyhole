@@ -134,11 +134,21 @@ async fn collateral_provisioning_seals_only_final_binding_and_serializes_value_a
  let p=Prepared{token_id:"provisioned".into(),owner:e.bob.id().to_string(),owner_epoch:0,worker_hash:"fe".repeat(32),wallet_pubkey:format!("ed25519:{}","cd".repeat(32)),plaintext_hash:"12".repeat(32),encrypted_data:"sealed-policy-provisioning-mock".into(),wallet_signature:"ab".repeat(64),version:1,valid_until:4_000_000_000};
  e.minter.call(e.c.id(),"begin_value_op").args_json(json!({"token_id":p.token_id,"epoch":"0","op_id":"1:provisioning-race","action_hash":"fixture","owner_id":e.bob.id()}))
   .deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;
- let blocked=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).max_gas().transact().await?;
+ let blocked=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).gas(near_workspaces::types::Gas::from_tgas(200)).transact().await?;
  assert!(blocked.is_failure());assert!(view(&e.c,"get_collateral_binding",json!({"token_id":p.token_id})).await.is_null());
  e.minter.call(e.c.id(),"finish_value_op").args_json(json!({"token_id":p.token_id,"op_id":"1:provisioning-race","success":true})).max_gas().transact().await?.into_result()?;
- let out=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).max_gas().transact().await?.into_result()?;
+ let out=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).gas(near_workspaces::types::Gas::from_tgas(200)).transact().await?.into_result()?;
  let terminal=out.json::<bool>()?;assert!(terminal);
+ let hash=out.outcome().transaction_hash.to_string();
+ let response=tokio::process::Command::new("curl").args(["-fsS","--max-time","30",&e.w.rpc_addr(),"-H","Content-Type: application/json","--data-binary",&json!({"jsonrpc":"2.0","id":"original","method":"tx","params":{"tx_hash":hash,"sender_account_id":e.minter.id(),"wait_until":"FINAL"}}).to_string()]).output().await?;
+ anyhow::ensure!(response.status.success(),"sandbox RPC status failed");let original:Value=serde_json::from_slice(&response.stdout)?;
+ assert_eq!(collateral::registration_terminal_for(&original,&hash,e.minter.id().as_str(),e.c.id().as_str(),&p,66*N/1000,e.mock.id().as_str()),Some(true),"actual runtime receipt graph must close");
+ // A new holder can adopt the already-installed exact original proof, never send
+ // the old preparation again. The old local epoch namespace cannot strand title.
+ e.bob.call(e.c.id(),"nft_transfer").args_json(json!({"token_id":p.token_id,"receiver_id":e.lender.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ assert!(!collateral::holder_plan_access(&p,e.lender.id().as_str(),1,false));assert!(collateral::holder_plan_access(&p,e.lender.id().as_str(),1,true));
+ e.lender.call(e.c.id(),"nft_transfer").args_json(json!({"token_id":p.token_id,"receiver_id":e.bob.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+
  let a=AuthorityAudit{domain:collateral::DOMAIN.into(),project_uuid:guarded::PROJECT_UUID.into(),contract:e.c.id().to_string(),provision_id:p.id(),authority_audit_sha256:"ef".repeat(32),issued_at_sec:1000,expires_at_sec:1100,no_presigned_authorities:true,all_aliases_reviewed:true,old_jobs_drained:true,external_chain_authorities_reviewed:true,effective_policy_reviewed:true,reachable_quorum_verified:true};
  let reviewer=SigningKey::from_bytes(&[44;32]);let message=serde_json::to_string(&a)?;let signature=B64.encode(reviewer.sign(format!("{}\n{message}",collateral::DOMAIN).as_bytes()).to_bytes());
  let approved=collateral::audit(&message,&signature,&B64.encode(reviewer.verifying_key().as_bytes()),&p,e.c.id().as_str(),1001).unwrap();
@@ -152,4 +162,21 @@ async fn collateral_provisioning_seals_only_final_binding_and_serializes_value_a
   .deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
  let ts=now(&e).await;let cert:guarded::Certificate=serde_json::from_value(view(&e.c,"loan_certificate_template",json!({"token_id":p.token_id,"observed_at_ns":ts.to_string(),"expires_at_ns":(ts+30_000_000_000).to_string()})).await)?;
  guarded::eligible(&st.read(&keyhole_worker::tkey(&p.token_id,"confinement_v1")).unwrap(),&cert).unwrap();Ok(())
+}
+
+#[tokio::test(flavor="multi_thread",worker_threads=2)]
+async fn provisioning_dispatch_rejects_stale_title_and_lost_callback_locks_all_mutation()->Result<()> {
+ use keyhole_worker::collateral::Prepared;let e=setup().await?;
+ e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"cas-race","receiver_id":e.bob.id(),"tier":2,"metadata":{"copies":1}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ let mut p=Prepared{token_id:"cas-race".into(),owner:e.bob.id().to_string(),owner_epoch:0,worker_hash:"fe".repeat(32),wallet_pubkey:format!("ed25519:{}","cd".repeat(32)),plaintext_hash:"12".repeat(32),encrypted_data:"sealed-policy-cas-mock".into(),wallet_signature:"ab".repeat(64),version:1,valid_until:4_000_000_000};
+ for (from,to) in [(&e.bob,&e.lender),(&e.lender,&e.bob)] {
+  from.call(e.c.id(),"nft_transfer").args_json(json!({"token_id":p.token_id,"receiver_id":to.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+  let old=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).max_gas().transact().await?;assert!(old.is_failure());assert!(view(&e.c,"get_pending_registration",json!({"token_id":p.token_id})).await.is_null());
+ }
+ p.owner_epoch=2;fault_callbacks(&e).await?;
+ let lost=e.minter.call(e.c.id(),"register_collateral").args_json(p.args()).deposit(NearToken::from_millinear(66)).max_gas().transact().await?;injected(&lost);
+ for (actor,method,args,deposit) in [(&e.bob,"nft_transfer",json!({"token_id":p.token_id,"receiver_id":e.lender.id()}),1),(&e.minter,"begin_value_op",json!({"token_id":p.token_id,"owner_id":e.bob.id(),"epoch":"2","op_id":"1:race","action_hash":"hash"}),N/100),(&e.bob,"nft_list",json!({"token_id":p.token_id,"price":N.to_string()}),N/100)] {
+  assert!(actor.call(e.c.id(),method).args_json(args).deposit(NearToken::from_yoctonear(deposit)).max_gas().transact().await?.is_failure());
+ }
+ let control=view(&e.c,"get_control_state",json!({"token_id":p.token_id})).await;assert_eq!(control["transfer_pending"],true);assert_eq!(control["owner_epoch"],"2");Ok(())
 }

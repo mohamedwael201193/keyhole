@@ -25,9 +25,18 @@ export const IDENTITY = {
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "57419a8286c7ff50647dc52d26c1902664bd1f33518bcbc35068006b689cb46e",
-    "bytes": 1043280,
+    "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+    "bytes": 1085333,
     "recipe": "tee/worker/build.sh"
+  },
+  "contract_candidate": {
+    "status": "source-candidate-not-deployed",
+    "version": "2.6.0",
+    "release": "v2.6",
+    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
+    "bytes": 487260,
+    "recipe": "contracts/keys/build.sh"
   }
 } as const;
 export const WORKER_SHA256 = IDENTITY.worker.wasm_sha256;

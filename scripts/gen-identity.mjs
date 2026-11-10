@@ -3,8 +3,9 @@
 // checks that identity.json agrees with contracts/keys/deployed (sha256 + base58 code hash).
 // Also refreshes the <!-- IDENTITY:START --> … <!-- IDENTITY:END --> block in README.md.
 // usage: node scripts/gen-identity.mjs [--check] [--promote-live <public-capture.json>] [--review-source <full-commit>]
-import { readFileSync, writeFileSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 // fileURLToPath (not .pathname): on Windows .pathname gives "/D:/..." and every read fails.
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -55,6 +56,19 @@ if (process.argv.includes("--worker-candidate")) {
     writeFileSync(root + "identity.json", JSON.stringify(id, null, 2) + "\n");
   }
 }
+// Separately reviewed contract candidate: never changes deployed/live identity.
+if (process.argv.includes("--contract-candidate")) {
+  const artifact=readFileSync(root+"contracts/keys/target/near/keyhole_keys.wasm");
+  const digest=createHash("sha256").update(artifact).digest("hex");
+  const version=readFileSync(root+"contracts/keys/src/lib.rs","utf8").match(/version = "([0-9.]+)"/)[1];
+  const c={status:"source-candidate-not-deployed",version,release:"v"+version.split(".").slice(0,2).join("."),wasm_sha256:digest,code_hash:b58(digest),bytes:artifact.length,recipe:"contracts/keys/build.sh"};
+  const path="contracts/keys/release/"+c.release+"/keyhole_keys.wasm";
+  if(process.argv.includes("--check")) {
+    if(JSON.stringify(id.contract_candidate)!==JSON.stringify(c) || !readFileSync(root+path).equals(artifact)) throw Error("contract candidate byte equality failed");
+  } else {
+    id.contract_candidate=c;mkdirSync(root+"contracts/keys/release/"+c.release,{recursive:true});writeFileSync(root+path,artifact);writeFileSync(root+"identity.json",JSON.stringify(id,null,2)+"\n");
+  }
+}
 const wasm = readFileSync(root + "contracts/keys/deployed/keyhole_keys.wasm");
 const sha = createHash("sha256").update(wasm).digest("hex");
 const errs = [];
@@ -101,14 +115,14 @@ The contract release is **${contractLive ? "live on mainnet" : "a source candida
 |---|---:|---|---:|
 | v2.5 (${contractLive ? "live" : "not deployed"}) | ${candidate.bytes.toLocaleString("en-US")} | \`${candidateSha}\` | ${(candidate.bytes / 100000).toFixed(5)} NEAR |
 
-Strict read-only online verification, including a reproducible contract rebuild:
+Strict read-only online verification of the live deployment:
 
 \`\`\`bash
-CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict --rebuild
+CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 \`\`\`
 
-${id.worker_candidate ? `Worker source candidate: \`${id.worker_candidate.wasm_sha256}\` (${id.worker_candidate.bytes.toLocaleString("en-US")} bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Provisioning proof](docs/evidence/worker-provisioning/README.md).\n\n` : ""}Measured size steps are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [\`docs/evidence/live-v2.5/all-live-views.json\`](docs/evidence/live-v2.5/all-live-views.json).
+${id.worker_candidate ? `Worker source candidate: \`${id.worker_candidate.wasm_sha256}\` (${id.worker_candidate.bytes.toLocaleString("en-US")} bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Provisioning proof](docs/evidence/worker-provisioning/README.md).\n\n` : ""}${id.contract_candidate ? `Contract source candidate **${id.contract_candidate.version}**, not deployed: [generated release identity](contracts/keys/release/${id.contract_candidate.release}/identity.json). Its owner/epoch CAS is required before collateral provisioning.\n\n` : ""}Measured size steps are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [\`docs/evidence/live-v2.5/all-live-views.json\`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
 `;
 
@@ -123,11 +137,12 @@ export const short = (h: string) => \`\${h.slice(0, 8)}…\${h.slice(-8)}\`;
 `;
 
 const releaseSumsPath = "contracts/keys/release/SHA256SUMS";
-const releaseSums = readFileSync(root + releaseSumsPath, "utf8").replace(/^[a-f0-9]{64}  v2\.5\/keyhole_keys\.wasm$/m, `${candidateSha}  v2.5/keyhole_keys.wasm`);
-const out = { ...(id.worker_candidate ? { "tee/worker/CANDIDATE_SHA256": id.worker_candidate.wasm_sha256 + "\n", "docs/evidence/worker-provisioning/candidate.json": JSON.stringify(id.worker_candidate, null, 2) + "\n" } : {}), [releaseSumsPath]: releaseSums, "web/lib/identity.gen.ts": ts, "tee/worker/DEPLOYED_SHA256": id.worker.wasm_sha256 + "\n", "contracts/keys/release/v2.5/identity.json": JSON.stringify(candidate, null, 2) + "\n" };
+let releaseSums = readFileSync(root + releaseSumsPath, "utf8").replace(/^[a-f0-9]{64}  v2\.5\/keyhole_keys\.wasm$/m, `${candidateSha}  v2.5/keyhole_keys.wasm`);
+if(id.contract_candidate){const c=id.contract_candidate;releaseSums=releaseSums.split("\n").filter(x=>x&&!x.endsWith("  "+c.release+"/keyhole_keys.wasm")).join("\n")+"\n"+c.wasm_sha256+"  "+c.release+"/keyhole_keys.wasm\n";}
+const out = { ...(id.contract_candidate ? { ["contracts/keys/release/"+id.contract_candidate.release+"/identity.json"]:JSON.stringify(id.contract_candidate,null,2)+"\n" } : {}), ...(id.worker_candidate ? { "tee/worker/CANDIDATE_SHA256": id.worker_candidate.wasm_sha256 + "\n", "docs/evidence/worker-provisioning/candidate.json": JSON.stringify(id.worker_candidate, null, 2) + "\n" } : {}), [releaseSumsPath]: releaseSums, "web/lib/identity.gen.ts": ts, "tee/worker/DEPLOYED_SHA256": id.worker.wasm_sha256 + "\n", "contracts/keys/release/v2.5/identity.json": JSON.stringify(candidate, null, 2) + "\n" };
 for (const [p, body] of Object.entries(out)) {
   let cur = ""; try { cur = readFileSync(root + p, "utf8"); } catch {}
-  if (cur !== body) { if (process.argv.includes("--check")) errs.push(`${p} is stale: run node scripts/gen-identity.mjs`); else writeFileSync(root + p, body); }
+  if (cur !== body) { if (process.argv.includes("--check")) errs.push(`${p} is stale: run node scripts/gen-identity.mjs`); else { mkdirSync(dirname(root+p),{recursive:true}); writeFileSync(root + p, body); } }
 }
 
 const readmePath = root + "README.md";

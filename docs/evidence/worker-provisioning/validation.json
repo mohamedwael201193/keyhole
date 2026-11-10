@@ -1,65 +1,130 @@
 {
-  "scope": "source candidate; no mainnet or paid provider execution",
-  "base_commit": "cb8179e289ad64b36ac707d433128420e2976189",
+  "scope": "R2 source candidates; public read-only live verification; no mainnet or paid execution",
+  "reviewed_r1": "34953e91bc4e7afb25683dc5948c5e36db2c5871",
+  "integrated_main": "a7ba1fbe0634b166ed4f655ecb6a6ab3dd0705e0",
+  "local_merge": "8b159bec569251b746260a056abf7d2baa8043ee",
   "candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "57419a8286c7ff50647dc52d26c1902664bd1f33518bcbc35068006b689cb46e",
-    "bytes": 1043280,
+    "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+    "bytes": 1085333,
     "recipe": "tee/worker/build.sh"
   },
+  "contract_candidate": {
+    "status": "source-candidate-not-deployed",
+    "version": "2.6.0",
+    "release": "v2.6",
+    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
+    "bytes": 487260,
+    "recipe": "contracts/keys/build.sh"
+  },
   "reproducible_builds": {
-    "runs": 2,
-    "sha256_equal": true
+    "worker": {
+      "runs": 2,
+      "sha256_equal": true,
+      "log": "r2/worker-rebuilds.log"
+    },
+    "contract": {
+      "runs": 2,
+      "sha256_equal": true,
+      "log": "r2/contract-rebuilds.log"
+    }
   },
   "tests": {
     "worker": {
-      "passed": 639,
-      "failed": 0,
-      "ignored": 0
+      "pass": 656,
+      "fail": 0
     },
-    "offline_plan_and_publication": {
-      "passed": 9,
-      "failed": 0
-    },
-    "judge_kit": {
-      "passed": 15,
-      "failed": 0
-    },
-    "receipt_proof": {
-      "passed": 9,
-      "failed": 0
+    "contract": {
+      "pass": 306,
+      "fail": 0
     },
     "sandbox_complete": {
-      "passed": 27,
-      "failed": 0,
+      "pass": 58,
+      "fail": 0,
       "ignored": 1
-    }
-  },
-  "clippy": {
-    "native": "pass (-D warnings)",
-    "wasm32-wasip2": "pass (-D warnings)"
-  },
-  "claims": {
-    "offline": {
-      "total": 576,
-      "pass": 282,
-      "fail": 0,
-      "error": 0,
-      "skip": 294
     },
-    "strict_online": {
-      "total": 576,
-      "pass": 576,
+    "offline_planners_candidate_checker": {
+      "pass": 22,
+      "fail": 0
+    },
+    "judge_node": {
+      "pass": 25,
+      "fail": 0
+    },
+    "receipt_python": {
+      "pass": 9,
+      "fail": 0
+    },
+    "recorded_attestation_rows": {
+      "ok": 26
+    },
+    "cli": {
+      "pass": 63,
+      "fail": 0
+    },
+    "web_unit": {
+      "pass": 1785,
+      "files": 99,
+      "fail": 0
+    },
+    "zero_install_live": {
+      "pass": 9,
       "fail": 0,
-      "error": 0,
-      "skip": 0
+      "skip": 0,
+      "isolated_files": 3
+    },
+    "web_browser_ci_scope": {
+      "pass": 201,
+      "fail": 0,
+      "skip": 15,
+      "excluded_paid_info_cases": 2,
+      "widths": [
+        1440,
+        390
+      ]
     }
   },
-  "sandbox_fixture": {
-    "path": "contracts/keys-sandbox/tests/fixtures/callback_failure.wasm",
-    "sha256": "7c99daf302445990ad0f995b061651ea96ad84096a0d18af575ce81118746973",
-    "source_matches_prior_fixture_build": true,
-    "ui_server_test": "intentionally ignored"
+  "static_gates": {
+    "worker_native_and_wasi_clippy": "pass (-D warnings)",
+    "contract_clippy": "pass (-D warnings)",
+    "cli_types": "pass",
+    "web_types": "pass",
+    "web_lint": {
+      "errors": 0,
+      "existing_warnings": 10
+    },
+    "web_production_build": "pass",
+    "worker_candidate_bytes_equality": "pass",
+    "generated_identity_candidates": "pass"
+  },
+  "toolchain": {
+    "node": "22.22.2",
+    "npm": "10.8.2",
+    "CARGO_BUILD_JOBS": 1,
+    "NODE_OPTIONS": "--max-old-space-size=3072"
+  },
+  "commands": {
+    "worker": "cd tee/worker && cargo test --locked && cargo clippy --locked -- -D warnings && cargo clippy --locked --target wasm32-wasip2 --bin keyhole-worker -- -D warnings",
+    "contract": "cd contracts/keys && cargo test --locked && cargo clippy --locked -- -D warnings",
+    "sandbox": "cd contracts/keys-sandbox && cargo test --locked --tests -- --test-threads=1",
+    "offline": "node --test scripts/check-worker-candidate.test.mjs scripts/pledge/*.test.mjs",
+    "judge": "node --test judge/*.test.mjs; python3 -m unittest discover -s judge -p \"*_test.py\"",
+    "worker_rebuild": "cd tee/worker && ./build.sh (two forced rebuilds)",
+    "contract_rebuild": "cd contracts/keys && ./build.sh (two forced rebuilds)",
+    "candidate_identity": "node scripts/gen-identity.mjs --worker-candidate --contract-candidate --check; node scripts/check-worker-candidate.mjs",
+    "claims": "python3 judge/gen-claims.py .; node judge/verify-claims.mjs --offline; node judge/verify-claims.mjs --strict",
+    "web": "npm run lint; npm run typecheck; npm test; npm run build",
+    "browser": "BASE_URL=http://127.0.0.1:3185 node node_modules/@playwright/test/cli.js test --workers=1 --grep-invert 'needs a funded payment key'"
+  },
+  "release_plan": {
+    "worker_admin_native_transactions": 6,
+    "reason": "worker > 1 MiB requires two fixed-nonce FastFS chunks",
+    "separate_contract_upgrade_required": true,
+    "maintenance_required": true,
+    "live_contract_unchanged": "2.5.0",
+    "live_worker_unchanged": "d337e822",
+    "release_boundary": "../../../SECURITY.md#r2-provisioning-repair-and-cutover-boundary"
   },
   "external_actions": {
     "mainnet_transactions": 0,
@@ -68,12 +133,35 @@
     "pushes": 0,
     "pull_requests": 0
   },
-  "release_checklist": "SECURITY.md#collateral-provisioning-release-boundary",
-  "source_commit": "b7675dc64872701df69e85c98142ff1dddb477d2",
+  "prior_validation": "r1-validation.json",
+  "claims": {
+    "total": 582,
+    "offline": {
+      "pass": 288,
+      "fail": 0,
+      "error": 0,
+      "skip": 294
+    },
+    "strict_online": {
+      "pass": 582,
+      "fail": 0,
+      "error": 0,
+      "skip": 0
+    }
+  },
+  "historical_live_strict_rebuild": {
+    "source_commit": "a7ba1fbe0634b166ed4f655ecb6a6ab3dd0705e0",
+    "release": "2.5.0",
+    "pass": true,
+    "log": "r2/live-strict-rebuild-complete.log"
+  },
   "proof_checks": {
     "generated_identity": "pass",
-    "source_tarball_root_identity_and_candidate": "pass",
-    "source_tarball_manifest_hash_and_bytes": "pass",
-    "repository_secret_pattern_hygiene": "pass (no values printed)"
-  }
+    "candidate_byte_equality": "pass",
+    "workflow_yaml": "pass",
+    "git_diff_check": "pass",
+    "credential_pattern_hygiene": "pass; unchanged public quote signatures classified without values",
+    "prohibited_names_in_changed_text": "zero matches"
+  },
+  "log_normalization": "Committed .log copies normalize CR/LF and trailing whitespace only; originals retained under /workspace/near_hackathon/upgrade/provisioning-r2"
 }

@@ -1,20 +1,11 @@
 // Included in WASI host. Every write below is enclave storage or an explicitly
 // holder-authorized production operation; native unit/sandbox tests never call it.
 use keyhole_worker::collateral::{self, AuthorityAudit, Prepared};
-fn provision_root(token: &str) -> String {
-    tkey(token, "collateral_provision_v1")
+fn provision_root(token: &str, epoch: u64) -> String {
+    collateral::provision_root(token, epoch)
 }
 fn provision_idle(token: &str) -> Result<(), Error> {
-    let k = provision_root(token);
-    if !Store::read(&mut Host, &format!("{k}/claimed"))?.is_empty()
-        && Store::read(&mut Host, &format!("{k}/complete"))?.is_empty()
-    {
-        return Err(err(
-            "collateral_unknown",
-            "collateral provisioning holds this wallet; reconcile original operation",
-        ));
-    }
-    Ok(())
+    collateral::assert_provision_idle(&mut Host, token, guard_control(token)?.epoch)
 }
 fn provision_auth(input: &Value, op: &str) -> Result<(Ctx, Control), Error> {
     if input.pointer("/auth/scheme").and_then(Value::as_str) != Some("nep413") {
@@ -42,6 +33,17 @@ fn provision_auth(input: &Value, op: &str) -> Result<(Ctx, Control), Error> {
     if cfg["network"] != "mainnet" || cfg["custody_contract"] != "outlayer.near" {
         return Err(err("collateral_ineligible", "wrong custody domain"));
     }
+    if view(
+        &keys_contract(),
+        "collateral_registration_protocol",
+        json!({}),
+    )? != json!(2)
+    {
+        return Err(err(
+            "collateral_ineligible",
+            "reviewed owner/epoch-CAS contract release required",
+        ));
+    }
     guarded_minter()?;
     Ok((c, control))
 }
@@ -54,10 +56,10 @@ fn provision_unchanged(c: &Ctx, control: &Control) -> Result<(), Error> {
     }
     guard_registry()
 }
-fn load_prepared(token: &str) -> Result<Prepared, Error> {
+fn load_prepared(token: &str, epoch: u64) -> Result<Prepared, Error> {
     serde_json::from_slice(&Store::read(
         &mut Host,
-        &format!("{}/prepared", provision_root(token)),
+        &format!("{}/prepared", provision_root(token, epoch)),
     )?)
     .map_err(|_| {
         err(
@@ -74,9 +76,9 @@ fn prepared_summary(p: &Prepared) -> Value {
 fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
     let (c, control) = provision_auth(input, "prepare_collateral")?;
     let token = c.token_id();
-    let k = provision_root(&token);
+    let k = provision_root(&token, control.epoch);
     if !Store::read(&mut Host, &format!("{k}/prepared"))?.is_empty() {
-        let p = load_prepared(&token)?;
+        let p = load_prepared(&token, control.epoch)?;
         if p.owner != c.account || p.owner_epoch != control.epoch {
             return Err(err(
                 "epoch_changed",
@@ -205,8 +207,12 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
 }
 fn provision_identity(c: &Ctx, control: &Control, p: &Prepared) -> Result<(), Error> {
     if p.token_id != c.token_id()
-        || p.owner != c.account
-        || p.owner_epoch != control.epoch
+        || !collateral::holder_plan_access(
+            p,
+            &c.account,
+            control.epoch,
+            c.req.op == "reconcile_collateral",
+        )
         || p.worker_hash != cfg("GUARDED_WORKER_HASH", "")
         || c.req.params["provision_id"] != p.id()
     {
@@ -216,8 +222,8 @@ fn provision_identity(c: &Ctx, control: &Control, p: &Prepared) -> Result<(), Er
 }
 fn op_provision_collateral(input: &Value) -> Result<Value, Error> {
     let (c, control) = provision_auth(input, "provision_collateral")?;
-    let p = load_prepared(&c.token_id())?;
-    let k = provision_root(&p.token_id);
+    let p = load_prepared(&c.token_id(), control.epoch)?;
+    let k = provision_root(&p.token_id, p.owner_epoch);
     provision_identity(&c, &control, &p)?;
     // Once submission has been claimed, this entry point can only reconcile it.
     if !Store::read(&mut Host, &format!("{k}/submitted"))?.is_empty() {
@@ -278,73 +284,33 @@ fn op_provision_collateral(input: &Value) -> Result<Value, Error> {
     )?;
     let deposit = collateral::quote(&q, guarded::text(&c.req.params, "max_deposit_yocto")?)?;
     provision_unchanged(&c, &control)?;
-    // Construct and check native reserve before taking a persistent global latch.
-    let (hash, signed) = provision_signed_tx(&mid, &msk, &p, deposit)?;
-    provision_unchanged(&c, &control)?;
-    // A global latch protects this minter nonce until exact FINAL reconciliation.
-    if !Host.set_if_absent("w/collateral_minter_pending", p.id().as_bytes())? {
-        return Err(err(
-            "collateral_unknown",
-            "minter has an unresolved provisioning send",
-        ));
-    }
-    guarded::put_once(
+    let args = p.args().to_string();
+    let seed = minter_secret(&msk)?;
+    let outcome = native_send::execute(
         &mut Host,
-        &format!("{k}/audit"),
-        &serde_json::to_vec(&a).map_err(|_| err("storage", "audit encoding"))?,
-    )?;
-    guarded::put_once(
-        &mut Host,
-        &format!("{k}/deposit"),
-        deposit.to_string().as_bytes(),
-    )?;
-    guarded::put_once(&mut Host, &format!("{k}/tx_hash"), hash.as_bytes())?;
-    if !Host.set_if_absent(&format!("{k}/submitted"), b"1")? {
-        return Err(err(
-            "collateral_unknown",
-            "original transaction already claimed",
-        ));
+        &mut NativeRpc {
+            provision: Some((p.clone(), deposit, a)),
+        },
+        &p.id(),
+        &c.account,
+        &mid,
+        &seed,
+        &keys_contract(),
+        &[Action::FunctionCall {
+            method: "register_collateral",
+            args: args.as_bytes(),
+            gas: 200_000_000_000_000,
+            deposit,
+        }],
+    );
+    if let Err(e) = outcome {
+        if Store::read(&mut Host, &format!("{k}/tx_hash"))?.is_empty() {
+            return Err(e);
+        }
     }
-    provision_unchanged(&c, &control)?;
-    // Persist original hash BEFORE broadcast; never resend, even on a transport error.
-    let _ = rpc::send_tx(&signed, "FINAL");
     reconcile_provision(&c, &control, &p)
 }
-fn provision_signed_tx(
-    mid: &str,
-    msk: &str,
-    p: &Prepared,
-    deposit: u128,
-) -> Result<(String, String), Error> {
-    use base64::Engine;
-    use sha2::{Digest, Sha256};
-    let seed = minter_secret(msk)?;
-    let pk = ed25519_dalek::SigningKey::from_bytes(&seed)
-        .verifying_key()
-        .to_bytes();
-    let (raw, e) = rpc::view_access_key(
-        mid,
-        &format!("ed25519:{}", bs58::encode(pk).into_string()),
-        "final",
-    );
-    if !e.is_empty() {
-        return Err(err("rpc", "minter access key unavailable"));
-    }
-    let ak: Value = serde_json::from_str(&raw).map_err(|_| err("rpc", "invalid access key"))?;
-    let nonce = ak["nonce"]
-        .as_u64()
-        .and_then(|n| n.checked_add(1))
-        .ok_or_else(|| err("rpc", "invalid minter nonce"))?;
-    let (b, e) = rpc::block("final");
-    if !e.is_empty() {
-        return Err(err("rpc", "final block unavailable"));
-    }
-    let b: Value = serde_json::from_str(&b).map_err(|_| err("rpc", "invalid final block"))?;
-    let bh: [u8; 32] = bs58::decode(guarded::text(&b["header"], "hash")?)
-        .into_vec()
-        .ok()
-        .and_then(|b| b.try_into().ok())
-        .ok_or_else(|| err("rpc", "invalid block hash"))?;
+fn provision_native_budget(mid: &str, deposit: u128) -> Result<(), Error> {
     let (price, e) = rpc::gas_price("");
     if !e.is_empty() {
         return Err(err("rpc", "gas price unavailable"));
@@ -372,35 +338,26 @@ fn provision_signed_tx(
             "minter reserve or transaction ceiling insufficient",
         ));
     }
-    let args = p.args().to_string();
-    let tx = encode_tx(
-        mid,
-        &pk,
-        nonce,
-        &keys_contract(),
-        &bh,
-        &[Action::FunctionCall {
-            method: "register_collateral",
-            args: args.as_bytes(),
-            gas: 200_000_000_000_000,
-            deposit,
-        }],
-    );
-    let hash = bs58::encode(Sha256::digest(&tx)).into_string();
-    let signed = sign_tx(&seed, &tx);
-    Ok((
-        hash,
-        base64::engine::general_purpose::STANDARD.encode(signed),
-    ))
+    Ok(())
 }
+
 fn op_reconcile_collateral(input: &Value) -> Result<Value, Error> {
     let (c, control) = provision_auth(input, "reconcile_collateral")?;
-    let p = load_prepared(&c.token_id())?;
+    let plan_epoch = c
+        .req
+        .params
+        .get("provision_owner_epoch")
+        .map(|v| guarded::decimal(&json!({"e":v}), "e"))
+        .transpose()?
+        .map(|v| u64::try_from(v).map_err(|_| err("bad_params", "bad provision epoch")))
+        .transpose()?
+        .unwrap_or(control.epoch);
+    let p = load_prepared(&c.token_id(), plan_epoch)?;
     provision_identity(&c, &control, &p)?;
     reconcile_provision(&c, &control, &p)
 }
 fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value, Error> {
-    let k = provision_root(&p.token_id);
+    let k = provision_root(&p.token_id, p.owner_epoch);
     let hash = String::from_utf8(Store::read(&mut Host, &format!("{k}/tx_hash"))?)
         .map_err(|_| err("storage", "invalid transaction identity"))?;
     if hash.is_empty() || Store::read(&mut Host, &format!("{k}/submitted"))?.is_empty() {
@@ -428,8 +385,10 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
     };
     // The original native nonce is now FINAL, even if the provider store failed.
     // Release only this plan's latch; never strand another value journal's finish.
-    if Store::read(&mut Host, "w/collateral_minter_pending")? == p.id().as_bytes() {
-        Host.remove("w/collateral_minter_pending")?;
+    if let Some(t) = native_send::current(&mut Host)? {
+        if t.id == p.id() {
+            native_send::reconcile(&mut Host, &mut NativeRpc { provision: None }, &t)?;
+        }
     }
     if !terminal {
         return Ok(
@@ -475,9 +434,11 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
         .map_err(|_| err("storage", "approved audit missing"))?;
     collateral::seal_eligibility(&mut Host, p, &a, &b, &policy, &keys_contract(), terminal)?;
     guarded::put_once(&mut Host, &format!("{k}/complete"), hash.as_bytes())?;
-    // Only this provisioner may release its global minter latch.
-    if Store::read(&mut Host, "w/collateral_minter_pending")? == p.id().as_bytes() {
-        Host.remove("w/collateral_minter_pending")?;
+    // Append-only native completion never deletes a newer generation.
+    if let Some(t) = native_send::current(&mut Host)? {
+        if t.id == p.id() {
+            native_send::reconcile(&mut Host, &mut NativeRpc { provision: None }, &t)?;
+        }
     }
     Ok(
         json!({"ok":true,"op":"reconcile_collateral","status":"success","provision_id":p.id(),"tx_hash":hash,"binding_ready":true,"eligibility_sealed":true,"deposit_yocto":deposit.to_string()}),
@@ -486,7 +447,7 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
 /// Public output is a quote and non-reusable hashes, never the policy signature or API key.
 fn op_collateral_quote(input: &Value) -> Result<Value, Error> {
     let (c, control) = provision_auth(input, "collateral_quote")?;
-    let p = load_prepared(&c.token_id())?;
+    let p = load_prepared(&c.token_id(), control.epoch)?;
     provision_identity(&c, &control, &p)?;
     p.validate(&keys_contract(), chain_now_ms()? / 1000)?;
     let (mid, _) = guarded_minter()?;

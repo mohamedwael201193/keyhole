@@ -9,7 +9,7 @@ use keyhole_keys::LoanCertificate;
 use near_workspaces::{Account, Contract};
 use near_workspaces::types::NearToken;
 use serde_json::{json,Value};
-const WASM:&str="../keys/release/v2.5/keyhole_keys.wasm";
+const WASM:&str="../keys/release/v2.6/keyhole_keys.wasm";
 const MOCK:&str="tests/fixtures/custody_policy_mock.wasm";
 const N:u128=1_000_000_000_000_000_000_000_000;
 struct E { w:near_workspaces::Worker<near_workspaces::network::Sandbox>, c:Contract, mock:Contract, alice:Account, lender:Account, bob:Account, minter:Account }
@@ -29,7 +29,7 @@ async fn setup()->Result<E>{
  assert_eq!(view(&c,"get_pledge_config",json!({})).await["lending_enabled"],false);
  c.call("set_lending_enabled").args_json(json!({"enabled":true})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  // Mock accepts a fixed fake artifact; signature cryptography belongs to live provider rollout, not this fixture.
- minter.call(c.id(),"register_collateral").args_json(json!({"token_id":"k1","wallet_pubkey":format!("ed25519:{}","ab".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64}))
+ minter.call(c.id(),"register_collateral").args_json(json!({"token_id":"k1","wallet_pubkey":format!("ed25519:{}","ab".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64,"expected_owner_id":alice.id(),"expected_owner_epoch":"0"}))
   .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&c,"get_collateral_binding",json!({"token_id":"k1"})).await["ready"],true);
  Ok(E{w,c,mock,alice,lender,bob,minter})
@@ -227,7 +227,7 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
 #[tokio::test]async fn actual_failed_registration_refunds_forwarded_deposit_and_allows_corrected_retry()->Result<()> {
  let e=setup().await?;e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"k2","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Retry"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let mint_credit=view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await.as_str().unwrap().parse::<u128>()?;
- let args=json!({"token_id":"k2","wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64});
+ let args=json!({"token_id":"k2","wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64,"expected_owner_id":e.bob.id(),"expected_owner_epoch":"0"});
  let dep=N/50+1;let r=e.minter.call(e.c.id(),"register_collateral").args_json(args.clone()).deposit(NearToken::from_yoctonear(dep)).max_gas().transact().await?;
  assert!(format!("{:?}",r.receipt_failures()).contains("mock provider insufficient deposit"));
  assert!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await.is_null());assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,(dep+mint_credit).to_string());
@@ -249,7 +249,7 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
  let e=setup().await?;fault_callbacks(&e).await?;
  e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"k2","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Registration callback"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let mint_credit=view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await;
- let r=e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":"k2","wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?;injected(&r);
+ let r=e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":"k2","wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64,"expected_owner_id":e.bob.id(),"expected_owner_epoch":"0"})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?;injected(&r);
  assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],false);
  e.bob.call(e.c.id(),"check_collateral").args_json(json!({"token_id":"k2"})).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k2"})).await["ready"],false);assert_eq!(view(&e.c,"get_pledge_config",json!({})).await["user_liabilities"],(mint_credit.as_str().unwrap().parse::<u128>()?+N/10).to_string());assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await,mint_credit);Ok(())
@@ -271,7 +271,7 @@ fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{
  let token="k".repeat(64);
  e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":token,"receiver_id":borrower.id(),"tier":2,"metadata":{"title":"Storage measurement"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let before_binding=e.c.view_account().await?.storage_usage;
- e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64,"expected_owner_id":borrower.id(),"expected_owner_epoch":"0"})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let baseline=e.c.view_account().await?.storage_usage;
  let mut peaks=Vec::new();
  for cycle in 0..3 {
@@ -359,7 +359,7 @@ mod guarded_layer;
  let token="k".repeat(64);
  e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":token,"receiver_id":borrower.id(),"tier":2,"metadata":{"title":"Storage measurement"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let before_binding=e.c.view_account().await?.storage_usage;
- e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64,"expected_owner_id":borrower.id(),"expected_owner_epoch":"0"})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let baseline=e.c.view_account().await?.storage_usage;
   let ts=now(&e).await;
   borrower.call(e.c.id(),"open_loan").args_json(json!({"token_id":token,"terms":{"lender":lender.id(),"principal":(N/100).to_string(),"repayment":(101*N/10000).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"500000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
@@ -406,7 +406,7 @@ mod guarded_layer;
  let token="k".repeat(64);
  e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":token,"receiver_id":borrower.id(),"tier":2,"metadata":{"title":"Storage measurement"}})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let before_binding=e.c.view_account().await?.storage_usage;
- e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+ e.minter.call(e.c.id(),"register_collateral").args_json(json!({"token_id":token,"wallet_pubkey":format!("ed25519:{}","cd".repeat(32)),"encrypted_data":"sealed-policy","wallet_signature":"ab".repeat(64),"version":1,"valid_until":4_000_000_000u64,"expected_owner_id":borrower.id(),"expected_owner_epoch":"0"})).deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let baseline=e.c.view_account().await?.storage_usage;
  let ts=now(&e).await;
  borrower.call(e.c.id(),"open_loan").args_json(json!({"token_id":token,"terms":{"lender":lender.id(),"principal":(N/100).to_string(),"repayment":(101*N/10000).to_string(),"duration_sec":"7200","grace_sec":"900","floor_raw":"500000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;

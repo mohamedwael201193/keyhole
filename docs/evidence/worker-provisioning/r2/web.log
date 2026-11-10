@@ -1,0 +1,108 @@
+v22.22.2
+10.8.2
+
+> keyhole-web@1.0.0 lint
+> eslint .
+
+
+/workspace/near_hackathon/wt_worker_prov/web/app/pledge/view.tsx
+  164:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  180:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  201:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  233:27  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  247:23  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  293:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  315:56  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  319:57  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/workspace/near_hackathon/wt_worker_prov/web/components/Art.tsx
+  10:5  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/workspace/near_hackathon/wt_worker_prov/web/components/judge/AttackBoard.tsx
+  49:39  warning  React Hook useEffect has a missing dependency: 'runAll'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 10 problems (0 errors, 10 warnings)
+
+
+> keyhole-web@1.0.0 typecheck
+> tsc --noEmit
+
+
+> keyhole-web@1.0.0 test
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 /workspace/near_hackathon/wt_worker_prov/web
+
+
+ Test Files  99 passed (99)
+      Tests  1785 passed (1785)
+   Start at  21:39:36
+   Duration  4.80s (transform 3.55s, setup 0ms, import 9.71s, tests 10.26s, environment 6ms)
+
+
+> keyhole-web@1.0.0 build
+> next build
+
+▲ Next.js 16.4.3 (Turbopack)
+✓ Running next.config.ts took 28ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 906ms
+  Running TypeScript ...
+  Finished TypeScript in 5.0s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/29) ...
+  Generating static pages using 7 workers (7/29)
+  Generating static pages using 7 workers (14/29)
+  Generating static pages using 7 workers (21/29)
+✓ Generating static pages using 7 workers (29/29) in 661ms
+  Finalizing page optimization ...
+
+Route (app)                 Revalidate  Expire
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /api/agent
+├ ƒ /api/ai
+├ ƒ /api/check
+├ ƒ /api/health
+├ ƒ /api/keyhole
+├ ƒ /api/keys
+├ ƒ /api/oneclick
+├ ƒ /api/oneclick/deposit
+├ ƒ /api/oneclick/fund
+├ ƒ /api/pcs
+├ ƒ /api/pledge-sandbox
+├ ƒ /api/prices
+├ ƒ /api/supply
+├ ƒ /api/tokens
+├ ƒ /api/worker
+├ ○ /apple-icon.png
+├ ○ /ask
+├ ○ /atlas
+├ ○ /attack
+├ ○ /dashboard
+├ ○ /demo
+├ ƒ /gallery
+├ ƒ /identity
+├ ○ /judge
+├ ○ /key
+├ ○ /keys
+├ ○ /manifest.webmanifest
+├ ○ /mint                           1m      1y
+├ ○ /pledge
+├ ƒ /pledge/lend/[tokenId]
+├ ○ /pnl
+├ ○ /settle
+├ ○ /source
+├ ○ /start
+├ ○ /swap
+├ ○ /vault                          1m      1y
+└ ƒ /verify
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

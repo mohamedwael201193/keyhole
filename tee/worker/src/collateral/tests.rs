@@ -84,7 +84,9 @@ fn views(p: &Prepared) -> (Value, Value) {
     )
 }
 fn receipt(p: &Prepared) -> Value {
-    json!({"final_execution_status":"FINAL","transaction":{"hash":"original","signer_id":"minter.near","receiver_id":"keys.near","actions":[{"FunctionCall":{"method_name":"register_collateral","gas":200000000000000u64,"deposit":(BINDING_DEPOSIT+1).to_string(),"args":B64.encode(p.args().to_string())}}]},"status":{"SuccessValue":B64.encode("true")},"receipts_outcome":[{"outcome":{"status":{"SuccessValue":""}}}]})
+    let mut v = crate::receipts::fixture("original", "minter.near", "keys.near", "true");
+    v["transaction"]["actions"] = json!([{"FunctionCall":{"method_name":"register_collateral","deposit":(BINDING_DEPOSIT+1).to_string(),"gas":200_000_000_000_000u64,"args":B64.encode(p.args().to_string())}}]);
+    v
 }
 #[test]
 fn restricted_policy_has_no_raw_or_external_signing() {
@@ -367,6 +369,74 @@ fn current_decrypted_policy_must_match_all_prepared_authority_surfaces() {
         assert!(
             !effective_policy_matches(&expected, &v, &p, "keys.near"),
             "{field}"
+        );
+    }
+}
+
+#[test]
+fn title_epoch_namespaces_do_not_strand_new_holder_and_only_reconcile_can_adopt() {
+    let p = plan();
+    assert_ne!(
+        provision_root(&p.token_id, p.owner_epoch),
+        provision_root(&p.token_id, p.owner_epoch + 1)
+    );
+    assert!(holder_plan_access(&p, &p.owner, p.owner_epoch, false));
+    assert!(!holder_plan_access(
+        &p,
+        "new.near",
+        p.owner_epoch + 1,
+        false
+    ));
+    assert!(!holder_plan_access(&p, &p.owner, p.owner_epoch + 2, false));
+    assert!(holder_plan_access(&p, "new.near", p.owner_epoch + 1, true));
+    assert_eq!(p.args()["expected_owner_id"], p.owner);
+    assert_eq!(p.args()["expected_owner_epoch"], p.owner_epoch.to_string());
+}
+#[test]
+fn production_idle_gate_only_holds_the_current_title_epoch() {
+    let mut s = Mem::default();
+    let p = plan();
+    s.set_if_absent(
+        &format!("{}/claimed", provision_root(&p.token_id, p.owner_epoch)),
+        b"old",
+    )
+    .unwrap();
+    assert!(assert_provision_idle(&mut s, &p.token_id, p.owner_epoch).is_err());
+    assert!(assert_provision_idle(&mut s, &p.token_id, p.owner_epoch + 1).is_ok());
+    assert!(assert_provision_idle(&mut s, &p.token_id, p.owner_epoch + 2).is_ok());
+}
+#[test]
+fn exact_closed_false_or_failure_is_terminal_but_incomplete_failure_is_unknown() {
+    let p = plan();
+    for status in [
+        json!({"SuccessValue":B64.encode("false")}),
+        json!({"Failure":{"ActionError":"failed"}}),
+    ] {
+        let mut v = receipt(&p);
+        v["status"] = status.clone();
+        v["receipts_outcome"][0]["outcome"]["status"] = status;
+        assert_eq!(
+            registration_terminal(
+                &v,
+                "original",
+                "minter.near",
+                "keys.near",
+                &p,
+                BINDING_DEPOSIT + 1
+            ),
+            Some(false)
+        );
+        v["receipts_outcome"] = Value::Null;
+        assert_eq!(
+            registration_terminal(
+                &v,
+                "original",
+                "minter.near",
+                "keys.near",
+                &p,
+                BINDING_DEPOSIT + 1
+            ),
+            None
         );
     }
 }

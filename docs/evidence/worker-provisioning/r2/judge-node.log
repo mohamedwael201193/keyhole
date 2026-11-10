@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: primary recipe fetches and checks the full immutable source commit
+ok 1 - primary recipe fetches and checks the full immutable source commit
+  ---
+  duration_ms: 1.081972
+  type: 'test'
+  ...
+# Subtest: exact generated checkout contains byte-identical script, receipt checker and identity
+ok 2 - exact generated checkout contains byte-identical script, receipt checker and identity
+  ---
+  duration_ms: 636.723747
+  type: 'test'
+  ...
+# Subtest: unknown flags reject before any rebuild or live read
+ok 3 - unknown flags reject before any rebuild or live read
+  ---
+  duration_ms: 34.672175
+  type: 'test'
+  ...
+# Subtest: rebuild actually invokes build and enforces byte equality
+ok 4 - rebuild actually invokes build and enforces byte equality
+  ---
+  duration_ms: 147.240024
+  type: 'test'
+  ...
+# Subtest: strict online predicate rejects nonimplicit/wrong minter instead of warning success
+ok 5 - strict online predicate rejects nonimplicit/wrong minter instead of warning success
+  ---
+  duration_ms: 169.365622
+  type: 'test'
+  ...
+# Subtest: live identity promotion is reproducible from FINAL public evidence
+ok 6 - live identity promotion is reproducible from FINAL public evidence
+  ---
+  duration_ms: 196.110612
+  type: 'test'
+  ...
+# Subtest: promotion refuses unmatched live bytes without changing live identity
+ok 7 - promotion refuses unmatched live bytes without changing live identity
+  ---
+  duration_ms: 48.459547
+  type: 'test'
+  ...
+# Subtest: promotion refuses pending receipt without changing live identity
+ok 8 - promotion refuses pending receipt without changing live identity
+  ---
+  duration_ms: 46.021738
+  type: 'test'
+  ...
+# Subtest: promotion refuses failed receipt without changing live identity
+ok 9 - promotion refuses failed receipt without changing live identity
+  ---
+  duration_ms: 45.236008
+  type: 'test'
+  ...
+# Subtest: promotion refuses different deployment bytes without changing live identity
+ok 10 - promotion refuses different deployment bytes without changing live identity
+  ---
+  duration_ms: 46.191461
+  type: 'test'
+  ...
+# Subtest: promotion refuses different beneficiary without changing live identity
+ok 11 - promotion refuses different beneficiary without changing live identity
+  ---
+  duration_ms: 46.054462
+  type: 'test'
+  ...
+# Subtest: no claim URL hits /api/health or OutLayer /call
+ok 12 - no claim URL hits /api/health or OutLayer /call
+  ---
+  duration_ms: 3.867089
+  type: 'test'
+  ...
+# Subtest: the claims runner does not call OutLayer /call
+ok 13 - the claims runner does not call OutLayer /call
+  ---
+  duration_ms: 0.296074
+  type: 'test'
+  ...
+# Subtest: full reproduction builds the untracked callback fixture before the sandbox
+ok 14 - full reproduction builds the untracked callback fixture before the sandbox
+  ---
+  duration_ms: 1.548996
+  type: 'test'
+  ...
+# Subtest: full reproduction compiles the WASI host, not just native cfg
+ok 15 - full reproduction compiles the WASI host, not just native cfg
+  ---
+  duration_ms: 0.200364
+  type: 'test'
+  ...
+# Subtest: judge checkout and raw paths share an immutable generated source ref
+ok 16 - judge checkout and raw paths share an immutable generated source ref
+  ---
+  duration_ms: 2.66137
+  type: 'test'
+  ...
+# Subtest: all current README claim-count rows match actual offline verification
+ok 17 - all current README claim-count rows match actual offline verification
+  ---
+  duration_ms: 168.700929
+  type: 'test'
+  ...
+# Subtest: live and source candidates stay distinct and presentation has no visible dates
+ok 18 - live and source candidates stay distinct and presentation has no visible dates
+  ---
+  duration_ms: 0.966469
+  type: 'test'
+  ...
+# Subtest: successful receipts prove success
+ok 19 - successful receipts prove success
+  ---
+  duration_ms: 1.369995
+  type: 'test'
+  ...
+# Subtest: a failed nested receipt cannot prove success
+ok 20 - a failed nested receipt cannot prove success
+  ---
+  duration_ms: 0.368017
+  type: 'test'
+  ...
+# Subtest: intentional refusal must match its documented error
+ok 21 - intentional refusal must match its documented error
+  ---
+  duration_ms: 0.285818
+  type: 'test'
+  ...
+# Subtest: an unrelated failure does not prove the documented refusal
+ok 22 - an unrelated failure does not prove the documented refusal
+  ---
+  duration_ms: 0.233882
+  type: 'test'
+  ...
+# Subtest: success cannot prove refusal
+ok 23 - success cannot prove refusal
+  ---
+  duration_ms: 0.266379
+  type: 'test'
+  ...
+# Subtest: failure claims without a reason fail closed
+ok 24 - failure claims without a reason fail closed
+  ---
+  duration_ms: 0.184518
+  type: 'test'
+  ...
+# Subtest: unknown expectations fail closed
+ok 25 - unknown expectations fail closed
+  ---
+  duration_ms: 0.244213
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 705.907811

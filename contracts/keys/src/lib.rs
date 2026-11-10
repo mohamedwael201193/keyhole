@@ -41,7 +41,7 @@ macro_rules! json_object {
     }};
 }
 
-mod pledge;
+#[allow(clippy::too_many_arguments)] mod pledge; // Flat provider ABI plus required owner/epoch CAS fields.
 mod sale;
 pub use sale::{Sale, SaleTerms, SaleCertificate, SaleState};
 pub use pledge::*;
@@ -211,7 +211,7 @@ fn emit_key_event(event: &str, data: String) {
 }
 
 #[near(contract_state, contract_metadata(
-    version = "2.5.0",
+    version = "2.6.0",
     link = "https://github.com/mohamedwael201193/keyhole",
     standard(standard = "nep171", version = "1.2.0"),
     standard(standard = "nep177", version = "2.0.0"),
@@ -584,7 +584,7 @@ impl Contract {
             owner_epoch: near_sdk::json_types::U64(owner_epochs().get(&token_id).unwrap_or(0)),
             pending_value_ops: near_sdk::json_types::U64(self.pending_ops(&token_id)),
             listed: listings().get(&token_id).is_some() || sale::sales().get(&token_id).is_some(),
-            transfer_pending: transfer_calls().get(&token_id).is_some(),
+            transfer_pending: transfer_calls().get(&token_id).is_some() || pledge::registration_busy(&token_id),
             pledged: loans().get(&token_id).is_some(),
             value_op_nonce: near_sdk::json_types::U64(value_ops().get(&token_id).map(|op| op.nonce.0).unwrap_or(0)),
         }

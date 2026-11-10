@@ -90,7 +90,7 @@ impl Prepared {
     pub fn args(&self) -> Value {
         json!({"token_id":self.token_id,"wallet_pubkey":self.wallet_pubkey,
         "encrypted_data":self.encrypted_data,"wallet_signature":self.wallet_signature,
-        "version":self.version,"valid_until":self.valid_until})
+        "version":self.version,"valid_until":self.valid_until,"expected_owner_id":self.owner,"expected_owner_epoch":self.owner_epoch.to_string()})
     }
     pub fn validate(&self, contract: &str, now_sec: u64) -> Result<(), Error> {
         if !guarded::lower_hash(&self.worker_hash)
@@ -265,13 +265,15 @@ pub fn binding_matches(p: &Prepared, b: &Value, policy: &Value, contract: &str) 
 }
 /// A view, tx acknowledgement or final_execution_status alone is never a success.
 /// The original hash and method must match; terminal SuccessValue must decode to true.
-pub fn registration_terminal(
+#[allow(clippy::too_many_arguments)]
+pub fn registration_terminal_for(
     v: &Value,
     hash: &str,
     minter: &str,
     contract: &str,
     p: &Prepared,
     deposit: u128,
+    custody: &str,
 ) -> Option<bool> {
     let v = v.get("result").unwrap_or(v);
     let identity = v["final_execution_status"] == "FINAL"
@@ -294,29 +296,32 @@ pub fn registration_terminal(
     if !identity {
         return None;
     }
-    if v["status"].get("Failure").is_some() {
-        return Some(false);
+    let proof = crate::receipts::terminal(
+        v,
+        hash,
+        minter,
+        contract,
+        Some(&[minter, contract, custody]),
+    )?;
+    match proof {
+        crate::receipts::Terminal::Success { bytes, executor } => {
+            if executor != contract {
+                return None;
+            }
+            Some(bytes == b"true" && !crate::receipts::has_failure(v))
+        }
+        crate::receipts::Terminal::Failure => Some(false),
     }
-    let result = v["status"]["SuccessValue"]
-        .as_str()
-        .and_then(|s| B64.decode(s).ok())?;
-    let rs = v["receipts_outcome"]
-        .as_array()
-        .filter(|rs| !rs.is_empty())?;
-    if !rs.iter().all(|r| {
-        let st = &r["outcome"]["status"];
-        st.get("Failure").is_some()
-            || st.get("SuccessValue").is_some()
-            || st.get("SuccessReceiptId").is_some()
-    }) {
-        return None;
-    }
-    Some(
-        result == b"true"
-            && rs
-                .iter()
-                .all(|r| r["outcome"]["status"].get("Failure").is_none()),
-    )
+}
+pub fn registration_terminal(
+    v: &Value,
+    hash: &str,
+    minter: &str,
+    contract: &str,
+    p: &Prepared,
+    deposit: u128,
+) -> Option<bool> {
+    registration_terminal_for(v, hash, minter, contract, p, deposit, "outlayer.near")
 }
 pub fn final_registration(
     v: &Value,
@@ -375,3 +380,25 @@ pub fn seal_eligibility(
 
 #[cfg(test)]
 mod tests;
+
+/// Epoch-scoped local preparation can never strand a later title holder. The
+/// contract CAS is the authority barrier, not this off-chain namespace.
+pub fn provision_root(token: &str, epoch: u64) -> String {
+    crate::tkey(token, &format!("collateral_provision_v2/{epoch}"))
+}
+pub fn holder_plan_access(p: &Prepared, owner: &str, epoch: u64, reconcile_only: bool) -> bool {
+    reconcile_only || (p.owner == owner && p.owner_epoch == epoch)
+}
+
+pub fn assert_provision_idle(st: &mut dyn Store, token: &str, epoch: u64) -> Result<(), Error> {
+    let k = provision_root(token, epoch);
+    if !st.read(&format!("{k}/claimed"))?.is_empty()
+        && st.read(&format!("{k}/complete"))?.is_empty()
+    {
+        return Err(err(
+            "collateral_unknown",
+            "current epoch provisioning is pending; reconcile original operation",
+        ));
+    }
+    Ok(())
+}
