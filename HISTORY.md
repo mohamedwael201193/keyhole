@@ -91,3 +91,9 @@
 - Clippy: drop unnecessary `as u64` in epoch invariant test (`r.below` is already u64).
 - Web: register `epoch_void` in `WORKER_ERROR_CODES` + en.json error copy so p2-errors stays green.
 - PnL-on-card / Attested Key Desk PnL dropped from the plan (swap-only; no invented metrics). Priority remains epoch + operator trust.
+
+## 2026-11-09 — v2.5 pledge contract rework (PR #184, prepared/not deployed)
+- Replaces the undeployed desk proposal: S/Q/A/F and service/economics methods removed; v2.4 layout and E/Vo/Vc preserved.
+- Adds complete sealed-loan state/nonce, all-path pledge and token transfer-call locks, authenticated-owner/epoch admission, canonical contract-verified certificate, asynchronous principal and failure-restored lender credits.
+- Fixed-account treasury-only recovery after December2,2026 02:00 Africa/Cairo, explicit provenance ledger and all-liability/storage/reserve exclusions; no upgrade escape hatch.
+- 209 unit + 19 sandbox tests, strict clippy and captured-state fork dry-run pass. Captured native balance is short for candidate code storage; sandbox-only funding used. Live deployment, publication, retirement and key changes remain approval gates.

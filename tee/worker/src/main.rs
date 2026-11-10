@@ -4,6 +4,7 @@
 #[cfg(target_arch = "wasm32")]
 mod host {
     use keyhole_worker::*;
+    use keyhole_worker::guarded::{self, Control, Journal, Terminal};
     use serde_json::{json, Value};
     use std::io::Read;
     wit_bindgen::generate!({ world: "keyhole", path: "wit", generate_all });
@@ -113,20 +114,11 @@ mod host {
         listing_blocks_ex(op, execute, read.as_ref().map_err(String::as_str))
     }
 
-    /// Current settlement epoch for a key (enclave storage). Missing means 0.
-    fn epoch_of(token: &str) -> u64 {
-        epoch_from_bytes(&Host.get(&tkey(token, "epoch")))
-    }
-
-    /// Persist epoch. Called when ownership changes.
-    fn set_epoch(token: &str, epoch: u64) {
-        Host.set(&tkey(token, "epoch"), &epoch_to_bytes(epoch));
-    }
-
     /// Stamp a value-move with the current epoch, then refuse if owner or epoch drift before the send.
     fn settle_gate(token: &str, account: &str, stamped: u64) -> Result<(), Error> {
         owns(token, account).and_then(settle_if_owner)?;
-        settle_if_epoch(stamped, epoch_of(token))
+        let control=guard_control(token)?;control.admit()?;
+        settle_if_epoch(stamped, control.epoch)
     }
 
     fn yocto_of(v: &Value) -> u128 {
@@ -145,7 +137,7 @@ mod host {
         fn cap(&self) -> String { cap_id(&self.token_id()) }
     }
 
-    /// Signature -> key ownership -> freshness -> op binding -> tier -> nonce (replay) -> rate limit.
+    // Signature -> key ownership -> freshness -> op binding -> tier -> nonce (replay) -> rate limit.
     thread_local! {
         // Account and key that passed authentication in this call, echoed in `bind`.
         static BIND: std::cell::RefCell<Option<(String, Option<String>)>> = const { std::cell::RefCell::new(None) };
@@ -183,6 +175,7 @@ mod host {
         if need_key && token.is_none() {
             return Err(err("not_owner", "only the current key holder can authorize this"));
         }
+        if let Some(t)=&token {guarded::private_access(&guard_control(t)?,owns(t,&account)?)?;}
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         // Nonce first: a replay is refused without spending the rate budget (P1-9).
         admit(&mut Host, &account, &lim, &nonce, now_ms)?;
@@ -206,6 +199,8 @@ mod host {
         check_freshness(req.ts_ms, now_ms)?;
         let account = g.account.clone();
         if !owns(&g.token_id, &account)? { return Err(err("not_owner", "this account no longer holds the key the session was made for")); }
+        let control=guard_control(&g.token_id)?;guarded::private_access(&control,owns(&g.token_id,&account)?)?;
+        guarded::session_epoch(&Store::read(&mut Host,&session_key(&id,"guard_epoch"))?,control.epoch)?;
         let tier = holder_tier(&account)?;
         let lim = limits_for_tier(tier.unwrap_or(1)).unwrap();
         admit(&mut Host, &account, &lim, &nonce, now_ms)?;
@@ -218,12 +213,15 @@ mod host {
     fn op_session(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "session", true)?;
         let g = grant_from_request(&c.req, &c.token_id(), c.now_ms)?;
+        let control=guard_control(&c.token_id())?;
+        if control.transfer_pending{return Err(err("transfer_pending","wait for title settlement before creating a session"));}
         let mut t = [0u8; 32];
         getrandom::fill(&mut t).map_err(|_| err("rng", "no randomness"))?;
         let id = session_id(&t);
-        Host.set(&session_key(&id, "grant"), serde_json::to_string(&g).unwrap_or_default().as_bytes());
+        guarded::put_once(&mut Host,&session_key(&id,"grant"),&serde_json::to_vec(&g).map_err(|_|err("storage","grant encoding"))?)?;
+        guarded::put_once(&mut Host,&session_key(&id,"guard_epoch"),&control.epoch.to_be_bytes())?;
         Ok(json!({"ok": true, "op": "session", "account": c.account, "token_id": g.token_id, "session_token": b64(&t),
-            "exp_ms": g.exp_ms, "max_usd_micro": g.max_usd_micro, "scope": g.scope}))
+            "exp_ms": g.exp_ms, "max_usd_micro": g.max_usd_micro, "scope": g.scope, "owner_epoch":control.epoch.to_string()}))
     }
 
     /// Minter key is generated inside the TEE on first use and kept in encrypted storage.
@@ -322,6 +320,8 @@ mod host {
     fn op_quote(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "quote", true)?;
         let p = &c.req.params;
+        let execute=p.get("execute").and_then(Value::as_bool).unwrap_or(false);
+        if execute{guard_preflight(&c)?;}
         let lim = limits_now(&c)?;
         // No quotes on a key locked for sale; proceeds and refunds go only to the signer (P1-4c, P1-9).
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
@@ -345,32 +345,25 @@ mod host {
         let dry = oneclick_quote(&body)?;
         let usd = dry.pointer("/quote/amountInUsd").and_then(|v| v.as_str()).and_then(parse_usd_micro)
             .ok_or_else(|| err("upstream", "quote has no USD value; cannot apply caps"))?;
-        let execute = p.get("execute").and_then(|v| v.as_bool()).unwrap_or(false);
         // Wet quotes move custody funds via an INTENTS deposit; refuse them while listed (H-1).
         if execute {
             assert_not_listed_ex("quote", &c.token_id(), true)?;
         }
-        let spent = enforce_caps(&mut Host, &c.cap(), &lim, usd, c.now_ms, execute)?;
-        let mut out = json!({"ok": true, "op": "quote", "account": c.account, "tier": c.tier, "usd_micro": usd,
-            "limits": lim, "spent_today_usd_micro": spent, "policy": "passed"});
-        if !execute {
-            out["quote"] = dry["quote"].clone();
-            return Ok(out);
-        }
-        body["dry"] = json!(false);
-        match oneclick_quote(&body) {
-            Ok(real) => {
-                let wet = real.pointer("/quote/amountInUsd").and_then(|v| v.as_str()).and_then(parse_usd_micro);
-                if let Err(e) = assert_wet_within_dry(usd, wet) {
-                    let _ = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), -(usd as i64));
-                    return Err(e);
-                }
-                out["quote"] = real["quote"].clone();
-                out["deposit_address"] = real.pointer("/quote/depositAddress").cloned().unwrap_or(Value::Null);
-                Ok(out)
-            }
-            Err(e) => { let _ = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), -(usd as i64)); Err(e) }
-        }
+        let spent=enforce_caps(&mut Host,&c.cap(),&lim,usd,c.now_ms,false)?;
+        let mut out=json!({"ok":true,"op":"quote","account":c.account,"tier":c.tier,"usd_micro":usd,"limits":lim,"spent_today_usd_micro":spent,"policy":"passed"});
+        if !execute{out["quote"]=dry["quote"].clone();return Ok(out);}
+        body["dry"]=json!(false);
+        let charge=charge_spend(&mut Host,&c.cap(),&lim,c.session.as_ref().map(|(id,g)|(id.as_str(),g)),usd,c.now_ms)?;
+        let j=guard_begin(&c,input,"quote",body.clone(),Some(charge))?;
+        if !guarded::put_once(&mut Host,&format!("{}/dispatch",j.key()),b"1")?{return Err(err("replay","quote already dispatched"));}
+        let real=oneclick_quote(&body).map_err(|_|err("needs_review",format!("quote-only outcome unknown; admission {} remains locked",j.op_id)))?;
+        let wet=real.pointer("/quote/amountInUsd").and_then(Value::as_str).and_then(parse_usd_micro);
+        let valid=assert_wet_within_dry(usd,wet).is_ok()&&real.pointer("/quote/depositAddress").and_then(Value::as_str).is_some();
+        let t=Terminal{success:valid,refund_charge:!valid,provider_id:format!("quote-only:{}",sha256_hex(&real.to_string()))};
+        let finished=guard_finish(&j,&t)?;
+        if !valid{return Err(err("quote_changed",format!("quote rejected; admission_finished={finished}; operation {}",j.op_id)));}
+        out["quote"]=real["quote"].clone();out["deposit_address"]=real.pointer("/quote/depositAddress").cloned().unwrap_or(Value::Null);
+        out["value_op_id"]=json!(j.op_id);out["admission_finished"]=json!(finished);out["quote_only"]=json!(true);Ok(out)
     }
 
     fn op_status(input: &Value) -> Result<Value, Error> {
@@ -378,17 +371,19 @@ mod host {
         let tier_lim = c.tier.and_then(limits_for_tier);
         let lim = if c.token.is_some() { limits_now(&c).ok().or(tier_lim) } else { tier_lim };
         let pol = c.token.as_ref().and_then(|t| policy_for(&Host.get(&tkey(t, "policy")), &c.account));
-        let cool = c.token.as_ref().and_then(|t| {
-            prov_sync_owner(t, &c.account, c.now_ms);
-            let evs: Vec<ProvEvent> = load_prov(t).into_iter().map(|(e, _)| e).collect();
-            cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms)
-        });
+        let cool = match c.token.as_ref() {
+            Some(t) => {
+                let epoch_cool=prov_sync_owner(t, &c.account, c.now_ms)?;
+                let evs: Vec<ProvEvent> = load_prov(t).into_iter().map(|(e, _)| e).collect();
+                epoch_cool.max(cooldown_until(&evs, &c.account)).filter(|u| *u > c.now_ms)
+            }, None => None,
+        };
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = c.token.as_ref().and_then(|t| active_lock(&Host.get(&tkey(t, "lock")), &c.account, c.now_ms));
-        let epoch = c.token.as_ref().map(|t| epoch_of(t)).unwrap_or(0);
+        let epoch=match c.token.as_ref(){Some(t)=>guard_control(t)?.epoch,None=>0};
         Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
             "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent,
-            "settlement_epoch": epoch}))
+            "settlement_epoch": epoch,"owner_epoch":epoch.to_string()}))
     }
 
     fn op_mint(input: &Value) -> Result<Value, Error> {
@@ -425,11 +420,15 @@ mod host {
 
     // ---------- per-holder confidential wallets (one OutLayer custody wallet per holder) ----------
     fn http(method: &str, url: &str, bearer: Option<&str>, body: Option<&Value>) -> Result<(u16, Value), Error> {
+        http_idempotent(method,url,bearer,body,None)
+    }
+    fn http_idempotent(method: &str, url: &str, bearer: Option<&str>, body: Option<&Value>, idempotency:Option<&str>) -> Result<(u16, Value), Error> {
         let c = wasi_http_client::Client::new();
         let auth = bearer.map(|b| format!("Bearer {}", b));
         let b = body.map(|b| b.to_string()).unwrap_or_default();
         let mut rq = if method == "GET" { c.get(url) } else { c.post(url) };
         if let Some(a) = auth.as_deref() { rq = rq.header("Authorization", a); }
+        if let Some(id)=idempotency { rq=rq.header("X-Idempotency-Key",id).header("X-Answer-Within","0"); }
         if method != "GET" { rq = rq.header("Content-Type", "application/json").body(b.as_bytes()); }
         let resp = rq.connect_timeout(std::time::Duration::from_secs(20)).send().map_err(|_| err("upstream", "OutLayer wallet API unreachable, retry"))?;
         let st = resp.status();
@@ -463,26 +462,7 @@ mod host {
         Ok((s(&j, "api_key").unwrap_or_default(), s(&j, "near_account_id").unwrap_or_default()))
     }
 
-    /// Submit a wallet op and poll until it settles (max ~90 s).
-    fn wallet_op(key: &str, path: &str, body: Value) -> Result<Value, Error> {
-        let (st, j) = http("POST", &format!("{}{}", OL, path), Some(key), Some(&body))?;
-        if st >= 300 {
-            let code = j.get("error").and_then(|e| e.as_str()).unwrap_or("error").to_string();
-            if code.contains("policy") { return Err(err("policy_denied", "refused by the wallet's OutLayer policy")); }
-            return Err(err("upstream", format!("wallet {} {}: {}", path, st, j.get("message").and_then(|m| m.as_str()).unwrap_or(&code))));
-        }
-        let Some(id) = s(&j, "request_id") else { return Ok(j) };
-        let mut last = j;
-        for _ in 0..WALLET_POLLS {
-            std::thread::sleep(std::time::Duration::from_secs(3));
-            if let Ok((_, r)) = http("GET", &format!("{}/wallet/v1/requests/{}", OL, id), Some(key), None) {
-                let stt = s(&r, "status").unwrap_or_default();
-                last = r;
-                if ["success", "failed", "error", "refunded", "needs_review"].contains(&stt.as_str()) { break; }
-            }
-        }
-        Ok(last)
-    }
+    include!("guarded_host.rs");
 
     /// USD value (micro) of `amount` of `token`, priced by a dry 1Click quote into USDC.
     fn usd_of(token: &str, amount: &str, refund: &str, now_ms: u64) -> Result<u64, Error> {
@@ -542,6 +522,7 @@ mod host {
 
     fn op_swap(input: &Value, op: &str) -> Result<Value, Error> {
         let c = authenticate(input, op, true)?;
+        guard_preflight(&c)?;
         let p = &c.req.params;
         let lim = limits_now(&c)?;
         let tin = s(p, "token_in").ok_or_else(|| err("bad_params", "missing params.token_in"))?;
@@ -550,12 +531,12 @@ mod host {
         let amt = digits(p, "amount_in")?;
         // A client floor is checked before anything is priced or held. Zero is refused.
         let client_min = client_min_out_field(p.get("min_amount_out"))?;
-        let (key, id) = c.wallet()?;
+        let (key, id) = guarded_wallet(&c.token_id())?;
         let usd = usd_of(&tin, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         // A key listed for sale is frozen for value moves until it is sold or unlisted (before any spend is held).
         assert_not_listed(op, &c.token_id())?;
-        let stamped = epoch_of(&c.token_id());
+        let stamped = guard_control(&c.token_id())?.epoch;
         // The floor the wallet must respect. Without one from the caller, it comes from a fresh quote.
         let min_out = match client_min {
             Some(m) => m,
@@ -578,40 +559,38 @@ mod host {
             return Err(e);
         }
         let body = json!({"token_in": tin, "token_out": tout, "amount_in": amt, "min_amount_out": min_out.to_string()});
-        let r = match wallet_op(&key, "/wallet/v1/confidential/swap", body) {
-            Ok(r) => r,
-            Err(e) => { charge.release(&mut Host); return Err(e); }
-        };
+        let j=guard_begin(&c,input,op,body,Some(charge))?;
+        let r=guard_provider(&j,&key,false).map_err(|_|err("needs_review",format!("custody outcome unknown; reconcile {}",j.op_id)))?;
         let raw_status = s(&r, "status").unwrap_or_default();
-        charge.settle(&mut Host, &raw_status);
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
-        let status = after_move_status_epoch(&raw_status, still, stamped, epoch_of(&c.token_id()));
+        let status = after_move_status_epoch(&raw_status, still, stamped, guard_control(&c.token_id())?.epoch);
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
             "usd_in_micro": usd, "status": status, "epoch": stamped, "source": p.get("source")}));
         if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}")); }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
-            "min_amount_out": min_out.to_string(), "settlement_epoch": stamped, "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
+            "min_amount_out": min_out.to_string(), "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
     }
 
     fn op_withdraw(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "withdraw", true)?;
+        guard_preflight(&c)?;
         let p = &c.req.params;
         let lim = limits_now(&c)?;
-        let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
-            s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
-        // `to` is checked for shape on `chain` only. The NEP-413 message signed above already contains params.to, so
-        // the holder has signed this destination explicitly.
-        assert_withdraw_to(&chain, &to)?;
-        prov_sync_owner(&c.token_id(), &c.account, c.now_ms);
+        let chain=s(p,"chain").ok_or_else(||err("bad_params","missing params.chain"))?;
+        let token=s(p,"token").ok_or_else(||err("bad_params","missing params.token"))?;
+        // Derive self, never trust a pasted address as ownership proof; reject any override.
+        let to=self_withdraw_destination(&c.account,&chain,s(p,"to").as_deref(),input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413"))?;
+        let epoch_cool=prov_sync_owner(&c.token_id(), &c.account, c.now_ms)?;
+        ownership_sync::require_elapsed(epoch_cool,c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&c.token_id()).into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         let amt = digits(p, "amount")?;
-        let (key, id) = c.wallet()?;
+        let (key, id) = guarded_wallet(&c.token_id())?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         assert_not_listed("withdraw", &c.token_id())?;
-        let stamped = epoch_of(&c.token_id());
+        let stamped = guard_control(&c.token_id())?.epoch;
         // Holds the spend; every refusal before the send gives it back (see charge_spend).
         let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
         if let Err(e) = settle_gate(&c.token_id(), &c.account, stamped) {
@@ -622,18 +601,17 @@ mod host {
             charge.release(&mut Host);
             return Err(e);
         }
-        let r = wallet_op(&key, "/wallet/v1/confidential/withdraw", json!({"chain": chain, "to": to, "amount": amt, "token": token}));
-        let r = match r { Ok(r) => r, Err(e) => { charge.release(&mut Host); return Err(e); } };
+        let j=guard_begin(&c,input,"withdraw",json!({"chain":chain,"to":to,"amount":amt,"token":token}),Some(charge))?;
+        let r=guard_provider(&j,&key,false).map_err(|_|err("needs_review",format!("custody outcome unknown; reconcile {}",j.op_id)))?;
         let raw_status = s(&r, "status").unwrap_or_default();
-        charge.settle(&mut Host, &raw_status);
         // Re-read ownership and settlement epoch after the move: either drift reports needs_review.
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
-        let status = after_move_status_epoch(&raw_status, still, stamped, epoch_of(&c.token_id()));
+        let status = after_move_status_epoch(&raw_status, still, stamped, guard_control(&c.token_id())?.epoch);
         log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status, "epoch": stamped}));
         if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}")); }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
-        Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "request_id": r.get("request_id"),
+        Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"),
             "tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
     }
 
@@ -670,13 +648,22 @@ mod host {
         save_prov(token, &rows);
     }
 
-    fn prov_sync_owner(token: &str, owner: &str, ts: u64) {
+    /// Separate from the log: a round trip can return the same owner with a higher epoch.
+    fn custody_cooldown(token: &str, owner: &str, now_ms: u64) -> Result<Option<u64>, Error> {
+        let control=guard_control(token)?;
+        if !owns(token,owner)? || guard_control(token)?!=control {
+            return Err(err("not_owner", "ownership epoch changed during cooldown synchronization"));
+        }
+        ownership_sync::observe(&mut Host,&keys_contract(),token,owner,control.epoch,now_ms)
+    }
+
+    fn prov_sync_owner(token: &str, owner: &str, ts: u64) -> Result<Option<u64>, Error> {
+        let until=custody_cooldown(token,owner,ts)?;
         let rows = load_prov(token);
-        if rows.last().map(|(e, _)| e.owner.as_str()) == Some(owner) || rows.is_empty() { return; }
-        // Ownership changed: bump the settlement epoch so any in-flight settle stamped with the old epoch is void.
-        let next = bump_epoch(epoch_of(token));
-        set_epoch(token, next);
-        prov_append(token, "transfer", owner, ts, &format!("transfer epoch {next}"));
+        if rows.last().is_some_and(|(e, _)| e.owner != owner) {
+            prov_append(token, "transfer", owner, ts, "transfer");
+        }
+        Ok(until)
     }
 
     fn minter_secret(msk: &str) -> Result<[u8; 32], Error> {
@@ -705,7 +692,7 @@ mod host {
             .ok_or_else(|| err("bad_params", "token_id required"))?;
         let tok = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?;
         if let Some(owner) = tok.get("owner_id").and_then(|v| v.as_str()) {
-            if let Ok(now) = chain_now_ms() { prov_sync_owner(&tid, owner, now); }
+            prov_sync_owner(&tid, owner, chain_now_ms()?)?;
         }
         let body = prov_body(&tid, None)?;
         let mut out = json!({"ok": true, "op": "provenance"});
@@ -812,7 +799,7 @@ mod host {
         let stored: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
         verify_chain(&stored)?;
         // The same owner sync as provenance and level_up, so a transfer the log has not seen yet is in the head.
-        prov_sync_owner(&tid, &owner, now);
+        prov_sync_owner(&tid, &owner, now)?;
         let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
         let head = verify_chain(&evs)?;
         let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
@@ -830,7 +817,7 @@ mod host {
     fn op_level_up(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "level_up", true)?;
         let tid = c.token_id();
-        prov_sync_owner(&tid, &c.account, c.now_ms);
+        prov_sync_owner(&tid, &c.account, c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
         let trades: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
         let current = nft_tier_of(&tid)?;
@@ -870,9 +857,9 @@ mod host {
         let lim = limits_now(&c)?;
         let tier_lim = c.tier.and_then(limits_for_tier);
         let pol = policy_for(&Host.get(&tkey(&tid, "policy")), &c.account);
-        prov_sync_owner(&tid, &c.account, c.now_ms);
+        let epoch_cool=prov_sync_owner(&tid, &c.account, c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
-        let cool = cooldown_until(&evs, &c.account).filter(|u| *u > c.now_ms);
+        let cool = epoch_cool.max(cooldown_until(&evs, &c.account)).filter(|u| *u > c.now_ms);
         let spent = Host.incr(&hkey(&c.cap(), &format!("spent/{}", c.now_ms / 86_400_000)), 0)?;
         let locked = active_lock(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms);
         let (key, id) = c.wallet()?;
@@ -929,41 +916,12 @@ mod host {
             "public_key": chainsig::fmt_pk(&child), "evm_address": chainsig::evm_address(&child)}))
     }
 
-    /// Chain Signatures: the holder asks the MPC network to sign a 32-byte hash for this key's address.
-    /// The minter calls `v1.signer.sign` (1 yocto); the answer is checked to recover to the derived key.
+    /// Experimental detached MPC signing is quarantined in this guarded source revision.
+    /// Never USD-capped collateral: a signature may be broadcast after title/epoch changes.
     fn op_chain_sign(input: &Value) -> Result<Value, Error> {
-        let c = authenticate(input, "chain_sign", true)?;
-        let tid = c.token_id();
-        let path = chainsig::path_for(&tid).ok_or_else(|| err("no_key", "no key NFT"))?;
-        let hx = s(&c.req.params, "payload_hash").unwrap_or_default();
-        let args = chainsig::sign_args(&hx, &path).ok_or_else(|| err("bad_params", "params.payload_hash must be 32 bytes hex"))?;
-        // Same holder guards as a withdraw: no signing while the key is locked for sale or inside the
-        // post-transfer cooldown, and a small per-key daily count (each request costs the minter gas).
-        prov_sync_owner(&tid, &c.account, c.now_ms);
-        let evs: Vec<ProvEvent> = load_prov(&tid).into_iter().map(|(e, _)| e).collect();
-        assert_no_cooldown(&evs, &c.account, c.now_ms)?;
-        assert_unlocked(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms)?;
-        // Signing for the key's address can move the funds held there on other chains, so it is frozen too.
-        assert_not_listed("chain_sign", &tid)?;
-        let qk = tkey(&tid, &format!("chainsig/{}", c.now_ms / 86_400_000));
-        // Check room now, count only after a signature that recovers to this key (P1-2): a failed MPC call costs no quota.
-        assert_quota_room(&mut Host, &qk, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
-        let (mid, msk) = minter()?;
-        let a = args.to_string();
-        let (tx, out) = send_full(&mid, &msk, chainsig::SIGNER, &[Action::FunctionCall { method: "sign", args: a.as_bytes(), gas: chainsig::CHAINSIG_GAS, deposit: 1 }])?;
-        use base64::Engine;
-        let sv = out.pointer("/status/SuccessValue").or(out.pointer("/result/status/SuccessValue")).and_then(|v| v.as_str())
-            .and_then(|b| base64::engine::general_purpose::STANDARD.decode(b).ok()).and_then(|b| serde_json::from_slice::<Value>(&b).ok())
-            .ok_or_else(|| err("upstream", format!("no signature in outcome of {tx}")))?;
-        let sig = chainsig::decode_sig(&sv).ok_or_else(|| err("bad_signature", "malformed MPC signature"))?;
-        let root = chainsig::parse_pk(chainsig::ROOT_PK).ok_or_else(|| err("config", "root key"))?;
-        let child = chainsig::derive(&root, &mid, &path);
-        let h: [u8; 32] = hex::decode(hx.trim_start_matches("0x")).ok().and_then(|v| v.try_into().ok()).ok_or_else(|| err("bad_params", "hash"))?;
-        if !chainsig::recovers_to(&h, &sig, &child) { return Err(err("bad_signature", "signature does not recover to this key's address")); }
-        bump_within(&mut Host, &qk, 1, CHAIN_SIGN_PER_DAY, "chainsig_quota", "daily Chain Signatures limit for this key reached, try tomorrow (UTC)".into())?;
-        prov_append(&tid, "chain_sign", &c.account, c.now_ms, &format!("chain_sign {} tx {tx}", hx));
-        Ok(json!({"ok": true, "op": "chain_sign", "token_id": tid, "path": path, "tx": tx, "payload_hash": hx,
-            "signature": sig, "evm_address": chainsig::evm_address(&child)}))
+        let c=authenticate(input,"chain_sign",true)?;let control=guard_preflight(&c)?;
+        settle_gate(&c.token_id(),&c.account,control.epoch)?;
+        Err(err("unsupported_authority","generic detached signing is disabled in the guarded revision: future broadcast cannot be reconciled"))
     }
 
     /// Scoped beat key on the TEE minter: `add_beat_key` / `del_beat_key {public_key}`, signed by the keys contract owner.
@@ -988,9 +946,9 @@ mod host {
 
     fn op_info() -> Result<Value, Error> {
         let (mid, _) = minter()?;
-        Ok(json!({"ok": true, "op": "info", "version": VERSION, "keys_contract": keys_contract(), "nep413_recipient": recipient(),
+        Ok(json!({"ok": true, "op": "info", "version": VERSION, "guarded_revision":guarded::REVISION, "guarded_registry_hash":cfg("GUARDED_WORKER_HASH",""), "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -1014,6 +972,10 @@ mod host {
             "swap" => op_swap(&input, "swap"),
             "copy" => op_swap(&input, "copy"),
             "withdraw" => op_withdraw(&input),
+            "transfer" => op_transfer(&input),
+            "loan_certificate" => op_loan_certificate(&input),
+            "pledge_inventory" => op_pledge_inventory(&input),
+            "reconcile_value_op" => op_reconcile_value(&input),
             "history" => op_history(&input),
             "pnl" => op_pnl(&input),
             "sweep_minter" => op_sweep_minter(),
@@ -1025,7 +987,7 @@ mod host {
             "level_up" => op_level_up(&input),
             "session" => op_session(&input),
             "session_revoke" => op_session_revoke(&input),
-            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, history, provenance, record, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, level_up, session, session_revoke")),
+            _ => Err(err("unknown_op", "op must be one of: info, status, quote, mint, account, balance, swap, copy, withdraw, transfer, loan_certificate, reconcile_value_op, history, provenance, record, lock, prove, limits, pnl, sweep_minter, chain_address, chain_sign, add_beat_key, del_beat_key, dashboard, level_up, session, session_revoke")),
         };
         let mut out = match r { Ok(v) => v, Err(e) => json!({"ok": false, "error": e}) };
         // Binding: the exact signed message and nonce this answer is for, and the key that passed auth.

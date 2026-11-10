@@ -17,6 +17,7 @@ import "./pledge.css";
 import Link from "next/link";
 import {useWallet} from "@/lib/wallet";
 import {usePayoutStorageFee} from "@/lib/usePayoutStorageFee";
+import {LivePledge} from "./LivePledge";
 import {ComparisonCard} from "./ComparisonCard";
 
 const KEY_ART = "/heirloom/keys/k03.webp";
@@ -96,7 +97,7 @@ export function PledgeView() {
   const lenderDisplay = live && loan ? loan.terms.lender : EXAMPLE.lender;
   const countdownLabel = live && loan ? loan.state==="DisbursementPending"?"waiting":loan.state==="UnlockPending"?"thaw":hoursLeftLabel(loan.due_ns,chainNowNs) : "2h";
 
-  if(live && (loadError || !loan || loan.token_id !== keys.primary?.token_id)) return <section className="plg"><div className="plg-inner"><PageHeader eyebrow="Pledge · read only" title="Borrower account" lead={!keys.primary ? "Select an eligible account." : loadError || (loaded ? "No on-chain loan found for this account." : "Loading on-chain status. No example balances shown as live.")} /><p>New funding remains disabled pending release review. Select an eligible account; exact private at-risk balances and obligations must be verified before a request.</p><Link href="/pledge/lend/example">Review the separate lender example</Link></div></section>;
+  if(live) return <LivePledge role="borrower" tokenId={keys.primary?.token_id}/>;
 
   return (
     <div className={`plg${active ? " is-active" : ""}`} data-testid="pledge-page" data-live={live ? "1" : "0"}>

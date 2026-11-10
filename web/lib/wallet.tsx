@@ -1,9 +1,10 @@
 "use client";
+import {SandboxWalletProvider} from "./sandboxWallet";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { WalletSelector, WalletModuleFactory } from "@near-wallet-selector/core";
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
-import { NEP413_RECIPIENT } from "./config";
+import { PLEDGE_SANDBOX, NEP413_RECIPIENT } from "./config";
 import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
 import { callWorker } from "./worker";
 import { sendKeysCall, sendKeysCalls, type KeysCall, type SendResult, type BatchSendResult, type TxRoute, type TxWallet } from "./keysTx";
@@ -38,7 +39,7 @@ async function revokeStored(account: string | null) {
 
 export class SignError extends Error { constructor(public code: string) { super(code); } }
 
-interface WalletCtx {
+export interface WalletCtx {
   accountId: string | null;
   ready: boolean;
   /** A wallet from an earlier visit is being restored; show a neutral pill, not "Connect wallet". */
@@ -222,7 +223,8 @@ async function init(): Promise<{ selector: WalletSelector; modal: WalletSelector
   return { selector, modal };
 }
 
-export function WalletProvider({ children }: { children: ReactNode }) {
+export function WalletProvider({ children }: { children: ReactNode }) {return PLEDGE_SANDBOX?<SandboxWalletProvider context={Ctx}>{children}</SandboxWalletProvider>:<NativeWalletProvider>{children}</NativeWalletProvider>;}
+function NativeWalletProvider({ children }: { children: ReactNode }) {
   const ref = useRef<{ selector: WalletSelector; modal: WalletSelectorModal } | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);

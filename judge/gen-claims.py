@@ -41,12 +41,13 @@ add("metadata-symbol", "NEP-177 metadata is KEYHOLE / KEY", where(RD,"(`KEYHOLE`
     {"type":"view","method":"nft_metadata","args":{},"path":"symbol","op":"eq","value":"KEY"}, "symbol == KEY")
 add("metadata-name", "NEP-177 metadata name is KEYHOLE", where(RD,"(`KEYHOLE` / `KEY`)"), "mainnet view", "nft_metadata()",
     {"type":"view","method":"nft_metadata","args":{},"path":"name","op":"eq","value":"KEYHOLE"}, "name == KEYHOLE")
-toks = {"0":"keyhole-devmo.near","k857b6b68facc0f94":"a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da","k5f4750858f328940":"0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228","k0642e7964b2fb515":"476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8","k102a806df6867547":"0xf76e6b0920e9332ff4410f6dd53f01722abc71a3"}
+toks = {"0":"keyhole-devmo.near","k857b6b68facc0f94":"a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da","k5f4750858f328940":"3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447","k0642e7964b2fb515":"476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8","k102a806df6867547":"0xf76e6b0920e9332ff4410f6dd53f01722abc71a3"}
 for t,o in toks.items():
-    add(f"token-{t}-owner", f"Token {t} is held by {o} (table read {'2026-11-07' if t == 'k5f4750858f328940' else '2026-11-03'})", where(RD,f"| `{t}`"), "mainnet view", f"nft_token({t})",
+    add(f"token-{t}-owner", f"Token {t} is held by {o} (table read {'2026-11-09' if t == 'k5f4750858f328940' else '2026-11-03'})", where(RD,f"| `{t}`"), "mainnet view", f"nft_token({t})",
         {"type":"view","method":"nft_token","args":{"token_id":t},"path":"owner_id","op":"eq","value":o}, f"owner_id == {o}")
-    add(f"token-{t}-tier", f"Token {t} is tier 1", where(RD,f"| `{t}`"), "mainnet view", f"nft_tier({t})",
-        {"type":"view","method":"nft_tier","args":{"token_id":t},"op":"eq","value":1}, "1")
+    tier = 2 if t == "k5f4750858f328940" else 1
+    add(f"token-{t}-tier", f"Token {t} is tier {tier}", where(RD,f"| `{t}`"), "mainnet view", f"nft_tier({t})",
+        {"type":"view","method":"nft_tier","args":{"token_id":t},"op":"eq","value":tier}, str(tier))
 add("token-k102-media", "Token k102a806df6867547 (MetaMask mint) carries media on-chain", where(RD,"carries `media` on-chain"), "mainnet view", "nft_token(k102a806df6867547)",
     {"type":"view","method":"nft_token","args":{"token_id":"k102a806df6867547"},"path":"metadata.media","op":"nonempty"}, "metadata.media is a non-empty URL")
 for t in ["0","k0642e7964b2fb515","k5f4750858f328940","k857b6b68facc0f94"]:
@@ -125,7 +126,7 @@ G("src-cooldown","10-minute withdraw cooldown after a transfer (TRANSFER_COOLDOW
 G("src-ai-model","/ask uses Qwen/Qwen3.6-35B-A3B-FP8",where(RD,"`Qwen/Qwen3.6-35B-A3B-FP8`"),"web/lib/ai.ts",r"Qwen/Qwen3\.6-35B-A3B-FP8","model id found")
 G("src-gw-8kb","Gateway rejects bodies over 8 KB with 413",where(RD,"bodies over 8 KB are rejected with 413"),"web/app/api/worker/route.ts",r"len > 8192.*status: 413","8192 / 413")
 G("src-gw-ip","Gateway allows 20 calls a minute per IP",where(RD,"Each IP gets 20 calls a minute"),"web/app/api/worker/route.ts",r"createLimiter\(20, 60_000\)","20 per 60 s")
-G("src-gw-allow","Gateway allowlist: info, provenance, record, loan_certificate, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "record", "loan_certificate", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"\]',"exact list")
+G("src-gw-allow","Gateway allowlist: info, provenance, record, loan_certificate, pledge_inventory, reconcile_value_op, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",where(RD,"**Allowlist:**"),"web/lib/gateway.ts",r'ALLOWED_OPS = \["info", "provenance", "record", "loan_certificate", "pledge_inventory", "reconcile_value_op", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"\]',"exact list")
 G("src-gw-nocopy","copy and sweep_minter are not in the gateway allowlist (bad_op)",where(RD,"Both refusals are `bad_op`"),"web/lib/gateway.ts",r'code: "bad_op"',"bad_op for any other op")
 G("src-limits-t1","Tier 1: $1 per trade, $5 per day, 6/min",where(RD,"| 1 Bronze | $1 | $5 | 6 |"),"docs/evidence/mainnet-e2e/01_info.json",r'"daily_usd_micro": ?5000000',"in attested info")
 G("src-global","Global limits 120/min and 25 free mints per day",where(RD,"Global limits: 120 requests per minute and 25 free mints per day"),"docs/evidence/mainnet-e2e/01_info.json",r'"global_mints_per_day": ?25',"25 in attested info")
@@ -153,8 +154,8 @@ for t in sorted(tests):
     paths = ["tee/worker/src","contracts/keys/src"]
     w = None
     for d in DOCS:
-        try: w = where(d,f"`{t}`"); break
-        except SystemExit: pass
+        w = where(d,f"`{t}`")
+        if w is not None: break
     add(f"test-{t}", f"Named test or symbol `{t}` exists in the source", w, "test file", "tee/worker/src, contracts/keys/src, web",
         {"type":"symbol","name":t,"dirs":["tee/worker/src","contracts/keys/src","contracts/keys-sandbox/tests","web/lib","web/app","cli/src"]}, f"`{t}` found in source")
 spec = open("web/e2e/site.spec.ts",encoding="utf8").read()

@@ -203,6 +203,7 @@ async function rpcView<T>(rpcUrl: string, contractId: string, method: string, ar
   const res = await fetch(rpcUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
+    cache:"no-store",signal:AbortSignal.timeout(10000),
     body: JSON.stringify({
       jsonrpc: "2.0",
       id: "pledge",
@@ -241,11 +242,14 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
     async chainNowNs():Promise<U64>{
       if(!live)throw Error("Preview has no live clock");
       if(opts.chainNowNs)return opts.chainNowNs();
-      const response=await fetch(rpcUrl,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:"pledge-clock",method:"block",params:{finality:"final"}})});
+      const response=await fetch(rpcUrl,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:"pledge-clock",method:"block",params:{finality:"final"}}),cache:"no-store",signal:AbortSignal.timeout(10000)});
       const j=await response.json();const n=j.result?.header?.timestamp_nanosec;
       if(!response.ok||j.error||typeof n!=="string"||!/^\d+$/.test(n))throw Error("Final chain clock unavailable");
       return n;
     },
+    async getOwner(token_id:TokenId):Promise<string|null>{const n=live?await viewFn<{owner_id:string}|null>("nft_token",{token_id}):null;return n?.owner_id??null;},
+    async getControl(token_id:TokenId):Promise<{owner_epoch:U64;listed:boolean;transfer_pending:boolean;pending_value_ops:U64}|null>{return live?viewFn("get_control_state",{token_id}):null;},
+    async receiverEligible(account_id:string):Promise<boolean>{if(!live)return false;const [count,reserved]=await Promise.all([viewFn<string>("nft_supply_for_owner",{account_id}),viewFn<number>("pending_return_count",{account_id})]);return count==="0"&&reserved===0;},
     methods: { change: PLEDGE_CHANGE_METHODS, view: PLEDGE_VIEW_METHODS },
     buildOpenLoan,
     buildFundLoan,

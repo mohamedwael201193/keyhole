@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
+import {LivePledge} from "../../LivePledge";
 import {PageHeader} from "@/components/v7";
 import {createPledgeClient,payoutStorageConsent,type LenderOffer} from "@/lib/pledgeClient";
 import "../../pledge.css";
@@ -28,6 +29,7 @@ export function LenderView({tokenId}:{tokenId:string}) {
   }catch(e){setCertificateStatus(e instanceof Error?e.message:"Certificate unavailable; floor remains declared only.");}finally{setVerifying(false);}
  }
 
+ if(client.live)return <LivePledge role="lender" tokenId={tokenId}/>;
  return <div className="plg" data-testid="lender-page"><div className="plg-inner"><div className="plg-banner" role="status">{client.live?"On-chain read only · funding disabled": "Lender example · preview · not live"}</div>
  <PageHeader eyebrow="Named lender · review" title={<>Know the terms.<br/><em>Not the full balance.</em></>} lead="Review one declared USDC minimum; treat it as certified only after verifying its sealed certificate. Repayment or control of the entire account — never guaranteed yield."/>
  <div className="plg-lender-layout"><section className="plg-widget plg-lender-card" aria-label="Lender cashflows">

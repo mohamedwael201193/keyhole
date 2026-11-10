@@ -1,7 +1,7 @@
 name: ci
 on:
   push:
-    branches: [main, feat/pledge-first-class, feat/pledge-two-sided]
+    branches: [main, feat/worker-pledge-admission, feat/pledge-first-class, feat/pledge-two-sided]
   pull_request:
 # Runs on GitHub-hosted runners. Only pushes and same-repo PRs run; fork PRs are skipped and there is no pull_request_target.
 permissions:
@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     defaults: { run: { working-directory: contracts/keys } }
-    # The committed release wasm embeds registry paths under /home/box/.cargo (where v2.2 and v2.3 were built).
-    # Building with the same CARGO_HOME keeps the byte-for-byte rebuild check exact on any machine.
+    # Retain the historical release toolchain home; build.sh remaps crate/registry paths
+    # and omits optional embedded ABI while still generating off-chain ABI JSON.
     env:
       CARGO_HOME: /home/box/.cargo
     steps:
@@ -31,13 +31,17 @@ jobs:
       - name: count passing tests
         run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
-      - name: source rebuilds to the committed v2.4 release wasm
+      - name: source rebuilds to the committed v2.5 release wasm
         run: |
-          cargo near build non-reproducible-wasm >/dev/null
+          ./build.sh >/dev/null
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
-          want=$(grep ' v2.4/' release/SHA256SUMS | cut -d' ' -f1)
+          want=$(grep ' v2.5/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
-      - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate, v2.2 -> v2.3 and v2.3 -> v2.4 code-only upgrades, NEP-178 cap, one key, royalty sale, minter-only tier raise
+      - name: build sandbox-only callback failure fixture (never deploy)
+        run: |
+          ./build.sh --features callback-failure-fixture >/dev/null
+          cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm
+      - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + sealed pledge state), NEP-178 cap, one key, royalty sale, minter-only tier raise
         working-directory: contracts/keys-sandbox
         run: cargo test --locked
       - name: count passing sandbox tests
@@ -57,6 +61,8 @@ jobs:
       - name: count passing tests
         run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings
+      - name: lint the WASI-only custody host (native cfg excludes it)
+        run: cargo clippy --locked --target wasm32-wasip2 -- -D warnings
       - name: reproducible wasm, compared with the deployed hash
         run: |
           got=$(./build.sh)
@@ -150,4 +156,33 @@ jobs:
           name: pledge-shots
           path: web/test-results/pledge-shots
           if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Real native sandbox / real UI funded repay and default endings
+        env:
+          PLEDGE_SANDBOX_E2E: "1"
+          NEXT_PUBLIC_PLEDGE_SANDBOX: "1"
+          NEXT_PUBLIC_PLEDGE_LIVE: "1"
+          NEXT_PUBLIC_PLEDGE_TRANSACTIONS: "1"
+          BASE_URL: http://127.0.0.1:3142
+          PLEDGE_SHOTS: test-results/pledge-final
+        run: |
+          export UI_SANDBOX_READY="$RUNNER_TEMP/pledge-sandbox.json"
+          (cd ../contracts/keys-sandbox && cargo test --locked --test pledge serve_ui_sandbox -- --ignored --nocapture > "$RUNNER_TEMP/pledge-sandbox.log" 2>&1) &
+          node -e 'const fs=require("fs");let n=0;const t=setInterval(()=>{if(fs.existsSync(process.env.UI_SANDBOX_READY)){clearInterval(t);process.exit(0)}if(++n>900){clearInterval(t);process.exit(1)}},1000)'
+          export NEXT_PUBLIC_PLEDGE_SANDBOX_RPC="$(node -p 'require(process.env.UI_SANDBOX_READY).rpc')"
+          npm run build
+          npx next start --hostname 127.0.0.1 -p 3142 > "$RUNNER_TEMP/pledge-ui.log" 2>&1 &
+          node -e 'let n=0;const t=setInterval(async()=>{try{if((await fetch(process.env.BASE_URL+"/pledge?token=k1")).ok){clearInterval(t);process.exit(0)}}catch{}if(++n>180){clearInterval(t);process.exit(1)}},1000)'
+          npx playwright test pledge-funded.spec.ts --project=desktop --workers=1 --retries=0
+      - name: Funded Pledge final screenshots / native receipts / fixture logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pledge-final
+          path: |
+            web/test-results/pledge-final
+            ${{ runner.temp }}/pledge-sandbox.log
+            ${{ runner.temp }}/pledge-ui.log
+          if-no-files-found: warn
           retention-days: 7

@@ -1,10 +1,13 @@
-/** Public, non-secret configuration. Every value is real mainnet state. */
+/** Public configuration. Production remains pinned to mainnet; sandbox requires an explicit isolated fixture build. */
 import { IDENTITY } from "./identity.gen";
-export const KEYS_CONTRACT = "keyhole-devmo.near";
+export const PLEDGE_SANDBOX=process.env.NEXT_PUBLIC_PLEDGE_SANDBOX==="1";
+const sandboxRpc=process.env.NEXT_PUBLIC_PLEDGE_SANDBOX_RPC??"";
+if(PLEDGE_SANDBOX){const u=new URL(sandboxRpc);if(u.protocol!=="http:"||u.hostname!=="127.0.0.1"||!u.port||Number(u.port)<1024||Number(u.port)>65535||u.pathname!=="/"||u.search||u.hash||u.username||u.password)throw Error("Invalid isolated sandbox RPC");}
+export const KEYS_CONTRACT = PLEDGE_SANDBOX?"ui-keys.test.near":"keyhole-devmo.near";
 /** Keys the landing collection shows. The page reads exactly this many keys and their tiers. */
 export const LANDING_KEYS = 4;
 export const NEP413_RECIPIENT = "keyhole";
-export const RPC_URL = "https://rpc.mainnet.fastnear.com";
+export const RPC_URL = PLEDGE_SANDBOX?sandboxRpc:"https://rpc.mainnet.fastnear.com";
 export const OUTLAYER_API = "https://api.outlayer.ai";
 export const OUTLAYER_OWNER = "keyhole-devmo.near";
 export const OUTLAYER_PROJECT = process.env.NEXT_PUBLIC_OUTLAYER_PROJECT || "keyhole";

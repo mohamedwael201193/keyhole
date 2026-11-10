@@ -1,0 +1,2 @@
+    Checking keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.86s

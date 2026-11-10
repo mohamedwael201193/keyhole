@@ -1,0 +1,85 @@
+   Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+   Compiling keyhole-keys-sandbox v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys-sandbox)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.73s
+     Running unittests src/lib.rs (/workspace/near_hackathon/pr184-review3/build-target/debug/deps/keyhole_keys_sandbox-40c27e71b8e21b61)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/audit_gas.rs (/workspace/near_hackathon/pr184-review3/build-target/debug/deps/audit_gas-0bfc2552b6ee3a6a)
+
+running 3 tests
+new-owner attempted return failures=[ExecutionOutcome { transaction_hash: EUm51wQ6RtMieQXG3k8zzgF72PZR5VC6XgPNi4dsXtj2, block_hash: 3QZjk1x5q1QS8Nxy7PYLmt7BJxWVs4qWgbukdkGe2oMn, logs: [], receipt_ids: [FEJFEFNzS9rYiiPo7LLte8xp2HaNcihAgkMzrxP8emrX, 8h7HDRBwpjd1LMVUyCFB2LwbUTyeWqpCgTTtdFZiKQRg], gas_burnt: NearGas { inner: 2042793117708 }, tokens_burnt: NearToken { inner: 204279311770800000000 }, executor_id: AccountId("dev-20261109232553-40659314098396.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: Sender not approved")) })) }]
+bomb state={"listed":false,"owner_epoch":"2","pending_value_ops":"0","pledged":false,"token_id":"k1","transfer_pending":false,"value_op_nonce":"0"} old_owner_pending_returns=0 token_owner="alice.test.near" failures=[] gas=158245148552218
+test audit_return_data_bomb_does_not_strand_title ... ok
+len=0 state={"listed":false,"owner_epoch":"2","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: 2vo1kcjF76ebdeLiEY1QnwXJG7nzTjkTj326Bq1wuqqW, block_hash: HB4yaFjg9rB2tmw5Ygkk8buHkWkYRY3Lt2nUUsL8Nq4X, logs: [], receipt_ids: [Hq2VwXnJBhEEH9ELkQcqF3agkGJtFkRn7TUX1uxMiecv], gas_burnt: NearGas { inner: 1156939182372 }, tokens_burnt: NearToken { inner: 115693918237200000000 }, executor_id: AccountId("dev-20261109232553-76523096144151.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: panicked at src/lib.rs:15:59:\ncalled `Result::unwrap()` on an `Err` value: Error(\"EOF while parsing a value\", line: 1, column: 0)")) })) }] gas=10553757105730
+new-owner attempted return failures=[ExecutionOutcome { transaction_hash: F9YcdizC6mkiT7Re3GZ5PsKGWWRdfpZ7bRRMU6veBzo, block_hash: FGFy3EStNMBMwzD9kEBNK4K76k7gvzRRrwGnmrUhKaVv, logs: [], receipt_ids: [GvcLrNcgq97ZLDbeqpTHukxVB8wgRuxFy4XYaSuX7D4Z, DqZDGt5ntmbwLuqVpPpSHtjwvjuEBf3T1qrd6nJtFV33], gas_burnt: NearGas { inner: 2139862892810 }, tokens_burnt: NearToken { inner: 213986289281000000000 }, executor_id: AccountId("dev-20261109232553-73702070011844.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: Sender not approved")) })) }]
+bomb state={"listed":false,"owner_epoch":"2","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} old_owner_pending_returns=0 token_owner="alice.test.near" failures=[] gas=158801693399599
+maximum-case resolver gas=3855127865554
+test audit_return_data_bomb_at_maximum_token_and_approval_bound ... ok
+len=1024 state={"listed":false,"owner_epoch":"4","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: HQb9v3uwk2ubh5dqjFfvSYoxccjswg5QkNf3RW2Soqoa, block_hash: GSMUtnN94nEaRE9nFxC661VswUHXGfg4SHT2vmBw9EgY, logs: [], receipt_ids: [FRR6Kc1EPg1yPQp7qpNhe3f8gpZHSpWB9rbcPjaukc8V], gas_burnt: NearGas { inner: 1168509880924 }, tokens_burnt: NearToken { inner: 116850988092400000000 }, executor_id: AccountId("dev-20261109232553-76523096144151.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: panicked at src/lib.rs:15:59:\ncalled `Result::unwrap()` on an `Err` value: Error(\"expected value\", line: 1, column: 1)")) })) }] gas=10769543311220
+len=4096 state={"listed":false,"owner_epoch":"6","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: 2PSKFM954VPqBr4dNpCzxwMzGGhPZ6h5jziBTVkH3pVk, block_hash: bVif8ysQVDJdg3BFnY11s8xJ4ffveXKXtn4Upz51Wb4, logs: [], receipt_ids: [29pm5ke45FMjpsVj9uEpc5wdJ3VVtT7wjpYBM9F2VGQ8], gas_burnt: NearGas { inner: 1212799265884 }, tokens_burnt: NearToken { inner: 121279926588400000000 }, executor_id: AccountId("dev-20261109232553-76523096144151.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: panicked at src/lib.rs:15:59:\ncalled `Result::unwrap()` on an `Err` value: Error(\"expected value\", line: 1, column: 1)")) })) }] gas=11335411526336
+len=8192 state={"listed":false,"owner_epoch":"8","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: 6KCQJghEDUs6VBykhnHc7ZLdhkGgXxznuhQzacz6sjgR, block_hash: 9Q8ZfidoZT5B5C7u6LYAMcncSr6GNW1vZ8epzb6TMASL, logs: [], receipt_ids: [HPtCx1K3mLzfxAsKtnRXUfm24ydXYcPXjdkJh9TukviF], gas_burnt: NearGas { inner: 1271851779164 }, tokens_burnt: NearToken { inner: 127185177916400000000 }, executor_id: AccountId("dev-20261109232553-76523096144151.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: panicked at src/lib.rs:15:59:\ncalled `Result::unwrap()` on an `Err` value: Error(\"expected value\", line: 1, column: 1)")) })) }] gas=12100246168256
+len=16384 state={"listed":false,"owner_epoch":"10","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: 3TDpMZK6doBX8vT4uSUCJKSoVqx5oQGmiHRWRwJpFKHD, block_hash: EgMX6pDhGnv6W71QSkKxP15A6UKPtXW3pNnn5zZVU1jf, logs: [], receipt_ids: [9MerTHsCWFxZ7NgLka2Ez2UJXp3YvyfuhoYcYuySUvUt], gas_burnt: NearGas { inner: 1389956805724 }, tokens_burnt: NearToken { inner: 138995680572400000000 }, executor_id: AccountId("dev-20261109232553-76523096144151.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: panicked at src/lib.rs:15:59:\ncalled `Result::unwrap()` on an `Err` value: Error(\"expected value\", line: 1, column: 1)")) })) }] gas=13630194366380
+len=32768 state={"listed":false,"owner_epoch":"10","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: 4JEjWm3PCDGcsBfh4T26ReFUxVx4jp2iSgdEbRRjwk91, block_hash: DiCCj6moxzG65Z4Wa8jCZJBS9CAZC5qnbSMkZvbPMbms, logs: [], receipt_ids: [6zbSd6XvnTcjPRw9s7siTM4C89wpPaXdgUtgQxFHZqaW, Ch6efmmHoNn9MqtndpP75SBQjz2egpLXVdMFinSa1uCd], gas_burnt: NearGas { inner: 2311126532341 }, tokens_burnt: NearToken { inner: 231112653234100000000 }, executor_id: AccountId("dev-20261109232553-34704241298341.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: receiver message exceeds 16 KiB")) })) }] gas=4635918943436
+len=65536 state={"listed":false,"owner_epoch":"10","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: A8pTZ9hqGT4zchYbywTj8iyA5mAfGfBqxhhhbVJHT4Py, block_hash: 6seQHE2SuHDKoKynGsh2HdJm2mNpocmVeWZ5Dd9SYeWe, logs: [], receipt_ids: [4SYqyuqVpYGrLpzjzuZeBQp72YhzK8RmQDhphizGFQiU, FiAPVhwbVvhJJcQsBPgJopqZiQddMkKf2VXWJMEDGrzK], gas_burnt: NearGas { inner: 2793658309821 }, tokens_burnt: NearToken { inner: 279365830982100000000 }, executor_id: AccountId("dev-20261109232553-34704241298341.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: receiver message exceeds 16 KiB")) })) }] gas=6680950694036
+len=131072 state={"listed":false,"owner_epoch":"10","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: H53r7xeRoEXEW74s3TGCasFHF2u4dzBxPWhamAkioQzs, block_hash: 2i2r3nQDNaQKooakhowyn8m6SgsKo64EdENTCkF2S3UB, logs: [], receipt_ids: [7wAvLA61w8r3f19joLZC5whkr1nqDs8r8EFCdrX5gh2s, 6aUqn4fqZGEK9ZPHK9hPmp96Cswmb4zzCBPjM18x1wyX], gas_burnt: NearGas { inner: 3758720219269 }, tokens_burnt: NearToken { inner: 375872021926900000000 }, executor_id: AccountId("dev-20261109232553-34704241298341.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: receiver message exceeds 16 KiB")) })) }] gas=10771012549724
+len=262144 state={"listed":false,"owner_epoch":"10","pending_value_ops":"0","pledged":false,"token_id":"kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk","transfer_pending":false,"value_op_nonce":"0"} failures=[ExecutionOutcome { transaction_hash: Fi8Reamm13d6Jbk8HFzbxyH3REZYKS5htWu2VPZ3g5zM, block_hash: FnKyiDcvSYWSmgYau2jNQu5HD7US3uuktARGcxQ3x5ng, logs: [], receipt_ids: [6qCTp1SZSx2d8wgUTQRw1CegeDgV299VjdaaVdSVEr9v, Fft4AdRh9f9nQjjWDgxv1kawy4jsxhDwgS5JduK5RA38], gas_burnt: NearGas { inner: 5688844038165 }, tokens_burnt: NearToken { inner: 568884403816500000000 }, executor_id: AccountId("dev-20261109232553-34704241298341.test.near"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: receiver message exceeds 16 KiB")) })) }] gas=18951136261100
+test audit_maximum_approvals_transfer_call_gas ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.43s
+
+     Running tests/pledge.rs (/workspace/near_hackathon/pr184-review3/build-target/debug/deps/pledge-017c27024d6ffb67)
+
+running 14 tests
+captured-state deploy blocker (sandbox only): [ExecutionOutcome { transaction_hash: Arf9Xqh6tVPuaYNJt4U8ubK5QhNhansKn6eptkJtCCzr, block_hash: HzmdeAQSCAmVFgJBDmeWPgxrVrPNAENLEgZVnoESuveY, logs: [], receipt_ids: [tJ38xv9CUZMwn5UVg143b4t66uXKa3oGx1KN1ywZTGt], gas_burnt: NearGas { inner: 28579778244528 }, tokens_burnt: NearToken { inner: 2857977824452800000000 }, executor_id: AccountId("dev-20261109232605-38607515353877.test.near"), status: Failure(ActionError(ActionError { index: None, kind: LackBalanceForState { account_id: AccountId("dev-20261109232605-38607515353877.test.near"), amount: NearToken { inner: 785625312346349137378339 } } })) }]
+test captured_v24_state_migrates_without_reclassifying_legacy_balance ... ok
+test actual_failed_registration_callback_recovers_after_successful_provider_without_reforwarding ... ok
+test actual_failed_registration_refunds_forwarded_deposit_and_allows_corrected_retry ... ok
+test actual_failed_native_cashout_and_lost_callback_stays_unknown_not_double_credited ... ok
+test admission_and_pledge_both_receipt_orderings_are_serialized ... ok
+test admission_storage_is_bounded_and_stale_finish_cannot_unlock_new_op ... ok
+test custody_generation_fence_rejects_old_freeze_after_committed_thaw ... ok
+test actual_lost_policy_callback_recovers_by_fence_and_lost_payout_cannot_be_paid_three_times ... ok
+test failed_principal_cashout_restores_borrower_credit_and_preserves_atomic_debt ... ok
+test token_transfer_call_lock_refuses_reentrant_loan_then_resolves_cleanly ... ok
+test deleted_payout_recipient_restores_exact_lender_credit_on_real_runtime ... ok
+test sealed_loan_repay_unlock_and_native_credit_conservation ... ok
+test actual_failed_resolver_has_permissionless_provisional_timeout_not_economic_rollback ... ok
+test sealed_loan_default_redirect_and_failed_thaw_keeps_both_owners_blocked ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 30.21s
+
+     Running tests/review3.rs (/workspace/near_hackathon/pr184-review3/build-target/debug/deps/review3-f8fbb187c7da8ae9)
+
+running 4 tests
+test review3_sale_delivered_but_callback_lost_keeps_reserved_pending_and_cannot_pay_again ... ok
+test review3_deleted_seller_retains_exact_sale_and_bond_then_recreated_seller_claims ... ok
+test review3_sale_cashout_deleted_recipient_restores_once_or_stays_pending_if_callback_lost ... ok
+test review3_timeout_late_real_resolver_returns_false_with_and_without_new_transfer ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.76s
+
+     Running tests/upgrade.rs (/workspace/near_hackathon/pr184-review3/build-target/debug/deps/upgrade-83e892da44c2a649)
+
+running 11 tests
+test transfer_call_race_is_closed_on_v2_2 ... ok
+test upgrade_v1_to_v2_keeps_every_token_owner_tier_metadata_and_minter ... ok
+test transfer_call_race_reaches_two_keys_on_v2_1 ... ok
+test migrate_runs_once_and_only_as_self ... ok
+test mainnet_path_v1_v2_v2_1_keeps_state ... ok
+test v2_3_is_a_code_only_upgrade_of_v2_2 ... ok
+test v2_4_sale_settles_real_balances ... ok
+test v2_5_admission_barrier_and_epoch_code_only ... ok
+test v2_4_set_tier_is_code_only_and_minter_only ... ok
+test v2_3_approval_cap_one_key_and_transfers_work_after_upgrade ... ok
+test v2_one_key_nep178_and_a_real_royalty_sale ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.40s
+
+   Doc-tests keyhole_keys_sandbox
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

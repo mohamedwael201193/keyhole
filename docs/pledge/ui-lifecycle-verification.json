@@ -1,0 +1,64 @@
+{
+  "candidate_only": true,
+  "recorded_at_cairo": "2026-11-10T03:15:33.009447+02:00",
+  "reviewed_parents": {
+    "ui": "c976895b536a2b951b10816a1c96d9dd96132992",
+    "contract": "f58b3eb14d3dc7d2b969eb68c00ddde34179cc79",
+    "prepaid_slot_base": "92da2864dd3b154fba088303f39bd11c32091f24"
+  },
+  "local_checks": {
+    "web_typecheck": "PASS",
+    "web_lint": {
+      "errors": 0,
+      "inherited_warnings": 10
+    },
+    "web_units": {
+      "files_passed": 85,
+      "tests_passed": 1598
+    },
+    "web_production_default_off_build": "PASS (webpack, existing dependencies)",
+    "funded_spec_typecheck": "PASS, not execution",
+    "worker_units_passed": 593,
+    "worker_native_and_wasi_strict_clippy": "PASS",
+    "native_sandbox_tests_passed": 45,
+    "offline_planner_tests_passed": 7,
+    "offline_claims": {
+      "total": 537,
+      "pass": 243,
+      "fail": 0,
+      "error": 0,
+      "skip": 294
+    }
+  },
+  "normal_contract_wasm_sha256": "e0922b1e922f0c874e210e4a266711d4dca0e7f4e9d37f86654a23e08ce42bd3",
+  "candidate_worker_wasm_sha256": "5036f802dda07466bfbc7a9bf0731ca1ac2b3469ff14892a34dde08b28b09ce9",
+  "deployed_identity_pins_changed": false,
+  "native_storage_bytes": {
+    "prepaid_payout_slot": 320,
+    "loan_peak_after_prepaid_slots": 580,
+    "cancel": 450,
+    "default": 574,
+    "bounded_retained_default_owner_epoch": 117
+  },
+  "browser_acceptance": {
+    "completed": false,
+    "funded_repay_ending_executed": false,
+    "funded_default_ending_executed": false,
+    "final_screenshots": [],
+    "required_viewports": [
+      "1440x900",
+      "390x844"
+    ],
+    "required_destination": "/workspace/near_hackathon/shots_pledge/final/",
+    "ci_spec": "web/e2e/pledge-funded.spec.ts",
+    "ci_artifact": "pledge-final",
+    "reason": "No browser/desktop delegation available to executor; backend smoke and compiled spec are not browser proof."
+  },
+  "release": {
+    "keep_pr_194_draft": true,
+    "production_write_gate": "OFF",
+    "mainnet_operations_executed": false,
+    "custody_fixture": "explicit mock; native sandbox transactions/receipts and production pure guarded drivers real",
+    "live_same_ledger_comparison": "unavailable, explicitly labelled"
+  }
+}

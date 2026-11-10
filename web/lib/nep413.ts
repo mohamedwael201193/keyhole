@@ -3,7 +3,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import bs58 from "bs58";
 import { NEP413_RECIPIENT } from "./config";
 
-export type Op = "info" | "record" | "status" | "quote" | "mint" | "account" | "balance" | "history" | "swap" | "withdraw" | "limits" | "pnl" | "prove" | "dashboard" | "level_up" | "session" | "session_revoke";
+export type Op = "info" | "pledge_inventory" | "reconcile_value_op" | "record" | "status" | "quote" | "mint" | "account" | "balance" | "history" | "swap" | "withdraw" | "limits" | "pnl" | "prove" | "dashboard" | "level_up" | "session" | "session_revoke";
 export const NEP413_TAG = 2147484061; // 2^31 + 413
 
 export interface SignedAuth {

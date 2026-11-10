@@ -1,3 +1,5 @@
+import {PLEDGE_SANDBOX} from "@/lib/config";
+import {sandboxProxy} from "@/lib/sandboxProxy";
 import { clientIp, safeAttPath } from "@/lib/verifyScore";
 import { NextRequest, NextResponse } from "next/server";
 import { checkBody } from "@/lib/gateway";
@@ -25,6 +27,7 @@ export async function POST(req: NextRequest) {
   const c = checkBody(raw);
   if (!c.ok) return NextResponse.json({ ok: false, error: { code: c.code } }, { status: c.status });
   if (c.op === "info" && infoCache && Date.now() - infoCache.at < 300_000) return NextResponse.json(infoCache.body, { headers: { "cache-control": "public, s-maxage=300" } });
+  if(PLEDGE_SANDBOX)return sandboxProxy(req,"worker",JSON.parse(raw));
   const key = process.env.OUTLAYER_PAYMENT_KEY;
   if (!key) return NextResponse.json({ ok: false, error: { code: "gateway" } }, { status: 503 });
   try {

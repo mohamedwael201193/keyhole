@@ -1,0 +1,54 @@
+   Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_pr184_fix/contracts/keys)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.77s
+     Running unittests src/lib.rs (/workspace/near_hackathon/pr184-review3/build-target/debug/deps/keyhole_keys-06d58208ee6514bf)
+
+running 7 tests
+test pledge::tests::review3_timeout_then_new_transfer_must_not_make_old_chain_report_success ... FAILED
+test pledge::tests::review3_timeout_then_late_acceptance_must_not_report_success ... FAILED
+test pledge::tests::review3_failed_sale_refund_cannot_be_counted_as_free_treasury ... FAILED
+test pledge::tests::review3_unknown_money_cannot_be_restored_by_title_timeout_and_remains_reserved ... ok
+test pledge::tests::review3_repay_wins_then_default_cannot_seize_or_credit_twice ... ok
+test pledge::tests::review3_default_wins_then_repay_cannot_create_credit_or_change_title ... ok
+test pledge::tests::review3_pending_new_credit_and_stale_opposite_results_conserve_liabilities ... ok
+
+failures:
+
+---- pledge::tests::review3_timeout_then_new_transfer_must_not_make_old_chain_report_success stdout ----
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_mint","data":[{"owner_id":"alice.near","token_ids":["k1"]}]}
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_transfer","data":[{"old_owner_id":"alice.near","new_owner_id":"receiver.near","token_ids":["k1"]}]}
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_transfer","data":[{"old_owner_id":"receiver.near","new_owner_id":"alice.near","token_ids":["k1"]}]}
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_transfer","data":[{"old_owner_id":"alice.near","new_owner_id":"other-receiver.near","token_ids":["k1"]}]}
+
+thread 'pledge::tests::review3_timeout_then_new_transfer_must_not_make_old_chain_report_success' panicked at src/pledge_review_round3_tests.rs:26:5:
+old returned transfer is incorrectly reported accepted when a newer transfer is pending
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- pledge::tests::review3_timeout_then_late_acceptance_must_not_report_success stdout ----
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_mint","data":[{"owner_id":"alice.near","token_ids":["k1"]}]}
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_transfer","data":[{"old_owner_id":"alice.near","new_owner_id":"receiver.near","token_ids":["k1"]}]}
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_transfer","data":[{"old_owner_id":"receiver.near","new_owner_id":"alice.near","token_ids":["k1"]}]}
+
+thread 'pledge::tests::review3_timeout_then_late_acceptance_must_not_report_success' panicked at src/pledge_review_round3_tests.rs:12:5:
+late resolver reports transfer success although timeout already returned title
+
+---- pledge::tests::review3_failed_sale_refund_cannot_be_counted_as_free_treasury stdout ----
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_mint","data":[{"owner_id":"alice.near","token_ids":["k1"]}]}
+EVENT_JSON:{"standard":"keyhole","version":"1.0.0","event":"treasury_credit","data":[{"amount":"1000000000000000000000000","from":"owner.near","kind":"explicit_funding"}]}
+EVENT_JSON:{"standard":"keyhole","version":"1.0.0","event":"key_list","data":[{"price":"1000000000000000000000000","seller":"alice.near","token_id":"k1"}]}
+EVENT_JSON:{"standard":"nep171","version":"1.0.0","event":"nft_transfer","data":[{"old_owner_id":"alice.near","new_owner_id":"bob.near","token_ids":["k1"],"memo":"sale"}]}
+EVENT_JSON:{"standard":"keyhole","version":"1.0.0","event":"key_sale","data":[{"buyer":"bob.near","price":"1000000000000000000000000","royalty":"0","seller":"alice.near","token_id":"k1"}]}
+
+thread 'pledge::tests::review3_failed_sale_refund_cannot_be_counted_as_free_treasury' panicked at src/pledge_review_round3_tests.rs:112:5:
+assertion `left == right` failed: gross treasury attribution plus zero seller liabilities lets failed user payment count as free capital
+  left: 1000000000000000000000000
+ right: 0
+
+
+failures:
+    pledge::tests::review3_failed_sale_refund_cannot_be_counted_as_free_treasury
+    pledge::tests::review3_timeout_then_late_acceptance_must_not_report_success
+    pledge::tests::review3_timeout_then_new_transfer_must_not_make_old_chain_report_success
+
+test result: FAILED. 4 passed; 3 failed; 0 ignored; 0 measured; 246 filtered out; finished in 0.29s
+
+error: test failed, to rerun pass `--lib`
