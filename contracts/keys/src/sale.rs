@@ -68,7 +68,7 @@ impl Contract {
  fn start_sale_policy(&mut self,token:TokenId,freeze:bool)->Promise{
   let mut s=sales().get(&token).unwrap_or_else(||env::panic_str("no protected sale"));
   require!((freeze&&s.state==SaleState::Freezing)||(!freeze&&s.state==SaleState::UnlockPending),"wrong sale custody phase");
-  require!(!s.policy_busy || s.policy_call_complete,"sale policy outcome unknown: no redispatch");
+  require!(!s.policy_busy,"sale policy action/read pending: no redispatch");
   s.policy_sequence=U64(s.policy_sequence.0.checked_add(1).unwrap_or_else(||env::panic_str("sale policy sequence overflow")));
   s.policy_busy=true;s.policy_call_complete=false;sales().insert(&token,&s);
   let c=config_required();let b=collateral().get(&token).unwrap_or_else(||env::panic_str("unbound collateral"));
@@ -80,8 +80,9 @@ impl Contract {
  pub fn on_sale_policy_action(&mut self,token_id:TokenId,nonce:U64,sequence:U64)->PromiseOrValue<bool>{
   require!(env::predecessor_account_id()==env::current_account_id(),"callback is private");pledge::callback_failure_fixture();
   let Some(mut s)=sales().get(&token_id) else{return PromiseOrValue::Value(false);};
-  if s.nonce!=nonce || s.policy_sequence!=sequence || !s.policy_busy{return PromiseOrValue::Value(false);}
-  // Both success and failure mean that exact command is terminal; its result alone never certifies policy.
+  if s.nonce!=nonce || s.policy_sequence!=sequence || !s.policy_busy || s.policy_call_complete{return PromiseOrValue::Value(false);}
+  // Terminal action alone is insufficient: keep busy through exact policy verification.
+  // Duplicate action callbacks must not enqueue another read or release the command lock.
   let result=unsafe{near_sdk::sys::promise_result(0,12_345)};require!(result==1||result==2,"missing policy result");
   s.policy_call_complete=true;sales().insert(&token_id,&s);
   PromiseOrValue::Promise(self.read_sale_policy(token_id,s))
@@ -137,7 +138,7 @@ impl Contract {
   assert_one_yocto();enough_gas();let mut s=load(&token_id,nonce);
   require!(!s.sold&&s.state!=SaleState::UnlockPending,"sale already settled or cancelling");
   require!(env::predecessor_account_id()==s.seller||env::block_timestamp()>s.terms.deadline_ns.0,"only seller before expiry");
-  require!(!s.policy_busy||s.policy_call_complete,"sale policy outcome unknown: cannot cancel");
+  require!(!s.policy_busy,"sale policy action/read pending: cannot cancel");
   s.state=SaleState::UnlockPending;sales().insert(&token_id,&s);self.start_sale_policy(token_id,false)
  }
 }

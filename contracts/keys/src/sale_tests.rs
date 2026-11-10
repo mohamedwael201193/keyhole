@@ -64,3 +64,37 @@ fn rejects<F:FnOnce()>(f:F){assert!(catch_unwind(AssertUnwindSafe(f)).is_err());
  result(policy(false));assert!(!c.on_sale_policy_view("k1".into(),U64(1),U64(1)));
  assert_eq!(c.get_sale("k1".into()).unwrap().state,SaleState::Offered);
 }
+
+#[test] fn delayed_policy_read_blocks_retry_cancel_and_duplicate_action(){
+ let mut c=setup();open(&mut c);
+ result(PromiseResult::Successful(vec![]));let _=c.on_sale_policy_action("k1".into(),U64(1),U64(1));
+ let s=c.get_sale("k1".into()).unwrap();assert!(s.policy_busy&&s.policy_call_complete);
+ ctx("alice.near",1,NOW);
+ rejects(||{let _=c.retry_sale_policy("k1".into(),U64(1));});
+ rejects(||{let _=c.cancel_sale("k1".into(),U64(1));});
+ result(PromiseResult::Successful(vec![]));
+ assert!(matches!(c.on_sale_policy_action("k1".into(),U64(1),U64(1)),PromiseOrValue::Value(false)));
+ assert!(get_created_receipts().is_empty());
+ result(PromiseResult::Failed);assert!(!c.on_sale_policy_view("k1".into(),U64(1),U64(1)));
+ ctx("alice.near",1,NOW);rejects(||{let _=c.cancel_sale("k1".into(),U64(1));});
+ let _=c.reconcile_sale_policy("k1".into(),U64(1));
+ result(policy(true));assert!(c.on_sale_policy_view("k1".into(),U64(1),U64(1)));
+ ctx("alice.near",1,NOW);let _=c.cancel_sale("k1".into(),U64(1));
+ assert_eq!(c.get_sale("k1".into()).unwrap().policy_sequence,U64(2));
+ result(policy(true));assert!(!c.on_sale_policy_view("k1".into(),U64(1),U64(1)));
+ assert!(c.get_sale("k1".into()).unwrap().policy_busy);
+ settle(&mut c,false);assert!(c.get_sale("k1".into()).is_none());
+}
+#[test] fn verified_failed_direction_allows_retry_but_old_callbacks_cannot_release_new_command(){
+ let mut c=setup();open(&mut c);result(PromiseResult::Failed);
+ let _=c.on_sale_policy_action("k1".into(),U64(1),U64(1));
+ result(policy(false));assert!(c.on_sale_policy_view("k1".into(),U64(1),U64(1)));
+ assert!(!c.get_sale("k1".into()).unwrap().policy_busy);
+ ctx("alice.near",0,NOW);let _=c.retry_sale_policy("k1".into(),U64(1));
+ result(PromiseResult::Successful(vec![]));
+ assert!(matches!(c.on_sale_policy_action("k1".into(),U64(1),U64(1)),PromiseOrValue::Value(false)));
+ result(policy(true));assert!(!c.on_sale_policy_view("k1".into(),U64(1),U64(1)));
+ let s=c.get_sale("k1".into()).unwrap();assert_eq!(s.policy_sequence,U64(2));assert!(s.policy_busy&&!s.policy_call_complete);
+ ctx("alice.near",1,NOW);rejects(||{let _=c.cancel_sale("k1".into(),U64(1));});
+ settle(&mut c,true);assert_eq!(c.get_sale("k1".into()).unwrap().state,SaleState::Offered);
+}

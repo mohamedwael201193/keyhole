@@ -900,7 +900,7 @@ The protected purchase accepts the named buyer's **exact NEAR price**, validates
 
 The release-policy method `adopt_zero_royalty` explicitly changes the stored rate to zero under owner authorization. At that setting, NEP-199 returns the entire declared balance to the seller, including zero and maximum-u128 values. NEP-199 computes a payout map; it is not proof that an external marketplace paid it. The deployed configuration table above is a separate, dated live observation.
 
-Local candidate checks reproduced on 2026-11-10 (Africa/Cairo): **276 contract unit tests, 38 sandbox tests, 555 worker tests and 1,516 browser unit tests passed**. Contract/worker clippy, browser typecheck and the Node log verifier passed. The normal contract Wasm rebuild matches the committed 492,414-byte artifact and `release/SHA256SUMS`. These are source/sandbox checks, not a deployed release claim.
+Local candidate checks reproduced on 2026-11-10 (Africa/Cairo): **276 contract unit tests, 38 sandbox tests, 555 worker tests and 1,516 browser unit tests passed at d051fdf**. Contract/worker clippy, browser typecheck and the Node log verifier passed. The normal contract Wasm rebuild matches the then-committed 492,414-byte artifact and `release/SHA256SUMS`. These are source/sandbox checks, not a deployed release claim.
 
 Reproduce locally with no wallet or funds (Rust toolchains and cargo-near as pinned in CI):
 

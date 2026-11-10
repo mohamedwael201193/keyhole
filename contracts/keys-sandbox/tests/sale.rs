@@ -106,3 +106,20 @@ async fn lost_seller_cashout_callback_keeps_liability_pending_in_both_native_wor
  }
  Ok(())
 }
+
+#[tokio::test] async fn terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery()->Result<()>{
+ let e=setup().await?;enable(&e).await?;
+ e.mock.call("mock_fail_policy_reads").args_json(json!({"fail":true})).transact().await?.into_result()?;
+ let _=open_sale(&e).await;
+ let s=view(&e.c,"get_sale",json!({"token_id":"k1"})).await;
+ assert_eq!(s["state"],"Freezing");assert_eq!(s["policy_busy"],true);assert_eq!(s["policy_call_complete"],true);assert_eq!(s["policy_sequence"],"1");
+ for m in ["retry_sale_policy","cancel_sale"]{
+  let r=e.alice.call(e.c.id(),m).args_json(json!({"token_id":"k1","nonce":"1"})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;assert!(r.is_failure(),"blocked read-stage command {m}");
+ }
+ e.mock.call("mock_fail_policy_reads").args_json(json!({"fail":false})).transact().await?.into_result()?;
+ assert_eq!(e.mock.view("get_wallet_policy").args_json(json!({"wallet_pubkey":format!("ed25519:{}","ab".repeat(32))})).await?.json::<Value>()?["frozen"],true);
+ e.alice.call(e.c.id(),"reconcile_sale_policy").args_json(json!({"token_id":"k1","nonce":"1"})).max_gas().transact().await?.into_result()?;
+ let s=view(&e.c,"get_sale",json!({"token_id":"k1"})).await;assert_eq!(s["state"],"Offered");assert_eq!(s["policy_busy"],false);assert_eq!(s["policy_sequence"],"1");
+ e.alice.call(e.c.id(),"cancel_sale").args_json(json!({"token_id":"k1","nonce":"1"})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ assert!(view(&e.c,"get_sale",json!({"token_id":"k1"})).await.is_null());Ok(())
+}

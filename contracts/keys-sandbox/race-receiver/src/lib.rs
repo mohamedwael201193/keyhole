@@ -48,12 +48,16 @@ impl Receiver {
         env::storage_write(wallet_pubkey.as_bytes(), p.to_string().as_bytes());
     }
     pub fn get_wallet_policy(&self, wallet_pubkey: String) -> Option<near_sdk::serde_json::Value> {
+        assert!(!env::storage_has_key(b"fail_policy_reads"), "mock policy read unavailable");
+        self.read_wallet_policy(wallet_pubkey)
+    }
+    fn read_wallet_policy(&self, wallet_pubkey: String) -> Option<near_sdk::serde_json::Value> {
         env::storage_read(wallet_pubkey.as_bytes()).map(|v|near_sdk::serde_json::from_slice(&v).unwrap())
     }
     // TEST-ONLY fenced provider. Real OutLayer support MUST be separately implemented/audited.
     pub fn set_wallet_frozen(&mut self,wallet_pubkey:String,generation:near_sdk::json_types::U64,frozen:bool){
         assert!(!(!frozen&&env::storage_has_key(b"refuse_thaw")),"mock provider refuses thaw");
-        let mut p=self.get_wallet_policy(wallet_pubkey.clone()).unwrap();
+        let mut p=self.read_wallet_policy(wallet_pubkey.clone()).unwrap();
         assert_eq!(p["owner"].as_str().unwrap(),env::predecessor_account_id().as_str(),"only controller");
         let old=p["generation"].as_u64().unwrap();assert!(generation.0>=old,"stale policy generation");
         if generation.0==old{assert_eq!(p["frozen"],frozen,"generation conflict");return;}
@@ -65,7 +69,7 @@ impl Receiver {
     pub fn unfreeze_wallet(&mut self,wallet_pubkey:String){self.legacy_frozen(wallet_pubkey,false);}
     fn legacy_frozen(&mut self,wallet_pubkey:String,frozen:bool){
         assert!(!(!frozen&&env::storage_has_key(b"refuse_thaw")),"mock provider refuses thaw");
-        let mut p=self.get_wallet_policy(wallet_pubkey.clone()).unwrap();
+        let mut p=self.read_wallet_policy(wallet_pubkey.clone()).unwrap();
         assert_eq!(p["owner"].as_str().unwrap(),env::predecessor_account_id().as_str(),"only controller");
         assert_ne!(p["frozen"].as_bool().unwrap(),frozen,"already in requested state");
         p["frozen"]=near_sdk::serde_json::json!(frozen);env::storage_write(wallet_pubkey.as_bytes(),p.to_string().as_bytes());
@@ -74,6 +78,9 @@ impl Receiver {
     pub fn claim_then_delete(&mut self, keys: AccountId, beneficiary: AccountId) {
         let _ = Promise::new(keys).function_call("claim_payout".into(), b"{}".to_vec(), NearToken::from_yoctonear(1), Gas::from_tgas(60));
         let _ = Promise::new(env::current_account_id()).delete_account(beneficiary);
+    }
+    pub fn mock_fail_policy_reads(&mut self, fail: bool) {
+        if fail { env::storage_write(b"fail_policy_reads",&[1]); } else { env::storage_remove(b"fail_policy_reads"); }
     }
     pub fn mock_refuse_thaw(&mut self, refuse: bool) {
         if refuse { env::storage_write(b"refuse_thaw",&[1]); } else { env::storage_remove(b"refuse_thaw"); }
