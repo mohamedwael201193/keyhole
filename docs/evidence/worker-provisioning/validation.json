@@ -68,5 +68,12 @@
     "pushes": 0,
     "pull_requests": 0
   },
-  "release_checklist": "SECURITY.md#collateral-provisioning-release-boundary"
+  "release_checklist": "SECURITY.md#collateral-provisioning-release-boundary",
+  "source_commit": "b7675dc64872701df69e85c98142ff1dddb477d2",
+  "proof_checks": {
+    "generated_identity": "pass",
+    "source_tarball_root_identity_and_candidate": "pass",
+    "source_tarball_manifest_hash_and_bytes": "pass",
+    "repository_secret_pattern_hygiene": "pass (no values printed)"
+  }
 }

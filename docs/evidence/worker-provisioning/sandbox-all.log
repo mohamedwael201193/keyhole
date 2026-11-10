@@ -34,4 +34,3 @@ test successful_principal_transfer_with_lost_callback_never_starts_debt_from_a_g
 test token_transfer_call_lock_refuses_reentrant_loan_then_resolves_cleanly ... ok
 
 test result: ok. 27 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 390.01s
-
