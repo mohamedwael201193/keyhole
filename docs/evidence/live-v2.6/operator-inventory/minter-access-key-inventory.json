@@ -1,0 +1,34 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "block_hash": "6pTjj3qBnj5safsPmhxG9wAjVNx8kJ43P5kgDmC5o7Sg",
+    "block_height": 223980749,
+    "keys": [
+      {
+        "access_key": {
+          "nonce": 221861956000009,
+          "permission": "FullAccess"
+        },
+        "public_key": "ed25519:6H1iG1oHWKQZ7smE6yh5rMAeJ4tJ61tvtZGzuW7kSY2"
+      },
+      {
+        "access_key": {
+          "nonce": 222839825000001,
+          "permission": {
+            "FunctionCall": {
+              "allowance": "49820698473980300000000",
+              "method_names": [
+                "beat"
+              ],
+              "receiver_id": "keyhole-devmo.near"
+            }
+          }
+        },
+        "public_key": "ed25519:9FiNXX2MQdv8r4fNagjeJ3NrodDoqoSTLTbPBW7d6LXR"
+      }
+    ]
+  },
+  "id": "release-minter-inventory",
+  "observed_at_cairo": "2026-11-11T00:48:03.842514+02:00",
+  "account_id": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443"
+}
