@@ -88,7 +88,7 @@ The source worker (not published) requires the separately released v2.6 CAS cont
 
 This block is generated from [`identity.json`](identity.json) by `node scripts/gen-identity.mjs`. Do not edit it by hand.
 
-The live worker is `d337e822` (765,658 bytes).
+The live worker is `62398a8a` (1,085,333 bytes).
 
 | Piece | Live value | Proof |
 |---|---|---|
@@ -99,9 +99,9 @@ The live worker is `d337e822` (765,658 bytes).
 | Contract code hash | `6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww` | deploy tx [`4XrNsFhg…`](https://nearblocks.io/txns/4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj) |
 | Contract wasm sha256 | `54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
-| Worker wasm sha256 | `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
-| Worker publish tx | `BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5` | [nearblocks](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
-| Live `info` call | `dc3668db-674f-4865-a2ce-272f70c41b0d` | [attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) · [verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| Worker wasm sha256 | `62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
+| Worker publish tx | `3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P` | [nearblocks](https://nearblocks.io/txns/3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P) |
+| Live `info` call | `962d4374-b9ec-411a-9efa-973b36260431` | [attestation](https://api.outlayer.ai/attestations/by-call/962d4374-b9ec-411a-9efa-973b36260431) · [verify](https://keyhole-seven.vercel.app/verify?call=962d4374-b9ec-411a-9efa-973b36260431) |
 
 The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.6/identity.json`](contracts/keys/release/v2.6/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 

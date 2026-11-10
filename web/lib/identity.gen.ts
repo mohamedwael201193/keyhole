@@ -3,10 +3,10 @@ export const IDENTITY = {
   "_doc": "Single source of truth for live identities. Generate deployment updates with node scripts/gen-identity.mjs --promote-live <public-capture.json>. Refresh generated files with the same script.",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
-    "bytes": 765658,
-    "add_version_tx": "BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5",
-    "info_call": "dc3668db-674f-4865-a2ce-272f70c41b0d",
+    "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+    "bytes": 1085333,
+    "add_version_tx": "3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P",
+    "info_call": "962d4374-b9ec-411a-9efa-973b36260431",
     "previous_wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c"
   },
   "contract": {
@@ -24,7 +24,7 @@ export const IDENTITY = {
     "source_commit": "4dcf55ad2644dd6985eafd6a1cd65537f04ff610"
   },
   "worker_candidate": {
-    "status": "source-candidate-not-published",
+    "status": "published-mainnet",
     "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
     "bytes": 1085333,
     "recipe": "tee/worker/build.sh"
