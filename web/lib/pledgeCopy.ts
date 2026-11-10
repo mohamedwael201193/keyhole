@@ -40,6 +40,18 @@ export function policyAction(state: string, kind: "retry" | "check" | "unknown")
     : "Unlock not confirmed yet. This command is still pending / UNKNOWN. No redispatch or timeout unlock.";
 }
 
+/** An in-flight cashout is not a claim. Both actors wait and check the chain. */
+export function pendingCashoutChrome(viewerOwnsAccount: boolean): { badge: string; step: string; heading: string; text: string } {
+  return {
+    badge: "Cashout confirmation pending",
+    step: "Now: check the chain",
+    heading: "Cashout pending",
+    text: viewerOwnsAccount
+      ? "Wait and check the chain. Do not send again."
+      : "Wait and check the chain. Do not send again on this account.",
+  };
+}
+
 export function disbursementCopy(viewerOwnsAccount: boolean, principal: string): { heading: string; text: string } {
   if (viewerOwnsAccount) {
     return {
@@ -145,9 +157,17 @@ export function humanSeconds(sec: string): string {
   return parts.join(" ");
 }
 
+/** A short id drops the protocol prefix. It is the label only when metadata has no symbol. */
 export function shortTokenId(token: string): string {
-  if (token.length <= 18) return token;
-  return `${token.slice(0, 10)}…${token.slice(-4)}`;
+  const bare = token.replace(/^nep141:/i, "");
+  if (bare.length <= 18) return bare;
+  return `${bare.slice(0, 8)}…${bare.slice(-4)}`;
+}
+
+function metadataSymbol(symbol: string | undefined): string | null {
+  const name = symbol?.trim();
+  if (!name || name.toUpperCase() === "UNPRICED") return null;
+  return name;
 }
 
 export type AssetBits = { token: string; amount: string; symbol?: string; decimals?: number };
@@ -166,14 +186,14 @@ export function assetPresentation(asset: AssetBits, normalized: string | null): 
       copyId: true,
     };
   }
-  const named = asset.symbol && asset.symbol.toUpperCase() !== "UNPRICED" ? asset.symbol : shortTokenId(asset.token);
+  const symbol = metadataSymbol(asset.symbol);
   return {
-    name: named,
+    name: symbol ?? shortTokenId(asset.token),
     amount: normalized,
     note: "Price not quoted · included in your collateral",
     extra: "",
-    tip: asset.token,
-    copyId: false,
+    tip: symbol ? asset.token : `${asset.token} · symbol unavailable`,
+    copyId: symbol === null,
   };
 }
 

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { compactAccount } from "@/lib/near";
 import { networkPillDetail, networkPillLabel } from "@/lib/networkLabel";
-import { accountAccess, assetPresentation, cairoTime, cashoutCopy, currentStep, disbursementCopy, floorCaption, humanSeconds, loanStateLabel, policyAction, terminalLabel, unlockNotice } from "@/lib/pledgeCopy";
+import { accountAccess, assetPresentation, cairoTime, cashoutCopy, currentStep, disbursementCopy, floorCaption, humanSeconds, loanStateLabel, pendingCashoutChrome, policyAction, terminalLabel, unlockNotice } from "@/lib/pledgeCopy";
 import type { LoanState as LoanStateType } from "@/lib/pledgeClient";
 import { LivePledge } from "@/app/pledge/LivePledge";
 
@@ -61,6 +61,19 @@ describe("pledge status labels", () => {
     const usdc = assetPresentation({ token: "nep141:usdc.test", amount: "500000", symbol: "USDC", decimals: 6 }, "0.5");
     expect(usdc).toMatchObject({ name: "USDC", amount: "0.5", extra: "", copyId: false });
     expect(usdc.note).toContain("Price not quoted");
+    const missing = assetPresentation({ token: "nep141:nor.example.near", amount: "1230000", decimals: 6 }, "1.23");
+    const placeholder = assetPresentation({ token: "nep141:0123456789abcdef.example.near", amount: "1230000", symbol: "UNPRICED", decimals: 6 }, "1.23");
+    for (const row of [missing, placeholder]) {
+      expect(row.amount).toBe("1.23");
+      expect(row.name).not.toMatch(/nep141/i);
+      expect(row.name).not.toBe("UNPRICED");
+      expect(row.name).not.toBe("Other token");
+      expect(row.note).toContain("Price not quoted");
+      expect(row.copyId).toBe(true);
+      expect(row.tip).toContain(row === missing ? "nep141:nor.example.near" : "nep141:0123456789abcdef.example.near");
+    }
+    expect(missing.name).toBe("nor.example.near");
+    expect(placeholder.name).toBe("01234567…near");
   });
 
   it("maps every phase to borrower and lender copy, and never tells a lender to claim principal", () => {
@@ -111,6 +124,19 @@ describe("pledge status labels", () => {
     const ready = cashoutCopy({ pending: false, amount: "0.0101", nonce: null });
     expect(ready.detail).toContain("Still held by the contract");
     expect(ready.title).toContain("0.0101 NEAR ready to withdraw");
+    for (const owns of [true, false]) {
+      const chrome = pendingCashoutChrome(owns);
+      const blob = `${chrome.badge} ${chrome.step} ${chrome.heading} ${chrome.text}`;
+      expect(blob.toLowerCase()).not.toContain("claim");
+      expect(chrome.step).toBe("Now: check the chain");
+      expect(chrome.text).toContain("Wait and check the chain");
+      expect(chrome.text).toContain("Do not send again");
+      expect(blob).not.toMatch(/\bdelivered\b|\bconfirmed\b/);
+    }
+    const page = readFileSync(new URL("../app/pledge/LivePledge.tsx", import.meta.url), "utf8");
+    expect(page).toContain("pendingCashoutChrome");
+    expect(page).toContain("{payoutPending?null:");
+    expect(page).toContain("Original money operation {operation.status}");
   });
 
   it("keeps seconds in the Cairo deadline and leaves a zero due date unstarted", () => {

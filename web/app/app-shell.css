@@ -163,8 +163,9 @@
 @media (max-width: 599px) {
   .app-brand { padding: 0 var(--space-3); }
   .app-brand .kh-logo { --kh: 1.6rem; }
-  .app-top { width: 100%; max-width: 100%; }
-  .app-top-end { gap: 6px; padding-inline-end: 12px; min-width: 0; flex: 1 1 auto; overflow: hidden; justify-content: flex-end; }
+  .app-top { width: 100%; max-width: 100%; overflow: visible; }
+  /* The account name ellipsizes inside its own button. This group stays visible so the session popover, including Revoke, is not clipped. */
+  .app-top-end { gap: 6px; padding-inline-end: 12px; min-width: 0; flex: 1 1 auto; overflow: visible; justify-content: flex-end; }
   .app-top .app-net { display: none; }
   .app-top .sp-pill { height: 40px; min-height: 40px; padding: 0 10px; gap: 6px; flex: none; }
   .app-top .sp-pill .sp-word, .app-top .sp-pill .sp-sep { display: none; }
@@ -176,6 +177,7 @@
   .app-top .acct .cw-full { display: none; }
   .app-top .acct .cw-short { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
   .app-top .cw-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(255, 255, 255, .18); font: 700 13px/1 var(--font-ui); flex: none; }
+  .app-top .sp-pop { position: fixed; top: 68px; left: 12px; right: 12px; width: auto; }
 }
 
 /* Isolated sandbox builds only. Fixed above the sticky bar, with the shell shifted down by the same 28px, so the strip never covers the pills and does not add a page scroll. */
@@ -204,6 +206,7 @@
   .sandbox-banner + .app .app-top { top: 48px; }
   .sandbox-banner + .app .app-side { top: 108px; }
   .sandbox-banner + .app .app-top .acct-menu { top: 116px; }
+  .sandbox-banner + .app .app-top .sp-pop { top: 116px; }
 }
 @media (max-width: 419px) {
   /* "Sandbox" is short enough to sit beside the compact account pill. "NEAR mainnet" stays in the menu. */

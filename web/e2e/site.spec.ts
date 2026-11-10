@@ -287,6 +287,89 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await expect(page.getByTestId("error")).toHaveCount(0);
 });
 
+test("the session popover stays visible at 390 and Revoke is clickable", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await holdAccount(page);
+  await page.addInitScript(() => {
+    sessionStorage.setItem("kh_session_v1", JSON.stringify({
+      token: "sess-test", account: "holder.keyhole.test", token_id: "4", exp_ms: Date.now() + 25 * 60 * 1000, max_usd_micro: 5_000_000,
+    }));
+  });
+  let revoked = 0;
+  await page.route("**/api/worker", async (route) => {
+    const body = route.request().postDataJSON() as { op?: string } | null;
+    if (body?.op === "session_revoke") revoked += 1;
+    await route.fulfill({ json: { call_id: "c1", status: "ok", output: { ok: true }, attestation_url: null, time_ms: 1 } });
+  });
+  await page.goto("/vault");
+  const pill = page.getByTestId("session-pill");
+  await expect(pill).toHaveAttribute("data-state", "unlocked", { timeout: 20_000 });
+  await pill.click();
+  const pop = page.getByTestId("session-pop");
+  const revoke = page.getByTestId("session-revoke");
+  await expect(revoke).toBeVisible();
+  const hit = await revoke.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    const dialog = document.querySelector("[data-testid='session-pop']")!.getBoundingClientRect();
+    const vp = { w: document.documentElement.clientWidth, h: document.documentElement.clientHeight };
+    return {
+      hit: top === el || el.contains(top),
+      inside: r.x >= 0 && r.y >= 0 && r.right <= vp.w + 1 && r.bottom <= vp.h + 1 && dialog.x >= -1 && dialog.right <= vp.w + 1 && dialog.bottom <= vp.h + 1,
+      extra: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      overflow: getComputedStyle(document.querySelector(".app-top-end")!).overflow,
+    };
+  });
+  expect(hit.hit, "Revoke is covered").toBe(true);
+  expect(hit.inside, "session popover is clipped or off-screen").toBe(true);
+  expect(hit.extra, "390 horizontal overflow").toBeLessThanOrEqual(0);
+  expect(hit.overflow).not.toBe("hidden");
+  await pill.focus();
+  await page.keyboard.press("Tab");
+  await expect(revoke).toBeFocused();
+  await revoke.click();
+  await expect(pill).toHaveAttribute("data-state", "locked");
+  await expect(pop).toHaveCount(0);
+  await expect.poll(() => revoked).toBe(1);
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem("kh_session_v1"))).toBeNull();
+  await page.context().route("https://app.mynearwallet.com/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>wallet</title>" }));
+  const popup = page.waitForEvent("popup", { timeout: 20_000 });
+  await pill.click();
+  await (await popup).close();
+  const retry = page.getByTestId("session-retry");
+  const dismiss = pop.getByRole("button", { name: "Dismiss" });
+  await expect(retry).toBeVisible();
+  await expect(dismiss).toBeVisible();
+  const errorHit = await retry.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === el;
+  });
+  expect(errorHit, "Try again is covered").toBe(true);
+  await dismiss.click();
+  await expect(pop).toHaveCount(0);
+});
+
+test("the app font and sidebar render at 1440", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/vault");
+  await page.evaluate(() => document.fonts.ready);
+  const aside = page.locator("aside.app-side");
+  await expect(aside).toBeVisible();
+  await expect(page.getByRole("link", { name: "Vault", exact: true })).toBeVisible();
+  const font = await page.evaluate(() => {
+    const declared = getComputedStyle(document.documentElement).getPropertyValue("--font-inter");
+    const family = declared.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+    const used = getComputedStyle(document.querySelector(".app")!).fontFamily;
+    const loaded = [...document.fonts].some((face) => face.status === "loaded" && face.family.replace(/['"]/g, "") === family);
+    return { family, used, loaded, aside: getComputedStyle(document.querySelector("aside.app-side")!).display };
+  });
+  expect(font.family.toLowerCase()).toContain("inter");
+  expect(font.used).toContain(font.family);
+  expect(font.loaded).toBe(true);
+  expect(font.aside).not.toBe("none");
+});
+
 test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "sets 1280 and 390 itself");
   test.setTimeout(60_000);
