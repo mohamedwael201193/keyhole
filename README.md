@@ -35,9 +35,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 077d86f12c7f80030bb9c3b958536f43e12ddba9
+git fetch --depth 1 origin ca1fba40a40d7d6b05a33e193d882c0728420b5d
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "077d86f12c7f80030bb9c3b958536f43e12ddba9"
+test "$(git rev-parse HEAD)" = "ca1fba40a40d7d6b05a33e193d882c0728420b5d"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -50,9 +50,9 @@ No git? Download all three files from that same immutable source commit and run 
 
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/077d86f12c7f80030bb9c3b958536f43e12ddba9/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/077d86f12c7f80030bb9c3b958536f43e12ddba9/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/077d86f12c7f80030bb9c3b958536f43e12ddba9/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/ca1fba40a40d7d6b05a33e193d882c0728420b5d/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/ca1fba40a40d7d6b05a33e193d882c0728420b5d/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/ca1fba40a40d7d6b05a33e193d882c0728420b5d/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -621,9 +621,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 077d86f12c7f80030bb9c3b958536f43e12ddba9
+git fetch --depth 1 origin ca1fba40a40d7d6b05a33e193d882c0728420b5d
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "077d86f12c7f80030bb9c3b958536f43e12ddba9"
+test "$(git rev-parse HEAD)" = "ca1fba40a40d7d6b05a33e193d882c0728420b5d"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
