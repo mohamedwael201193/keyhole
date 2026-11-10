@@ -17,7 +17,7 @@ export const IDENTITY = {
     "deploy_tx": "84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn"
   },
   "review": {
-    "source_commit": "e901275debf3cdb006563add84ff45ca1e1ef1e1"
+    "source_commit": "077d86f12c7f80030bb9c3b958536f43e12ddba9"
   }
 } as const;
 export const WORKER_SHA256 = IDENTITY.worker.wasm_sha256;
