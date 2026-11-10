@@ -1,0 +1,19 @@
+{
+  "at_cairo": "2026-11-11 01:55:32 Africa/Cairo",
+  "block": {
+    "hash": "97jWJu2ugppeD8QqRxgxjjAq3svp6K6XAkWfzH1g2nVN",
+    "height": 223987892,
+    "timestamp": 1794354924692996600
+  },
+  "contract_code": {
+    "sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "bytes": 487260
+  },
+  "preserved_raw_state_six_nfts_owners_controls_epochs_credits_configs": true,
+  "snapshot_sha256": "916edd59ea38186f42c47fe2382cf02b2f92615327b57d1ffaf74eb57546ceed",
+  "token_count": 6,
+  "lending_enabled": false,
+  "registry_uuid": "p000000000000004b",
+  "registry_count": 1,
+  "active_worker": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f"
+}

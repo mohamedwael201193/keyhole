@@ -1,0 +1,30 @@
+{
+  "at_cairo": "2026-11-11T01:54:49.626862+02:00",
+  "deployment_url": "https://keyhole-7wl2s500y-mohamedwael201193s-projects.vercel.app",
+  "source_commit": "7ac5dad0192a558ab06688010b3612e0ff4aaf7b",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/api/keyhole",
+      "status": 400
+    },
+    {
+      "path": "/api/worker",
+      "status": 400
+    },
+    {
+      "path": "/api/keys?account=keyhole-devmo.near",
+      "status": 200,
+      "read_flow": {
+        "token_id": "0",
+        "owner": "keyhole-devmo.near",
+        "keys_returned": 1,
+        "tier": 1,
+        "paid_compute": false
+      }
+    }
+  ]
+}

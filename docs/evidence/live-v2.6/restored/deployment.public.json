@@ -1,0 +1,35 @@
+{
+  "at_cairo": "2026-11-11T01:53:34.470316+02:00",
+  "source_commit": "7ac5dad0192a558ab06688010b3612e0ff4aaf7b",
+  "command_arguments": [
+    "deploy",
+    ".",
+    "--prod",
+    "--skip-domain",
+    "--yes",
+    "--archive=tgz",
+    "--scope",
+    "mohamedwael201193s-projects"
+  ],
+  "exit_code": 0,
+  "deployment": {
+    "id": "dpl_3WH9uTUgttfGcMPDt5V8STTt8ePS",
+    "url": "https://keyhole-7wl2s500y-mohamedwael201193s-projects.vercel.app",
+    "productionUrl": null,
+    "inspectorUrl": "https://vercel.com/mohamedwael201193s-projects/keyhole/3WH9uTUgttfGcMPDt5V8STTt8ePS",
+    "readyState": "READY",
+    "target": "production",
+    "environment": "production",
+    "deploymentApiUrl": "https://api.vercel.com/v13/deployments/dpl_3WH9uTUgttfGcMPDt5V8STTt8ePS",
+    "buildMachine": {
+      "cores": 2,
+      "memory": 8192,
+      "machine": "basic",
+      "selectionType": "fixed",
+      "selectionSource": "plan-default"
+    },
+    "deploymentProtection": [
+      "vercel_authentication"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "keyhole-release-checkpoint-v1",
+  "phase": "restore",
+  "release": {
+    "account": "keyhole-devmo.near",
+    "contract": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "worker": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f"
+  },
+  "block": {
+    "hash": "B3a9w1bnouj7FJSR4QD8mXdtGB5Lvn3TyTnwgE2kTU2W",
+    "height": 223987309,
+    "timestamp": 1794354596848384800
+  },
+  "snapshot_sha256": "da0318a4f9b19fdba870eb4aa9e2aad032e77d0c76dfda65e767fb672d9fcc16"
+}
