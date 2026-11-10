@@ -1,0 +1,24 @@
+on-chain code_hash  6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww
+repo wasm (base58)  6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww  (sha256 54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a)
+OK   contract code matches the committed wasm
+config {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
+OK   minter is an implicit account (015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443); its key was generated inside the TEE (see worker op info in evidence)
+Traceback (most recent call last):
+  File "<stdin>", line 8, in <module>
+  File "<stdin>", line 5, in query
+  File "/usr/lib/python3.13/urllib/request.py", line 189, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/urllib/request.py", line 495, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.13/urllib/request.py", line 604, in http_response
+    response = self.parent.error(
+        'http', request, response, code, msg, hdrs)
+  File "/usr/lib/python3.13/urllib/request.py", line 533, in error
+    return self._call_chain(*args)
+           ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/urllib/request.py", line 466, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.13/urllib/request.py", line 613, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 403: Forbidden

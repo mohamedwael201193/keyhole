@@ -1,0 +1,11 @@
+{
+  "at_cairo": "2026-11-11 01:25:49 Africa/Cairo",
+  "block": "E8oWuC5vUE4x8YCMiiVRHNVJ19ya4MbnNWNcxzbcNJ3E",
+  "gas_price": "100000000",
+  "per_upload_cap_yocto": "10000000000000000000000",
+  "batch_nonce": 1794353148,
+  "previous_indexed_nonce": 0,
+  "ordering": "Upstream stores by predecessor/current_account/path/offset, not numeric nonce; nonce identifies matching parts. Prior overflow batch was rejected before storage.",
+  "upstream_ordering": "https://github.com/fastnear/fastdata-indexer/blob/187d80e84dc3db8411a1f69854b77d990ad6c721/fastfs-sub-indexer/src/scylla_types.rs",
+  "upstream_assembly": "https://github.com/fastnear/fastfs-server/blob/2f7a2f41e6275140a34e88b3dbd9ffebf705d4ea/src/main.rs"
+}
