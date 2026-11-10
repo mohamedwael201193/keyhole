@@ -1,0 +1,25 @@
+# Wallet dependency compatibility — PR201 R4 source repair
+
+Source-only web dependency and reproduction repair; not a deployment or live wallet/custody certification.
+
+## Resolution strategy
+
+- Regenerate the lock with npm **10.8.2**, not npm 11, removing unnecessary inherited noble-hash overrides and preserving upstream hash major/pin boundaries. CI pins **Node 22.22.2 / npm 10.8.2** to satisfy near-api-js 7.4.0's engine floor. No force, legacy-peer-deps or disabled epoch/receipt checks.
+- HERE/legacy NEAR retain **bs58 4.0.1 / base-x 3.0.11** and the CJS Buffer API. Other retained base-x majors use **4.0.1 / 5.0.1**. Browser bs58 6 is unchanged.
+- **lodash 4.18.1**, not deprecated 4.18.0: the latter's modular template/fromPairs distributions have a ReferenceError. [Upstream patch release](https://github.com/lodash/lodash/releases/tag/4.18.1) explains the compatible corrective patch. Tests exercise both modular helpers and the exact rejected template-import error.
+- Meteor keeps SDK 1.0.24, with **nanoid 5.1.16**, **query-string 9.5.0 / decode-uri-component 0.5.1**. Version/count-bound postinstall patches migrate its ESM named import and CJS default interop. Tests invoke both actual SDK signature-popup transports with a mocked window; no wallet is connected or asked to sign.
+- Zod is **4.6.6**. Reown's three pinned frame-schema versions use the supported two-argument record API already; all installed schema copies are loaded and tested against valid/invalid provider collections and theme dictionaries. x402 0.7.3's four single-argument records are migrated to explicit string-key records in **every external-zod ESM/CJS entry**. Its payment schema tests preserve arbitrary record values and reject invalid native amounts/addresses/record shapes. The unused prebundled x402 paywall is not rewritten or certified by these external dependency patches.
+- Older abitype pins move to same-major **1.3.0**, whose peer declaration supports zod v4; this prevents retaining vulnerable optional v3 peer copies. Every installed old/current viem encoder is tested with identical ABI calldata and decoding. This is a reviewed dependency migration, not an assertion that v3 and v4 are universally interchangeable.
+- Retained ws **8.x** copies use **8.21.0**; the compatible patched **7.5.13** caller is not forced across majors.
+
+Reproducible consumer changes: [`web/scripts/patch-wallet-deps.mjs`](../../../web/scripts/patch-wallet-deps.mjs), [`wallet-dependency-patches.json`](../../../web/scripts/wallet-dependency-patches.json). Drift in package version, expected source text or replacement count fails install. The script is idempotent. Regression proof: [`wallet-dependencies.test.ts`](../../../web/tests/wallet-dependencies.test.ts). The lockfile retains registry integrity values.
+
+## Audit scope
+
+Before, `npm audit --omit=dev --json`: **63 entries: 22 low / 13 moderate / 28 high / 0 critical**. Package-level propagated entries are not distinct exploits. The repaired high leaf families are bs58/base-x, lodash, nanoid, decode-uri-component, zod and ws. After: **45 entries: 34 low / 11 moderate / 0 high / 0 critical**. Full graph: **53 entries: 34 low / 19 moderate / 0 high / 0 critical**. Raw public-package audit graphs: [before](wallet-audit-r4-before.json), [after](wallet-audit-r4-after.json). Remaining lower-severity graph and deployment qualifications are in [`SECURITY.md`](../../../SECURITY.md#clean-install-dependency-advisory-boundary). Installed-leaf audit does not certify upstream prebundled copies, live extensions, third-party wallet origin policy, or Rust dependencies.
+
+## Executed gates
+
+Default `npm ci` (no `--ignore-scripts`; root consumer migrations executed) completed for **Node 22.22.2 / npm 10.8.2**, the previous hosted **Node 20.20.2 / npm 10.8.2** pair, and **Node 22.22.2 / npm 11.21.0**, all using the same committed lockfile. The legacy Node 20 run emits the expected engine warnings and is install-portability proof only, not a supported runtime. Postinstall idempotence is checked separately. See the final repair report for the exact local head and local raw log directory. Hosted CI is intentionally not claimed: this change is committed locally and not pushed.
+
+Completed source regressions: **97 files / 1,777 web units**, including seven real dependency-consumer tests; typecheck PASS; lint **0 errors / 10 existing warnings**; **22 Node judge/planner/receipt tests** and **9 Python receipt tests** PASS. Full production/browser and fresh funded acceptance are recorded by the final local-head execution report rather than rewriting historical manifests.

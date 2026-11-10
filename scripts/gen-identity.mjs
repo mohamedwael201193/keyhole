@@ -19,6 +19,8 @@ if (b58(id.contract.wasm_sha256) !== id.contract.code_hash) errs.push(`code_hash
 if (!/^[0-9a-f]{64}$/.test(String(id.contract.minter || ""))) errs.push("contract.minter must be the 64-hex implicit account");
 if (!readFileSync(root + "contracts/keys/deployed/SHA256SUMS", "utf8").startsWith(sha)) errs.push("SHA256SUMS out of date");
 
+const reviewRef = id.review?.source_commit;
+if (!/^[0-9a-f]{40}$/.test(reviewRef ?? "")) errs.push("review.source_commit must be an immutable full Git commit");
 const w = id.worker;
 const k = id.contract;
 const w8 = w.wasm_sha256.slice(0, 8);
@@ -80,13 +82,39 @@ const END = "<!-- IDENTITY:END -->";
 let readme = "";
 try { readme = readFileSync(readmePath, "utf8"); } catch { errs.push("README.md is missing"); }
 if (readme) {
+  const repo = "https://github.com/mohamedwael201193/keyhole.git";
+  const checkout = `<!-- JUDGE-CHECKOUT:START -->
+\`\`\`bash
+git init keyhole && cd keyhole
+git remote add origin ${repo}
+git fetch --depth 1 origin ${reviewRef}
+git checkout --detach FETCH_HEAD
+test "$(git rev-parse HEAD)" = "${reviewRef}"
+\`\`\`
+<!-- JUDGE-CHECKOUT:END -->`;
+  const rawBase = `https://raw.githubusercontent.com/mohamedwael201193/keyhole/${reviewRef}`;
+  const raw = `<!-- JUDGE-RAW:START -->
+\`\`\`bash
+curl -fsSL ${rawBase}/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL ${rawBase}/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL ${rawBase}/identity.json -o identity.json
+IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
+\`\`\`
+<!-- JUDGE-RAW:END -->`;
+  for (const [name, body, count] of [["JUDGE-CHECKOUT", checkout, 2], ["JUDGE-RAW", raw, 1]]) {
+    const pattern = new RegExp(`<!-- ${name}:START -->[\\s\\S]*?<!-- ${name}:END -->`, "g");
+    if ([...readme.matchAll(pattern)].length !== count) errs.push(`README missing ${name} blocks`);
+    const next = readme.replace(pattern, () => body);
+    if (next !== readme && process.argv.includes("--check")) errs.push(`README ${name} is stale: run node scripts/gen-identity.mjs`);
+    readme = next;
+  }
   const i = readme.indexOf(START);
   const j = readme.indexOf(END);
   if (i < 0 || j < 0 || j < i) {
     errs.push("README.md is missing the <!-- IDENTITY:START --> … <!-- IDENTITY:END --> block; run node scripts/gen-identity.mjs after inserting the markers");
   } else {
     const next = readme.slice(0, i) + identityBlock.trimEnd() + readme.slice(j + END.length);
-    if (next !== readme) {
+    if (next !== readFileSync(readmePath, "utf8")) {
       if (process.argv.includes("--check")) errs.push("README.md identity block is stale: run node scripts/gen-identity.mjs");
       else writeFileSync(readmePath, next);
     }

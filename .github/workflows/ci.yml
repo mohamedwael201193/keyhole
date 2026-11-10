@@ -164,7 +164,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: web/package-lock.json }
+        with: { node-version: 22.22.2, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm install --global npm@10.8.2
+      - run: node --version && npm --version
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
@@ -174,8 +176,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: e2e against the local production build (reads mainnet live)
         run: |
-          PORT="${KH_E2E_PORT:-3100}"; export BASE_URL="http://localhost:$PORT"
-          npx next start -p "$PORT" & npx -y wait-on "$BASE_URL"
+          PORT="${KH_E2E_PORT:-3174}"; export BASE_URL="http://localhost:$PORT"
+          npx next start -p "$PORT" & UI_PID=$!
+          trap 'kill "$UI_PID" 2>/dev/null || true' EXIT
+          npx -y wait-on "$BASE_URL"
           PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/p.json" npx playwright test --grep-invert "funded payment key" --reporter=list,json
           echo "| e2e (distinct, each run at 2 widths) | $(node -p "const j=require(process.env.RUNNER_TEMP+'/p.json');new Set(j.suites.flatMap(function f(s){return [...(s.specs||[]).filter(x=>x.ok).map(x=>x.file+x.title),...(s.suites||[]).flatMap(f)]})).size") |" >> "$GITHUB_STEP_SUMMARY"
 

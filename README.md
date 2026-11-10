@@ -29,23 +29,33 @@ Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepar
 
 No wallet, no Rust, no `npm install`. You need `curl`, `bash` and `python3` (standard library only).
 
-`main` does not contain `judge/0-live.sh`. Clone the review branch that does. The same branch is the identity file the no-checkout path reads.
+Use the immutable source commit recorded in [`identity.json`](identity.json). The checkout and no-checkout paths below are generated together by [`scripts/gen-identity.mjs`](scripts/gen-identity.mjs).
+
+<!-- JUDGE-CHECKOUT:START -->
+```bash
+git init keyhole && cd keyhole
+git remote add origin https://github.com/mohamedwael201193/keyhole.git
+git fetch --depth 1 origin e901275debf3cdb006563add84ff45ca1e1ef1e1
+git checkout --detach FETCH_HEAD
+test "$(git rev-parse HEAD)" = "e901275debf3cdb006563add84ff45ca1e1ef1e1"
+```
+<!-- JUDGE-CHECKOUT:END -->
 
 ```bash
-git clone --depth 1 --branch integration/final-candidate https://github.com/mohamedwael201193/keyhole.git
-cd keyhole
 test -f judge/0-live.sh
 bash judge/0-live.sh
 ```
 
-No git? Download the script and the receipt checker from that same branch, plus `identity.json` from that same branch, and run them together:
+No git? Download all three files from that same immutable source commit and run them together:
 
+<!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/integration/final-candidate/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/integration/final-candidate/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/integration/final-candidate/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/e901275debf3cdb006563add84ff45ca1e1ef1e1/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/e901275debf3cdb006563add84ff45ca1e1ef1e1/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/e901275debf3cdb006563add84ff45ca1e1ef1e1/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
+<!-- JUDGE-RAW:END -->
 
 It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
 
@@ -171,7 +181,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `533 claims: 239 PASS, 0 FAIL, 0 ERROR, 294 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `566 claims: 273 PASS, 0 FAIL, 0 ERROR, 293 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -215,7 +225,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (533 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 239 PASS, 0 FAIL, 0 ERROR, 294 SKIP (2026-11-10, Africa/Cairo) |
+| Judge-claims machine (566 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 273 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo) |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -476,7 +486,7 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | Agent signs with a scoped key, and the limits are explained | Function-call key on the minter, allowed only `beat` on `keyhole-devmo.near`, 0.05 NEAR gas allowance, no deposit or transfer. Added by the enclave on the owner's signed request ([`op_beat_key`, `tee/worker/src/main.rs:879`](tee/worker/src/main.rs)). Holder requests still need a full-access key of the NFT owner ([§8](#8-security-model)) | partial (only the beat key is scoped) |
 | Agent wallet with a policy (NEAR Intents Agent API) | The Bronze caps written as an Agent API policy on the demo partner deployment (swap only, $1 per swap and $5 per day on USDC, six routed assets). [/settle](https://keyhole-seven.vercel.app/settle) compares the live policy with the caps. Tests: [`web/tests/agentPolicy.test.ts`](web/tests/agentPolicy.test.ts) | shipped (demo partner) |
 | Attack demo: a prompt-injected agent tries to pay a bad address, with a log | Six mainnet attack calls, all stopped ([evidence](docs/evidence/prompt-injection/README.md)) | shipped |
-| Counterparty check, allow / warn / block, with signals and a shared blocklist | `cli/src/counterparty.ts` (identical copy in [`web/lib/counterparty.ts`](web/lib/counterparty.ts)), served read-only by [`GET /api/check`](web/app/api/check/route.ts). Guards `withdraw`, `quote --execute` and MCP `copy`. Blocklist in [`security/blocklist.json`](security/blocklist.json). Tests: [`cli/test/counterparty.test.ts`](cli/test/counterparty.test.ts), [`cli/test/guard.test.ts`](cli/test/guard.test.ts), [`web/tests/check.test.ts`](web/tests/check.test.ts) | partial (advisory; not enforced in the TEE) |
+| Counterparty check, allow / warn / block, with signals and a shared blocklist | `cli/src/counterparty.ts` (identical copy in [`web/lib/counterparty.ts`](web/lib/counterparty.ts)), served read-only by [`GET /api/check`](web/app/api/check/route.ts). Guards `withdraw`, `quote --execute` and MCP `copy`. Blocklist in [`security/blocklist.json`](security/blocklist.json). Tests: [`cli/test/counterparty.test.ts`](cli/test/counterparty.test.ts), [`cli/test/guard.test.ts`](cli/test/guard.test.ts), [`web/tests/check.test.ts`](web/tests/check.test.ts) | [scope and trust](SECURITY.md#counterparty-check-boundary) |
 | Attack demo on the guard: a scripted agent obeys an injected instruction, and the guard refuses before signing | [`scripts/attack-demo.mts`](scripts/attack-demo.mts). The signer is a stub that throws, and the run asserts it was never called. Log: [`docs/evidence/attack-demo/2026-11-07.log`](docs/evidence/attack-demo/2026-11-07.log). Refusals only: the worker does not pay third parties yet | partial |
 | TEE attestation | [/verify](https://keyhole-seven.vercel.app/verify), [`verify.sh`](verify.sh), [judge kit](judge/README.md) | shipped |
 
@@ -497,7 +507,7 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | WARN | `signal unavailable: …` | a signal could not be read |
 | ALLOW | none | everything else |
 
-Limits of this check: it is advisory. Anyone with the full-access key can sign without it. A new address with history can still be a scam, so ALLOW is not safety. Nearblocks returned HTTP 429 after a short burst of test checks, and a 429 is a WARN. Comparing code hashes proves that code differs between two points in time; it does not count deploys.
+[Counterparty-check scope and trust assumptions](SECURITY.md#counterparty-check-boundary), with [guard regressions](cli/test/guard.test.ts) and [signal tests](cli/test/counterparty.test.ts).
 
 **Reporting a bad receiver.** An agent reports with a NEP-413 signed JSON made by `signReport` ([`cli/src/report.ts`](cli/src/report.ts)), recipient `keyhole-blocklist`. A curator checks it with `verifyReport`, confirms on chain that the public key is a full-access key of the reporter, and only then adds the entry by pull request, to [`security/blocklist.json`](security/blocklist.json) and its two copies. Nothing is added automatically, and reports are not written on chain. The demo entry `keyhole-demo-blocked.near` is labelled as a demo, not a real account.
 
@@ -607,9 +617,17 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 
 ### The checks
 
+<!-- JUDGE-CHECKOUT:START -->
 ```bash
-git clone --depth 1 --branch integration/final-candidate https://github.com/mohamedwael201193/keyhole.git
-cd keyhole
+git init keyhole && cd keyhole
+git remote add origin https://github.com/mohamedwael201193/keyhole.git
+git fetch --depth 1 origin e901275debf3cdb006563add84ff45ca1e1ef1e1
+git checkout --detach FETCH_HEAD
+test "$(git rev-parse HEAD)" = "e901275debf3cdb006563add84ff45ca1e1ef1e1"
+```
+<!-- JUDGE-CHECKOUT:END -->
+
+```bash
 
 bash ./judge/0-live.sh                   # curl + python3 only: live code hash, views, one existing attestation, one FINAL receipt
 node judge/verify-claims.mjs --offline   # file checks only; live checks are SKIP. Does not call OutLayer /call
@@ -756,7 +774,7 @@ Historical measurements below belong to `2f7ac1e` (on top of `7356cfa`), unless 
 | CLI tests | **53** cases; 52 pass here | `cd cli && npm test`. The one failure is a checkout artefact: [`skills/keyhole/SKILL.md`](skills/keyhole/SKILL.md) is LF in git, but this Windows checkout has CRLF (`core.autocrlf` is on), and the test's regex expects LF |
 | Web unit tests (Vitest) | **1256** cases in 65 files; 1254 pass in the full run | `cd web && npx vitest run`. One failure is the same CRLF artefact, in [`web/tests/sourceTarball.test.ts`](web/tests/sourceTarball.test.ts) (the `.sha256` file has CRLF here). One Meteor test timed out at 5 s while other work was running; it passes alone (10 of 10) |
 | Web e2e (Playwright) | not re-run for this README | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). CI runs them at 1440 and 390 px |
-| Claims in `docs/claims.json` | **533**: offline 239 PASS, 0 FAIL, 0 ERROR, 294 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **566**: offline 273 PASS, 0 FAIL, 0 ERROR, 293 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | **216** tokens on **39** chains | live `GET keyhole-seven.vercel.app/api/tokens` (2026-11-09) |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (2026-11-09). The home page counts the five holder keys |
@@ -927,7 +945,7 @@ This local stack combines admission, guarded custody, serialized policy commands
 - V2 event commitments use secure random private openings and immutable encrypted rows. V1 history remains verifiable; holder history opens only that holder's rows. Public projections do not expose openings.
 - The preview client keeps the floor public key and treasury/config fields, models DisbursementPending, and builds exact principal and bond deposits. Preview remains disabled by default.
 
-Reproduce without wallets, deployments or spending:
+Reproduce without wallets, deployments or spending. Use Node **22.22.2** (`web/.nvmrc`) and npm **10.8.2**, the same pinned pair as the web CI job:
 
 ```bash
 export CARGO_BUILD_JOBS=1 NODE_OPTIONS=--max-old-space-size=3072
@@ -951,7 +969,7 @@ Before a public loan exists the floor is **Declared, not yet verified**. An open
 
 The shared app shell exposes **Claim your funds** for available native credits. It reserves a versioned local pending operation before opening the connected wallet, never silently retries UNKNOWN, and checks final receipt sender/contract/method/deposit/gas/arguments plus a post-dispatch block before accepting a returned hash. Contract pending payouts still block retries. `NEXT_PUBLIC_PLEDGE_TRANSACTIONS` is a separate default-OFF write gate. [Tests](web/tests/pledge-money.test.ts).
 
-For the box's linked-dependency worktree only, the verified production build command is `cd web && KEYHOLE_TURBOPACK_ROOT=/workspace/near_hackathon npm run build`. Clean checkouts/CI keep the normal root and `npm run build`; no dependency or lockfile change is needed.
+Clean checkouts, CI and the isolated box install use `cd web && npm run build` with the normal project root. Linked-dependency worktrees may explicitly set `KEYHOLE_TURBOPACK_ROOT` to their common checkout/dependency parent. Use Node 22.22.2 (`web/.nvmrc`) and npm 10.8.2; [dependency compatibility proof](docs/evidence/integration-stack/wallet-dependencies-r4.md) covers clean installation and wallet schemas.
 
 [Two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).
 
@@ -1029,6 +1047,6 @@ The real-native funded fixture mints the canonical public token ID returned in i
 
 The funded evidence collector captures each original transaction hash/signer as genuine FINAL immediately after submission, before later sandbox clock advances, and reads serially and permits at most three read-only attempts for the node's explicit timeout error (including its HTTP 408 JSON-RPC timeout response). It accepts only a genuine FINAL response; missing, pending, other RPC errors and exhausted reads fail closed, before the unchanged 13-transaction action/identity ledger. [Observer negatives](web/tests/funded-final-observer.test.ts), [collector](web/e2e/support/final-receipt.ts), [receipt-ledger negatives](web/tests/pledge-review-r5.test.ts).
 
-Clean web installs retain the declared hash override through the NEAR crypto, browser keystore, signer and transaction packages. The lockfile contains those exact resolutions rather than stale nested copies. [Lock-resolution regression](web/tests/locked-hashes.test.ts); reproduce with the full fence's unchanged `npm ci` command.
+Clean web installs honor the upstream NEAR signer/transaction/curve hash pins and keep the application's hash v2 separate. The unnecessary inherited hash overrides are removed; the npm 10 and npm 11 resolvers now accept the same lockfile. [Lock-resolution regression](web/tests/locked-hashes.test.ts); reproduce with the full fence's unchanged `npm ci` command.
 
 Dependency-policy context for clean reproduction is kept in [SECURITY.md](SECURITY.md#clean-install-dependency-advisory-boundary).

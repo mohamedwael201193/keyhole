@@ -1,0 +1,82 @@
+[
+  {
+    "package": "@meteorwallet/sdk",
+    "version": "1.0.24",
+    "file": "dist/index.js",
+    "before": "import { stringify } from \"query-string\";",
+    "after": "import queryString from \"query-string\";\nconst { stringify } = queryString;",
+    "count": 1
+  },
+  {
+    "package": "@meteorwallet/sdk",
+    "version": "1.0.24",
+    "file": "dist/index.cjs",
+    "before": "query_string.stringify",
+    "after": "query_string.default.stringify",
+    "count": 1
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/cjs/index.js",
+    "before": "import_zod3.z.record(import_zod3.z.any())",
+    "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
+    "count": 4
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/esm/chunk-3EQVFRKV.mjs",
+    "before": "z3.record(z3.any())",
+    "after": "z3.record(z3.string(), z3.any())",
+    "count": 4
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/cjs/client/index.js",
+    "before": "import_zod3.z.record(import_zod3.z.any())",
+    "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
+    "count": 4
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/cjs/schemes/index.js",
+    "before": "import_zod3.z.record(import_zod3.z.any())",
+    "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
+    "count": 4
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/cjs/shared/index.js",
+    "before": "import_zod3.z.record(import_zod3.z.any())",
+    "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
+    "count": 4
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/cjs/verify/index.js",
+    "before": "import_zod3.z.record(import_zod3.z.any())",
+    "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
+    "count": 4
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/cjs/facilitator/index.js",
+    "before": "import_zod3.z.record(import_zod3.z.any())",
+    "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
+    "count": 4
+  },
+  {
+    "package": "x402",
+    "version": "0.7.3",
+    "file": "dist/cjs/types/index.js",
+    "before": "import_zod3.z.record(import_zod3.z.any())",
+    "after": "import_zod3.z.record(import_zod3.z.string(), import_zod3.z.any())",
+    "count": 4
+  }
+]

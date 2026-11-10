@@ -1,50 +1,38 @@
-/**
- * Runs the primary README fence against a clean clone.
- * `main` has no judge/0-live.sh. The fence must check out the branch that does.
- * The clone is a separate work tree, so a dirty checkout of this repo is not what the test sees.
- * `bash judge/0-live.sh` is the fence's last command and is read-only public RPC.
- */
+/** Execute the generated immutable checkout recipe, never a mutable branch. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-const repo = decodeURIComponent(new URL("..", import.meta.url).pathname);
+import { fileURLToPath } from "node:url";
+const repo = fileURLToPath(new URL("..", import.meta.url));
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+const id = JSON.parse(readFileSync(new URL("../identity.json", import.meta.url), "utf8"));
+const ref = id.review.source_commit;
 const section = readme.split("## 1. Verify in 5 minutes")[1].split("## ")[0];
 const fence = section.split("```bash\n")[1].split("```")[0].trim();
-const lines = fence.split("\n").map((l) => l.trim()).filter(Boolean);
-
-test("primary fence checks out the branch that contains the judge script", () => {
-  assert.match(lines[0], /^git clone --depth 1 --branch integration\/final-candidate https:\/\/github\.com\/mohamedwael201193\/keyhole\.git$/);
-  assert.equal(lines[1], "cd keyhole");
-  assert.equal(lines[2], "test -f judge/0-live.sh");
-  assert.equal(lines[3], "bash judge/0-live.sh");
-  assert.doesNotMatch(fence, /git clone --depth 1 https:\/\/github\.com\/mohamedwael201193\/keyhole(?:\.git)?\s+&&/);
+const remote = "https://github.com/mohamedwael201193/keyhole.git";
+test("primary recipe fetches and checks the full immutable source commit", () => {
+  assert.match(ref, /^[0-9a-f]{40}$/);
+  assert.equal(fence, `git init keyhole && cd keyhole\ngit remote add origin ${remote}\ngit fetch --depth 1 origin ${ref}\ngit checkout --detach FETCH_HEAD\ntest "$(git rev-parse HEAD)" = "${ref}"`);
+  assert.doesNotMatch(fence, /--branch/);
 });
-
-test("exact clone of this branch has the script; main does not", { timeout: 180_000 }, () => {
-  const parent = mkdtempSync(join(tmpdir(), "kh-judge-"));
+test("exact generated checkout contains byte-identical script, receipt checker and identity", {timeout:180_000}, () => {
+  const parent = mkdtempSync(join(tmpdir(), "kh-judge-ref-"));
   try {
-    const source = join(parent, "source");
-    execFileSync("git", ["clone", "--local", repo, source], { stdio: "pipe" });
-    // A CI checkout is often detached. The fence names this branch, so the source must have that ref at HEAD.
-    execFileSync("git", ["checkout", "-B", "integration/final-candidate"], { cwd: source, stdio: "pipe" });
-    const run = join(parent, "run");
-    execFileSync("mkdir", ["-p", run]);
-    execFileSync("git", ["clone", "--depth", "1", "--branch", "integration/final-candidate", source, "keyhole"], { cwd: run, stdio: "pipe" });
-    const checkout = join(run, "keyhole");
-    execFileSync("test", ["-f", "judge/0-live.sh"], { cwd: checkout });
-    execFileSync("test", ["-f", "judge/receipt_proof.py"], { cwd: checkout });
-    execFileSync("bash", ["judge/0-live.sh"], { cwd: checkout, stdio: "pipe", timeout: 120_000 });
-    execFileSync("git", ["clone", "--depth", "1", "--branch", "main", "https://github.com/mohamedwael201193/keyhole.git", "main-checkout"], { cwd: run, stdio: "pipe", timeout: 120_000 });
-    let missing = false;
-    try { execFileSync("test", ["-f", "main-checkout/judge/0-live.sh"], { cwd: run }); }
-    catch { missing = true; }
-    assert.equal(missing, true);
-  } finally {
-    rmSync(parent, { recursive: true, force: true });
-  }
+    let source = repo;
+    // A hosted shallow checkout may not have its pinned source ancestor locally yet.
+    try { execFileSync("git", ["cat-file", "-e", `${ref}^{commit}`], {cwd:repo,stdio:"pipe"}); }
+    catch { source = remote; }
+    const quote = (s) => "'" + s.replaceAll("'", "'\\''") + "'";
+    execFileSync("bash", ["-eu", "-c", fence.replace(remote, quote(source))], {cwd:parent,stdio:"pipe",timeout:120_000});
+    const checkout = join(parent,"keyhole");
+    for (const file of ["judge/0-live.sh","judge/receipt_proof.py","identity.json"]) {
+      const checked = readFileSync(join(checkout,file));
+      const committed = execFileSync("git", ["show",`${ref}:${file}`], {cwd:checkout});
+      assert.deepEqual(checked, committed);
+    }
+    assert.equal(execFileSync("git", ["rev-parse","HEAD"], {cwd:checkout,encoding:"utf8"}).trim(),ref);
+  } finally { rmSync(parent,{recursive:true,force:true}); }
 });

@@ -15,6 +15,9 @@ export const IDENTITY = {
     "code_hash": "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ",
     "wasm_sha256": "b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c",
     "deploy_tx": "84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn"
+  },
+  "review": {
+    "source_commit": "e901275debf3cdb006563add84ff45ca1e1ef1e1"
   }
 } as const;
 export const WORKER_SHA256 = IDENTITY.worker.wasm_sha256;
