@@ -163,17 +163,18 @@
 @media (max-width: 599px) {
   .app-brand { padding: 0 var(--space-3); }
   .app-brand .kh-logo { --kh: 1.6rem; }
-  .app-top-end { gap: 6px; padding-inline-end: 12px; min-width: 0; }
+  .app-top { width: 100%; max-width: 100%; }
+  .app-top-end { gap: 6px; padding-inline-end: 12px; min-width: 0; flex: 1 1 auto; overflow: hidden; justify-content: flex-end; }
   .app-top .app-net { display: none; }
   .app-top .sp-pill { height: 40px; min-height: 40px; padding: 0 10px; gap: 6px; flex: none; }
   .app-top .sp-pill .sp-word, .app-top .sp-pill .sp-sep { display: none; }
   .app-top .sp-pill[data-state="unlocked"] .sp-time { font-variant-numeric: tabular-nums; }
   .app-top .sp-unit { font-size: 0; }
   .app-top .sp-unit::after { content: "m"; font-size: 13px; }
-  .app-top .acct { min-width: 0; flex: none; }
-  .app-top .acct .cw { max-width: none; min-width: 0; height: 40px; padding: 0 12px 0 6px; gap: 8px; font-size: 14px; overflow: visible; }
+  .app-top .acct { min-width: 0; flex: 0 1 auto; max-width: 100%; }
+  .app-top .acct .cw { max-width: 100%; min-width: 0; height: 40px; padding: 0 12px 0 6px; gap: 8px; font-size: 14px; overflow: hidden; }
   .app-top .acct .cw-full { display: none; }
-  .app-top .acct .cw-short { display: inline; white-space: nowrap; }
+  .app-top .acct .cw-short { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
   .app-top .cw-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(255, 255, 255, .18); font: 700 13px/1 var(--font-ui); flex: none; }
 }
 

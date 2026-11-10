@@ -51,7 +51,8 @@ describe("the top bar fits a phone (source contract)", () => {
     expect(css).toMatch(/@media \(max-width: 599px\) \{[\s\S]*\.app-top \.sp-pill \.sp-word, \.app-top \.sp-pill \.sp-sep \{ display: none; \}/);
     expect(css).toMatch(/\.app-top \.sp-unit::after \{ content: "m";/);
     expect(css).toMatch(/\.app-top \.acct \.cw-full \{ display: none; \}/);
-    expect(css).toMatch(/\.app-top \.acct \.cw-short \{ display: inline; white-space: nowrap; \}/);
+    expect(css).toMatch(/\.app-top \.acct \.cw-short \{ display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; \}/);
+    expect(css).toMatch(/\.app-top-end \{ gap: 6px; padding-inline-end: 12px; min-width: 0; flex: 1 1 auto; overflow: hidden; justify-content: flex-end; \}/);
     expect(css).toMatch(/\.app-top \.cw-avatar \{ display: grid;/);
     expect(css).not.toMatch(/\.app-top \.acct \.cw \{ max-width: 120px;/);
     expect(css).toMatch(/@media \(max-width: 599px\) \{[\s\S]*\.app-top \.app-net \{ display: none; \}/);
