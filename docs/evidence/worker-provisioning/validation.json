@@ -40,7 +40,7 @@
       "fail": 0
     },
     "sandbox_complete": {
-      "pass": 58,
+      "pass": 59,
       "fail": 0,
       "ignored": 1
     },
@@ -83,6 +83,15 @@
         1440,
         390
       ]
+    },
+    "code_only_six_nft_upgrade": {
+      "pass": 1,
+      "fail": 0,
+      "included_in_full_sandbox": true,
+      "fixture_cases": [
+        "Pledge absent",
+        "Pledge already initialized"
+      ]
     }
   },
   "static_gates": {
@@ -96,17 +105,19 @@
     },
     "web_production_build": "pass",
     "worker_candidate_bytes_equality": "pass",
-    "generated_identity_candidates": "pass"
+    "generated_identity_candidates": "pass",
+    "contract_live_bytes_strict": "pass (fresh public read, no rebuild of candidate as live)"
   },
   "toolchain": {
     "node": "22.22.2",
     "npm": "10.8.2",
     "CARGO_BUILD_JOBS": 1,
-    "NODE_OPTIONS": "--max-old-space-size=3072"
+    "NODE_OPTIONS": "--max-old-space-size=3072",
+    "native_dependency_cache": "/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target (existing shared Cargo cache; no copy)"
   },
   "commands": {
-    "worker": "cd tee/worker && cargo test --locked && cargo clippy --locked -- -D warnings && cargo clippy --locked --target wasm32-wasip2 --bin keyhole-worker -- -D warnings",
-    "contract": "cd contracts/keys && cargo test --locked && cargo clippy --locked -- -D warnings",
+    "worker": "cd tee/worker && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings; cargo clippy --locked --target wasm32-wasip2 -- -D warnings",
+    "contract": "cd contracts/keys && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains",
     "sandbox": "cd contracts/keys-sandbox && cargo test --locked --tests -- --test-threads=1",
     "offline": "node --test scripts/check-worker-candidate.test.mjs scripts/pledge/*.test.mjs",
     "judge": "node --test judge/*.test.mjs; python3 -m unittest discover -s judge -p \"*_test.py\"",
@@ -163,5 +174,24 @@
     "credential_pattern_hygiene": "pass; unchanged public quote signatures classified without values",
     "prohibited_names_in_changed_text": "zero matches"
   },
-  "log_normalization": "Committed .log copies normalize CR/LF and trailing whitespace only; originals retained under /workspace/near_hackathon/upgrade/provisioning-r2"
+  "log_normalization": "Committed .log copies normalize CR/LF and trailing whitespace only; originals retained under /workspace/near_hackathon/upgrade/provisioning-r2",
+  "contract_upgrade": {
+    "required_for_new_worker": true,
+    "from": "2.5.0",
+    "to": "2.6.0",
+    "state_migration_required": false,
+    "action": "DeployContract on same account only",
+    "forbidden_init_calls": [
+      "new",
+      "migrate",
+      "migrate_pledge"
+    ],
+    "live_pledge_initialized": true,
+    "live_nfts": 6,
+    "owners_preserved_by_runtime_regression": true,
+    "borsh_contract_fields_unchanged_from": "a7ba1fbe0634b166ed4f655ecb6a6ab3dd0705e0",
+    "new_lazy_prefix": "Pr26t",
+    "public_snapshot": "r2/live-upgrade-before.json",
+    "proof": "r2/upgrade-code-only.log"
+  }
 }

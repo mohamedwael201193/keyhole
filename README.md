@@ -792,7 +792,7 @@ Current repair validation: [R2 proof and exact finding map](docs/evidence/worker
 | Component | Count | How it was measured |
 |---|---|---|
 | Keys contract unit tests | **306** pass | `cd contracts/keys && cargo test --locked` (current repair) |
-| Keys contract sandbox tests | **58** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 30 historical upgrade/sale/runtime cases |
+| Keys contract sandbox tests | **59** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 31 upgrade/sale/runtime cases |
 | TEE worker unit tests | **656** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
 | CLI tests | **63** pass | `cd cli && npm test`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web unit tests (Vitest) | **1785** pass in 99 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |

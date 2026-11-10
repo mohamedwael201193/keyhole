@@ -1,0 +1,172 @@
+{
+  "scope": "read-only finalized mainnet views; not an upgrade",
+  "account_id": "keyhole-devmo.near",
+  "source_metadata": {
+    "version": "2.5.0",
+    "link": "https://github.com/mohamedwael201193/keyhole",
+    "standards": [
+      {
+        "standard": "nep171",
+        "version": "1.2.0"
+      },
+      {
+        "standard": "nep177",
+        "version": "2.0.0"
+      },
+      {
+        "standard": "nep178",
+        "version": "1.0.0"
+      },
+      {
+        "standard": "nep181",
+        "version": "1.0.0"
+      },
+      {
+        "standard": "nep199",
+        "version": "2.1.0"
+      },
+      {
+        "standard": "nep330",
+        "version": "1.2.0"
+      }
+    ],
+    "build_info": null
+  },
+  "config": {
+    "owner": "keyhole-devmo.near",
+    "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+    "treasury": "keyhole-devmo.near",
+    "royalty_bps": 500,
+    "beats": "2"
+  },
+  "pledge_config": {
+    "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+    "recovery_unlock_ns": "1796169600000000000",
+    "attestor_public_key": "AVoCWQaln59Ayhfa8qPGHF5jo3wIHHUjCHDKpqgqxEM=",
+    "custody_contract": "outlayer.near",
+    "network": "mainnet",
+    "lending_enabled": false,
+    "next_loan_nonce": "0",
+    "next_payout_nonce": "0",
+    "treasury_available": "0",
+    "user_liabilities": "0",
+    "treasury_pending": null
+  },
+  "total_supply": "6",
+  "tokens": [
+    {
+      "token_id": "0",
+      "owner_id": "keyhole-devmo.near",
+      "metadata": {
+        "title": "KEYHOLE Key #0 (test)",
+        "description": "Test viewing key",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k0642e7964b2fb515",
+      "owner_id": "476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k102a806df6867547",
+      "owner_id": "0xf76e6b0920e9332ff4410f6dd53f01722abc71a3",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": "https://keyhole-seven.vercel.app/heirloom/keys/k08.webp",
+        "media_hash": "wkprKA5JUUtPRrxG0EkmaTnfHFgW1Zv469wlZN4eyJg=",
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k22b07f20ff167d8d",
+      "owner_id": "a838e946d80014f0c9a99911ad9802e7f88e80b87536fce86a46e1c03b3292f4",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": "https://keyhole-seven.vercel.app/heirloom/keys/k08.webp",
+        "media_hash": "wkprKA5JUUtPRrxG0EkmaTnfHFgW1Zv469wlZN4eyJg=",
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k5f4750858f328940",
+      "owner_id": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    },
+    {
+      "token_id": "k857b6b68facc0f94",
+      "owner_id": "a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da",
+      "metadata": {
+        "title": "KEYHOLE Key \u00b7 Bronze",
+        "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.",
+        "media": null,
+        "media_hash": null,
+        "copies": 1,
+        "issued_at": null,
+        "expires_at": null,
+        "starts_at": null,
+        "updated_at": null,
+        "extra": null,
+        "reference": null,
+        "reference_hash": null
+      },
+      "approved_account_ids": {}
+    }
+  ]
+}

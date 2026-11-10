@@ -1,21 +1,24 @@
+    Blocking waiting for file lock on build directory
+   Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_worker_prov/contracts/keys)
+   Compiling keyhole-worker v0.1.0 (/workspace/near_hackathon/wt_worker_prov/tee/worker)
    Compiling keyhole-keys-sandbox v0.1.0 (/workspace/near_hackathon/wt_worker_prov/contracts/keys-sandbox)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.19s
-     Running unittests src/lib.rs (target/debug/deps/keyhole_keys_sandbox-da5b82464a01ba88)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 32.75s
+     Running unittests src/lib.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/keyhole_keys_sandbox-da5b82464a01ba88)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/audit_gas.rs (target/debug/deps/audit_gas-b4c74bb59eb82eb3)
+     Running tests/audit_gas.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/audit_gas-b4c74bb59eb82eb3)
 
 running 3 tests
 test audit_maximum_approvals_transfer_call_gas ... ok
 test audit_return_data_bomb_at_maximum_token_and_approval_bound ... ok
 test audit_return_data_bomb_does_not_strand_title ... ok
 
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.95s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.05s
 
-     Running tests/pledge.rs (target/debug/deps/pledge-249bff5fe19e1856)
+     Running tests/pledge.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/pledge-249bff5fe19e1856)
 
 running 29 tests
 test actual_failed_native_cashout_and_lost_callback_stays_unknown_not_double_credited ... ok
@@ -48,9 +51,9 @@ test sealed_loan_repay_unlock_and_native_credit_conservation ... ok
 test successful_principal_transfer_with_lost_callback_never_starts_debt_from_a_guess ... ok
 test token_transfer_call_lock_refuses_reentrant_loan_then_resolves_cleanly ... ok
 
-test result: ok. 28 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 407.33s
+test result: ok. 28 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 401.56s
 
-     Running tests/review3.rs (target/debug/deps/review3-45e8d120d2fee0a8)
+     Running tests/review3.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/review3-45e8d120d2fee0a8)
 
 running 4 tests
 test review3_deleted_seller_retains_exact_sale_and_bond_then_recreated_seller_claims ... ok
@@ -58,18 +61,18 @@ test review3_sale_cashout_deleted_recipient_restores_once_or_stays_pending_if_ca
 test review3_sale_delivered_but_callback_lost_keeps_reserved_pending_and_cannot_pay_again ... ok
 test review3_timeout_late_real_resolver_returns_false_with_and_without_new_transfer ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 72.82s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 180.67s
 
-     Running tests/review4.rs (target/debug/deps/review4-86021548162214c4)
+     Running tests/review4.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/review4-86021548162214c4)
 
 running 3 tests
 test review4_real_dust_refund_storage_must_not_consume_old_backing ... ok
 test review4_real_failed_seller_cashout_restores_exact_credit_and_later_delivers ... ok
 test review4_real_registration_rejects_unfunded_refund_atomically_and_preserves_full_dust ... ok
 
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.12s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 32.83s
 
-     Running tests/sale.rs (target/debug/deps/sale-bca36d42296c9a74)
+     Running tests/sale.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/sale-bca36d42296c9a74)
 
 running 8 tests
 test cancelled_sale_reopen_cannot_use_old_certificate ... ok
@@ -81,11 +84,11 @@ test protected_seller_storage_is_prepaid_separately_before_freeze ... ok
 test sale_title_credit_survive_failed_thaw_and_alternate_routes_cannot_bypass ... ok
 test terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery ... ok
 
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 97.91s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 96.92s
 
-     Running tests/upgrade.rs (target/debug/deps/upgrade-c470926f681c21e1)
+     Running tests/upgrade.rs (/workspace/near_hackathon/kh-epoch/contracts/keys-sandbox/target/debug/deps/upgrade-c470926f681c21e1)
 
-running 12 tests
+running 13 tests
 test candidate_unregistered_minter_sale_unlist_buy_and_approval_refunds_cash_out ... ok
 test mainnet_path_v1_v2_v2_1_keeps_state ... ok
 test migrate_runs_once_and_only_as_self ... ok
@@ -97,12 +100,7 @@ test v2_3_is_a_code_only_upgrade_of_v2_2 ... ok
 test v2_4_sale_settles_real_balances ... ok
 test v2_4_set_tier_is_code_only_and_minter_only ... ok
 test v2_5_admission_barrier_and_epoch_code_only ... ok
+test v2_6_plain_code_upgrade_preserves_six_live_nfts_owners_and_pledge_state ... ok
 test v2_one_key_nep178_and_a_real_royalty_sale ... ok
 
-test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 115.68s
-
-   Doc-tests keyhole_keys_sandbox
-
-running 0 tests
-
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 123.71s

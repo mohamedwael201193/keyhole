@@ -680,3 +680,54 @@ async fn candidate_unregistered_minter_sale_unlist_buy_and_approval_refunds_cash
     assert_eq!(view(&c,"get_payout_credit",json!({"account_id":buyer.id()})).await,"0");
     assert!(view(&c,"get_pending_payout",json!({"account_id":buyer.id()})).await.is_null());Ok(())
 }
+
+
+/// Exact six live NFT IDs/owners/metadata, deployed on v2.5 and preserved by a
+/// plain v2.6 DeployContract. Covers both absent and already-initialized Pledge
+/// metadata; initialization below is only fixture setup BEFORE the upgrade.
+#[tokio::test]
+async fn v2_6_plain_code_upgrade_preserves_six_live_nfts_owners_and_pledge_state() -> anyhow::Result<()> {
+    let recorded: Value = serde_json::from_str(include_str!("fixtures/mainnet_v25_tokens.json"))?;
+    let tokens = recorded["tokens"].as_array().unwrap();
+    assert_eq!(tokens.len(), 6);
+    for initialize_pledge in [false, true] {
+        let w = near_workspaces::sandbox().await?;
+        let root = w.root_account()?;
+        let c = w.dev_deploy(&std::fs::read(V2_5)?).await?;
+        c.call("new").args_json(json!({"owner":c.id(),"minter":root.id(),"treasury":c.id(),"royalty_bps":500}))
+            .transact().await?.into_result()?;
+        register_payouts(&c, &root, &[root.id()]).await?;
+        let mut ids = vec![];
+        for t in tokens {
+            root.call(c.id(), "nft_mint").args_json(json!({"token_id":t["token_id"],"receiver_id":t["owner_id"],"tier":t["tier"],"metadata":t["metadata"]}))
+                .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
+            ids.push((t["token_id"].as_str().unwrap().to_owned(),t["owner_id"].as_str().unwrap().to_owned()));
+        }
+        if initialize_pledge {
+            c.call("migrate_pledge").args_json(recorded["pledge_init"].clone()).max_gas().transact().await?.into_result()?;
+        }
+        let e = Env { c, minter: root.clone(), root, ids, w };
+        assert_eq!(view(&e.c,"contract_source_metadata",json!({})).await["version"],"2.5.0");
+        let before = snapshot(&e).await;
+        let raw_tokens = view(&e.c,"nft_tokens",json!({})).await;
+        let pledge_before = view(&e.c,"get_pledge_config",json!({})).await;
+        let credit_before = view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await;
+        let mut control_before = vec![];
+        for (id, _) in &e.ids { control_before.push(view(&e.c,"get_control_state",json!({"token_id":id})).await); }
+        assert_eq!(before["supply"],"6");
+        assert_eq!(!pledge_before.is_null(),initialize_pledge);
+        // This is the ENTIRE upgrade: no init, migrate or migrate_pledge call.
+        e.c.as_account().deploy(&std::fs::read("../keys/target/near/keyhole_keys.wasm")?).await?.into_result()?;
+        assert_eq!(view(&e.c,"contract_source_metadata",json!({})).await["version"],"2.6.0");
+        assert_eq!(view(&e.c,"collateral_registration_protocol",json!({})).await,2);
+        assert_eq!(before,snapshot(&e).await,"all stored NFT/owner/tier/holder/config/metadata state survives");
+        assert_eq!(raw_tokens,view(&e.c,"nft_tokens",json!({})).await,"including every approval map");
+        assert_eq!(pledge_before,view(&e.c,"get_pledge_config",json!({})).await,"existing recovery/attestor/custody/network/nonces/liabilities unchanged");
+        assert_eq!(credit_before,view(&e.c,"get_payout_credit",json!({"account_id":e.minter.id()})).await);
+        for (i,(id,owner)) in e.ids.iter().enumerate() {
+            assert_eq!(view(&e.c,"nft_token",json!({"token_id":id})).await["owner_id"],owner.as_str());
+            assert_eq!(control_before[i],view(&e.c,"get_control_state",json!({"token_id":id})).await);
+        }
+    }
+    Ok(())
+}
