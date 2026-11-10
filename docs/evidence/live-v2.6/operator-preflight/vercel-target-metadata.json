@@ -1,0 +1,13 @@
+{
+  "authenticated_username": "mohamedwael201193",
+  "scope": "mohamedwael201193s-projects",
+  "team_id": "team_VO6NnV7uOBJ4LSiPQosaBwWk",
+  "project_name": "keyhole",
+  "project_id": "prj_EOUNSZXCMpGbRCmKIdSuFuVYY9b4",
+  "cli_version": "65.14.0",
+  "production_deployment": "https://keyhole-6zj4ien1g-mohamedwael201193s-projects.vercel.app",
+  "production_source_commit": "e57fe8340a055eb91cb7e8c57856fc4475e58bae",
+  "production_source_has_maintenance_barrier": false,
+  "production_maintenance_env_present": false,
+  "mutation_performed": false
+}

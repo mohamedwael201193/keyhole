@@ -1,0 +1,41 @@
+{
+  "at_cairo": "2026-11-11T00:42:24.512102+02:00",
+  "checks": [
+    {
+      "url": "https://keyhole-seven.vercel.app/api/keyhole",
+      "status": 400,
+      "cache_control": "public, max-age=0, must-revalidate",
+      "location": null
+    },
+    {
+      "url": "https://keyhole-seven.vercel.app/api/worker",
+      "status": 400,
+      "cache_control": "public, max-age=0, must-revalidate",
+      "location": null
+    },
+    {
+      "url": "https://keyhole-6zj4ien1g-mohamedwael201193s-projects.vercel.app/api/keyhole",
+      "status": 401,
+      "cache_control": "no-store, max-age=0",
+      "location": null
+    },
+    {
+      "url": "https://keyhole-6zj4ien1g-mohamedwael201193s-projects.vercel.app/api/worker",
+      "status": 401,
+      "cache_control": "no-store, max-age=0",
+      "location": null
+    },
+    {
+      "url": "https://keyhole-2e7obko5i-mohamedwael201193s-projects.vercel.app/api/keyhole",
+      "status": 401,
+      "cache_control": "no-store, max-age=0",
+      "location": null
+    },
+    {
+      "url": "https://keyhole-2e7obko5i-mohamedwael201193s-projects.vercel.app/api/worker",
+      "status": 401,
+      "cache_control": "no-store, max-age=0",
+      "location": null
+    }
+  ]
+}

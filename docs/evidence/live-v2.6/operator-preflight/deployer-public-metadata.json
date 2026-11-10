@@ -1,0 +1,9 @@
+{
+  "account_id": "keyhole-devmo.near",
+  "public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
+  "nonce": "221777577000129",
+  "permission": "FullAccess",
+  "block_hash": "EVa1AJYSP8U7mZRGmjk15qRKshGvjBg8krV1grXmABJU",
+  "private_key_read_for_signing": false,
+  "signed_transaction_created": false
+}
