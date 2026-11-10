@@ -7,6 +7,7 @@
  * Kept in sessionStorage (gone when the tab closes). Scope and expiry are enforced by the enclave.
  */
 import { freshNonce, toB64 } from "./nep413";
+import { decimalEpoch, guardedValueOp } from "./guardedRequest";
 import { NEP413_RECIPIENT } from "./config";
 
 export const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -20,14 +21,14 @@ export const SESSION_OPS = ["status", "quote", "account", "balance", "swap", "co
 export type SessionOp = (typeof SESSION_OPS)[number];
 export const inSession = (op: string): op is SessionOp => (SESSION_OPS as readonly string[]).includes(op);
 
-export type Session = { token: string; account: string; token_id: string; exp_ms: number; max_usd_micro: number };
+export type Session = { token: string; account: string; token_id: string; exp_ms: number; max_usd_micro: number; owner_epoch: string };
 const KEY = "kh_session_v1";
 
 export function loadSession(account: string | null, now = Date.now(), store: Pick<Storage, "getItem" | "removeItem"> = sessionStorage): Session | null {
   if (!account) return null;
   try {
     const s = JSON.parse(store.getItem(KEY) || "null") as Session | null;
-    if (!s || typeof s.token !== "string" || s.account !== account || !(s.exp_ms > now + 5_000)) { if (s) store.removeItem(KEY); return null; }
+    if (!s || typeof s.token !== "string" || s.account !== account || !decimalEpoch(s.owner_epoch) || !(s.exp_ms > now + 5_000)) { if (s) store.removeItem(KEY); return null; }
     return s;
   } catch { store.removeItem(KEY); return null; }
 }
@@ -36,6 +37,11 @@ export function clearSession(store: Pick<Storage, "removeItem"> = sessionStorage
 
 /** Session-mode auth for one call. The enclave consumes the nonce once (replay protection). */
 export function sessionAuth(s: Session, op: SessionOp, params: Record<string, unknown> = {}, now = Date.now()) {
+  if (!decimalEpoch(s.owner_epoch)) throw new Error("session_epoch: unlock again");
+  if (guardedValueOp(op, params)) {
+    if ((params.token_id !== undefined && params.token_id !== s.token_id) || (params.owner_epoch !== undefined && params.owner_epoch !== s.owner_epoch)) throw new Error("session_epoch: unlock again");
+    params = { ...params, token_id: s.token_id, owner_epoch: s.owner_epoch };
+  }
   const message = JSON.stringify({ op, account_id: s.account, ts_ms: now, params });
   return { scheme: "session", token: s.token, message, nonce: toB64(freshNonce()), recipient: NEP413_RECIPIENT };
 }

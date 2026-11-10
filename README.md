@@ -105,7 +105,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `526 claims: 226 PASS, 0 FAIL, 0 ERROR, 300 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `530 claims: 236 PASS, 0 FAIL, 0 ERROR, 294 SKIP` (run 2026-11-10, Africa/Cairo). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -149,7 +149,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (526 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 226 PASS, 0 FAIL, 300 SKIP (2026-11-10, Africa/Cairo) |
+| Judge-claims machine (530 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 236 PASS, 0 FAIL, 294 SKIP (2026-11-10, Africa/Cairo) |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -229,7 +229,7 @@ flowchart LR
 | 8 | Replay. `(account, nonce)` is written with an atomic `set_if_absent` | `replay` | [`tee/worker/src/lib.rs:256`](tee/worker/src/lib.rs) | [`ac289f04`](https://api.outlayer.ai/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab) |
 | 9 | Caps. The USD value comes from the solver's quote (`amountInUsd`), never from the caller. Per trade and per UTC day | `over_cap_per_tx`, `over_cap_daily` | `limits_for_tier` [`tee/worker/src/lib.rs:285`](tee/worker/src/lib.rs). Nothing is sent when refused | [`a02613a2`](https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533) |
 
-A refused swap or withdraw rolls back its daily spend. The worker source also refuses another receiver, a non-owner or old holder after transfer, and any chain other than NEAR (`assert_withdraw_to`, [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs); `holder_withdraw_*` regression tests). The vault withdrawal builder takes no destination override and uses the signed-in account on NEAR (`web/tests/destination.test.ts`).
+A definite refusal before dispatch or a provider-proven never-executed failure releases its daily spend. A pending or UNKNOWN custody outcome retains the reservation and must reconcile the same operation; a generic error is not rollback proof. The worker source also refuses another receiver, a non-owner or old holder after transfer, and any chain other than NEAR (`assert_withdraw_to`, [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs); `holder_withdraw_*` regression tests). The vault withdrawal builder takes no destination override and uses the signed-in account on NEAR (`web/tests/destination.test.ts`).
 
 </details>
 
@@ -256,7 +256,7 @@ A refused swap or withdraw rolls back its daily spend. The worker source also re
 
 **Website gateway**
 
-- **Allowlist.** [`web/lib/gateway.ts:7`](web/lib/gateway.ts) (`ALLOWED_OPS`). `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose signed `op` matches. The gateway refuses `copy` with `bad_op`, and `copy` stays on the CLI and MCP.
+- **Allowlist.** [`web/lib/gateway.ts:7`](web/lib/gateway.ts) (`ALLOWED_OPS`). `swap` and `withdraw` are relayed only with a NEP-413 `auth` whose signed `op` matches. The gateway refuses `copy` with `bad_op`, and `copy` stays on the CLI and MCP. The candidate additionally validates fresh-holder `reconcile_value_op` requests and exact public `loan_certificate` parameters; it never adds epoch fields after signing.
 - **Limits.** Bodies over 8 KB get HTTP 413 ([`web/app/api/worker/route.ts:23`](web/app/api/worker/route.ts)). Each IP gets 20 calls a minute, with HTTP 429 and `retry-after` ([`:21`](web/app/api/worker/route.ts)).
 - **Secrets and logs.** The OutLayer payment key is a server-only secret. Request bodies, amounts and accounts are not logged. `info` is cached for 5 minutes.
 - **Parity.** The browser signs the same NEP-413 construction as the CLI ([`web/lib/nep413.ts`](web/lib/nep413.ts)). [`web/tests/nep413.test.ts`](web/tests/nep413.test.ts) checks it byte-for-byte against the reference the TEE accepted on mainnet.
@@ -499,7 +499,7 @@ Contract configuration at capture (2026-11-03; `beats` grows with each heartbeat
 {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
 ```
 
-`contracts/keys/deployed/keyhole_keys.wasm` is the code on the account. It is v2.4, checked against the on-chain code hash by `judge/1-contract.sh`. The sha256 table is in [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS). Build with `cargo near build non-reproducible-wasm` (rustc 1.86 through `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2); CI rebuilds the source and compares it with the newest entry in `release/SHA256SUMS`.
+`contracts/keys/deployed/keyhole_keys.wasm` is the code on the account. It is v2.4, checked against the on-chain code hash by `judge/1-contract.sh`. The sha256 table is in [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS). Build the **undeployed candidate**, not the live v2.4 source, with `cd contracts/keys && ./build.sh` (official rustup Linux target, rustc 1.86.0 through `rust-toolchain.toml`, cargo-near 0.22.0, near-sdk 5.17.2, Binaryen 123); CI rebuilds the source and compares it with the newest entry in `release/SHA256SUMS`.
 
 <details>
 <summary><b>Contract details</b></summary>
@@ -512,7 +512,7 @@ Contract configuration at capture (2026-11-03; `beats` grows with each heartbeat
 
 </details>
 
-**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) prints `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41`. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) holds the same value, and it is the hash every attestation of the live build reports as `executed_wasm_sha256`. The worker's sha256 is the identity of the code; the TDX measurement in a quote names the OutLayer runtime, not the KEYHOLE code.
+**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) prints the SHA-256 of the current source-candidate artifact. This candidate is **not deployed**. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) still holds live hash `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41`, which live attestations report as `executed_wasm_sha256`; those attestations do not prove candidate behavior. The worker's sha256 is the identity of the code; the TDX measurement in a quote names the OutLayer runtime, not the KEYHOLE code.
 
 The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` call is the one the browser verifier shows by default. Each earlier build was published with the same `add_version` method and has its own FastFS upload. [`identity.json`](identity.json) is the single source for the live build, the contract hashes and the publish transaction. `node scripts/gen-identity.mjs --check` fails CI when generated files drift.
 
@@ -728,7 +728,7 @@ Historical measurements below belong to `2f7ac1e` (on top of `7356cfa`), unless 
 | CLI tests | **53** cases; 52 pass here | `cd cli && npm test`. The one failure is a checkout artefact: [`skills/keyhole/SKILL.md`](skills/keyhole/SKILL.md) is LF in git, but this Windows checkout has CRLF (`core.autocrlf` is on), and the test's regex expects LF |
 | Web unit tests (Vitest) | **1256** cases in 65 files; 1254 pass in the full run | `cd web && npx vitest run`. One failure is the same CRLF artefact, in [`web/tests/sourceTarball.test.ts`](web/tests/sourceTarball.test.ts) (the `.sha256` file has CRLF here). One Meteor test timed out at 5 s while other work was running; it passes alone (10 of 10) |
 | Web e2e (Playwright) | not re-run for this README | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). CI runs them at 1440 and 390 px |
-| Claims in `docs/claims.json` | **526**: offline 226 PASS, 0 FAIL, 0 ERROR, 300 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **530**: offline 236 PASS, 0 FAIL, 0 ERROR, 294 SKIP (2026-11-10, Africa/Cairo). Historical full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | **216** tokens on **39** chains | live `GET keyhole-seven.vercel.app/api/tokens` (2026-11-09) |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (2026-11-09). The home page counts the five holder keys |
@@ -895,3 +895,8 @@ node judge/verify-claims.mjs --offline
 ```
 
 The runtime suite uses real local NEAR receipts with a labelled custody mock. Verification results for this integrated head are recorded in [the integrated validation record](docs/evidence/integration-stack/validation.json). Trust, economic risks, UNKNOWN liveness and release gates are in [SECURITY.md](SECURITY.md). No local result is a claim of a published candidate or live provider confinement.
+
+
+### Integrated client continuity proof
+
+The v2.5 source candidate now binds final owner epochs before signatures, recovers the original custody journal across refreshes, and exposes separately consented payout-slot registration and native-credit cashout. The minter checks its prepaid slot before mint dispatch. Candidate byte identity is generated by `node scripts/gen-identity.mjs` in [`release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json); the live identity is unchanged. [Independent artifact reproduction](docs/evidence/integration-stack/artifact-repro-r2.json) records the two clean Linux builds and measured code storage. Regressions: [`integration196.test.ts`](web/tests/integration196.test.ts), [`client-owner-epoch.json`](protocol/client-owner-epoch.json), and the named terminal-history and ordinary-payout runtime tests. [Trust and rollout details](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).

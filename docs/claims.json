@@ -3222,17 +3222,17 @@
   },
   {
    "id": "src-gw-allow",
-   "claim": "Gateway allowlist: info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
+   "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
    "where": "judge/gen-claims.py:136",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
     "type": "grep",
     "path": "web/lib/gateway.ts",
-    "pattern": "ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
+    "pattern": "ALLOWED_OPS = \\[\"reconcile_value_op\", \"loan_certificate\", \"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]"
    },
    "expected": "exact list",
-   "verify": "grep -nE 'ALLOWED_OPS = \\[\"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
+   "verify": "grep -nE 'ALLOWED_OPS = \\[\"reconcile_value_op\", \"loan_certificate\", \"info\", \"provenance\", \"record\", \"status\", \"quote\", \"mint\", \"account\", \"balance\", \"history\", \"swap\", \"withdraw\", \"lock\", \"prove\", \"limits\", \"pnl\", \"dashboard\", \"level_up\", \"session\", \"session_revoke\"\\]' web/lib/gateway.ts"
   },
   {
    "id": "src-gw-nocopy",
@@ -4607,6 +4607,27 @@
    },
    "expected": "`rate_limit_per_holder` found in source",
    "verify": "node judge/verify-claims.mjs --only test-rate_limit_per_holder"
+  },
+  {
+   "id": "test-reconcile_value_op",
+   "claim": "Named test or symbol `reconcile_value_op` exists in the source",
+   "where": "README.md:259",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "reconcile_value_op",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`reconcile_value_op` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-reconcile_value_op"
   },
   {
    "id": "test-seller_lock_binds_only_the_owner_who_set_it",
@@ -6547,6 +6568,58 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/integration-stack/validation.json"
+  },
+  {
+   "id": "path-contracts/keys/release/v2.5/identity.json",
+   "claim": "Linked repo path contracts/keys/release/v2.5/identity.json exists",
+   "where": "README.md:902",
+   "evidence_type": "file",
+   "evidence": "contracts/keys/release/v2.5/identity.json",
+   "check": {
+    "type": "path",
+    "path": "contracts/keys/release/v2.5/identity.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-contracts/keys/release/v2.5/identity.json"
+  },
+  {
+   "id": "path-docs/evidence/integration-stack/artifact-repro-r2.json",
+   "claim": "Linked repo path docs/evidence/integration-stack/artifact-repro-r2.json exists",
+   "where": "README.md:902",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/integration-stack/artifact-repro-r2.json",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/integration-stack/artifact-repro-r2.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/integration-stack/artifact-repro-r2.json"
+  },
+  {
+   "id": "path-web/tests/integration196.test.ts",
+   "claim": "Linked repo path web/tests/integration196.test.ts exists",
+   "where": "README.md:902",
+   "evidence_type": "file",
+   "evidence": "web/tests/integration196.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/integration196.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/integration196.test.ts"
+  },
+  {
+   "id": "path-protocol/client-owner-epoch.json",
+   "claim": "Linked repo path protocol/client-owner-epoch.json exists",
+   "where": "README.md:902",
+   "evidence_type": "file",
+   "evidence": "protocol/client-owner-epoch.json",
+   "check": {
+    "type": "path",
+    "path": "protocol/client-owner-epoch.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-protocol/client-owner-epoch.json"
   },
   {
    "id": "path-contracts/keys",

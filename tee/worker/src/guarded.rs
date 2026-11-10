@@ -63,12 +63,16 @@ pub fn registry(project:&Value,versions:&Value,count:u64,expected_hash:&str)->Re
 }
 
 #[derive(Debug,Clone,Serialize,Deserialize)]
+pub struct JournalEvent { pub ts_ms:u64, pub usd:u64, pub source:Value }
+
+#[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Journal {
     pub contract:String,pub token_id:String,pub owner:String,pub epoch:u64,pub nonce:u64,
     pub op_id:String,pub action_hash:String,pub kind:String,pub body:Value,pub wallet_id:String,
     pub charge:Option<Charge>,
     #[serde(default)] pub auth_scheme:String,
+    #[serde(default)] pub event:Option<JournalEvent>,
 }
 impl Journal {
     pub fn key(&self)->String {journal_key(&self.contract,&self.token_id,&self.op_id)}
@@ -172,7 +176,7 @@ pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:
     if !raw.is_empty(){
         let t:Terminal=serde_json::from_slice(&raw).map_err(|_|err("guard_journal","corrupt terminal"))?;
         let done=host.finish(j,&t)?;
-        return Ok(json!({"status":if done{if t.success{"success"}else{"failed"}}else{"needs_review"},"value_op_id":j.op_id,"admission_finished":done}));
+        return Ok(json!({"status":if done{if t.success{"success"}else{"failed"}}else{"needs_review"},"value_op_id":j.op_id,"request_id":t.provider_id,"admission_finished":done}));
     }
     host.validate_dispatch(j,key)?;
     let first=put_once(host,&format!("{}/dispatch",j.key()),b"1")?;
@@ -188,9 +192,50 @@ pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:
     }else{String::from_utf8(raw).map_err(|_|err("guard_journal","bad request id"))?};
     if !uuid(&id){return Err(err("guard_journal","invalid provider id"));}
     let mut value=match host.fetch(key,&id){Ok((200,v))=>v,_=>return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"request_id":id,"admission_finished":false}))};
-    let done=if let Some(t)=reconcile_status(&value,&id)?{host.finish(j,&t)?}else{false};
+    let done=if let Some(t)=reconcile_status(&value,&id)?{
+        // Preserve the exact first terminal result before admission release. A late reconciler
+        // must rebuild history from this fact, never from a new request or a changing provider row.
+        let facts=serde_json::to_vec(&value).map_err(|_|err("guard_journal","encode settlement"))?;
+        let _=host.set_if_absent(&format!("{}/settlement",j.key()),&facts)?;
+        let done=host.finish(j,&t)?;
+        if done {value["status"]=json!(if t.success{"success"}else{"failed"});}
+        done
+    }else{false};
     if !done&&!["pending_deposit","processing","pending_approval"].contains(&value["status"].as_str().unwrap_or("")){value["status"]=json!("needs_review");}
     value["value_op_id"]=json!(j.op_id);value["admission_finished"]=json!(done);Ok(value)
+}
+
+/// Immutable terminal projection. Called by BOTH initiation and reconciliation. Provenance CAS
+/// serializes duplicate/late writers; a storage error is retryable without another money dispatch.
+pub fn finalize_record<S:Store,F:FnMut(&mut [u8;32])->Result<(),Error>>(st:&mut S,j:&Journal,entropy:F)->Result<(),Error>{
+    let raw=st.read(&format!("{}/terminal",j.key()))?;if raw.is_empty(){return Ok(());}
+    let t:Terminal=serde_json::from_slice(&raw).map_err(|_|err("guard_journal","invalid terminal"))?;
+    let meta=j.event.as_ref().ok_or_else(||err("guard_journal","original event metadata unavailable"))?;
+    let facts:Value=serde_json::from_slice(&st.read(&format!("{}/settlement",j.key()))?).map_err(|_|err("guard_journal","settlement facts unavailable"))?;
+    let mut row=j.body.clone();
+    row["value_op_id"]=json!(j.op_id);row["by"]=json!(j.owner);row["kind"]=json!(j.kind);row["ts_ms"]=json!(meta.ts_ms);
+    row["epoch"]=json!(j.epoch);row["status"]=json!(if t.success{"success"}else{"failed"});row["request_id"]=json!(t.provider_id);
+    row["usd_in_micro"]=json!(meta.usd);row["usd_micro"]=json!(meta.usd);row["source"]=meta.source.clone();
+    row["amount_out"]=facts.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
+    let detail=row.to_string();let kind=if t.success{j.kind.as_str()}else{"value_failure"};
+    crate::provenance::append(st,crate::provenance::EventInput{operation_id:&j.op_id,contract:&j.contract,token:&j.token_id,kind,owner:&j.owner,owner_epoch:j.epoch,ts_ms:meta.ts_ms,detail:&detail},entropy)?;Ok(())
+}
+/// Publish the original terminal record before releasing transferable title/admission.
+pub fn finalize_and_settle<H:AdmissionHost,F:FnMut(&mut [u8;32])->Result<(),Error>>(host:&mut H,j:&Journal,t:&Terminal,entropy:F)->Result<bool,Error>{
+    put_once(host,&format!("{}/terminal",j.key()),&serde_json::to_vec(t).map_err(|_|err("guard_journal","encode terminal"))?)?;
+    finalize_record(host,j,entropy)?;
+    settle_admission(host,j,t)
+}
+/// Shared history/record/tier/PnL view. Legacy rows stay; late terminal rows replace only their own journal.
+pub fn merged_history<S:Store>(st:&mut S,contract:&str,token:&str,mut legacy:Vec<Value>)->Result<Vec<Value>,Error>{
+    for r in crate::provenance::load(st,contract,token)? {
+        if let Ok(row)=serde_json::from_str::<Value>(&r.detail){
+            if row["by"]==r.event.owner && row["value_op_id"].as_str().is_some_and(|id|id.contains(':')) && row["epoch"].as_u64()==Some(r.event.owner_epoch){
+                legacy.retain(|e|e["value_op_id"]!=row["value_op_id"]);legacy.push(row);
+            }
+        }
+    }
+    legacy.sort_by_key(|r|r["ts_ms"].as_u64().unwrap_or(0));if legacy.len()>100{legacy.drain(..legacy.len()-100);}Ok(legacy)
 }
 
 #[derive(Debug,Clone,Deserialize,Serialize,PartialEq,Eq)]

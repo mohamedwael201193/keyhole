@@ -12,7 +12,7 @@ impl Store for Memory{
 fn fixture()->Value{serde_json::from_str(include_str!("../../../protocol/loan-certificate-v3-delivery.json")).unwrap()}
 fn cert()->Certificate{serde_json::from_value(fixture()["certificate"].clone()).unwrap()}
 fn control()->Value{json!({"token_id":"k1","owner_epoch":"0","value_op_nonce":"0","pending_value_ops":"0","pledged":false,"listed":false,"transfer_pending":false})}
-fn journal()->Journal{Journal{contract:"keys.near".into(),token_id:"k1".into(),owner:"alice.near".into(),epoch:0,nonce:1,op_id:format!("1:{}","a".repeat(64)),action_hash:"a".repeat(64),kind:"swap".into(),body:json!({"amount_in":"100"}),wallet_id:"ab".repeat(32),charge:None,auth_scheme:"nep413".into()}}
+fn journal()->Journal{Journal{contract:"keys.near".into(),token_id:"k1".into(),owner:"alice.near".into(),epoch:0,nonce:1,op_id:format!("1:{}","a".repeat(64)),action_hash:"a".repeat(64),kind:"swap".into(),body:json!({"amount_in":"100"}),wallet_id:"ab".repeat(32),charge:None,auth_scheme:"nep413".into(),event:Some(JournalEvent{ts_ms:1000,usd:100,source:Value::Null})}}
 const ID:&str="12345678-1234-1234-1234-123456789abc";
 #[test]fn worker_certificate_matches_contract_borsh_and_signature_vector(){let f=fixture();let c=cert();assert_eq!(hex::encode(c.bytes().unwrap()),f["borsh_hex"]);assert_eq!(c.sign(&[7;32]).unwrap(),f["signature"]);let pk:[u8;32]=B64.decode(f["public_key"].as_str().unwrap()).unwrap().try_into().unwrap();let sig=Signature::from_slice(&B64.decode(f["signature"].as_str().unwrap()).unwrap()).unwrap();VerifyingKey::from_bytes(&pk).unwrap().verify(&c.bytes().unwrap(),&sig).unwrap();}
 #[test]fn expired_future_wrong_epoch_nonce_contract_and_token_certificates_fail(){let c=cert();let now=c.observed_at_ns.parse::<u64>().unwrap();assert!(c.live("keys.near","k1",1,0,now).is_ok());for (contract,token,nonce,epoch,time)in[("other.near","k1",1,0,now),("keys.near","k2",1,0,now),("keys.near","k1",2,0,now),("keys.near","k1",1,1,now),("keys.near","k1",1,0,now-1),("keys.near","k1",1,0,now+30_000_000_000)]{assert!(c.live(contract,token,nonce,epoch,time).is_err());}}
@@ -58,14 +58,14 @@ fn pending_approval_even_with_inconsistent_terminal_status_never_finishes() {
 struct ProviderFixture {
     store:Memory, admitted:bool, post_calls:usize, executions:usize,
     lose_post:bool, lose_get:bool, ack_finish:bool, finish_calls:usize,
-    row:Value, reserved:BTreeMap<String,Value>, paths:Vec<String>,
+    fail_history:bool,last_success:bool,row:Value, reserved:BTreeMap<String,Value>, paths:Vec<String>,
 }
 impl Default for ProviderFixture {
     fn default()->Self{Self{store:Memory::default(),admitted:true,post_calls:0,executions:0,lose_post:false,lose_get:false,ack_finish:true,finish_calls:0,
-        row:json!({"request_id":ID,"type":"confidential","status":"success"}),reserved:BTreeMap::new(),paths:Vec::new()}}
+        fail_history:false,last_success:false,row:json!({"request_id":ID,"type":"confidential","status":"success"}),reserved:BTreeMap::new(),paths:Vec::new()}}
 }
 impl Store for ProviderFixture {
-    fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{self.store.set_if_absent(k,v)}
+    fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{if self.fail_history&&k.starts_with("p2/"){return Err(err("storage","injected history write failure"));}self.store.set_if_absent(k,v)}
     fn incr(&mut self,k:&str,d:i64)->Result<i64,Error>{self.store.incr(k,d)}
     fn read(&mut self,k:&str)->Result<Vec<u8>,Error>{self.store.read(k)}
     fn remove(&mut self,k:&str)->Result<(),Error>{self.store.remove(k)}
@@ -87,11 +87,15 @@ impl ProviderHost for ProviderFixture {
     fn fetch(&mut self,_key:&str,id:&str)->Result<(u16,Value),Error>{
         assert_eq!(id,ID);if self.lose_get{return Err(err("upstream","GET unavailable"));}Ok((200,self.row.clone()))
     }
-    fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{
-        put_once(self,&format!("{}/terminal",j.key()),&serde_json::to_vec(t).unwrap())?;
-        self.finish_calls+=1;if self.ack_finish{self.admitted=false;}Ok(self.ack_finish)
-    }
+    fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{finalize_and_settle(self,j,t,|b|{*b=[4;32];Ok(())})}
 }
+impl AdmissionHost for ProviderFixture {
+ fn value_op(&mut self,j:&Journal)->Result<Value,Error>{Ok(json!({"op_id":j.op_id,"action_hash":j.action_hash,"epoch":j.epoch.to_string(),"nonce":j.nonce.to_string(),"state":if self.admitted{0}else if self.last_success{2}else{3}}))}
+ fn control(&mut self,_:&str)->Result<Control,Error>{Ok(Control{epoch:0,nonce:1,pending:if self.admitted{1}else{0},pledged:false,listed:false,transfer_pending:false})}
+ fn begin(&mut self,_:&Journal)->Result<(),Error>{unreachable!()}
+ fn complete(&mut self,_:&Journal,t:&Terminal)->Result<(),Error>{self.finish_calls+=1;if self.ack_finish{self.admitted=false;self.last_success=t.success;}Ok(())}
+}
+
 #[test]
 fn production_driver_never_dispatches_without_confirmed_admission() {
     let mut host=ProviderFixture{admitted:false,..ProviderFixture::default()};let j=journal();j.create(&mut host).unwrap();
@@ -160,3 +164,37 @@ fn production_driver_routes_each_confidential_mutation_through_identical_journal
 
 #[test]fn standard_self_exit_binds_fresh_native_or_same_evm_identity(){use crate::self_withdraw_destination as dest;assert_eq!(dest("alice.near","near",None,"nep413").unwrap(),"alice.near");assert!(dest("alice.near","near",Some("attacker.near"),"nep413").is_err());assert!(dest("alice.near","near",Some("alice.near"),"session").is_err());assert!(dest("alice.near","base",Some("0x0000000000000000000000000000000000000001"),"nep413").is_err());let a="0x0000000000000000000000000000000000000001";for chain in ["eth","base","arb","op","bsc","pol","avax","gnosis"]{assert!(dest(a,chain,Some(a),"eip191").is_err());assert!(dest(a,chain,Some("0x0000000000000000000000000000000000000002"),"eip191").is_err());}for chain in ["near","sol","btc","unknown"]{assert!(dest(a,chain,None,"eip191").is_err());}}
 #[test]fn standard_driver_never_posts_bad_or_legacy_unknown_identity_destinations(){for scheme in ["nep413","session",""]{let mut j=journal();j.kind="withdraw".into();j.auth_scheme=scheme.into();j.body=json!({"chain":"near","to":"attacker.near","token":ASSET,"amount":"100"});let mut h=ProviderFixture::default();assert!(drive_provider(&mut h,&j,"key",false).is_err());assert_eq!(h.executions,0);assert_eq!(h.post_calls,0);}let mut j=journal();j.kind="transfer".into();j.body=json!({"to":"attacker.near","token":ASSET,"amount":"100"});assert!(j.validate_destination().is_err());}
+
+#[test]fn actual_cli_signed_envelope_reaches_strict_worker_preflight_and_rejects_a_b_a(){
+ let input:Value=serde_json::from_str(include_str!("../../../protocol/client-owner-epoch.json")).unwrap();
+ let auth:crate::Auth=serde_json::from_value(input["auth"].clone()).unwrap();
+ let (req,_)=crate::verify_nep413(&auth,"keyhole").unwrap();
+ assert_eq!(req.op,"swap");assert_eq!(req.params["token_id"],"k1234");
+ signed_epoch(&req.params,7).unwrap();assert_eq!(signed_epoch(&req.params,9).unwrap_err().code,"epoch_changed");
+ let mut bad=auth.clone();bad.message=bad.message.replace("\"7\"","\"9\"");assert!(crate::verify_nep413(&bad,"keyhole").is_err());
+}
+#[test]fn late_terminal_projection_repairs_history_exactly_once_without_redispatch(){
+ let mut host=ProviderFixture::default();host.row["status"]=json!("processing");let j=journal();
+ drive_provider(&mut host,&j,"key",false).unwrap();finalize_record(&mut host,&j,|b|{*b=[1;32];Ok(())}).unwrap();
+ assert!(merged_history(&mut host,"keys.near","k1",vec![]).unwrap().is_empty());
+ host.row["status"]=json!("success");host.row["result"]=json!({"amount_out":"250"});
+ drive_provider(&mut host,&j,"key",true).unwrap();
+ for n in 1..4 {finalize_record(&mut host,&j,|b|{*b=[n;32];Ok(())}).unwrap();drive_provider(&mut host,&j,"key",true).unwrap();}
+ let rows=merged_history(&mut host,"keys.near","k1",vec![]).unwrap();assert_eq!(rows.len(),1);assert_eq!(rows[0]["status"],"success");assert_eq!(rows[0]["amount_out"],"250");assert_eq!(rows[0]["epoch"],0);assert_eq!(rows[0]["by"],"alice.near");
+ assert_eq!(host.executions,1);assert_eq!(host.post_calls,1);
+ let prov=crate::provenance::load(&mut host,"keys.near","k1").unwrap();assert_eq!(prov.len(),1);assert!(prov[0].project(Some("bob.near")).get("detail").is_none());
+}
+#[test]fn completed_payment_record_storage_failure_reconciles_without_a_second_payment(){
+ let mut host=ProviderFixture{fail_history:true,..ProviderFixture::default()};let j=journal();
+ assert!(drive_provider(&mut host,&j,"key",false).is_err());
+ assert!(host.admitted,"history failure must keep title/admission locked");assert_eq!(host.finish_calls,0);
+ host.fail_history=false;host.lose_get=true;
+ assert_eq!(drive_provider(&mut host,&j,"key",true).unwrap()["admission_finished"],true);
+ assert_eq!(merged_history(&mut host,"keys.near","k1",vec![]).unwrap().len(),1);assert_eq!(host.executions,1);assert_eq!(host.post_calls,1);assert!(!host.admitted);
+}
+
+#[test]fn completed_provider_status_is_normalized_only_after_terminal_record_and_admission_ack(){
+ let mut host=ProviderFixture::default();host.row["status"]=json!("completed");let j=journal();
+ let out=drive_provider(&mut host,&j,"key",false).unwrap();assert_eq!(out["status"],"success");assert_eq!(out["admission_finished"],true);
+ assert_eq!(merged_history(&mut host,"keys.near","k1",vec![]).unwrap()[0]["status"],"success");
+}

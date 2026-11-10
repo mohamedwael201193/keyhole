@@ -83,7 +83,7 @@ describe("listBlockReason", () => {
   it("needs about 0.011 NEAR in the account, with the deposit and gas named", () => {
     expect(LIST_MIN_BALANCE_YOCTO).toBe(11n * 10n ** 21n);
     expect(listBlockReason({ ...ok, balance: LIST_MIN_BALANCE_YOCTO - 1n })).toBe(LIST_BALANCE_TEXT);
-    expect(LIST_BALANCE_TEXT).toBe("You need about 0.011 NEAR in this account to list (0.01 NEAR refundable deposit + gas).");
+    expect(LIST_BALANCE_TEXT).toBe("You need about 0.011 NEAR in this account to list (0.01 NEAR refundable deposit + gas). On v2.5, first register the separate 0.0032 NEAR nonrefundable payout slot; sale and refund credits need a later cashout.");
   });
   it("says the balance is being read, or could not be read, instead of guessing", () => {
     expect(listBlockReason({ ...ok, balance: undefined })).toMatch(/Reading this account/);

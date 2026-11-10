@@ -635,3 +635,47 @@ async fn v2_5_admission_barrier_and_epoch_code_only() -> anyhow::Result<()> {
     assert!(view(&e.c, "get_pledge_config", json!({})).await.is_null());
     Ok(())
 }
+
+/// Ordinary existing UI/CLI journeys on candidate bytecode, starting with NO prepaid accounts.
+#[tokio::test]
+async fn candidate_unregistered_minter_sale_unlist_buy_and_approval_refunds_cash_out() -> anyhow::Result<()> {
+    let w=near_workspaces::sandbox().await?;let root=w.root_account()?;
+    let c=w.dev_deploy(&std::fs::read(V2_5)?).await?;
+    c.call("new").args_json(json!({"owner":c.id(),"minter":root.id(),"treasury":c.id(),"royalty_bps":0})).transact().await?.into_result()?;
+    let seller=root.create_subaccount("slot-seller").initial_balance(NearToken::from_near(5)).transact().await?.into_result()?;
+    let buyer=root.create_subaccount("slot-buyer").initial_balance(NearToken::from_near(5)).transact().await?.into_result()?;
+    let market=root.create_subaccount("slot-market").initial_balance(NearToken::from_near(5)).transact().await?.into_result()?;
+    let mint=json!({"token_id":"kslots","receiver_id":seller.id(),"tier":1,"metadata":{"title":"Payout journey"}});
+    let refused=root.call(c.id(),"nft_mint").args_json(mint.clone()).deposit(NearToken::from_millinear(20)).max_gas().transact().await?;
+    assert!(format!("{:?}",refused.into_result().unwrap_err()).contains("register payout account"));
+    let cost=view(&c,"payout_storage_cost",json!({})).await.as_str().unwrap().parse::<u128>()?;
+    for a in [&root,&seller] { a.call(c.id(),"register_payout_account").args_json(json!({})).deposit(NearToken::from_yoctonear(cost)).max_gas().transact().await?.into_result()?; }
+    root.call(c.id(),"nft_mint").args_json(mint).deposit(NearToken::from_millinear(20)).max_gas().transact().await?.into_result()?;
+    let minter_credit=view(&c,"get_payout_credit",json!({"account_id":root.id()})).await.as_str().unwrap().parse::<u128>()?;assert!(minter_credit>0);
+    root.call(c.id(),"claim_payout").args_json(json!({})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert_eq!(view(&c,"get_payout_credit",json!({"account_id":root.id()})).await,"0");
+    assert!(view(&c,"get_pending_payout",json!({"account_id":root.id()})).await.is_null());
+    let list=json!({"token_id":"kslots","price":"100000000000000000000000"});
+    seller.call(c.id(),"nft_list").args_json(list.clone()).deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;
+    seller.call(c.id(),"nft_unlist").args_json(json!({"token_id":"kslots"})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert_eq!(view(&c,"get_payout_credit",json!({"account_id":seller.id()})).await,"10000000000000000000000");
+    seller.call(c.id(),"claim_payout").args_json(json!({})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert!(view(&c,"get_pending_payout",json!({"account_id":seller.id()})).await.is_null());
+    seller.call(c.id(),"nft_list").args_json(list).deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;
+    let overpay=100000000000000000000002u128;
+    let refused=buyer.call(c.id(),"nft_buy").args_json(json!({"token_id":"kslots"})).deposit(NearToken::from_yoctonear(overpay)).max_gas().transact().await?;
+    assert!(format!("{:?}",refused.into_result().unwrap_err()).contains("register payout account"));
+    assert_eq!(view(&c,"nft_token",json!({"token_id":"kslots"})).await["owner_id"],seller.id().as_str());
+    buyer.call(c.id(),"register_payout_account").args_json(json!({})).deposit(NearToken::from_yoctonear(cost)).max_gas().transact().await?.into_result()?;
+    buyer.call(c.id(),"nft_buy").args_json(json!({"token_id":"kslots"})).deposit(NearToken::from_yoctonear(overpay)).max_gas().transact().await?.into_result()?;
+    assert_eq!(view(&c,"get_payout_credit",json!({"account_id":buyer.id()})).await,"2");
+    assert_eq!(view(&c,"get_payout_credit",json!({"account_id":seller.id()})).await,"110000000000000000000000");
+    seller.call(c.id(),"claim_payout").args_json(json!({})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert_eq!(view(&c,"get_payout_credit",json!({"account_id":seller.id()})).await,"0");
+    buyer.call(c.id(),"nft_approve").args_json(json!({"token_id":"kslots","account_id":market.id()})).deposit(NearToken::from_millinear(10)).max_gas().transact().await?.into_result()?;
+    buyer.call(c.id(),"nft_revoke").args_json(json!({"token_id":"kslots","account_id":market.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert!(view(&c,"get_payout_credit",json!({"account_id":buyer.id()})).await.as_str().unwrap().parse::<u128>()?>2);
+    buyer.call(c.id(),"claim_payout").args_json(json!({})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert_eq!(view(&c,"get_payout_credit",json!({"account_id":buyer.id()})).await,"0");
+    assert!(view(&c,"get_pending_payout",json!({"account_id":buyer.id()})).await.is_null());Ok(())
+}

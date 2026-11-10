@@ -864,6 +864,8 @@ pub struct Charge {
     usd: u64,
 }
 
+impl Charge { pub fn usd_micro(&self)->u64 { self.usd } }
+
 /// Hold `usd` for one swap or withdraw. Both counters move only when the whole hold succeeds: the
 /// session is charged first, and if the daily check then refuses, the session charge is undone too.
 pub fn charge_spend(st: &mut dyn Store, cap: &str, lim: &Limits, session: Option<(&str, &SessionGrant)>, usd: u64, now_ms: u64) -> Result<Charge, Error> {

@@ -16,6 +16,7 @@ export const DEFAULTS = {
   recipient: process.env.KEYHOLE_RECIPIENT ?? "keyhole",
   outlayer: process.env.OUTLAYER_API ?? "https://api.outlayer.ai",
   fastfs: process.env.FASTFS_BASE ?? "https://main.fastfs.io",
+  contract: process.env.KEYHOLE_CONTRACT ?? "keyhole-devmo.near",
   rpc: process.env.NEAR_RPC ?? "https://rpc.mainnet.fastnear.com",
 };
 
@@ -88,8 +89,33 @@ export async function callWorker(input: { op: string; auth?: Auth }): Promise<Ca
   return { call_id: j.call_id, output: j.output, attestation_url: j.attestation_url };
 }
 
+export async function contractView<T>(method: string, args: Record<string, unknown>): Promise<T> {
+  const r = await fetch(DEFAULTS.rpc, { method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(10000),
+    body: JSON.stringify({ jsonrpc: "2.0", id: "keyhole", method: "query", params: { request_type: "call_function", finality: "final", account_id: DEFAULTS.contract, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") } }) });
+  const j: any = await r.json();
+  if (!r.ok || j.error || j.result?.error) throw new Error(j.result?.error ?? JSON.stringify(j.error) ?? "rpc");
+  return JSON.parse(Buffer.from(j.result.result).toString("utf8"));
+}
+/** Bind current final owner epoch before signing for CLI AND MCP. No unsigned gateway injection. */
+export async function prepareGuardedRequest(account: string, op: string, params: Record<string, unknown>, read: typeof contractView = contractView): Promise<Record<string, unknown>> {
+  if (!["swap", "copy", "withdraw", "transfer"].includes(op) && !(op === "quote" && params.execute === true)) return params;
+  let token = params.token_id;
+  if (!token) {
+    const held = await read<{ token_id: string }[]>("nft_tokens_for_owner", { account_id: account, from_index: "0", limit: 2 });
+    if (held.length !== 1) throw new Error("Select the exact key before signing");
+    token = held[0].token_id;
+  }
+  if (typeof token !== "string" || !token) throw new Error("Invalid key");
+  const nft = await read<{ owner_id: string } | null>("nft_token", { token_id: token });
+  const c = await read<{ token_id: string; owner_epoch: string; transfer_pending: boolean }>("get_control_state", { token_id: token });
+  if (nft?.owner_id !== account) throw new Error("not_owner");
+  if (c.token_id !== token || typeof c.owner_epoch !== "string" || !/^(0|[1-9]\d*)$/.test(c.owner_epoch) || BigInt(c.owner_epoch) > 18446744073709551615n || c.transfer_pending !== false) throw new Error("guard_state");
+  if (params.owner_epoch !== undefined && params.owner_epoch !== c.owner_epoch) throw new Error("epoch_changed: sign again");
+  return { ...params, token_id: token, owner_epoch: c.owner_epoch };
+}
+
 export async function run(key: Key | null, op: string, params: Record<string, unknown> = {}): Promise<CallResult> {
-  return callWorker(key ? { op, auth: signRequest(key, op, params) } : { op });
+  return callWorker(key ? { op, auth: signRequest(key, op, await prepareGuardedRequest(key.accountId, op, params)) } : { op });
 }
 
 export const hex = (u: Uint8Array) => Buffer.from(u).toString("hex");

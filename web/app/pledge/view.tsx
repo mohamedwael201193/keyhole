@@ -23,9 +23,9 @@ const EXAMPLE = {
   floorUsdc: "0.50",
   borrowNear: "0.01",
   repayNear: "0.0101",
-  dueLabel: "Due Nov 12, 2026 · 23:59 UTC · example",
+  dueLabel: "Due only after confirmed native delivery · example",
   lender: "lender-demo.near",
-  termMeta: "72h term\nfixed repay",
+  termMeta: "2h term + 15m grace\nfixed repay",
   sealed: "Lender sees: floor ≥ 0.50 USDC · Balance: hidden",
 } as const;
 
@@ -110,6 +110,7 @@ export function PledgeView() {
               lead="Your lender sees one certified minimum, not the full balance while reviewing this offer."
             />
 
+            <details className="note" data-testid="pledge-delivery-risk"><summary>Lender delivery risk · public lending is off</summary><p>Funding is not delivery. If the borrower never claims principal, or a payout callback is UNKNOWN, capital can stay locked indefinitely. No timeout refund.</p></details>
             <aside className="plg-howto" aria-label="How it works">
               <h3>How it works</h3>
             <ol>
@@ -124,7 +125,7 @@ export function PledgeView() {
                 <span className="n">2</span>
                 <p>
                   <strong>Borrow NEAR</strong>
-                  Funding starts debt and creates a NEAR claim. Withdraw it separately.
+                  Funding creates a reserved NEAR claim. Debt starts only after confirmed native delivery.
                 </p>
               </li>
               <li>
@@ -152,7 +153,7 @@ export function PledgeView() {
                 <div className="plg-widget-head">
                   <h3 className="plg-widget-h">Pledge</h3>
                   <span className="plg-widget-meta">
-                    {live ? "Fixed term" : "72h term"}
+                    {live ? "Fixed term" : "2h term + 15m grace"}
                     <br />
                     {live ? "sealed floor" : "fixed repay"}
                   </span>

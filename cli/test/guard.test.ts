@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import { readFileSync } from "node:fs";
 import bs58 from "bs58";
-import { keyFromString, guardedRun, guardTarget, operatorGate, loadBlocklist, run, GuardError, type GuardDeps, type Terminal } from "../src/core.ts";
+import { keyFromString, guardedRun, guardTarget, operatorGate, loadBlocklist, run, GuardError, DEFAULTS, type GuardDeps, type Terminal } from "../src/core.ts";
 import { copyTrade } from "../src/mcp.ts";
 import type { CounterpartyResult, Verdict } from "../src/counterparty.ts";
 
@@ -119,6 +119,7 @@ test("operator gate: the typed code allows, anything else refuses, and the code 
 
 let gateway: Server;
 let gatewayUrl = "";
+const originalRpc=DEFAULTS.rpc;
 const seen: string[] = [];
 const sentMessages: string[] = [];
 before(async () => {
@@ -126,7 +127,12 @@ before(async () => {
     let body = "";
     req.on("data", (c) => { body += c; });
     req.on("end", () => {
-      const sent = JSON.parse(body) as { op: string; auth?: { message: string } };
+      const sent = JSON.parse(body) as { op: string; auth?: { message: string }; method?: string; params?: { method_name: string } };
+      if(sent.method === "query") {
+        const m=sent.params?.method_name;
+        const value=m==="nft_tokens_for_owner"?[{token_id:"k1234"}]:m==="nft_token"?{owner_id:key.accountId}:{token_id:"k1234",owner_epoch:"7",transfer_pending:false};
+        res.setHeader("content-type","application/json");res.end(JSON.stringify({result:{result:[...Buffer.from(JSON.stringify(value))]}}));return;
+      }
       const op = sent.op;
       seen.push(op);
       if (sent.auth) sentMessages.push(sent.auth.message);
@@ -140,9 +146,9 @@ before(async () => {
   await new Promise<void>((r) => gateway.listen(0, "127.0.0.1", () => r()));
   const port = (gateway.address() as { port: number }).port;
   gatewayUrl = `http://127.0.0.1:${port}/api`;
-  process.env.KEYHOLE_GATEWAY = gatewayUrl;
+  process.env.KEYHOLE_GATEWAY = gatewayUrl; DEFAULTS.rpc = gatewayUrl+"/rpc";
 });
-after(() => { delete process.env.KEYHOLE_GATEWAY; gateway.close(); });
+after(() => { delete process.env.KEYHOLE_GATEWAY; DEFAULTS.rpc=originalRpc; gateway.close(); });
 
 const copyArgs = { amount: "10000", token_in: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", token_out: "nep141:wrap.near" };
 const liveish = (verdict: Verdict, gate: GuardDeps["gate"]): GuardDeps => ({

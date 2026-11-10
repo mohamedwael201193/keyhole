@@ -30,8 +30,10 @@ fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->
     let action_hash=sha256_hex(&json!({"revision":guarded::REVISION,"contract":keys_contract(),"owner":c.account,"token_id":c.token_id(),"kind":kind,"body":body,
         "signed_message":input.pointer("/auth/message"),"signed_nonce":input.pointer("/auth/nonce")}).to_string());
     let nonce=control.nonce.checked_add(1).ok_or_else(||err("guard_state","nonce exhausted"))?;
-    let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,charge,auth_scheme:input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413").to_owned()};
-    j.create(&mut Host)?;guard_admit(&j)?;Ok(j)
+    let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,event:Some(guarded::JournalEvent{ts_ms:c.now_ms,usd:charge.as_ref().map(|ch|ch.usd_micro()).unwrap_or(0),source:c.req.params.get("source").cloned().unwrap_or(Value::Null)}),auth_scheme:input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413").to_owned(),charge};
+    j.create(&mut Host)?;
+    let _=Host.set_if_absent(&format!("{}/current/{}/{}",tkey(&j.token_id,"value_recovery"),j.nonce,j.action_hash),j.op_id.as_bytes())?;
+    guard_admit(&j)?;Ok(j)
 }
 impl guarded::AdmissionHost for Host {
     fn value_op(&mut self,j:&Journal)->Result<Value,Error>{view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))}
@@ -49,7 +51,9 @@ fn guard_admit(j:&Journal)->Result<(),Error>{
     if j.contract!=keys_contract(){return Err(err("guard_journal","wrong contract"));}
     guarded::confirm_admission(&mut Host,j)
 }
-fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{guarded::settle_admission(&mut Host,j,t)}
+fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{
+    guarded::finalize_and_settle(&mut Host,j,t,|bytes|getrandom::fill(bytes).map_err(|_|err("entropy","secure event randomness unavailable")))
+}
 impl guarded::ProviderHost for Host {
     fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>{
         guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
@@ -70,7 +74,10 @@ impl guarded::ProviderHost for Host {
     fn fetch(&mut self,key:&str,id:&str)->Result<(u16,Value),Error>{http("GET",&format!("{OL}/wallet/v1/requests/{id}"),Some(key),None)}
     fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{guard_finish(j,t)}
 }
-fn guard_provider(j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{guarded::drive_provider(&mut Host,j,key,reconcile)}
+fn guard_provider(j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{
+    let out=guarded::drive_provider(&mut Host,j,key,reconcile)?;
+    Ok(out)
+}
 fn op_reconcile_value(input:&Value)->Result<Value,Error>{
     let c=authenticate(input,"reconcile_value_op",true)?;let id=s(&c.req.params,"value_op_id").ok_or_else(||err("bad_params","value_op_id required"))?;
     let key=guarded::journal_key(&keys_contract(),&c.token_id(),&id);
@@ -153,4 +160,20 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     Ok(json!({"ok":true,"op":"loan_certificate","certificate":cert,"signature":signature,"public_key":public_key,
         "guarded_revision":guarded::REVISION,"registry_version":cfg("GUARDED_WORKER_HASH",""),
         "execution_verification":"Verify the OutLayer attestation over this exact output separately; registry version is NOT a measured self hash"}))
+}
+
+fn pending_value_identity(c:&Ctx)->Result<Value,Error>{
+    let Some(token)=&c.token else{return Ok(Value::Null);};let control=guard_control(token)?;
+    for nonce in [control.nonce,control.nonce.saturating_add(1)] {
+      let rows=Host.list_prefix(&format!("{}/current/{}/",tkey(token,"value_recovery"),nonce))?;
+      if rows.len()>64{return Err(err("guard_journal","too many interrupted attempts; use original value_op_id"));}
+      for row in rows {
+        let raw=Store::read(&mut Host,&row)?;
+        if raw.is_empty(){continue;}let id=String::from_utf8(raw).map_err(|_|err("guard_journal","invalid recovery identity"))?;
+        let key=guarded::journal_key(&keys_contract(),token,&id);
+        let j:Journal=serde_json::from_slice(&Store::read(&mut Host,&format!("{key}/record"))?).map_err(|_|err("guard_journal","invalid recovery journal"))?;
+        let permit=view(&keys_contract(),"get_value_op",json!({"token_id":token,"op_id":id}))?;
+        if j.owner==c.account&&j.epoch==control.epoch&&permit["op_id"]==id&&permit["action_hash"]==j.action_hash&&Store::read(&mut Host,&format!("{key}/finish_ack"))?.is_empty(){return Ok(json!({"token_id":token,"value_op_id":id,"status":"UNKNOWN"}));}
+      }
+    }Ok(Value::Null)
 }

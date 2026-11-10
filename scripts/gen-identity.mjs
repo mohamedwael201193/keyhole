@@ -25,7 +25,10 @@ export const CONTRACT_CODE_HASH = IDENTITY.contract.code_hash;
 export const CONTRACT_WASM_SHA256 = IDENTITY.contract.wasm_sha256;
 export const short = (h: string) => \`\${h.slice(0, 8)}…\${h.slice(-8)}\`;
 `;
-const out = { "web/lib/identity.gen.ts": ts, "tee/worker/DEPLOYED_SHA256": id.worker.wasm_sha256 + "\n" };
+const candidateWasm = readFileSync(root + "contracts/keys/release/v2.5/keyhole_keys.wasm");
+const candidateSha = createHash("sha256").update(candidateWasm).digest("hex");
+const candidate = { status: "source-candidate-not-deployed", release: "v2.5", wasm_sha256: candidateSha, code_hash: b58(candidateSha), bytes: candidateWasm.length, recipe: "contracts/keys/build.sh", rust: "1.86.0", cargo_near: "0.22.0", binaryen: "123" };
+const out = { "web/lib/identity.gen.ts": ts, "tee/worker/DEPLOYED_SHA256": id.worker.wasm_sha256 + "\n", "contracts/keys/release/v2.5/identity.json": JSON.stringify(candidate, null, 2) + "\n" };
 for (const [p, body] of Object.entries(out)) {
   let cur = ""; try { cur = readFileSync(root + p, "utf8"); } catch {}
   if (cur !== body) { if (process.argv.includes("--check")) errs.push(`${p} is stale: run node scripts/gen-identity.mjs`); else writeFileSync(root + p, body); }

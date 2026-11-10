@@ -5,7 +5,7 @@ import { checkBody } from "@/lib/gateway";
 import { readFileSync } from "node:fs";
 
 const mem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), m }; };
-const S: Session = { token: "A".repeat(43) + "=", account: "alice.near", token_id: "k1234", exp_ms: 2_000_000, max_usd_micro: 5_000_000 };
+const S: Session = { token: "A".repeat(43) + "=", account: "alice.near", token_id: "k1234", exp_ms: 2_000_000, max_usd_micro: 5_000_000, owner_epoch: "7" };
 
 describe("session client", () => {
   it("stores and loads only for the same account before expiry", () => {
@@ -24,7 +24,7 @@ describe("session client", () => {
     const a = sessionAuth(S, "swap", { x: 1 }, 5), b = sessionAuth(S, "swap", { x: 1 }, 5);
     expect(a.nonce).not.toBe(b.nonce);
     expect(Buffer.from(a.nonce, "base64").length).toBe(32);
-    expect(JSON.parse(a.message)).toEqual({ op: "swap", account_id: "alice.near", ts_ms: 5, params: { x: 1 } });
+    expect(JSON.parse(a.message)).toEqual({ op: "swap", account_id: "alice.near", ts_ms: 5, params: { x: 1, token_id: "k1234", owner_epoch: "7" } });
     expect(a.scheme).toBe("session");
   });
   it("scope matches the worker (lock, prove, mint, session never in scope)", () => {

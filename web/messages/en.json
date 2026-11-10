@@ -357,6 +357,7 @@
     "source": "Source"
   },
   "errors": {
+    "minter_payout_unregistered": ["The minter payout slot is not registered.", "The operator must explicitly pay the exact permanent payout-storage fee before minting. No sponsorship was charged."],
     "admission_unknown": ["Admission outcome is unknown.", "Keep the existing operation ID. Reconcile that admission before sending or opening another operation."],
     "certificate": ["This collateral certificate is not valid for the current offer.", "Read the exact offer and refresh its same-terms certificate. Do not fund a changed or expired statement."],
     "collateral_ineligible": ["This account has not passed the custody checks for this offer.", "Do not fund. Verify the wallet, settled prior operations and approved authority audit first."],

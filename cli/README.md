@@ -56,3 +56,14 @@ Tools: `verify`, `explain_pnl`, `quote_buy`, `copy`. `copy` previews the trade, 
 ## Interface for apps (stable)
 
 `src/core.ts` exports `signRequest(key, op, params)`, `callWorker({op, auth})`, `verifyCall(callId, wasmPath?)`, `explainPnl(history, balances)`, `nep413Bytes()`. A browser wallet produces the same `auth` with NEP-413 `signMessage({message, recipient: "keyhole", nonce})`, where `message = JSON.stringify({op, account_id, ts_ms, params})`.
+
+
+### Candidate ownership epochs and payouts
+
+Value requests (swap/copy/withdraw/executed quote) resolve the exact current token and final owner epoch before NEP-413 signing. A stale supplied epoch is refused; do not reuse old signed JSON after a handover.
+
+`keyhole reconcile --key <token_id> --value-op-id <original-ID>` checks the original custody journal with fresh holder authorization. Never create another payment to replace UNKNOWN. The MCP tool exposes the same holder-only reconciliation.
+
+`keyhole payout` reads slot registration, backed credit and pending native payout. First use requires `keyhole payout --register --accept-storage-yocto <exact-read-cost>`: this is a permanent nonrefundable storage purchase, separate from bonds/gas. `keyhole payout --claim` signs one-yocto `claim_payout` to the same account. A hash or successful HTTP response is not native delivery: inspect the FINAL transfer/callback receipts and re-read pending state. UNKNOWN stays locked. A definitive MethodNotFound identifies legacy v2.4; network failures do not downgrade policy.
+
+Before candidate mint rollout, `node scripts/payout-onboarding.mjs [additional-recipient.near ...]` (from repo root) prints a **read-only unsigned** minter/recipient onboarding plan. It never reads credentials or sends transactions. The release operator must separately approve the exact sponsorship fee; the worker refuses unregistered-minter minting before quota/dispatch.

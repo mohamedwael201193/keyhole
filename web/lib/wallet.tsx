@@ -5,6 +5,8 @@ import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { NEP413_RECIPIENT } from "./config";
 import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
+import { readPayout } from "./payout";
+import { decimalEpoch, guardedValueOp, prepareGuardedRequest } from "./guardedRequest";
 import { callWorker } from "./worker";
 import { sendKeysCall, type KeysCall, type SendResult, type TxRoute, type TxWallet } from "./keysTx";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
@@ -252,6 +254,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   /** The sign-in signature, kept (in memory only) when the account had no key yet, to unlock right after minting. */
   const stash = useRef<SignedAuth | null>(null);
   useEffect(() => { setSession(loadSession(accountId)); const t = setInterval(() => setSession(loadSession(accountId)), 30_000); return () => clearInterval(t); }, [accountId]);
+  useEffect(() => { const invalid = () => setSession(null); addEventListener("keyhole-session-invalid", invalid); return () => removeEventListener("keyhole-session-invalid", invalid); }, []);
   const [pending, setPending] = useState<(SignedAuth & { ctx?: OpResume | null }) | null>(null);
   const loading = useRef<Promise<void> | null>(null);
 
@@ -371,6 +374,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const sign = useCallback(async (op: Op, params: Record<string, unknown> = {}): Promise<SignedAuth> => {
     const live = loadSession(accountId);
+    if (!accountId && guardedValueOp(op, params)) throw new SignError("no_auth");
+    if (accountId) {
+      try { params = await prepareGuardedRequest(op, accountId, params, live && inSession(op) ? live : undefined); }
+      catch (e) { if (live) { clearSession(); setSession(null); } throw e; }
+    }
     if (live && inSession(op)) return sessionAuth(live, op, params) as unknown as SignedAuth;
     if (owner.current === "privy") {
       const p = privy.current;
@@ -429,8 +437,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const finishSession = useCallback(async (auth: SignedAuth, tokenId: string) => {
     const r = await callWorker("session", auth);
     const o = r.output;
-    if (r.error || !o?.ok || typeof o.session_token !== "string") return { ok: false as const, code: r.error?.code || "session_failed" };
-    const s: Session = { token: o.session_token, account: String(o.account), token_id: String(o.token_id ?? tokenId), exp_ms: Number(o.exp_ms), max_usd_micro: Number(o.max_usd_micro) };
+    if (r.error || !o?.ok || typeof o.session_token !== "string" || !decimalEpoch(o.owner_epoch)) return { ok: false as const, code: r.error?.code || "session_failed" };
+    const s: Session = { token: o.session_token, account: String(o.account), token_id: String(o.token_id ?? tokenId), exp_ms: Number(o.exp_ms), max_usd_micro: Number(o.max_usd_micro), owner_epoch: o.owner_epoch };
     saveSession(s); setSession(s);
     return { ok: true as const };
   }, []);
@@ -492,7 +500,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const w = await ref.current!.selector.wallet();
     return { kind: "ws", accountId: acc, walletId: st.selectedWalletId ?? "", wallet: w as unknown as TxWallet, callbackUrl: location.href.split("#")[0] };
   }, [accountId, ensure]);
-  const sendTx = useCallback(async (call: KeysCall): Promise<SendResult> => sendKeysCall(await txRoute(), call), [txRoute]);
+  const sendTx = useCallback(async (call: KeysCall): Promise<SendResult> => {
+    if (accountId && /^(nft_(list|buy|approve|revoke|revoke_all|transfer|transfer_call|transfer_payout))$/.test(call.method)) {
+      try {
+        const payout = await readPayout(accountId);
+        if (payout.supported && !payout.registered) return { error: { code: "bad_call", message: "Register your payout slot in Vault first (exact nonrefundable storage charge with explicit consent). No fee was charged." } };
+      } catch { return { error: { code: "unknown", message: "Cannot verify payout onboarding. No transaction was sent." } }; }
+    }
+    return sendKeysCall(await txRoute(), call);
+  }, [txRoute, accountId]);
 
   return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectMeteor: () => connectSelectorWallet("meteor-wallet"), connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession, sendTx }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }

@@ -360,6 +360,7 @@ mod host {
         let wet=real.pointer("/quote/amountInUsd").and_then(Value::as_str).and_then(parse_usd_micro);
         let valid=assert_wet_within_dry(usd,wet).is_ok()&&real.pointer("/quote/depositAddress").and_then(Value::as_str).is_some();
         let t=Terminal{success:valid,refund_charge:!valid,provider_id:format!("quote-only:{}",sha256_hex(&real.to_string()))};
+        guarded::put_once(&mut Host,&format!("{}/settlement",j.key()),real.to_string().as_bytes())?;
         let finished=guard_finish(&j,&t)?;
         if !valid{return Err(err("quote_changed",format!("quote rejected; admission_finished={finished}; operation {}",j.op_id)));}
         out["quote"]=real["quote"].clone();out["deposit_address"]=real.pointer("/quote/depositAddress").cloned().unwrap_or(Value::Null);
@@ -383,13 +384,18 @@ mod host {
         let epoch=match c.token.as_ref(){Some(t)=>guard_control(t)?.epoch,None=>0};
         Ok(json!({"ok": true, "op": "status", "account": c.account, "tier": c.tier, "limits": lim, "tier_limits": tier_lim,
             "holder_limits": pol, "withdraw_cooldown_until_ms": cool, "locked_until_ms": locked, "spent_today_usd_micro": spent,
-            "settlement_epoch": epoch,"owner_epoch":epoch.to_string()}))
+            "settlement_epoch": epoch,"owner_epoch":epoch.to_string(),"pending_value_op":pending_value_identity(&c)?}))
     }
 
     fn op_mint(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "mint", false)?;
         if c.tier.is_some() { return Err(err("already_holder", "this account already holds a KEYHOLE key")); }
         let (mid, msk) = minter()?;
+        match view(&keys_contract(),"payout_storage_cost",json!({})) {
+            Ok(cost)=>{if view(&keys_contract(),"payout_account_registered",json!({"account_id":mid}))?!=true{return Err(err("minter_payout_unregistered",format!("Operator onboarding required: register the minter payout slot with exact {cost} yoctoNEAR nonrefundable storage. No sponsorship was charged.")));}}
+            Err(e) if e.message.contains("MethodNotFound")||e.message.contains("MethodResolveError")=>{},
+            Err(e)=>return Err(e),
+        }
         let (acct_raw, e) = rpc::view_account(&mid, "final");
         if !e.is_empty() { return Err(err("rpc", e)); }
         let acct: Value = serde_json::from_str(&acct_raw).unwrap_or_default();
@@ -473,14 +479,9 @@ mod host {
         q.pointer("/quote/amountInUsd").and_then(|v| v.as_str()).and_then(parse_usd_micro).ok_or_else(|| err("upstream", "no USD price for token"))
     }
 
-    fn log_push(token: &str, by: &str, mut entry: Value) {
-        entry["by"] = json!(by);
-        let k = tkey(token, "log");
-        let (v, _) = storage::get(&k);
-        let mut a: Vec<Value> = serde_json::from_slice(&v).unwrap_or_default();
-        a.push(entry);
-        if a.len() > 100 { a.remove(0); }
-        let _ = storage::set(&k, serde_json::to_string(&a).unwrap().as_bytes());
+    fn trade_history(token:&str)->Result<Vec<Value>,Error>{
+        let legacy:Vec<Value>=serde_json::from_slice(&Host.get(&tkey(token,"log"))).unwrap_or_default();
+        guarded::merged_history(&mut Host,&keys_contract(),token,legacy)
     }
 
     fn digits(p: &Value, k: &str) -> Result<String, Error> {
@@ -565,9 +566,6 @@ mod host {
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
         let status = after_move_status_epoch(&raw_status, still, stamped, guard_control(&c.token_id())?.epoch);
         let amount_out = r.pointer("/result/amount_out").cloned().unwrap_or(Value::Null);
-        log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": op, "token_in": tin, "token_out": tout, "amount_in": amt, "amount_out": amount_out,
-            "usd_in_micro": usd, "status": status, "epoch": stamped, "source": p.get("source")}));
-        if status == "success" { prov_append(&c.token_id(), op, &c.account, c.now_ms, &format!("{op} {tin} {amt}"), &c.operation_id)?; }
         Ok(json!({"ok": status == "success", "op": op, "account": c.account, "status": status, "amount_out": amount_out, "usd_in_micro": usd,
             "min_amount_out": min_out.to_string(), "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"), "intent_hash": r.pointer("/result/intent_hash")}))
     }
@@ -608,8 +606,6 @@ mod host {
         // Re-read ownership and settlement epoch after the move: either drift reports needs_review.
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
         let status = after_move_status_epoch(&raw_status, still, stamped, guard_control(&c.token_id())?.epoch);
-        log_push(&c.token_id(), &c.account, json!({"ts_ms": c.now_ms, "kind": "withdraw", "token": token, "amount": amt, "chain": chain, "usd_micro": usd, "status": status, "epoch": stamped}));
-        if status == "success" { prov_append(&c.token_id(), "withdraw", &c.account, c.now_ms, &format!("withdraw {amt} {token} to {to}"), &c.operation_id)?; }
         let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
         Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"),
@@ -749,7 +745,7 @@ mod host {
         let c = authenticate(input, "pnl", true)?;
         let (_, id) = c.wallet()?;
         let tid = c.token_id();
-        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let all: Vec<Value> = trade_history(&tid)?;
         let mine = history_for(&all, &c.account);
         let (trades, cost, outs, since) = pnl_aggregate(&mine);
         if outs.len() > 6 { return Err(err("bad_params", "too many assets to price in one call")); }
@@ -783,7 +779,7 @@ mod host {
         prov_sync_owner(&tid, &owner, now)?;
         let evs: Vec<ProvEvent> = load_prov(&tid)?.into_iter().map(|(e, _)| e).collect();
         let head = verify_chain(&evs)?;
-        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let all: Vec<Value> = trade_history(&tid)?;
         let (settled, volume) = level_counts(&all);
         let (trades, cost, outs, since) = pnl_aggregate(&all);
         let statement = record_canonical(&tid, &owner, tier, &listing.seller, &listing.price_yocto, settled, volume, trades, cost, &outs, since, &head, now);
@@ -800,7 +796,7 @@ mod host {
         let tid = c.token_id();
         prov_sync_owner(&tid, &c.account, c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&tid)?.into_iter().map(|(e, _)| e).collect();
-        let trades: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let trades: Vec<Value> = trade_history(&tid)?;
         let current = nft_tier_of(&tid)?;
         // Refuses with bad_log when the provenance chain does not verify; nothing is counted then.
         let a = assess_level(&evs, &trades, current)?;
@@ -824,7 +820,7 @@ mod host {
     fn op_history(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "history", true)?;
         let _ = c.wallet()?; // runs the one-time migration, so a legacy log is found
-        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&c.token_id(), "log"))).unwrap_or_default();
+        let all: Vec<Value> = trade_history(&c.token_id())?;
         let a = history_for(&all, &c.account);
         let tid = c.token_id();
         let chain = prov_body(&tid, Some(&c.account))?;
@@ -845,7 +841,7 @@ mod host {
         let locked = active_lock(&Host.get(&tkey(&tid, "lock")), &c.account, c.now_ms);
         let (key, id) = c.wallet()?;
         let (_, b) = http("GET", &format!("{}/wallet/v1/confidential/balance", OL), Some(&key), None)?;
-        let all: Vec<Value> = serde_json::from_slice(&Host.get(&tkey(&tid, "log"))).unwrap_or_default();
+        let all: Vec<Value> = trade_history(&tid)?;
         let entries = history_for(&all, &c.account);
         // Earned-tier progress from the same verified record as level_up. Null when that record does not verify.
         let progress = assess_level(&evs, &all, c.tier.unwrap_or(1)).ok().and_then(|a| serde_json::to_value(a.progress).ok());

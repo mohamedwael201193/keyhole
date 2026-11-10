@@ -103,7 +103,7 @@ export function buyBlockReason(s: BuyState): string | null {
  * for nft_list (30 TGas, see lib/keysTx.ts). Measured estimate, rounded up to 0.011 NEAR.
  */
 export const LIST_MIN_BALANCE_YOCTO = 11n * 10n ** 21n;
-export const LIST_BALANCE_TEXT = "You need about 0.011 NEAR in this account to list (0.01 NEAR refundable deposit + gas).";
+export const LIST_BALANCE_TEXT = "You need about 0.011 NEAR in this account to list (0.01 NEAR refundable deposit + gas). On v2.5, first register the separate 0.0032 NEAR nonrefundable payout slot; sale and refund credits need a later cashout.";
 
 /** The reason the holder cannot list or change this key's price right now, or null. `balance` is the account's NEAR, read fresh. */
 export function listBlockReason(s: {
