@@ -92,7 +92,11 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   const nativeReceipts:FinalWalletReceipt[]=[];
   for(const x of submissions)nativeReceipts.push(await readFinalReceipt(async()=>{
    const response=await request.post(meta.rpc,{data:{jsonrpc:"2.0",id:"final-ledger",method:"tx",params:{tx_hash:x.hash,sender_account_id:x.account,wait_until:"FINAL"}}});
-   expect(response.ok()).toBeTruthy();return response.json();
+   const reply=await response.json();
+   // near-sandbox uses HTTP 408 for its typed JSON-RPC timeout. This is still
+   // unavailable evidence, eligible only for the same bounded read-only retry.
+   if(!response.ok())expect(reply.error?.cause?.name).toBe("TIMEOUT_ERROR");
+   return reply;
   }));
   assertFundedWalletLedger(submissions,nativeReceipts);
   evidence.native_receipts=nativeReceipts;expect(evidence.states).toHaveLength(64);expect(evidence.negatives).toHaveLength(3);
