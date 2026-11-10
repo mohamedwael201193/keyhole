@@ -1,0 +1,11 @@
+{
+  "op": "swap",
+  "auth": {
+    "account_id": "alice.near",
+    "public_key": "ed25519:AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9",
+    "signature": "fp76rFmBiz8pSgN5zBAOty3gekaNDd0JEdGWmk5/6UNL7sLsOAG0/oyWEE3QWqornxrQoMO+AwZNT2w2AjG6Cw==",
+    "nonce": "NeLol8aF2ejN/eoYhcHk637Ea8IIDFBLmIoMwQaUKxo=",
+    "message": "{\"op\":\"swap\",\"account_id\":\"alice.near\",\"ts_ms\":1000,\"params\":{\"amount_in\":\"100\",\"token_in\":\"USDC\",\"token_out\":\"NEAR\",\"token_id\":\"k1234\",\"owner_epoch\":\"7\"}}",
+    "recipient": "keyhole"
+  }
+}

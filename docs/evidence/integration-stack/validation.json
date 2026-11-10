@@ -1,0 +1,106 @@
+{
+    "record_scope":  "Predecessor local run, not this head. Contract wasm ac25d889 / 496539 bytes and worker a05f7162 are earlier candidates. Current v2.5 contract bytes are artifact-repro-r2.json (bc12dace, 495199 bytes, 4.95199 NEAR). The claims_online site-health FAIL below is retained and was not reclassified as PASS. Current funding was not re-probed.",
+    "scope":  "Local Windows PC with WSL; source candidate only, no deploy, spend or secret access. Dated predecessor record. See record_scope.",
+    "status":  "PASS local PR-CI-equivalent gates; FAIL scheduled full-online claims gate: unfunded live service",
+    "contract":  {
+                     "unit_pass":  303,
+                     "strict_clippy":  "PASS",
+                     "wasm_bytes":  496539,
+                     "wasm_sha256":  "ac25d8899561d7ee109d69aca22792b3d7836123f6d815a85d897c8a24558538",
+                     "linux_build_sh":  "PASS"
+                 },
+    "worker":  {
+                   "unit_pass":  605,
+                   "native_clippy":  "PASS",
+                   "wasi_clippy":  "PASS",
+                   "wasm_bytes":  903430,
+                   "wasm_sha256":  "a05f7162f687d8382f40bc1595bb197a0ea17f6ab1b9627b746ee31840de0aab",
+                   "independent_rebuild":  "PASS; identical SHA256; persistent ignored .integration/keyhole-worker.wasm"
+               },
+    "cli":  {
+                "tests_pass":  53,
+                "typecheck":  "PASS"
+            },
+    "offline_loan_plan":  {
+                              "tests_pass":  5
+                          },
+    "judge_kit":  {
+                      "attestations":  "PASS",
+                      "historical_fastfs":  "PASS",
+                      "live_deployed_contract_hash":  "PASS",
+                      "identity":  "PASS",
+                      "receipt_outcome_regressions_pass":  7
+                  },
+    "hygiene":  {
+                    "secret_scan":  "PASS",
+                    "source_tarball_live_identity":  "PASS"
+                },
+    "claims":  {
+                   "total":  525,
+                   "pass":  231,
+                   "fail":  0,
+                   "error":  0,
+                   "offline_skip":  294
+               },
+    "sandbox":  {
+                    "pass":  52,
+                    "fail":  0,
+                    "breakdown":  {
+                                      "audit_gas":  3,
+                                      "pledge":  23,
+                                      "review3":  4,
+                                      "review4":  3,
+                                      "sale":  8,
+                                      "upgrade":  11
+                                  },
+                    "max_identifier_loan_peak_bytes":  580,
+                    "loan_bond_bytes_at_tested_price":  900
+                },
+    "web":  {
+                "unit_pass":  1551,
+                "unit_fail":  0,
+                "test_files":  80,
+                "typecheck":  "PASS",
+                "lint":  "PASS (0 errors; 10 existing warnings)",
+                "production_build":  "PASS (Turbopack; one build worker; 2048 MiB heap cap)",
+                "nonfunded_e2e":  "PASS",
+                "e2e_pass":  141,
+                "e2e_fail":  0,
+                "e2e_skipped":  9,
+                "e2e_distinct_passed":  75,
+                "e2e_projects":  {
+                                     "desktop_pass":  73,
+                                     "desktop_skip":  2,
+                                     "mobile_pass":  68,
+                                     "mobile_skip":  7
+                                 },
+                "e2e_skip_scope":  "Existing width-specific duplicate exclusions; every one of 75 distinct selected tests passed at an applicable width. Funded payment-key tests excluded exactly as CI."
+            },
+    "live_identity":  "unchanged; candidate hashes are not deployed identities",
+    "hosted_ci":  "Not run: no push or remote mutation authorized; jobs replicated locally with Node 24/npm 10 and WSL Linux Rust.",
+    "claims_online":  {
+                          "status":  "FAIL: site-health (strict online assertion retained)",
+                          "initial_total":  525,
+                          "initial_pass":  521,
+                          "initial_fail":  3,
+                          "initial_error":  0,
+                          "initial_skip":  1,
+                          "initial_false_positive_failures_fixed":  [
+                                                                        "tx-9kmr1tsb",
+                                                                        "tx-H8qJNgox"
+                                                                    ],
+                          "live_health":  "online=false; reason=service_unfunded; assertion remains strict",
+                          "checked_at_cairo":  "2026-11-10 08:31 Africa/Cairo",
+                          "skip":  1,
+                          "fixed_refusals_verified_online":  "PASS: exact already migrated and one key per account receipt errors",
+                          "pass":  523,
+                          "fail":  1,
+                          "completed_at_cairo":  "2026-11-10 08:47 Africa/Cairo",
+                          "failed_ids":  [
+                                             "site-health"
+                                         ],
+                          "error":  0,
+                          "total":  525
+                      },
+    "release_qualification":  "Source candidate, not deployed. Code storage 4.96539 NEAR; captured-state projected storage 5.02631 NEAR and shortfall 1.341487799980027337378339 NEAR, excluding gas/migration/operating capital. No spend or funding authorization."
+}

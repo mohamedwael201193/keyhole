@@ -483,7 +483,7 @@ export function SwapView() {
               </section>
 
               {to.blockchain !== "near" && (
-                <p className="sw-note" data-testid="swap-lands">Lands in your vault as {to.symbol} on {chainName(to.blockchain)}. Withdraw it to any {chainName(to.blockchain)} address from the Vault.</p>
+                <p className="sw-note" data-testid="swap-lands">Lands in your vault as {to.symbol} on {chainName(to.blockchain)}. Withdraw supported NEAR assets only to your own NEAR account from the Vault.</p>
               )}
               <div className="sw-rate">
                 <span className="sw-rate-val" data-testid="swap-rate">{rate != null ? `1 ${from.symbol} = ${formatAmount(rate)} ${to.symbol}` : "Enter an amount to see the rate"}</span>

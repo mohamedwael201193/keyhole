@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-// verify-claims.mjs: check every claim in docs/claims.json, read-only.
-// Uses public NEAR RPC, OutLayer, FastFS, the live site and the GitHub API. No keys, no writes, no spending.
+// verify-claims.mjs: check every claim in docs/claims.json.
+// Default mode uses public NEAR RPC, existing OutLayer attestations (GET), FastFS, the live site and the GitHub API.
+// It does not call OutLayer /call and it does not request /api/health. A passive or skipped probe is not an online PASS.
+// An approved info probe is a separate server route and is not invoked here.
 // usage: node judge/verify-claims.mjs [--only <id>] [--offline] [--json]
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkTxOutcome } from "./tx-outcome.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const doc = JSON.parse(readFileSync(join(ROOT, "docs/claims.json"), "utf8"));
@@ -115,10 +118,8 @@ const checks = {
     // Every node (archival included) answered "unknown" for every sender: the chain says no such tx, so FAIL.
     if (!r && unknown === tried) return [false, "tx not found on mainnet (archival RPCs, every candidate sender)"];
     if (!r) throw new InfraError(`tx not found on any RPC with any sender (${miss})`);
-    const failed = [r.status, ...r.receipts_outcome.map((o) => o.outcome.status)].some((s) => s && s.Failure);
     if (c.receiver && !r.receipts_outcome.some((o) => o.outcome.executor_id === c.receiver)) return [false, `no receipt on ${c.receiver}`];
-    if (c.expect === "exists") return [true, `found, signer ${r.transaction.signer_id}`];
-    return [!failed, failed ? "a receipt failed" : `ok, signer ${r.transaction.signer_id}`];
+    return checkTxOutcome(r, c);
   },
   async attestation(c) {
     const r = await get(`${OUTLAYER}/attestations/by-call/${c.call}`);

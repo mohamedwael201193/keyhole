@@ -6,13 +6,18 @@ rust-version = "1.86"
 license = "MIT"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Sandbox fault injection ONLY; never a release/deploy artifact.
+callback-failure-fixture = []
 
 [dependencies]
-near-sdk = "~5.17"
+near-sdk = { version = "~5.17", features = ["unstable"] }
 near-contract-standards = "~5.17"
 
 [dev-dependencies]
+ed25519-dalek = "2.2"
 near-sdk = { version = "~5.17", features = ["unit-testing"] }
 
 [profile.release]

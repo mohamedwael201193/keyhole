@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { PayoutPanel } from "@/components/PayoutPanel";
+import { readPayout } from "@/lib/payout";
 import { Button, Skeleton } from "@/components/ui";
 import { Card } from "@/components/ui/card";
 import { TxResult } from "@/components/TxResult";
@@ -112,7 +114,14 @@ export function SaleCard({ id, owner, royaltyBps, minter, onChanged }: Props) {
   async function send(act: Act, call: KeysCall) {
     setBusy(act); setTx(null);
     let r: SendResult;
-    try { r = await sendTx(call); } catch {
+    try {
+      if (accountId) {
+        const payout = await readPayout(accountId);
+        if (payout.supported && !payout.registered) { setBusy(null); setFormErr("Register your permanent payout slot below before listing, buying or receiving a refund. No fee was charged."); return; }
+        if (act === "buy" && listed) { const seller = await readPayout(listed.seller); if (seller.supported && !seller.registered) { setBusy(null); setFormErr("The seller must register their payout slot before this legacy listing can be bought."); return; } }
+      }
+      r = await sendTx(call);
+    } catch {
       r = { error: { code: "unknown", message: "The transaction did not complete. Nothing is confirmed on NEAR." } };
     }
     setBusy(null);
@@ -122,8 +131,11 @@ export function SaleCard({ id, owner, royaltyBps, minter, onChanged }: Props) {
       if (act === "buy" && accountId) {
         // A fresh read (not the shared 60 s cache): the owner must be the one after this transaction.
         const owner = await view<Token | null>("nft_token", { token_id: id }, KEYS_CONTRACT, { shared: false }).then((t) => t?.owner_id ?? null).catch(() => undefined);
-        if (owner !== undefined && owner !== accountId) {
-          setTx({ act, hash: r.txHash, redirect: false, error: { code: "stale_listing", message: "The listing had already ended, so no sale happened. Your NEAR was refunded in the same transaction." } });
+        if (owner === undefined) {
+          setTx({ act, hash: r.txHash, redirect: false, error: { code: "unknown", message: "Transaction recorded, but final key ownership could not be verified. Refresh before treating this as a purchase." } }); reload(); return;
+        }
+        if (owner !== accountId) {
+          setTx({ act, hash: r.txHash, redirect: false, error: { code: "stale_listing", message: "The listing had already ended, so no sale happened. Your payment is not a purchase. On v2.5 the refund is claimable credit in Native payouts & refunds; on v2.4 it is a native refund." } });
           reload(); return;
         }
       }
@@ -160,6 +172,8 @@ export function SaleCard({ id, owner, royaltyBps, minter, onChanged }: Props) {
       <p className="eb">Sale · NEAR mainnet</p>
       <h2 id="sale-h">{title}</h2>
       {body}
+      {accountId && <PayoutPanel onChanged={() => setRound(n => n+1)} />}
+      <p className="note">v2.5 proceeds and refunds are credits until claimed. You can cash out later in Vault even after selling the key. Listing bond: 0.01 NEAR refundable credit; first-use payout slot: 0.0032 NEAR nonrefundable; gas is separate.</p>
     </Card>
   );
 
@@ -302,12 +316,12 @@ export function SaleCard({ id, owner, royaltyBps, minter, onChanged }: Props) {
                 <dd data-testid="sale-royalty">{nearText(royaltyOf(priceYocto, bps))} NEAR ({royaltyPercentText(bps)})</dd>
               </div>
               <div>
-                <dt>You receive on sale</dt>
+                <dt>Sale proceeds</dt>
                 <dd data-testid="sale-receive">{nearText(sellerNetOf(priceYocto, bps))} NEAR</dd>
               </div>
               <div>
                 <dt>Listing deposit</dt>
-                <dd>0.01 NEAR, returned to you when the listing ends</dd>
+                <dd>0.01 NEAR returned when the listing ends (v2.5: claimable credit, not delivered cash)</dd>
               </div>
             </dl>
           ) : (

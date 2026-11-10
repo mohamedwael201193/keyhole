@@ -1,0 +1,26 @@
+{
+  "scope": "source-candidate-not-deployed",
+  "predecessor_sha256": "ac25d8899561d7ee109d69aca22792b3d7836123f6d815a85d897c8a24558538",
+  "wasm_sha256": "bc12dace72dd85ccd5b1941cd86782dd1a0302839fc97d92adc192f49df16f38",
+  "bytes": 495199,
+  "independent_clean_path_build_equal": true,
+  "host": "x86_64-unknown-linux-gnu",
+  "rustc": "1.86.0 (05f9846f893b09a1be1fc8560e33fc3c815cfecb)",
+  "cargo_near": "0.22.0",
+  "binaryen": "123",
+  "recipe": "contracts/keys/build.sh",
+  "diagnosis": "Predecessor contains machine-local standard-library source paths under /home/devmo/.rustup; clean official rustup target uses /rustc/05f9846f893b09a1be1fc8560e33fc3c815cfecb/library. Two independent Linux checkout/target builds match the hosted CI hash. The recipe now checks host/compiler/optimizer and rejects machine-local rustup source paths.",
+  "checks": [
+    "independent clean target compile",
+    "byte-for-byte cmp",
+    "release/SHA256SUMS",
+    "scripts/gen-identity.mjs --check"
+  ],
+  "live_identity_changed": false,
+  "mainnet_transactions": 0,
+  "funding_actions": 0,
+  "code_storage_near": "4.95199",
+  "code_delta_vs_live_v24_near": "2.53578",
+  "payout_slot_near": "0.0032",
+  "cost_scope": "Code storage only. Not an all-in deployment/top-up quote; excludes migration state, gas, reserves and liabilities. Existing storage.json is a captured predecessor snapshot, not final funding advice."
+}

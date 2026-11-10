@@ -1,5 +1,7 @@
 //! KEYHOLE worker core: pure, host-independent logic (unit-tested natively).
 //! The OutLayer host glue lives in main.rs.
+pub mod provenance;
+pub mod mint_payout;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
@@ -449,11 +451,8 @@ pub fn encode_tx(signer: &str, pk: &[u8; 32], nonce: u64, receiver: &str, block_
     v
 }
 
-/// Withdraw destination: `to` must be a well-formed address on `chain`. It may be any such address, not only the
-/// signer's. The holder's NEP-413 / EIP-191 signature covers the whole signed `params` (`params.to` included), so the
-/// holder names the destination explicitly and the signature commits to it. Shape only: no chain lookup. The chains
-/// are fixed here; an unknown chain is `bad_params`.
-pub fn assert_withdraw_to(chain: &str, to: &str) -> Result<(), Error> {
+/// Address parsing only; this does NOT authorize a withdrawal. Use `assert_withdraw_to` for that.
+pub fn validate_chain_address(chain: &str, to: &str) -> Result<(), Error> {
     let ok = match chain {
         "near" => is_valid_account_id(to),
         "sol" => is_sol_address(to),
@@ -461,6 +460,27 @@ pub fn assert_withdraw_to(chain: &str, to: &str) -> Result<(), Error> {
         _ => return Err(err("bad_params", "params.chain is not a supported withdraw chain")),
     };
     if ok { Ok(()) } else { Err(err("bad_params", "params.to is not a valid address for params.chain")) }
+}
+
+/// Standard self-exit policy. Address syntax alone is NOT proof of destination ownership.
+/// NEP-413 proves the NEAR account; EIP-191 proves the same 0x holder on allowlisted EVM chains.
+pub fn self_withdraw_destination(holder:&str,chain:&str,requested:Option<&str>,scheme:&str)->Result<String,Error>{
+    if scheme!="nep413"||chain!="near"||!is_valid_account_id(holder){return Err(err("destination_policy","withdrawals require the current holder NEAR account"));}
+    if requested.is_some_and(|to|to!=holder){return Err(err("destination_policy","withdrawals pay only the current holder"));}
+    validate_chain_address(chain,holder)?;Ok(holder.to_owned())
+}
+
+/// A withdrawal pays only the verified current NFT holder's own NEAR account.
+/// `current_owner` must come from nft_token at final finality, never request params.
+/// Authentication alone is not sufficient: the owner may have changed since it ran.
+pub fn assert_withdraw_to(chain: &str, to: &str, signer: &str, current_owner: Option<&str>) -> Result<(), Error> {
+    if !owner_is(current_owner, signer) {
+        return Err(err("not_owner", "only the current key holder can withdraw"));
+    }
+    if chain != "near" || to != signer {
+        return Err(err("bad_params", "withdrawals pay only the current holder's NEAR account on NEAR"));
+    }
+    validate_chain_address("near", to)
 }
 
 /// Solana address: base58 that decodes to exactly 32 bytes.
@@ -626,7 +646,7 @@ pub fn after_move_status_epoch(status: &str, still_owner: bool, stamped: u64, cu
 fn zero_hash() -> String { "0".repeat(64) }
 
 /// One row of the per-key log. `detail_hash` commits to the private detail.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ProvEvent {
     pub i: u64,
     pub prev: String,
@@ -635,6 +655,12 @@ pub struct ProvEvent {
     pub owner: String,
     pub ts_ms: u64,
     pub detail_hash: String,
+    #[serde(default = "provenance::legacy_version")]
+    pub v: u8,
+    #[serde(default)]
+    pub contract: String,
+    #[serde(default)]
+    pub owner_epoch: u64,
 }
 
 pub fn detail_hash(detail: &str) -> String {
@@ -643,6 +669,7 @@ pub fn detail_hash(detail: &str) -> String {
 
 /// Field order is fixed so a verifier in another language recomputes the same bytes.
 pub fn event_canonical(ev: &ProvEvent) -> String {
+    if ev.v == 2 { return provenance::canonical_v2(ev); }
     format!(
         "{{\"detail_hash\":\"{}\",\"i\":{},\"kind\":\"{}\",\"owner\":\"{}\",\"prev\":\"{}\",\"token_id\":\"{}\",\"ts_ms\":{}}}",
         ev.detail_hash, ev.i, ev.kind, ev.owner, ev.prev, ev.token_id, ev.ts_ms
@@ -663,6 +690,7 @@ pub fn append_event(log: &mut Vec<ProvEvent>, kind: &str, token_id: &str, owner:
         owner: owner.to_string(),
         ts_ms,
         detail_hash: detail_hash(detail),
+        v: 1, contract: String::new(), owner_epoch: 0,
     };
     let h = event_hash(&ev);
     log.push(ev);
@@ -672,6 +700,7 @@ pub fn append_event(log: &mut Vec<ProvEvent>, kind: &str, token_id: &str, owner:
 pub fn verify_chain(log: &[ProvEvent]) -> Result<String, Error> {
     let mut prev = zero_hash();
     for (i, ev) in log.iter().enumerate() {
+        if ev.v != 1 && ev.v != 2 { return Err(err("bad_log", "unsupported commitment version")); }
         if ev.i != i as u64 { return Err(err("bad_log", "event index does not match its place in the chain")); }
         if ev.prev != prev { return Err(err("bad_log", "event prev does not match the previous hash")); }
         prev = event_hash(ev);
@@ -829,12 +858,14 @@ pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) 
 /// A spend held against the session cap (when the call runs in a session) and the key's daily cap.
 /// Every refusal before the send gives it back at once (`charge_spend`). A send that failed for good
 /// gives it back in `settle`. A send still pending or under review keeps it.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Charge {
     day_key: String,
     session_id: Option<String>,
     usd: u64,
 }
+
+impl Charge { pub fn usd_micro(&self)->u64 { self.usd } }
 
 /// Hold `usd` for one swap or withdraw. Both counters move only when the whole hold succeeds: the
 /// session is charged first, and if the daily check then refuses, the session charge is undone too.
@@ -1348,3 +1379,10 @@ pub fn assess_level(prov: &[ProvEvent], trades: &[serde_json::Value], current: u
         earned: earned_tier(current, swaps, volume),
     })
 }
+
+pub mod guarded;
+
+/// Epoch-scoped durable ownership cooldown, separate from the public provenance format.
+pub mod ownership_sync;
+
+pub mod pledge_inventory;

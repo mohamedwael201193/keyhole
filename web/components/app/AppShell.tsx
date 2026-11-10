@@ -5,10 +5,14 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { KeyholeLogo } from "@/components/KeyholeLogo";
 import { AccountControl } from "@/components/AccountControl";
 import { TxLink } from "@/components/TxLink";
-import { KEYS_CONTRACT } from "@/lib/config";
+import { KEYS_CONTRACT, PLEDGE_SANDBOX } from "@/lib/config";
+import { networkPillDetail, networkPillLabel } from "@/lib/networkLabel";
 import { useI18n } from "@/lib/i18n";
 import { KeyStoreProvider, useKeyStore } from "@/lib/keyStore";
 import { useWallet } from "@/lib/wallet";
+import { PayoutPanel } from "@/components/PayoutPanel";
+import { ValueRecovery } from "@/components/ValueRecovery";
+import { PayoutCredit } from "@/components/PayoutCredit";
 import { SessionPill } from "./SessionPill";
 
 /**
@@ -19,14 +23,14 @@ import { SessionPill } from "./SessionPill";
  */
 
 /** Routes that render inside the shell (exact path or a sub-path). */
-export const APP_ROUTES = ["/dashboard", "/swap", "/keys", "/gallery", "/key", "/settle", "/vault", "/mint", "/pnl", "/verify", "/attack"] as const;
+export const APP_ROUTES = ["/dashboard", "/swap", "/keys", "/gallery", "/key", "/settle", "/vault", "/mint", "/pnl", "/verify", "/attack", "/pledge"] as const;
 
 export function isAppRoute(path: string | null | undefined): boolean {
   if (!path) return false;
   return APP_ROUTES.some((r) => path === r || path.startsWith(r + "/"));
 }
 
-export type AppIcon = "home" | "key" | "swap" | "vault" | "activity" | "shield" | "alert";
+export type AppIcon = "home" | "key" | "swap" | "vault" | "activity" | "shield" | "alert" | "pledge";
 export type AppNavItem = {
   /** Stable id for tests and styling. */
   id: string;
@@ -43,8 +47,8 @@ export type AppNavItem = {
 export type AppNavGroup = { title: string; items: AppNavItem[] };
 
 /**
- * Overview, Swap, Vault, Keys and Activity. Mint lives inside Keys (it is reached from the keys page), so Keys stays lit
- * on /mint. The bottom tabs are the first four of these.
+ * Overview, Swap, Vault, Keys, Pledge and Activity. Mint lives inside Keys (it is reached from the keys page), so Keys stays lit
+ * on /mint. The bottom tabs are the first four of these (Pledge is reached from More on phones).
  */
 export const APP_NAV: AppNavGroup[] = [
   {
@@ -54,6 +58,7 @@ export const APP_NAV: AppNavGroup[] = [
       { id: "swap", label: "Swap", href: "/swap", icon: "swap", match: ["/swap"] },
       { id: "vault", label: "Vault", href: "/vault", icon: "vault", match: ["/vault", "/pnl"] },
       { id: "keys", label: "Keys", href: "/keys", icon: "key", match: ["/keys", "/gallery", "/key", "/mint"] },
+      { id: "pledge", label: "Pledge", href: "/pledge", icon: "pledge", match: ["/pledge"] },
       { id: "activity", label: "Activity", href: "/settle", icon: "activity", match: ["/settle"] },
     ],
   },
@@ -80,7 +85,7 @@ export function isItemActive(item: AppNavItem, pathname: string | null | undefin
 /** The title shown in the top bar for a route. Pure. */
 const TITLES: [string, string][] = [
   ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Activity"], ["/vault", "Vault"], ["/pnl", "Swap log"],
-  ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"], ["/verify", "Proof"], ["/attack", "Attack"],
+  ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"], ["/pledge", "Pledge"], ["/verify", "Proof"], ["/attack", "Attack"],
 ];
 export function pageTitle(path: string | null | undefined): string {
   if (!path) return "KEYHOLE";
@@ -96,6 +101,7 @@ const ICON: Record<AppIcon, ReactNode> = {
   activity: <path d="M3 12.5h4l2.6-6.5 4.2 13 2.6-6.5H21" />,
   shield: <><path d="M12 3.5 19 6v5.5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z" /><path d="m9 12 2.2 2.2L15.5 10" /></>,
   alert: <><path d="M12 4 2.8 19.5h18.4z" /><path d="M12 10v4.5M12 17.2v.1" /></>,
+  pledge: <><path d="M12 3v3M12 18v3M3 12h3M18 12h3" /><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M9.5 12h5" /></>,
 };
 
 export function AppNavIcon({ name }: { name: AppIcon }) {
@@ -186,6 +192,8 @@ function AppShellFrame({ children }: { children: ReactNode }) {
   const mint = !!accountId && keys.status === "ready" && keys.keys.length === 0;
   const [hash, setHash] = useState("");
   const [open, setOpen] = useState(false);
+  const network = networkPillLabel(PLEDGE_SANDBOX);
+  const networkDetail = networkPillDetail(PLEDGE_SANDBOX);
 
   // The hash is not part of usePathname(), and a client link to the same page does not fire hashchange. Read it on
   // route change, on back and forward, and when a shell link is pressed (onNavigate below).
@@ -213,7 +221,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
         </Link>
         <p className="app-title" data-testid="app-title">{pageTitle(pathname)}</p>
         <div className="app-top-end">
-          <span className="app-net" data-testid="network-pill"><i aria-hidden="true" />NEAR mainnet</span>
+          <span className="app-net" data-testid="network-pill" title={networkDetail}><i aria-hidden="true" />{network}</span>
           <SessionPill />
           <AccountControl />
         </div>
@@ -222,7 +230,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
         <aside id="app-side" className={`app-side${open ? " open" : ""}`} aria-label="App">
           <AppNav pathname={pathname} hash={hash} mint={mint} onNavigate={(href) => { setHash(hashOf(href)); setOpen(false); }} />
           <div className="app-foot">
-            <p className="app-net-line"><i aria-hidden="true" />NEAR mainnet</p>
+            <p className="app-net-line" title={networkDetail}><i aria-hidden="true" />{network}</p>
             <Link href="/" className="app-back" data-testid="app-back">← Back to site</Link>
             <Link href="/verify" className="app-proof" data-testid="app-proof">Proof</Link>
             <p className="app-legal">
@@ -232,7 +240,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
             </p>
           </div>
         </aside>
-        <main id="main" className="app-main" tabIndex={-1}>{children}</main>
+        <main id="main" className="app-main" tabIndex={-1}><ValueRecovery /><PayoutCredit key={accountId??"signed-out"} />{children}{pathname === "/vault" && <PayoutPanel />}</main>
       </div>
       <AppTabs pathname={pathname} hash={hash} moreOpen={open} onMore={() => setOpen((v) => !v)} />
     </div>

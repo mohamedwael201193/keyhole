@@ -34,6 +34,8 @@ keyhole balance                                confidential balances
 keyhole swap --amount 10000 [--from .. --to ..] confidential swap within your caps
 keyhole history | pnl                          your private trade log / summary
 keyhole withdraw --chain near --to you.near --token <id> --amount <base units>
+keyhole payout [--register --accept-storage-yocto <exact cost> | --claim]
+keyhole reconcile --key <token_id> --value-op-id <original operation ID>
 keyhole verify <call_id> [--wasm path]         check attestation vs FastFS (and your build)
 ```
 

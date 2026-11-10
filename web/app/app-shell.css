@@ -48,7 +48,7 @@
 .app-back:hover { color: var(--primary); background: var(--primary-soft); }
 .app-back:focus-visible, .app-proof:focus-visible, .app-legal a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-net-line { display: none; }
-.app-main { min-width: 0; outline: none; position: relative; }
+.app-main { min-width: 0; outline: none; position: relative; overflow: visible; }
 .app-nav { display: grid; gap: 4px; }
 .app-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .app-link {
@@ -63,16 +63,29 @@
 .app-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Foot of the sidebar: the Proof block (the contract on the explorer) and the thin legal line */
-.app-foot { position: relative; z-index: 1; margin-top: auto; display: grid; gap: var(--space-2); padding-top: var(--space-5); border-top: 1px solid var(--sidebar-line); }
+.app-foot {
+  position: relative; z-index: 2; margin-top: auto; display: grid; gap: 8px;
+  padding-top: var(--space-4); padding-bottom: 4px;
+  border-top: 1px solid var(--sidebar-line);
+  /* Keep Proof + legal on separate rows; no overlap with each other or overlays */
+  isolation: isolate;
+}
 .app-proof {
-  display: inline-flex; align-items: center; min-height: 36px; padding: 0; border-radius: var(--radius-sm); width: fit-content;
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0; border-radius: var(--radius-sm); width: fit-content;
   font: 600 18px/1.2 var(--font-ui); color: var(--ink); text-decoration: none;
+  position: relative; z-index: 1;
 }
 .app-proof:hover { color: var(--primary); }
-.app-legal { margin: 0; font: 400 13px/1.55 var(--font-ui); color: var(--muted); overflow-wrap: anywhere; }
+.app-legal {
+  margin: 0; font: 400 12px/1.45 var(--font-ui); color: var(--muted);
+  overflow-wrap: anywhere; position: relative; z-index: 1;
+  /* One clean line under Proof — never sit under a badge */
+  max-width: 100%;
+}
 .app-legal a { color: var(--ink-2); text-underline-offset: 3px; }
 .app-legal .txl { display: inline-flex; gap: 0; }
-.app-legal .txl .alt { display: none; }
+.app-legal .txl .alt,
+.app-legal .alt { display: none !important; }
 
 /* Bottom tabs and the menu: phones only */
 .app-tabs { display: none; }
@@ -92,7 +105,6 @@
   .app-title { padding-inline-start: var(--space-3); font-size: 15px; }
   .app-top-end { gap: 8px; padding-inline-end: var(--space-3); }
   .app-top .cw { height: 40px; padding: 0 12px; font-size: 14px; white-space: nowrap; }
-  .app-top .acct .cw { max-width: 124px; overflow: hidden; text-overflow: ellipsis; }
   .app-brand .kh-logo { --kh: 1.9rem; }
   .app-body { display: block; min-height: calc(100dvh - 60px); padding-bottom: 84px; }
   .app-side {
@@ -145,20 +157,59 @@
 .app-top .cw:disabled { opacity: 1; background: var(--primary); color: var(--primary-ink); box-shadow: 0 8px 18px -12px rgba(15, 74, 72, .8); cursor: progress; }
 .app-top .cw:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 
-/* Phones (up to 599px): the top bar fits at 375 and 390, signed in or out. The session pill shows its icon and minutes ("25m"),
-   the account name truncates at 120px, and the network pill is in the menu sheet (.app-net-line), not the bar. */
+/* Phones (up to 599px): the top bar fits at 375 and 390. The session pill shows its icon and minutes ("25m").
+   The account control is an avatar plus a short name (start and end kept). The network pill is in the menu sheet. */
+.app-top .cw-avatar { display: none; }
 @media (max-width: 599px) {
   .app-brand { padding: 0 var(--space-3); }
   .app-brand .kh-logo { --kh: 1.6rem; }
-  .app-top-end { gap: 6px; padding-inline-end: 12px; min-width: 0; }
+  .app-top { width: 100%; max-width: 100%; overflow: visible; }
+  /* The account name ellipsizes inside its own button. This group stays visible so the session popover, including Revoke, is not clipped. */
+  .app-top-end { gap: 6px; padding-inline-end: 12px; min-width: 0; flex: 1 1 auto; overflow: visible; justify-content: flex-end; }
   .app-top .app-net { display: none; }
   .app-top .sp-pill { height: 40px; min-height: 40px; padding: 0 10px; gap: 6px; flex: none; }
   .app-top .sp-pill .sp-word, .app-top .sp-pill .sp-sep { display: none; }
   .app-top .sp-pill[data-state="unlocked"] .sp-time { font-variant-numeric: tabular-nums; }
   .app-top .sp-unit { font-size: 0; }
   .app-top .sp-unit::after { content: "m"; font-size: 13px; }
-  .app-top .acct { min-width: 0; }
-  .app-top .acct .cw { max-width: 120px; min-width: 0; padding: 0 12px; font-size: 14px; overflow: hidden; }
-  .app-top .acct .cw-full { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-top .acct { min-width: 0; flex: 0 1 auto; max-width: 100%; }
+  .app-top .acct .cw { max-width: 100%; min-width: 0; height: 40px; padding: 0 12px 0 6px; gap: 8px; font-size: 14px; overflow: hidden; }
+  .app-top .acct .cw-full { display: none; }
+  .app-top .acct .cw-short { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+  .app-top .cw-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(255, 255, 255, .18); font: 700 13px/1 var(--font-ui); flex: none; }
+  .app-top .sp-pop { position: fixed; top: 68px; left: 12px; right: 12px; width: auto; }
+}
+
+/* Isolated sandbox builds only. Fixed above the sticky bar, with the shell shifted down by the same 28px, so the strip never covers the pills and does not add a page scroll. */
+.sandbox-banner {
+  position: fixed; z-index: 70; top: 0; left: 0; right: 0; box-sizing: border-box; height: 28px;
+  display: flex; justify-content: center; gap: 8px; align-items: center; padding: 0 8px;
+  background: #f2dc9f; color: #253b2c; font: 600 12px/1.2 var(--font-ui, sans-serif);
+}
+.sandbox-banner button { font: 600 12px/1.2 var(--font-ui, sans-serif); min-height: 22px; padding: 2px 8px; border: 1px solid #253b2c33; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
+.sandbox-banner + .app { box-sizing: border-box; padding-top: 28px; }
+.sandbox-banner + .app .app-top { top: 28px; }
+.sandbox-banner + .app .app-body { min-height: calc(100dvh - 92px); }
+.sandbox-banner + .app .app-side { top: 92px; height: calc(100dvh - 92px); }
+@media (max-width: 899px) {
+  .sandbox-banner + .app .app-body { min-height: calc(100dvh - 88px); }
+  .sandbox-banner + .app .app-side { top: 88px; height: auto; }
+}
+@media (max-width: 860px) {
+  .sandbox-banner + .app .app-top .acct-menu { top: 96px; }
+}
+@media (max-width: 599px) {
+  /* The demo sentence wraps beside its button. Give it a second line instead of painting over the pills. */
+  .sandbox-banner { height: auto; min-height: 44px; padding: 6px 8px; }
+  .sandbox-banner b { flex: 1 1 auto; min-width: 0; }
+  .sandbox-banner + .app { padding-top: 48px; }
+  .sandbox-banner + .app .app-top { top: 48px; }
+  .sandbox-banner + .app .app-side { top: 108px; }
+  .sandbox-banner + .app .app-top .acct-menu { top: 116px; }
+  .sandbox-banner + .app .app-top .sp-pop { top: 116px; }
+}
+@media (max-width: 419px) {
+  /* "Sandbox" is short enough to sit beside the compact account pill. "NEAR mainnet" stays in the menu. */
+  .sandbox-banner + .app .app-top .app-net { display: inline-flex; height: 40px; min-height: 40px; padding: 0 10px; font-size: 13px; }
 }
 .app-top .acct-menu { border-radius: var(--radius-lg); border: 1px solid var(--card-edge); background: var(--raised); box-shadow: var(--shadow-2); }

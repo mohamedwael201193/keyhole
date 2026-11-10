@@ -1,3 +1,5 @@
+import {PLEDGE_SANDBOX} from "@/lib/config";
+import {sandboxProxy} from "@/lib/sandboxProxy";
 import { clientIp, safeAttPath } from "@/lib/verifyScore";
 import { NextRequest, NextResponse } from "next/server";
 import { checkBody } from "@/lib/gateway";
@@ -6,6 +8,7 @@ import { OUTLAYER_API, OUTLAYER_OWNER, OUTLAYER_PROJECT } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const certificates = createLimiter(6, 60_000);
 const perIp = createLimiter(20, 60_000);
 // info is public and identical for everyone: cache it so anonymous traffic cannot burn TEE compute.
 let infoCache: { at: number; body: unknown } | null = null;
@@ -24,7 +27,9 @@ export async function POST(req: NextRequest) {
   const raw = await req.text();
   const c = checkBody(raw);
   if (!c.ok) return NextResponse.json({ ok: false, error: { code: c.code } }, { status: c.status });
+  if (c.op === "loan_certificate" && !certificates(ip).ok) return NextResponse.json({ error: { code: "rate_limited" } }, { status: 429 });
   if (c.op === "info" && infoCache && Date.now() - infoCache.at < 300_000) return NextResponse.json(infoCache.body, { headers: { "cache-control": "public, s-maxage=300" } });
+  if(PLEDGE_SANDBOX)return sandboxProxy(req,"worker",JSON.parse(raw));
   const key = process.env.OUTLAYER_PAYMENT_KEY;
   if (!key) return NextResponse.json({ ok: false, error: { code: "gateway" } }, { status: 503 });
   try {
@@ -33,7 +38,7 @@ export async function POST(req: NextRequest) {
       headers: { "X-Payment-Key": key, "content-type": "application/json" },
       // record: the client sends the key id at the top level (validated in checkBody); the enclave reads params.token_id.
       body: JSON.stringify({ input: c.op === "info" ? { op: "info" } : c.op === "provenance" ? { op: "provenance", token_id: (JSON.parse(raw) as { token_id?: string }).token_id }
-        : c.op === "record" ? { op: "record", params: { token_id: (JSON.parse(raw) as { token_id?: string }).token_id } } : { op: c.op, auth: c.auth }, async: false,
+        : c.op === "loan_certificate" ? { op: c.op, params: c.params } : c.op === "record" ? { op: "record", params: { token_id: (JSON.parse(raw) as { token_id?: string }).token_id } } : { op: c.op, auth: c.auth }, async: false,
         secrets_ref: { profile: "default", account_id: OUTLAYER_OWNER } }),
       signal: AbortSignal.timeout(55_000),
       cache: "no-store",

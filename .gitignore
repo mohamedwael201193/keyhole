@@ -4,3 +4,9 @@ node_modules/
 *.secret*
 web/.scratch/
 web/AGENTS.md
+
+# Generated only with the explicit sandbox fault-injection feature.
+contracts/keys-sandbox/tests/fixtures/callback_failure.wasm
+
+# Isolated local/CI sandbox UI output; never source or production evidence.
+web/.next-pledge-sandbox/

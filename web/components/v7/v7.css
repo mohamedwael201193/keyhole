@@ -374,11 +374,13 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
 .app-main .page.sw-page { padding: var(--space-4) var(--space-5) var(--space-5); max-width: none; }
 .app-main .vlt,
 .app-main .kp-root,
-.app-main .act { padding: var(--space-4) var(--space-5) var(--space-5); }
+.app-main .act,
+.app-main .plg { padding: var(--space-4) var(--space-5) var(--space-5); }
 .app-main .vlt,
 .app-main .kp-root,
 .app-main .act,
-.app-main .sw-page { gap: var(--space-3); }
+.app-main .sw-page,
+.app-main .plg { gap: var(--space-3); }
 @media (max-width: 899px) {
   .app-main .v7-page-title { font-size: 32px; }
   .app-main .v7-hero { padding: var(--space-4); min-height: 0; }
@@ -386,7 +388,8 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
   .app-main .page.sw-page,
   .app-main .vlt,
   .app-main .kp-root,
-  .app-main .act { padding: var(--space-4) var(--space-3) var(--space-5); }
+  .app-main .act,
+  .app-main .plg { padding: var(--space-4) var(--space-3) var(--space-5); }
 }
 @media (max-width: 419px) {
   .app-main .v7-page-title { font-size: 28px; }

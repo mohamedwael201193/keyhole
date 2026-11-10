@@ -1,1 +1,12 @@
 web/public/source/ export-ignore
+
+# Generated identity/claim checks compare bytes across Linux and Windows.
+web/lib/identity.gen.ts text eol=lf
+tee/worker/DEPLOYED_SHA256 text eol=lf
+docs/claims.json text eol=lf
+
+*.sh text eol=lf
+*.sha256 text eol=lf
+*.md text eol=lf
+# Checksum sidecars are byte-compared and must remain canonical on Windows too.
+web/public/source/*.sha256 text eol=lf

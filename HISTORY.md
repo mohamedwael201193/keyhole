@@ -1,3 +1,10 @@
+## 2026-11-10 — Pledge dashboard preview (web)
+- Red-team (IDEA_REDTEAM §8) copy: headline "Borrow NEAR without publishing your full balance"; whole-account collateral warning; locked USDC/NEAR chips; tier exit caps; no hard-coded due date; lender preview never requests holder balance.
+- `/pledge` sketch-v5 widget in the app shell: sidebar **Pledge**, real USDC/NEAR icons, motion + reduced-motion, morph to Active chrome, floating key art unclipped.
+- Density like PR #185: whole page fits 1440×900 and 1280×800 without scrolling.
+- Typed client vs PR #184 (`0c3c6196`) methods; `NEXT_PUBLIC_PLEDGE_LIVE` OFF in production → labelled preview, CTA "Pledge launches after audit", no fake live data.
+- Unit + e2e mocks; screenshots in `shots_pledge/`. README states Pledge = preview / in review (never "live").
+
 ## 2026-11-09 — Attack build labels + honest swap log (PR #187)
 - `/attack`: each refusal card shows recorded wasm (e.g. `6367401a` / `38bd67b9`) with "Recorded on previous build"; `AttackBuild.current` ready for future current-build refusals.
 - `/pnl` + vault/README: removed Mark-to-market delta metric; page shows signed swap-log pointer (log head, trades, signature, attested call) only.
@@ -84,3 +91,9 @@
 - Clippy: drop unnecessary `as u64` in epoch invariant test (`r.below` is already u64).
 - Web: register `epoch_void` in `WORKER_ERROR_CODES` + en.json error copy so p2-errors stays green.
 - PnL-on-card / Attested Key Desk PnL dropped from the plan (swap-only; no invented metrics). Priority remains epoch + operator trust.
+
+## 2026-11-09 — v2.5 pledge contract rework (PR #184, prepared/not deployed)
+- Replaces the undeployed desk proposal: S/Q/A/F and service/economics methods removed; v2.4 layout and E/Vo/Vc preserved.
+- Adds complete sealed-loan state/nonce, all-path pledge and token transfer-call locks, authenticated-owner/epoch admission, canonical contract-verified certificate, asynchronous principal and failure-restored lender credits.
+- Fixed-account treasury-only recovery after December2,2026 02:00 Africa/Cairo, explicit provenance ledger and all-liability/storage/reserve exclusions; no upgrade escape hatch.
+- 209 unit + 19 sandbox tests, strict clippy and captured-state fork dry-run pass. Captured native balance is short for candidate code storage; sandbox-only funding used. Live deployment, publication, retirement and key changes remain approval gates.

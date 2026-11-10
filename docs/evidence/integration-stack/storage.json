@@ -1,0 +1,14 @@
+{
+  "capture_block": 223813218,
+  "candidate_bytes": 496539,
+  "candidate_sha256": "ac25d8899561d7ee109d69aca22792b3d7836123f6d815a85d897c8a24558538",
+  "storage_byte_cost_yocto": "10000000000000000000",
+  "candidate_code_storage_near": "4.96539",
+  "additional_code_storage_near_vs_v24": "2.54918",
+  "projected_post_deploy_storage_bytes": 502631,
+  "projected_post_deploy_storage_near": "5.02631",
+  "capture_balance_yocto": "3684822200019972662621661",
+  "code_storage_deficit_yocto_excluding_execution_and_migration": "1341487799980027337378339",
+  "code_storage_deficit_near_excluding_execution_and_migration": "1.341487799980027337378339",
+  "qualification": "Captured public state only, not a current balance quote. Execution gas, migration state and operating capital are additional. No funding or deployment approval."
+}

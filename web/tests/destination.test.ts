@@ -54,9 +54,16 @@ describe("validating a destination per chain", () => {
   });
 });
 
-describe("withdraw params carry the destination", () => {
-  it("default to the account on the token's chain, and take a chosen address on that chain", () => {
+describe("withdraw params are holder-only on NEAR", () => {
+  it("uses the signed-in holder and never takes another receiver", () => {
     expect(withdrawParams("you.near", "usdc", "1")).toMatchObject({ chain: "near", to: "you.near" });
-    expect(withdrawParams("you.near", "usdc", "1", { chain: "near", to: "bob.near" })).toMatchObject({ chain: "near", to: "bob.near" });
+    // @ts-expect-error Legacy JS callers cannot override the holder's destination.
+    expect(withdrawParams("you.near", "usdc", "1", { chain: "near", to: "bob.near" })).toMatchObject({ chain: "near", to: "you.near" });
+  });
+  it("uses the new signed-in account after a holder change", () => {
+    expect(withdrawParams("bob.near", "wnear", "1")).toMatchObject({ chain: "near", to: "bob.near" });
+  });
+  it("refuses missing or invalid signed-in accounts before signing", () => {
+    for (const account of ["", "Not An Account", "alice.near "]) expect(() => withdrawParams(account, "usdc", "1")).toThrow("valid signed-in NEAR account");
   });
 });

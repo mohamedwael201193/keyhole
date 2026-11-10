@@ -1,0 +1,24 @@
+ Shallow Bytes │ Shallow % │ Item
+───────────────┼───────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+        197629 ┊    24.68% ┊ "function names" subsection
+         46226 ┊     5.77% ┊ data segment ".rodata"
+          9400 ┊     1.17% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h4fb90884e856a6e6
+          7418 ┊     0.93% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h87248a2ff4adfb13
+          6318 ┊     0.79% ┊ core::num::flt2dec::strategy::dragon::format_shortest::h4f5fa41f6b4ce83e
+          5782 ┊     0.72% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h71905560fa9529eb
+          5326 ┊     0.67% ┊ core::num::flt2dec::strategy::dragon::format_exact::hab52be0c58f4af3c
+          4268 ┊     0.53% ┊ <base64::engine::general_purpose::GeneralPurpose as base64::engine::Engine>::internal_decode::h6dddcbb26e77cbc6
+          3492 ┊     0.44% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h57fec1cb4a80ba82
+          3312 ┊     0.41% ┊ keyhole_keys::sale::<impl keyhole_keys::Contract>::buy_sale::he5ab9b09c69fb15a
+          3301 ┊     0.41% ┊ keyhole_keys::pledge::<impl keyhole_keys::Contract>::register_collateral::h9532b90d4caf90a7
+          3184 ┊     0.40% ┊ keyhole_keys::Contract::nft_buy::h19cfde978b81ea32
+          3133 ┊     0.39% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h09789eef977d9d85
+          3099 ┊     0.39% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h891b612169b2707c
+          2977 ┊     0.37% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::hc7d136fa92d65d33
+          2896 ┊     0.36% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::hb83743b2b5b80ef0
+          2810 ┊     0.35% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h14cbf8d0aa57ae30
+          2724 ┊     0.34% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h30a7d695063d8134
+          2683 ┊     0.34% ┊ <base64::engine::general_purpose::GeneralPurpose as base64::engine::Engine>::internal_encode::h81f71910c174f998
+          2597 ┊     0.32% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct::h960b41738f426ce2
+        482085 ┊    60.21% ┊ ... and 2242 more.
+        800660 ┊   100.00% ┊ Σ [2262 Total Rows]

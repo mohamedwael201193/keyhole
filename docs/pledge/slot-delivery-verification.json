@@ -1,0 +1,43 @@
+{
+  "scope": "Local-only candidate, no mainnet deployment/transaction/key changes",
+  "base_pr184": "92da2864dd3b154fba088303f39bd11c32091f24",
+  "integration": "non-rewriting merge of the new base; preserves published PR193 history",
+  "contract_unit_pass": 275,
+  "contract_strict_clippy": "PASS",
+  "sandbox_pass": 44,
+  "sandbox_breakdown": {
+    "audit": 3,
+    "pledge": 23,
+    "review3": 4,
+    "review4": 3,
+    "upgrade": 11
+  },
+  "offline_plan_tests_pass": 5,
+  "claims": {
+    "total": 523,
+    "pass": 223,
+    "fail": 0,
+    "error": 0,
+    "offline_skip": 300
+  },
+  "normal_wasm_bytes": 450721,
+  "normal_wasm_sha256": "e0922b1e922f0c874e210e4a266711d4dca0e7f4e9d37f86654a23e08ce42bd3",
+  "independent_normal_rebuild_exact_match": true,
+  "debt_activation": "exact confirmed genuine native principal cashout callback; no debt on failed/UNKNOWN delivery",
+  "prepaid_payout_slot": {
+    "budget_bytes": 320,
+    "nonrefundable_fee_near_at_tested_byte_price": "0.0032",
+    "first_action_batch_gas_tgas": 220,
+    "real_runtime_cases": [
+      "register+open",
+      "register+fund",
+      "atomic failed-action rollback",
+      "sponsored duplicate registration followed by manual action-only retry",
+      "full principal, repayment and refundable bond credits",
+      "permanent empty slot reuse"
+    ]
+  },
+  "marginal_loan_peak_bytes": 580,
+  "loan_bond_bytes_at_tested_price": 900,
+  "visual_proof": "No funded-browser proof claimed; UI lane maintains that release gate"
+}

@@ -1,5 +1,7 @@
+import {fixtureRedirect} from "./support/signed-redirect";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import identity from "../../identity.json";
 const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge", "/ask"];
 const shots = process.env.SHOTS_DIR;
 
@@ -159,25 +161,28 @@ test("sealed vault names MetaMask and a gas-free signature", async ({ page }) =>
   await expect(empty).toContainText("one gas-free signature that only the enclave can check");
 });
 
-test("a cold health check stays on checking until the retry settles", async ({ page }) => {
+test("passive health stays unknown after one GET and never requests a paid probe", async ({ page }) => {
   let hits = 0;
+  const methods: string[] = [];
+  let release!: () => void;
+  const responseGate = new Promise<void>((resolve) => { release = resolve; });
   await page.route("**/api/health", async (route) => {
     hits += 1;
-    await new Promise((r) => setTimeout(r, 700));
-    await route.fulfill({ json: { online: false, reason: "gateway" } });
+    methods.push(route.request().method());
+    await responseGate;
+    await route.fulfill({ json: { mode: "passive", online: null, fresh: false, reason: "not_probed", payer: null } });
   });
   await page.goto("/vault", { waitUntil: "domcontentloaded" });
-  const offline = page.getByTestId("offline");
-  const live = page.getByText("Enclave live", { exact: false });
-  if (await live.isVisible().catch(() => false)) {
-    await page.waitForTimeout(250);
-    await expect(offline).toHaveCount(0);
-    return;
-  }
   await expect(page.getByTestId("enclave-checking")).toBeVisible();
-  await expect(offline).toHaveCount(0);
-  await expect(offline).toBeVisible({ timeout: 15_000 });
-  expect(hits).toBeGreaterThanOrEqual(2);
+  await expect(page.getByTestId("offline")).toHaveCount(0);
+  const response = page.waitForResponse((r) => r.url().endsWith("/api/health"));
+  release();
+  await response;
+  await expect(page.getByTestId("enclave-checking")).toBeVisible();
+  await expect(page.getByTestId("offline")).toHaveCount(0);
+  await expect(page.getByText("Enclave live", { exact: false })).toHaveCount(0);
+  expect(hits).toBe(1);
+  expect(methods).toEqual(["GET"]);
 });
 
 async function holdAccount(page: Page) {
@@ -201,6 +206,19 @@ async function holdAccount(page: Page) {
     await route.fulfill({ json: { jsonrpc: "2.0", id: "kh", result: { result: bytes } } });
   });
 }
+
+test("holder-only withdrawal shows an immutable NEAR receiver", async ({ page }) => {
+  await holdAccount(page);
+  await page.goto("/vault");
+  await expect(page.getByTestId("account")).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("open-withdraw").click();
+  const sheet = page.getByTestId("withdraw-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId("w-chain")).toHaveText("NEAR");
+  await expect(sheet.getByTestId("w-dest")).toHaveText("holder.keyhole.test");
+  await expect(sheet.locator("input#w-dest")).toHaveCount(0);
+  await expect(sheet.getByTestId("w-dest").locator("input, textarea, select")).toHaveCount(0);
+});
 
 test("connected account opens a menu instead of disconnecting", async ({ page, context }, info) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -239,18 +257,10 @@ for (const kind of ["swap", "withdraw"] as const) {
         : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success", usd_in_micro: 20000 };
       await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
     });
-    await page.addInitScript(({ nonce, kind }) => {
-      const op = kind;
-      sessionStorage.setItem("kh_pending_sign", JSON.stringify({
-        message: JSON.stringify({ op, account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
-        nonce,
-        ctx: op === "withdraw"
-          ? { op, amount: "0.01 USDC", to: "holder.keyhole.test" }
-          : { op, give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
-      }));
-    }, { nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", kind });
+    const redirect=fixtureRedirect(kind,kind==="withdraw"?{op:kind,amount:"0.01 USDC",to:"holder.keyhole.test"}:{op:kind,give:"0.02 USDC",decimals:24,symbol:"wNEAR"});
+    await page.addInitScript(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
     // A swap is started and resumed on /swap; a withdrawal on /vault (its sheet reopens).
-    await page.goto(`${kind === "swap" ? "/swap" : "/vault"}#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc`);
+    await page.goto((kind==="swap"?"/swap":"/vault")+redirect.hash);
     if (kind === "swap") {
       await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
       await expect(page.getByTestId("trade-out")).toContainText("success");
@@ -286,17 +296,116 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await (await popup).close();
   await expect(balanceCard.getByTestId("error")).toHaveAttribute("data-code", "wallet_rejected", { timeout: 20_000 });
   await expect(balanceCard.getByText("You declined the signature.")).toBeVisible();
-  await page.evaluate(() => {
-    sessionStorage.setItem("kh_pending_sign", JSON.stringify({
-      message: JSON.stringify({ op: "swap", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
-      nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-      ctx: { op: "swap", give: "0.02 USDC", decimals: 24, symbol: "wNEAR" },
-    }));
-  });
-  await page.goto("/swap?back=1#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+  const redirect=fixtureRedirect("swap",{op:"swap",give:"0.02 USDC",decimals:24,symbol:"wNEAR"});
+  await page.evaluate(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
+  await page.goto("/swap?back=1"+redirect.hash);
   await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
   await expect(page.getByTestId("trade-out")).toContainText("success");
   await expect(page.getByTestId("error")).toHaveCount(0);
+});
+
+for (const profile of ["v2.5", "v2.4"] as const) {
+test(`the session popover stays visible at 390 and Revoke is clickable (${profile})`, async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await holdAccount(page);
+  // A guarded grant is epoch-bound. The legacy fixture explicitly represents the pinned
+  // live v2.4 profile, never a missing epoch silently converted to epoch zero.
+  await page.route("https://rpc.mainnet.fastnear.com/**", async route => {
+    const body = route.request().postDataJSON();
+    const params = body?.params;
+    if (params?.request_type === "view_account") {
+      expect(params.finality).toBe("final");
+      return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result: { code_hash: identity.contract.code_hash } } });
+    }
+    if (!["get_control_state", "nft_token"].includes(params?.method_name)) return route.fallback();
+    expect(params.finality).toBe("final");
+    if (params.method_name === "get_control_state" && profile === "v2.4") {
+      return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result: { error: "wasm execution failed with error: FunctionCallError(MethodResolveError(MethodNotFound))" } } });
+    }
+    const payload = params.method_name === "nft_token" ? { token_id: "4", owner_id: "holder.keyhole.test" }
+      : { token_id: "4", owner_epoch: "7", transfer_pending: false };
+    return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result: { result: [...new TextEncoder().encode(JSON.stringify(payload))] } } });
+  });
+  await page.addInitScript(profile => {
+    sessionStorage.setItem("kh_session_v1", JSON.stringify({
+      token: "sess-test", account: "holder.keyhole.test", token_id: "4", exp_ms: Date.now() + 25 * 60 * 1000, max_usd_micro: 5_000_000,
+      profile, ...(profile === "v2.5" ? { owner_epoch: "7" } : {}),
+    }));
+  }, profile);
+  let revoked = 0;
+  await page.route("**/api/worker", async (route) => {
+    const body = route.request().postDataJSON() as { op?: string } | null;
+    if (body?.op === "session_revoke") revoked += 1;
+    await route.fulfill({ json: { call_id: "c1", status: "ok", output: { ok: true }, attestation_url: null, time_ms: 1 } });
+  });
+  await page.goto("/vault");
+  const pill = page.getByTestId("session-pill");
+  await expect(pill).toHaveAttribute("data-state", "unlocked", { timeout: 20_000 });
+  await pill.click();
+  const pop = page.getByTestId("session-pop");
+  const revoke = page.getByTestId("session-revoke");
+  await expect(revoke).toBeVisible();
+  const hit = await revoke.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    const dialog = document.querySelector("[data-testid='session-pop']")!.getBoundingClientRect();
+    const vp = { w: document.documentElement.clientWidth, h: document.documentElement.clientHeight };
+    return {
+      hit: top === el || el.contains(top),
+      inside: r.x >= 0 && r.y >= 0 && r.right <= vp.w + 1 && r.bottom <= vp.h + 1 && dialog.x >= -1 && dialog.right <= vp.w + 1 && dialog.bottom <= vp.h + 1,
+      extra: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      overflow: getComputedStyle(document.querySelector(".app-top-end")!).overflow,
+    };
+  });
+  expect(hit.hit, "Revoke is covered").toBe(true);
+  expect(hit.inside, "session popover is clipped or off-screen").toBe(true);
+  expect(hit.extra, "390 horizontal overflow").toBeLessThanOrEqual(0);
+  expect(hit.overflow).not.toBe("hidden");
+  await pill.focus();
+  await page.keyboard.press("Tab");
+  await expect(revoke).toBeFocused();
+  await revoke.click();
+  await expect(pill).toHaveAttribute("data-state", "locked");
+  await expect(pop).toHaveCount(0);
+  await expect.poll(() => revoked).toBe(1);
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem("kh_session_v1"))).toBeNull();
+  await page.context().route("https://app.mynearwallet.com/**", (route) => route.fulfill({ contentType: "text/html", body: "<title>wallet</title>" }));
+  const popup = page.waitForEvent("popup", { timeout: 20_000 });
+  await pill.click();
+  await (await popup).close();
+  const retry = page.getByTestId("session-retry");
+  const dismiss = pop.getByRole("button", { name: "Dismiss" });
+  await expect(retry).toBeVisible();
+  await expect(dismiss).toBeVisible();
+  const errorHit = await retry.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === el;
+  });
+  expect(errorHit, "Try again is covered").toBe(true);
+  await dismiss.click();
+  await expect(pop).toHaveCount(0);
+});
+}
+
+test("the app font and sidebar render at 1440", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/vault");
+  await page.evaluate(() => document.fonts.ready);
+  const aside = page.locator("aside.app-side");
+  await expect(aside).toBeVisible();
+  await expect(page.getByRole("link", { name: "Vault", exact: true })).toBeVisible();
+  const font = await page.evaluate(() => {
+    const declared = getComputedStyle(document.documentElement).getPropertyValue("--font-inter");
+    const family = declared.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+    const used = getComputedStyle(document.querySelector(".app")!).fontFamily;
+    const loaded = [...document.fonts].some((face) => face.status === "loaded" && face.family.replace(/['"]/g, "") === family);
+    return { family, used, loaded, aside: getComputedStyle(document.querySelector("aside.app-side")!).display };
+  });
+  expect(font.family.toLowerCase()).toContain("inter");
+  expect(font.used).toContain(font.family);
+  expect(font.loaded).toBe(true);
+  expect(font.aside).not.toBe("none");
 });
 
 test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
@@ -323,15 +432,11 @@ test("asset rows stay one line at desktop and 390", async ({ page }, info) => {
       },
     },
   }));
-  await page.addInitScript(() => {
-    sessionStorage.setItem("kh_pending_sign", JSON.stringify({
-      message: JSON.stringify({ op: "balance", account_id: "holder.keyhole.test", ts_ms: 1, params: {} }),
-      nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    }));
-  });
+  const redirect=fixtureRedirect("balance");
+  await page.addInitScript(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
   for (const [w, h] of [[1280, 800], [390, 844]] as const) {
     await page.setViewportSize({ width: w, height: h });
-    await page.goto("/vault#accountId=holder.keyhole.test&publicKey=ed25519:111&signature=abc");
+    await page.goto("/vault"+redirect.hash);
     const list = page.getByTestId("asset-list");
     await expect(list).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("vault-total")).toHaveText("$0.04", { timeout: 15_000 });
@@ -765,4 +870,12 @@ test("verify: when Intel PCS does not answer, the page says so and counts what d
   await expect(page.getByTestId("tally-head")).toContainText("Intel PCS did not answer", { timeout: 30_000 });
   await expect(page.getByTestId("tally-head")).toContainText("25 of 25");
   await expect(page.getByTestId("verdict")).toHaveText("Intel PCS unreachable. Run again.");
+});
+
+test("production redirect parsing does not consume an overwritten challenge on an older signature",async({page})=>{
+ await holdAccount(page);let withdrawals=0;await page.route("**/api/worker",async route=>{if(route.request().postDataJSON()?.op==="withdraw")withdrawals++;await route.fulfill({json:{output:{ok:true,op:"withdraw",request_id:"binding-proof",status:"success"}}});});
+ const ctx={op:"withdraw",amount:"0.01 USDC",to:"holder.keyhole.test"},x=fixtureRedirect("withdraw",ctx,1),y=fixtureRedirect("withdraw",ctx,2);
+ await page.addInitScript(saved=>{if(!sessionStorage.getItem("kh_pending_sign"))sessionStorage.setItem("kh_pending_sign",saved);},y.saved);
+ await page.goto("/vault"+x.hash);await expect.poll(()=>page.evaluate(()=>location.hash)).toBe("");expect(await page.evaluate(()=>sessionStorage.getItem("kh_pending_sign"))).toBe(y.saved);expect(withdrawals).toBe(0);await expect(page.getByTestId("withdraw-out")).toHaveCount(0);
+ await page.goto("/vault?callback=valid"+y.hash);await expect(page.getByTestId("withdraw-out")).toContainText("binding-proof",{timeout:20000});expect(withdrawals).toBe(1);
 });

@@ -21,8 +21,8 @@ const withI18n = (el: ReturnType<typeof createElement>) => createElement(I18nPro
 
 describe("app routes", () => {
   it("the holder routes render inside the shell, URLs unchanged; /swap and /keys are app routes in v3", () => {
-    expect([...APP_ROUTES].sort()).toEqual(["/attack", "/dashboard", "/gallery", "/key", "/keys", "/mint", "/pnl", "/settle", "/swap", "/vault", "/verify"]);
-    for (const p of ["/dashboard", "/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/key/extra", "/verify", "/attack"]) expect(isAppRoute(p), p).toBe(true);
+    expect([...APP_ROUTES].sort()).toEqual(["/attack", "/dashboard", "/gallery", "/key", "/keys", "/mint", "/pledge", "/pnl", "/settle", "/swap", "/vault", "/verify"]);
+    for (const p of ["/dashboard", "/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/key/extra", "/verify", "/attack", "/pledge"]) expect(isAppRoute(p), p).toBe(true);
   });
 
   it("public pages keep the public top bar", () => {
@@ -40,12 +40,13 @@ describe("sidebar items", () => {
       ["Swap", "/swap"],
       ["Vault", "/vault"],
       ["Keys", "/keys"],
+      ["Pledge", "/pledge"],
       ["Activity", "/settle"],
     ]);
   });
 
   it("every link points at a real route", () => {
-    const known = ["/dashboard", "/swap", "/vault", "/keys", "/settle", "/verify", "/attack"];
+    const known = ["/dashboard", "/swap", "/vault", "/keys", "/pledge", "/settle", "/verify", "/attack"];
     for (const i of APP_NAV.flatMap((g) => g.items)) expect(known).toContain(i.href.split("#")[0].split("?")[0]);
   });
 });
@@ -70,8 +71,14 @@ describe("active state", () => {
     expect(isItemActive(item("swap"), "/vault", "")).toBe(false);
   });
 
+  it("Pledge is active on /pledge only", () => {
+    expect(isItemActive(item("pledge"), "/pledge", "")).toBe(true);
+    expect(isItemActive(item("pledge"), "/swap", "")).toBe(false);
+    expect(isItemActive(item("keys"), "/pledge", "")).toBe(false);
+  });
+
   it("only one item is active on each app route", () => {
-    for (const p of ["/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl"]) {
+    for (const p of ["/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/pledge"]) {
       const on = APP_NAV.flatMap((g) => g.items).filter((i) => isItemActive(i, p, ""));
       expect(on.length, p).toBe(1);
     }
@@ -91,6 +98,7 @@ describe("page titles", () => {
   it("the top bar names the page; unknown routes fall back to the product name", () => {
     expect(pageTitle("/dashboard")).toBe("Overview");
     expect(pageTitle("/swap")).toBe("Swap");
+    expect(pageTitle("/pledge")).toBe("Pledge");
     expect(pageTitle("/keys")).toBe("Keys");
     expect(pageTitle("/key/12")).toBe("Key");
     expect(pageTitle("/keys/extra")).toBe("Keys");
