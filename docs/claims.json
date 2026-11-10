@@ -3599,6 +3599,27 @@
    "verify": "node judge/verify-claims.mjs --only test-del_beat_key"
   },
   {
+   "id": "test-delayed_policy_read_blocks_retry_cancel_and_duplicate_action",
+   "claim": "Named test or symbol `delayed_policy_read_blocks_retry_cancel_and_duplicate_action` exists in the source",
+   "where": "README.md:922",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "delayed_policy_read_blocks_retry_cancel_and_duplicate_action",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`delayed_policy_read_blocks_retry_cancel_and_duplicate_action` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-delayed_policy_read_blocks_retry_cancel_and_duplicate_action"
+  },
+  {
    "id": "test-derive_min_out",
    "claim": "Named test or symbol `derive_min_out` exists in the source",
    "where": "SECURITY.md:140",
@@ -3664,7 +3685,7 @@
   {
    "id": "test-failed_seller_cashout_restores_credit_once_without_reversing_title",
    "claim": "Named test or symbol `failed_seller_cashout_restores_credit_once_without_reversing_title` exists in the source",
-   "where": "README.md:920",
+   "where": "README.md:922",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4021,7 +4042,7 @@
   {
    "id": "test-lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds",
    "claim": "Named test or symbol `lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds` exists in the source",
-   "where": "README.md:920",
+   "where": "README.md:922",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4418,6 +4439,27 @@
    "verify": "node judge/verify-claims.mjs --only test-pending_return_count"
   },
   {
+   "id": "test-protected_seller_storage_is_prepaid_separately_before_freeze",
+   "claim": "Named test or symbol `protected_seller_storage_is_prepaid_separately_before_freeze` exists in the source",
+   "where": "README.md:922",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "protected_seller_storage_is_prepaid_separately_before_freeze",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`protected_seller_storage_is_prepaid_separately_before_freeze` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-protected_seller_storage_is_prepaid_separately_before_freeze"
+  },
+  {
    "id": "test-provenance_chain_verifies_and_rejects_a_tampered_owner",
    "claim": "Named test or symbol `provenance_chain_verifies_and_rejects_a_tampered_owner` exists in the source",
    "where": "SECURITY.md:30",
@@ -4647,6 +4689,27 @@
    },
    "expected": "`tampered_message_fails` found in source",
    "verify": "node judge/verify-claims.mjs --only test-tampered_message_fails"
+  },
+  {
+   "id": "test-terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery",
+   "claim": "Named test or symbol `terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery` exists in the source",
+   "where": "README.md:922",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery"
   },
   {
    "id": "test-transfer_call_race_is_closed_on_v2_2",
