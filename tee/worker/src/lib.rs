@@ -450,11 +450,8 @@ pub fn encode_tx(signer: &str, pk: &[u8; 32], nonce: u64, receiver: &str, block_
     v
 }
 
-/// Withdraw destination: `to` must be a well-formed address on `chain`. It may be any such address, not only the
-/// signer's. The holder's NEP-413 / EIP-191 signature covers the whole signed `params` (`params.to` included), so the
-/// holder names the destination explicitly and the signature commits to it. Shape only: no chain lookup. The chains
-/// are fixed here; an unknown chain is `bad_params`.
-pub fn assert_withdraw_to(chain: &str, to: &str) -> Result<(), Error> {
+/// Address parsing only; this does NOT authorize a withdrawal. Use `assert_withdraw_to` for that.
+pub fn validate_chain_address(chain: &str, to: &str) -> Result<(), Error> {
     let ok = match chain {
         "near" => is_valid_account_id(to),
         "sol" => is_sol_address(to),
@@ -462,6 +459,19 @@ pub fn assert_withdraw_to(chain: &str, to: &str) -> Result<(), Error> {
         _ => return Err(err("bad_params", "params.chain is not a supported withdraw chain")),
     };
     if ok { Ok(()) } else { Err(err("bad_params", "params.to is not a valid address for params.chain")) }
+}
+
+/// A withdrawal pays only the verified current NFT holder's own NEAR account.
+/// `current_owner` must come from nft_token at final finality, never request params.
+/// Authentication alone is not sufficient: the owner may have changed since it ran.
+pub fn assert_withdraw_to(chain: &str, to: &str, signer: &str, current_owner: Option<&str>) -> Result<(), Error> {
+    if !owner_is(current_owner, signer) {
+        return Err(err("not_owner", "only the current key holder can withdraw"));
+    }
+    if chain != "near" || to != signer {
+        return Err(err("bad_params", "withdrawals pay only the current holder's NEAR account on NEAR"));
+    }
+    validate_chain_address("near", to)
 }
 
 /// Solana address: base58 that decodes to exactly 32 bytes.

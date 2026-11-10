@@ -103,6 +103,6 @@ describe("swap CTA when the amount is more than the balance, and with a live ses
   it("names the receive chain under the receive panel when it is not NEAR", () => {
     const v = src("../app/swap/view.tsx");
     expect(v).toContain(`to.blockchain !== "near"`);
-    expect(v).toContain("Lands in your vault as {to.symbol} on {chainName(to.blockchain)}. Withdraw it to any {chainName(to.blockchain)} address from the Vault.");
+    expect(v).toContain("Lands in your vault as {to.symbol} on {chainName(to.blockchain)}. Withdraw supported NEAR assets only to your own NEAR account from the Vault.");
   });
 });

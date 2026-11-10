@@ -18,7 +18,7 @@ import { heldFrom, useKeyStore } from "@/lib/keyStore";
 import { useLogVerified } from "@/lib/useLogVerified";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, withdrawParams } from "@/lib/trade";
-import { chainOfAsset, defaultDestination, validDestination } from "@/lib/destination";
+import { defaultDestination, validDestination } from "@/lib/destination";
 import { chainName } from "@/lib/tokens";
 import { keyState, shortAccount, shortKeyId } from "@/lib/near";
 import { acct, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
@@ -153,8 +153,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const [fundedFor, setFundedFor] = useState<string | null>(null);
   const [wAsset, setWAsset] = useState<AssetKey>("usdc");
   const [wAmt, setWAmt] = useState("0.05");
-  /** The address the holder typed. null while untouched: the field then shows the signed-in account when it fits the chain. */
-  const [wTo, setWTo] = useState<string | null>(null);
   const [doneWithdraw, setDoneWithdraw] = useState<DoneWithdraw | null>(null);
   const [prices, setPrices] = useState(initialPrices);
   const [mintTx, setMintTx] = useState<string | null>(null);
@@ -167,9 +165,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const fundKey = `${fundAsset}:${fundUnits ?? ""}`;
   const fundedDeposit = account.res?.output?.ok && fundedFor === fundKey && typeof account.res.output.deposit?.deposit_address === "string" ? String(account.res.output.deposit.deposit_address) : null;
   const wUnits = toBaseUnits(wAmt, ASSETS[wAsset].decimals);
-  const wChain = chainOfAsset(ASSETS[wAsset].id);
-  const wAddr = wTo ?? defaultDestination(wChain, accountId ?? "");
-  const wDest = validDestination(wChain, wAddr);
+  const wAddr = defaultDestination("near", accountId ?? "");
+  const wDest = validDestination("near", wAddr);
   const utcReset = (() => { const d = new Date(); d.setUTCHours(24, 0, 0, 0); return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); })();
 
   const heldId = held?.token.token_id ?? null;
@@ -281,7 +278,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     sessionStorage.setItem(OP_CTX, JSON.stringify(ctx));
     setDoneWithdraw(ctx);
     clearOtherErrors(withdraw);
-    void withdraw.run(withdrawParams(accountId, wAsset, wUnits, { chain: wChain, to: wAddr.trim() }));
+    void withdraw.run(withdrawParams(accountId, wAsset, wUnits));
   }
 
   const totalText = totalKind.kind === "unread" ? t("vault.sealed") : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : formatUsdMicro(totalKind.micro);
@@ -648,8 +645,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 <SettingRow
                   testid="settings-withdraw"
                   iconName="arrow-up"
-                  title="Withdraw to any chain"
-                  sub="Your wallet signs each withdrawal, to any address you choose."
+                  title="Withdraw to your NEAR account"
+                  sub="Only the current key holder receives withdrawals. Your wallet signs each one."
                   onClick={() => setWOpen(true)}
                 />
                 <SettingRow
@@ -762,20 +759,18 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         <div className="vlt-stack">
           <div className="vlt-field">
             <span className="vlt-label">{t("vault.asset")}</span>
-            <TokenSelect label={t("vault.asset")} options={TOKEN_OPTIONS} value={ASSETS[wAsset].id} onChange={(id) => { setWAsset(keyOfId(id)); setWTo(null); }} testid="w-asset" />
+            <TokenSelect label={t("vault.asset")} options={TOKEN_OPTIONS} value={ASSETS[wAsset].id} onChange={(id) => setWAsset(keyOfId(id))} testid="w-asset" />
           </div>
           <AmountInput label={t("vault.amount")} value={wAmt} onChange={setWAmt} symbol={ASSETS[wAsset].symbol} error={wUnits ? null : t("vault.badAmount")} testid="w-amt" />
           <div className="vlt-field" data-testid="w-chain-field">
             <span className="vlt-label">Chain</span>
-            <div className="vlt-box ro" data-testid="w-chain"><span className="v">{chainName(wChain)}</span></div>
-            <p className="vlt-sub">The token pays out on its own chain.</p>
+            <div className="vlt-box ro" data-testid="w-chain"><span className="v">NEAR</span></div>
+            <p className="vlt-sub">Withdrawals go only to the current key holder on NEAR.</p>
           </div>
           <div className="vlt-field">
-            <label className="vlt-label" htmlFor="w-dest">{t("vault.dest")}</label>
-            <input id="w-dest" className="input" value={wAddr} onChange={(e) => setWTo(e.target.value)} spellCheck={false} autoComplete="off"
-              placeholder={`Address on ${chainName(wChain)}`} aria-invalid={wDest.ok ? undefined : true} aria-describedby="w-dest-note" data-testid="w-dest" />
-            {!wDest.ok && wAddr.trim() !== "" && <p className="note-box" role="alert" data-testid="w-dest-error">{wDest.reason}</p>}
-            <p className="vlt-sub" id="w-dest-note">{t("vault.destHelp")}</p>
+            <span className="vlt-label">{t("vault.dest")}</span>
+            <div className="vlt-box ro" data-testid="w-dest"><span className="v">{wAddr}</span></div>
+            <p className="vlt-sub" id="w-dest-note">Your signed-in NEAR account. The worker verifies you still hold the key.</p>
           </div>
           {coolUntil ? <p className="note-box" data-testid="cooldown-note">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
           <Button block testid="withdraw-btn" loading={withdraw.busy} loadingLabel={withdraw.label} disabled={!wUnits || !wDest.ok || withdraw.busy} onClick={doWithdraw}>

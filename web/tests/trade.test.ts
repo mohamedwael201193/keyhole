@@ -36,7 +36,8 @@ describe("site trade params match the CLI", () => {
     });
     expect(withdrawParams("you.near", "wnear", "1").token).toBe(CLI_WNEAR);
     expect(withdrawParams("you.near", "usdc", "1").token).not.toBe("USDC");
-    expect(withdrawParams("you.near", "usdc", "1", { chain: "base", to: "0xf76e4b0a4c2d9a1e8b3f5c7d9e1a2b3c4d5e71a3" })).toMatchObject({ chain: "base", to: "0xf76e4b0a4c2d9a1e8b3f5c7d9e1a2b3c4d5e71a3" });
+    // @ts-expect-error Arbitrary destinations are no longer part of the public API.
+    expect(withdrawParams("you.near", "usdc", "1", { chain: "base", to: "0xf76e4b0a4c2d9a1e8b3f5c7d9e1a2b3c4d5e71a3" })).toMatchObject({ chain: "near", to: "you.near" });
   });
 
   it("fund keeps the deposit-API symbol, which is not the withdraw id", () => {

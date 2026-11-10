@@ -597,12 +597,12 @@ mod host {
     fn op_withdraw(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "withdraw", true)?;
         let p = &c.req.params;
-        let lim = limits_now(&c)?;
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
-        // `to` is checked for shape on `chain` only. The NEP-413 message signed above already contains params.to, so
-        // the holder has signed this destination explicitly.
-        assert_withdraw_to(&chain, &to)?;
+        // Re-read the actual owner at final finality. Refuse before custody access or spend reservation.
+        let nft = view(&keys_contract(), "nft_token", json!({"token_id": c.token_id()}))?;
+        assert_withdraw_to(&chain, &to, &c.account, nft.get("owner_id").and_then(Value::as_str))?;
+        let lim = limits_now(&c)?;
         prov_sync_owner(&c.token_id(), &c.account, c.now_ms)?;
         let evs: Vec<ProvEvent> = load_prov(&c.token_id())?.into_iter().map(|(e, _)| e).collect();
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
@@ -622,7 +622,7 @@ mod host {
             charge.release(&mut Host);
             return Err(e);
         }
-        let r = wallet_op(&key, "/wallet/v1/confidential/withdraw", json!({"chain": chain, "to": to, "amount": amt, "token": token}));
+        let r = wallet_op(&key, "/wallet/v1/confidential/withdraw", json!({"chain": "near", "to": c.account, "amount": amt, "token": token}));
         let r = match r { Ok(r) => r, Err(e) => { charge.release(&mut Host); return Err(e); } };
         let raw_status = s(&r, "status").unwrap_or_default();
         charge.settle(&mut Host, &raw_status);

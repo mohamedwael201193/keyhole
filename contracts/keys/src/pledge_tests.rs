@@ -399,3 +399,27 @@ include!("pledge_review_round2_tests.rs");
 include!("pledge_review_round3_tests.rs");
 
 include!("pledge_review_round4_tests.rs");
+
+#[test] fn value_op_rejects_non_minter_even_when_naming_the_holder() {
+    let mut c=setup();ctx("bob.near",N/100,NOW);
+    rejected(||c.begin_value_op("k1".into(),U64(0),"1:withdraw".into(),"hash".into(),a("alice.near")));
+    assert_eq!(c.pending_value_op_count("k1".into()).0,0);
+}
+#[test] fn value_op_rejects_old_holder_after_real_nft_transfer_at_current_epoch() {
+    let mut c=setup();ctx("alice.near",1,NOW);c.nft_transfer(a("bob.near"),"k1".into(),None,None);
+    let epoch=c.nft_settlement_epoch("k1".into());assert_eq!(epoch.0,1);
+    ctx("minter.near",N/100,NOW);
+    rejected(||c.begin_value_op("k1".into(),epoch,"1:withdraw".into(),"hash".into(),a("alice.near")));
+    assert_eq!(c.pending_value_op_count("k1".into()).0,0);
+    c.begin_value_op("k1".into(),epoch,"1:withdraw".into(),"hash".into(),a("bob.near"));
+    assert_eq!(c.pending_value_op_count("k1".into()).0,1);
+}
+#[test] fn admitted_value_op_blocks_transfer_until_terminal_finish() {
+    let mut c=setup();ctx("minter.near",N/100,NOW);
+    c.begin_value_op("k1".into(),U64(0),"1:withdraw".into(),"hash".into(),a("alice.near"));
+    ctx("alice.near",1,NOW);rejected(||c.nft_transfer(a("bob.near"),"k1".into(),None,None));
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+    ctx("minter.near",0,NOW);c.finish_value_op("k1".into(),"1:withdraw".into(),true);
+    ctx("alice.near",1,NOW);c.nft_transfer(a("bob.near"),"k1".into(),None,None);
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("bob.near"));
+}

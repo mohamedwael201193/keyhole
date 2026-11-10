@@ -576,6 +576,8 @@ impl Contract {
 
     /// Admit a value-op before external custody dispatch. Minter (TEE settler) only for v1.
     /// Refuses if listed, epoch mismatch, or op_id already present. Does not move funds.
+    /// There is no payout receiver argument: owner_id must equal the live NFT owner.
+    /// A pending admission blocks ownership changes until terminal reconciliation.
     #[payable]
     pub fn begin_value_op(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64, op_id: String, action_hash: String, owner_id: AccountId) {
         self.assert_minter();
