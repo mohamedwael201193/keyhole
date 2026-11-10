@@ -32,7 +32,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   const before=await balance(meta.borrower);await claim(borrower,"Cash out principal");await state("Active");expect(BigInt((await loan()).due_ns)).toBeGreaterThan(0n);expect(await balance(meta.borrower)-before).toBeGreaterThan(5_000_000_000_000_000_000_000n);await capture(`${label}_native_delivered_active`);
  }
  try{
-  await capture("00_ready");await readInventory(borrower);await capture("01_private_inventory");
+  await state("Ready to pledge");await capture("00_ready");await readInventory(borrower);await capture("01_private_inventory");
   await begin("repay");
   await fixture("policy",{refuse_thaw:true});await borrower.getByRole("button",{name:"Repay 0.0101 NEAR & thaw",exact:true}).click();await state("UnlockPending");await capture("repay_thaw_pending");
   await fixture("policy",{refuse_thaw:false});await borrower.getByRole("button",{name:"Retry completed policy transition",exact:true}).click();await state("Repaid · thaw confirmed");await capture("repay_thawed_credits");

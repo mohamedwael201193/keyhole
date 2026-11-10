@@ -1,6 +1,6 @@
 {
   "candidate_only": true,
-  "recorded_at_cairo": "2026-11-10T03:15:33.009447+02:00",
+  "recorded_at_cairo": "2026-11-10T03:20:55.119845+02:00",
   "reviewed_parents": {
     "ui": "c976895b536a2b951b10816a1c96d9dd96132992",
     "contract": "f58b3eb14d3dc7d2b969eb68c00ddde34179cc79",
@@ -14,7 +14,7 @@
     },
     "web_units": {
       "files_passed": 85,
-      "tests_passed": 1598
+      "tests_passed": 1599
     },
     "web_production_default_off_build": "PASS (webpack, existing dependencies)",
     "funded_spec_typecheck": "PASS, not execution",
@@ -28,7 +28,8 @@
       "fail": 0,
       "error": 0,
       "skip": 294
-    }
+    },
+    "terminal_display": "PASS: missing final-chain reads cannot fabricate a repaid/default/thawed ending; delayed cancellation retains its canceled resolution"
   },
   "normal_contract_wasm_sha256": "e0922b1e922f0c874e210e4a266711d4dca0e7f4e9d37f86654a23e08ce42bd3",
   "candidate_worker_wasm_sha256": "5036f802dda07466bfbc7a9bf0731ca1ac2b3469ff14892a34dde08b28b09ce9",
