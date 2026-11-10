@@ -16,6 +16,10 @@ This was reproduced, not inferred from a single CI timeout: the unchanged test f
 
 [The corrected test](../../../web/e2e/pledge-review-r3.spec.ts) synchronously reads and asserts an empty store in **both** tabs before either may publish, matching the mounted component's initial observation. It still races both real Web Lock contenders and keeps the original one-admission, one-wallet and positive-notification assertions. It additionally checks notifications in **both** tabs and binds their observed IDs to the actual winning operation. Two forced winner-order regressions cover either publisher finishing before the contender starts. No sleep, timeout increase, fabricated storage event, retry change or production lock change is used.
 
+## Separate reload-fixture race found by the no-retry full suite
+
+The first complete local no-retry suite also exposed an unrelated Vault cashout fixture failure: its mocked RPC route called `page.evaluate` while `page.reload()` destroyed the old execution context. This was a mock-backend/document-lifetime coupling, not a failed payout guard. [Both ordinary payout fixtures](../../../web/e2e/integration196.spec.ts) now keep their backend registration/claim state in the test process, updated through an awaited browser binding **only when the actual mock wallet transport is invoked**. The route no longer evaluates a navigating document or infers settlement from a reserved local intent. All original wallet-call, durable UNKNOWN, foreign-signer, pending-chain, FINAL/callback and reload/no-resend assertions remain unchanged. No application code or financial rule changes.
+
 ## Execution
 
 The final local-head report records clean `npm ci` followed by two `npm run postinstall` executions, complete web gates, and thirty no-retry repetitions of all three notification orderings at both configured viewports. This is browser/storage/native-install evidence, not a mainnet transaction, live external wallet or custody-confinement certification.

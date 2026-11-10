@@ -10,7 +10,7 @@ test.beforeAll(async()=>{
   const result=await build({absWorkingDir:process.cwd(),stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {PayoutPanel} from './components/PayoutPanel';import {ValueRecovery} from './components/ValueRecovery';createRoot(document.getElementById('root')).render(<><PayoutPanel/><ValueRecovery/></>);`,resolveDir:process.cwd(),loader:"tsx"},bundle:true,write:false,format:"iife",define:{"process.env":"{}","process.env.NODE_ENV":'"production"'},plugins:[{name:"isolated-wallet-adapter",setup(b){
     b.onResolve({filter:/^@\/lib\/wallet$/},()=>({path:"wallet-test-only",namespace:"local-test"}));
     b.onResolve({filter:/^next\/navigation$/},()=>({path:"navigation-test-only",namespace:"local-test"}));
-    b.onLoad({filter:/.*/,namespace:"local-test"},a=>({contents:a.path.startsWith("navigation")?`export const usePathname=()=>'/vault';`:`export const useWallet=()=>({accountId:'alice.near',sign:async(op,params={})=>({account_id:'alice.near',public_key:'local-test',signature:'local-test',nonce:'local-test',recipient:'keyhole',message:JSON.stringify({op,account_id:'alice.near',ts_ms:Date.now(),params})}),sendTx:async(call)=>{(window.__calls??=[]).push(call);if(call.method==='register_payout_account')window.__registered=true;return {txHash:'local-test-transaction'};},sendTxBatch:async(calls,consent)=>{if(consent.expectedSigner!=='alice.near')throw Error('wrong expected signer');(window.__calls??=[]).push(...calls);if(calls.some(c=>c.method==='register_payout_account'))window.__registered=true;if(calls.some(c=>c.method==='claim_payout'))window.__claimCalls=(window.__claimCalls??0)+1;return {txHash:'local-test-claim'};}});`,loader:"js"}));
+    b.onLoad({filter:/.*/,namespace:"local-test"},a=>({contents:a.path.startsWith("navigation")?`export const usePathname=()=>'/vault';`:`export const useWallet=()=>({accountId:'alice.near',sign:async(op,params={})=>({account_id:'alice.near',public_key:'local-test',signature:'local-test',nonce:'local-test',recipient:'keyhole',message:JSON.stringify({op,account_id:'alice.near',ts_ms:Date.now(),params})}),sendTx:async(call)=>{(window.__calls??=[]).push(call);if(call.method==='register_payout_account')window.__registered=true;await window.__walletSubmitted([call]);return {txHash:'local-test-transaction'};},sendTxBatch:async(calls,consent)=>{if(consent.expectedSigner!=='alice.near')throw Error('wrong expected signer');(window.__calls??=[]).push(...calls);if(calls.some(c=>c.method==='register_payout_account'))window.__registered=true;if(calls.some(c=>c.method==='claim_payout'))window.__claimCalls=(window.__claimCalls??0)+1;await window.__walletSubmitted(calls);return {txHash:'local-test-claim'};}});`,loader:"js"}));
   }}]});
   const js=result.outputFiles[0].text;
   server=createServer((req,res)=>{if(req.url==="/bundle.js"){res.setHeader("content-type","text/javascript");res.end(js);}else{res.setHeader("content-type","text/html");res.end('<!doctype html><html><body><main id="root"></main><script src="/bundle.js"></script></body></html>');}});
@@ -18,13 +18,13 @@ test.beforeAll(async()=>{
 });
 test.afterAll(async()=>{if(server)await new Promise<void>((r,j)=>server.close(e=>e?j(e):r()));});
 test("ordinary payout consent and original custody recovery survive reload without duplicate dispatch",async({page},info)=>{
-  const id="1:"+"a".repeat(64);let reconciles=0, payoutCost="3200000000000000000000";
+  const id="1:"+"a".repeat(64);let reconciles=0, payoutCost="3200000000000000000000", registered=false;
+  await page.exposeFunction("__walletSubmitted", (calls:{method:string}[])=>{if(calls.some(c=>c.method==="register_payout_account"))registered=true;});
   await page.addInitScript(({id})=>{const k='kh_value_recovery_v1:'+JSON.stringify(['alice.near','k1234',id]);if(!sessionStorage.getItem('seeded')){localStorage.setItem(k,JSON.stringify({account:'alice.near',token_id:'k1234',value_op_id:id,status:'processing'}));sessionStorage.setItem('seeded','1');}},{id});
   await page.route(/https:\/\/.*(?:fastnear|near).*|https:\/\/rpc\.mainnet.*/,async route=>{
     const j=route.request().postDataJSON();const m=j.params?.method_name;
     if(j.method==='block')return route.fulfill({json:{result:{header:{hash:'block42',height:41}}}});
     if(j.method==='tx')return route.fulfill({json:{error:{message:'Unknown transaction'}}});
-    const registered=await page.evaluate(()=>Boolean((window as any).__registered));
     const value=({payout_storage_cost:payoutCost,payout_account_registered:registered,get_payout_credit:'0',get_pending_payout:null} as any)[m];
     await route.fulfill({json:{result:{result:[...Buffer.from(JSON.stringify(value))]}}});
   });
@@ -51,7 +51,10 @@ test("ordinary payout consent and original custody recovery survive reload witho
 
 // Actual ordinary payout component + durable Web Locks/store + receipt helpers; transports remain mocked.
 test("Vault cashout keeps UNKNOWN across reload and binds FINAL receipt before delivery", async ({page}) => {
-  let final = false, chainPending = true, wrongSigner = false;
+  let final = false, chainPending = true, wrongSigner = false, claimed = false;
+  // Mock backend state belongs to the wallet transport, not a document that may
+  // be destroyed by reload while an earlier RPC request is still in flight.
+  await page.exposeFunction("__walletSubmitted", (calls:{method:string}[])=>{if(calls.some(c=>c.method==="claim_payout"))claimed=true;});
   await page.addInitScript(() => { (window as any).__registered = true; });
   await page.route(/https:\/\/.*(?:fastnear|near).*|https:\/\/rpc\.mainnet.*/, async route => {
     const j = route.request().postDataJSON();
@@ -63,7 +66,6 @@ test("Vault cashout keeps UNKNOWN across reload and binds FINAL receipt before d
     }
     if (j.method === 'block') return route.fulfill({json:{result:{header:{hash:'block42',height:j.params?.block_id?42:41}}}});
     const m = j.params?.method_name;
-    const claimed = await page.evaluate(() => !!(window as any).__claimCalls || Object.keys(localStorage).some(k=>k.startsWith('keyhole:pledge-money:v1:')));
     const value = ({payout_storage_cost:'3200000000000000000000',payout_account_registered:true,get_payout_credit:claimed?'0':'10',get_pending_payout:claimed&&chainPending?{nonce:'1',amount:'10'}:null} as any)[m];
     await route.fulfill({json:{result:{result:[...Buffer.from(JSON.stringify(value))]}}});
   });
