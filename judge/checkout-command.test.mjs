@@ -18,7 +18,7 @@ const fence = section.split("```bash\n")[1].split("```")[0].trim();
 const lines = fence.split("\n").map((l) => l.trim()).filter(Boolean);
 
 test("primary fence checks out the branch that contains the judge script", () => {
-  assert.match(lines[0], /^git clone --depth 1 --branch fix\/int196-r2 https:\/\/github\.com\/mohamedwael201193\/keyhole\.git$/);
+  assert.match(lines[0], /^git clone --depth 1 --branch integration\/final-candidate https:\/\/github\.com\/mohamedwael201193\/keyhole\.git$/);
   assert.equal(lines[1], "cd keyhole");
   assert.equal(lines[2], "test -f judge/0-live.sh");
   assert.equal(lines[3], "bash judge/0-live.sh");
@@ -31,10 +31,10 @@ test("exact clone of this branch has the script; main does not", { timeout: 180_
     const source = join(parent, "source");
     execFileSync("git", ["clone", "--local", repo, source], { stdio: "pipe" });
     // A CI checkout is often detached. The fence names this branch, so the source must have that ref at HEAD.
-    execFileSync("git", ["checkout", "-B", "fix/int196-r2"], { cwd: source, stdio: "pipe" });
+    execFileSync("git", ["checkout", "-B", "integration/final-candidate"], { cwd: source, stdio: "pipe" });
     const run = join(parent, "run");
     execFileSync("mkdir", ["-p", run]);
-    execFileSync("git", ["clone", "--depth", "1", "--branch", "fix/int196-r2", source, "keyhole"], { cwd: run, stdio: "pipe" });
+    execFileSync("git", ["clone", "--depth", "1", "--branch", "integration/final-candidate", source, "keyhole"], { cwd: run, stdio: "pipe" });
     const checkout = join(run, "keyhole");
     execFileSync("test", ["-f", "judge/0-live.sh"], { cwd: checkout });
     execFileSync("test", ["-f", "judge/receipt_proof.py"], { cwd: checkout });

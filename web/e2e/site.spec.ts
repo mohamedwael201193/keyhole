@@ -1,6 +1,7 @@
 import {fixtureRedirect} from "./support/signed-redirect";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import identity from "../../identity.json";
 const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge", "/ask"];
 const shots = process.env.SHOTS_DIR;
 
@@ -303,15 +304,35 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await expect(page.getByTestId("error")).toHaveCount(0);
 });
 
-test("the session popover stays visible at 390 and Revoke is clickable", async ({ page }) => {
+for (const profile of ["v2.5", "v2.4"] as const) {
+test(`the session popover stays visible at 390 and Revoke is clickable (${profile})`, async ({ page }) => {
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await holdAccount(page);
-  await page.addInitScript(() => {
+  // A guarded grant is epoch-bound. The legacy fixture explicitly represents the pinned
+  // live v2.4 profile, never a missing epoch silently converted to epoch zero.
+  await page.route("https://rpc.mainnet.fastnear.com/**", async route => {
+    const body = route.request().postDataJSON();
+    const params = body?.params;
+    if (params?.request_type === "view_account") {
+      expect(params.finality).toBe("final");
+      return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result: { code_hash: identity.contract.code_hash } } });
+    }
+    if (!["get_control_state", "nft_token"].includes(params?.method_name)) return route.fallback();
+    expect(params.finality).toBe("final");
+    if (params.method_name === "get_control_state" && profile === "v2.4") {
+      return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result: { error: "wasm execution failed with error: FunctionCallError(MethodResolveError(MethodNotFound))" } } });
+    }
+    const payload = params.method_name === "nft_token" ? { token_id: "4", owner_id: "holder.keyhole.test" }
+      : { token_id: "4", owner_epoch: "7", transfer_pending: false };
+    return route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result: { result: [...new TextEncoder().encode(JSON.stringify(payload))] } } });
+  });
+  await page.addInitScript(profile => {
     sessionStorage.setItem("kh_session_v1", JSON.stringify({
       token: "sess-test", account: "holder.keyhole.test", token_id: "4", exp_ms: Date.now() + 25 * 60 * 1000, max_usd_micro: 5_000_000,
+      profile, ...(profile === "v2.5" ? { owner_epoch: "7" } : {}),
     }));
-  });
+  }, profile);
   let revoked = 0;
   await page.route("**/api/worker", async (route) => {
     const body = route.request().postDataJSON() as { op?: string } | null;
@@ -365,6 +386,7 @@ test("the session popover stays visible at 390 and Revoke is clickable", async (
   await dismiss.click();
   await expect(pop).toHaveCount(0);
 });
+}
 
 test("the app font and sidebar render at 1440", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });

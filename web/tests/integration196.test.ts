@@ -96,43 +96,6 @@ describe("ordinary-flow payout onboarding",()=>{
   });
 });
 
-describe("passive health",()=>{
-  it("GET /api/health never calls OutLayer /call",async()=>{
-    const calls:string[]=[];
-    vi.stubGlobal("fetch",vi.fn(async(url:string)=>{ calls.push(String(url)); return new Response("{}"); }));
-    const { GET, POST }=await import("@/app/api/health/route");
-    const { NextRequest }=await import("next/server");
-    const priorProbe=process.env.KEYHOLE_HEALTH_PROBE;
-    const priorKey=process.env.OUTLAYER_PAYMENT_KEY;
-    delete process.env.KEYHOLE_HEALTH_PROBE;
-    process.env.OUTLAYER_PAYMENT_KEY="local-test-not-a-secret";
-    try {
-      const res=await GET(new NextRequest("http://localhost/api/health",{headers:{"x-forwarded-for":"192.0.2.10"}}));
-      expect(res.status).toBe(200);
-      const body=await res.json();
-      expect(body).toMatchObject({mode:"passive",online:null,fresh:false,reason:"not_probed"});
-      expect(calls).toEqual([]);
-      const denied=await POST(new NextRequest("http://localhost/api/health",{method:"POST",headers:{"x-forwarded-for":"192.0.2.11"},body:JSON.stringify({approve:"spend-one-info-call"})}));
-      expect(denied.status).toBe(403);
-      expect(calls).toEqual([]);
-      process.env.KEYHOLE_HEALTH_PROBE="1";
-      const still=await POST(new NextRequest("http://localhost/api/health",{method:"POST",headers:{"x-forwarded-for":"192.0.2.12"},body:JSON.stringify({approve:"no"})}));
-      expect(still.status).toBe(403);
-      expect(calls).toEqual([]);
-      const probed=await POST(new NextRequest("http://localhost/api/health",{method:"POST",headers:{"x-forwarded-for":"192.0.2.13"},body:JSON.stringify({approve:"spend-one-info-call"})}));
-      expect(probed.status).toBe(200);
-      const paid=await probed.json();
-      expect(paid.mode).toBe("active");
-      expect(paid.payer).toBe("keyhole-devmo.near/keyhole");
-      expect(paid.budget).toMatch(/payment key/);
-      expect(calls.some((u)=>u.includes("/call/"))).toBe(true);
-    } finally {
-      if(priorProbe===undefined) delete process.env.KEYHOLE_HEALTH_PROBE; else process.env.KEYHOLE_HEALTH_PROBE=priorProbe;
-      if(priorKey===undefined) delete process.env.OUTLAYER_PAYMENT_KEY; else process.env.OUTLAYER_PAYMENT_KEY=priorKey;
-    }
-  });
-});
-
 describe("real hosted gateway adapter",()=>{
   it("relays the same authenticated journal on pending and terminal responses, and preserves public certificate params",async()=>{
     const { POST }=await import("@/app/api/worker/route");const { NextRequest }=await import("next/server");

@@ -32,7 +32,7 @@ No wallet, no Rust, no `npm install`. You need `curl`, `bash` and `python3` (sta
 `main` does not contain `judge/0-live.sh`. Clone the review branch that does. The same branch is the identity file the no-checkout path reads.
 
 ```bash
-git clone --depth 1 --branch fix/int196-r2 https://github.com/mohamedwael201193/keyhole.git
+git clone --depth 1 --branch integration/final-candidate https://github.com/mohamedwael201193/keyhole.git
 cd keyhole
 test -f judge/0-live.sh
 bash judge/0-live.sh
@@ -41,9 +41,9 @@ bash judge/0-live.sh
 No git? Download the script and the receipt checker from that same branch, plus `identity.json` from that same branch, and run them together:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/fix/int196-r2/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/fix/int196-r2/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/fix/int196-r2/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/integration/final-candidate/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/integration/final-candidate/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/integration/final-candidate/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 
@@ -608,7 +608,7 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ### The checks
 
 ```bash
-git clone --depth 1 --branch fix/int196-r2 https://github.com/mohamedwael201193/keyhole.git
+git clone --depth 1 --branch integration/final-candidate https://github.com/mohamedwael201193/keyhole.git
 cd keyhole
 
 bash ./judge/0-live.sh                   # curl + python3 only: live code hash, views, one existing attestation, one FINAL receipt
@@ -627,7 +627,7 @@ bash ./judge/4-live-refusals.sh          # with your own NEAR account: replay an
 
 **In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. Which browser transcript is recorded: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 
-GET `/api/health` is passive. The browser reads it once and keeps unprobed availability unknown; it never retries into a paid probe. It does not spend compute and it does not report the enclave online. The paid check's 2026-11-10 08:31 Africa/Cairo result remains the FAIL in [validation.json](docs/evidence/integration-stack/validation.json). An approved probe is separate: [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
+GET `/api/health` is passive. The browser reads it once and keeps unprobed availability unknown; it never retries into a paid probe. It does not spend compute and it does not report the enclave online. The paid check's 2026-11-10 08:31 Africa/Cairo result remains the FAIL in [validation.json](docs/evidence/integration-stack/validation.json). The HTTP surface has a permanent zero compute budget, including POST; replay and concurrent refusals are covered by [health-route tests](web/tests/health-route.test.ts). Operator verification is separate: [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
 
 **The CLI** ([`cli/README.md`](cli/README.md)) works with any NEAR account, and the key stays on your machine. Only signatures are sent.
 
@@ -930,9 +930,12 @@ This local stack combines admission, guarded custody, serialized policy commands
 Reproduce without wallets, deployments or spending:
 
 ```bash
+export CARGO_BUILD_JOBS=1 NODE_OPTIONS=--max-old-space-size=3072
 (cd contracts/keys && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains && ./build.sh)
+# Fault injection is sandbox-only, never a release/deploy artifact:
+(cd contracts/keys && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm && ./build.sh && cmp target/near/keyhole_keys.wasm release/v2.5/keyhole_keys.wasm)
 (cd contracts/keys-sandbox && ./build-policy-mock.sh && cargo test --locked -- --test-threads=1)
-(cd tee/worker && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings && node verify-log.mjs --self-test)
+(cd tee/worker && cargo test --locked && cargo clippy --locked --all-targets -- -D warnings && cargo clippy --locked --target wasm32-wasip2 -- -D warnings && ./build.sh && node verify-log.mjs --self-test)
 (cd web && npm ci && npm run lint && npm run typecheck && npm test && npm run build)
 (cd cli && npm ci && npm test && npx tsc -p . --noEmit)
 node --test scripts/pledge/plan.test.mjs
@@ -964,9 +967,8 @@ Withdrawal cooldown is keyed by **contract + token + authoritative ownership epo
 ```bash
 (cd contracts/keys && cargo test --locked custody && cargo test --locked policy)
 (cd tee/worker && cargo test --locked ownership_sync && cargo clippy --locked --target wasm32-wasip2 -- -D warnings)
-# Full normal-release + labelled mock/fault integration:
-(cd contracts/keys && ./build.sh && ./build.sh --features callback-failure-fixture && cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm)
-(cd contracts/keys-sandbox && cargo test --locked)
+# For the complete normal-release + labelled mock/fault integration,
+# use the single full reproduction fence under “Pledge preparation” above.
 python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
 ```
 
@@ -1018,3 +1020,7 @@ The integration candidate combines the final-owner-epoch client and original-jou
 One claim surface owns each route: Pledge uses its loan action panel, Vault pairs ordinary payout-slot onboarding with durable native cashout, and other holder routes use the shared credit panel. All cashout surfaces share the account/contract money-intent store and FINAL action/identity/dispatch-height checks; pending or UNKNOWN never grants another send. Vault labels delivery only after the successful FINAL callback proof. [Vault payout panel](web/components/PayoutPanel.tsx), [shared credit panel](web/components/PayoutCredit.tsx), [receipt guards](web/lib/pledgeMoney.ts), [callback verifier](web/lib/payout.ts), [route/guard regression](web/tests/pledge-integration-merge.test.ts).
 
 The merged client requires the current storage-bond/binding quote, keeps first-use registration and financial action in a single 220-Tgas batch, and retains the exact 13-receipt funded acceptance ledger. Contract release bytes and generated live identities remain those of the integration base. These are source invariants; each hosted run and funded manifest identifies its own tested head. [Client tests](web/tests/pledge-client.test.ts), [receipt-ledger negatives](web/tests/pledge-review-r5.test.ts), [funded acceptance](web/e2e/pledge-funded.spec.ts), [release checksums](contracts/keys/release/SHA256SUMS), [release boundaries](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).
+
+### Final integration regression proofs
+
+Public health cannot dispatch paid compute, even with stale opt-in flags: [GET and refused/replayed/concurrent POST tests](web/tests/health-route.test.ts). Inventory propagates provenance-load failures before iteration in the actual [WASI host](tee/worker/src/guarded_host.rs); the [dedicated WASI clippy and build gates](.github/workflows/ci.yml) check the production target. The [Revoke browser tests](web/e2e/site.spec.ts) retain real hit testing, keyboard focus, one revoke call and token deletion for both an epoch-bound v2.5 session and an explicitly pinned legacy-profile fixture. The [full reproduction fence](#pledge-preparation--v25-source-not-deployed) builds the callback-failure fixture before sandbox tests and restores byte-identical normal output; [recipe regression tests](judge/reproduction.test.mjs) keep that ordering executable. Operational boundaries remain in [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).

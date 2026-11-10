@@ -19,13 +19,13 @@ command -v "$PYTHONBIN" >/dev/null || { echo "FAIL missing python3 (stdlib only;
 
 HERE="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 ROOT="$(CDPATH= cd -- "$HERE/.." && pwd)"
-REVIEW_REF="${KEYHOLE_REVIEW_REF:-fix/int196-r2}"
+REVIEW_REF="${KEYHOLE_REVIEW_REF:-integration/final-candidate}"
 DEFAULT_IDENTITY_URL="${IDENTITY_URL:-https://raw.githubusercontent.com/mohamedwael201193/keyhole/${REVIEW_REF}/identity.json}"
 OUTLAYER="${OUTLAYER_API:-https://api.outlayer.ai}"
 # Recorded refusal predicate lives next to this script (stdlib Python, no packages).
 RECEIPT_PY="$HERE/receipt_proof.py"
 if [ ! -f "$RECEIPT_PY" ]; then
-  echo "FAIL missing $RECEIPT_PY. Check out ${REVIEW_REF:-fix/int196-r2}; main does not contain this judge path."
+  echo "FAIL missing $RECEIPT_PY. Check out ${REVIEW_REF:-integration/final-candidate}; main does not contain this judge path."
   exit 2
 fi
 

@@ -6268,6 +6268,19 @@
    "verify": "node judge/verify-claims.mjs --only path-web/e2e/site.spec.ts"
   },
   {
+   "id": "path-web/tests/health-route.test.ts",
+   "claim": "Linked repo path web/tests/health-route.test.ts exists",
+   "where": "README.md:630",
+   "evidence_type": "file",
+   "evidence": "web/tests/health-route.test.ts",
+   "check": {
+    "type": "path",
+    "path": "web/tests/health-route.test.ts"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests/health-route.test.ts"
+  },
+  {
    "id": "path-cli/README.md",
    "claim": "Linked repo path cli/README.md exists",
    "where": "README.md:632",
@@ -6725,7 +6738,7 @@
   {
    "id": "path-protocol/loan-certificate-v3-delivery.json",
    "claim": "Linked repo path protocol/loan-certificate-v3-delivery.json exists",
-   "where": "README.md:947",
+   "where": "README.md:950",
    "evidence_type": "file",
    "evidence": "protocol/loan-certificate-v3-delivery.json",
    "check": {
@@ -6738,7 +6751,7 @@
   {
    "id": "path-web/tests/pledge-money.test.ts",
    "claim": "Linked repo path web/tests/pledge-money.test.ts exists",
-   "where": "README.md:949",
+   "where": "README.md:952",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-money.test.ts",
    "check": {
@@ -6751,7 +6764,7 @@
   {
    "id": "path-docs/pledge/TEAM_RUNBOOK.md",
    "claim": "Linked repo path docs/pledge/TEAM_RUNBOOK.md exists",
-   "where": "README.md:953",
+   "where": "README.md:956",
    "evidence_type": "file",
    "evidence": "docs/pledge/TEAM_RUNBOOK.md",
    "check": {
@@ -6764,7 +6777,7 @@
   {
    "id": "path-docs/evidence/integration-stack/artifact-repro-r2.json",
    "claim": "Linked repo path docs/evidence/integration-stack/artifact-repro-r2.json exists",
-   "where": "README.md:959",
+   "where": "README.md:962",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/artifact-repro-r2.json",
    "check": {
@@ -6777,7 +6790,7 @@
   {
    "id": "path-web/tests/integration196.test.ts",
    "claim": "Linked repo path web/tests/integration196.test.ts exists",
-   "where": "README.md:959",
+   "where": "README.md:962",
    "evidence_type": "file",
    "evidence": "web/tests/integration196.test.ts",
    "check": {
@@ -6790,7 +6803,7 @@
   {
    "id": "path-protocol/client-owner-epoch.json",
    "claim": "Linked repo path protocol/client-owner-epoch.json exists",
-   "where": "README.md:959",
+   "where": "README.md:962",
    "evidence_type": "file",
    "evidence": "protocol/client-owner-epoch.json",
    "check": {
@@ -6803,7 +6816,7 @@
   {
    "id": "path-web/tests/pledge-labels.test.ts",
    "claim": "Linked repo path web/tests/pledge-labels.test.ts exists",
-   "where": "README.md:987",
+   "where": "README.md:989",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-labels.test.ts",
    "check": {
@@ -6816,7 +6829,7 @@
   {
    "id": "path-docs/pledge/UI_SANDBOX_RUNBOOK.md",
    "claim": "Linked repo path docs/pledge/UI_SANDBOX_RUNBOOK.md exists",
-   "where": "README.md:989",
+   "where": "README.md:991",
    "evidence_type": "file",
    "evidence": "docs/pledge/UI_SANDBOX_RUNBOOK.md",
    "check": {
@@ -6829,7 +6842,7 @@
   {
    "id": "path-web/tests/pledge-review-safety.test.ts",
    "claim": "Linked repo path web/tests/pledge-review-safety.test.ts exists",
-   "where": "README.md:993",
+   "where": "README.md:995",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-review-safety.test.ts",
    "check": {
@@ -6842,7 +6855,7 @@
   {
    "id": "path-web/tests/pledge-lifecycle.test.ts",
    "claim": "Linked repo path web/tests/pledge-lifecycle.test.ts exists",
-   "where": "README.md:993",
+   "where": "README.md:995",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-lifecycle.test.ts",
    "check": {
@@ -6855,7 +6868,7 @@
   {
    "id": "path-web/tests/pledge-review-r3.test.ts",
    "claim": "Linked repo path web/tests/pledge-review-r3.test.ts exists",
-   "where": "README.md:1004",
+   "where": "README.md:1006",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-review-r3.test.ts",
    "check": {
@@ -6868,7 +6881,7 @@
   {
    "id": "path-web/e2e/pledge-review-r3.spec.ts",
    "claim": "Linked repo path web/e2e/pledge-review-r3.spec.ts exists",
-   "where": "README.md:1004",
+   "where": "README.md:1006",
    "evidence_type": "file",
    "evidence": "web/e2e/pledge-review-r3.spec.ts",
    "check": {
@@ -6881,7 +6894,7 @@
   {
    "id": "path-web/tests/pledge-review-r5.test.ts",
    "claim": "Linked repo path web/tests/pledge-review-r5.test.ts exists",
-   "where": "README.md:1012",
+   "where": "README.md:1014",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-review-r5.test.ts",
    "check": {
@@ -6894,7 +6907,7 @@
   {
    "id": "path-web/e2e/pledge-funded.spec.ts",
    "claim": "Linked repo path web/e2e/pledge-funded.spec.ts exists",
-   "where": "README.md:1012",
+   "where": "README.md:1014",
    "evidence_type": "file",
    "evidence": "web/e2e/pledge-funded.spec.ts",
    "check": {
@@ -6907,7 +6920,7 @@
   {
    "id": "path-web/tests/pledge-integration-merge.test.ts",
    "claim": "Linked repo path web/tests/pledge-integration-merge.test.ts exists",
-   "where": "README.md:1016",
+   "where": "README.md:1018",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-integration-merge.test.ts",
    "check": {
@@ -6920,7 +6933,7 @@
   {
    "id": "path-web/components/PayoutPanel.tsx",
    "claim": "Linked repo path web/components/PayoutPanel.tsx exists",
-   "where": "README.md:1018",
+   "where": "README.md:1020",
    "evidence_type": "file",
    "evidence": "web/components/PayoutPanel.tsx",
    "check": {
@@ -6933,7 +6946,7 @@
   {
    "id": "path-web/components/PayoutCredit.tsx",
    "claim": "Linked repo path web/components/PayoutCredit.tsx exists",
-   "where": "README.md:1018",
+   "where": "README.md:1020",
    "evidence_type": "file",
    "evidence": "web/components/PayoutCredit.tsx",
    "check": {
@@ -6946,7 +6959,7 @@
   {
    "id": "path-web/lib/pledgeMoney.ts",
    "claim": "Linked repo path web/lib/pledgeMoney.ts exists",
-   "where": "README.md:1018",
+   "where": "README.md:1020",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeMoney.ts",
    "check": {
@@ -6959,7 +6972,7 @@
   {
    "id": "path-web/lib/payout.ts",
    "claim": "Linked repo path web/lib/payout.ts exists",
-   "where": "README.md:1018",
+   "where": "README.md:1020",
    "evidence_type": "file",
    "evidence": "web/lib/payout.ts",
    "check": {
@@ -6968,6 +6981,32 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-web/lib/payout.ts"
+  },
+  {
+   "id": "path-tee/worker/src/guarded_host.rs",
+   "claim": "Linked repo path tee/worker/src/guarded_host.rs exists",
+   "where": "README.md:1026",
+   "evidence_type": "file",
+   "evidence": "tee/worker/src/guarded_host.rs",
+   "check": {
+    "type": "path",
+    "path": "tee/worker/src/guarded_host.rs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-tee/worker/src/guarded_host.rs"
+  },
+  {
+   "id": "path-judge/reproduction.test.mjs",
+   "claim": "Linked repo path judge/reproduction.test.mjs exists",
+   "where": "README.md:1026",
+   "evidence_type": "file",
+   "evidence": "judge/reproduction.test.mjs",
+   "check": {
+    "type": "path",
+    "path": "judge/reproduction.test.mjs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-judge/reproduction.test.mjs"
   },
   {
    "id": "path-contracts/keys",

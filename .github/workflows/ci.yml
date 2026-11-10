@@ -127,6 +127,8 @@ jobs:
         run: python3 judge/receipt_proof_test.py
       - name: primary judge checkout command
         run: node --test judge/checkout-command.test.mjs
+      - name: full reproduction prepares sandbox fixtures and compiles WASI
+        run: node --test judge/reproduction.test.mjs
       - name: default claims mode does not spend on health
         run: node --test judge/passive-claims.test.mjs
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
