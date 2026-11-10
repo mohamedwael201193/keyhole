@@ -4,8 +4,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 CH="${CARGO_HOME:-$HOME/.cargo}"
 [ "$(cargo near --version | awk '{print $2}')" = "0.22.0" ] || { echo "cargo-near 0.22.0 required" >&2; exit 1; }
-rustc -vV | grep -q '^commit-hash: 05f9846f893b09a1be1fc8560e33fc3c815cfecb$'
-rustc -vV | grep -q '^host: x86_64-unknown-linux-gnu$' || { echo "Release requires pinned Linux host + official wasm32 target (not a locally rebuilt std)" >&2; exit 1; }
+# Capture rustc -vV first: grep -q on a live rustc pipe can exit 141 (SIGPIPE) under pipefail.
+rustc_vv="$(rustc -vV)"
+grep -q '^commit-hash: 05f9846f893b09a1be1fc8560e33fc3c815cfecb$' <<<"$rustc_vv" || { echo "Release requires rustc 1.86.0 (commit 05f9846f89)" >&2; exit 1; }
+grep -q '^host: x86_64-unknown-linux-gnu$' <<<"$rustc_vv" || { echo "Release requires pinned Linux host + official wasm32 target (not a locally rebuilt std)" >&2; exit 1; }
 
 # Keep off-chain ABI JSON; omit the optional on-chain compressed ABI export.
 # Stable panic/source paths avoid baking machine-local registry/checkout names into code.

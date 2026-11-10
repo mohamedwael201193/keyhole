@@ -1,5 +1,6 @@
 {
-    "scope":  "Local Windows PC with WSL; source candidate only, no deploy, spend or secret access",
+    "record_scope":  "Predecessor local run, not this head. Contract wasm ac25d889 / 496539 bytes and worker a05f7162 are earlier candidates. Current v2.5 contract bytes are artifact-repro-r2.json (bc12dace, 495199 bytes, 4.95199 NEAR). The claims_online site-health FAIL below is retained and was not reclassified as PASS. Current funding was not re-probed.",
+    "scope":  "Local Windows PC with WSL; source candidate only, no deploy, spend or secret access. Dated predecessor record. See record_scope.",
     "status":  "PASS local PR-CI-equivalent gates; FAIL scheduled full-online claims gate: unfunded live service",
     "contract":  {
                      "unit_pass":  303,

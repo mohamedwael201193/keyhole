@@ -6,9 +6,9 @@ import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import {parseWalletRedirect} from "./walletRedirect";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { PLEDGE_SANDBOX, NEP413_RECIPIENT } from "./config";
-import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
+import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionFromGrant, sessionParams, type Session } from "./session";
 import { readPayout } from "./payout";
-import { decimalEpoch, guardedValueOp, prepareGuardedRequest } from "./guardedRequest";
+import { contractProfile, guardedValueOp, prepareGuardedRequest } from "./guardedRequest";
 import { callWorker } from "./worker";
 import { sendKeysCall, sendRoutedKeysCalls, type TxConsent, type KeysCall, type SendResult, type BatchSendResult, type TxRoute, type TxWallet } from "./keysTx";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
@@ -438,8 +438,17 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
   const finishSession = useCallback(async (auth: SignedAuth, tokenId: string) => {
     const r = await callWorker("session", auth);
     const o = r.output;
-    if (r.error || !o?.ok || typeof o.session_token !== "string" || !decimalEpoch(o.owner_epoch)) return { ok: false as const, code: r.error?.code || "session_failed" };
-    const s: Session = { token: o.session_token, account: String(o.account), token_id: String(o.token_id ?? tokenId), exp_ms: Number(o.exp_ms), max_usd_micro: Number(o.max_usd_micro), owner_epoch: o.owner_epoch };
+    if (r.error || !o?.ok || typeof o.session_token !== "string") return { ok: false as const, code: r.error?.code || "session_failed" };
+    const token = String(o.token_id ?? tokenId);
+    // A returned decimal epoch is the guarded v2.5 grant. Do not invent one.
+    // A grant with no epoch is accepted only after the pinned live v2.4 contract is detected.
+    let profile: "v2.4" | "v2.5" = "v2.5";
+    if (o.owner_epoch == null) {
+      try { profile = await contractProfile(token); }
+      catch { return { ok: false as const, code: "session_failed" }; }
+    }
+    const s = sessionFromGrant(o, token, profile);
+    if (!s) return { ok: false as const, code: "session_failed" };
     saveSession(s); setSession(s);
     return { ok: true as const };
   }, []);

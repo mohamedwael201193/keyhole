@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { prepareGuardedRequest, keyFromString, signRequest } from "../src/core.ts";
+import { LIVE_V24_CODE_HASH, prepareGuardedRequest, keyFromString, signRequest } from "../src/core.ts";
 import { payout } from "../src/payout.ts";
 import { readFileSync } from "node:fs";
 import bs58 from "bs58";
@@ -15,6 +15,25 @@ test("actual CLI/MCP prepared envelope includes string epoch and token before NE
 });
 test("A-B-A refuses an old explicitly supplied epoch",async()=>{await assert.rejects(prepareGuardedRequest(key.accountId,"swap",{owner_epoch:"7"},read("9")),/epoch_changed/);});
 test("read operations are not forced through guarded-value admission",async()=>{const p={};assert.equal(await prepareGuardedRequest(key.accountId,"quote",p,async()=>{throw Error("must not read");}),p);});
+test("live v2.4 missing control view signs without an invented epoch",async()=>{
+  const missing=new Error("wasm execution failed with error: FunctionCallError(MethodResolveError(MethodNotFound))");
+  const read=async(m:string)=>{ if(m==="nft_token") return {owner_id:key.accountId}; if(m==="get_control_state") throw missing; throw new Error(m); };
+  const p=await prepareGuardedRequest(key.accountId,"withdraw",{token_id:"k1234",owner_epoch:"0"},read as any,async()=>LIVE_V24_CODE_HASH);
+  assert.deepEqual(p,{token_id:"k1234"});
+  assert.equal(JSON.parse(signRequest(key,"withdraw",p,"keyhole",1000).message).params.owner_epoch,undefined);
+});
+test("control-view failures that are not MethodNotFound fail closed",async()=>{
+  for (const message of ["timeout","MethodResolveError(MethodInvalidSignature)","MethodResolveError","fetch failed"]) {
+    const read=async(m:string)=>{ if(m==="nft_token") return {owner_id:key.accountId}; throw new Error(message); };
+    await assert.rejects(prepareGuardedRequest(key.accountId,"swap",{token_id:"k1234"},read as any,async()=>LIVE_V24_CODE_HASH), new RegExp(message.replace(/[()]/g,"\\$&")));
+  }
+  const missing=async(m:string)=>{ if(m==="nft_token") return {owner_id:key.accountId}; throw new Error("MethodResolveError(MethodNotFound)"); };
+  await assert.rejects(prepareGuardedRequest(key.accountId,"swap",{token_id:"k1234"},missing as any,async()=>"other-hash"), /unpinned_contract/);
+});
+test("pinned live code hash matches identity.json",async()=>{
+  const ident=JSON.parse(readFileSync(new URL("../../identity.json",import.meta.url),"utf8"));
+  assert.equal(LIVE_V24_CODE_HASH, ident.contract.code_hash);
+});
 test("Rust worker fixture is a genuine CLI signature over prepared exact params",async()=>{
   const f=JSON.parse(readFileSync(new URL("../../protocol/client-owner-epoch.json",import.meta.url),"utf8"));
   const p=await prepareGuardedRequest(key.accountId,f.op,{amount_in:"100",token_in:"USDC",token_out:"NEAR"},read());
@@ -29,6 +48,18 @@ test("CLI payout exact fee consent and pending cashout guard",async()=>{
   await payout(key,"register","3200000000000000000000",payoutRead(),execute);assert.equal(calls[0].deposit,"3200000000000000000000");
   await assert.rejects(payout(key,"claim",undefined,payoutRead(true,{nonce:"1"}),execute),/pending/);
   await payout(key,"claim",undefined,payoutRead(true),execute);assert.equal(calls[1].method,"claim_payout");assert.equal(calls[1].deposit,"1");
+});
+
+test("payout legacy detection accepts only MethodNotFound",async()=>{
+  const missing=async()=>{ throw new Error("FunctionCallError(MethodResolveError(MethodNotFound))"); };
+  const legacy=await payout(key,"status",undefined,missing as any,async()=>{ throw new Error("must not execute"); });
+  assert.equal(legacy.supported,false);
+  for (const message of ["MethodResolveError(MethodInvalidSignature)","MethodResolveError","timeout","malformed"]) {
+    const read=async()=>{ throw new Error(message); };
+    await assert.rejects(payout(key,"status",undefined,read as any,async()=>{ throw new Error("must not execute"); }), new RegExp(message.replace(/[()]/g,"\\$&")));
+  }
+  const bad=async()=>"nope";
+  await assert.rejects(payout(key,"status",undefined,bad as any,async()=>{ throw new Error("must not execute"); }), /Invalid payout state/);
 });
 
 test("operator onboarding plan includes minter and exact authorized sponsorship, never signs",async()=>{

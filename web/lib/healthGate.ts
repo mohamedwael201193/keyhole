@@ -2,7 +2,7 @@
 export const ONLINE_TTL_MS = 60_000;
 export const OFFLINE_TTL_MS = 15_000;
 
-export interface Stamped { at: number; online: boolean }
+export interface Stamped { at: number; online: boolean | null }
 
 export function freshHealth<T extends Stamped>(cache: T | null, now = Date.now()): T | null {
   if (!cache) return null;

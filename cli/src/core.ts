@@ -9,6 +9,7 @@ import { createInterface } from "node:readline";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { checkCounterparty, type BlocklistEntry, type CounterpartyResult, type Verdict } from "./counterparty.js";
+import { isMethodNotFound } from "./rpcError.js";
 
 export const NEP413_TAG = 2147484061;
 export const DEFAULTS = {
@@ -96,8 +97,22 @@ export async function contractView<T>(method: string, args: Record<string, unkno
   if (!r.ok || j.error || j.result?.error) throw new Error(j.result?.error ?? JSON.stringify(j.error) ?? "rpc");
   return JSON.parse(Buffer.from(j.result.result).toString("utf8"));
 }
-/** Bind current final owner epoch before signing for CLI AND MCP. No unsigned gateway injection. */
-export async function prepareGuardedRequest(account: string, op: string, params: Record<string, unknown>, read: typeof contractView = contractView): Promise<Record<string, unknown>> {
+/** Pinned live v2.4 code hash. Must stay equal to identity.json contract.code_hash. */
+export const LIVE_V24_CODE_HASH = "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ";
+const decimalEpoch = (v: unknown): v is string => typeof v === "string" && /^(0|[1-9]\d*)$/.test(v) && BigInt(v) <= 18446744073709551615n;
+export async function readLiveCodeHash(rpc = DEFAULTS.rpc, contract = DEFAULTS.contract): Promise<string> {
+  const r = await fetch(rpc, { method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(10000),
+    body: JSON.stringify({ jsonrpc: "2.0", id: "keyhole-code", method: "query", params: { request_type: "view_account", finality: "final", account_id: contract } }) });
+  const j: any = await r.json();
+  if (!r.ok || j.error || typeof j.result?.code_hash !== "string") throw new Error(j.error?.cause?.name || j.error?.message || "code_hash_unavailable");
+  return j.result.code_hash;
+}
+/**
+ * Bind the current final owner epoch before signing for CLI and MCP.
+ * If get_control_state is missing on the pinned live v2.4 code, sign the v2.4 envelope and do not invent an epoch.
+ * Network failures and any other resolver error fail closed. No unsigned gateway injection.
+ */
+export async function prepareGuardedRequest(account: string, op: string, params: Record<string, unknown>, read: typeof contractView = contractView, codeHash: () => Promise<string> = () => readLiveCodeHash()): Promise<Record<string, unknown>> {
   if (!["swap", "copy", "withdraw", "transfer"].includes(op) && !(op === "quote" && params.execute === true)) return params;
   let token = params.token_id;
   if (!token) {
@@ -107,9 +122,18 @@ export async function prepareGuardedRequest(account: string, op: string, params:
   }
   if (typeof token !== "string" || !token) throw new Error("Invalid key");
   const nft = await read<{ owner_id: string } | null>("nft_token", { token_id: token });
-  const c = await read<{ token_id: string; owner_epoch: string; transfer_pending: boolean }>("get_control_state", { token_id: token });
   if (nft?.owner_id !== account) throw new Error("not_owner");
-  if (c.token_id !== token || typeof c.owner_epoch !== "string" || !/^(0|[1-9]\d*)$/.test(c.owner_epoch) || BigInt(c.owner_epoch) > 18446744073709551615n || c.transfer_pending !== false) throw new Error("guard_state");
+  let c: { token_id: string; owner_epoch: string; transfer_pending: boolean };
+  try {
+    c = await read("get_control_state", { token_id: token });
+  } catch (e) {
+    if (!isMethodNotFound(e)) throw e;
+    if (await codeHash() !== LIVE_V24_CODE_HASH) throw new Error("unpinned_contract");
+    const next: Record<string, unknown> = { ...params, token_id: token };
+    delete next.owner_epoch;
+    return next;
+  }
+  if (c.token_id !== token || !decimalEpoch(c.owner_epoch) || c.transfer_pending !== false) throw new Error("guard_state");
   if (params.owner_epoch !== undefined && params.owner_epoch !== c.owner_epoch) throw new Error("epoch_changed: sign again");
   return { ...params, token_id: token, owner_epoch: c.owner_epoch };
 }

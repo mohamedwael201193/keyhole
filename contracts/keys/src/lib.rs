@@ -21,6 +21,26 @@ use near_sdk::{
     assert_one_yocto, env, near, require, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue,
 };
 use std::collections::HashMap;
+// Internal JSON objects have only statically named scalar fields. Serialize those
+// directly instead of constructing the general-purpose serde_json::Value tree.
+// Field sorting preserves the exact bytes emitted by serde_json's BTreeMap-backed
+// json! objects; Serde still performs all string escaping and scalar encoding.
+fn encode_json_object(fields: &mut [(&str, String)]) -> String {
+    fields.sort_unstable_by(|a, b| a.0.cmp(b.0));
+    let mut out = String::from("{");
+    for (i, (key, value)) in fields.iter().enumerate() {
+        if i > 0 { out.push(','); }
+        out.push('"'); out.push_str(key); out.push_str("\":"); out.push_str(value);
+    }
+    out.push('}');
+    out
+}
+macro_rules! json_object {
+    ({ $($key:literal : $value:expr),* $(,)? }) => {{
+        encode_json_object(&mut [$(($key, near_sdk::serde_json::to_string(&$value).unwrap())),*])
+    }};
+}
+
 mod pledge;
 mod sale;
 pub use sale::{Sale, SaleTerms, SaleCertificate, SaleState};
@@ -184,7 +204,7 @@ fn yocto(v: u128) -> near_sdk::NearToken {
 }
 
 /// NEP-297 event (standard "keyhole", version "1.0.0"); data holds one object.
-fn emit_key_event(event: &str, data: near_sdk::serde_json::Value) {
+fn emit_key_event(event: &str, data: String) {
     env::log_str(&format!(
         "EVENT_JSON:{{\"standard\":\"{KEYHOLE_EVENT_STANDARD}\",\"version\":\"{KEYHOLE_EVENT_VERSION}\",\"event\":\"{event}\",\"data\":[{data}]}}"
     ));
@@ -393,7 +413,7 @@ impl Contract {
     fn end_listing(&mut self, token_id: &TokenId) {
         if let Some(listing) = self.take_listing(token_id) {
             record_native_credit(&listing.seller, listing.deposit.0);
-            emit_key_event("key_unlist", near_sdk::serde_json::json!({"token_id": token_id, "seller": listing.seller}));
+            emit_key_event("key_unlist", json_object!({"token_id": token_id, "seller": listing.seller}));
         }
     }
 
@@ -467,7 +487,7 @@ impl Contract {
                 }
             }
         }
-        emit_key_event("key_list", near_sdk::serde_json::json!({"token_id": token_id, "seller": caller, "price": price}));
+        emit_key_event("key_list", json_object!({"token_id": token_id, "seller": caller, "price": price}));
     }
 
     /// The seller, or the current owner, ends a listing. The deposit goes back to the seller. Requires 1 yoctoNEAR.
@@ -503,7 +523,7 @@ impl Contract {
             }
             emit_key_event(
                 "key_listing_stale",
-                near_sdk::serde_json::json!({"token_id": token_id, "seller": listing.seller, "owner": owner}),
+                json_object!({"token_id": token_id, "seller": listing.seller, "owner": owner}),
             );
             return;
         }
@@ -521,7 +541,7 @@ impl Contract {
         let royalty = royalty_amount(price, self.royalty_bps);
         emit_key_event(
             "key_sale",
-            near_sdk::serde_json::json!({"token_id": token_id, "seller": seller, "buyer": buyer, "price": U128(price), "royalty": U128(royalty)}),
+            json_object!({"token_id": token_id, "seller": seller, "buyer": buyer, "price": U128(price), "royalty": U128(royalty)}),
         );
         if attached > price {
             record_native_credit(&buyer, attached - price);
@@ -603,7 +623,7 @@ impl Contract {
         require!(env::attached_deposit().as_yoctonear() >= cost, "attach value-op storage deposit");
         let excess = env::attached_deposit().as_yoctonear() - cost;
         if excess > 0 { record_native_credit(&self.minter, excess); }
-        emit_key_event("value_op_begin", near_sdk::serde_json::json!({"token_id": token_id, "op_id": op_id, "epoch": epoch}));
+        emit_key_event("value_op_begin", json_object!({"token_id": token_id, "op_id": op_id, "epoch": epoch}));
     }
 
     /// Finish ONLY after terminal reconciliation, never HTTP timeout/needs_review.
@@ -619,7 +639,7 @@ impl Contract {
         value_ops().insert(&key, &op);
         let n = self.pending_ops(&token_id).checked_sub(1).unwrap_or_else(||env::panic_str("value-op counter underflow"));
         if n == 0 { value_op_counts().remove(&token_id); } else { value_op_counts().insert(&token_id, &n); }
-        emit_key_event("value_op_finish", near_sdk::serde_json::json!({"token_id": token_id, "op_id": op_id, "success": success, "epoch": op.epoch}));
+        emit_key_event("value_op_finish", json_object!({"token_id": token_id, "op_id": op_id, "success": success, "epoch": op.epoch}));
     }
 
     #[payable]
@@ -657,7 +677,7 @@ impl Contract {
     #[payable]
     pub fn adopt_zero_royalty(&mut self) {
         assert_one_yocto(); self.assert_owner(); self.royalty_bps=0;
-        emit_key_event("royalty_policy",near_sdk::serde_json::json!({"royalty_bps":0,"treasury":self.treasury}));
+        emit_key_event("royalty_policy",json_object!({"royalty_bps":0,"treasury":self.treasury}));
     }
 
     pub fn config(&self) -> Config {
@@ -739,11 +759,11 @@ impl NonFungibleTokenCore for Contract {
         transfer_calls().insert(&token_id, &PendingTransfer { previous_owner: owner.clone(), receiver: receiver_id.clone(), epoch, approvals, restore_after_ns:near_sdk::json_types::U64(env::block_timestamp().checked_add(TRANSFER_RESTORE_DELAY_NS).unwrap_or_else(||env::panic_str("transfer timeout overflow"))) });
         set_pending(&owner, pending_returns(&owner).checked_add(1).unwrap_or_else(||env::panic_str("reservation overflow")));
         // Reserve 50 Tgas for bounded resolution plus 25 Tgas for outbound wrapper/storage.
-        Promise::new(receiver_id).function_call("nft_on_transfer".into(), near_sdk::serde_json::json!({
+        Promise::new(receiver_id).function_call("nft_on_transfer".into(), json_object!({
             "sender_id":sender,"previous_owner_id":owner,"token_id":token_id,"msg":msg
-        }).to_string().into_bytes(), yocto(0), env::prepaid_gas().saturating_sub(near_sdk::Gas::from_tgas(75)))
+        }).into_bytes(), yocto(0), env::prepaid_gas().saturating_sub(near_sdk::Gas::from_tgas(75)))
             .then(Promise::new(env::current_account_id()).function_call("resolve_transfer_call".into(),
-                near_sdk::serde_json::json!({"token_id":token_id,"epoch":epoch}).to_string().into_bytes(), yocto(0), near_sdk::Gas::from_tgas(50))).into()
+                json_object!({"token_id":token_id,"epoch":epoch}).into_bytes(), yocto(0), near_sdk::Gas::from_tgas(50))).into()
     }
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
         self.tokens.nft_token(token_id)
@@ -2271,4 +2291,42 @@ mod zero_royalty_tests {
  #[test] #[should_panic(expected="only owner")] fn zero_policy_requires_owner(){let mut c=setup();ctx("alice.near",1);c.adopt_zero_royalty();}
  #[test] #[should_panic] fn zero_policy_requires_one_yocto(){let mut c=setup();ctx("owner.near",0);c.adopt_zero_royalty();}
  #[test] #[should_panic(expected="max_len_payout too small")] fn zero_policy_honors_zero_payout_limit(){let mut c=setup();ctx("owner.near",1);c.adopt_zero_royalty();c.nft_payout("k1".into(),U128(0),Some(0));}
+}
+
+#[cfg(test)]
+mod compact_json_tests {
+    use super::*;
+    use near_sdk::json_types::{Base64VecU8, U64};
+
+    #[test]
+    fn compact_objects_preserve_legacy_json_bytes_and_borrow_inputs() {
+        let text = "quote\" slash\\ newline\n nul\0 utf8: 🔑 ".to_string();
+        let account: AccountId = "holder.near".parse().unwrap();
+        macro_rules! same {
+            ($($key:literal : $value:expr),* $(,)?) => {
+                assert_eq!(json_object!({$($key: $value),*}),
+                    near_sdk::serde_json::json!({$($key: $value),*}).to_string());
+            };
+        }
+        same!("wallet_pubkey": text);
+        same!("token_id": text, "nonce": U64(u64::MAX));
+        same!("token_id": text, "nonce": U64(0), "sequence": U64(u64::MAX));
+        same!("token_id": text, "op_id": text, "success": true, "epoch": U64(0));
+        same!("token_id": text, "seller": account, "buyer": account,
+            "price": U128(u128::MAX), "royalty": U128(0));
+        same!("token_id": text, "nonce": U64(0), "seller": account, "buyer": account,
+            "price": U128(u128::MAX), "seller_net": U128(0), "royalty_bps": 0);
+        same!("wallet_pubkey": text, "encrypted_data": text,
+            "wallet_signature": Base64VecU8(vec![0, 255, 128]), "version": 42u64,
+            "locked": true, "valid_until": 123u64, "storage_refund_to": account);
+        same!("account_id": account, "paid": U128(u128::MAX), "budget_bytes": 320u64);
+        same!("token_id": text, "nonce": U64(0), "resolution": Some(text.clone()));
+        same!("token_id": text, "nonce": U64(0), "resolution": None::<String>);
+        same!("kind": "explicit_funding", "from": account, "amount": U128(0));
+        same!("token_id": text, "nonce": U64(0), "payout_nonce": U64(2),
+            "activated_at_ns": U64(u64::MAX), "due_ns": U64(u64::MAX));
+        same!("sender_id": account, "previous_owner_id": account, "token_id": text, "msg": text);
+        assert!(text.ends_with("🔑 "));
+        assert_eq!(account.as_str(), "holder.near");
+    }
 }

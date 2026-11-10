@@ -35,7 +35,7 @@ export function ProofPanel({
 }: ProofPanelProps) {
   const enc = enclave === "live"
     ? { tone: "success" as const, text: "Live" }
-    : enclave === "down" ? { tone: "error" as const, text: "Not reachable" } : { tone: "neutral" as const, text: "Checking" };
+    : enclave === "down" ? { tone: "error" as const, text: "Not reachable" } : { tone: "neutral" as const, text: "Not probed" };
   const att = attestation === "verified"
     ? { tone: "success" as const, text: "Verified", icon: "check" as const }
     : attestation === "not-verified" ? { tone: "error" as const, text: "Not verified", icon: "alert" as const }

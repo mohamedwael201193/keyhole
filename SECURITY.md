@@ -160,7 +160,7 @@ Tests: `tee/worker/src/p2harden.rs`.
 
 ## Continuity
 
-- If the OutLayer payment balance runs out, live calls stop and `/api/health` (the strip on /judge) shows "offline: payment balance empty". Attestations, FastFS wasm and on-chain state stay public and verifiable.
+- If the OutLayer payment balance runs out, a later paid worker call stops. GET `/api/health` does not spend that balance and does not report it. Attestations, FastFS wasm and on-chain state stay public and verifiable. The page strip shows that availability was not probed.
 
 ## Design decisions and trade-offs
 
@@ -345,14 +345,11 @@ Empty registered slots remain permanently after successful cashout. Their capaci
 **Rollout/integration STOP gate:** onboard minters before mint/admission/provider dispatch, sellers before listing, approvers before approvals, borrowers before opening and lenders before funding; any royalty recipient receiving a pull credit must be registered before a sale (including a self-treasury before pledge initialization; after initialization self-royalties use the treasury ledger). Legacy approval/refund beneficiaries must register before a new operation that frees their storage; failing synchronous calls revert rather than lose money. Transfer-call schedules an approval refund only for a permanently registered original owner, so callback-time unregistered-credit failures are not introduced. Workers, CLI and frontend need registration/claim UX and explicit fee consent before rollout. Third-party sponsorship is optional, not permission to spend user funds.
 
 Only the already-deployed v2.4-to-candidate upgrade is exercised. An older *undeployed* v2.5 review candidate could contain unbonded `Pc` records; this code does not retrospectively label or charge those records. Do not deploy over such a state without separately funding/reviewing its storage obligations and preserving all credits/pending payouts. Before/after-pledge migration in this candidate retains the same prepaid slots, aggregate liabilities and nonce continuity. Historical unrecorded push failures remain a separate reconciliation boundary, not confiscated or reconstructed from balances. No production deployment, migration, top-up or FullAccess removal is authorized.
-### Candidate self-exit destination boundary — not live
+The candidate self-exit policy is stated once, above: withdrawals are NEAR-only to the current holder. EIP-191 is a signing method for holder authentication, not a withdrawal destination on an EVM chain.
 
-Standard candidate withdrawals require fresh full-holder authorization, derive only the authenticated current holder as a NEAR account on NEAR, and reject any different requested destination. Unknown chain/identity mappings fail closed; no Solana/Bitcoin ownership proof is invented. Sessions cannot withdraw. The private-transfer route and durable provider POST boundary enforce the same policy, so a hidden signed `to` is not a bypass. Already-submitted legacy requests may still be reconciled without authorizing another send. Lower provider recipient enforcement remains unproven: this is not an operator-proof destination firewall.
-
-The CURRENT LIVE source permits arbitrary well-formed freshly signed destinations. Historical malformed/tampered attack examples are not proof of this new policy, which has not been published. Before activation, every affected holder needs a supported real self-exit proof. Generic arbitrary-digest MPC signing is disabled in the candidate, with an explicit final owner/epoch settle gate on that rejected entrypoint. Previously issued signatures cannot be recalled and foreign balances/allowances are outside collateral. Provisional title grants no confidential reads or sessions. No live publication/retirement/authority change has happened.
 
 - **Decision.** `keyhole-devmo.near` has two full-access keys (deploy key and the owner's Meteor wallet key) plus a function-call beat key that can call only `beat`. The minter account's full-access key is generated and kept inside the TEE. There is no timelock or multisig yet. Live count is re-checked on [/verify](https://keyhole-seven.vercel.app/verify).
-- **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [README §8](README.md#8-security-model).
+- **Why.** The reasons are those in entry 3. The key list and the stated purpose of each key are in [Trust detail](#trust-detail-moved-from-the-readme).
 - **Mitigation.** The beat key is a function-call key that can call only `beat`, with a 0.05 NEAR allowance, and the owner revokes it with `del_beat_key`. The deploy key is described in the repository as kept offline and never on the website or in the worker.
 
 
@@ -380,7 +377,18 @@ Ordinary and durable withdrawals are NEAR-only to the freshly authenticated curr
 
 ### Integrated-stack online verification limitation (2026-11-10)
 
-The candidate's local PR-CI gates are separate from the public service's live readiness. At 08:31 Africa/Cairo, the deployed health endpoint returned online=false with reason=service_unfunded. The online claim requiring online=true therefore remains a real FAIL; it was not relaxed to make this verification green. No balance top-up, deployment or paid worker call was authorized or performed by this integration run. The two documented intentional contract refusals are checked for their exact failure messages, not mislabelled as successful transactions. Full online readiness needs a separately authorized operational action and another verification; offline checks do not establish it.
+The candidate's local PR-CI gates are separate from the public service's live readiness. At 08:31 Africa/Cairo, the deployed health endpoint returned online=false with reason=service_unfunded. That online claim remains a real FAIL in [validation.json](docs/evidence/integration-stack/validation.json). It was not rewritten as a pass. GET `/api/health` is now passive: it does not call OutLayer and a skipped or stale attestation is not a fresh online pass. An active probe requires `KEYHOLE_HEALTH_PROBE=1` and the approval token `spend-one-info-call`, discloses payer `keyhole-devmo.near/keyhole`, and spends one info execution from the server payment key. This change did not run that probe, did not top up a balance, and does not know whether the service is funded now. Compute funding is not contract-storage funding, minter gas, or loan principal. No balance top-up, deployment or paid worker call was authorized or performed by this integration run. The two documented intentional contract refusals are checked for their exact failure messages, not mislabelled as successful transactions. Full online readiness needs a separately authorized operational action and another verification; offline checks do not establish it.
+
+## Qualifications moved from the README
+
+**No NEAR sub-account.** Each `token_id` maps to one custody wallet held inside the OutLayer Intel TDX enclave. A NEAR sub-account would need an access key, and someone would hold that key. Here the keys never leave the enclave. The account is not a NEAR account a wallet can open directly. It runs only through the enclave.
+
+**Threat model written after the code.** The contract and worker code were first committed on 2026-10-28 (`66f7070`). [`THREAT_MODEL.md`](THREAT_MODEL.md) was first committed on 2026-10-31 (`701faf4`), and [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) on 2026-11-03 (`4736e9c`). The track asked for the threat model first.
+
+**Signed record.** The public `record` statement shows what the enclave read on that call. The minter's signature is the trust point. It is not a complete audit of the trade log. Evidence: [`docs/evidence/signed-record`](docs/evidence/signed-record/README.md).
+
+**Browser verifier transcript.** The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) drives the page. A saved full browser transcript of info call `dc3668db` (build `d337e822`) is not in the repo. The last full recorded browser run was `0847b924` (build `cc8d2fa8`). The public attestation for `dc3668db` is still the identity block's info call.
+
 
 
 ### Integrated client recovery and ordinary payout rollout
@@ -456,3 +464,62 @@ Funded acceptance checks exactly thirteen unique browser-wallet submissions agai
 ### Integrated route-specific payout coordination
 
 Vault retains ordinary prepaid-slot onboarding and cashout, while the shared PayoutCredit surface deliberately does not mount on Vault or Pledge. Vault cashout now uses the same account/contract durable money store, expected-signer routing and FINAL action/dispatch-height verifier as Pledge; its delivery label additionally requires the existing successful-callback verifier. A final failed original transaction may retire its exact local intent only after pending payout is absent; that does not assert delivery or dispatch a replacement. Unrecoverable hashes, pending callbacks, unavailable storage/RPC and nonterminal provider results stay blocked/UNKNOWN. Ordinary registration retains explicit nonrefundable fee consent and fresh cost/status validation. Native payout coordination remains same-origin cooperative browser state, not cross-device authority or an honest-RPC substitute. A conflict-resolved source candidate requires its own CI, funded acceptance and independent integrated-head review; earlier component GO verdicts do not certify this merge or activate any production gate.
+## Trust detail (moved from the README)
+
+These are the known limits, not product features. Operator-key counts can be re-checked on [/verify](https://keyhole-seven.vercel.app/verify).
+
+**What if TDX is broken.** An attestation proves which code ran only while the enclave is genuine. If an attacker broke Intel TDX, a forged quote could pass every check on this page. Then the attacker could read the sealed keys and act for any custody wallet. The blast radius is:
+
+- **Confidential balances in custody wallets.** These are the funds that are not on the NEAR chain. All of them would be exposed.
+- **Minting.** The minter key is sealed in the same enclave, so an attacker could mint keys.
+- **The contract account is the royalty treasury.** `config.treasury` is `keyhole-devmo.near`, which is the contract account itself. Royalties from built-in sales and from royalty payouts therefore accrue to the contract account, and so do the 0.01 NEAR listing deposits of open listings until they end. The owner can change the treasury and the rate with `set_royalty`, and that change applies at buy time to open listings too, because `nft_buy` reads the current treasury and rate.
+
+Caps and locks are enforced by the enclave, so they do not stop an attacker who runs outside it. The practical limit is to keep balances small. Custody is also run through OutLayer's custody API, so OutLayer is part of the trust base (see [Design decisions and trade-offs](#design-decisions-and-trade-offs)).
+
+**Privacy**
+
+- **Balances and history** live in TEE encrypted storage under the holder's key. They are readable only by a signed request from the full-access key of the account that holds the key NFT.
+- **Swaps** use 1Click `confidentiality: basic | advanced`. The solvers still see the asset pair and amount of each quote. Cross-chain settlement works both ways it can end: 0.004 SOL became 0.367068 USDC at `keyhole-devmo.near`, and an order with no liquidity came back as a refund ([`docs/evidence/oneclick-sol`](docs/evidence/oneclick-sol/README.md)).
+- **No KYC and no region.** Three ways in: a NEAR wallet, MetaMask, or Google or email on [/start](https://keyhole-seven.vercel.app/start), which goes through Privy.
+- **The gateway keeps no record.** It does not log bodies, amounts or accounts.
+- **Wallets sign messages, not transactions.** Signing costs no gas and moves no funds.
+- **Public reads.** The website caches public contract reads for 60 seconds. `nft_tokens_for_owner` is not cached.
+
+**Browser and site.** [`web/next.config.ts`](web/next.config.ts) sets a Content-Security-Policy with `frame-ancestors 'none'`, HSTS (2 years, preload), `nosniff` and strict referrer and permissions policies. `curl -I https://keyhole-seven.vercel.app` shows them.
+
+**Agents.** Do not give an agent your main account. Mint or move a key to an account the agent controls (an implicit account is enough), set low holder caps from your wallet first (a cut is immediate, a raise waits 24 hours), and lock the key while you are away. The worker then enforces, inside the TEE: the exact signed payout destination, per-trade and per-day caps, one use per signature, the transfer cooldown, and the lock. The MCP `copy` tool needs the operator's confirmation on their own terminal. The attack log in [`docs/evidence/prompt-injection`](docs/evidence/prompt-injection/README.md) records the specific historical malformed/over-cap/replay/tamper refusals shown there; it is NOT a destination allowlist or a guarantee against a fresh valid in-cap holder-signed malicious payout.
+
+**Function-call keys, precisely.**
+
+- The beat key `ed25519:9FiNXX2M…` on the minter (`015a0259…c443`) is a FunctionCall key. Its receiver is `keyhole-devmo.near`, its only method is `beat`, and its remaining allowance was 0.0498 NEAR on 2026-11-07 (read over RPC `view_access_key_list`).
+- It cannot transfer NEAR, attach a deposit, add or delete keys, or call any method except `beat`. A different method is refused with `MethodNameMismatch`. Its allowance is the only NEAR it can spend, as gas, and the owner revokes it with `del_beat_key`.
+- It is not the payment key. The worker refuses function-call keys for holder requests (`key_not_owned`), so `withdraw`, `quote --execute` and `copy` still need a holder's full-access key.
+
+**Operator keys on the contract account.** `keyhole-devmo.near` holds two full-access keys and one function-call key (RPC, 2026-11-09). The table lists each key and its stated purpose. The contract has no multisig and is not locked.
+
+| Account | Key | Permission | Stated purpose |
+|---|---|---|---|
+| `keyhole-devmo.near` (contract) | `ed25519:7N1fLo9M…` | FullAccess | Deploy and publish key. The earlier revision of this README says it is kept offline and never on the website or in the worker |
+| `keyhole-devmo.near` | `ed25519:8NP9x5eF…` | **FullAccess** | The owner's second wallet key: Meteor Wallet holds it for this account (it is the key Meteor lists for `keyhole-devmo.near` at sign-in). Same owner as the key above; an operator key, listed under [Design decisions and trade-offs](#design-decisions-and-trade-offs) |
+| `keyhole-devmo.near` | `ed25519:FNe2aYtz…` | **FunctionCall** to `social`, methods `__fastdata_kv` and `__fastdata_fastfs`, 1 NEAR allowance | Uploads the worker wasm to FastFS. It cannot transfer NEAR, call the contract or add keys |
+| minter `015a0259…c443` (implicit) | `ed25519:6H1iG1oH…` | FullAccess | Generated and held inside the TEE (OutLayer secret). The minter signs mints, PnL statements and log heads. The contract only lets this account mint |
+| minter `015a0259…c443` | `ed25519:9FiNXX2M…` (beat key) | **FunctionCall** to `keyhole-devmo.near`, method `beat` only, 0.05 NEAR allowance | Lets an off-enclave agent emit the per-key heartbeat. Added by the enclave on the owner's signed `add_beat_key` ([AddKey tx](https://nearblocks.io/txns/DXH756vmgj8GTDz6fUwnfgaUuC7vCi1vu6VaX5heoDww)). Remaining allowance 0.0498 NEAR on 2026-11-07 |
+
+The first full-access key is described in the repository as the deploy and publish key, kept offline and never on the website or in the worker.
+
+
+## Guarded worker source-candidate integration details
+
+Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+
+### Guarded worker candidate — SOURCE ONLY, NOT PUBLISHED
+
+Integrated with reviewed prepaid-slot #184 head92da286 and #193 delivery-clock/custody serialization; source only, not a production rollout. Every custody swap/copy/withdraw/private transfer/wet quote uses the shared production admission/provider drivers. Persisted journals bind exact owner/epoch/nonce/body/action; an op ID/idempotency key never changes on retry. Value requests require signed decimal-string `params.owner_epoch`; legacy sessions are rejected and A→B→A cannot revive old authorizations. Provisional receivers cannot read sealed data or establish sessions; pledged legitimate holders may still read.
+
+The fresh fixed-floor certificate uses V3_DELIVERY and verifies exact binding plus the contract-confirmed local command sequence; current policy/loan/control are re-read after the private balance/inventory observation. Canonical project UUID and a single pinned nonlegacy version are required. A sealed authority-audit record must already exist; no public/automatic eligibility writer or silent legacy-wallet approval exists. This remains a fail-closed rollout gate, not self-measured code proof.
+
+Generic detached `chain_sign` is disabled in this source revision, including protected/pledged collateral, and the owner/epoch settle gate is explicit. Prior foreign signatures cannot be revoked, so foreign assets/allowances are excluded from the fixed custody-USDC certificate. This is not a claim to have changed live versions or existing credentials.
+
+**Candidate destination policy: self-exit only.** Fresh NEP-413 authorization derives the authenticated NEAR holder; EIP-191 derives the same authenticated0x holder on supported EVM chains. Unknown identity/chain mapping and any different `to` are rejected, including private-transfer bypasses and durable POST replay. Sessions cannot withdraw. Current LIVE source historically allows arbitrary well-formed holder-signed destinations: this source-only restriction has not been deployed, and old attack examples do not prove it live.
+
+The two named cross-layer tests use REAL NEAR admission/pledge/title receipts and the same production drivers as WASI, but HTTP, sealed storage, registry and eligibility observations are labelled mocks. They cover repay/default, failures/unknowns, transfer_call A→B→A and legitimate post-thaw exits, not live-provider confinement or a full WASI-host execution. Source-only native payment UNKNOWN/liveness and live confinement gates remain. No deploy/publish/funding/legacy-version retirement/key or policy change is performed.

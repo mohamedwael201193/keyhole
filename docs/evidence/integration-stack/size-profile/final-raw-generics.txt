@@ -1,0 +1,24 @@
+ Apprx. Bloat Bytes │ Apprx. Bloat % │ Bytes  │ %      │ Monomorphizations
+────────────────────┼────────────────┼────────┼────────┼───────────────────────────────────────────────────────────────────────────────────────────────────
+             138959 ┊         17.36% ┊ 148359 ┊ 18.53% ┊ <&mut serde_json::de::Deserializer<R> as serde_core::de::Deserializer>::deserialize_struct
+              18296 ┊          2.29% ┊  18614 ┊  2.32% ┊ serde_json::de::from_trait
+               9282 ┊          1.16% ┊   9520 ┊  1.19% ┊ <serde_json::de::MapAccess<R> as serde_core::de::MapAccess>::next_key_seed
+               5100 ┊          0.64% ┊   5168 ┊  0.65% ┊ serde_json::de::from_slice
+               4601 ┊          0.57% ┊   4793 ┊  0.60% ┊ serde_core::ser::SerializeMap::serialize_entry
+               4225 ┊          0.53% ┊   4522 ┊  0.56% ┊ borsh::de::BorshDeserialize::try_from_slice
+               3910 ┊          0.49% ┊   4436 ┊  0.55% ┊ borsh::ser::helpers::to_vec
+               3511 ┊          0.44% ┊   3751 ┊  0.47% ┊ near_sdk::collections::lookup_map::LookupMap<K,V>::insert
+               3482 ┊          0.43% ┊   3694 ┊  0.46% ┊ <serde_json::de::SeqAccess<R> as serde_core::de::SeqAccess>::next_element_seed
+               2807 ┊          0.35% ┊   3003 ┊  0.38% ┊ near_sdk::collections::lookup_map::LookupMap<K,V>::get
+               2272 ┊          0.28% ┊   2468 ┊  0.31% ┊ near_sdk::collections::lookup_map::LookupMap<K,V>::remove
+               1703 ┊          0.21% ┊   1934 ┊  0.24% ┊ serde_core::ser::Serializer::collect_seq
+               1620 ┊          0.20% ┊   1728 ┊  0.22% ┊ near_sdk::collections::lookup_map::LookupMap<K,V>::serialize_value
+               1403 ┊          0.18% ┊   1686 ┊  0.21% ┊ serde_core::de::impls::<impl serde_core::de::Deserialize for core::option::Option<T>>::deserialize
+               1374 ┊          0.17% ┊   1503 ┊  0.19% ┊ near_sdk::collections::lookup_map::LookupMap<K,V>::deserialize_value
+               1308 ┊          0.16% ┊   2682 ┊  0.33% ┊ hashbrown::raw::RawTable<T,A>::reserve_rehash
+               1257 ┊          0.16% ┊   1624 ┊  0.20% ┊ <core::option::Option<T> as borsh::de::BorshDeserialize>::deserialize_reader
+               1095 ┊          0.14% ┊   1194 ┊  0.15% ┊ <serde_json::de::MapAccess<R> as serde_core::de::MapAccess>::next_value_seed
+               1088 ┊          0.14% ┊   1257 ┊  0.16% ┊ serde_json::ser::to_vec
+                973 ┊          0.12% ┊   1187 ┊  0.15% ┊ serde_json::ser::to_string
+              21676 ┊          2.71% ┊ 283098 ┊ 35.36% ┊ ... and 1128 more.
+             229942 ┊         28.72% ┊ 506221 ┊ 63.23% ┊ Σ [1148 Total Rows]

@@ -82,10 +82,14 @@ mod tests {
         )));
         for message in [
             "MethodResolveError(MethodInvalidSignature)",
+            "MethodResolveError",
+            "method not found",
             "timeout",
             "unavailable",
+            "{not-json",
+            "transport error",
         ] {
-            assert!(!legacy_missing_method(&err("rpc", message)));
+            assert!(!legacy_missing_method(&err("rpc", message)), "{message}");
         }
     }
     fn fake() -> Fake {

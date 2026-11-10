@@ -183,7 +183,7 @@ for d in DOCS:
 for p in ["/","/judge","/verify","/settle","/gallery","/mint","/vault","/ask","/atlas","/identity","/pnl","/key?id=k5f4750858f328940"]:
     add(f"site-{p}", f"Live page {p} serves", where(RD, "| `"+p.split('?')[0]+"` |") if p not in ("/key?id=k5f4750858f328940",) else where(TC,"k5f4750858f328940"), "live site", SITE+p,
         {"type":"http","url":SITE+p,"status":200}, "HTTP 200")
-add("site-health","/api/health reports the enclave online",where(RD,"`/api/health`"),"live site",SITE+"/api/health",{"type":"http","url":SITE+"/api/health","status":200,"contains":'"online":true'},'200 with "online":true')
+add("site-health","GET /api/health is passive and does not assert the enclave online",where(RD,"GET `/api/health`"),"file","web/lib/health.ts",{"type":"grep","path":"web/lib/health.ts","pattern":'mode: "passive"'},'passive health names mode passive and does not start compute')
 add("site-ar-redirect","/ar/… redirects to the same path without the prefix and keeps the query",where(RD,"A request to `/ar`"),"live site",SITE+"/ar/judge?x=1",{"type":"redirect","url":SITE+"/ar/judge?x=1","location":SITE+"/judge?x=1"},"308 → /judge?x=1")
 for h,v in [("strict-transport-security","max-age=63072000; includeSubDomains; preload"),("x-content-type-options","nosniff"),("content-security-policy","frame-ancestors 'none'"),("referrer-policy","strict-origin-when-cross-origin"),("permissions-policy","camera=()")]:
     add(f"site-hdr-{h}",f"Site sends {h}: …{v}",where(RD,"CSP, HSTS (2 years, preload)"),"live site",SITE,{"type":"header","url":SITE+"/","header":h,"contains":v},f"{h} contains {v}","curl -sI "+SITE)

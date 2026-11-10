@@ -17,7 +17,7 @@ The `record` call was attested on `d337e822` (`executed_wasm_sha256` = `wasm_has
 
 ## Build and info call
 
-- Worker `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` (765,658 bytes). `./build.sh` in [`tee/worker`](../../../tee/worker) run on this checkout prints the same value. The add_version tx [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) is success, signer `keyhole-devmo.near`, receiver `outlayer.near`, method `add_version`.
+- Worker `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` (765,658 bytes) is the published build. `./build.sh` in [`tee/worker`](../../../tee/worker) prints that hash only on the commit that published it. This branch is a later candidate: CI warns if the rebuild differs and the job still succeeds. The publishing git commit is not recorded in this folder. The add_version tx [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) is success, signer `keyhole-devmo.near`, receiver `outlayer.near`, method `add_version`.
 - Info call on this build: [`dc3668db-674f-4865-a2ce-272f70c41b0d`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) (attested, [file](attestation_dc3668db.json)). Its output is in [`web/public/evidence/dc3668db-674f-4865-a2ce-272f70c41b0d.json`](../../../web/public/evidence/dc3668db-674f-4865-a2ce-272f70c41b0d.json). The canonical sha256 of that output equals the attested `output_hash` `f1279fd0…61e8`. It lists 25 ops, including `record`.
 - First signed call on this build: `balance`, [`740191ec-48a4-4bbb-87f9-906b27c8116e`](https://api.outlayer.ai/attestations/by-call/740191ec-48a4-4bbb-87f9-906b27c8116e) (attested, [file](attestation_740191ec.json)), result ok.
 

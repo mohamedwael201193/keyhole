@@ -2,6 +2,7 @@ import { Account, JsonRpcProvider, KeyPairSigner, actions } from "near-api-js";
 import { ed25519 } from "@noble/curves/ed25519";
 import bs58 from "bs58";
 import { contractView, DEFAULTS, type Key } from "./core.js";
+import { isMethodNotFound } from "./rpcError.js";
 export type PayoutCall = { method: string; deposit: string; gas: string };
 export async function payout(key: Key, mode: "status" | "register" | "claim", consentedCost?: string,
   read: typeof contractView = contractView, execute: (call: PayoutCall) => Promise<unknown> = async call => {
@@ -12,7 +13,7 @@ export async function payout(key: Key, mode: "status" | "register" | "claim", co
   }) {
   let cost: string;
   try { cost = await read<string>("payout_storage_cost",{}); }
-  catch(e) { if (/MethodNotFound|MethodResolveError|method not found/i.test(String(e))) return {supported:false,delivery:"Legacy v2.4 native refunds; no payout slot methods"}; throw e; }
+  catch(e) { if (isMethodNotFound(e)) return {supported:false,delivery:"Legacy v2.4 native refunds; no payout slot methods"}; throw e; }
   const registered = await read<boolean>("payout_account_registered",{account_id:key.accountId});
   const credit = await read<string>("get_payout_credit",{account_id:key.accountId});
   const pending = await read<unknown>("get_pending_payout",{account_id:key.accountId});
