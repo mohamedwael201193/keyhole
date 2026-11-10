@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   GAS_BUY, GAS_BUY_TGAS, GAS_LIST, GAS_LIST_TGAS, ONE_YOCTO, classifyTxError, classifyTxText, functionCallAction, outcomeFailure,
-  outcomeHash, panicText, sendKeysCall, type KeysCall, type TxRoute, type TxWallet,
+  outcomeHash, panicText, sendKeysCall, sendKeysCalls, type KeysCall, type TxRoute, type TxWallet,
 } from "@/lib/keysTx";
 
 const LIST: KeysCall = { method: "nft_list", args: { token_id: "k1", price: "5000000000000000000000000" }, deposit: "10000000000000000000000", gas: GAS_LIST };
@@ -139,4 +139,11 @@ describe("sendKeysCall routes", () => {
     expect("error" in r && r.error.code).toBe("bad_call");
     expect(calls).toHaveLength(0);
   });
+});
+
+describe("atomic same-receiver wallet action batching",()=>{
+ const registration:KeysCall={method:"register_payout_account",args:{account_id:"alice.near"},deposit:"3200000000000000000000",gas:"20000000000000"};
+ it.each(["nc","ws"] as const)("%s requests exactly one signature with ordered registration plus first action",async kind=>{const {wallet,calls}=fakeWallet(OK);const route:TxRoute=kind==="nc"?{kind,accountId:"alice.near",wallet}:{kind,accountId:"alice.near",walletId:"meteor-wallet",wallet,callbackUrl:"https://example/pledge"};expect(await sendKeysCalls(route,[registration,BUY])).toEqual({txHash:"HASH123"});expect(calls).toHaveLength(1);const actions=calls[0].params.actions as {params?:{methodName:string};functionCall?:{methodName:string}}[];expect(actions.map(a=>a.params?.methodName??a.functionCall?.methodName)).toEqual(["register_payout_account","nft_buy"]);});
+ it("never splits an unsupported/invalid batch into separate money sends",async()=>{const {wallet,calls}=fakeWallet(OK);const route:TxRoute={kind:"nc",accountId:"alice.near",wallet};for(const actions of [[],[registration,{...BUY,gas:"300000000000000"}],[registration,{...BUY,deposit:"invalid"}]]){const result=await sendKeysCalls(route,actions);expect("error" in result&&result.error?.code).toBe("bad_call");}expect(calls).toHaveLength(0);});
+ it("keeps an executed failure hash so batch registration races can be reconciled, never guessed or replayed",async()=>{const {wallet,calls}=fakeWallet(PANIC);expect(await sendKeysCalls({kind:"nc",accountId:"alice.near",wallet},[registration,BUY])).toMatchObject({txHash:"H2",error:{code:"contract"}});expect(calls).toHaveLength(1);});
 });

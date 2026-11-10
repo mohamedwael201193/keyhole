@@ -1,9 +1,10 @@
 /**
- * Typed client for the sealed bilateral Pledge surface on contracts/keys (PR #184 oracle-free head 01665e83 + loan-limits candidate).
+ * Typed client for the sealed bilateral Pledge surface on contracts/keys (PR #184 prepaid-slot head 92da286 + delivery-clock loan-limits candidate).
  * Method names and argument shapes match contracts/keys/src/pledge.rs on that revision.
  * Live calls stay behind PLEDGE_LIVE; when the flag is off this module still exports the shapes
  * so the UI and unit tests can bind against the real contract API without talking to mainnet.
  */
+import type {KeysCall} from "./keysTx";
 import { KEYS_CONTRACT, PLEDGE_LIVE, PLEDGE_TRANSACTIONS, RPC_URL } from "./config";
 
 /** NEAR JSON stringified u128 / u64 wrappers as the contract serde uses them. */
@@ -89,6 +90,7 @@ export const PLEDGE_CHANGE_METHODS = [
   "migrate_pledge",
   "set_lending_enabled",
   "register_collateral",
+  "register_payout_account",
   "open_loan",
   "fund_loan",
   "repay_loan",
@@ -102,6 +104,8 @@ export const PLEDGE_CHANGE_METHODS = [
 /** View methods (PR #184). */
 export const PLEDGE_VIEW_METHODS = [
   "get_pledge_config",
+  "payout_storage_cost",
+  "payout_account_registered",
   "get_loan",
   "get_collateral_binding",
   "get_loan_limits",
@@ -158,6 +162,21 @@ export function buildRegisterCollateral(args: RegisterCollateralArgs, policyAndB
 export type LoanLimits = { storage_bond: U128; collateral_binding_deposit: U128; min_duration_sec: U64; max_duration_sec: U64; max_grace_sec: U64; certificate_max_age_ns: U64; activation: string };
 export type LenderOffer = { loan: Loan; asset: string; decimals: number; lender_has_no_key: boolean; lender_has_no_return_reservation: boolean; lending_enabled: boolean; owner_current: boolean; funding_open: boolean; certificate_required: boolean };
 export function buildClaimPayout() { return {method: "claim_payout" as const, args: {}, deposit: "1", gas: "200000000000000"}; }
+
+/** Single-line consent. Never call the permanent charge a refundable bond or principal deduction. */
+export function payoutStorageConsent(cost: U128 | null): string {
+  if (cost === null) return "One-time payout storage: exact fee quoted before your first action; nonrefundable and reusable (0.0032 NEAR at the tested byte price).";
+  if (!/^\d+$/.test(cost)) throw Error("Invalid payout storage quote");
+  const n=BigInt(cost);
+  if(n===0n)return "Payout storage is already registered; no new fee.";
+  const near=`${n/10n**24n}.${(n%10n**24n).toString().padStart(24,"0").replace(/0+$/,"")||"0"}`;
+  return `One-time payout storage: ${near} NEAR, nonrefundable and reusable; included in this transaction.`;
+}
+export type PledgeActionPlan = {calls: KeysCall[]; payoutStorageChargeYocto: U128; totalDepositYocto: U128};
+export function buildRegisterPayoutAccount(account: AccountId, exactCost: U128): KeysCall {
+  if (typeof exactCost !== "string" || !/^\d+$/.test(exactCost) || BigInt(exactCost) <= 0n || BigInt(exactCost) >= 1n << 128n) throw Error("Read exact payout storage cost from the final chain");
+  return {method: "register_payout_account", args: {account_id: account}, deposit: exactCost, gas: "20000000000000"};
+}
 
 export type PledgeClientOpts = {
   /** Override the live flag (tests). Defaults to PLEDGE_LIVE from config. */
@@ -235,6 +254,21 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
     buildClaimDefault,
     buildRegisterCollateral,
     buildClaimPayout,
+    buildRegisterPayoutAccount,
+    async getPayoutStorageCost(): Promise<U128 | null> {return live ? viewFn<U128>("payout_storage_cost", {}) : null;},
+    async payoutAccountRegistered(account_id: AccountId): Promise<boolean | null> {return live ? viewFn<boolean>("payout_account_registered", {account_id}) : null;},
+    /** Build, do not send. Fee must be displayed for consent. Missing ABI/status fails closed. */
+    async prepareAction(account: AccountId, action: KeysCall): Promise<PledgeActionPlan> {
+      if (!live) throw Error("Preview cannot prepare a money operation");
+      if (!["register_collateral","open_loan","fund_loan","repay_loan","cancel_loan","claim_default","claim_payout"].includes(action.method)) throw Error("Only a credit-producing Pledge role can buy payout storage in this planner");
+      if (!/^[a-z0-9]+([._-][a-z0-9]+)*$/.test(account) || account.length < 2 || account.length > 64 || /^0x[0-9a-f]{40}$/i.test(account)) throw Error("Native NEAR identity required");
+      const registered = await viewFn<boolean>("payout_account_registered", {account_id: account});
+      if (typeof registered !== "boolean") throw Error("Final payout registration status unavailable");
+      const registration = registered ? [] : [buildRegisterPayoutAccount(account, await viewFn<U128>("payout_storage_cost", {}))];
+      const calls = [...registration, action];
+      if (calls.reduce((n, c) => n + BigInt(c.gas), 0n) > 300_000_000_000_000n) throw Error("Atomic first action exceeds the gas budget");
+      return {calls, payoutStorageChargeYocto: registration[0]?.deposit ?? "0", totalDepositYocto: calls.reduce((n, c) => n + BigInt(c.deposit), 0n).toString()};
+    },
     async getPrincipalDelivery(account_id:AccountId):Promise<{token_id:TokenId;loan_nonce:U64;principal:U128;payout_nonce:U64|null}|null>{return live?viewFn("get_principal_delivery",{account_id}):null;},
     async getCertificateTemplate(token_id:TokenId,observed_at_ns:U64,expires_at_ns:U64):Promise<LoanCertificate|null>{return live?viewFn("loan_certificate_template",{token_id,observed_at_ns,expires_at_ns}):null;},
     async getLoanLimits(): Promise<LoanLimits | null> { return live ? viewFn<LoanLimits>("get_loan_limits", {}) : null; },

@@ -6,7 +6,7 @@ import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCal
 import { NEP413_RECIPIENT } from "./config";
 import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionParams, type Session } from "./session";
 import { callWorker } from "./worker";
-import { sendKeysCall, type KeysCall, type SendResult, type TxRoute, type TxWallet } from "./keysTx";
+import { sendKeysCall, sendKeysCalls, type KeysCall, type SendResult, type BatchSendResult, type TxRoute, type TxWallet } from "./keysTx";
 import { authFromSignIn, NC_WALLET_KEY, reusable, signInRequest } from "./nearConnect";
 import type { NearConnector } from "@hot-labs/near-connect";
 import dynamic from "next/dynamic";
@@ -77,6 +77,7 @@ interface WalletCtx {
   revokeSession: () => Promise<void>;
   /** Sends one FunctionCall to the keys contract from the signed-in account, through the wallet it signed in with (lib/keysTx.ts). */
   sendTx: (call: KeysCall) => Promise<SendResult>;
+  sendTxBatch: (calls: readonly KeysCall[]) => Promise<BatchSendResult>;
 }
 const Ctx = createContext<WalletCtx | null>(null);
 const PENDING = "kh_pending_sign";
@@ -494,7 +495,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [accountId, ensure]);
   const sendTx = useCallback(async (call: KeysCall): Promise<SendResult> => sendKeysCall(await txRoute(), call), [txRoute]);
 
-  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectMeteor: () => connectSelectorWallet("meteor-wallet"), connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession, sendTx }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
+  const sendTxBatch = useCallback(async (calls: readonly KeysCall[]): Promise<BatchSendResult> => sendKeysCalls(await txRoute(), calls), [txRoute]);
+
+  return <Ctx.Provider value={{ accountId, ready, restoring, mismatch, connect, connectNear, connectOther, connectMeteor: () => connectSelectorWallet("meteor-wallet"), connectSocial, socialEnabled: privyEnabled(), via, socialCreating, socialFinishing, choosing, closeChooser: () => setChoosing(false), disconnect, sign, pending, clearPending: () => setPending(null), session, startSession, revokeSession, sendTx, sendTxBatch }}>{children}<SignInModal open={choosing} onClose={() => setChoosing(false)} socialEnabled={privyEnabled()} onGoogle={() => connectSocial("google")} onEmail={() => connectSocial("email")} onNear={() => void connectNear()} onMeteor={() => connectSelectorWallet("meteor-wallet")} onOther={() => void connectOther()} />{privyOn && privyEnabled() && <PrivyBridge wantLogin={wantLogin} method={socialMethod} onChange={onPrivy} />}</Ctx.Provider>;
 }
 /** MetaMask personal_sign (EIP-191) over the same intent JSON the worker recovers. */
 async function signEip191(op: Op, accountId: string, params: Record<string, unknown>): Promise<SignedAuth> {

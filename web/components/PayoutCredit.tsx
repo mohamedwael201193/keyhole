@@ -2,8 +2,8 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import {usePathname} from "next/navigation";
 import {useWallet} from "@/lib/wallet";
-import {createPledgeClient,buildClaimPayout,type PendingPayout} from "@/lib/pledgeClient";
-import {browserMoneyStore,dispatchMoney,finalMoneyReceipt,nextFinalBlockHeight,type MoneyOperation} from "@/lib/pledgeMoney";
+import {createPledgeClient,buildClaimPayout,payoutStorageConsent,type PendingPayout} from "@/lib/pledgeClient";
+import {browserMoneyStore,dispatchMoneyBatch,finalMoneyReceipt,nextFinalBlockHeight,type MoneyOperation} from "@/lib/pledgeMoney";
 /** Shared across borrower, lender and sale routes: a credit is not wallet delivery. */
 export function PayoutCredit() {
  const wallet=useWallet(),account=wallet.accountId,pathname=usePathname();
@@ -16,7 +16,11 @@ export function PayoutCredit() {
   const finalized=saved?await finalMoneyReceipt(saved,client.rpcUrl):false;
   const [nextCredit,nextPending]=await Promise.all([client.getPayoutCredit(account),client.getPendingPayout(account)]);
   setSupported(true);setCredit(nextCredit??"0");setPending(nextPending);
-  if(saved&&finalized&&!nextPending){store.save(null);setOperation(null);setMessage("Original transaction is finalized; current credit is refreshed. A transaction hash alone was not treated as delivery.");}
+  if(saved&&finalized&&!nextPending){
+   const duplicate=saved.calls?.some(c=>c.method==="register_payout_account")&&saved.error?.includes("already registered");
+   if(duplicate&&await client.payoutAccountRegistered(account)!==true)throw Error("Registration status is inconsistent. Keep the original operation; do not resend.");
+   store.save(null);setOperation(null);setMessage(duplicate?"Payout storage is already ready; the failed batch did not complete the intended action. Retry that action manually without another registration fee.":"Original transaction is finalized; current credit is refreshed. A transaction hash alone was not treated as delivery.");
+  }
   else if(saved||nextPending)setMessage("Native outcome pending / UNKNOWN. Do not resend. Refresh this original operation.");
  },[account,client,store]);
  useEffect(()=>{let cancelled=false;setCredit("0");setPending(null);setOperation(null);setMessage("");setSupported(false);if(!account||!store)return;
@@ -33,7 +37,9 @@ export function PayoutCredit() {
    setCredit(freshCredit??"0");setPending(freshPending);
    if(freshPending)throw Error("A native cashout is already pending. Do not resend.");
    if(!freshCredit||BigInt(freshCredit)<=0n)throw Error("No available credit in the current final-chain view.");
-   const op=await dispatchMoney(account,client.contractId,buildClaimPayout(),store,wallet.sendTx,await nextFinalBlockHeight(client.rpcUrl));setOperation(op);await refresh();
+   const plan=await client.prepareAction(account,buildClaimPayout());
+   setMessage(payoutStorageConsent(plan.payoutStorageChargeYocto));
+   const op=await dispatchMoneyBatch(account,client.contractId,plan.calls,store,wallet.sendTxBatch,await nextFinalBlockHeight(client.rpcUrl));setOperation(op);await refresh();
   }
   catch(e){setMessage(e instanceof Error?e.message:"Outcome unknown; keep the original operation.");setOperation(store.load());}
   finally{setBusy(false);}

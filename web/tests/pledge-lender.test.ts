@@ -2,6 +2,7 @@ import {it,expect,vi} from "vitest";
 import {createElement} from "react";
 import {renderToStaticMarkup} from "react-dom/server";
 import {readFileSync} from "node:fs";
+vi.mock("@/lib/wallet",()=>({useWallet:()=>({accountId:null})}));
 vi.mock("next/navigation",()=>({usePathname:()=>"/pledge/lend/example"}));
 vi.mock("@/lib/config",async()=>({...await vi.importActual("@/lib/config"),PLEDGE_LIVE:false}));
 import {LenderView} from "@/app/pledge/lend/[tokenId]/view";

@@ -1,12 +1,12 @@
 /** Identical starting portfolios and usable cash after refundable bond + quoted upfront cash costs. Fees counted once. */
 export type MatchedQuote = { ledger: string; route: string; expiresAtMs: number; usableNearYocto: string; usdcDebitRaw: string; restoreUsdcRaw: string; reverseNearYocto: string; reverseFixedFeeYocto: string; source: string };
-export type ComparisonInput = { principal: string; repayment: string; bond: string; incrementalLoanCost: string; quote: MatchedQuote | null; ledger: string; nowMs: number };
+export type ComparisonInput = { principal: string; repayment: string; bond: string; incrementalLoanCost: string; payoutStorageCost: string | null; quote: MatchedQuote | null; ledger: string; nowMs: number };
 export function compareLoanSwap(x: ComparisonInput) {
- const p=BigInt(x.principal),r=BigInt(x.repayment),bond=BigInt(x.bond),cost=BigInt(x.incrementalLoanCost);
- if(p<=0n||r<p||bond<0n||cost<0n) throw Error("Invalid nonnegative exact native terms");
- const base={upfrontBond:bond.toString(),netAfterBondBeforeCosts:(p-bond).toString(),usableNowAfterQuotedCosts:(p-bond-cost).toString(),loanRepayment:r.toString(),loanAfterBondReturn:(r-bond).toString()};
+ const p=BigInt(x.principal),r=BigInt(x.repayment),bond=BigInt(x.bond),slot=x.payoutStorageCost===null?0n:BigInt(x.payoutStorageCost),incremental=BigInt(x.incrementalLoanCost),cost=incremental+slot;
+ if(p<=0n||r<p||bond<0n||cost<0n||slot<0n||incremental<0n) throw Error("Invalid nonnegative exact native terms");
+ const base={payoutStorageCost:x.payoutStorageCost,upfrontBond:bond.toString(),netAfterBondBeforeCosts:(p-bond).toString(),usableNowAfterQuotedCosts:(p-bond-cost).toString(),loanRepayment:r.toString(),loanAfterBondReturn:(r-bond).toString()};
  const q=x.quote;
- if(p<=bond+cost||!q||q.ledger!==x.ledger||q.expiresAtMs<=x.nowMs||!q.source||!q.route||BigInt(q.usableNearYocto)!==p-bond-cost||BigInt(q.usdcDebitRaw)<=0n||q.restoreUsdcRaw!==q.usdcDebitRaw)
+ if(x.payoutStorageCost===null||p<=bond+cost||!q||q.ledger!==x.ledger||q.expiresAtMs<=x.nowMs||!q.source||!q.route||BigInt(q.usableNearYocto)!==p-bond-cost||BigInt(q.usdcDebitRaw)<=0n||q.restoreUsdcRaw!==q.usdcDebitRaw)
   return {...base,available:false as const,message:"Comparison unavailable at this size"};
  const reverse=BigInt(q.reverseNearYocto),fixed=BigInt(q.reverseFixedFeeYocto);
  if(reverse<=0n||fixed<0n||fixed>reverse) throw Error("Invalid reverse benchmark");

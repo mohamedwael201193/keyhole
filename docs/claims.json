@@ -4355,6 +4355,48 @@
    "verify": "node judge/verify-claims.mjs --only test-parse_usd_micro"
   },
   {
+   "id": "test-payout_account_registered",
+   "claim": "Named test or symbol `payout_account_registered` exists in the source",
+   "where": "judge/gen-claims.py:158",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "payout_account_registered",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`payout_account_registered` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-payout_account_registered"
+  },
+  {
+   "id": "test-payout_storage_cost",
+   "claim": "Named test or symbol `payout_storage_cost` exists in the source",
+   "where": "judge/gen-claims.py:158",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "payout_storage_cost",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`payout_storage_cost` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-payout_storage_cost"
+  },
+  {
    "id": "test-pending_return_count",
    "claim": "Named test or symbol `pending_return_count` exists in the source",
    "where": "judge/gen-claims.py:158",

@@ -53,6 +53,7 @@ export type TxRoute =
 export type TxErrorCode = "signed_out" | "unsupported_wallet" | "rejected" | "insufficient_balance" | "contract" | "bad_call" | "stale_listing" | "unknown";
 export type TxError = { code: TxErrorCode; message: string };
 export type SendResult = { txHash: string } | { redirect: true } | { error: TxError };
+export type BatchSendResult = SendResult | {txHash: string; error: TxError};
 
 const YOCTO = /^\d+$/;
 const GAS = /^\d+$/;
@@ -121,28 +122,39 @@ export function outcomeFailure(o: unknown): TxError | null {
 
 /** The wallet route for the signed-in account. Built in lib/wallet.tsx from the wallet that is connected. */
 export async function sendKeysCall(route: TxRoute, call: KeysCall, contractId = KEYS_CONTRACT): Promise<SendResult> {
+  const result = await sendKeysCalls(route, [call], contractId);
+  // Preserve the existing single-call error contract for sale callers.
+  return "error" in result && result.error ? {error: result.error} : result;
+}
+
+/** One atomic same-receiver transaction, one wallet confirmation. Never fall back to sequential sends. */
+export async function sendKeysCalls(route: TxRoute, calls: readonly KeysCall[], contractId = KEYS_CONTRACT): Promise<BatchSendResult> {
   if (route.kind === "none") return { error: { code: "signed_out", message: "Sign in with a NEAR wallet to send this." } };
   if (route.kind === "ws" && route.walletId === "ethereum-wallets") {
     return { error: { code: "unsupported_wallet", message: "Selling and buying keys is not supported for MetaMask in this build. Sign in with a NEAR wallet." } };
   }
-  let action: FunctionCallAction;
-  try { action = functionCallAction(call); } catch (e) {
+  let actions: FunctionCallAction[];
+  try {
+    if (!calls.length || calls.length > 10) throw Error("Expected 1–10 same-receiver calls");
+    actions = calls.map(functionCallAction);
+    if (calls.reduce((sum, call) => sum + BigInt(call.gas), 0n) > 300_000_000_000_000n) throw Error("Batch exceeds 300 Tgas");
+  } catch (e) {
     return { error: { code: "bad_call", message: textOf(e) } };
   }
   let outcome: unknown;
   try {
     if (route.kind === "nc") {
-      outcome = await route.wallet.signAndSendTransaction({ signerId: route.accountId, receiverId: contractId, actions: [action] });
+      outcome = await route.wallet.signAndSendTransaction({ signerId: route.accountId, receiverId: contractId, actions });
     } else if (route.kind === "ws") {
       // wallet-selector v10 converts near-api-js actions itself (najActionToInternal) and refuses the {type, params} shape
       // with "Unsupported NAJ action", so its wallets get the near-api-js action. NEAR Connect accepts both shapes.
-      outcome = await route.wallet.signAndSendTransaction({ signerId: route.accountId, receiverId: contractId, actions: [selectorAction(call, action)], callbackUrl: route.callbackUrl });
+      outcome = await route.wallet.signAndSendTransaction({ signerId: route.accountId, receiverId: contractId, actions: calls.map((call, i) => selectorAction(call, actions[i])), callbackUrl: route.callbackUrl });
     } else {
       const account = new Account(route.accountId, new JsonRpcProvider({ url: RPC_URL }), route.signer);
       outcome = await account.signAndSendTransaction({
         receiverId: contractId,
-        actions: [najActions.functionCall(call.method, call.args, BigInt(action.params.gas), BigInt(call.deposit))],
-        throwOnFailure: true,
+        actions: calls.map((call, i) => selectorAction(call, actions[i])),
+        throwOnFailure: false,
       });
     }
   } catch (e) {
@@ -151,8 +163,8 @@ export async function sendKeysCall(route: TxRoute, call: KeysCall, contractId = 
   // A browser wallet (MyNearWallet and similar) navigates away and resolves with nothing. Its result returns in the URL.
   if (outcome === undefined || outcome === null) return { redirect: true };
   const failed = outcomeFailure(outcome);
-  if (failed) return { error: failed };
   const hash = outcomeHash(outcome);
+  if (failed) return hash ? {error: failed, txHash: hash} : {error: failed};
   if (!hash) return { error: { code: "unknown", message: "The wallet did not return a transaction hash. Check the account on NEAR before trying again." } };
   return { txHash: hash };
 }

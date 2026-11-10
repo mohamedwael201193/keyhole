@@ -10,10 +10,13 @@ import {
   PLEDGE_CTA_DISABLED,
   PLEDGE_PREVIEW_LABEL,
   createPledgeClient,
+  payoutStorageConsent,
   type Loan,
 } from "@/lib/pledgeClient";
 import "./pledge.css";
 import Link from "next/link";
+import {useWallet} from "@/lib/wallet";
+import {usePayoutStorageFee} from "@/lib/usePayoutStorageFee";
 import {ComparisonCard} from "./ComparisonCard";
 
 const KEY_ART = "/heirloom/keys/k03.webp";
@@ -42,6 +45,8 @@ export function PledgeView() {
   const keys = useKeyStore();
   const client = useMemo(() => createPledgeClient(), []);
   const live = client.live && PLEDGE_LIVE;
+  const {accountId}=useWallet();
+  const payoutStorageFee=usePayoutStorageFee(client,accountId);
 
   const [mode, setMode] = useState<Mode>("form");
   const [loadError,setLoadError]=useState("");
@@ -149,7 +154,7 @@ export function PledgeView() {
             </div>
             </aside>
             <p><Link href={loan ? `/pledge/lend/${encodeURIComponent(loan.token_id)}` : "/pledge/lend/example"}>Review as the named lender →</Link></p>
-            <ComparisonCard input={{principal:loan?.terms.principal??"10000000000000000000000",repayment:loan?.terms.repayment??"10100000000000000000000",bond:loan?.storage_bond??"9000000000000000000000",incrementalLoanCost:"0",quote:null,ledger:"CONFIDENTIAL",nowMs:0}} />
+            <ComparisonCard input={{principal:loan?.terms.principal??"10000000000000000000000",repayment:loan?.terms.repayment??"10100000000000000000000",bond:loan?.storage_bond??"9000000000000000000000",incrementalLoanCost:"0",payoutStorageCost:payoutStorageFee,quote:null,ledger:"CONFIDENTIAL",nowMs:0}} />
           </div>
 
           <div className="plg-stage">
@@ -249,6 +254,8 @@ export function PledgeView() {
                   </span>
                   <span className="plg-ex" data-testid="pledge-example-tag">{live ? "" : "Example"}</span>
                 </div>
+
+                <p className="plg-warn" role="note" data-testid="payout-storage-consent">{payoutStorageConsent(payoutStorageFee)}</p>
 
                 <p className="plg-warn" data-testid="pledge-warn" role="note">
                   Whole account is collateral — while pledged it can&apos;t trade, withdraw or transfer; miss repayment and the lender can claim it.

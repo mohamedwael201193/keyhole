@@ -1,23 +1,29 @@
-import type {KeysCall,SendResult} from "./keysTx";
-export type MoneyOperation={account:string;contract:string;call:KeysCall;status:"AwaitingWallet"|"Submitted"|"UNKNOWN";minBlockHeight:string;txHash?:string};
+import type {KeysCall,BatchSendResult} from "./keysTx";
+export type MoneyOperation={account:string;contract:string;call:KeysCall;calls?:KeysCall[];error?:string;status:"AwaitingWallet"|"Submitted"|"UNKNOWN";minBlockHeight:string;txHash?:string};
 export type MoneyStore={load():MoneyOperation|null;save(op:MoneyOperation|null):void};
 export function browserMoneyStore(account:string,contract:string):MoneyStore {
  const key=`keyhole:pledge-money:v1:${contract}:${account}`;
  return {load(){const raw=localStorage.getItem(key);if(!raw)return null;if(raw.length>16384)throw Error("Pending operation storage is invalid");const op=JSON.parse(raw) as MoneyOperation;if(op.account!==account||op.contract!==contract)throw Error("Pending operation identity mismatch");return op;},save(op){if(op)localStorage.setItem(key,JSON.stringify(op));else localStorage.removeItem(key);}};
 }
 /** Persist BEFORE opening a wallet or following its redirect. No automatic retry on network/receipt uncertainty. */
-export async function dispatchMoney(account:string,contract:string,call:KeysCall,store:MoneyStore,send:(call:KeysCall)=>Promise<SendResult>,minBlockHeight:string):Promise<MoneyOperation|null> {
+export async function dispatchMoney(account:string,contract:string,call:KeysCall,store:MoneyStore,send:(call:KeysCall)=>Promise<BatchSendResult>,minBlockHeight:string,calls?:KeysCall[]):Promise<MoneyOperation|null> {
  if(store.load())throw Error("An earlier money operation is unresolved. Refresh its original receipt; do not resend.");
  if(!/^\d+$/.test(minBlockHeight)||BigInt(minBlockHeight)<=0n)throw Error("Final chain dispatch anchor unavailable");
- const op:MoneyOperation={account,contract,call,status:"AwaitingWallet",minBlockHeight};store.save(op);
+ const op:MoneyOperation={account,contract,call,status:"AwaitingWallet",minBlockHeight,...(calls?{calls}: {})};store.save(op);
  try {
   const result=await send(call);
-  if("txHash" in result){op.txHash=result.txHash;op.status="Submitted";}
+  if("txHash" in result&&typeof result.txHash==="string"){op.txHash=result.txHash;op.status="Submitted";if("error" in result)op.error=result.error.message;}
   else if("redirect" in result){op.status="AwaitingWallet";}
-  else if(["rejected","signed_out","unsupported_wallet","bad_call"].includes(result.error.code)){store.save(null);throw Error(result.error.message);}
+  else if("error" in result&&["rejected","signed_out","unsupported_wallet","bad_call"].includes(result.error.code)){store.save(null);throw Error(result.error.message);}
   else {op.status="UNKNOWN";}
   store.save(op);return op;
  }catch(error){if(store.load()){op.status="UNKNOWN";store.save(op);}throw error;}
+}
+/** Persist every ordered action before the single wallet request, including first-use storage. */
+export async function dispatchMoneyBatch(account:string,contract:string,calls:readonly KeysCall[],store:MoneyStore,send:(calls:readonly KeysCall[])=>Promise<BatchSendResult>,minBlockHeight:string):Promise<MoneyOperation|null> {
+ if(!calls.length||calls.length>10)throw Error("Expected an atomic money-action batch");
+ const snapshot=JSON.parse(JSON.stringify(calls)) as KeysCall[];
+ return dispatchMoney(account,contract,snapshot[snapshot.length-1],store,()=>send(JSON.parse(JSON.stringify(snapshot))),minBlockHeight,snapshot);
 }
 function stable(value:unknown):string {
  if(Array.isArray(value))return `[${value.map(stable).join(",")}]`;
@@ -29,11 +35,15 @@ export function matchesMoneyReceipt(op:MoneyOperation,result:unknown):boolean {
  try {
   const r=result as {final_execution_status?:string;transaction?:{hash?:string;signer_id?:string;receiver_id?:string;actions?:{FunctionCall?:{method_name?:string;deposit?:string;gas?:number|string;args?:string}}[]}};
   const tx=r.transaction,actions=tx?.actions;
-  if(r.final_execution_status!=="FINAL"||!tx||tx.hash!==op.txHash||tx.signer_id!==op.account||tx.receiver_id!==op.contract||actions?.length!==1)return false;
-  const call=actions[0].FunctionCall;
-  if(!call||call.method_name!==op.call.method||call.deposit!==op.call.deposit||String(call.gas)!==op.call.gas||typeof call.args!=="string")return false;
-  const json=new TextDecoder().decode(Uint8Array.from(atob(call.args),x=>x.charCodeAt(0)));
-  return stable(JSON.parse(json))===stable(op.call.args);
+  if(r.final_execution_status!=="FINAL"||!tx||tx.hash!==op.txHash||tx.signer_id!==op.account||tx.receiver_id!==op.contract||!actions)return false;
+  const expected=op.calls??[op.call];
+  if(actions.length!==expected.length)return false;
+  return expected.every((want,i)=>{
+   const call=actions[i].FunctionCall;
+   if(!call||call.method_name!==want.method||call.deposit!==want.deposit||String(call.gas)!==want.gas||typeof call.args!=="string")return false;
+   const json=new TextDecoder().decode(Uint8Array.from(atob(call.args),x=>x.charCodeAt(0)));
+   return stable(JSON.parse(json))===stable(want.args);
+  });
  }catch{return false;}
 }
 export async function finalMoneyReceipt(op:MoneyOperation,rpcUrl:string):Promise<boolean> {
