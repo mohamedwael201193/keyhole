@@ -21,7 +21,7 @@ export const IDENTITY = {
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "3587b6704c68cf6835fd5102822ba5dfb4f94662"
+    "source_commit": "18a71c4928f742ec1c8106eaa4c2ef7232eae9c7"
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
