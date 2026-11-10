@@ -97,7 +97,7 @@ export async function contractView<T>(method: string, args: Record<string, unkno
   if (!r.ok || j.error || j.result?.error) throw new Error(j.result?.error ?? JSON.stringify(j.error) ?? "rpc");
   return JSON.parse(Buffer.from(j.result.result).toString("utf8"));
 }
-/** Pinned live v2.4 code hash. Must stay equal to identity.json contract.code_hash. */
+/** Historical v2.4 fallback identity. Never repin this exception to v2.5: its owner epoch is mandatory. */
 export const LIVE_V24_CODE_HASH = "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ";
 const decimalEpoch = (v: unknown): v is string => typeof v === "string" && /^(0|[1-9]\d*)$/.test(v) && BigInt(v) <= 18446744073709551615n;
 export async function readLiveCodeHash(rpc = DEFAULTS.rpc, contract = DEFAULTS.contract): Promise<string> {

@@ -1136,7 +1136,6 @@
         "priority_fee": 0,
         "public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
         "receiver_id": "keyhole-devmo.near",
-        "signature": "ed25519:3qFUayrbXCPHFwwE1gy6FdGKAPdaX756gwCwcpMwSDSumXo3N1ns3UhU9WiyGG8Jx7aw85MLrj9UqEtxoy6jyiWk",
         "signer_id": "keyhole-devmo.near"
       },
       "transaction_outcome": {
@@ -1176,7 +1175,9 @@
             "hash": "977rbrEJBMVhicPMMojKUP2nXc7fhcgh5uwvp5QdBdQA"
           }
         ]
-      }
+      },
+      "transaction_signature_sha256": "f2c5a6abb31801907a20b5896f18447b238d7e2cf642b0218b33a0f571d3d846",
+      "transaction_signature_note": "Public transaction signature omitted from this sanitized capture; transaction hash, FINAL status and receipt outcomes are unchanged."
     },
     "migration": {
       "final_execution_status": "FINAL",
@@ -1401,7 +1402,6 @@
         "priority_fee": 0,
         "public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
         "receiver_id": "keyhole-devmo.near",
-        "signature": "ed25519:4wZbePX658oEeae9KqDaUhE5xN3kQXP5CexypFjJbxTZxGt944QFKRcapmPxAxBKYRdK7PCJ2QASNyz6WBvs64em",
         "signer_id": "keyhole-devmo.near"
       },
       "transaction_outcome": {
@@ -1441,7 +1441,9 @@
             "hash": "8YWDaTmwMZQNmo6r2PCo3jfULQhocJSpnFVXsT5uYpu6"
           }
         ]
-      }
+      },
+      "transaction_signature_sha256": "b039283d0c29e48b56903308809a22b1e0d2e93bd7ca4194759d68020fb9951d",
+      "transaction_signature_note": "Public transaction signature omitted from this sanitized capture; transaction hash, FINAL status and receipt outcomes are unchanged."
     }
   },
   "view_state": {

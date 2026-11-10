@@ -17,5 +17,9 @@ for kind in ['view_state','view_access_key_list']:
  out[kind]=q(kind,**({'prefix_base64':''} if kind=='view_state' else {}))
 c=q('view_code');out['code']={'sha256':hashlib.sha256(base64.b64decode(c['code_base64'])).hexdigest(),'bytes':len(base64.b64decode(c['code_base64'])),'code_hash':c['hash']}
 for label,h in [('deploy','BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S'),('migration','EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa')]:
- tx=call('tx',{'tx_hash':h,'sender_account_id':account,'wait_until':'FINAL'});assert tx['final_execution_status']=='FINAL';assert not any('Failure' in x['outcome']['status'] for x in tx['receipts_outcome']);out['transactions'][label]=tx
+ tx=call('tx',{'tx_hash':h,'sender_account_id':account,'wait_until':'FINAL'});assert tx['final_execution_status']=='FINAL';assert not any('Failure' in x['outcome']['status'] for x in tx['receipts_outcome'])
+ signature=tx['transaction'].pop('signature')
+ tx['transaction_signature_sha256']=hashlib.sha256(signature.encode()).hexdigest()
+ tx['transaction_signature_note']='Public transaction signature omitted from this sanitized capture; transaction hash, FINAL status and receipt outcomes are unchanged.'
+ out['transactions'][label]=tx
 (D/'all-live-views.json').write_text(json.dumps(out,indent=2)+'\n');print('Recorded',len(out['views']),'views at',b,'and both FINAL receipt trees')
