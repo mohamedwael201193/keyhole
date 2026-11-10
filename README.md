@@ -81,7 +81,13 @@ The live worker is `d337e822` (765,658 bytes).
 | Worker publish tx | `BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5` | [nearblocks](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
 | Live `info` call | `dc3668db-674f-4865-a2ce-272f70c41b0d` | [attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) · [verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) |
 
-These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [`docs/evidence/integration-stack/artifact-repro-r2.json`](docs/evidence/integration-stack/artifact-repro-r2.json) and the v2.5 line of [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS). [`docs/evidence/integration-stack/validation.json`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into `identity.json`. Re-run this script after changing `identity.json`.
+These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [`contracts/keys/release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json), generated from the release artifact, and the v2.5 line of [`contracts/keys/release/SHA256SUMS`](contracts/keys/release/SHA256SUMS).
+
+| Candidate (not deployed) | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
+|---|---:|---|---:|
+| v2.5 | 485,855 | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` | 4.85855 NEAR |
+
+Measured size steps and the exact-artifact profiler report are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). [`docs/evidence/integration-stack/validation.json`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into `identity.json`. Re-run this script after changing `identity.json`.
 <!-- IDENTITY:END -->
 
 
@@ -238,7 +244,7 @@ flowchart LR
 - **Sessions.** One wallet signature starts a 30-minute grant with a $5 cap. A session can read, quote, swap, lower limits and revoke itself. It cannot withdraw or raise limits.
 - **Earned tiers.** A key rises from its own settled trades through `level_up`. Bronze to Silver (tier 1 to 2) is on mainnet. Caps follow the tier, and the contract refuses a lower value.
 - **Built-in sale and listing freeze.** `nft_list`, `nft_unlist` and `nft_buy` are in the contract. A listed key's account is frozen for value moves: the worker refuses swap and withdraw while it is listed (`listed`), and quote and chain signature refuse a key locked for sale. Balance reads still work.
-- **Verifiable builds.** Three different checks, with the commands in [§7](#7-verify-everything-yourself): deployed bytes match historical attestations ([identity block](#live-mainnet-identities)); the current candidate contract rebuild matches [`artifact-repro-r2.json`](docs/evidence/integration-stack/artifact-repro-r2.json); rebuilding the worker from this checkout is not the same as reproducing the deployed worker. Every call is attested with the executed wasm hash, and the browser checks the quote.
+- **Verifiable builds.** Three different checks, with the commands in [§7](#7-verify-everything-yourself): deployed bytes match historical attestations ([identity block](#live-mainnet-identities)); the current candidate contract rebuild matches its [generated release identity](contracts/keys/release/v2.5/identity.json); rebuilding the worker from this checkout is not the same as reproducing the deployed worker. Every call is attested with the executed wasm hash, and the browser checks the quote.
 
 ### Worker ops and their auth
 
@@ -916,7 +922,7 @@ python3 judge/gen-claims.py .
 node judge/verify-claims.mjs --offline
 ```
 
-The runtime suite uses real local NEAR receipts with a labelled custody mock. Current candidate contract bytes are [artifact-repro-r2.json](docs/evidence/integration-stack/artifact-repro-r2.json) (`bc12dace…`, 495,199 bytes). [validation.json](docs/evidence/integration-stack/validation.json) is the earlier local record (`ac25d889…` / 496,539 bytes) and keeps its health FAIL. Trust boundaries and release gates are in [SECURITY.md](SECURITY.md). No local result is a published candidate or live provider confinement.
+The runtime suite uses real local NEAR receipts with a labelled custody mock. Current candidate contract bytes and code-storage cost are generated in the [identity block](#live-mainnet-identities), with [measured size steps and profiling](docs/evidence/integration-stack/contract-size.md). [validation.json](docs/evidence/integration-stack/validation.json) is the earlier local record (`ac25d889…` / 496,539 bytes) and keeps its health FAIL. Trust boundaries and release gates are in [SECURITY.md](SECURITY.md). No local result is a published candidate or live provider confinement.
 
 
 ### Integrated client continuity proof

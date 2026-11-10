@@ -25,6 +25,9 @@ const w8 = w.wasm_sha256.slice(0, 8);
 const k8 = k.code_hash.slice(0, 8);
 const tx8 = (s) => `${s.slice(0, 8)}…`;
 const bytes = Number(w.bytes).toLocaleString("en-US");
+const candidateWasm = readFileSync(root + "contracts/keys/release/v2.5/keyhole_keys.wasm");
+const candidateSha = createHash("sha256").update(candidateWasm).digest("hex");
+const candidate = { status: "source-candidate-not-deployed", release: "v2.5", wasm_sha256: candidateSha, code_hash: b58(candidateSha), bytes: candidateWasm.length, recipe: "contracts/keys/build.sh", rust: "1.86.0", cargo_near: "0.22.0", binaryen: "123" };
 const identityBlock = `<!-- IDENTITY:START -->
 ### Live mainnet identities
 
@@ -43,7 +46,13 @@ The live worker is \`${w8}\` (${bytes} bytes).
 | Worker publish tx | \`${w.add_version_tx}\` | [nearblocks](https://nearblocks.io/txns/${w.add_version_tx}) |
 | Live \`info\` call | \`${w.info_call}\` | [attestation](https://api.outlayer.ai/attestations/by-call/${w.info_call}) · [verify](https://keyhole-seven.vercel.app/verify?call=${w.info_call}) |
 
-These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [\`docs/evidence/integration-stack/artifact-repro-r2.json\`](docs/evidence/integration-stack/artifact-repro-r2.json) and the v2.5 line of [\`contracts/keys/release/SHA256SUMS\`](contracts/keys/release/SHA256SUMS). [\`docs/evidence/integration-stack/validation.json\`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into \`identity.json\`. Re-run this script after changing \`identity.json\`.
+These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [\`contracts/keys/release/v2.5/identity.json\`](contracts/keys/release/v2.5/identity.json), generated from the release artifact, and the v2.5 line of [\`contracts/keys/release/SHA256SUMS\`](contracts/keys/release/SHA256SUMS).
+
+| Candidate (not deployed) | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
+|---|---:|---|---:|
+| v2.5 | ${candidate.bytes.toLocaleString("en-US")} | \`${candidateSha}\` | ${(candidate.bytes / 100000).toFixed(5)} NEAR |
+
+Measured size steps and the exact-artifact profiler report are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). [\`docs/evidence/integration-stack/validation.json\`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into \`identity.json\`. Re-run this script after changing \`identity.json\`.
 <!-- IDENTITY:END -->
 `;
 
@@ -56,10 +65,10 @@ export const CONTRACT_CODE_HASH = IDENTITY.contract.code_hash;
 export const CONTRACT_WASM_SHA256 = IDENTITY.contract.wasm_sha256;
 export const short = (h: string) => \`\${h.slice(0, 8)}…\${h.slice(-8)}\`;
 `;
-const candidateWasm = readFileSync(root + "contracts/keys/release/v2.5/keyhole_keys.wasm");
-const candidateSha = createHash("sha256").update(candidateWasm).digest("hex");
-const candidate = { status: "source-candidate-not-deployed", release: "v2.5", wasm_sha256: candidateSha, code_hash: b58(candidateSha), bytes: candidateWasm.length, recipe: "contracts/keys/build.sh", rust: "1.86.0", cargo_near: "0.22.0", binaryen: "123" };
-const out = { "web/lib/identity.gen.ts": ts, "tee/worker/DEPLOYED_SHA256": id.worker.wasm_sha256 + "\n", "contracts/keys/release/v2.5/identity.json": JSON.stringify(candidate, null, 2) + "\n" };
+
+const releaseSumsPath = "contracts/keys/release/SHA256SUMS";
+const releaseSums = readFileSync(root + releaseSumsPath, "utf8").replace(/^[a-f0-9]{64}  v2\.5\/keyhole_keys\.wasm$/m, `${candidateSha}  v2.5/keyhole_keys.wasm`);
+const out = { [releaseSumsPath]: releaseSums, "web/lib/identity.gen.ts": ts, "tee/worker/DEPLOYED_SHA256": id.worker.wasm_sha256 + "\n", "contracts/keys/release/v2.5/identity.json": JSON.stringify(candidate, null, 2) + "\n" };
 for (const [p, body] of Object.entries(out)) {
   let cur = ""; try { cur = readFileSync(root + p, "utf8"); } catch {}
   if (cur !== body) { if (process.argv.includes("--check")) errs.push(`${p} is stale: run node scripts/gen-identity.mjs`); else writeFileSync(root + p, body); }

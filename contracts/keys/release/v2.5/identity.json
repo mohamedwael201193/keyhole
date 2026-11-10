@@ -1,9 +1,9 @@
 {
   "status": "source-candidate-not-deployed",
   "release": "v2.5",
-  "wasm_sha256": "bc12dace72dd85ccd5b1941cd86782dd1a0302839fc97d92adc192f49df16f38",
-  "code_hash": "DfAKhVi4t3Q568sYYNspPaRfZAtzDnWdrWqRMha74UTH",
-  "bytes": 495199,
+  "wasm_sha256": "28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce",
+  "code_hash": "3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b",
+  "bytes": 485855,
   "recipe": "contracts/keys/build.sh",
   "rust": "1.86.0",
   "cargo_near": "0.22.0",

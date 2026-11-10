@@ -209,10 +209,10 @@ fn policy_matches(p: &PolicyView, b: &CollateralBinding) -> bool {
     p.owner == env::current_account_id() && p.locked && p.version == b.policy_version.0
         && env::sha256(p.encrypted_data.as_bytes()) == b.encrypted_policy_hash.0
 }
-fn call(target: AccountId, method: &str, args: near_sdk::serde_json::Value, deposit: u128, gas: u64) -> Promise {
-    Promise::new(target).function_call(method.into(), args.to_string().into_bytes(), yocto(deposit), Gas::from_tgas(gas))
+fn call(target: AccountId, method: &str, args: String, deposit: u128, gas: u64) -> Promise {
+    Promise::new(target).function_call(method.into(), args.into_bytes(), yocto(deposit), Gas::from_tgas(gas))
 }
-fn callback(method: &str, args: near_sdk::serde_json::Value, gas: u64) -> Promise {
+fn callback(method: &str, args: String, gas: u64) -> Promise {
     call(env::current_account_id(), method, args, 0, gas)
 }
 fn enough_gas() { require!(env::prepaid_gas() >= Gas::from_tgas(180), "attach at least 180 Tgas"); }
@@ -247,7 +247,7 @@ pub(crate) fn record_sale_royalty(treasury: &AccountId, amount: u128) -> bool {
     let Some(mut c) = pledge_config() else { return false; };
     c.treasury_available = U128(c.treasury_available.0.checked_add(amount).unwrap_or_else(||env::panic_str("treasury overflow")));
     save_config(&c);
-    emit_key_event("treasury_credit", near_sdk::serde_json::json!({"kind":"sale_royalty","amount":U128(amount)}));
+    emit_key_event("treasury_credit", json_object!({"kind":"sale_royalty","amount":U128(amount)}));
     true
 }
 fn require_lending(c: &PledgeConfig) { require!(c.lending_enabled, "lending disabled: confinement rollout required"); }
@@ -292,7 +292,7 @@ impl Contract {
         // aggregate+nonce keys add at most 130 bytes once, not once per account.
         require!(env::storage_usage().saturating_sub(before) + 24 + 130 <= PAYOUT_STORAGE_BYTES,
             "payout storage budget insufficient");
-        emit_key_event("payout_storage_register", near_sdk::serde_json::json!({"account_id":who,"paid":U128(cost),"budget_bytes":PAYOUT_STORAGE_BYTES}));
+        emit_key_event("payout_storage_register", json_object!({"account_id":who,"paid":U128(cost),"budget_bytes":PAYOUT_STORAGE_BYTES}));
         true
     }
     pub fn payout_storage_cost(&self) -> U128 { U128(env::storage_byte_cost().as_yoctonear() * PAYOUT_STORAGE_BYTES as u128) }
@@ -371,11 +371,11 @@ impl Contract {
         let nonce = c.next_payout_nonce;
         registrations().insert(&token_id, &PendingRegistration { nonce, payer: env::predecessor_account_id(), forwarded: U128(dep - COLLATERAL_STORAGE_DEPOSIT), store_succeeded: None });
         change_liabilities(&mut c, dep, 0); save_config(&c);
-        call(c.custody_contract, "store_wallet_policy", near_sdk::serde_json::json!({
+        call(c.custody_contract, "store_wallet_policy", json_object!({
             "wallet_pubkey": wallet_pubkey, "encrypted_data": encrypted_data, "wallet_signature": wallet_signature,
             "version": version, "locked": true, "valid_until": valid_until, "storage_refund_to": self.minter,
         }), dep - COLLATERAL_STORAGE_DEPOSIT, 35)
-            .then(callback("on_collateral_stored", near_sdk::serde_json::json!({"token_id": token_id, "nonce": nonce}), 65))
+            .then(callback("on_collateral_stored", json_object!({"token_id": token_id, "nonce": nonce}), 65))
     }
 
     #[private]
@@ -387,8 +387,8 @@ impl Contract {
     pub fn check_collateral(&self, token_id: TokenId) -> Promise {
         let c = config_required(); let b = collateral().get(&token_id).unwrap_or_else(||env::panic_str("unbound collateral"));
         let nonce = registrations().get(&token_id).map(|r| r.nonce).unwrap_or(U64(0));
-        call(c.custody_contract, "get_wallet_policy", near_sdk::serde_json::json!({"wallet_pubkey": b.wallet_pubkey}), 0, 15)
-            .then(callback("on_collateral_checked", near_sdk::serde_json::json!({"token_id": token_id, "nonce": nonce}), 30))
+        call(c.custody_contract, "get_wallet_policy", json_object!({"wallet_pubkey": b.wallet_pubkey}), 0, 15)
+            .then(callback("on_collateral_checked", json_object!({"token_id": token_id, "nonce": nonce}), 30))
     }
 
     #[private]
@@ -448,7 +448,7 @@ impl Contract {
         loans().insert(&token_id, &l);
         let storage_cost=env::storage_usage().saturating_sub(storage_before) as u128*env::storage_byte_cost().as_yoctonear();
         require!(storage_cost<=LOAN_STORAGE_DEPOSIT,"loan bond does not cover storage");
-        emit_key_event("loan_open", near_sdk::serde_json::json!({"token_id": token_id, "nonce": l.nonce}));
+        emit_key_event("loan_open", json_object!({"token_id": token_id, "nonce": l.nonce}));
         self.start_policy_action(token_id, true)
     }
 
@@ -463,8 +463,8 @@ impl Contract {
         b.policy_generation=U64(b.policy_generation.0.checked_add(1).unwrap_or_else(||env::panic_str("policy sequence overflow")));
         collateral().insert(&token,&b);l.policy_sequence=b.policy_generation;
         l.policy_busy=true;l.policy_call_complete=false;loans().insert(&token,&l);
-        call(c.custody_contract,if freeze {"freeze_wallet"} else {"unfreeze_wallet"},near_sdk::serde_json::json!({"wallet_pubkey":b.wallet_pubkey}),0,20)
-            .then(callback("on_policy_action",near_sdk::serde_json::json!({"token_id":token,"nonce":l.nonce,"sequence":l.policy_sequence}),65))
+        call(c.custody_contract,if freeze {"freeze_wallet"} else {"unfreeze_wallet"},json_object!({"wallet_pubkey":b.wallet_pubkey}),0,20)
+            .then(callback("on_policy_action",json_object!({"token_id":token,"nonce":l.nonce,"sequence":l.policy_sequence}),65))
     }
 
     /// Retry only after the previous provider action AND read callback have completed. No overlapping thaw/freeze.
@@ -487,8 +487,8 @@ impl Contract {
     }
     fn read_loan_policy(&self, token: TokenId, l: Loan) -> Promise {
         let c = config_required(); let b = collateral().get(&token).unwrap_or_else(||env::panic_str("unbound collateral"));
-        call(c.custody_contract, "get_wallet_policy", near_sdk::serde_json::json!({"wallet_pubkey": b.wallet_pubkey}), 0, 15)
-            .then(callback("on_loan_policy", near_sdk::serde_json::json!({"token_id": token, "nonce": l.nonce, "sequence": l.policy_sequence}), 30))
+        call(c.custody_contract, "get_wallet_policy", json_object!({"wallet_pubkey": b.wallet_pubkey}), 0, 15)
+            .then(callback("on_loan_policy", json_object!({"token_id": token, "nonce": l.nonce, "sequence": l.policy_sequence}), 30))
     }
 
     #[private]
@@ -504,7 +504,7 @@ impl Contract {
         if l.state == LoanState::UnlockPending && !p.frozen {
             // Loan bond remains a user liability until a successful pull payout; no treasury attribution.
             add_credit(&l.borrower, l.storage_bond.0); loans().remove(&token_id);
-            emit_key_event("loan_closed", near_sdk::serde_json::json!({"token_id": token_id, "nonce": nonce, "resolution": l.resolution}));
+            emit_key_event("loan_closed", json_object!({"token_id": token_id, "nonce": nonce, "resolution": l.resolution}));
             return true;
         }
         loans().insert(&token_id, &l); true
@@ -608,7 +608,7 @@ impl Contract {
         }
         ledger.available=0;ledger.pending=Some(p.clone());save_credit(&who,&ledger);
         Promise::new(who.clone()).transfer(yocto(amount))
-            .then(callback("on_payout", near_sdk::serde_json::json!({"account_id": who, "nonce": p.nonce}), 30))
+            .then(callback("on_payout", json_object!({"account_id": who, "nonce": p.nonce}), 30))
     }
 
     #[private]
@@ -621,7 +621,7 @@ impl Contract {
     pub fn fund_treasury(&mut self) {
         let mut c = config_required(); let amount = env::attached_deposit().as_yoctonear(); require!(amount > 0, "zero treasury funding");
         c.treasury_available = U128(c.treasury_available.0.checked_add(amount).unwrap_or_else(||env::panic_str("treasury overflow"))); save_config(&c);
-        emit_key_event("treasury_credit", near_sdk::serde_json::json!({"kind":"explicit_funding","from":env::predecessor_account_id(),"amount":U128(amount)}));
+        emit_key_event("treasury_credit", json_object!({"kind":"explicit_funding","from":env::predecessor_account_id(),"amount":U128(amount)}));
     }
 
     pub fn treasury_recoverable(&self) -> U128 {
@@ -645,7 +645,7 @@ impl Contract {
         c.treasury_available = U128(c.treasury_available.0 - amount.0); c.treasury_pending = Some(p.clone()); save_config(&c);
         // Destination cannot be supplied or changed. No upgrade, DeleteAccount, custody signing or NFT operation.
         Promise::new(c.recovery_account).transfer(yocto(amount.0))
-            .then(callback("on_treasury_recovered", near_sdk::serde_json::json!({"nonce": p.nonce}), 30))
+            .then(callback("on_treasury_recovered", json_object!({"nonce": p.nonce}), 30))
     }
 
     #[private]
@@ -696,7 +696,7 @@ impl Contract {
                     loan.due_ns=U64(delivered_at.checked_add(loan.terms.duration_sec.0*SECOND).unwrap_or_else(||env::panic_str("due overflow")));
                     loan.state=LoanState::Active;loans().insert(&delivery.token_id,&loan);
                     principal_dispatches().remove(&delivery.token_id);
-                    emit_key_event("loan_principal_delivered",near_sdk::serde_json::json!({"token_id":delivery.token_id,"nonce":loan.nonce,"payout_nonce":nonce,"activated_at_ns":U64(delivered_at),"due_ns":loan.due_ns}));
+                    emit_key_event("loan_principal_delivered",json_object!({"token_id":delivery.token_id,"nonce":loan.nonce,"payout_nonce":nonce,"activated_at_ns":U64(delivered_at),"due_ns":loan.due_ns}));
                 } else {
                     // Definite transfer failure: same exact credit may be claimed again, no clock.
                     principal_dispatches().remove(&delivery.token_id);

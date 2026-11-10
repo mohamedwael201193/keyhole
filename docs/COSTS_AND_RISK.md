@@ -22,13 +22,13 @@ A v2.4 built-in sale pays 5% to `config.treasury` (`keyhole-devmo.near`) and the
 
 ### Code storage, live and candidate
 
-Measured in [artifact-repro-r2.json](evidence/integration-stack/artifact-repro-r2.json). Not an all-in top-up. Migration state, gas, the 0.1 NEAR operating reserve, and existing liabilities are outside this table.
+Measured in [candidate identity](../contracts/keys/release/v2.5/identity.json). Not an all-in top-up. Migration state, gas, the 0.1 NEAR operating reserve, and existing liabilities are outside this table.
 
 | | Live v2.4 | Candidate v2.5 | Proof |
 |---|---:|---:|---|
-| Code bytes | 241,621 | 495,199 | [identity.json](../identity.json), [artifact-repro-r2.json](evidence/integration-stack/artifact-repro-r2.json) |
-| Code storage at 10^19 yoctoNEAR/byte | 2.41621 NEAR | 4.95199 NEAR | same records |
-| Increment over live code | — | 253,578 bytes / 2.53578 NEAR | `code_delta_vs_live_v24_near` in the artifact record |
+| Code bytes | 241,621 | 485,855 | [identity.json](../identity.json), [candidate identity](../contracts/keys/release/v2.5/identity.json) |
+| Code storage at 10^19 yoctoNEAR/byte | 2.41621 NEAR | 4.85855 NEAR | same records |
+| Increment over live code | — | 244,234 bytes / 2.44234 NEAR | [measured size record](evidence/integration-stack/contract-size.md) |
 
 ## Candidate (v2.5, not deployed)
 
