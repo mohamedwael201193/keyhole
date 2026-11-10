@@ -1,0 +1,64 @@
+
+> keyhole-web@1.0.0 build
+> next build
+
+▲ Next.js 16.4.3 (Turbopack)
+✓ Running next.config.ts took 47ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 13.0s
+  Running TypeScript ...
+  Finished TypeScript in 12.0s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/29) ...
+  Generating static pages using 7 workers (7/29) 
+  Generating static pages using 7 workers (14/29) 
+  Generating static pages using 7 workers (21/29) 
+✓ Generating static pages using 7 workers (29/29) in 650ms
+  Finalizing page optimization ...
+
+Route (app)                 Revalidate  Expire
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /api/agent
+├ ƒ /api/ai
+├ ƒ /api/check
+├ ƒ /api/health
+├ ƒ /api/keyhole
+├ ƒ /api/keys
+├ ƒ /api/oneclick
+├ ƒ /api/oneclick/deposit
+├ ƒ /api/oneclick/fund
+├ ƒ /api/pcs
+├ ƒ /api/pledge-sandbox
+├ ƒ /api/prices
+├ ƒ /api/supply
+├ ƒ /api/tokens
+├ ƒ /api/worker
+├ ○ /apple-icon.png
+├ ○ /ask
+├ ○ /atlas
+├ ○ /attack
+├ ○ /dashboard
+├ ○ /demo
+├ ƒ /gallery
+├ ƒ /identity
+├ ○ /judge
+├ ○ /key
+├ ○ /keys
+├ ○ /manifest.webmanifest
+├ ○ /mint                           1m      1y
+├ ○ /pledge
+├ ƒ /pledge/lend/[tokenId]
+├ ○ /pnl
+├ ○ /settle
+├ ○ /source
+├ ○ /start
+├ ○ /swap
+├ ○ /vault                          1m      1y
+└ ƒ /verify
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

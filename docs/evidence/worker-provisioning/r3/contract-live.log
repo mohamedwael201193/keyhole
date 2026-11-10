@@ -1,0 +1,6 @@
+on-chain code_hash  3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b
+repo wasm (base58)  3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b  (sha256 28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce)
+OK   contract code matches the committed wasm
+config {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
+OK   minter is an implicit account (015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443); its key was generated inside the TEE (see worker op info in evidence)
+PASS strict online contract identity, actual code bytes, version and minter at final block HoNkTSsNaTyXG7uRJYA5CnuHSGVJjAaM4KLhQMWPnzuG

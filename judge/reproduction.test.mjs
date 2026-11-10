@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
-const section = readme.split("## Pledge reproduction — live v2.5 contract, guarded worker not published")[1];
+const section = readme.split("## Pledge reproduction —")[1];
 const fence = section.split("```bash\n")[1].split("```")[0];
 test("full reproduction builds the untracked callback fixture before the sandbox", () => {
   const build = fence.indexOf("./build.sh --features callback-failure-fixture");

@@ -129,7 +129,7 @@ jobs:
       - name: strict recorded-refusal predicate
         run: python3 judge/receipt_proof_test.py
       - name: strict rebuild semantics and publication recovery regressions
-        run: node --test judge/contract-rebuild.test.mjs scripts/pledge/*.test.mjs
+        run: node --test judge/contract-rebuild.test.mjs scripts/pledge/*.test.mjs scripts/release/*.test.mjs
       - name: primary judge checkout command
         run: node --test judge/checkout-command.test.mjs
       - name: full reproduction prepares sandbox fixtures and compiles WASI

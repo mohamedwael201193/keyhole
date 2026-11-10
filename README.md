@@ -21,7 +21,9 @@
 Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepared source/sandbox features are not live. Contract and worker author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
 
 
-> **Live contract v2.5:** the in-place upgrade and Pledge migration are FINAL on mainnet ([deployment](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)). The guarded worker is a separate release; lending remains disabled. [Live identities and strict online verification](#live-mainnet-identities).
+<!-- LIVE-SUMMARY:START -->
+> **Live contract v2.5:** deployment is FINAL on mainnet ([deployment](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S)); the historical Pledge migration remains [FINAL](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa) and is not repeated. Worker publishing is separate; lending remains disabled at release. [Live identities and strict online verification](#live-mainnet-identities).
+<!-- LIVE-SUMMARY:END -->
 
 **Contents:** [1 Verify in 5 minutes](#1-verify-in-5-minutes-zero-install) · [2 Proven](#2-proven-on-near-mainnet) · [3 Try it](#3-try-it) · [3a Real vs simulated](#3a-real-vs-simulated) · [4 How it works](#4-how-it-works) · [5 Why an NFT that does something](#5-why-this-is-an-nft-that-does-something) · [6 NEAR stack](#6-near-stack-used) · [7 Verify](#7-verify-everything-yourself) · [8 Security](#8-security-model) · [9 Numbers](#9-numbers) · [10 Built during the hackathon](#10-built-during-the-hackathon) · [11 Repo map](#11-repo-map) · [12 License](#12-license)
 
@@ -67,7 +69,7 @@ It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
 | Attestation | `api.outlayer.ai/attestations/by-call/<info_call>` | a TDX quote is present and `executed_wasm_sha256` equals the worker hash in `identity.json`. This is an existing attestation, not a new paid call |
 | Receipt | archival NEAR RPC `tx` with `wait_until: FINAL` and the recorded signer | [`H8qJNgox…`](https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV) refused `one key per account: receiver already holds a KEYHOLE key` as expected; matches hash, signer, receiver, `nft_transfer`, 1 yocto, decoded args, and the typed contract `ExecutionError` in [`judge/receipt_proof.py`](judge/receipt_proof.py) |
 
-Read-only mainnet judge: **9 PASS, 0 FAIL**. Output: [current isolated run](docs/evidence/worker-provisioning/r2/live-zero-install.log) · [historical run](docs/evidence/judge-zero-install/run.txt).
+Read-only mainnet judge: **9 PASS, 0 FAIL**. Output: [current isolated run](docs/evidence/worker-provisioning/r3/live-final.log) · [historical run](docs/evidence/judge-zero-install/run.txt).
 
 Only a browser? Open [/verify](https://keyhole-seven.vercel.app/verify) (attestation, Intel DCAP and revocation checks, computed in the page) and [/judge](https://keyhole-seven.vercel.app/judge).
 
@@ -77,7 +79,7 @@ Fees and deposits for every action, and what a sealed-floor attestation does and
 
 The source worker (not published) requires the separately released v2.6 CAS contract, then prepares its real provider policy inside the enclave, quotes exact storage with the minter refund beneficiary, and submits collateral with the enclave-only minter. A separately pinned, signed authority review binds the exact wallet, policy, build and owner epoch. The sealed eligibility writer runs only after the original registration is FINAL and the immutable binding matches. Holder-only exit previews retain actual provider minima without broadcasting a withdrawal.
 
-[Production path and runnable proof](docs/evidence/worker-provisioning/README.md) · [Independent-review schema](tee/worker/src/collateral.rs) · [Reproducible candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Storage, route and bounded compute accounting](docs/evidence/worker-provisioning/RESEARCH.md).
+[R3 release tooling and finding map](docs/evidence/worker-provisioning/R3.md) · [Production path and runnable proof](docs/evidence/worker-provisioning/README.md) · [Independent-review schema](tee/worker/src/collateral.rs) · [Reproducible candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Storage, route and bounded compute accounting](docs/evidence/worker-provisioning/RESEARCH.md).
 
 <!-- IDENTITY:START -->
 ### Live mainnet identities
@@ -119,7 +121,7 @@ Contract source candidate **2.6.0**, not deployed: [generated release identity](
 Measured size steps are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [`docs/evidence/live-v2.5/all-live-views.json`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
 
-The downloadable source bundle carries the same v2.5 contract identity as this checkout. Public rollout evidence retains both FINAL receipt trees and transaction hashes; public transaction signatures are represented by SHA256 digests in the sanitized capture. The CLI's historical v2.4 compatibility pin stays tied to its released wasm, while v2.5 requests require the current owner epoch. The serial funded acceptance keeps its 13-transaction ledger and 96 screenshots, with bounded browser operations and an overall evidence-capture budget suitable for shared CI runners.
+The downloadable source bundle carries the same generated live and candidate identities as this checkout. Public rollout evidence retains both FINAL receipt trees and transaction hashes; public transaction signatures are represented by SHA256 digests in the sanitized capture. The CLI's historical v2.4 compatibility pin stays tied to its released wasm, while current requests require the current owner epoch. The serial funded acceptance keeps its 13-transaction ledger and 96 screenshots, with bounded browser operations and an overall evidence-capture budget suitable for shared CI runners.
 
 
 ---
@@ -202,7 +204,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `582 claims: 288 PASS, 0 FAIL, 0 ERROR, 294 SKIP` (current repair). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `584 claims: 290 PASS, 0 FAIL, 0 ERROR, 294 SKIP` (current repair). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -241,12 +243,12 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 
 | What | Status | Where to check |
 |---|---|---|
-| NFT contract `keyhole-devmo.near` on mainnet (v2.5 code hash) | **Real mainnet** | [/verify](https://keyhole-seven.vercel.app/verify) live evidence pack · `bash ./judge/1-contract.sh` |
+| NFT contract `keyhole-devmo.near` on mainnet (generated live code hash) | **Real mainnet** | [/verify](https://keyhole-seven.vercel.app/verify) live evidence pack · `bash ./judge/1-contract.sh` |
 | TEE worker published on OutLayer (wasm in `identity.json`) | **Real mainnet + attestation** | [/verify](https://keyhole-seven.vercel.app/verify) · OutLayer attestation API |
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (582 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 288 PASS, 0 FAIL, 0 ERROR, 294 SKIP (current repair) |
+| Judge-claims machine (584 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 290 PASS, 0 FAIL, 0 ERROR, 294 SKIP (current repair) |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -260,7 +262,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 flowchart LR
   H["Holder wallet<br/>signs NEP-413 or EIP-191 (no gas)"] -->|"POST /api/worker {op, auth}"| G["Website gateway<br/>allowlist, 8 KB limit, 20 calls per minute per IP"]
   G -->|"adds the payment key on the server"| T
-  subgraph TEE["OutLayer Intel TDX enclave, KEYHOLE worker d337e822"]
+  subgraph TEE["OutLayer Intel TDX enclave, KEYHOLE worker (generated live identity above)"]
     T["Worker<br/>signature, nonce, freshness, owner, caps, rate limit"]
     CW[("Custody wallet per token_id<br/>key sealed in enclave storage")]
     T --- CW
@@ -275,7 +277,7 @@ flowchart LR
 - **Sessions.** One wallet signature starts a 30-minute grant with a $5 cap. A session can read, quote, swap, lower limits and revoke itself. It cannot withdraw or raise limits.
 - **Earned tiers.** A key rises from its own settled trades through `level_up`. Bronze to Silver (tier 1 to 2) is on mainnet. Caps follow the tier, and the contract refuses a lower value.
 - **Built-in sale and listing freeze.** `nft_list`, `nft_unlist` and `nft_buy` are in the contract. A listed key's account is frozen for value moves: the worker refuses swap and withdraw while it is listed (`listed`), and quote and chain signature refuse a key locked for sale. Balance reads still work.
-- **Verifiable builds.** Three different checks, with the commands in [§7](#7-verify-everything-yourself): deployed bytes match historical attestations ([identity block](#live-mainnet-identities)); the live v2.5 contract rebuild matches its [generated release identity](contracts/keys/release/v2.5/identity.json); rebuilding the worker from this checkout is not the same as reproducing the deployed worker. Every call is attested with the executed wasm hash, and the browser checks the quote.
+- **Verifiable builds.** Three different checks, with the commands in [§7](#7-verify-everything-yourself): deployed bytes match historical attestations ([identity block](#live-mainnet-identities)); the historical v2.5 source rebuild matches its [generated release identity](contracts/keys/release/v2.5/identity.json); rebuilding the worker from this checkout is not the same as reproducing the deployed worker. Every call is attested with the executed wasm hash, and the browser checks the quote.
 
 ### Worker ops and their auth
 
@@ -556,7 +558,7 @@ KEYHOLE's next holder surface after Swap (sidebar **Pledge**): **borrow NEAR wit
 | NEP-181 enumeration | `nft_tokens`, `nft_tokens_for_owner`, `nft_total_supply` | [`lib.rs:344`](contracts/keys/src/lib.rs) | [`nft_tokens.json`](docs/evidence/contract-v2/nft_tokens.json) |
 | NEP-199 payouts | `nft_payout`, `nft_transfer_payout`, 500 bps live (cap 1000) | `nft_payout` [`lib.rs:238`](contracts/keys/src/lib.rs), `nft_transfer_payout` [`:254`](contracts/keys/src/lib.rs) | sale [`Azn3WUud…`](https://nearblocks.io/txns/Azn3WUudmSn4ip9B9HNVXTGXriavZ4JK5f3Aqp7JPx2m) |
 | NEP-297 event format | `EVENT_JSON` for `nft_metadata_update` (`beat`). It is not listed in the contract's standards metadata | [`lib.rs:198`–`:199`](contracts/keys/src/lib.rs) | tx [`2ShJpaoi…`](https://nearblocks.io/txns/2ShJpaoicEm49L9rcsJjXoubuzoF3SvbQFZASUQBi5dq) |
-| NEP-330 source metadata | Version, repository link, standards | [`lib.rs:61`](contracts/keys/src/lib.rs) | live `2.5.0` ([post-upgrade views](docs/evidence/live-v2.5/all-live-views.json)); an older snapshot is [`contract_source_metadata.json`](docs/evidence/contract-v2/contract_source_metadata.json) |
+| NEP-330 source metadata | Version, repository link, standards | [`lib.rs:61`](contracts/keys/src/lib.rs) | generated live version above; historical v2.5 ([post-upgrade views](docs/evidence/live-v2.5/all-live-views.json)); an older snapshot is [`contract_source_metadata.json`](docs/evidence/contract-v2/contract_source_metadata.json) |
 | NEP-413 signed intents | Holder authentication for every request | [`verify_nep413`, `tee/worker/src/lib.rs:92`](tee/worker/src/lib.rs); browser side [`web/lib/nep413.ts`](web/lib/nep413.ts) | [`942b4cff`](https://api.outlayer.ai/attestations/by-call/942b4cff-23c9-4e4d-8ebc-79bfa01cd029) |
 | EIP-191 (MetaMask) | Holder authentication from an Ethereum key; the account is the `0x` address | [`verify_eip191`, `tee/worker/src/lib.rs:183`](tee/worker/src/lib.rs) | Key `k102a806df6867547`, minted from a MetaMask account ([§9](#keys-on-the-contract)) |
 | Function-call keys | Scoped beat key: `beat` only, 0.05 NEAR gas allowance | [`tee/worker/src/beatkey.rs`](tee/worker/src/beatkey.rs), [`op_beat_key`, `tee/worker/src/main.rs:879`](tee/worker/src/main.rs) | `add_beat_key` [`DXH756vm…`](https://nearblocks.io/txns/DXH756vmgj8GTDz6fUwnfgaUuC7vCi1vu6VaX5heoDww) |
@@ -588,7 +590,7 @@ Not used: NEP-366 meta-transactions, NEP-145/148/141, sub-accounts, Intent Conne
 | v2.3 | `700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d` (210,474 bytes) | `8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG` | previous release |
 | **v2.4** | `b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c` (241,621 bytes) | **`DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ`** | superseded by v2.5 (deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn), [evidence](docs/evidence/contract-v2-4/README.md)) |
 
-| **v2.5** | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` (485,855 bytes) | **`3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b`** | **live** ([deploy](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [Pledge migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)) |
+| **v2.5** | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` (485,855 bytes) | **`3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b`** | recorded v2.5 rollout; current identity above ([deploy](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [Pledge migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)) |
 
 Contract configuration at capture (historical; `beats` grows with each heartbeat, re-read by `judge/1-contract.sh`):
 
@@ -596,7 +598,9 @@ Contract configuration at capture (historical; `beats` grows with each heartbeat
 {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500,"beats":"2"}
 ```
 
-`contracts/keys/deployed/keyhole_keys.wasm` is the live **v2.5** code: **485,855 bytes**, SHA256 `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce`. `bash judge/1-contract.sh --strict` checks actual finalized bytes, version and minter. [Live-source strict rebuild proof](docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log) reproduces that historical source. The current checkout instead rebuilds the separately labelled **v2.6 candidate**, checked by CI against [`release/SHA256SUMS`](contracts/keys/release/SHA256SUMS) and its generated identity. The pinned recipe uses rustc 1.86.0, cargo-near 0.22.0 and Binaryen 123.
+<!-- LIVE-ARTIFACT:START -->
+`contracts/keys/deployed/keyhole_keys.wasm` is the live **v2.5** code: **485,855 bytes**, SHA256 `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce`. `bash judge/1-contract.sh --strict` checks actual finalized bytes, version and minter. [Historical v2.5 source rebuild proof](docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log) remains labelled historical. The current checkout rebuilds the separately generated source candidate, checked by CI against [`release/SHA256SUMS`](contracts/keys/release/SHA256SUMS) and its identity. The pinned recipe uses rustc 1.86.0, cargo-near 0.22.0 and Binaryen 123.
+<!-- LIVE-ARTIFACT:END -->
 
 <details>
 <summary><b>Contract details</b></summary>
@@ -618,7 +622,7 @@ The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` 
 
 | Build | Role | `add_version` tx | Live `info` call |
 |---|---|---|---|
-| `d337e822` (765,658 bytes) | **current, live** | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| `d337e822` (765,658 bytes) | recorded deployment; current identity above | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
 | `cc8d2fa8` (755,751 bytes) | previous | [`Epaz3aMA…`](https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6) | [`0847b924`](https://api.outlayer.ai/attestations/by-call/0847b924-df76-4cee-ab5a-a96c789d2983) |
 | `a985fd87` (745,180 bytes) | previous | [`A1o8882h…`](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG) | [`246e4a7a`](https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751) |
 | `ebeb6a34` | previous, rolled back to `94c355ff` | [`MG7pGVSN…`](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq) | [`5650a6b7`](https://api.outlayer.ai/attestations/by-call/5650a6b7-b7de-410c-b206-e189171bad15) |
@@ -655,7 +659,7 @@ test "$(git rev-parse HEAD)" = "a8836ffff7af313056a6ae9224c6ac4f022d50b8"
 bash ./judge/0-live.sh                   # curl + python3 only: live code hash, views, one existing attestation, one FINAL receipt
 node judge/verify-claims.mjs --offline   # file checks only; live checks are SKIP. Does not call OutLayer /call
 node judge/verify-claims.mjs             # public reads (mainnet, site pages, existing attestations, CI). Not a paid info probe
-bash ./judge/1-contract.sh --strict          # committed live v2.5 bytes == chain; candidate rebuild below
+bash ./judge/1-contract.sh --strict          # committed live bytes == chain; candidate rebuild below
 bash ./judge/2-attestations.sh           # every recorded call: attested build and output hash
 ./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d
 # --rebuild compiles THIS checkout. It matches executed wasm only on the publishing commit.
@@ -723,8 +727,8 @@ OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f13efe926132
 | Publish worker `a985fd87` (`add_version`, set active; now previous): the PR #134 hardening (wallet-signed withdraw, swap slippage floor, refunds on refused calls) without nonce pruning (PR #139) | [`A1o8882h…`](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG) |
 | FastFS upload for `a985fd87` (expected prepaid-gas revert) | [`Bc8YArR3…`](https://nearblocks.io/txns/Bc8YArR3dwjaTY5fVPbqxCVEXf7xp62DkSBuWjuUmdUY) |
 | Live `info` on `a985fd87` (now previous) | [`246e4a7a`](https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751) |
-| Publish current worker `d337e822` (`add_version`, set active): the public signed `record` op for listed keys, and withdraw to any address the holder signs (#177) | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
-| Live `info` on `d337e822` (25 ops, lists `record`) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| Publish recorded worker `d337e822` (`add_version`, set active): the public signed `record` op for listed keys, and withdraw to any address the holder signs (#177) | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
+| Recorded `info` on `d337e822` (25 ops, lists `record`) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
 | First signed call on `d337e822` (`balance`, ok) | [`740191ec`](https://api.outlayer.ai/attestations/by-call/740191ec-48a4-4bbb-87f9-906b27c8116e) |
 | Signed `record` call for a listed key (statement signed by the minter) | [`b5fbed71`](https://api.outlayer.ai/attestations/by-call/b5fbed71-d497-43fe-bbd4-6e28efc4dacf) |
 | Publish worker `cc8d2fa8` (`add_version`, set active; now previous): earned tiers (`level_up`, #164) and the freeze of a listed key's account on sale (#173) | [`Epaz3aMA…`](https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6) |
@@ -787,7 +791,7 @@ Detailed trust boundaries (a broken TEE, privacy limits, the browser, agents, fu
 
 ## 9. Numbers
 
-Current repair validation: [R2 proof and exact finding map](docs/evidence/worker-provisioning/R2.md). Mainnet and product measurements below retain their explicitly named historical evidence.
+Current repair validation: [R3 proof and exact finding map](docs/evidence/worker-provisioning/R3.md); [historical R2 proof](docs/evidence/worker-provisioning/R2.md). Mainnet and product measurements below retain their explicitly named historical evidence.
 
 | Component | Count | How it was measured |
 |---|---|---|
@@ -797,7 +801,7 @@ Current repair validation: [R2 proof and exact finding map](docs/evidence/worker
 | CLI tests | **63** pass | `cd cli && npm test`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web unit tests (Vitest) | **1785** pass in 99 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web e2e (Playwright) | **201** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px under pinned Node/npm |
-| Claims in `docs/claims.json` | **582**: offline 288 PASS, 0 FAIL, 0 ERROR, 294 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **584**: offline 290 PASS, 0 FAIL, 0 ERROR, 294 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | **216** tokens on **39** chains | live `GET keyhole-seven.vercel.app/api/tokens` (historical) |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |
@@ -916,7 +920,7 @@ verify.sh             one-call verifier (attestation, FastFS, optional rebuild)
 
 **Wallets.** A NEAR wallet signs a NEP-413 message. MetaMask signs the same intent with EIP-191. A redirect wallet returns the signature in the URL hash, and the vault shows the result from that return. The wallet bundle loads when you click **Connect wallet**. Motion is off under `prefers-reduced-motion`. The ambient audio loop is off by default and released under **CC0** ([`web/public/audio/LICENSE.txt`](web/public/audio/LICENSE.txt)).
 
-**Historical v2.4 rollout: earned tiers and a built-in key sale.** Contract v2.4 was deployed on `keyhole-devmo.near` in the historical run (deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn), code hash `DEXHHyEM…`, [evidence](docs/evidence/contract-v2-4/README.md)). It adds the minter-only `nft_set_tier` and the built-in sale: `nft_list`, `nft_unlist`, `nft_buy`, and the views `nft_listing` and `nft_listings`. At the last check, `nft_listings` returned `[]`, so no key was listed. The worker `cc8d2fa8` was live and is now the previous build (the live one is `d337e822`, section 2; [publish](docs/evidence/publish-cc8d2fa8/README.md)): its info call [`0847b924`](https://api.outlayer.ai/attestations/by-call/0847b924-df76-4cee-ab5a-a96c789d2983) lists `level_up` ([`tee/worker/src/level.rs`](tee/worker/src/level.rs)), and its first signed call [`b6787f80`](https://api.outlayer.ai/attestations/by-call/b6787f80-339e-4de3-8f6d-dc46898d6e6d) (`status`) returned ok. The earned tier and the sale are recorded in [§2](#2-proven-on-near-mainnet) and in [`docs/evidence/earned-tier-and-sale`](docs/evidence/earned-tier-and-sale/README.md). The app's sell and buy screens are in the repository (commit `d3bb985`).
+**Historical v2.4 rollout: earned tiers and a built-in key sale.** Contract v2.4 was deployed on `keyhole-devmo.near` in the historical run (deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn), code hash `DEXHHyEM…`, [evidence](docs/evidence/contract-v2-4/README.md)). It adds the minter-only `nft_set_tier` and the built-in sale: `nft_list`, `nft_unlist`, `nft_buy`, and the views `nft_listing` and `nft_listings`. At the last check, `nft_listings` returned `[]`, so no key was listed. The worker `cc8d2fa8` was live and is now the previous build (see the generated live identity above; section 2 records the rollout; [publish](docs/evidence/publish-cc8d2fa8/README.md)): its info call [`0847b924`](https://api.outlayer.ai/attestations/by-call/0847b924-df76-4cee-ab5a-a96c789d2983) lists `level_up` ([`tee/worker/src/level.rs`](tee/worker/src/level.rs)), and its first signed call [`b6787f80`](https://api.outlayer.ai/attestations/by-call/b6787f80-339e-4de3-8f6d-dc46898d6e6d) (`status`) returned ok. The earned tier and the sale are recorded in [§2](#2-proven-on-near-mainnet) and in [`docs/evidence/earned-tier-and-sale`](docs/evidence/earned-tier-and-sale/README.md). The app's sell and buy screens are in the repository (commit `d3bb985`).
 
 **Commits:** [`6063b69`](https://github.com/mohamedwael201193/keyhole/commit/6063b69) keys contract · [`063318f`](https://github.com/mohamedwael201193/keyhole/commit/063318f) TEE worker · [`321b827`](https://github.com/mohamedwael201193/keyhole/commit/321b827) CLI, MCP, judge kit and reproducible build · [`0dc39e2`](https://github.com/mohamedwael201193/keyhole/commit/0dc39e2) website · [`a9d65df`](https://github.com/mohamedwael201193/keyhole/commit/a9d65df) site polish · [`7584d9b`](https://github.com/mohamedwael201193/keyhole/commit/7584d9b) step numbering and current minter.
 
@@ -952,9 +956,9 @@ npm run build
 cd ..
 ```
 
-## Pledge reproduction — live v2.5 contract, guarded worker not published
+## Pledge reproduction — source candidates and generated live identities
 
-This local stack combines admission, guarded custody, serialized policy commands, the client preview, blinded provenance, protected sales and delivery-gated lending. The v2.5 contract is live; the v2.6 owner/epoch-CAS contract candidate below is not deployed. `identity.json` separately pins the unchanged deployed worker. Lending and both Pledge write flags remain off.
+This local stack combines admission, guarded custody, serialized policy commands, the client preview, blinded provenance, protected sales and delivery-gated lending. The generated identity block above distinguishes the actual live contract/worker from the owner/epoch-CAS source candidates. `identity.json` pins each identity independently. Lending and both Pledge write flags remain off.
 
 - Contract admission binds the current holder, ownership epoch, exact operation ID and action hash. The worker's ordinary withdrawal uses the same begin_value_op/finish_value_op driver as guarded value operations; there is no direct legacy withdrawal POST. Only the current holder's own NEAR account is a permitted withdrawal destination, including at durable provider dispatch.
 - Custody freeze/thaw uses the documented Boolean ABI, with one outstanding command. Both the exact genuine terminal callback and a matching policy read are needed before another command. Epoch-keyed ten-minute cooldown handles A→B→A without resetting token-wide daily spend.
@@ -998,7 +1002,7 @@ Clean checkouts, CI and the isolated box install use `cd web && npm run build` w
 
 ### Integrated client continuity proof
 
-The v2.5 client binds final owner epochs before signatures, recovers the original custody journal across refreshes, and exposes separately consented payout-slot registration and native-credit cashout. The minter checks its prepaid slot before mint dispatch. Release byte identity is generated by `node scripts/gen-identity.mjs` in [`release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json); the live contract identity now matches that release. [Independent artifact reproduction](docs/evidence/integration-stack/artifact-repro-r2.json) records the two clean Linux builds and measured code storage. Regressions: [`integration196.test.ts`](web/tests/integration196.test.ts), [`client-owner-epoch.json`](protocol/client-owner-epoch.json), and the named terminal-history and ordinary-payout runtime tests. [Trust and rollout details](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).
+The v2.5 client binds final owner epochs before signatures, recovers the original custody journal across refreshes, and exposes separately consented payout-slot registration and native-credit cashout. The minter checks its prepaid slot before mint dispatch. Release byte identity is generated by `node scripts/gen-identity.mjs` in [`release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json); the historical rollout matches that release. [Independent artifact reproduction](docs/evidence/integration-stack/artifact-repro-r2.json) records the two clean Linux builds and measured code storage. Regressions: [`integration196.test.ts`](web/tests/integration196.test.ts), [`client-owner-epoch.json`](protocol/client-owner-epoch.json), and the named terminal-history and ordinary-payout runtime tests. [Trust and rollout details](SECURITY.md#integrated-client-recovery-and-ordinary-payout-rollout).
 The provider mock exposes the same Boolean freeze/thaw argument shapes as the public provider contract. Native tests exercise exact-command callbacks, duplicate/late callbacks, delayed reads, terminal failures and restart. Sandbox fault builds exercise a provider mutation whose callback fails; the outstanding command remains durable across a return to the normal binary.
 
 Withdrawal cooldown is keyed by **contract + token + authoritative ownership epoch**, not just the last logged account name. First final-chain observation of a new nonzero epoch durably arms ten minutes; A→B→A cannot reuse A's old record. Status/dashboard show the effective deadline and the normal POST boundary checks it again. No ownership observation deletes or resets the token-wide daily spent counter.
