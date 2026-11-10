@@ -1,0 +1,114 @@
+{
+  "schema": "keyhole-live-v26-held-public-v1",
+  "at_cairo": "2026-11-11 01:20:57 Africa/Cairo",
+  "rpc": "https://near.drpc.org",
+  "rpc_configuration": "Existing NEAR_RPC; isolated native CLI mainnet rpc_url. No reviewed source changes.",
+  "base_commit": "9d661db70a70e00e4d23544fc75dbc523d17e626",
+  "contract": {
+    "version": "2.6.0",
+    "hash": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "bytes": 487260,
+    "preservation": "PASS: all raw rows, six complete NFTs/owners/epochs, credits, metadata and config unchanged",
+    "predeploy": "PASS",
+    "post": "PASS",
+    "deploy_post": "PASS",
+    "identity": "PROMOTED",
+    "before_to_original_execution_blocks": 88
+  },
+  "transactions": [
+    {
+      "hash": "4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
+      "status": "FINAL_SUCCESS",
+      "at_cairo": "2026-11-11 01:11:39 Africa/Cairo",
+      "block_height": 223983247,
+      "before_height": 223983159,
+      "dispatch_distance_blocks": 88,
+      "code_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+      "code_bytes": 487260,
+      "fees_yocto": "3536916508618000000000",
+      "storage_delta_yocto": "14050000000000000000000",
+      "all_state_preserved": true,
+      "predeploy": "PASS",
+      "post": "PASS",
+      "deploy_post": "PASS",
+      "contract_identity": "PROMOTED"
+    },
+    {
+      "step": "upload-1",
+      "hash": "Fm5j4jfF933r9jqZDHy3d2Ph1scmMVt6h3KMZfLABWd3",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "at_cairo": "2026-11-11 01:16:20 Africa/Cairo",
+      "block_height": 223983744,
+      "fees_yocto": "5354700466524800000000",
+      "closed_receipt_graph": true
+    },
+    {
+      "step": "upload-2",
+      "hash": "J581HTWGiV7NVJjMFKtrWqaJAbqdTSRDsjbAyE5dCCU4",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "at_cairo": "2026-11-11 01:16:44 Africa/Cairo",
+      "block_height": 223983785,
+      "fees_yocto": "303735533371700000000",
+      "closed_receipt_graph": true
+    }
+  ],
+  "total_fees_yocto": "9195352508514500000000",
+  "additional_contract_storage_yocto": "14050000000000000000000",
+  "compute_calls": 0,
+  "compute_micro_usd": 0,
+  "unknown_original_transactions": 0,
+  "stop": {
+    "reason": "Prepared FastFS Partial batch nonce 2611110050 exceeds supported i32::MAX 2147483647; upstream validator rejects both chunks; assembled URL remains 404 even cache-busted.",
+    "batch_nonce": 2611110050,
+    "supported_nonce_min": 1,
+    "supported_nonce_max": 2147483647,
+    "upstream_validator": "https://github.com/fastnear/fastdata-indexer/blob/187d80e84dc3db8411a1f69854b77d990ad6c721/fastfs-sub-indexer/src/fastfs.rs",
+    "upstream_storage_gate": "https://github.com/fastnear/fastdata-indexer/blob/187d80e84dc3db8411a1f69854b77d990ad6c721/fastfs-sub-indexer/src/main.rs",
+    "planner_gap": "scripts/pledge/fastfs-payloads.mjs validates u32 only; tests incorrectly accept nonce 0 for Partial.",
+    "no_retry_or_new_batch": true
+  },
+  "held": {
+    "block": {
+      "hash": "2tKZMNKwZR6xDJBF9tMB8nmkDsF6zWYrUuyTJFAz1htu",
+      "height": 223984214,
+      "timestamp": 1794352847532192500
+    },
+    "maintenance": "ON",
+    "gateway_aliases": [
+      {
+        "path": "/api/keyhole",
+        "status": 503,
+        "cache_control": "no-store"
+      },
+      {
+        "path": "/api/worker",
+        "status": 503,
+        "cache_control": "no-store"
+      }
+    ],
+    "submitters": "Remain paused",
+    "lending_enabled": false,
+    "registry_uuid": "p000000000000004b",
+    "registry_count": 22,
+    "active_worker": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    "registry_unchanged": true,
+    "default_secret_metadata_unchanged": true,
+    "secret_merge": "NOT DISPATCHED",
+    "registry_batches": "NOT DISPATCHED",
+    "restore": "NOT EVALUATED / assembly prerequisite FAIL",
+    "worker_promotion": "NOT DONE",
+    "maintenance_off": "NOT DONE"
+  },
+  "additional_checks": {
+    "generated_identity": "PASS",
+    "strict_contract_judge": "Code hash and minter checks PASS; full strict script incomplete: urllib RPC HTTP 403. Not rerun or relabelled PASS."
+  },
+  "approval_needed": "Reviewed nonce-range guard/tests and explicit approval for two additional replacement uploads using one valid new nonce; do not redeploy or migrate contract. Preserve the existing original journals. Then original remaining secret merge/three registry batches, restore and maintenance-off remain gated.",
+  "evidence_file_sha256": {
+    "before.json": "dc2650cf586a1eff2623645be5ed9e4a7e486c1cc7c79d4902c34a92deb7c4d9",
+    "predeploy.checkpoint.json": "f0a9e06d9718b23d509b3959e27c467287570a72647331d3081add5bbcad9a92",
+    "post.json": "dc458246311e2713173b7ee347af2f27536e26ef267923624ef90a47c5da1ac8",
+    "deploy-post.checkpoint.json": "337b08c8a378cc02c60aea04521ffbc9273fb00c90a5248bc216b9139cfa0867",
+    "held-context.json": "fb9b19e3214e61c9e40d2e6d0de0b94af5f96efe9d9b53b8e3e057471e8e5c73"
+  }
+}

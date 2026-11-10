@@ -12,11 +12,11 @@ export const IDENTITY = {
   "contract": {
     "account": "keyhole-devmo.near",
     "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
-    "code_hash": "3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b",
-    "wasm_sha256": "28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce",
-    "deploy_tx": "BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S",
-    "version": "2.5.0",
-    "bytes": 485855,
+    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
+    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "deploy_tx": "4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
+    "version": "2.6.0",
+    "bytes": 487260,
     "migrate_pledge_tx": "EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
@@ -30,7 +30,7 @@ export const IDENTITY = {
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
-    "status": "source-candidate-not-deployed",
+    "status": "deployed-mainnet",
     "version": "2.6.0",
     "release": "v2.6",
     "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",

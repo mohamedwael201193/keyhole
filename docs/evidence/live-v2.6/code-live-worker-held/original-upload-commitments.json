@@ -1,0 +1,24 @@
+{
+  "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+  "bytes": 1085333,
+  "batch_nonce": 2611110050,
+  "nonce_valid_for_upstream_indexer": false,
+  "supported_nonce_range": [
+    1,
+    2147483647
+  ],
+  "chunks": [
+    {
+      "step": 1,
+      "payload_sha256": "1c468172804f124f8fb3c835746879c29369f83bc693aaee6b94d5867ac6c5fb",
+      "payload_bytes": 1048686,
+      "original_hash": "Fm5j4jfF933r9jqZDHy3d2Ph1scmMVt6h3KMZfLABWd3"
+    },
+    {
+      "step": 2,
+      "payload_sha256": "cd80c1f5cf6355d9a03970c753a04d1fd24c8032ec10e0037147354f604bf0f2",
+      "payload_bytes": 36867,
+      "original_hash": "J581HTWGiV7NVJjMFKtrWqaJAbqdTSRDsjbAyE5dCCU4"
+    }
+  ]
+}

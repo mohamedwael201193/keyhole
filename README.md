@@ -22,8 +22,10 @@ Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepar
 
 
 <!-- LIVE-SUMMARY:START -->
-> **Live contract v2.5:** deployment is FINAL on mainnet ([deployment](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S)); the historical Pledge migration remains [FINAL](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa) and is not repeated. Worker publishing is separate; lending remains disabled at release. [Live identities and strict online verification](#live-mainnet-identities).
+> **Live contract v2.6:** deployment is FINAL on mainnet ([deployment](https://nearblocks.io/txns/4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj)); the historical Pledge migration remains [FINAL](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa) and is not repeated. Worker publishing is separate; lending remains disabled at release. [Live identities and strict online verification](#live-mainnet-identities).
 <!-- LIVE-SUMMARY:END -->
+
+Release status (11 Nov 2026, Africa/Cairo): the v2.6 contract is FINAL, but worker cutover is **held under maintenance** after a FastFS upload-nonce validation failure. [Original hashes, fees and safe handoff](docs/evidence/live-v2.6/code-live-worker-held/README.md).
 
 **Contents:** [1 Verify in 5 minutes](#1-verify-in-5-minutes-zero-install) · [2 Proven](#2-proven-on-near-mainnet) · [3 Try it](#3-try-it) · [3a Real vs simulated](#3a-real-vs-simulated) · [4 How it works](#4-how-it-works) · [5 Why an NFT that does something](#5-why-this-is-an-nft-that-does-something) · [6 NEAR stack](#6-near-stack-used) · [7 Verify](#7-verify-everything-yourself) · [8 Security](#8-security-model) · [9 Numbers](#9-numbers) · [10 Built during the hackathon](#10-built-during-the-hackathon) · [11 Repo map](#11-repo-map) · [12 License](#12-license)
 
@@ -92,20 +94,20 @@ The live worker is `d337e822` (765,658 bytes).
 |---|---|---|
 | Contract account | `keyhole-devmo.near` | [nearblocks](https://nearblocks.io/address/keyhole-devmo.near) |
 | TEE minter | `015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443` | [`judge/0-live.sh`](judge/0-live.sh) requires `config.minter` to equal this 64-hex implicit account |
-| Contract version | `2.5.0` | NEP-330 `contract_source_metadata` |
+| Contract version | `2.6.0` | NEP-330 `contract_source_metadata` |
 | Pledge migration | `EwKUkWju…` | [nearblocks](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa) |
-| Contract code hash | `3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b` | deploy tx [`BRuwESG8…`](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S) |
-| Contract wasm sha256 | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
+| Contract code hash | `6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww` | deploy tx [`4XrNsFhg…`](https://nearblocks.io/txns/4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj) |
+| Contract wasm sha256 | `54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
 | Worker wasm sha256 | `d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
 | Worker publish tx | `BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5` | [nearblocks](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
 | Live `info` call | `dc3668db-674f-4865-a2ce-272f70c41b0d` | [attestation](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) · [verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) |
 
-The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.5/identity.json`](contracts/keys/release/v2.5/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
+The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.6/identity.json`](contracts/keys/release/v2.6/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
 | Contract release | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
 |---|---:|---|---:|
-| v2.5 (live) | 485,855 | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` | 4.85855 NEAR |
+| v2.6 (live) | 487,260 | `54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a` | 4.87260 NEAR |
 
 Strict read-only online verification of the live deployment:
 
@@ -116,7 +118,7 @@ node judge/verify-claims.mjs --strict
 
 Worker source candidate: `62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f` (1,085,333 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Provisioning proof](docs/evidence/worker-provisioning/README.md).
 
-Contract source candidate **2.6.0**, not deployed: [generated release identity](contracts/keys/release/v2.6/identity.json). Its owner/epoch CAS is required before collateral provisioning.
+Contract source candidate **2.6.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.6/identity.json). Its owner/epoch CAS is required before collateral provisioning.
 
 Measured size steps are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [`docs/evidence/live-v2.5/all-live-views.json`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
@@ -599,7 +601,7 @@ Contract configuration at capture (historical; `beats` grows with each heartbeat
 ```
 
 <!-- LIVE-ARTIFACT:START -->
-`contracts/keys/deployed/keyhole_keys.wasm` is the live **v2.5** code: **485,855 bytes**, SHA256 `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce`. `bash judge/1-contract.sh --strict` checks actual finalized bytes, version and minter. [Historical v2.5 source rebuild proof](docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log) remains labelled historical. The current checkout rebuilds the separately generated source candidate, checked by CI against [`release/SHA256SUMS`](contracts/keys/release/SHA256SUMS) and its identity. The pinned recipe uses rustc 1.86.0, cargo-near 0.22.0 and Binaryen 123.
+`contracts/keys/deployed/keyhole_keys.wasm` is the live **v2.6** code: **487,260 bytes**, SHA256 `54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a`. `bash judge/1-contract.sh --strict` checks actual finalized bytes, version and minter. [Historical v2.5 source rebuild proof](docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log) remains labelled historical. The current checkout rebuilds the separately generated source candidate, checked by CI against [`release/SHA256SUMS`](contracts/keys/release/SHA256SUMS) and its identity. The pinned recipe uses rustc 1.86.0, cargo-near 0.22.0 and Binaryen 123.
 <!-- LIVE-ARTIFACT:END -->
 
 <details>
