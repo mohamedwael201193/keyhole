@@ -1,9 +1,14 @@
 import type {KeysCall,BatchSendResult} from "./keysTx";
-import {createBrowserIntentStore,browserIntentEnvironment,type IntentStore,type IntentEnvironment} from "./pledgeIntentStore";
+import {createBrowserIntentStore,browserIntentEnvironment,pledgeLifecycleScope,type IntentStore,type IntentEnvironment} from "./pledgeIntentStore";
 export type MoneyOperation={id?:string;owner?:string;account:string;contract:string;call:KeysCall;calls?:KeysCall[];error?:string;status:"AwaitingWallet"|"Submitted"|"UNKNOWN";minBlockHeight:string;txHash?:string};
 export type MoneyStore={load():MoneyOperation|null;save(op:MoneyOperation|null):void}&Partial<Omit<IntentStore<MoneyOperation>,"load">>;
+/** Fail closed on any saved exit for this account, including malformed/legacy records. */
+export function assertNoSavedPledgeExit(account:string,contract:string,env:IntentEnvironment=browserIntentEnvironment()):void {
+ const prefix=`keyhole:pledge-exit:v1:${contract}:${account}:`;
+ for(let i=0;i<env.storage.length;i++){const key=env.storage.key(i);if(key?.startsWith(prefix)&&env.storage.getItem(key)!==null)throw Error("Resolve the original exit before preparing another loan.");}
+}
 export function browserMoneyStore(account:string,contract:string,env:IntentEnvironment=browserIntentEnvironment()):MoneyStore {
- const store=createBrowserIntentStore<MoneyOperation>(`keyhole:pledge-money:v1:${contract}:${account}`,op=>{if(op.account!==account||op.contract!==contract)throw Error("Pending operation identity mismatch");},env);
+ const store=createBrowserIntentStore<MoneyOperation>(`keyhole:pledge-money:v1:${contract}:${account}`,op=>{if(op.account!==account||op.contract!==contract)throw Error("Pending operation identity mismatch");},env,{scope:pledgeLifecycleScope(account,contract),check:op=>{if(op.call.method==="open_loan")assertNoSavedPledgeExit(account,contract,env);}});
  return {...store,save(){throw Error("Use identity-checked money operation mutations");}};
 }
 /** Only identity-matched updates/removals are allowed after an async boundary. */
