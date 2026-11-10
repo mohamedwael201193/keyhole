@@ -1,3 +1,15 @@
+## 2026-11-10 — Pledge dashboard preview (web)
+- Red-team (IDEA_REDTEAM §8) copy: headline "Borrow NEAR without publishing your full balance"; whole-account collateral warning; locked USDC/NEAR chips; tier exit caps; no hard-coded due date; lender preview never requests holder balance.
+- `/pledge` sketch-v5 widget in the app shell: sidebar **Pledge**, real USDC/NEAR icons, motion + reduced-motion, morph to Active chrome, floating key art unclipped.
+- Density like PR #185: whole page fits 1440×900 and 1280×800 without scrolling.
+- Typed client vs PR #184 (`0c3c6196`) methods; `NEXT_PUBLIC_PLEDGE_LIVE` OFF in production → labelled preview, CTA "Pledge launches after audit", no fake live data.
+- Unit + e2e mocks; screenshots in `shots_pledge/`. README states Pledge = preview / in review (never "live").
+
+## 2026-11-09 — Attack build labels + honest swap log (PR #187)
+- `/attack`: each refusal card shows recorded wasm (e.g. `6367401a` / `38bd67b9`) with "Recorded on previous build"; `AttackBuild.current` ready for future current-build refusals.
+- `/pnl` + vault/README: removed Mark-to-market delta metric; page shows signed swap-log pointer (log head, trades, signature, attested call) only.
+- Online `verify-claims`: **519 PASS, 0 FAIL, 0 ERROR, 1 SKIP** (`site-beats-live`).
+
 ## 2026-11-09 — Harsh judge fixes (PR #186)
 - `/judge` Step 4: handover calls labelled build `a985fd87` (their real executed_wasm), not "Current build". Regression test added.
 - `/source/manifest.json` regenerated to current worker `d337e822` / contract `DEXHHyEM…`; CI hygiene checks tarball identity matches `identity.json`.

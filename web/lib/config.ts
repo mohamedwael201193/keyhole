@@ -26,3 +26,11 @@ export const attestation = (callId: string) => `${OUTLAYER_API}/attestations/by-
 export const ALT_EXPLORER = "https://pikespeak.ai";
 export const txAlt = (h: string) => `${ALT_EXPLORER}/transaction-viewer/${h}`;
 export const acctAlt = (a: string) => `${ALT_EXPLORER}/wallet-explorer/${a}`;
+
+/**
+ * Pledge (sealed-floor borrow) live wiring. OFF in production until the reviewed contract + worker
+ * ship and the audit gate clears. When false, /pledge renders a labelled preview: no live chain
+ * reads are presented as balances, and the primary CTA stays disabled.
+ * Set NEXT_PUBLIC_PLEDGE_LIVE=1 only in explicit staging after the gate.
+ */
+export const PLEDGE_LIVE = process.env.NEXT_PUBLIC_PLEDGE_LIVE === "1";

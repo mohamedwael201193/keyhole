@@ -105,15 +105,16 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do: `git clone https://github.com/mohamedwael201193/keyhole && cd keyhole && node judge/verify-claims.mjs --offline`. See: `512 claims: 201 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (run 2026-11-09). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
+1. **Check the claims, offline.** Do: `git clone https://github.com/mohamedwael201193/keyhole && cd keyhole && node judge/verify-claims.mjs --offline`. See: offline `531 claims: 212 PASS, 0 FAIL, 0 ERROR, 319 SKIP`; live (2026-11-09) `519 PASS, 0 FAIL, 0 ERROR, 1 SKIP` (`site-beats-live`). The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. On 2026-11-08 that run gave `494 PASS, 0 FAIL, 0 ERROR, 1 SKIP` on 495 claims; two attestation reads were rate-limited (HTTP 429) and passed on a single retry. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for call `dc3668db…`. No wallet.
-3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx, labelled live check vs recorded mainnet evidence. No wallet and no value moved.
+3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
 5. **Open a key's history.** Do: open [keyhole-seven.vercel.app/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940). See: the holders with from and to dates, deposits, withdrawals and the transfer of 2026-11-07. The page shows "19 events chain, head matches, head signed, signer is the TEE minter. Confirmed", re-checked in your browser.
 6. **Check that the contract on chain is the repo's wasm.** Do: `bash ./judge/1-contract.sh` (needs `bash`, `curl`, `jq`, `sha256sum` and `python3`). See: `on-chain code_hash DEXHHyEM…SiZZ`, then `OK   contract code matches the committed wasm`, then `OK   minter is an implicit account`. Checked 2026-11-09.
 7. **Verify one call from the terminal.** Do: `cd cli && npm ci && npx tsx src/cli.ts verify dc3668db-674f-4865-a2ce-272f70c41b0d`. See: `"ok": true` and three `OK` lines: TDX quote present; registered wasm_hash equals executed_wasm_sha256; FastFS bytes equal the attested hash. No key is needed. Checked 2026-11-09 with `./verify.sh` (the same checks, plus FastFS) on `dc3668db`.
 8. **Open an attested refusal.** Do: open [keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533](https://keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533). See: the attestation checks pass. The refusal is `over_cap_per_tx`: a 2 USDC swap against the $1 Bronze cap. The attestation has no output body, so the recorded outcome is in [`docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json`](docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json).
 9. **Use the agent path (optional).** Do: run `keyhole-mcp` (`cli/src/mcp.ts`), a stdio MCP server with four tools: `verify`, `explain_pnl`, `quote_buy` and `copy`. See: `verify` needs no key. `copy` needs the operator to type a code on the operator's own terminal; the code never appears in a tool result.
+10. **Open the Pledge preview.** Do: open [keyhole-seven.vercel.app/pledge](https://keyhole-seven.vercel.app/pledge) (or `/pledge` on a local build). See: headline **Borrow NEAR without publishing your full balance**; whole-account collateral warning; locked USDC/NEAR chips (no fake asset picker); tier exit-caps line; How it works column; floating key art unclipped; sidebar **Pledge** lit. Banner **Preview — in review · not live**. CTA disabled: **Pledge launches after audit**. Example terms labelled **Example** (0.50 USDC / 0.01 NEAR); due line marked example until live `get_loan`. Density matches the other dashboard pages (fits 1440×900 and 1280×800 without scrolling). No wallet and no value moved. Live lending stays behind `NEXT_PUBLIC_PLEDGE_LIVE` until the reviewed contract (PR #184 method surface: `open_loan`, `fund_loan`, `repay_loan`, `claim_default`, …) and audit gate clear.
 
 ### Try it with a wallet
 
@@ -146,12 +147,13 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | NFT contract `keyhole-devmo.near` on mainnet (v2.4 code hash) | **Real mainnet** | [/verify](https://keyhole-seven.vercel.app/verify) live evidence pack · `bash ./judge/1-contract.sh` |
 | TEE worker published on OutLayer (wasm in `identity.json`) | **Real mainnet + attestation** | [/verify](https://keyhole-seven.vercel.app/verify) · OutLayer attestation API |
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
-| Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call |
+| Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (520 claims) | **Real automation** | `node judge/verify-claims.mjs` (0 FAIL on last live run) |
+| Judge-claims machine (531 claims) | **Real automation** | `node judge/verify-claims.mjs` (0 FAIL on last live run) |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
+| Pledge dashboard (`/pledge`) — sealed-floor borrow UI | **Preview / in review** (feature flag `NEXT_PUBLIC_PLEDGE_LIVE` OFF in production; CTA disabled: "Pledge launches after audit"; no fake live balances) | [/pledge](https://keyhole-seven.vercel.app/pledge) · typed client vs PR #184 methods · unit + e2e mocks |
 | Independent market demand / unrelated-party volume | **Not claimed** | Demo sizes stay tiny; no invented PnL |
 
 
@@ -355,7 +357,7 @@ Four tracks are entered. Each row is a track's ask and the place in this reposit
 | NEP-171 contract that ties each token to an account it controls | Contract [`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs): `NonFungibleTokenCore` [`:295`](contracts/keys/src/lib.rs), `nft_mint` [`:169`](contracts/keys/src/lib.rs) (minter only, [`:151`](contracts/keys/src/lib.rs)), one key per account [`:141`, `:144`](contracts/keys/src/lib.rs). Custody per `token_id`: [`holder_wallet`](tee/worker/src/main.rs). See deviation (a) | shipped (deviation a) |
 | README explains how control passes on transfer and what stops the old owner | [control on transfer](#control-on-transfer); owner checks [`tee/worker/src/main.rs:92`, `:119`](tee/worker/src/main.rs); [`THREAT_MODEL.md`](THREAT_MODEL.md) | shipped |
 | Gated page only current holders can open | [`web/app/vault`](web/app/vault) is the display gate. The worker's owner check is the real gate ([`tee/worker/src/main.rs:149`](tee/worker/src/main.rs)). Live: [/vault](https://keyhole-seven.vercel.app/vault) | shipped (display gate is cosmetic; the worker check is the control) |
-| History per NFT: earned, paid out, who held it | [`web/app/key/view.tsx`](web/app/key/view.tsx) at `/key?id=`: holders with from and to, deposits, withdrawals, trades, the signed log. "Paid out" counts withdraw events, not amounts. USD totals are private; a holder can publish a signed swap log (`op_pnl`, [`tee/worker/src/main.rs:718`](tee/worker/src/main.rs)) | partial (earned USD is private by design) |
+| History per NFT: earned, paid out, who held it | [`web/app/key/view.tsx`](web/app/key/view.tsx) at `/key?id=`: holders with from and to, deposits, withdrawals, trades, the signed log. "Paid out" counts withdraw events, not amounts. USD totals are private; a holder can publish a signed swap-log pointer (`op_pnl`) — no profit metric on the page | partial (per-trade amounts stay in attested calls) |
 | Tests for the transfer path, including a sale in the middle of a payout | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs): transfer moves the account [`:404`](tee/worker/src/tests.rs), transfer while a withdraw is pending does not send [`:311`](tee/worker/src/tests.rs), and a predicate test for settle at auth and at settle [`:679`](tee/worker/src/tests.rs). Mainnet run: [mid-payout](docs/evidence/mid-payout/README.md) | partial (the unit test checks a predicate; the in-flight case is shown on mainnet) |
 | Threat model for the transfer | [`THREAT_MODEL.md`](THREAT_MODEL.md), [`docs/TRANSFER_THREAT_MODEL.md`](docs/TRANSFER_THREAT_MODEL.md) | shipped (written after the code; deviation b) |
 | Sub-accounts or top-level accounts | Not used. Confidential accounts live in the TEE, keyed by `token_id`. Deviation (a) | partial different shape |
@@ -438,6 +440,16 @@ Limits of this check: it is advisory. Anyone with the full-access key can sign w
 </details>
 
 ---
+
+### Pledge (preview / in review)
+
+KEYHOLE's next holder surface after Swap (sidebar **Pledge**): **borrow NEAR without publishing your full balance**. The lender sees one certified USDC minimum while reviewing the offer — not the full vault balance. The **entire account is collateral**: while pledged it cannot trade, withdraw, or transfer; miss repayment and the lender can claim the entire account. Repayment unlocks; default is an on-chain claim path (grace/recipient checks), not a browser timer.
+
+- **UI shipped now** at [`/pledge`](web/app/pledge): sketch-v5 widget (Certified USDC minimum → lock connector → You borrow NEAR), real USDC/NEAR icons as **locked chips** (v1 allowlist only — no fake multi-asset picker), visible whole-account warning, tier exit-caps line, ambient motion with `prefers-reduced-motion`, morph to Active loan chrome (preview control / `?preview=active`), floating key art unclipped, dashboard density like PR #185 so the page fits **1440×900** and **1280×800** without scrolling.
+- **Not live lending.** `NEXT_PUBLIC_PLEDGE_LIVE` defaults off. The page is a clearly labelled **preview / in review**: CTA disabled with **Pledge launches after audit**; preview shows clearly labelled **Example** terms (0.50 USDC / 0.01 NEAR / 0.0101 repay) matching sketch v5; live mode uses `get_loan` only — never invents balances as live. Lender preview never requests the holder balance.
+- **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against PR #184 head `0c3c6196` method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
+- **Proof.** Unit tests mock the client and the preview markup; Playwright e2e covers nav, disabled CTA, density (no scroll at desktop sizes), and screenshots under `shots_pledge/`. Offline claims include the Pledge preview statements (`src-pledge-*`).
+
 
 ## 6. NEAR stack used
 
@@ -716,7 +728,7 @@ Every count below was measured on this commit (`2f7ac1e`, on top of `7356cfa`) u
 | CLI tests | **53** cases; 52 pass here | `cd cli && npm test`. The one failure is a checkout artefact: [`skills/keyhole/SKILL.md`](skills/keyhole/SKILL.md) is LF in git, but this Windows checkout has CRLF (`core.autocrlf` is on), and the test's regex expects LF |
 | Web unit tests (Vitest) | **1256** cases in 65 files; 1254 pass in the full run | `cd web && npx vitest run`. One failure is the same CRLF artefact, in [`web/tests/sourceTarball.test.ts`](web/tests/sourceTarball.test.ts) (the `.sha256` file has CRLF here). One Meteor test timed out at 5 s while other work was running; it passes alone (10 of 10) |
 | Web e2e (Playwright) | not re-run for this README | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). CI runs them at 1440 and 390 px |
-| Claims in `docs/claims.json` | **512**: offline 201 PASS, 0 FAIL, 0 ERROR, 311 SKIP (2026-11-09). Last full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline` (2026-11-09) and `node judge/verify-claims.mjs` (2026-11-08) |
+| Claims in `docs/claims.json` | **531**: offline 212 PASS, 0 FAIL, 0 ERROR, 319 SKIP (2026-11-10). Last full online run, on 495 claims: 494 PASS, 0 FAIL, 1 SKIP (2026-11-08) | `node judge/verify-claims.mjs --offline` (2026-11-09) and `node judge/verify-claims.mjs` (2026-11-08) |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | **216** tokens on **39** chains | live `GET keyhole-seven.vercel.app/api/tokens` (2026-11-09) |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (2026-11-09). The home page counts the five holder keys |
@@ -825,13 +837,14 @@ verify.sh             one-call verifier (attestation, FastFS, optional rebuild)
 | `/` | The home page: a key with chain marks, three moves, tiers, a gallery and a proof list | `nft_total_supply`, `config` (cached 60 s; [`web/app/page.tsx`](web/app/page.tsx)) |
 | `/atlas` | Chain marks and their trails | NearBlocks, OutLayer attestations |
 | `/vault` | After connect: key card and signed limits, then **1 · Fund**, **2 · Trade**, **3 · Withdraw** | worker `status`, `account`, `quote`, `swap`, `withdraw`, `balance`, `history`; `nft_tokens_for_owner` |
+| `/pledge` | **Preview / in review**: sealed-floor borrow widget (sketch v5). Feature flag OFF in production; CTA "Pledge launches after audit"; typed client for PR #184 (`open_loan`, `fund_loan`, `repay_loan`, …). No fake live data | `web/app/pledge`, `web/lib/pledgeClient.ts`; unit + e2e mocks |
 | `/mint` | Bronze mint in one signature, with the cap table for each tier | worker `mint` |
 | `/gallery` | Every key on the contract, with its state | `nft_tokens`, `nft_tier` |
 | `/verify` | 37 checks computed in your browser | OutLayer, FastFS, Intel PCS |
 | `/judge` | Seven checks against mainnet with no wallet | static; every call links to `/verify` |
 | `/settle` | Dry-run quote, attested vault trade, real 1Click orders with live status, Agent API policy | 1Click `/v0/quote`, `/v0/status`, Agent API |
 | `/key` | One key's history, its signed log and the buy-side check | worker `provenance`, `prove`, NEAR |
-| `/pnl` | A holder-published, minter-signed **swap log** (mark-to-market of trade outputs vs cost — not realized profit) | worker `pnl` |
+| `/pnl` | A holder-published, minter-signed **swap log** pointer (key, trade count, log head, signature). Per-trade inputs/outputs/quote/receipt via vault Activity and `/verify` | worker `pnl` |
 | `/ask` | Private AI on NEAR AI Cloud with the model's attestation checked in the browser | NEAR AI Cloud |
 | `/identity` | How a key is drawn: specimen cards and the NEP-177 document | catalog art and `nep177` |
 
@@ -920,3 +933,14 @@ The web error catalog gives actionable English status for pending/provisional ow
 (cd web && npm ci && npx vitest run tests/domain.test.ts tests/p2-errors.test.ts)
 python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
 ```
+
+### Pledge client ABI — reviewed source interface
+
+The preview client models `Freezing → Offered → Active → UnlockPending` and the exact native pending-payout shape. Funding creates debt plus backed borrower credit; cash withdrawal is separate. Its configuration type contains the floor-certificate public key and no terminal-payment outcome signer. The preview remains behind its existing feature flag.
+
+```bash
+(cd web && npm ci && npx vitest run tests/pledge-client.test.ts tests/pledge-view.test.ts && npx tsc --noEmit)
+python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
+```
+
+The test transport is injected and performs no mainnet transaction. The CLI/MCP surface contains no terminal-outcome reconciliation method.

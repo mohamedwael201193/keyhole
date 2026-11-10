@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, StatusChip, Icon } from "@/components/v7";
 import { Button } from "@/components/ui";
-import { ATTACK_CASES, checkAttestedRefusal, checkNearTx, type AttackCase, type LiveRow } from "@/lib/liveChecks";
+import { ATTACK_CASES, attackBuildLabel, checkAttestedRefusal, checkNearTx, type AttackCase, type LiveRow } from "@/lib/liveChecks";
 
 type CaseState = { row: LiveRow | null; busy: boolean };
 
@@ -68,7 +68,16 @@ export function AttackBoard() {
                 title={c.title}
                 id={`atk-h-${c.id}`}
                 level={2}
-                meta={<StatusChip tone={c.kind === "tx" ? "info" : "warn"}>{c.kind === "tx" ? "Recorded mainnet tx · live re-fetch" : "Live attestation + evidence file"}</StatusChip>}
+                meta={
+                  <span className="atk-meta" data-testid={`attack-build-${c.id}`} data-current={c.build ? String(c.build.current) : undefined}>
+                    <StatusChip tone={c.kind === "tx" ? "info" : "warn"}>{c.kind === "tx" ? "Recorded mainnet tx · live re-fetch" : "Live attestation + evidence file"}</StatusChip>
+                    {c.build && (
+                      <StatusChip tone={c.build.current ? "success" : "info"} testid={`attack-wasm-${c.id}`}>
+                        {attackBuildLabel(c.build)}
+                      </StatusChip>
+                    )}
+                  </span>
+                }
               />
               <dl className="atk-dl">
                 <div><dt>Attempt</dt><dd>{c.attempt}</dd></div>

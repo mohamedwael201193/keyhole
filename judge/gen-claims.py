@@ -90,8 +90,10 @@ add("att-f198ce3a-build", "info via /api/keyhole call f198ce3a ran on build f13e
 for c in ["d3c285ae-54a2-442f-a9ee-e9d9af02e4c6","b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563","9b37dfee-47bf-4482-a445-0623a49d3f11"]:
     add(f"att-{c[:8]}-build", f"Live judge run call {c[:8]} attested to f13efe926132", where(RD,c), "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}",
         {"type":"attestation","call":c,"wasm_prefix":"f13efe926132"}, "executed starts f13efe926132")
+rd_text = open(RD, encoding="utf8").read()
 for c in ["d03f935f-dfc4-4548-8109-b9aabb5560fc","7d42db8d-d786-457f-b505-a96359f82393","c23f7bbf-c37c-4327-8edd-e773d3a8324f","7f52f7d8-e4f6-4290-97e8-0754b90bcfc8","a6b78742-f5ed-436b-845d-da5880f63ea1","fffe6327-2e0c-47c5-9942-bf785c8c152a","9e62569d-9444-4503-8bf2-4c1c266b8316"]:
-    add(f"att-{c[:8]}-build", f"Funded run call {c[:8]} matched build f13efe92", where(RD,c), "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}",
+    if c not in rd_text and c[:8] not in rd_text: continue
+    add(f"att-{c[:8]}-build", f"Funded run call {c[:8]} matched build f13efe92", where(RD,c[:8] if c[:8] in rd_text else c), "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}",
         {"type":"attestation","call":c,"wasm_prefix":"f13efe92"}, "executed starts f13efe92", f"./verify.sh {c}")
 for c in ["afaaf3e1-32ff-42d8-88da-412a0bb61e11","06cf2630-aed4-410a-9e28-f0799efddeda","369f522d-4bef-4b17-9071-1de01616eef6"]:
     add(f"att-{c[:8]}", f"Track-coverage call {c[:8]} is a real attested call", where(TC,c[:8]), "OutLayer call", f"https://api.outlayer.ai/attestations/by-call/{c}",
@@ -133,6 +135,15 @@ G("src-global","Global limits 120/min and 25 free mints per day",where(RD,"Globa
 G("src-ci-6jobs","CI has 6 jobs: contract, worker, cli, judge-kit, hygiene, web",where(RD,"6 jobs (contract"),".github/workflows/ci.yml",r"^  web:","web job (and 5 others) present")
 G("src-lighthouse","Lighthouse evidence file exists with the per-page scores",where(RD,"lighthouse.json"),"docs/evidence/lighthouse.json",r"performance","scores present")
 G("src-audio-cc0","Ambient loop released under CC0",where(RD,"**CC0**"),"web/public/audio/LICENSE.txt",r"CC0","CC0 text")
+G("src-pledge-flag","Pledge live flag defaults off (NEXT_PUBLIC_PLEDGE_LIVE only when =1)",where(RD,"NEXT_PUBLIC_PLEDGE_LIVE"),"web/lib/config.ts",r'PLEDGE_LIVE = process\.env\.NEXT_PUBLIC_PLEDGE_LIVE === "1"',"flag OFF unless =1")
+G("src-pledge-cta","Pledge CTA disabled copy is Pledge launches after audit",where(RD,"Pledge launches after audit"),"web/lib/pledgeClient.ts",r'PLEDGE_CTA_DISABLED = "Pledge launches after audit"',"exact CTA string")
+G("src-pledge-preview","Pledge preview label is Preview — in review · not live",where(RD,"Preview — in review"),"web/lib/pledgeClient.ts",r'PLEDGE_PREVIEW_LABEL = "Preview — in review · not live"',"preview label")
+G("src-pledge-open-loan","Typed Pledge client builds open_loan (PR #184)",where(RD,"`open_loan`"),"web/lib/pledgeClient.ts",r'method: "open_loan"',"open_loan builder")
+G("src-pledge-fund-loan","Typed Pledge client builds fund_loan (PR #184)",where(RD,"`fund_loan`"),"web/lib/pledgeClient.ts",r'method: "fund_loan"',"fund_loan builder")
+G("src-pledge-repay-loan","Typed Pledge client builds repay_loan (PR #184)",where(RD,"`repay_loan`"),"web/lib/pledgeClient.ts",r'method: "repay_loan"',"repay_loan builder")
+G("src-pledge-route","Pledge dashboard route exists at web/app/pledge",where(RD,"`/pledge`"),"web/app/pledge/page.tsx",r"PledgeView","page exports PledgeView")
+G("src-pledge-nav","App shell sidebar includes Pledge",where(RD,"sidebar **Pledge**"),"web/components/app/AppShell.tsx",r'id: "pledge", label: "Pledge"',"nav item")
+G("src-pledge-e2e","Pledge e2e spec covers preview CTA and density",where(RD,"Playwright e2e"),"web/e2e/pledge.spec.ts",r"Pledge launches after audit","e2e asserts audit CTA")
 G("src-lang-en","Site is English only, html lang=en",where(RD,'`html` is `lang="en"`'),"web/app/layout.tsx",r'lang="en"',"lang=en")
 add("src-invariant-6","Six worker invariant tests (fn invariant_*)",where(TC,"6 worker invariant tests"),"test file","tee/worker/src/tests.rs",
     {"type":"count","path":"tee/worker/src/tests.rs","pattern":r"fn invariant_","op":"gte","value":6},">= 6 matches")

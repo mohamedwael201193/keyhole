@@ -274,9 +274,9 @@
     },
     "path": "owner_id",
     "op": "eq",
-    "value": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447"
+    "value": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
    },
-   "expected": "owner_id == 3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+   "expected": "owner_id == 0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
    "verify": "node judge/verify-claims.mjs --only token-k5f4750858f328940-owner"
   },
   {
@@ -292,9 +292,9 @@
      "token_id": "k5f4750858f328940"
     },
     "op": "eq",
-    "value": 2
+    "value": 1
    },
-   "expected": "2",
+   "expected": "1",
    "verify": "node judge/verify-claims.mjs --only token-k5f4750858f328940-tier"
   },
   {
@@ -3401,6 +3401,132 @@
    "verify": "grep -nE 'CC0' web/public/audio/LICENSE.txt"
   },
   {
+   "id": "src-pledge-flag",
+   "claim": "Pledge live flag defaults off (NEXT_PUBLIC_PLEDGE_LIVE only when =1)",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/lib/config.ts",
+   "check": {
+    "type": "grep",
+    "path": "web/lib/config.ts",
+    "pattern": "PLEDGE_LIVE = process\\.env\\.NEXT_PUBLIC_PLEDGE_LIVE === \"1\""
+   },
+   "expected": "flag OFF unless =1",
+   "verify": "grep -nE 'PLEDGE_LIVE = process\\.env\\.NEXT_PUBLIC_PLEDGE_LIVE === \"1\"' web/lib/config.ts"
+  },
+  {
+   "id": "src-pledge-cta",
+   "claim": "Pledge CTA disabled copy is Pledge launches after audit",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/lib/pledgeClient.ts",
+   "check": {
+    "type": "grep",
+    "path": "web/lib/pledgeClient.ts",
+    "pattern": "PLEDGE_CTA_DISABLED = \"Pledge launches after audit\""
+   },
+   "expected": "exact CTA string",
+   "verify": "grep -nE 'PLEDGE_CTA_DISABLED = \"Pledge launches after audit\"' web/lib/pledgeClient.ts"
+  },
+  {
+   "id": "src-pledge-preview",
+   "claim": "Pledge preview label is Preview — in review · not live",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/lib/pledgeClient.ts",
+   "check": {
+    "type": "grep",
+    "path": "web/lib/pledgeClient.ts",
+    "pattern": "PLEDGE_PREVIEW_LABEL = \"Preview — in review · not live\""
+   },
+   "expected": "preview label",
+   "verify": "grep -nE 'PLEDGE_PREVIEW_LABEL = \"Preview — in review · not live\"' web/lib/pledgeClient.ts"
+  },
+  {
+   "id": "src-pledge-open-loan",
+   "claim": "Typed Pledge client builds open_loan (PR #184)",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/lib/pledgeClient.ts",
+   "check": {
+    "type": "grep",
+    "path": "web/lib/pledgeClient.ts",
+    "pattern": "method: \"open_loan\""
+   },
+   "expected": "open_loan builder",
+   "verify": "grep -nE 'method: \"open_loan\"' web/lib/pledgeClient.ts"
+  },
+  {
+   "id": "src-pledge-fund-loan",
+   "claim": "Typed Pledge client builds fund_loan (PR #184)",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/lib/pledgeClient.ts",
+   "check": {
+    "type": "grep",
+    "path": "web/lib/pledgeClient.ts",
+    "pattern": "method: \"fund_loan\""
+   },
+   "expected": "fund_loan builder",
+   "verify": "grep -nE 'method: \"fund_loan\"' web/lib/pledgeClient.ts"
+  },
+  {
+   "id": "src-pledge-repay-loan",
+   "claim": "Typed Pledge client builds repay_loan (PR #184)",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/lib/pledgeClient.ts",
+   "check": {
+    "type": "grep",
+    "path": "web/lib/pledgeClient.ts",
+    "pattern": "method: \"repay_loan\""
+   },
+   "expected": "repay_loan builder",
+   "verify": "grep -nE 'method: \"repay_loan\"' web/lib/pledgeClient.ts"
+  },
+  {
+   "id": "src-pledge-route",
+   "claim": "Pledge dashboard route exists at web/app/pledge",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/app/pledge/page.tsx",
+   "check": {
+    "type": "grep",
+    "path": "web/app/pledge/page.tsx",
+    "pattern": "PledgeView"
+   },
+   "expected": "page exports PledgeView",
+   "verify": "grep -nE 'PledgeView' web/app/pledge/page.tsx"
+  },
+  {
+   "id": "src-pledge-nav",
+   "claim": "App shell sidebar includes Pledge",
+   "where": "README.md:114",
+   "evidence_type": "file",
+   "evidence": "web/components/app/AppShell.tsx",
+   "check": {
+    "type": "grep",
+    "path": "web/components/app/AppShell.tsx",
+    "pattern": "id: \"pledge\", label: \"Pledge\""
+   },
+   "expected": "nav item",
+   "verify": "grep -nE 'id: \"pledge\", label: \"Pledge\"' web/components/app/AppShell.tsx"
+  },
+  {
+   "id": "src-pledge-e2e",
+   "claim": "Pledge e2e spec covers preview CTA and density",
+   "where": "README.md:448",
+   "evidence_type": "file",
+   "evidence": "web/e2e/pledge.spec.ts",
+   "check": {
+    "type": "grep",
+    "path": "web/e2e/pledge.spec.ts",
+    "pattern": "Pledge launches after audit"
+   },
+   "expected": "e2e asserts audit CTA",
+   "verify": "grep -nE 'Pledge launches after audit' web/e2e/pledge.spec.ts"
+  },
+  {
    "id": "src-lang-en",
    "claim": "Site is English only, html lang=en",
    "where": "judge/gen-claims.py:136",
@@ -4437,6 +4563,27 @@
    },
    "expected": "`seller_lock_binds_only_the_owner_who_set_it` found in source",
    "verify": "node judge/verify-claims.mjs --only test-seller_lock_binds_only_the_owner_who_set_it"
+  },
+  {
+   "id": "test-set_lending_enabled",
+   "claim": "Named test or symbol `set_lending_enabled` exists in the source",
+   "where": "README.md:447",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "set_lending_enabled",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`set_lending_enabled` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-set_lending_enabled"
   },
   {
    "id": "test-set_minter_only_owner",

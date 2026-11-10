@@ -67,3 +67,5 @@
 @media (max-width: 519px) {
   .vf-verdicts { grid-template-columns: minmax(0, 1fr); }
 }
+
+.atk-meta { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
