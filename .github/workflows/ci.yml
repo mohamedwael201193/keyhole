@@ -101,6 +101,8 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
+      - name: zero-install live path (curl + python3; code hash, views, one attestation, one receipt)
+        run: ./judge/0-live.sh
       - run: ./judge/2-attestations.sh
       - run: ./verify.sh "$(jq -r '.[0].call_id' judge/evidence.json)"
       - uses: actions/setup-node@v4
