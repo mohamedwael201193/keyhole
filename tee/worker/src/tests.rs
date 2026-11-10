@@ -223,17 +223,17 @@ fn signed_tx_verifies() {
 }
 
 #[test]
-fn withdraw_destination_must_be_a_valid_address_for_its_chain() {
-    // Any well-formed destination is allowed: the holder's signature covers params.to.
-    assert!(assert_withdraw_to("near", "bob.near").is_ok());
-    assert!(assert_withdraw_to("base", "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed").is_ok());
-    assert!(assert_withdraw_to("sol", "11111111111111111111111111111111").is_ok());
+fn address_parser_requires_a_valid_address_for_its_chain() {
+    // Address parsing is separate from holder-only withdrawal authorization.
+    assert!(validate_chain_address("near", "bob.near").is_ok());
+    assert!(validate_chain_address("base", "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed").is_ok());
+    assert!(validate_chain_address("sol", "11111111111111111111111111111111").is_ok());
     // Shape errors and unknown chains are refused with bad_params.
-    let bad = assert_withdraw_to("near", "bob.near ").unwrap_err();
+    let bad = validate_chain_address("near", "bob.near ").unwrap_err();
     assert_eq!(bad.code, "bad_params");
-    assert!(assert_withdraw_to("near", "").is_err());
-    assert!(assert_withdraw_to("doge", "bob.near").is_err());
-    assert!(assert_withdraw_to("base", "bob.near").is_err());
+    assert!(validate_chain_address("near", "").is_err());
+    assert!(validate_chain_address("doge", "bob.near").is_err());
+    assert!(validate_chain_address("base", "bob.near").is_err());
 }
 
 #[test]
@@ -435,7 +435,7 @@ fn transfer_moves_the_confidential_account_to_the_new_holder() {
     assert_eq!(wa, wb);
     assert_eq!(ledger[&wb], 100);
     // Bob withdraws 10 to himself.
-    assert_withdraw_to("near", "bob.near").unwrap();
+    assert_withdraw_to("near", "bob.near", "bob.near", Some(owner)).unwrap();
     settle_if_owner(owner == "bob.near").unwrap();
     *ledger.get_mut(&wb).unwrap() -= 10;
     log.push(serde_json::json!({"kind": "withdraw", "amount": "10", "by": "bob.near"}));
@@ -818,7 +818,7 @@ fn invariant_cooldown_binds_only_the_latest_transferee() {
             let o = owners[r.below(3) as usize];
             let kind = if r.below(3) == 0 { "swap" } else { "transfer" };
             let ts = i * 1000 + r.below(500);
-            evs.push(ProvEvent { i, prev: String::new(), kind: kind.into(), token_id: "k".into(), owner: o.into(), ts_ms: ts, detail_hash: String::new() });
+            evs.push(ProvEvent { i, prev: String::new(), kind: kind.into(), token_id: "k".into(), owner: o.into(), ts_ms: ts, detail_hash: String::new(), v:1, contract:String::new(), owner_epoch:0 });
             if kind == "transfer" { last = Some((o, ts)); }
         }
         for o in owners {
@@ -961,3 +961,49 @@ mod worker_hardening;
 
 #[path = "level.rs"]
 mod level;
+
+#[test]
+fn holder_withdraw_pays_only_self_on_near() {
+    assert!(assert_withdraw_to("near", "alice.near", "alice.near", Some("alice.near")).is_ok());
+    let implicit = "a".repeat(64);
+    assert!(assert_withdraw_to("near", &implicit, &implicit, Some(&implicit)).is_ok());
+}
+#[test]
+fn holder_withdraw_rejects_another_receiver() {
+    assert_eq!(assert_withdraw_to("near", "bob.near", "alice.near", Some("alice.near")).unwrap_err().code, "bad_params");
+}
+#[test]
+fn holder_withdraw_rejects_non_owner_and_missing_token() {
+    for owner in [Some("alice.near"), None] {
+        assert_eq!(assert_withdraw_to("near", "bob.near", "bob.near", owner).unwrap_err().code, "not_owner");
+    }
+}
+#[test]
+fn holder_withdraw_rejects_old_holder_after_transfer() {
+    let before = Some("alice.near");
+    assert!(assert_withdraw_to("near", "alice.near", "alice.near", before).is_ok());
+    let after = Some("bob.near");
+    assert_eq!(assert_withdraw_to("near", "alice.near", "alice.near", after).unwrap_err().code, "not_owner");
+    assert_eq!(assert_withdraw_to("near", "alice.near", "bob.near", after).unwrap_err().code, "bad_params");
+    assert!(assert_withdraw_to("near", "bob.near", "bob.near", after).is_ok());
+}
+#[test]
+fn holder_withdraw_rejects_mismatched_chain_even_with_valid_external_address() {
+    for (chain, to) in [("base", "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"), ("sol", "11111111111111111111111111111111"), ("eth", "alice.near"), ("NEAR", "alice.near")] {
+        assert_eq!(assert_withdraw_to(chain, to, "alice.near", Some("alice.near")).unwrap_err().code, "bad_params");
+    }
+}
+
+#[test]
+fn host_withdraw_checks_final_owner_before_custody_and_derives_send_receiver() {
+    let src = include_str!("main.rs");
+    let view = src.split("fn view(").nth(1).unwrap().split("fn holder_tier").next().unwrap();
+    assert!(view.contains("&args.to_string(), \"final\""));
+    let op = src.split("fn op_withdraw(").nth(1).unwrap().split("fn load_prov(").next().unwrap();
+    let guard = op.find("assert_withdraw_to(&chain, &to, &c.account, nft.get(\"owner_id\")").unwrap();
+    assert!(op[..guard].contains("let nft = view(&keys_contract(), \"nft_token\""));
+    assert!(guard < op.find("c.wallet()?").unwrap());
+    assert!(guard < op.find("charge_spend(").unwrap());
+    assert!(op.find("settle_gate(").unwrap() < op.find("let r = wallet_op(").unwrap());
+    assert!(op.contains("json!({\"chain\": \"near\", \"to\": c.account"));
+}

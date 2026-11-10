@@ -33,6 +33,7 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
       - name: source rebuilds to the committed v2.5 release wasm
         run: |
+          (cd release && sha256sum -c SHA256SUMS)
           ./build.sh >/dev/null
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
           want=$(grep ' v2.5/' release/SHA256SUMS | cut -d' ' -f1)
@@ -41,12 +42,17 @@ jobs:
         run: |
           ./build.sh --features callback-failure-fixture >/dev/null
           cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm
+      - name: source rebuilds the labelled custody mock fixture
+        working-directory: contracts/keys-sandbox
+        run: |
+          ./build-policy-mock.sh
+          git diff --exit-code -- tests/fixtures/custody_policy_mock.wasm
       - name: sandbox (near-workspaces) v1 -> v2 upgrade + migrate through v2.5 code-only (admission barrier + sealed pledge state), NEP-178 cap, one key, royalty sale, minter-only tier raise
         working-directory: contracts/keys-sandbox
-        run: cargo test --locked
+        run: CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1
       - name: count passing sandbox tests
         working-directory: contracts/keys-sandbox
-        run: cargo test --locked 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
+        run: CARGO_INCREMENTAL=0 cargo test --locked -- --test-threads=1 2>&1 | awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' | sed "s/%s/$(basename $PWD)/" >> "$GITHUB_STEP_SUMMARY"
       - name: deployed wasm matches on-chain code_hash
         working-directory: .
         run: ./judge/1-contract.sh
@@ -101,6 +107,10 @@ jobs:
         with: { node-version: 20 }
       - name: identity.json is the single source of build identities (generated files in sync, wasm sha + base58 code hash agree)
         run: node scripts/gen-identity.mjs --check
+      - name: claims.json regenerates from current documentation
+        run: |
+          python3 judge/gen-claims.py .
+          git diff --exit-code -- docs/claims.json
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:

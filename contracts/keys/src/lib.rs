@@ -22,6 +22,8 @@ use near_sdk::{
 };
 use std::collections::HashMap;
 mod pledge;
+mod sale;
+pub use sale::{Sale, SaleTerms, SaleCertificate, SaleState};
 pub use pledge::*;
 
 pub const MAX_TIER: u8 = 3;
@@ -220,6 +222,11 @@ pub fn pending_returns(a: &AccountId) -> u32 {
 }
 fn set_pending(a: &AccountId, n: u32) {
     if n == 0 { env::storage_remove(&pending_key(a)); } else { env::storage_write(&pending_key(a), &n.to_le_bytes()); }
+}
+
+/// Exact floor(balance*bps/10000), including u128::MAX without intermediate overflow.
+fn royalty_amount(balance:u128,bps:u32)->u128 {
+    (balance/10_000)*(bps as u128) + ((balance%10_000)*(bps as u128))/10_000
 }
 
 #[near]
@@ -511,7 +518,7 @@ impl Contract {
         // State first: the listing is gone, then the key moves. Payout credits are recorded atomically in this receipt.
         self.take_listing(&token_id);
         self.transfer_key(&token_id, &buyer, None, Some("sale"));
-        let royalty = price * self.royalty_bps as u128 / 10_000;
+        let royalty = royalty_amount(price, self.royalty_bps);
         emit_key_event(
             "key_sale",
             near_sdk::serde_json::json!({"token_id": token_id, "seller": seller, "buyer": buyer, "price": U128(price), "royalty": U128(royalty)}),
@@ -527,7 +534,8 @@ impl Contract {
 
     /// The listing of a token, if it is listed.
     pub fn nft_listing(&self, token_id: TokenId) -> Option<ListingView> {
-        listings().get(&token_id).map(|l| ListingView { token_id, seller: l.seller, price: l.price })
+        listings().get(&token_id).map(|l| ListingView { token_id:token_id.clone(), seller: l.seller, price: l.price })
+            .or_else(||sale::sales().get(&token_id).map(|s|ListingView{token_id,seller:s.seller,price:s.terms.price}))
     }
 
     /// Listed keys in index order, paged like NEP-181. limit defaults to MAX_LISTINGS_PAGE and is capped at it.
@@ -555,7 +563,7 @@ impl Contract {
             token_id: token_id.clone(),
             owner_epoch: near_sdk::json_types::U64(owner_epochs().get(&token_id).unwrap_or(0)),
             pending_value_ops: near_sdk::json_types::U64(self.pending_ops(&token_id)),
-            listed: listings().get(&token_id).is_some(),
+            listed: listings().get(&token_id).is_some() || sale::sales().get(&token_id).is_some(),
             transfer_pending: transfer_calls().get(&token_id).is_some(),
             pledged: loans().get(&token_id).is_some(),
             value_op_nonce: near_sdk::json_types::U64(value_ops().get(&token_id).map(|op| op.nonce.0).unwrap_or(0)),
@@ -568,6 +576,8 @@ impl Contract {
 
     /// Admit a value-op before external custody dispatch. Minter (TEE settler) only for v1.
     /// Refuses if listed, epoch mismatch, or op_id already present. Does not move funds.
+    /// There is no payout receiver argument: owner_id must equal the live NFT owner.
+    /// A pending admission blocks ownership changes until terminal reconciliation.
     #[payable]
     pub fn begin_value_op(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64, op_id: String, action_hash: String, owner_id: AccountId) {
         self.assert_minter();
@@ -642,6 +652,14 @@ impl Contract {
         ids.iter().filter_map(|t| self.tiers.get(&t)).max()
     }
 
+    /// Explicit release-policy transition. Legacy stored rates remain observable until called.
+    /// Administration stays mutable; protected offers bind both rate and exact seller net.
+    #[payable]
+    pub fn adopt_zero_royalty(&mut self) {
+        assert_one_yocto(); self.assert_owner(); self.royalty_bps=0;
+        emit_key_event("royalty_policy",near_sdk::serde_json::json!({"royalty_bps":0,"treasury":self.treasury}));
+    }
+
     pub fn config(&self) -> Config {
         Config { owner: self.owner.clone(), minter: self.minter.clone(), treasury: self.treasury.clone(), royalty_bps: self.royalty_bps, beats: self.beats.into() }
     }
@@ -650,7 +668,7 @@ impl Contract {
     pub fn nft_payout(&self, token_id: TokenId, balance: U128, max_len_payout: Option<u32>) -> Payout {
         let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(||env::panic_str("unknown token"));
         let mut payout = HashMap::new();
-        let royalty = balance.0 * self.royalty_bps as u128 / 10_000;
+        let royalty = royalty_amount(balance.0, self.royalty_bps);
         if royalty > 0 && self.treasury != owner {
             require!(max_len_payout.unwrap_or(2) >= 2, "max_len_payout too small");
             payout.insert(self.treasury.clone(), U128(royalty));
@@ -2238,4 +2256,19 @@ mod v25_admission {
         assert_eq!(c.nft_settlement_epoch("k1".into()).0, 1);
         assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
     }
+}
+
+#[cfg(test)]
+mod zero_royalty_tests {
+ use super::*;
+ use near_sdk::{test_utils::VMContextBuilder,testing_env};
+ fn a(s:&str)->AccountId{s.parse().unwrap()}
+ fn ctx(who:&str,dep:u128){testing_env!(VMContextBuilder::new().current_account_id(a("keys.near")).predecessor_account_id(a(who)).signer_account_id(a(who)).attached_deposit(yocto(dep)).build());}
+ fn setup()->Contract {ctx("keys.near",0);let mut c=Contract::new(a("owner.near"),a("minter.near"),a("treasury.near"),500);crate::test_register_payouts(&mut c,&[a("minter.near")]);ctx("minter.near",10u128.pow(24));c.nft_mint("k1".into(),a("alice.near"),1,TokenMetadata{title:Some("Key".into()),..Default::default()});c}
+ #[test] fn zero_policy_legacy_to_zero_and_every_unit_goes_to_seller(){let mut c=setup();ctx("owner.near",1);c.adopt_zero_royalty();assert_eq!(c.config().royalty_bps,0);for b in [0,1,9_999,10_000,u128::MAX]{let p=c.nft_payout("k1".into(),U128(b),Some(1)).payout;assert_eq!(p.len(),1);assert_eq!(p[&a("alice.near")].0,b);}}
+ #[test] fn legacy_payout_u128_max_conserves_without_overflow(){let mut c=setup();for rate in [0,1,500,1000]{c.royalty_bps=rate;for b in [0,1,19,39,10_000,u128::MAX]{let p=c.nft_payout("k1".into(),U128(b),Some(10)).payout;assert_eq!(p.values().try_fold(0u128,|a,b|a.checked_add(b.0)),Some(b));assert!(p.len()<=2);}}}
+ #[test] fn treasury_seller_collision_is_single_full_balance(){let mut c=setup();c.treasury=a("alice.near");let p=c.nft_payout("k1".into(),U128(u128::MAX),Some(1)).payout;assert_eq!(p.len(),1);assert_eq!(p[&a("alice.near")].0,u128::MAX);}
+ #[test] #[should_panic(expected="only owner")] fn zero_policy_requires_owner(){let mut c=setup();ctx("alice.near",1);c.adopt_zero_royalty();}
+ #[test] #[should_panic] fn zero_policy_requires_one_yocto(){let mut c=setup();ctx("owner.near",0);c.adopt_zero_royalty();}
+ #[test] #[should_panic(expected="max_len_payout too small")] fn zero_policy_honors_zero_payout_limit(){let mut c=setup();ctx("owner.near",1);c.adopt_zero_royalty();c.nft_payout("k1".into(),U128(0),Some(0));}
 }

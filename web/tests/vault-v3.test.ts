@@ -81,3 +81,15 @@ describe("/vault uses the shared key store and the tokens-only design", () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   });
 });
+
+describe("holder-only withdrawal UI", () => {
+  it("has no editable receiver or destination-chain selector", () => {
+    const v = src("../app/vault/view.tsx");
+    expect(v).not.toContain('<input id="w-dest"');
+    expect(v).not.toContain("setWTo");
+    expect(v).not.toContain("wChain");
+    expect(v).toContain('data-testid="w-dest"');
+    expect(v).toContain("withdrawParams(accountId, wAsset, wUnits)");
+    expect(v).toContain('title="Withdraw to your NEAR account"');
+  });
+});

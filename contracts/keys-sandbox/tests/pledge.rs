@@ -147,8 +147,16 @@ async fn funding(e:&E,borrower_deleted:bool)->Result<()> {
  if deploy.is_failure(){
   assert!(format!("{:?}",deploy.details.failures()).contains("LackBalanceForState"));
   println!("captured-state deploy blocker (sandbox only): {:?}",deploy.details.failures());
-  // This transfer exists only inside the sandbox; mainnet requires explicit separate approval.
-  root.transfer_near(c.id(),NearToken::from_near(2)).await?.into_result()?;
+  // Sandbox-only sponsor capital: size it from this candidate instead of a stale fixed 2 NEAR.
+  // The reserve is test operating headroom, NOT a mainnet quote or an approved expenditure.
+  let current=c.view_account().await?;
+  let old_len=std::fs::metadata("../keys/release/v2.4/keyhole_keys.wasm")?.len();
+  let new_len=std::fs::metadata(WASM)?.len();
+  let expected_storage=current.storage_usage.saturating_add(new_len.saturating_sub(old_len));
+  let required=expected_storage as u128*10_000_000_000_000_000_000u128;
+  let topup=required.saturating_sub(current.balance.as_yoctonear())+2*N;
+  println!("sandbox-only measured candidate storage backing plus 2 NEAR operating margin: {topup} yoctoNEAR");
+  root.transfer_near(c.id(),NearToken::from_yoctonear(topup)).await?.into_result()?;
   c.as_account().deploy(&std::fs::read(WASM)?).await?.into_result()?;
  }
  let pk=SigningKey::from_bytes(&[7;32]).verifying_key().to_bytes();

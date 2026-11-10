@@ -493,6 +493,10 @@
       "This signature was already used.",
       "Each request needs a fresh signature; sign again."
     ],
+    "entropy": [
+      "Secure event randomness is unavailable; no commitment was published.",
+      "Check the original operation status before resuming. Do not submit another money operation to repair its history."
+    ],
     "rng": [
       "The enclave couldn't get randomness.",
       "Try again."
@@ -502,8 +506,8 @@
       "Try again in a moment."
     ],
     "storage": [
-      "The enclave store is busy.",
-      "Try again in a moment."
+      "The enclave could not confirm storage.",
+      "Check the original operation status before resuming. Do not repeat a money operation to repair its history."
     ],
     "unknown_op": [
       "Unknown action.",

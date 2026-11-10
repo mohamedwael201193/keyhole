@@ -1,1 +1,6 @@
 web/public/source/ export-ignore
+
+# Generated identity/claim checks compare bytes across Linux and Windows.
+web/lib/identity.gen.ts text eol=lf
+tee/worker/DEPLOYED_SHA256 text eol=lf
+docs/claims.json text eol=lf

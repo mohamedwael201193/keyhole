@@ -1,5 +1,5 @@
-// Where a withdrawal goes: the chain a token pays out on, and the address on that chain. Pure, so the sheet and the tests use
-// the same rules. The worker checks the chain against the token; this only refuses an address that cannot be on the chain.
+// Generic chain/address format helpers. These do not authorize a withdrawal.
+// Withdrawals are restricted independently to the current holder on NEAR.
 import bs58 from "bs58";
 import { validAccountId } from "./keysApi";
 

@@ -39,7 +39,7 @@ fresh_rows! {
 }
 #[test] fn expired_code() { assert_eq!(check_freshness(0, N).unwrap_err().code, "expired"); }
 
-macro_rules! to_rows { ($($name:ident: $chain:expr, $to:expr => $ok:expr;)*) => { $(#[test] fn $name() { assert_eq!(assert_withdraw_to($chain, $to).is_ok(), $ok, "{} {:?}", $chain, $to); })* } }
+macro_rules! to_rows { ($($name:ident: $chain:expr, $to:expr => $ok:expr;)*) => { $(#[test] fn $name() { assert_eq!(validate_chain_address($chain, $to).is_ok(), $ok, "{} {:?}", $chain, $to); })* } }
 to_rows! {
     near_self: "near", "a.near" => true;
     near_other: "near", "b.near" => true;

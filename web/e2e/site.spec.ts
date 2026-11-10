@@ -202,6 +202,19 @@ async function holdAccount(page: Page) {
   });
 }
 
+test("holder-only withdrawal shows an immutable NEAR receiver", async ({ page }) => {
+  await holdAccount(page);
+  await page.goto("/vault");
+  await expect(page.getByTestId("account")).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("open-withdraw").click();
+  const sheet = page.getByTestId("withdraw-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByTestId("w-chain")).toHaveText("NEAR");
+  await expect(sheet.getByTestId("w-dest")).toHaveText("holder.keyhole.test");
+  await expect(sheet.locator("input#w-dest")).toHaveCount(0);
+  await expect(sheet.getByTestId("w-dest").locator("input, textarea, select")).toHaveCount(0);
+});
+
 test("connected account opens a menu instead of disconnecting", async ({ page, context }, info) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await holdAccount(page);

@@ -187,6 +187,8 @@ add("site-beats-live","Home page heartbeats equal config.beats",where(RD,"`nft_t
 add("site-hash","Home page names the live build d337e822",where(RD,"KEYHOLE worker d337e822"),"live site",SITE,{"type":"http","url":SITE+"/","status":200,"contains":"d337e822"},"home carries d337e822")
 import glob
 for f in sorted(glob.glob("web/app/**/*.tsx",recursive=True)+glob.glob("web/lib/**/*.ts",recursive=True)+glob.glob("web/components/**/*.tsx",recursive=True)+glob.glob("docs/evidence/**/README.md",recursive=True)):
+    # Evidence locations are repository paths, not platform-specific filesystem paths.
+    f = f.replace("\\", "/")
     for i,l in enumerate(open(f,encoding="utf8"),1):
         for h in re.findall(r'(?:txns/|tx\(")([1-9A-HJ-NP-Za-km-z]{43,44})', l):
             exp = "exists" if "revert" in l.lower() else "success"
@@ -201,5 +203,5 @@ for d in DOCS:
         for r in re.findall(r"actions/runs/(\d+)", l):
             add(f"ci-{r}", f"CI run {r} concluded success", f"{d}:{i}", "CI run", f"https://github.com/mohamedwael201193/keyhole/actions/runs/{r}",
                 {"type":"ci_run","repo":"mohamedwael201193/keyhole","run":r}, "conclusion == success")
-json.dump({"version":1,"generated":"see git log","repo":"mohamedwael201193/keyhole","rpc":"https://archival-rpc.mainnet.fastnear.com","claims":C}, open("docs/claims.json","w"), indent=1, ensure_ascii=False)
+json.dump({"version":1,"generated":"see git log","repo":"mohamedwael201193/keyhole","rpc":"https://archival-rpc.mainnet.fastnear.com","claims":C}, open("docs/claims.json","w",encoding="utf8",newline="\n"), indent=1, ensure_ascii=False)
 print(len(C))
