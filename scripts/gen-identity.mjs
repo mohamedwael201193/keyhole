@@ -2,8 +2,8 @@
 // Generates web/lib/identity.gen.ts and tee/worker/DEPLOYED_SHA256 from identity.json, and
 // checks that identity.json agrees with contracts/keys/deployed (sha256 + base58 code hash).
 // Also refreshes the <!-- IDENTITY:START --> … <!-- IDENTITY:END --> block in README.md.
-// usage: node scripts/gen-identity.mjs [--check]
-import { readFileSync, writeFileSync } from "node:fs";
+// usage: node scripts/gen-identity.mjs [--check] [--promote-live <public-capture.json>] [--review-source <full-commit>]
+import { readFileSync, writeFileSync, copyFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 // fileURLToPath (not .pathname): on Windows .pathname gives "/D:/..." and every read fails.
@@ -11,6 +11,39 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const id = JSON.parse(readFileSync(root + "identity.json", "utf8"));
 const A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const b58 = (hex) => { let n = BigInt("0x" + hex), s = ""; while (n > 0n) { s = A[Number(n % 58n)] + s; n /= 58n; } return s; };
+// Promotion is explicit and uses a finalized public receipt/view capture, never a candidate guess.
+if (process.argv.includes("--promote-live")) {
+  if (process.argv.includes("--check")) throw new Error("--check cannot promote a deployment");
+  const evidencePath = process.argv[process.argv.indexOf("--promote-live") + 1];
+  if (!evidencePath || evidencePath.startsWith("--")) throw new Error("--promote-live requires a public live-view JSON capture");
+  const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+  const artifact = readFileSync(root + "contracts/keys/release/v2.5/keyhole_keys.wasm");
+  const digest = createHash("sha256").update(artifact).digest("hex");
+  const view = (method) => evidence.views.find((v) => v.method === method)?.result;
+  if (evidence.code.sha256 !== digest || evidence.code.bytes !== artifact.length || evidence.account.code_hash !== b58(digest) || view("contract_source_metadata")?.version !== "2.5.0") throw new Error("live code/version does not match release artifact");
+  for (const name of ["deploy", "migration"]) {
+    const tx = evidence.transactions[name];
+    if (tx?.final_execution_status !== "FINAL" || !Object.hasOwn(tx.status, "SuccessValue") || tx.transaction.signer_id !== id.contract.account || tx.transaction.receiver_id !== id.contract.account || tx.receipts_outcome.some((r) => Object.hasOwn(r.outcome.status, "Failure"))) throw new Error(`${name} is not a successful FINAL self-transaction`);
+  }
+  const deploy = evidence.transactions.deploy.transaction;
+  const migration = evidence.transactions.migration.transaction;
+  const deployAction = deploy.actions.find((a) => a.DeployContract)?.DeployContract;
+  const migrateAction = migration.actions.find((a) => a.FunctionCall?.method_name === "migrate_pledge")?.FunctionCall;
+  const migrationArgs = migrateAction && JSON.parse(Buffer.from(migrateAction.args, "base64").toString());
+  if (!deployAction || Buffer.from(deployAction.code, "base64").toString("hex") !== digest || !migrateAction || migrateAction.deposit !== "0" || migrationArgs.recovery_account !== view("get_pledge_config")?.recovery_account) throw new Error("receipt actions do not prove this upgrade and recovery beneficiary");
+  id._doc = "Single source of truth for live identities. Generate deployment updates with node scripts/gen-identity.mjs --promote-live <public-capture.json>. Refresh generated files with the same script.";
+  Object.assign(id.contract, { version: "2.5.0", bytes: artifact.length, code_hash: b58(digest), wasm_sha256: digest, deploy_tx: deploy.hash, migrate_pledge_tx: migration.hash, recovery_account: migrationArgs.recovery_account });
+  copyFileSync(root + "contracts/keys/release/v2.5/keyhole_keys.wasm", root + "contracts/keys/deployed/keyhole_keys.wasm");
+  writeFileSync(root + "contracts/keys/deployed/SHA256SUMS", `${digest}  keyhole_keys.wasm\n`);
+  writeFileSync(root + "identity.json", JSON.stringify(id, null, 2) + "\n");
+}
+if (process.argv.includes("--review-source")) {
+  if (process.argv.includes("--check")) throw new Error("--check cannot set review source");
+  const source = process.argv[process.argv.indexOf("--review-source") + 1];
+  if (!/^[a-f0-9]{40}$/.test(source ?? "")) throw new Error("--review-source requires an immutable full commit");
+  id.review.source_commit = source;
+  writeFileSync(root + "identity.json", JSON.stringify(id, null, 2) + "\n");
+}
 const wasm = readFileSync(root + "contracts/keys/deployed/keyhole_keys.wasm");
 const sha = createHash("sha256").update(wasm).digest("hex");
 const errs = [];
@@ -29,7 +62,8 @@ const tx8 = (s) => `${s.slice(0, 8)}…`;
 const bytes = Number(w.bytes).toLocaleString("en-US");
 const candidateWasm = readFileSync(root + "contracts/keys/release/v2.5/keyhole_keys.wasm");
 const candidateSha = createHash("sha256").update(candidateWasm).digest("hex");
-const candidate = { status: "source-candidate-not-deployed", release: "v2.5", wasm_sha256: candidateSha, code_hash: b58(candidateSha), bytes: candidateWasm.length, recipe: "contracts/keys/build.sh", rust: "1.86.0", cargo_near: "0.22.0", binaryen: "123" };
+const contractLive = id.contract.wasm_sha256 === candidateSha;
+const candidate = { status: contractLive ? "deployed-mainnet" : "source-candidate-not-deployed", release: "v2.5", wasm_sha256: candidateSha, code_hash: b58(candidateSha), bytes: candidateWasm.length, recipe: "contracts/keys/build.sh", rust: "1.86.0", cargo_near: "0.22.0", binaryen: "123" };
 const identityBlock = `<!-- IDENTITY:START -->
 ### Live mainnet identities
 
@@ -41,6 +75,8 @@ The live worker is \`${w8}\` (${bytes} bytes).
 |---|---|---|
 | Contract account | \`${k.account}\` | [nearblocks](https://nearblocks.io/address/${k.account}) |
 | TEE minter | \`${k.minter}\` | [\`judge/0-live.sh\`](judge/0-live.sh) requires \`config.minter\` to equal this 64-hex implicit account |
+| Contract version | \`${k.version ?? "2.4.0"}\` | NEP-330 \`contract_source_metadata\` |
+| Pledge migration | \`${k.migrate_pledge_tx ? tx8(k.migrate_pledge_tx) : "not migrated"}\` | ${k.migrate_pledge_tx ? `[nearblocks](https://nearblocks.io/txns/${k.migrate_pledge_tx})` : "—"} |
 | Contract code hash | \`${k.code_hash}\` | deploy tx [\`${tx8(k.deploy_tx)}\`](https://nearblocks.io/txns/${k.deploy_tx}) |
 | Contract wasm sha256 | \`${k.wasm_sha256}\` | [\`contracts/keys/deployed/keyhole_keys.wasm\`](contracts/keys/deployed/keyhole_keys.wasm) |
 | Worker project | \`${w.project}\` | |
@@ -48,13 +84,20 @@ The live worker is \`${w8}\` (${bytes} bytes).
 | Worker publish tx | \`${w.add_version_tx}\` | [nearblocks](https://nearblocks.io/txns/${w.add_version_tx}) |
 | Live \`info\` call | \`${w.info_call}\` | [attestation](https://api.outlayer.ai/attestations/by-call/${w.info_call}) · [verify](https://keyhole-seven.vercel.app/verify?call=${w.info_call}) |
 
-These are the **deployed** identities. Source on this branch may be a later candidate. Current v2.5 contract bytes are in [\`contracts/keys/release/v2.5/identity.json\`](contracts/keys/release/v2.5/identity.json), generated from the release artifact, and the v2.5 line of [\`contracts/keys/release/SHA256SUMS\`](contracts/keys/release/SHA256SUMS).
+The contract release is **${contractLive ? "live on mainnet" : "a source candidate"}**. Release bytes and recipe are in [\`contracts/keys/release/v2.5/identity.json\`](contracts/keys/release/v2.5/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
-| Candidate (not deployed) | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
+| Contract release | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
 |---|---:|---|---:|
-| v2.5 | ${candidate.bytes.toLocaleString("en-US")} | \`${candidateSha}\` | ${(candidate.bytes / 100000).toFixed(5)} NEAR |
+| v2.5 (${contractLive ? "live" : "not deployed"}) | ${candidate.bytes.toLocaleString("en-US")} | \`${candidateSha}\` | ${(candidate.bytes / 100000).toFixed(5)} NEAR |
 
-Measured size steps and the exact-artifact profiler report are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). [\`docs/evidence/integration-stack/validation.json\`](docs/evidence/integration-stack/validation.json) is an earlier dated local record, including its retained health FAIL, and is not this head's byte identity. Candidate hashes are not live until they are published and written back into \`identity.json\`. Re-run this script after changing \`identity.json\`.
+Strict read-only online verification, including a reproducible contract rebuild:
+
+\`\`\`bash
+CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict --rebuild
+node judge/verify-claims.mjs --strict
+\`\`\`
+
+Measured size steps are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [\`docs/evidence/live-v2.5/all-live-views.json\`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
 `;
 

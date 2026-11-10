@@ -1,0 +1,115 @@
+TAP version 13
+# Subtest: primary recipe fetches and checks the full immutable source commit
+ok 1 - primary recipe fetches and checks the full immutable source commit
+  ---
+  duration_ms: 1.169928
+  ...
+# Subtest: exact generated checkout contains byte-identical script, receipt checker and identity
+ok 2 - exact generated checkout contains byte-identical script, receipt checker and identity
+  ---
+  duration_ms: 566.53057
+  ...
+# Subtest: live identity promotion is reproducible from FINAL public evidence
+ok 3 - live identity promotion is reproducible from FINAL public evidence
+  ---
+  duration_ms: 220.730715
+  ...
+# Subtest: promotion refuses unmatched live bytes without changing live identity
+ok 4 - promotion refuses unmatched live bytes without changing live identity
+  ---
+  duration_ms: 95.449034
+  ...
+# Subtest: promotion refuses pending receipt without changing live identity
+ok 5 - promotion refuses pending receipt without changing live identity
+  ---
+  duration_ms: 91.703459
+  ...
+# Subtest: promotion refuses failed receipt without changing live identity
+ok 6 - promotion refuses failed receipt without changing live identity
+  ---
+  duration_ms: 92.002353
+  ...
+# Subtest: promotion refuses different deployment bytes without changing live identity
+ok 7 - promotion refuses different deployment bytes without changing live identity
+  ---
+  duration_ms: 95.671234
+  ...
+# Subtest: promotion refuses different beneficiary without changing live identity
+ok 8 - promotion refuses different beneficiary without changing live identity
+  ---
+  duration_ms: 94.940545
+  ...
+# Subtest: no claim URL hits /api/health or OutLayer /call
+ok 9 - no claim URL hits /api/health or OutLayer /call
+  ---
+  duration_ms: 1.388994
+  ...
+# Subtest: the claims runner does not call OutLayer /call
+ok 10 - the claims runner does not call OutLayer /call
+  ---
+  duration_ms: 0.177787
+  ...
+# Subtest: full reproduction builds the untracked callback fixture before the sandbox
+ok 11 - full reproduction builds the untracked callback fixture before the sandbox
+  ---
+  duration_ms: 1.387317
+  ...
+# Subtest: full reproduction compiles the WASI host, not just native cfg
+ok 12 - full reproduction compiles the WASI host, not just native cfg
+  ---
+  duration_ms: 0.125954
+  ...
+# Subtest: judge checkout and raw paths share an immutable generated source ref
+ok 13 - judge checkout and raw paths share an immutable generated source ref
+  ---
+  duration_ms: 0.570729
+  ...
+# Subtest: all current README claim-count rows match actual offline verification
+ok 14 - all current README claim-count rows match actual offline verification
+  ---
+  duration_ms: 157.515324
+  ...
+# Subtest: successful receipts prove success
+ok 15 - successful receipts prove success
+  ---
+  duration_ms: 1.044035
+  ...
+# Subtest: a failed nested receipt cannot prove success
+ok 16 - a failed nested receipt cannot prove success
+  ---
+  duration_ms: 0.130309
+  ...
+# Subtest: intentional refusal must match its documented error
+ok 17 - intentional refusal must match its documented error
+  ---
+  duration_ms: 0.127758
+  ...
+# Subtest: an unrelated failure does not prove the documented refusal
+ok 18 - an unrelated failure does not prove the documented refusal
+  ---
+  duration_ms: 0.100988
+  ...
+# Subtest: success cannot prove refusal
+ok 19 - success cannot prove refusal
+  ---
+  duration_ms: 0.155286
+  ...
+# Subtest: failure claims without a reason fail closed
+ok 20 - failure claims without a reason fail closed
+  ---
+  duration_ms: 0.115081
+  ...
+# Subtest: unknown expectations fail closed
+ok 21 - unknown expectations fail closed
+  ---
+  duration_ms: 0.077679
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 800.495792

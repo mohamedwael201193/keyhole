@@ -116,3 +116,9 @@ it("stale readonly sessions require re-unlock instead of looping on a cached gra
   vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify({output:{ok:false,error:{code:"session_epoch"}}}),{headers:{"content-type":"application/json"}})));
   const {callWorker}=await import("@/lib/worker");await callWorker("status",sessionAuth(session,"status",{},1) as any);expect(st.getItem("kh_session_v1")).toBeNull();
 });
+
+// Promoting identity to v2.5 must not silently promote the legacy MethodNotFound exception.
+it("keeps the legacy exception pinned to v2.4, never the upgraded identity", () => {
+  expect(LIVE_V24_CODE_HASH).toBe("DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ");
+  expect(LIVE_V24_CODE_HASH).not.toBe("3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b");
+});

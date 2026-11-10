@@ -1,0 +1,28 @@
+{
+  "keyhole-devmo.near": {
+    "jsonrpc": "2.0",
+    "result": {
+      "amount": "5299576661423691162621661",
+      "block_hash": "AprNx5CeDtzYn3k1gGVuvqGbjmNg5HJP6mvv3FvcU8Zg",
+      "block_height": 223949451,
+      "code_hash": "3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b",
+      "locked": "0",
+      "storage_paid_at": 0,
+      "storage_usage": 492179
+    },
+    "id": "read-only"
+  },
+  "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443": {
+    "jsonrpc": "2.0",
+    "result": {
+      "amount": "40829047361825799999999",
+      "block_hash": "AprNx5CeDtzYn3k1gGVuvqGbjmNg5HJP6mvv3FvcU8Zg",
+      "block_height": 223949451,
+      "code_hash": "11111111111111111111111111111111",
+      "locked": "0",
+      "storage_paid_at": 0,
+      "storage_usage": 315
+    },
+    "id": "read-only"
+  }
+}

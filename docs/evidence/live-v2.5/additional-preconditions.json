@@ -1,0 +1,80 @@
+{
+  "at": "2026-11-10T19:44:56.258432+02:00",
+  "queries": [
+    {
+      "params": {
+        "request_type": "call_function",
+        "finality": "final",
+        "account_id": "keyhole-devmo.near",
+        "method_name": "payout_account_registered",
+        "args_base64": "eyJhY2NvdW50X2lkIjogIjAxNWEwMjU5MDZhNTlmOWY0MGNhMTdkYWYyYTNjNjFjNWU2M2EzN2MwODFjNzUyMzA4NzBjYWE2YTgyYWM0NDMifQ=="
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "block_hash": "9bzDNY3RX9boXhxhfswJmcGLGiNecw2pdWMLNSybroTP",
+          "block_height": 223949250,
+          "logs": [],
+          "result": [
+            102,
+            97,
+            108,
+            115,
+            101
+          ]
+        },
+        "id": "read-only"
+      }
+    },
+    {
+      "params": {
+        "request_type": "view_account",
+        "finality": "final",
+        "account_id": "kh-borrow-1112.keyhole-devmo.near"
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "name": "HANDLER_ERROR",
+          "cause": {
+            "info": {
+              "block_hash": "9bzDNY3RX9boXhxhfswJmcGLGiNecw2pdWMLNSybroTP",
+              "block_height": 223949250,
+              "requested_account_id": "kh-borrow-1112.keyhole-devmo.near"
+            },
+            "name": "UNKNOWN_ACCOUNT"
+          },
+          "code": -32000,
+          "message": "Server error",
+          "data": "account kh-borrow-1112.keyhole-devmo.near does not exist while viewing"
+        },
+        "id": "read-only"
+      }
+    },
+    {
+      "params": {
+        "request_type": "view_account",
+        "finality": "final",
+        "account_id": "kh-lend-1112.keyhole-devmo.near"
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "name": "HANDLER_ERROR",
+          "cause": {
+            "info": {
+              "block_hash": "9bzDNY3RX9boXhxhfswJmcGLGiNecw2pdWMLNSybroTP",
+              "block_height": 223949250,
+              "requested_account_id": "kh-lend-1112.keyhole-devmo.near"
+            },
+            "name": "UNKNOWN_ACCOUNT"
+          },
+          "code": -32000,
+          "message": "Server error",
+          "data": "account kh-lend-1112.keyhole-devmo.near does not exist while viewing"
+        },
+        "id": "read-only"
+      }
+    }
+  ]
+}
