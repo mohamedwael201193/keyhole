@@ -59,5 +59,8 @@
   },
   "recorded_attestation_rows": {
     "ok": 26
-  }
+  },
+  "source_commit": "3587b6704c68cf6835fd5102822ba5dfb4f94662",
+  "source_archive_sha256": "fb7ed352a846f748effc93b7b547c13e631939642d09b3cb55bb26309e1c0887",
+  "source_archive_files": 1031
 }

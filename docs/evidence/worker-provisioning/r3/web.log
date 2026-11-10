@@ -34,6 +34,6 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
  Test Files  99 passed (99)
       Tests  1785 passed (1785)
-   Start at  23:19:05
-   Duration  4.79s (transform 3.82s, setup 0ms, import 9.92s, tests 10.56s, environment 6ms)
+   Start at  23:39:35
+   Duration  4.94s (transform 3.73s, setup 0ms, import 10.11s, tests 11.45s, environment 7ms)
 
