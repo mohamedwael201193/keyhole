@@ -1,0 +1,21 @@
+{
+  "observed_at_cairo": "2026-11-11T01:08:16.203518+02:00",
+  "anomaly": "Fresh execution-context RPC reads return HTTP 429 before durable dispatch-claim creation",
+  "automatic_resends": 0,
+  "native_broadcasts": 0,
+  "native_fees_spent_yocto": "0",
+  "compute_spent_micro_usd": 0,
+  "live_contract": "v2.5 unchanged",
+  "live_worker": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41 unchanged",
+  "lending_enabled": false,
+  "maintenance": "ON",
+  "maintenance_off_at_cairo": null,
+  "native_release_post_gate": "NOT_EVALUATED_NO_DEPLOY",
+  "restore_gate": "NOT_EVALUATED_NO_PUBLICATION",
+  "worker_admin_transactions_sent": 0,
+  "identity_promotions": 0,
+  "private_root_directory": "outside Git; unchanged keypair",
+  "vercel_project_root_directory": "web",
+  "future_cli_deploy_working_directory": "repository root, not web/",
+  "source_release_commit": "9d661db70a70e00e4d23544fc75dbc523d17e626"
+}

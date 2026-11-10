@@ -1,0 +1,43 @@
+{
+  "verified_at_cairo": "2026-11-11T00:57:38.772916+02:00",
+  "checks": [
+    {
+      "path": "/api/keyhole",
+      "probe": "invalid-json",
+      "status": 503,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/keyhole",
+      "probe": "info",
+      "status": 503,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/keyhole",
+      "probe": "malformed-signed-operation",
+      "status": 503,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/worker",
+      "probe": "invalid-json",
+      "status": 503,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/worker",
+      "probe": "info",
+      "status": 503,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/worker",
+      "probe": "malformed-signed-operation",
+      "status": 503,
+      "cache_control": "no-store"
+    }
+  ],
+  "maintenance_effective": true,
+  "deployment": "https://keyhole-mgc182sxg-mohamedwael201193s-projects.vercel.app"
+}

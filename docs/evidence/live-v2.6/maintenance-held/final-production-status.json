@@ -1,0 +1,22 @@
+{
+  "at_cairo": "2026-11-11T01:07:23.048264+02:00",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "cache_control": "private, no-cache, no-store, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/api/keyhole",
+      "status": 503,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/worker",
+      "status": 503,
+      "cache_control": "no-store"
+    }
+  ],
+  "maintenance_effective": true,
+  "maintenance_off_at_cairo": null
+}

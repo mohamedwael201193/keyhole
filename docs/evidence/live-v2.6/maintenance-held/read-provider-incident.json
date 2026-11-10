@@ -1,0 +1,6 @@
+{
+  "fastnear_read_error": "HTTP 429, no Retry-After supplied; zero dispatch journals created",
+  "official_near_read_only_capture": "succeeded but took 98498ms, longer than the release freshness window",
+  "documented_blockpi_health": "HTTP failure; no signing or send attempted through it",
+  "decision": "Return to original reviewed RPC after cooldown with 150ms pacing; refresh all approvals and signed block, retaining every never-dispatched original. No receiver/key/financial gate changes."
+}

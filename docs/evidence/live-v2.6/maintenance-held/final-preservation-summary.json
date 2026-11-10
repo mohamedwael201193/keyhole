@@ -1,0 +1,32 @@
+{
+  "verified_at_cairo": "2026-11-11T01:09:00.399062+02:00",
+  "canonical_snapshot_at_cairo": "2026-11-11T01:06:50.002785+02:00",
+  "block": {
+    "hash": "3M5xPTqr7uAhj2kkpnx7nibSZJ8zB9DH68kF7nTWjaVT",
+    "height": 223982733,
+    "timestamp": 1794352010002785500
+  },
+  "equal_to_approved_before": {
+    "state": true,
+    "tokens": true,
+    "controls": true,
+    "credits": true,
+    "config": true,
+    "pledge": true,
+    "metadata": true,
+    "code": true
+  },
+  "NFT_count": 6,
+  "control_count": 6,
+  "credit_accounts": 8,
+  "raw_rows": 47,
+  "lending_enabled": false,
+  "deployer_nonce": "221777577000129",
+  "dispatch_journal_exists": false,
+  "onchain_transactions": [],
+  "native_fees_spent_yocto": "0",
+  "compute_spent_micro_usd": 0,
+  "payment_balance_available_micro_usd": "514657",
+  "payment_reserved_micro_usd": "0",
+  "maintenance_off_at_cairo": null
+}
