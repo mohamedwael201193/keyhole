@@ -20,7 +20,7 @@
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "18a71c4928f742ec1c8106eaa4c2ef7232eae9c7"
+    "source_commit": "4dcf55ad2644dd6985eafd6a1cd65537f04ff610"
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",

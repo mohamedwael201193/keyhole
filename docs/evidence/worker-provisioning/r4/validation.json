@@ -50,5 +50,11 @@
   },
   "worker_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
   "contract_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
-  "hashes_changed": false
+  "hashes_changed": false,
+  "source_commit": "4dcf55ad2644dd6985eafd6a1cd65537f04ff610",
+  "archive_sha256": "4e1f2f88488e66a573ddbe67a941bbd05ef704969151de3e65a64312b1afebd9",
+  "source_files": 1059,
+  "identity_generator": "PASS",
+  "archive_equality": "PASS",
+  "hosted_exact_head_ci": "not run: local-only commit, owner pushes"
 }
