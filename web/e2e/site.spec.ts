@@ -159,25 +159,28 @@ test("sealed vault names MetaMask and a gas-free signature", async ({ page }) =>
   await expect(empty).toContainText("one gas-free signature that only the enclave can check");
 });
 
-test("a cold health check stays on checking until the retry settles", async ({ page }) => {
+test("passive health stays unknown after one GET and never requests a paid probe", async ({ page }) => {
   let hits = 0;
+  const methods: string[] = [];
+  let release!: () => void;
+  const responseGate = new Promise<void>((resolve) => { release = resolve; });
   await page.route("**/api/health", async (route) => {
     hits += 1;
-    await new Promise((r) => setTimeout(r, 700));
-    await route.fulfill({ json: { online: false, reason: "gateway" } });
+    methods.push(route.request().method());
+    await responseGate;
+    await route.fulfill({ json: { mode: "passive", online: null, fresh: false, reason: "not_probed", payer: null } });
   });
   await page.goto("/vault", { waitUntil: "domcontentloaded" });
-  const offline = page.getByTestId("offline");
-  const live = page.getByText("Enclave live", { exact: false });
-  if (await live.isVisible().catch(() => false)) {
-    await page.waitForTimeout(250);
-    await expect(offline).toHaveCount(0);
-    return;
-  }
   await expect(page.getByTestId("enclave-checking")).toBeVisible();
-  await expect(offline).toHaveCount(0);
-  await expect(offline).toBeVisible({ timeout: 15_000 });
-  expect(hits).toBeGreaterThanOrEqual(2);
+  await expect(page.getByTestId("offline")).toHaveCount(0);
+  const response = page.waitForResponse((r) => r.url().endsWith("/api/health"));
+  release();
+  await response;
+  await expect(page.getByTestId("enclave-checking")).toBeVisible();
+  await expect(page.getByTestId("offline")).toHaveCount(0);
+  await expect(page.getByText("Enclave live", { exact: false })).toHaveCount(0);
+  expect(hits).toBe(1);
+  expect(methods).toEqual(["GET"]);
 });
 
 async function holdAccount(page: Page) {

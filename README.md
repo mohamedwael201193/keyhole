@@ -621,7 +621,7 @@ bash ./judge/4-live-refusals.sh          # with your own NEAR account: replay an
 
 **In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. Which browser transcript is recorded: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 
-GET `/api/health` is passive. It does not spend compute and it does not report the enclave online. The paid check's 2026-11-10 08:31 Africa/Cairo result remains the FAIL in [validation.json](docs/evidence/integration-stack/validation.json). An approved probe is separate: [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
+GET `/api/health` is passive. The browser reads it once and keeps unprobed availability unknown; it never retries into a paid probe. It does not spend compute and it does not report the enclave online. The paid check's 2026-11-10 08:31 Africa/Cairo result remains the FAIL in [validation.json](docs/evidence/integration-stack/validation.json). An approved probe is separate: [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
 
 **The CLI** ([`cli/README.md`](cli/README.md)) works with any NEAR account, and the key stays on your machine. Only signatures are sent.
 
