@@ -1,0 +1,34 @@
+{
+  "at_cairo": "2026-11-12T00:18:21.931159+02:00",
+  "tx": "GzqLAznKsXnb6utqaS6ngyVc7t7Gcjy4mTzKG2drnz2r",
+  "explorer": "https://explorer.near.org/transactions/GzqLAznKsXnb6utqaS6ngyVc7t7Gcjy4mTzKG2drnz2r",
+  "final_execution_status": "FINAL",
+  "status_keys": [
+    "SuccessValue"
+  ],
+  "transfers": [],
+  "C": {
+    "amount": "6749776251866280362621659",
+    "amount_near": 6.7497762518662805,
+    "storage_usage": 525930,
+    "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH"
+  },
+  "B": {
+    "amount": "99000000000000000000000",
+    "amount_near": 0.099,
+    "storage_usage": 182,
+    "code_hash": "11111111111111111111111111111111"
+  },
+  "B_keys": [
+    {
+      "public_key": "ed25519:oyMAr2ZRSTfhVnsUsPwcnu6fpEJSnWr8k5Pxq8azG5u",
+      "permission": "FullAccess",
+      "nonce": 224124941000000
+    }
+  ],
+  "expected_B_fullaccess": "ed25519:oyMAr2ZRSTfhVnsUsPwcnu6fpEJSnWr8k5Pxq8azG5u",
+  "key_match": true,
+  "lending_enabled": false,
+  "fee_near_cli": 0.0071149895375,
+  "C_delta_near": 0.10611498953749976
+}

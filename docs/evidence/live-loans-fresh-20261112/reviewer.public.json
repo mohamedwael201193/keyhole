@@ -1,0 +1,5 @@
+{
+  "label": "project-held reviewer key, separate from the attestor; not independent",
+  "public_key_b64": "xSuKMVrIJSI2TAoGfnRJ6G95W5XMrFRYBfQZHRAbdmk=",
+  "note": "Public half only. Not the contract attestor_public_key / minter TEE key."
+}

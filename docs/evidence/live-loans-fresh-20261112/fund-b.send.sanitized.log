@@ -1,0 +1,18 @@
+
+---stderr---
+├  Transaction Execution Info:
+│    Gas used: 8.6 Tgas
+│    Transaction fee: 0.0071149895375 NEAR (USD equivalent is unavailable due to an error: Failed to parse the response from Coingecko API as JSON: error decoding response body)
+│    Transaction ID: GzqLAznKsXnb6utqaS6ngyVc7t7Gcjy4mTzKG2drnz2r
+│    To see the transaction in the transaction explorer, please open this url in your browser:
+│    https://explorer.near.org/transactions/GzqLAznKsXnb6utqaS6ngyVc7t7Gcjy4mTzKG2drnz2r
+│     [0m
+
+
+<keyhole-devmo.near> has transferred 0.099 NEAR to <0c086e0918ab2f8b23e943012b9995b7bdc0a8db6bde9b44069c8ad66dbd5f10> successfully.
+
+
+
+Here is your console command if you need to script it or re-run:
+    [33m/home/box/.local/lib/node_modules/near-cli-rs/node_modules/.bin_real/near transaction send-signed-transaction file-with-base64-signed-transaction /workspace/handoff/live-loans-v2-exec/fund-b.signed.json network-config mainnet send[39m
+

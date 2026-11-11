@@ -1,0 +1,10 @@
+{
+  "tx": "A9n3UiJdUXLavtJD2pmmjty2bUHjsC8s1PFduuFA95H2",
+  "explorer": "https://explorer.near.org/transactions/A9n3UiJdUXLavtJD2pmmjty2bUHjsC8s1PFduuFA95H2",
+  "method": "register_payout_account",
+  "signer": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+  "account_id": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+  "deposit_yocto": "3200000000000000000000",
+  "result": "payout_storage_register paid 3200000000000000000000",
+  "cli_fee_near": 0.0002305423248659
+}

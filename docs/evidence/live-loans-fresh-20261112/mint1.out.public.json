@@ -1,0 +1,9 @@
+{
+  "call_id": "a58b8c26-930e-427c-822b-9892b2ff3ec5",
+  "status": "completed",
+  "ok": false,
+  "error": {
+    "code": "minter_payout_unregistered"
+  },
+  "compute_cost_micro_usd": 1010
+}

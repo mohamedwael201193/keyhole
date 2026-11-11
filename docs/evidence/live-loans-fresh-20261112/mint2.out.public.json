@@ -1,0 +1,11 @@
+{
+  "call_id": "418327ee-6691-40d8-b30e-c33020e707fe",
+  "status": "completed",
+  "ok": false,
+  "error": {
+    "code": "rpc_unavailable",
+    "message": "unexpected RPC view schema"
+  },
+  "compute_cost_micro_usd": 1010,
+  "cause": "Published worker decode requires nft_token to be an object; an unminted token returns null. Fresh mint cannot proceed on worker 3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377 without a worker fix and republish."
+}
