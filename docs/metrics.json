@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "total": 2065,
+  "total": 2068,
   "suites": {
     "cli": 77,
-    "web-unit": 1988
+    "web-unit": 1991
   },
   "excluded": [
     "contract",
@@ -11,15 +11,15 @@
     "sandbox",
     "playwright"
   ],
-  "commit": "6df7950d0142f41c0eddee98de43fce770b9d46f",
-  "measured_at": "2026-11-11T17:24:21Z",
+  "commit": "d451a25bab95817e73585dd5db3c323e230a9140",
+  "measured_at": "2026-11-11T19:09:41Z",
   "failed": 0,
-  "run_id": "f129a049f6457b63eff0dd871dc677912899771ae2759a2a2269dd41c5086121",
+  "run_id": "c49fad1563e4bab5a44ce88e344009bf0962f6458a318038d96c8bfaa9021aca",
   "runners": {
     "cli": "cd cli && npm test",
     "web-unit": "cd web && npx vitest run",
     "contract": "cd contracts/keys && cargo test --locked",
     "worker": "cd tee/worker && cargo test --locked"
   },
-  "note": "cli 77 and web-unit 1988 were measured on this commit with 0 failing tests. run_id is sha256 of the commit, the suite lines and the failing-test count. Contract, worker, sandbox and Playwright were not run and are not in total. A CI log count is not a row in this file."
+  "note": "ok is true only when every invoked runner exited 0 and total equals the sum of suites. Suites listed in excluded were not run for this file and are not in total. Token reach is feed-derived, not adoption. A CI log count is not a row in this file."
 }

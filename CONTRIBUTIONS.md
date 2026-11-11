@@ -2,7 +2,7 @@
 
 Author and direction: **devmo** (`keyhole-devmo.near`). The work in this repository is AI-assisted under that direction.
 
-The eligible window opens on 19 Oct 2026 ([HACKATHON.md](https://nearhackathon.com/HACKATHON.md) Q001). The first commit in this repository is [`7a8ec4a`](https://github.com/mohamedwael201193/keyhole/commit/7a8ec4a) on 27 Oct 2026. The v1 merge is [`66f7070`](https://github.com/mohamedwael201193/keyhole/commit/66f7070) on 28 Oct 2026. The diff between those two commits is [`7a8ec4a...66f7070`](https://github.com/mohamedwael201193/keyhole/compare/7a8ec4a...66f7070). The bootstrap itself is inside the eligible window. Nothing in this repository is claimed as work from before that window. The compare from that baseline through the reviewed source is [`7a8ec4a...6df7950d0142f41c0eddee98de43fce770b9d46f`](https://github.com/mohamedwael201193/keyhole/compare/7a8ec4a...6df7950d0142f41c0eddee98de43fce770b9d46f).
+The eligible window opens on 19 Oct 2026 ([HACKATHON.md](https://nearhackathon.com/HACKATHON.md) Q001). The first commit in this repository is [`7a8ec4a`](https://github.com/mohamedwael201193/keyhole/commit/7a8ec4a) on 27 Oct 2026. The v1 merge is [`66f7070`](https://github.com/mohamedwael201193/keyhole/commit/66f7070) on 28 Oct 2026. The diff between those two commits is [`7a8ec4a...66f7070`](https://github.com/mohamedwael201193/keyhole/compare/7a8ec4a...66f7070). The bootstrap itself is inside the eligible window. Nothing in this repository is claimed as work from before that window. The compare from that baseline through the reviewed source is [`7a8ec4a...d451a25bab95817e73585dd5db3c323e230a9140`](https://github.com/mohamedwael201193/keyhole/compare/7a8ec4a...d451a25bab95817e73585dd5db3c323e230a9140).
 
 ## Original
 
