@@ -1,12 +1,26 @@
 # Costs and risk
 
-Figures below are taken from the contract constants and from measured byte prices in the source tests. They are not quotes, not a funding request, and not a claim that lending or protected sales are live. Live mainnet today is contract **v2.4** and worker `identity.json`. Pledge, protected sale, payout slots and holder-only withdrawal are the **v2.5 source candidate**, not deployed.
+Figures below are taken from the contract constants and from measured byte prices in the source tests. They are not quotes, not a funding request, and not a claim that lending or protected sales are live. The live contract is **v2.7** in [`identity.json`](../identity.json). The published worker withdraws NEAR only to the current holder. The v2.4 tables further down are historical. Pull-credit handling that an older note called source-only v2.5 is the live v2.7 contract's `claim_payout` path. Lending stays off.
 
 Full caveats, UNKNOWN-callback liveness and release gates live in [SECURITY.md](../SECURITY.md). This page is the fee and risk table a judge can reconcile with the code.
 
+## 1Click fees (conditional)
+
+Source: [NEAR Intents fees](https://docs.near-intents.org/resources/fees), read 11 Nov 2026. These are not one global rate, and they are not an all-in guaranteed fee.
+
+| Request | Extra platform fee |
+|---|---|
+| Protocol fee on a quote | 0.0001% |
+| No API key, and the request is not `ANY_INPUT` | additional 0.25% (25 bps). A submitted `appFees` list stays, plus that 25 bps |
+| API key, no `appFees` | normally 0.20% (20 bps). Stablecoin pairs and same-asset multichain: 0.01% |
+| API key and `appFees` | partner-dependent |
+| `ANY_INPUT` | exempt from those platform fees |
+
+The near-intents.org site distribution fee is not the fee on every API request. The web names `ONECLICK_API_KEY`. The worker names `ONECLICK_JWT`. This page does not print either value.
+
 Storage byte price used for prepaid slots is `env::storage_byte_cost()` (`10^19` yoctoNEAR per byte on current mainnet and in the tested sandbox): 320 bytes = 0.0032 NEAR. If the protocol price changes, `payout_storage_cost()` follows it.
 
-## Live mainnet (v2.4)
+## Historical mainnet (v2.4)
 
 Live delivery is a native push refund on the deployed contract. It is not the candidate's pull-credit `claim_payout` path. The rows below are the deployed v2.4 behavior. Current `contracts/keys/src/lib.rs` is the v2.5 candidate; do not read it as the live refund path. Proof of what is deployed: [contract v2.4 evidence](evidence/contract-v2-4/README.md), [identity.json](../identity.json), and [`contracts/keys/deployed/keyhole_keys.wasm`](../contracts/keys/deployed/keyhole_keys.wasm).
 

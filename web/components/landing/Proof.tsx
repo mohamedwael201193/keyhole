@@ -1,8 +1,8 @@
 "use client";
 /**
- * "Proof, not promises": four live numbers, each a link to the place it can be checked. The key count is read on the server
- * (lib/landing.ts, the contract's nft_total_supply); when the server could not read it, SupplyStat polls /api/supply for a short while. The order count is the
- * public order census (lib/settlements.ts publicOrderCensus): one sealed vault swap plus each listed 1Click order.
+ * "Proof, not promises": four live numbers, each a link to the place it can be checked. The key count is keys held by people
+ * (lib/supply.ts holderSupply: minted minus the contract-held test key). When the server could not read it, SupplyStat polls /api/supply.
+ * The order count is the public order census (lib/settlements.ts publicOrderCensus): one sealed vault swap plus each listed 1Click order.
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";

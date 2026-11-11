@@ -45,6 +45,60 @@ export function missingAgentEnv(env: { base?: string; key?: string; agent?: stri
   return missing;
 }
 
+const rec = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const numMap = (v: unknown): v is Record<string, number> => rec(v) && Object.values(v).every(num);
+
+/** A network body the panel can render. Anything else is unavailable. */
+export function networkBody(v: unknown): { network: string; status: { overall: string } } | null {
+  if (!rec(v) || typeof v.network !== "string" || !rec(v.status) || typeof v.status.overall !== "string") return null;
+  return { network: v.network, status: { overall: v.status.overall } };
+}
+
+/** Quota counters the panel prints. A 200 with a different shape is not a quota. */
+export function quotasBody(v: unknown): { limits: Record<string, number>; usage: Record<string, number> } | null {
+  if (!rec(v) || !numMap(v.limits) || !numMap(v.usage)) return null;
+  const limits = v.limits as Record<string, number>;
+  const usage = v.usage as Record<string, number>;
+  if (!num(limits.daily_agents) || !num(limits.requests_per_minute) || !num(usage.agents_last_24_hours) || !num(usage.requests_this_minute)) return null;
+  return { limits, usage };
+}
+
+export type PolicyView = {
+  revision: number;
+  status: string;
+  policy_hash?: string;
+  transaction_hash?: string;
+  policy: {
+    limits: { per_transaction: Record<string, number>; daily: Record<string, number> };
+    budget: { daily_usd: string | number };
+    actions: string[];
+    destinations: { mode: string; list: unknown[] };
+  };
+};
+
+/** A policy body with the fields the table reads. A bare `{ policy: {} }` is refused. */
+export function policyBody(v: unknown): PolicyView | null {
+  if (!rec(v) || !num(v.revision) || typeof v.status !== "string" || !rec(v.policy)) return null;
+  const p = v.policy;
+  if (!rec(p.limits) || !numMap(p.limits.per_transaction) || !numMap(p.limits.daily)) return null;
+  if (!rec(p.budget) || (typeof p.budget.daily_usd !== "string" && !num(p.budget.daily_usd))) return null;
+  if (!Array.isArray(p.actions) || !p.actions.every((a) => typeof a === "string")) return null;
+  if (!rec(p.destinations) || typeof p.destinations.mode !== "string" || !Array.isArray(p.destinations.list)) return null;
+  return {
+    revision: v.revision,
+    status: v.status,
+    policy_hash: typeof v.policy_hash === "string" ? v.policy_hash : undefined,
+    transaction_hash: typeof v.transaction_hash === "string" ? v.transaction_hash : undefined,
+    policy: {
+      limits: { per_transaction: p.limits.per_transaction as Record<string, number>, daily: p.limits.daily as Record<string, number> },
+      budget: { daily_usd: p.budget.daily_usd as string | number },
+      actions: p.actions,
+      destinations: { mode: p.destinations.mode, list: p.destinations.list },
+    },
+  };
+}
+
 /** A read the upstream refused. HTTP stays 200 so the page can show the state without a failed-request console error. */
 export function agentUnavailable(kind: "upstream" | "timeout" | "config", extra?: { upstream_status?: number; missing?: string[] }) {
   const error: { code: string; upstream_status?: number; missing?: string[] } = { code: kind };

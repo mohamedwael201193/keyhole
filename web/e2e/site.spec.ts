@@ -864,6 +864,23 @@ test("judge: who sees what, and the Chain Signatures step verifies a published o
   await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓", { timeout: 30_000 });
 });
 
+test("settle: a malformed agent 200 leaves Activity up", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await page.route("**/api/agent**", (route) => {
+    const u = route.request().url();
+    const r = u.includes("r=network") ? "network" : u.includes("r=policy") ? "policy" : "quotas";
+    const body = r === "policy" ? { policy: {} } : {};
+    return route.fulfill({ status: 200, json: { ok: true, r, body } });
+  });
+  await page.goto("/settle");
+  await expect(page.getByTestId("activity-page")).toBeVisible();
+  await expect(page.getByTestId("act-stat-total")).toBeVisible();
+  await expect(page.getByTestId("agent-policy-down")).toBeVisible();
+  await expect(page.getByTestId("agent-quotas-down")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("settle: a vault trade is shown end to end with its attested call and intent hash", async ({ page }) => {
   await page.goto("/settle");
   const v = page.getByTestId("vault-trade");

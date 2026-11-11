@@ -112,7 +112,7 @@ The contract refuses a mint or a transfer (`nft_transfer`, `nft_transfer_call`, 
 
 `keyhole-devmo.near` holds a full-access key, so its owner can deploy new code without calling the contract. v1 to v2 added `migrate()`; v2.1, v2.2 and v2.3 changed code only. v2.3 (live since 2026-11-07) caps approvals at 10 per token; its evidence is in [`docs/evidence/contract-v2-3`](docs/evidence/contract-v2-3/README.md). v2.4 adds the built-in sale; v2.5 (historical deployed release) adds owner epoch, value-op admission and sealed pledge state with a separate one-time `migrate_pledge` for lending/recovery configuration; the abandoned desk surface is removed. Live code is v2.7 (`26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`, deploy tx `6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h`). It adds an in-contract 24 h upgrade delay and a two-step owner handover. That delay does not bind a full-access key. Every released wasm is in `contracts/keys/release` with its sha256. CI rebuilds this source to the v2.7 wasm and checks the committed v2.6 file is unchanged. `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed` (live v2.7; code-only deployment, no repeated migration). Do not call `new`, `migrate` or `migrate_pledge` on mainnet for this upgrade.
 
-The key page lists sale and loan steps from NEP-297 `EVENT_JSON` logs (`standard` `keyhole`). It finds the receipts through the public Nearblocks account index (`method` filter) and reads the logs with an archival `EXPERIMENTAL_tx_status` call. A log the index does not return is absent from that list. An event emitted while an async callback is still open is not proof that the step finished.
+The key page lists sale and loan steps from NEP-297 `EVENT_JSON` logs whose `standard` is `keyhole` and whose `version` is `1.0.0`, with the required fields for that event. It keeps a log only when the transaction is final and the receipt executed on this contract with `SuccessValue` or `SuccessReceiptId`. It finds receipts through the public Nearblocks account index, follows a bounded number of pages, and reads logs with an archival `EXPERIMENTAL_tx_status` call. `loan_principal_delivered` is discovered from `claim_payout` and `reconcile_payout` events, not from a token argument. A failed fetch, a non-2xx response, or a non-final status is "history unavailable, retry". It is not an empty verified history, and it is not cached as one. "No sale or loan event is recorded" is used only when the bounded scan finished and found none. An event emitted while an async callback is still open is not proof that the step finished.
 
 ## v2.7 contract limits
 
@@ -228,9 +228,9 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 
 ### 3. The contract account is not locked
 
-- **Decision.** `keyhole-devmo.near` holds full-access keys, and its owner can change the contract immediately. There is no multisig, and the account is not keyless. v2.7 source, staged for deploy and not live, adds an in-contract 24 h delay for `stage_upgrade` / `apply_upgrade` and for `propose_owner` / `accept_owner`. There is no single-step owner setter.
-- **Why.** Live versions through v2.6 were deployed by a full-access key. The in-contract delay does not bind that key. A full-access signer can replace the wasm without calling `apply_upgrade`.
-- **Mitigation.** Release bytes are in `contracts/keys/release` with their sha256. CI rebuilds the source candidate and checks the committed v2.6 file. `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`. The delay, the handover and the tests are in [`contracts/keys/src/v27.rs`](contracts/keys/src/v27.rs) and [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs). The full-access keys are still present, so the delay does not bind them yet. The accepted later deletion, and what it freezes, is in [Accepted key-deletion freeze](#accepted-key-deletion-freeze-not-done-on-mainnet). The caveats are in [v2.7 contract caveats](#v27-contract-caveats-staged-for-deploy-not-live). The key list is in [README §8](README.md#8-security-model).
+- **Decision.** `keyhole-devmo.near` holds full-access keys. There is no multisig, and the account is not keyless. Live v2.7 adds an in-contract 24 h delay for `stage_upgrade` / `apply_upgrade` and for `propose_owner` / `accept_owner`. There is no single-step owner setter. The owner is still the contract account. The delay does not delete the full-access keys.
+- **Why.** Versions through v2.6 were deployed by a full-access key. The in-contract delay does not bind that key. A full-access signer can replace the wasm without calling `apply_upgrade`.
+- **Mitigation.** Release bytes are in `contracts/keys/release` with their sha256. CI rebuilds the source candidate and checks the historical v2.6 file hash. `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`. The delay, the handover and the tests are in [`contracts/keys/src/v27.rs`](contracts/keys/src/v27.rs) and [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs). The full-access keys are still present. The accepted later deletion, and what it freezes, is in [Accepted key-deletion freeze](#accepted-key-deletion-freeze-not-done-on-mainnet). The limits are in [v2.7 contract limits](#v27-contract-limits). The key list is in [README §8](README.md#8-security-model).
 
 ### 4. Intents solvers see the pair and amount
 
@@ -354,7 +354,7 @@ Epoch cooldown is stored independently of provenance, in immutable per-contract/
 
 Standard published guarded-worker withdrawals require fresh full-holder authorization, derive only the authenticated current NEAR holder on the NEAR chain, and reject any different requested destination. Unknown chain/identity mappings fail closed; no Solana/Bitcoin ownership proof is invented. Sessions cannot withdraw. The private-transfer route and durable provider POST boundary enforce the same policy, so a hidden signed `to` is not a bypass. Already-submitted legacy requests may still be reconciled without authorizing another send. Lower provider recipient enforcement remains unproven: this is not an operator-proof destination firewall.
 
-The CURRENT LIVE source permits arbitrary well-formed freshly signed destinations. Historical malformed/tampered attack examples are not proof of this new policy, which has not been published. Before activation, every affected holder needs a supported real self-exit proof. Generic arbitrary-digest MPC signing is disabled in the candidate, with an explicit final owner/epoch settle gate on that rejected entrypoint. Previously issued signatures cannot be recalled and foreign balances/allowances are outside collateral. Provisional title grants no confidential reads or sessions. No live publication/retirement/authority change has happened.
+The published worker is that holder-only NEAR rule. Historical worker `d337e822` permitted arbitrary well-formed freshly signed destinations. Those historical attack examples are not proof of the published rule, and they are not the current destination policy. Generic arbitrary-digest MPC signing is disabled in the candidate, with an explicit final owner/epoch settle gate on that rejected entrypoint. Previously issued signatures cannot be recalled and foreign balances/allowances are outside collateral. Provisional title grants no confidential reads or sessions. No live publication/retirement/authority change has happened.
 
 ### Round-three native-payment inventory and historical boundary
 
@@ -558,9 +558,9 @@ Caps and locks are enforced by the enclave, so they do not stop an attacker who 
 The first full-access key is described in the repository as the deploy and publish key, kept offline and never on the website or in the worker.
 
 
-## Guarded worker source-candidate integration details
+## Guarded worker integration details
 
-Mainnet remains v2.4, worker d337e822. No deployment/publication/version retirement/funding/credential or access-key change is performed or authorized by source changes. Production requires independent exact-head review, live custody confinement proof and separate rollout approval. Unknown native-outcome liveness and operational longevity must be resolved before considering FullAccess removal. Web changes must preserve the existing dashboard and wait for reviewed green contract+worker PRs.
+Historical note, not the current deployment: an earlier write-up described mainnet as contract v2.4 and worker `d337e822`. That pair is previous. The live contract is v2.7 (`identity.json`) and the published worker is `62398a8a`. This section's source-candidate sentences below stay source-only where they say so. Unknown native-outcome liveness and operational longevity remain open before any FullAccess removal. No access key was deleted by this document.
 
 ### Guarded worker candidate — SOURCE ONLY, NOT PUBLISHED
 
@@ -570,7 +570,7 @@ The fresh fixed-floor certificate uses V3_DELIVERY and verifies exact binding pl
 
 Generic detached `chain_sign` is disabled in this source revision, including protected/pledged collateral, and the owner/epoch settle gate is explicit. Prior foreign signatures cannot be revoked, so foreign assets/allowances are excluded from the fixed custody-USDC certificate. This is not a claim to have changed live versions or existing credentials.
 
-**Candidate destination policy: self-exit only.** Fresh NEP-413 authorization derives the authenticated NEAR holder; EIP-191 derives the same authenticated0x holder on supported EVM chains. Unknown identity/chain mapping and any different `to` are rejected, including private-transfer bypasses and durable POST replay. Sessions cannot withdraw. Current LIVE source historically allows arbitrary well-formed holder-signed destinations: this source-only restriction has not been deployed, and old attack examples do not prove it live.
+**Published destination policy: holder-only NEAR.** Fresh NEP-413 authorization derives the authenticated current NEAR holder. Unknown identity or chain mapping, and any different `to`, are rejected. Sessions cannot withdraw. Historical worker `d337e822` allowed an arbitrary well-formed holder-signed destination. That older policy is not the published worker. Old attack examples do not prove a destination allowlist.
 
 The two named cross-layer tests use REAL NEAR admission/pledge/title receipts and the same production drivers as WASI, but HTTP, sealed storage, registry and eligibility observations are labelled mocks. They cover repay/default, failures/unknowns, transfer_call A→B→A and legitimate post-thaw exits, not live-provider confinement or a full WASI-host execution. Source-only native payment UNKNOWN/liveness and live confinement gates remain. No deploy/publish/funding/legacy-version retirement/key or policy change is performed.
 
@@ -581,6 +581,18 @@ The PR201 R4 repair updates the six reviewed high wallet-leaf families: legacy b
 Production-graph `npm audit --omit=dev --json` before: **63 package-level entries (22 low / 13 moderate / 28 high / 0 critical)**. After: **45 (34 low / 11 moderate / 0 high / 0 critical)**. Full audit after: **53 (34 low / 19 moderate / 0 high / 0 critical)**, including eight dev-only moderate lint-analysis entries. Raw before/after production graphs are linked from the compatibility proof. Counts include propagation through parent libraries; the low count changes with deduplication/severity reclassification and is not 34 independently demonstrated exploits. No force/legacy-peer-deps or automatic audit downgrade was used.
 
 Remaining runtime-graph roots include elliptic/secp256k1, bn.js, uuid and MetaMask SDK's historical debug advisory. The resolved debug remains 4.4.3, not the compromised 4.4.2. Browser wallet ws 8.x resolves to native WebSocket/stubs rather than its Node framing path; the retained 7.x caller is patched 7.5.13. Installed-leaf audit cannot certify code embedded in upstream bundles (including the unused x402 paywall), live extension/redirect-wallet behavior, third-party origin policy, Rust dependencies or live custody confinement. Zod migration is reviewed for the installed consumers, not a claim that arbitrary v3 users can be overridden safely: version/full-file-byte drift in the consumer patch script rejects installation, and explicit schema/ABI/popup/codec regressions gate the locked graph. Passing tests and zero high audit entries are not a vulnerability-free or production-activation certificate.
+
+## What a transfer does not recall
+
+- A payout already in flight is not recalled. On historical build `6367401a`, a withdraw signed before the sale completed to the holder who signed it. The next request from that holder was refused. The seller therefore keeps a payout that was already in flight. Proof: [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md).
+- One window remains between the last owner read and the send. A seller can set a lock before a sale to close it. Proof: `transfer_while_withdraw_is_pending_does_not_send` in [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs).
+- Money already paid out is not recalled by a later transfer.
+
+These are limits of the published path. They are not a claim that a loan has completed. Lending is off and the next loan nonce is 0.
+
+## Viewing right and selective disclosure
+
+A public certificate, a floor note, or a holder page is a viewing right for what that surface was built to show. It is not spend authority, not a dollar price, not a zero-knowledge proof, not solvency insurance, and not a continuous balance. Raw token units are not dollars. A note addressed to one lender is not confidential solely because it names that lender: the chain and the site still show what the page renders. The sealed balance and the custody credential stay in the enclave. The signed log records the NFT owner (`append_synced` in [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs)). `/holders` is an authenticated holder proof for the keys that account holds. It is not authorization for every confidential byte.
 
 ## Counterparty-check boundary
 

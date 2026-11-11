@@ -34,10 +34,9 @@ const SLIDES: PreviewSlide[] = [
 ];
 
 /** The real rule that earns each finish (tee/worker/src/level.rs TIER_RULES; Legendary per lib/traits.ts finishOf). */
-const EARN: Record<"Silver" | "Gold" | "Legendary", string> = {
+const EARN: Record<"Silver" | "Gold", string> = {
   Silver: "Earned by trading: 10 settled swaps and $5 of volume on the key.",
   Gold: "Earned by trading: 40 settled swaps and $50 of volume on the key.",
-  Legendary: "A rare Gold finish: about 1 in 8 Gold keys is finished as Legendary. It is earned after Gold.",
 };
 
 const WHAT = [
@@ -62,7 +61,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
   const signed = m.busy && m.stage !== "wallet";
 
   const steps: MintStep[] = [
-    { id: "tier", label: "Choose tier", state: "done" },
+    { id: "tier", label: "Bronze", state: "done" },
     { id: "sign", label: "Sign once", state: revealed || signed ? "done" : "current" },
     { id: "mint", label: "Mint & receive", state: revealed ? "done" : signed ? "current" : "todo" },
   ];
@@ -129,13 +128,13 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
             </Card>
           ) : (
             <Card as="section" className="km-tiers-card v7-rise" labelledBy="mint-tiers-h" testid="mint-tiers">
-              <CardHeader title="Choose a tier" id="mint-tiers-h" level={2} />
+              <CardHeader title="Mint Bronze" id="mint-tiers-h" level={2} />
               <div className="km-tiers">
-                <TierOption finish="Bronze" mintable rule="Minting gives a Bronze key: the caps the enclave enforces from day one." />
-                <TierOption finish="Silver" mintable={false} rule={EARN.Silver} />
-                <TierOption finish="Gold" mintable={false} rule={EARN.Gold} />
-                <TierOption finish="Legendary" mintable={false} rule={EARN.Legendary} />
+                <TierOption finish="Bronze" mintable rule="Minting gives a Bronze key. Borrow cap 0.05 NEAR. Lending is off, so this is a configured maximum." />
+                <TierOption finish="Silver" mintable={false} rule={`${EARN.Silver} Borrow cap 0.5 NEAR.`} />
+                <TierOption finish="Gold" mintable={false} rule={`${EARN.Gold} Borrow cap 5 NEAR.`} />
               </div>
+              <p className="km-note" data-testid="mint-legendary">Legendary is a cosmetic finish on Gold, not a fourth financial tier. The carousel can show it. It is not a mint choice and it is not a fourth borrow cap.</p>
               <p className="km-note" data-testid="mint-bronze-only">{t("mint.bronzeOnly")}</p>
             </Card>
           )}
@@ -202,7 +201,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
               <Card as="section" className="km-how v7-rise" labelledBy="mint-how-h" testid="mint-how">
                 <CardHeader title="How it works" id="mint-how-h" level={2} icon="info" />
                 <ol className="km-howlist">
-                  <li><span className="km-num" data-testid="step-num">01</span><p>Choose a tier that fits your usage.</p></li>
+                  <li><span className="km-num" data-testid="step-num">01</span><p>Mint a Bronze key. Silver and Gold are earned by trading.</p></li>
                   <li><span className="km-num" data-testid="step-num">02</span><p>Sign a single, gas-free request.</p></li>
                   <li><span className="km-num" data-testid="step-num">03</span><p>The TEE-held minter mints the NFT to you.</p></li>
                 </ol>

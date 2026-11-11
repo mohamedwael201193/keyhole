@@ -1,4 +1,8 @@
-import { loadKey, run, callWorker, signRequest, verifyCall } from "../cli/src/core.ts";
+if (process.env.KEYHOLE_LIVE_OPT_IN !== "1") {
+  console.error("refusing: judge/live.mts loads a wallet, calls the worker and can mint. Set KEYHOLE_LIVE_OPT_IN=1 to run it.");
+  process.exit(2);
+}
+const { loadKey, run, callWorker, signRequest, verifyCall } = await import("../cli/src/core.ts");
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 const key = loadKey();
 const show = async (label: string, r: any, expect: string) => {

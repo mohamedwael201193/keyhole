@@ -1,12 +1,16 @@
 /**
- * NEP-297 `keyhole` events for one key. Pure: the route fetches Nearblocks receipts and an archival
- * transaction status, then this module keeps the logs that name the token.
- * Spec: https://github.com/near/NEPs/blob/master/neps/nep-0297.md
+ * NEP-297 `keyhole` 1.0.0 events for one key.
+ * Logs are kept only from a finalized transaction's successful receipts whose executor is this contract.
+ * Spec: https://nomicon.io/Standards/EventsFormat
  */
 export const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;
+export const KEYHOLE_EVENT_VERSION = "1.0.0";
+/** Pages requested per method. A remaining cursor after this bound is an incomplete read, never a complete empty history. */
+export const MAX_EVENT_PAGES = 4;
+export const EVENT_PAGE_SIZE = 25;
 
-/** Methods that emit a sale or loan event carrying `token_id`. */
-export const INDEXED_METHODS = [
+/** Methods whose function-call args carry `token_id`. */
+export const TOKEN_METHODS = [
   "nft_list",
   "nft_unlist",
   "nft_buy",
@@ -18,13 +22,77 @@ export const INDEXED_METHODS = [
   "reclaim_unclaimed_principal",
 ] as const;
 
+/**
+ * Account or nonce calls. `loan_principal_delivered` is emitted on the `claim_payout` callback
+ * or on `reconcile_payout`, not on the earlier `fund_loan` receipt. Discovery is the event, not the args.
+ */
+export const ACCOUNT_METHODS = ["claim_payout", "reconcile_payout"] as const;
+
 export type IndexedEvent = {
   event: string;
   standard: "keyhole";
+  version: "1.0.0";
   tx: string;
   atMs: number | null;
   data: Record<string, unknown>;
 };
+
+export type HistoryState = {
+  events: IndexedEvent[];
+  /** Every requested page was read and every transaction status was final. */
+  complete: boolean;
+  /** A fetch, a non-2xx response, an RPC error, or a non-final status. Never cached as an empty history. */
+  unavailable: boolean;
+};
+
+const REQUIRED: Record<string, readonly string[]> = {
+  key_list: ["token_id", "seller", "price"],
+  key_unlist: ["token_id", "seller"],
+  key_sale: ["token_id", "seller", "buyer", "price", "royalty"],
+  key_listing_stale: ["token_id", "seller"],
+  loan_open: ["token_id", "nonce"],
+  loan_fund: ["token_id", "nonce", "lender", "principal"],
+  loan_repay: ["token_id", "nonce", "repayment"],
+  loan_cancel: ["token_id", "nonce"],
+  loan_default: ["token_id", "nonce", "receiver_id"],
+  loan_reclaim: ["token_id", "nonce", "lender", "principal"],
+  loan_principal_delivered: ["token_id", "nonce", "payout_nonce"],
+  collateral_ready: ["token_id", "wallet_pubkey"],
+};
+
+/** A NEAR execution status that produced a value or a follow-up receipt. `Failure` is not included. */
+export function outcomeSucceeded(status: unknown): boolean {
+  if (!status || typeof status !== "object" || Array.isArray(status)) return false;
+  const s = status as Record<string, unknown>;
+  return typeof s.SuccessValue === "string" || typeof s.SuccessReceiptId === "string";
+}
+
+/**
+ * Logs from `receipts_outcome` entries that executed on `contractId` and succeeded.
+ * A later failed child does not drop an earlier successful contract receipt.
+ * A foreign executor, a failed contract receipt, or a non-final transaction contributes nothing.
+ */
+export function authenticatedLogs(result: unknown, contractId: string): { final: boolean; logs: string[] } {
+  if (!result || typeof result !== "object") return { final: false, logs: [] };
+  const root = result as { final_execution_status?: unknown; receipts_outcome?: unknown };
+  if (root.final_execution_status !== "FINAL" || !Array.isArray(root.receipts_outcome)) return { final: false, logs: [] };
+  const logs: string[] = [];
+  for (const item of root.receipts_outcome) {
+    if (!item || typeof item !== "object") continue;
+    const outcome = (item as { outcome?: unknown }).outcome;
+    if (!outcome || typeof outcome !== "object") continue;
+    const row = outcome as { executor_id?: unknown; status?: unknown; logs?: unknown };
+    if (row.executor_id !== contractId || !outcomeSucceeded(row.status) || !Array.isArray(row.logs)) continue;
+    for (const line of row.logs) if (typeof line === "string") logs.push(line);
+  }
+  return { final: true, logs };
+}
+
+function present(v: unknown): boolean {
+  if (typeof v === "string") return v.length > 0;
+  if (typeof v === "number") return Number.isFinite(v);
+  return false;
+}
 
 /** Token id inside a Nearblocks function-call `args` string, or null. */
 export function receiptToken(args: unknown): string | null {
@@ -37,33 +105,23 @@ export function receiptToken(args: unknown): string | null {
   }
 }
 
-/** Every log string nested in an RPC transaction-status result. */
-export function collectLogs(node: unknown, out: string[] = []): string[] {
-  if (!node || typeof node !== "object") return out;
-  if (Array.isArray(node)) {
-    for (const x of node) collectLogs(x, out);
-    return out;
-  }
-  const rec = node as Record<string, unknown>;
-  if (Array.isArray(rec.logs)) {
-    for (const line of rec.logs) if (typeof line === "string") out.push(line);
-  }
-  for (const v of Object.values(rec)) collectLogs(v, out);
-  return out;
-}
-
 type RawEvent = { event: string; data: Record<string, unknown> };
 
-/** `EVENT_JSON` rows of standard `keyhole`. Malformed lines are skipped. */
+/** Verified `keyhole` 1.0.0 rows. Wrong version, unknown kind, or a missing required field is dropped. */
 export function parseKeyholeEvents(logs: readonly string[]): RawEvent[] {
   const out: RawEvent[] = [];
   for (const line of logs) {
     if (!line.startsWith("EVENT_JSON:")) continue;
-    let j: { standard?: unknown; event?: unknown; data?: unknown };
+    let j: { standard?: unknown; version?: unknown; event?: unknown; data?: unknown };
     try { j = JSON.parse(line.slice("EVENT_JSON:".length)); } catch { continue; }
-    if (j.standard !== "keyhole" || typeof j.event !== "string" || !Array.isArray(j.data)) continue;
+    if (j.standard !== "keyhole" || j.version !== KEYHOLE_EVENT_VERSION || typeof j.event !== "string") continue;
+    const need = REQUIRED[j.event];
+    if (!need || !Array.isArray(j.data)) continue;
     for (const row of j.data) {
-      if (row && typeof row === "object") out.push({ event: j.event, data: row as Record<string, unknown> });
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const data = row as Record<string, unknown>;
+      if (!need.every((k) => present(data[k]))) continue;
+      out.push({ event: j.event, data });
     }
   }
   return out;
@@ -74,7 +132,7 @@ export function eventMatchesToken(data: Record<string, unknown>, tokenId: string
   return Array.isArray(data.token_ids) && data.token_ids.includes(tokenId);
 }
 
-/** Keep sale and loan events for one token, oldest first, one row per event name and tx. */
+/** Keep verified sale and loan events for one token, oldest first. */
 export function eventsForToken(
   rows: readonly { tx: string; atMs: number | null; logs: readonly string[] }[],
   tokenId: string,
@@ -87,16 +145,27 @@ export function eventsForToken(
       const key = `${row.tx}|${ev.event}|${JSON.stringify(ev.data)}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ event: ev.event, standard: "keyhole", tx: row.tx, atMs: row.atMs, data: ev.data });
+      out.push({ event: ev.event, standard: "keyhole", version: "1.0.0", tx: row.tx, atMs: row.atMs, data: ev.data });
     }
   }
   out.sort((a, b) => (a.atMs ?? 0) - (b.atMs ?? 0) || a.tx.localeCompare(b.tx) || a.event.localeCompare(b.event));
   return out;
 }
 
+export type ReceiptPage = { txns: unknown[]; cursor: string | null };
+
+/** Whether another page should be requested. A full page with a cursor past the bound is incomplete. */
+export function pageStep(page: ReceiptPage, index: number, maxPages = MAX_EVENT_PAGES): { stop: boolean; complete: boolean; cursor: string | null } {
+  const cursor = page.cursor;
+  if (!cursor || page.txns.length < EVENT_PAGE_SIZE) return { stop: true, complete: true, cursor: null };
+  if (index + 1 >= maxPages) return { stop: true, complete: false, cursor };
+  return { stop: false, complete: false, cursor };
+}
+
 function yoctoNear(v: unknown): string | null {
-  if (typeof v !== "string" || !/^\d+$/.test(v)) return null;
-  const n = BigInt(v);
+  const raw = typeof v === "number" ? String(v) : v;
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
+  const n = BigInt(raw);
   const whole = n / 10n ** 24n;
   const frac = (n % 10n ** 24n).toString().padStart(24, "0").replace(/0+$/, "");
   return `${frac ? `${whole}.${frac}` : whole} NEAR`;
@@ -121,8 +190,10 @@ const TITLES: Record<string, string> = {
   collateral_ready: "Collateral ready",
 };
 
-/** A short title and a public detail line. Amounts stay in NEAR, never USD. */
-export function describeChainEvent(e: IndexedEvent): { title: string; detail: string } {
+/** A short title and a public detail line. Unknown kinds are not labelled as verified history. */
+export function describeChainEvent(e: IndexedEvent): { title: string; detail: string } | null {
+  const title = TITLES[e.event];
+  if (!title || e.version !== KEYHOLE_EVENT_VERSION) return null;
   const d = e.data;
   const price = yoctoNear(d.price) ?? yoctoNear(d.principal) ?? yoctoNear(d.repayment);
   const parts = [
@@ -130,10 +201,7 @@ export function describeChainEvent(e: IndexedEvent): { title: string; detail: st
     who(d.seller) ? `seller ${who(d.seller)}` : "",
     who(d.buyer) ? `buyer ${who(d.buyer)}` : "",
     who(d.lender) ? `lender ${who(d.lender)}` : "",
-    typeof d.nonce === "string" || typeof d.nonce === "number" ? `nonce ${d.nonce}` : "",
+    present(d.nonce) ? `nonce ${d.nonce}` : "",
   ].filter(Boolean);
-  return {
-    title: TITLES[e.event] ?? e.event.replaceAll("_", " "),
-    detail: parts.join(" · ") || "NEP-297 event",
-  };
+  return { title, detail: parts.join(" · ") || "NEP-297 event" };
 }

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/motion";
 import { useI18n } from "@/lib/i18n";
 import { publicOrderCensus } from "@/lib/settlements";
+import { siteUrl } from "@/lib/site";
+import { IDENTITY } from "@/lib/identity.gen";
 import type { TokenReach } from "@/lib/landing";
 import { ProofStrip } from "./landing/Proof";
 import { Handover } from "./landing/Handover";
@@ -23,10 +25,10 @@ const ORBIT = CHAINS.map(([id, name], i) => {
 /** The browser checks on /verify (TOTAL_CHECKS in app/verify/view.tsx). */
 const BROWSER_CHECKS = 37;
 
-/** The three commands for a judge. The README and judge/ hold the same steps. */
-const CMD_CLONE = "git clone https://github.com/mohamedwael201193/keyhole && cd keyhole";
+/** Immutable checkout of the pinned source commit. The README generates the same steps. */
+const CMD_CLONE = `git init keyhole && cd keyhole && git remote add origin https://github.com/mohamedwael201193/keyhole.git && git fetch --depth 1 origin ${IDENTITY.review.source_commit} && git checkout --detach FETCH_HEAD`;
 const CMD_VERIFY = "node judge/verify-claims.mjs";
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://keyhole.vercel.app";
+const SITE = siteUrl();
 
 export function Landing({ supply, hash, reach }: { supply: number | null; hash: string; reach: TokenReach | null }) {
   const { t } = useI18n();

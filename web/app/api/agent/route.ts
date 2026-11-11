@@ -1,6 +1,6 @@
 import { clientIp } from "@/lib/verifyScore";
 import { NextResponse } from "next/server";
-import { agentPath, agentUnavailable, drySwapBody, missingAgentEnv, redact, type AgentRead } from "@/lib/agentApi";
+import { agentPath, agentUnavailable, drySwapBody, missingAgentEnv, networkBody, policyBody, quotasBody, redact, type AgentRead } from "@/lib/agentApi";
 import { createLimiter } from "@/lib/ratelimit";
 
 // Server-side Agent API bridge. The key lives only in AGENT_API_KEY (Vercel env); reads are fixed paths and swaps are dry-only.
@@ -33,7 +33,13 @@ export async function GET(req: Request) {
     const up = await call(p);
     if (!up) return unavailable("config", { missing: missingAgentEnv(env(), r) });
     if (up.status !== 200) return unavailable("upstream", { upstream_status: up.status });
-    return okBody({ ok: true, r, body: redact(r as AgentRead, up.body) });
+    const body = redact(r as AgentRead, up.body);
+    const shaped = r === "network" ? networkBody(body) : r === "quotas" ? quotasBody(body) : r === "policy" ? policyBody(body) : body;
+    if (r === "network" || r === "quotas" || r === "policy") {
+      if (!shaped) return unavailable("upstream", { upstream_status: up.status });
+      return okBody({ ok: true, r, body: shaped });
+    }
+    return okBody({ ok: true, r, body });
   } catch (e) {
     const name = e instanceof Error ? e.name : "";
     return unavailable(name === "TimeoutError" || name === "AbortError" ? "timeout" : "upstream");

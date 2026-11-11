@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { buildPolicy } from "@/lib/agentPolicy";
-import { balanceWarnings, policyWarnings, canon } from "@/lib/agentApi";
+import { balanceWarnings, networkBody, policyBody, policyWarnings, quotasBody, canon } from "@/lib/agentApi";
 import { TxLink } from "@/components/TxLink";
 import { Button } from "@/components/ui";
 
@@ -37,11 +37,12 @@ export function AgentPanel() {
     Promise.all([get("network"), get("quotas"), get("policy")])
       .then(([n, qq, p]) => {
         if (!live) return;
-        if (n?.ok) setNet(n.body); else setDown(true);
-        if (qq?.ok && qq.body?.usage && qq.body?.limits) setQ(qq.body);
-        else setQuotaNote("Quotas are not available right now.");
-        if (p?.ok && p.body?.policy) setPol(p.body);
-        else setPolicyNote("The holder-cap policy is not available right now.");
+        const netOk = n?.ok ? networkBody(n.body) : null;
+        const quotaOk = qq?.ok ? quotasBody(qq.body) : null;
+        const polOk = p?.ok ? policyBody(p.body) : null;
+        if (netOk) setNet(netOk); else setDown(true);
+        if (quotaOk) setQ({ ...quotaOk, observed_at: "" }); else setQuotaNote("Quotas are not available right now.");
+        if (polOk) setPol(polOk as unknown as Pol); else setPolicyNote("The holder-cap policy is not available right now.");
       })
       .catch(() => { if (live) setDown(true); });
     return () => { live = false; };

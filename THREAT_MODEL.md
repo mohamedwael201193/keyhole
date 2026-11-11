@@ -24,11 +24,11 @@ Nonce records are kept for good: no pruning on the call path. (Build ebeb6a34 pr
 
 ## Withdraw to an address the holder names
 
-`assert_withdraw_to(chain, to)` returns `bad_params` unless `params.to` is well formed for `params.chain`: a NEAR account id for `near`, `0x` and 40 hex digits (EIP-55 checksum required when mixed case) for the EVM chains, base58 of 32 bytes for `sol`. An unknown chain is refused. Any well-formed address is allowed, not only the signer's. The holder's NEP-413 or EIP-191 signature covers `params.to`, so the wallet shows the destination the holder signs.
+The published worker (`identity.json` worker `62398a8a…`) sends NEAR only to the authenticated current holder. A different `to` is refused. Sessions cannot withdraw. Unknown chain mappings fail closed. This is the live destination rule. It is not a new capability beyond that published worker.
 
-What this changes: a key that can get a withdraw signature can now send to an address that is not the holder's. Before, a withdraw could only go to the signer's own account. The limits still apply: the per-trade and daily caps, the 10-minute cooldown after a transfer, the seller lock, and the listing freeze. A session token still cannot withdraw. The main risk left is a signature prompt that a phisher gets the holder to sign with an attacker's `to`, and it is bounded by those caps.
+Historical worker `d337e822` accepted any well-formed destination the holder signed. That behavior is historical. The format checks (`assert_withdraw_to`: NEAR account, EIP-55 `0x` address, 32-byte base58) still refuse a malformed `to`. The caps, the 10-minute cooldown, the seller lock and the listing freeze still apply. A phisher who gets a signature is bounded by those caps, and on the published worker the destination must still be the holder.
 
-Proof: the `assert_withdraw_to` cases in [`tee/worker/src/p2fail.rs`](tee/worker/src/p2fail.rs), [`tee/worker/src/matrix.rs`](tee/worker/src/matrix.rs) and [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs). The vault still sets `to` to the connected account, which the worker accepts.
+Proof: holder-only derivation in [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs) (`self_withdraw`); historical format cases in [`tee/worker/src/p2fail.rs`](tee/worker/src/p2fail.rs), [`tee/worker/src/matrix.rs`](tee/worker/src/matrix.rs) and [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs). The vault sets `to` to the connected account.
 
 ## A withdraw racing the transfer
 

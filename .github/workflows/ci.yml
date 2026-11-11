@@ -143,6 +143,8 @@ jobs:
         run: node --test judge/reproduction.test.mjs
       - name: default claims mode does not spend on health
         run: node --test judge/passive-claims.test.mjs
+      - name: docs currentness, link anchors, safe fences, mutation verifier, metrics fail-closed
+        run: node --test judge/docs-current.test.mjs judge/docs-links.test.mjs judge/check-readme.test.mjs judge/readme-verify.test.mjs judge/live-guard.test.mjs scripts/gen-metrics.test.mjs
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:

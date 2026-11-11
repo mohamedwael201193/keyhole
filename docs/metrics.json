@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "total": 2049,
+  "suites": {
+    "cli": 77,
+    "web-unit": 1972
+  },
+  "commit": null,
+  "note": "Recorded after cli npm test (77 pass, 0 fail) and web npx vitest run (1972 pass, 0 fail). Contract, worker and Playwright counts are not in this file because those suites were not part of this recording. A failed suite must not write ok:true. Token reach is feed-derived, not adoption."
+}

@@ -15,17 +15,22 @@ set -eu
 
 PYTHONBIN="${PYTHONBIN:-python3}"
 command -v curl >/dev/null || { echo "FAIL missing curl"; exit 2; }
-command -v "$PYTHONBIN" >/dev/null || { echo "FAIL missing python3 (stdlib only; no packages)"; exit 2; }
+if ! command -v "$PYTHONBIN" >/dev/null; then
+  if command -v python >/dev/null && python -c 'import sys; raise SystemExit(0 if sys.version_info[0] == 3 else 1)'; then
+    PYTHONBIN=python
+  else
+    echo "FAIL missing python3 (stdlib only; no packages)"
+    exit 2
+  fi
+fi
 
 HERE="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 ROOT="$(CDPATH= cd -- "$HERE/.." && pwd)"
-REVIEW_REF="${KEYHOLE_REVIEW_REF:-integration/final-candidate}"
-DEFAULT_IDENTITY_URL="${IDENTITY_URL:-https://raw.githubusercontent.com/mohamedwael201193/keyhole/${REVIEW_REF}/identity.json}"
 OUTLAYER="${OUTLAYER_API:-https://api.outlayer.ai}"
 # Recorded refusal predicate lives next to this script (stdlib Python, no packages).
 RECEIPT_PY="$HERE/receipt_proof.py"
 if [ ! -f "$RECEIPT_PY" ]; then
-  echo "FAIL missing $RECEIPT_PY. Check out ${REVIEW_REF:-integration/final-candidate}; main does not contain this judge path."
+  echo "FAIL missing $RECEIPT_PY. Download judge/0-live.sh, judge/receipt_proof.py and identity.json from the same commit, and set IDENTITY_JSON."
   exit 2
 fi
 
@@ -49,13 +54,16 @@ IDENT="$TMPDIR/identity.json"
 if [ -n "$IDENT_SRC" ]; then
   cp "$IDENT_SRC" "$IDENT"
   say "identity  $IDENT_SRC"
-else
-  if ! curl -fsSL --max-time 30 "$DEFAULT_IDENTITY_URL" -o "$IDENT"; then
-    bad "could not fetch identity.json from $DEFAULT_IDENTITY_URL"
+elif [ -n "${IDENTITY_URL:-}" ]; then
+  if ! curl -fsSL --max-time 30 "$IDENTITY_URL" -o "$IDENT"; then
+    bad "could not fetch identity.json from $IDENTITY_URL"
     say "----- $FAIL FAIL, $PASS PASS, $SKIP SKIP -----"
     exit 1
   fi
-  say "identity  $DEFAULT_IDENTITY_URL"
+  say "identity  $IDENTITY_URL"
+else
+  echo "FAIL set IDENTITY_JSON or IDENTITY_URL. This script does not guess a branch."
+  exit 2
 fi
 
 # All RPC + JSON work in one python process so we only need curl for OutLayer.
@@ -242,6 +250,12 @@ try:
         bad("nft_total_supply == %r (expected >= 6)" % supply)
 except Exception as e:
     bad("nft_total_supply() failed: %s" % e)
+
+gov = ident.get("governance") or {}
+if gov.get("owner") == "keyhole-devmo.near" and gov.get("lending_enabled") is False and gov.get("access_key_total") == 3 and gov.get("full_access_keys") == 2 and gov.get("function_call_keys") == 1:
+    ok("identity.governance owner=keyhole-devmo.near lending_enabled=false access_key_total=3")
+else:
+    bad("identity.governance owner/lending/keys mismatch: %r" % {k: gov.get(k) for k in ("owner", "lending_enabled", "access_key_total", "full_access_keys", "function_call_keys")})
 
 # 3. Recorded attestation: the live worker info call in identity.json
 try:

@@ -51,6 +51,20 @@ describe("GET /api/agent", () => {
     expect(await policy.json()).toEqual({ ok: false, error: { code: "upstream", upstream_status: 404 } });
   });
 
+  it("refuses a 200 body that is not the shape the page renders", async () => {
+    vi.stubEnv("AGENT_API_BASE_URL", "https://agent.example.test");
+    vi.stubEnv("AGENT_API_KEY", "test-key-not-a-secret");
+    vi.stubEnv("AGENT_API_AGENT_ID", AGENT);
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (String(url).endsWith("/v1/network")) return new Response(JSON.stringify({}), { status: 200 });
+      return new Response(JSON.stringify({ policy: {} }), { status: 200 });
+    }));
+    const network = await GET(req("network", "192.0.2.25"));
+    expect(await network.json()).toEqual({ ok: false, error: { code: "upstream", upstream_status: 200 } });
+    const policy = await GET(req("policy", "192.0.2.26"));
+    expect(await policy.json()).toEqual({ ok: false, error: { code: "upstream", upstream_status: 200 } });
+  });
+
   it("names a timeout without a 502", async () => {
     vi.stubEnv("AGENT_API_BASE_URL", "https://agent.example.test");
     vi.stubEnv("AGENT_API_KEY", "test-key-not-a-secret");
