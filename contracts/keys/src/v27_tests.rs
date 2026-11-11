@@ -1,7 +1,8 @@
 //! v2.7 unit tests: G1 race orders, G2 callbacks that never panic and reconcile, governance, wind-down,
 //! tier caps, events, and deterministic randomized invariant loops (proptest is not a dependency of this crate).
 use super::*;
-use crate::pledge::{collateral, config_required, loans, save_config, CollateralBinding, LOAN_STORAGE_DEPOSIT, RECOVERY_UNLOCK_NS};
+use super::{MIN_UPGRADE_DELAY_NS, RELEASE_UPGRADE_DELAY_NS, WIND_DOWN_KEY};
+use crate::pledge::{collateral, config_required, loans, save_config, CollateralBinding, DISBURSEMENT_WINDOW_NS, LOAN_STORAGE_DEPOSIT, RECOVERY_UNLOCK_NS};
 use crate::{test_funded_contract, test_register_payouts};
 use near_sdk::json_types::Base64VecU8;
 use ed25519_dalek::{Signer, SigningKey};
@@ -100,13 +101,17 @@ fn open_and_fund(c: &mut Contract, token: &str, borrower: &str, principal: u128,
 #[test]
 fn owner_handover_is_two_step_and_only_the_proposed_account_accepts() {
     let mut c = setup();
-    ctx("owner.near", 0, NOW); rejected(|| c.propose_owner(a("guardian.near")));
-    ctx("owner.near", 1, NOW); c.propose_owner(a("guardian.near"));
+    ctx("owner.near", 0, NOW); rejected(|| { let _ = c.propose_owner(a("guardian.near")); });
+    ctx("owner.near", 1, NOW); let not_before = c.propose_owner(a("guardian.near"));
+    assert_eq!(not_before.0, NOW + MIN_UPGRADE_DELAY_NS);
     assert_eq!(c.governance_state().pending_owner, Some(a("guardian.near")));
+    assert_eq!(c.governance_state().pending_owner_not_before_ns, Some(not_before));
     assert_eq!(c.governance_state().owner, a("owner.near"), "proposal does not change the owner");
-    ctx("evil.near", 1, NOW); rejected(|| c.accept_owner());
-    ctx("guardian.near", 0, NOW); rejected(|| c.accept_owner());
-    ctx("guardian.near", 1, NOW); c.accept_owner();
+    ctx("owner.near", 1, NOW); c.set_royalty(a("treasury.near"), 400);
+    ctx("evil.near", 1, NOW + MIN_UPGRADE_DELAY_NS); rejected(|| c.accept_owner());
+    ctx("guardian.near", 0, NOW + MIN_UPGRADE_DELAY_NS); rejected(|| c.accept_owner());
+    ctx("guardian.near", 1, NOW + MIN_UPGRADE_DELAY_NS - 1); rejected(|| c.accept_owner());
+    ctx("guardian.near", 1, NOW + MIN_UPGRADE_DELAY_NS); c.accept_owner();
     assert_eq!(c.governance_state().owner, a("guardian.near"));
     assert_eq!(c.config().owner, a("guardian.near"));
     assert!(logs_contain("owner_changed"));
@@ -117,7 +122,127 @@ fn owner_handover_is_two_step_and_only_the_proposed_account_accepts() {
 #[test]
 fn owner_proposal_to_self_is_refused() {
     let mut c = setup();
-    ctx("owner.near", 1, NOW); rejected(|| c.propose_owner(a("owner.near")));
+    ctx("owner.near", 1, NOW); rejected(|| { let _ = c.propose_owner(a("owner.near")); });
+}
+
+#[test]
+fn a_bad_owner_proposal_can_be_cancelled_before_it_can_take_effect() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); let _ = c.propose_owner(a("attacker.near"));
+    ctx("owner.near", 1, NOW); c.set_royalty(a("treasury.near"), 100);
+    ctx("alice.near", 1, NOW); rejected(|| c.cancel_owner_proposal());
+    ctx("owner.near", 0, NOW); rejected(|| c.cancel_owner_proposal());
+    ctx("attacker.near", 1, NOW + MIN_UPGRADE_DELAY_NS - 1); rejected(|| c.accept_owner());
+    ctx("owner.near", 1, NOW); c.cancel_owner_proposal();
+    assert!(c.governance_state().pending_owner.is_none());
+    ctx("attacker.near", 1, NOW + MIN_UPGRADE_DELAY_NS); rejected(|| c.accept_owner());
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+    ctx("owner.near", 1, NOW + MIN_UPGRADE_DELAY_NS); c.set_royalty(a("treasury.near"), 200);
+}
+
+#[test]
+fn repeating_an_owner_proposal_does_not_grow_storage() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); let _ = c.propose_owner(a("guardian.near"));
+    let used = env::storage_usage();
+    ctx("owner.near", 1, NOW + SECOND); let _ = c.propose_owner(a("guardian.near"));
+    assert_eq!(env::storage_usage(), used, "an overwrite of the same proposal must not grow storage");
+}
+
+#[test]
+fn accepting_ownership_clears_a_staged_upgrade() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); let _ = c.stage_upgrade(sha_hex(&wasm()));
+    ctx("owner.near", 1, NOW); let when = c.propose_owner(a("next.near"));
+    ctx("owner.near", 1, NOW + SECOND); let restarted = c.propose_owner(a("guardian.near"));
+    assert!(restarted.0 > when.0, "replacing a proposal restarts the delay");
+    ctx("next.near", 1, restarted.0); rejected(|| c.accept_owner());
+    ctx("guardian.near", 1, restarted.0); c.accept_owner();
+    assert_eq!(c.governance_state().owner, a("guardian.near"));
+    assert!(c.governance_state().staged_upgrade_sha256.is_none(), "handover clears a staged upgrade");
+    ctx_input("owner.near", 1, restarted.0 + MIN_UPGRADE_DELAY_NS, wasm());
+    rejected(|| { let _ = c.apply_upgrade(); });
+}
+
+#[test]
+fn governance_storage_cannot_consume_user_liabilities() {
+    let mut c = setup();
+    let mut cfg = config_required();
+    cfg.user_liabilities = U128(N);
+    save_config(&cfg);
+    let storage = env::storage_byte_cost().as_yoctonear() * env::storage_usage() as u128;
+    ctx_bal("owner.near", 1, NOW, storage);
+    rejected(|| { let _ = c.propose_owner(a("guardian.near")); });
+    assert!(c.governance_state().pending_owner.is_none());
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+}
+
+#[test]
+fn release_delay_is_24h_and_the_release_script_refuses_the_sandbox_feature() {
+    assert_eq!(RELEASE_UPGRADE_DELAY_NS, 86_400_000_000_000);
+    let build = include_str!("../build.sh");
+    assert!(build.contains("refuses sandbox-short-delay"), "build.sh must refuse the short-delay feature");
+    assert!(build.contains("keyhole_release"), "release builds set cfg keyhole_release");
+    assert!(build.contains("--features callback-failure-fixture"));
+    #[cfg(not(feature = "sandbox-short-delay"))]
+    {
+        assert_eq!(MIN_UPGRADE_DELAY_NS, RELEASE_UPGRADE_DELAY_NS);
+        assert_eq!(DISBURSEMENT_WINDOW_NS, RELEASE_UPGRADE_DELAY_NS);
+    }
+}
+
+#[test]
+fn payout_and_treasury_callbacks_reject_an_external_predecessor() {
+    let mut c = setup();
+    ctx("alice.near", 0, NOW); rejected(|| { let _ = c.on_payout(a("alice.near"), U64(1)); });
+    ctx("alice.near", 0, NOW); rejected(|| { let _ = c.on_treasury_recovered(U64(1)); });
+    ctx("alice.near", 0, NOW); rejected(|| { let _ = c.on_loan_policy("k1".into(), U64(1), U64(1)); });
+}
+
+#[test]
+fn loan_bond_covers_the_deadline_key_and_closing_frees_it() {
+    let mut c = setup();
+    let before = env::storage_usage();
+    let mut bal = 1000 * N;
+    bal += LOAN_STORAGE_DEPOSIT;
+    ctx_bal("alice.near", LOAN_STORAGE_DEPOSIT, NOW, bal);
+    let _ = c.open_loan("k1".into(), terms());
+    let grown = env::storage_usage().saturating_sub(before);
+    assert!((grown as u128) * env::storage_byte_cost().as_yoctonear() <= LOAN_STORAGE_DEPOSIT, "bond covers the deadline key");
+    settle_policy_on(&mut c, "k1", true, NOW, bal);
+    let open = env::storage_usage();
+    let nonce = c.get_loan("k1".into()).unwrap().nonce;
+    ctx("alice.near", 1, NOW); let _ = c.cancel_loan("k1".into(), nonce);
+    settle_policy_on(&mut c, "k1", false, NOW, bal);
+    assert!(c.get_loan("k1".into()).is_none());
+    assert!(env::storage_usage() < open, "closing the loan frees the deadline key");
+}
+
+#[test]
+fn wound_down_refuses_funding_and_a_protected_purchase() {
+    let mut c = setup();
+    let mut bal = 1000 * N;
+    bal += LOAN_STORAGE_DEPOSIT;
+    ctx_bal("alice.near", LOAN_STORAGE_DEPOSIT, NOW, bal);
+    let _ = c.open_loan("k1".into(), terms());
+    settle_policy_on(&mut c, "k1", true, NOW, bal);
+    env::storage_write(WIND_DOWN_KEY, &[1]);
+    let nonce = c.get_loan("k1".into()).unwrap().nonce;
+    let cert = c.loan_certificate_template("k1".into(), U64(NOW), U64(NOW + 30 * SECOND));
+    let sig = signed(&cert);
+    ctx_bal("lender.near", N, NOW, bal + N);
+    rejected(|| { let _ = c.fund_loan("k1".into(), nonce, cert, sig); });
+    assert_eq!(c.get_loan("k1".into()).unwrap().state, LoanState::Offered, "refused funding leaves the offer unchanged");
+    ctx("bob.near", N, NOW);
+    let sale = crate::SaleCertificate {
+        domain: String::new(), network: String::new(), contract: a("keys.near"), token_id: "k1".into(), sale_nonce: U64(1),
+        seller: a("alice.near"), owner_epoch: U64(0),
+        terms: crate::SaleTerms { buyer: a("bob.near"), price: U128(N), floor_raw: U128(1), deadline_ns: U64(NOW + SECOND) },
+        royalty_bps: 0, seller_net: U128(N), custody_contract: a("custody.near"), wallet_pubkey: String::new(), asset: String::new(),
+        decimals: 6, controller: a("keys.near"), policy_version: U64(1), policy_hash: Base64VecU8(vec![]), policy_sequence: U64(0),
+        observed_at_ns: U64(NOW), expires_at_ns: U64(NOW + SECOND), floor_met: true, frozen: true, pending_value_ops: U64(0),
+    };
+    rejected(|| { let _ = c.buy_sale("k1".into(), U64(1), sale, Base64VecU8(vec![0; 64])); });
 }
 
 fn wasm() -> Vec<u8> { b"\0asm-v27-fixture".to_vec() }
@@ -135,20 +260,28 @@ fn upgrade_stage_cancel_timelock_and_hash_checks() {
     ctx("owner.near", 0, NOW); rejected(|| { c.stage_upgrade(hash.clone()); });
     ctx("owner.near", 1, NOW); rejected(|| { c.stage_upgrade("ABC".into()); });
     ctx("owner.near", 1, NOW); let not_before = c.stage_upgrade(hash.clone());
-    assert_eq!(not_before.0, NOW + DAY);
+    assert_eq!(not_before.0, NOW + MIN_UPGRADE_DELAY_NS);
     ctx("owner.near", 1, NOW); rejected(|| { c.stage_upgrade(hash.clone()); });
     assert_eq!(c.governance_state().staged_upgrade_sha256, Some(hash.clone()));
-    // Too early, even with the right bytes.
-    ctx_input("owner.near", 1, NOW + DAY - 1, code.clone()); rejected(|| { let _ = c.apply_upgrade(); });
+    // Too early, even with the right bytes. A refusal does not consume the staged hash.
+    ctx_input("owner.near", 1, NOW + MIN_UPGRADE_DELAY_NS - 1, code.clone()); rejected(|| { let _ = c.apply_upgrade(); });
+    assert!(c.governance_state().staged_upgrade_sha256.is_some());
     // Right time, wrong bytes.
-    ctx_input("owner.near", 1, NOW + DAY, b"other".to_vec()); rejected(|| { let _ = c.apply_upgrade(); });
+    ctx_input("owner.near", 1, NOW + MIN_UPGRADE_DELAY_NS, b"other".to_vec()); rejected(|| { let _ = c.apply_upgrade(); });
+    assert_eq!(c.governance_state().staged_upgrade_sha256, Some(hash.clone()));
+    // Right hash, not a wasm module: refused and the stage is kept.
+    let text = b"this-is-not-wasm!!".to_vec();
+    ctx("owner.near", 1, NOW + MIN_UPGRADE_DELAY_NS); c.cancel_upgrade();
+    ctx("owner.near", 1, NOW + MIN_UPGRADE_DELAY_NS); let _ = c.stage_upgrade(sha_hex(&text));
+    ctx_input("owner.near", 1, NOW + 2 * MIN_UPGRADE_DELAY_NS, text);
+    rejected(|| { let _ = c.apply_upgrade(); });
+    assert!(c.governance_state().staged_upgrade_sha256.is_some(), "non-wasm input does not consume the stage");
+    ctx("owner.near", 1, NOW + 2 * MIN_UPGRADE_DELAY_NS); c.cancel_upgrade();
     // Cancel, then a restage restarts the clock.
-    ctx("owner.near", 1, NOW + DAY); c.cancel_upgrade();
-    assert!(c.governance_state().staged_upgrade_sha256.is_none());
-    ctx("owner.near", 1, NOW + DAY); let nb2 = c.stage_upgrade(hash.clone());
-    assert_eq!(nb2.0, NOW + 2 * DAY);
+    ctx("owner.near", 1, NOW + 2 * MIN_UPGRADE_DELAY_NS); let nb2 = c.stage_upgrade(hash.clone());
+    assert_eq!(nb2.0, NOW + 3 * MIN_UPGRADE_DELAY_NS);
     // Right time and right bytes: a deploy of this contract's own account, with no migrate call.
-    ctx_input("owner.near", 1, NOW + 2 * DAY, code.clone());
+    ctx_input("owner.near", 1, NOW + 3 * MIN_UPGRADE_DELAY_NS, code.clone());
     let _ = c.apply_upgrade();
     let receipts = format!("{:?}", get_created_receipts());
     assert!(receipts.contains("DeployContract"), "apply_upgrade must schedule a deploy receipt");
@@ -162,8 +295,8 @@ fn staged_hash_is_fixed_and_apply_is_owner_only() {
     let mut c = setup();
     let code = wasm();
     ctx("owner.near", 1, NOW); let _ = c.stage_upgrade(sha_hex(&code));
-    ctx_input("alice.near", 1, NOW + DAY, code.clone()); rejected(|| { let _ = c.apply_upgrade(); });
-    ctx_input("owner.near", 0, NOW + DAY, code.clone()); rejected(|| { let _ = c.apply_upgrade(); });
+    ctx_input("alice.near", 1, NOW + MIN_UPGRADE_DELAY_NS, code.clone()); rejected(|| { let _ = c.apply_upgrade(); });
+    ctx_input("owner.near", 0, NOW + MIN_UPGRADE_DELAY_NS, code.clone()); rejected(|| { let _ = c.apply_upgrade(); });
     assert!(c.governance_state().staged_upgrade_sha256.is_some());
 }
 
@@ -185,13 +318,13 @@ fn wind_down_refuses_before_date_then_closes_new_activity_and_keeps_transfers() 
     assert_eq!(due, 0, "principal not yet cashed out, so no due clock");
     // Reclaim after 24 h returns the principal and unlocks the key.
     let nonce = c.get_loan("k1".into()).unwrap().nonce;
-    ctx("lender.near", 1, t + DAY + SECOND); let _ = c.reclaim_unclaimed_principal("k1".into(), nonce);
-    settle_policy_on(&mut c, "k1", false, t + DAY + SECOND, bal);
+    ctx("lender.near", 1, t + DISBURSEMENT_WINDOW_NS + SECOND); let _ = c.reclaim_unclaimed_principal("k1".into(), nonce);
+    settle_policy_on(&mut c, "k1", false, t + DISBURSEMENT_WINDOW_NS + SECOND, bal);
     // The borrower collects the bond credit; the lender collects the principal credit.
-    ctx("alice.near", 1, t + DAY + SECOND); let _ = c.claim_payout();
-    let p = c.get_pending_payout(a("alice.near")).unwrap(); result(PromiseResult::Successful(vec![]), t + DAY + SECOND); assert!(c.on_payout(a("alice.near"), p.nonce));
-    ctx("lender.near", 1, t + DAY + SECOND); let _ = c.claim_payout();
-    let p = c.get_pending_payout(a("lender.near")).unwrap(); result(PromiseResult::Successful(vec![]), t + DAY + SECOND); assert!(c.on_payout(a("lender.near"), p.nonce));
+    ctx("alice.near", 1, t + DISBURSEMENT_WINDOW_NS + SECOND); let _ = c.claim_payout();
+    let p = c.get_pending_payout(a("alice.near")).unwrap(); result(PromiseResult::Successful(vec![]), t + DISBURSEMENT_WINDOW_NS + SECOND); assert!(c.on_payout(a("alice.near"), p.nonce));
+    ctx("lender.near", 1, t + DISBURSEMENT_WINDOW_NS + SECOND); let _ = c.claim_payout();
+    let p = c.get_pending_payout(a("lender.near")).unwrap(); result(PromiseResult::Successful(vec![]), t + DISBURSEMENT_WINDOW_NS + SECOND); assert!(c.on_payout(a("lender.near"), p.nonce));
     assert_eq!(config_required().user_liabilities.0, 0, "all user money has left the books");
     // Now wind-down succeeds, and after it every new-activity method refuses.
     ctx("owner.near", 1, WIND_DOWN_NS); c.wind_down();
@@ -265,7 +398,19 @@ fn governance_and_config_views_are_additive_and_consistent() {
     let g = c.governance_state();
     assert_eq!(g.owner, a("owner.near"));
     assert!(!g.wound_down);
-    assert_eq!(g.min_upgrade_delay_ns.0, DAY);
+    assert_eq!(g.min_upgrade_delay_ns.0, MIN_UPGRADE_DELAY_NS);
+    assert_eq!(RELEASE_UPGRADE_DELAY_NS, 86_400_000_000_000, "the release constant is 24h");
+    #[cfg(not(feature = "sandbox-short-delay"))]
+    {
+        assert_eq!(MIN_UPGRADE_DELAY_NS, RELEASE_UPGRADE_DELAY_NS);
+        assert_eq!(DISBURSEMENT_WINDOW_NS, RELEASE_UPGRADE_DELAY_NS);
+    }
+    #[cfg(feature = "sandbox-short-delay")]
+    {
+        assert!(MIN_UPGRADE_DELAY_NS < RELEASE_UPGRADE_DELAY_NS);
+        assert_eq!(DISBURSEMENT_WINDOW_NS, MIN_UPGRADE_DELAY_NS);
+        assert!(MIN_UPGRADE_DELAY_NS <= 60 * SECOND);
+    }
     assert_eq!(g.wind_down_ns.0, WIND_DOWN_NS);
     assert_eq!(WIND_DOWN_NS, 1_801_440_000 * 1_000_000_000, "2027-02-01T00:00:00Z");
     assert_eq!(RECOVERY_UNLOCK_NS, 1_796_169_600 * 1_000_000_000, "2026-12-02T00:00:00Z, unchanged");
@@ -277,10 +422,10 @@ fn governance_and_config_views_are_additive_and_consistent() {
 fn reclaim_refuses_inside_the_window_and_for_anyone_but_the_named_lender() {
     let mut c = setup(); let mut bal = 1000 * N;
     let nonce = open_and_fund(&mut c, "k1", "alice.near", N / 100, NOW, &mut bal);
-    ctx("lender.near", 1, NOW + DAY - SECOND); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
-    ctx("alice.near", 1, NOW + DAY + SECOND); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
-    ctx("lender.near", 0, NOW + DAY + SECOND); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
-    ctx("lender.near", 1, NOW + DAY); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); }); // strictly after
+    ctx("lender.near", 1, NOW + DISBURSEMENT_WINDOW_NS - SECOND); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
+    ctx("alice.near", 1, NOW + DISBURSEMENT_WINDOW_NS + SECOND); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
+    ctx("lender.near", 0, NOW + DISBURSEMENT_WINDOW_NS + SECOND); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
+    ctx("lender.near", 1, NOW + DISBURSEMENT_WINDOW_NS); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); }); // strictly after
     assert_eq!(c.get_loan("k1".into()).unwrap().state, LoanState::DisbursementPending);
 }
 
@@ -289,7 +434,7 @@ fn reclaim_after_window_moves_principal_credit_and_unlocks_the_key() {
     let mut c = setup(); let mut bal = 1000 * N;
     let nonce = open_and_fund(&mut c, "k1", "alice.near", N / 100, NOW, &mut bal);
     assert_eq!(c.get_payout_credit(a("alice.near")).0, N / 100);
-    let t = NOW + DAY + SECOND;
+    let t = NOW + DISBURSEMENT_WINDOW_NS + SECOND;
     ctx_bal("lender.near", 1, t, bal); let _ = c.reclaim_unclaimed_principal("k1".into(), nonce);
     assert_eq!(c.get_payout_credit(a("alice.near")).0, 0, "borrower loses the unclaimed principal credit");
     assert_eq!(c.get_payout_credit(a("lender.near")).0, N / 100, "lender holds exactly the principal");
@@ -309,7 +454,7 @@ fn reclaim_after_window_moves_principal_credit_and_unlocks_the_key() {
 fn race_order_claim_first_blocks_reclaim_until_a_failed_cashout_restores_credit() {
     let mut c = setup(); let mut bal = 1000 * N;
     let nonce = open_and_fund(&mut c, "k1", "alice.near", N / 100, NOW, &mut bal);
-    let t = NOW + DAY + SECOND;
+    let t = NOW + DISBURSEMENT_WINDOW_NS + SECOND;
     // Borrower claims: the dispatch marker is set and the credit is drained into the pending payout.
     ctx("alice.near", 1, t); let _ = c.claim_payout();
     let p = c.get_pending_payout(a("alice.near")).unwrap();
@@ -327,7 +472,7 @@ fn race_order_claim_first_blocks_reclaim_until_a_failed_cashout_restores_credit(
 fn race_order_reclaim_first_leaves_the_borrower_claim_nothing_to_pay() {
     let mut c = setup(); let mut bal = 1000 * N;
     let nonce = open_and_fund(&mut c, "k1", "alice.near", N / 100, NOW, &mut bal);
-    let t = NOW + DAY + SECOND;
+    let t = NOW + DISBURSEMENT_WINDOW_NS + SECOND;
     ctx_bal("lender.near", 1, t, bal); let _ = c.reclaim_unclaimed_principal("k1".into(), nonce);
     settle_policy_on(&mut c, "k1", false, t, bal);
     // The borrower's late claim has no credit, so it is refused, and the principal is not in any dispatch.
@@ -348,7 +493,7 @@ fn successful_cashout_activates_the_loan_and_blocks_reclaim_for_good() {
     assert!(c.on_payout("alice.near".parse().unwrap(), p.nonce));
     assert!(logs_contain("loan_principal_delivered"));
     assert_eq!(c.get_loan("k1".into()).unwrap().state, LoanState::Active);
-    ctx_bal("lender.near", 1, NOW + DAY + SECOND, bal); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
+    ctx_bal("lender.near", 1, NOW + DISBURSEMENT_WINDOW_NS + SECOND, bal); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
 }
 
 // ---------- G2: callbacks never panic, outcomes are recorded and reconciled ----------
@@ -364,7 +509,7 @@ fn payout_callback_with_a_broken_loan_state_does_not_panic_and_never_double_pays
     result_bal(PromiseResult::Successful(vec![]), NOW, bal - N / 100); bal -= N / 100;
     assert!(c.on_payout("alice.near".parse().unwrap(), p.nonce), "money cashout is recorded; the callback does not panic");
     // Reclaim is refused by the loan state, and nothing is credited twice.
-    ctx_bal("lender.near", 1, NOW + DAY + SECOND, bal); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
+    ctx_bal("lender.near", 1, NOW + DISBURSEMENT_WINDOW_NS + SECOND, bal); rejected(|| { let _ = c.reclaim_unclaimed_principal("k1".into(), nonce); });
     assert_eq!(c.get_payout_credit(a("lender.near")).0, 0);
     assert!(c.get_pending_payout(a("alice.near")).is_none());
 }
@@ -541,7 +686,7 @@ fn random_run(seed: u64) {
                 assert_solvent(&c, bal);
             } else if c.get_loan(token.clone()).is_some() {
                 // Principal unclaimed or failed: the lender reclaims after the window, then the custody unlock releases.
-                let tr = t + DAY + SECOND;
+                let tr = t + DISBURSEMENT_WINDOW_NS + SECOND;
                 ctx_bal(&lender, 1, tr, bal); let _ = c.reclaim_unclaimed_principal(token.clone(), nonce);
                 settle_policy_on(&mut c, &token, false, tr, bal);
                 assert_solvent(&c, bal);
@@ -611,7 +756,7 @@ fn conservation_run(seed: u64) {
                 assert_eq!(c.nft_token(token.clone()).unwrap().owner_id, receiver, "default: key moved");
             }
             _ => {
-                let tr = t + DAY + SECOND;
+                let tr = t + DISBURSEMENT_WINDOW_NS + SECOND;
                 ctx_bal(&lender, 1, tr, bal); let _ = c.reclaim_unclaimed_principal(token.clone(), nonce);
                 settle_policy_on(&mut c, &token, false, tr, bal);
                 ctx(&lender, 1, tr); let _ = c.claim_payout();

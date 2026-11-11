@@ -401,11 +401,13 @@ test("full generator code-only promotion works through real RPC boundary and ret
       prior.contract.migrate_pledge_tx,
     );
     assert.equal(out.worker.wasm_sha256, prior.worker.wasm_sha256);
-    assert.equal(out.contract_candidate.status, "deployed-mainnet");
+    assert.equal(out.contract_candidate.status, "source-candidate-not-deployed");
+    assert.equal(out.contract_candidate.version, "2.7.0");
+    assert.notEqual(out.contract_candidate.wasm_sha256, out.contract.wasm_sha256);
     const readme = readFileSync(join(d, "README.md"), "utf8");
     assert.match(readme, /Live contract v2\.6/);
     assert.match(readme, /v2\.6 \(live\)/);
-    assert.match(readme, /matches live deployment/);
+    assert.match(readme, /Contract source candidate \*\*2\.7\.0\*\*, staged for deploy, not live/);
     assert.match(
       readFileSync(join(d, "web/lib/identity.gen.ts"), "utf8"),
       new RegExp(CANDIDATE),

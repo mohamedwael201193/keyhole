@@ -20,7 +20,13 @@ pub const CERTIFICATE_DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V3_DELIVERY";
 pub const TRANSFER_RESTORE_DELAY_NS:u64=300_000_000_000;
 pub const CERTIFICATE_MAX_AGE_NS: u64 = 60_000_000_000;
 /// G1: after funding, the borrower has this long to start the native cashout. Then the named lender may reclaim the principal.
+/// Release builds keep 24 h. `sandbox-short-delay` is refused by `contracts/keys/build.sh`.
+#[cfg(not(feature = "sandbox-short-delay"))]
 pub const DISBURSEMENT_WINDOW_NS: u64 = 86_400_000_000_000;
+#[cfg(feature = "sandbox-short-delay")]
+pub const DISBURSEMENT_WINDOW_NS: u64 = 30_000_000_000;
+#[cfg(not(feature = "sandbox-short-delay"))]
+const _: () = assert!(DISBURSEMENT_WINDOW_NS == 86_400_000_000_000);
 const SECOND: u64 = 1_000_000_000;
 const MAX_DURATION: u64 = 30 * 86_400;
 const CONFIG_KEY: &[u8] = b"Pg";
@@ -512,6 +518,8 @@ impl Contract {
             terms, state: LoanState::Freezing, due_ns: U64(0), storage_bond: U128(LOAN_STORAGE_DEPOSIT), policy_sequence: U64(0),
             policy_busy: false, policy_call_complete: false, resolution: None };
         loans().insert(&token_id, &l);
+        // Reserve the G1 deadline key while the bond is measured. fund_loan overwrites the same key.
+        disbursement_deadlines().insert(&token_id, &U64(0));
         let storage_cost=env::storage_usage().saturating_sub(storage_before) as u128*env::storage_byte_cost().as_yoctonear();
         require!(storage_cost<=LOAN_STORAGE_DEPOSIT,"loan bond does not cover storage");
         emit_key_event("loan_open", json_object!({"token_id": token_id, "nonce": l.nonce}));
@@ -569,7 +577,7 @@ impl Contract {
         if l.state == LoanState::Freezing && p.frozen { l.state = LoanState::Offered; }
         if l.state == LoanState::UnlockPending && !p.frozen {
             // Loan bond remains a user liability until a successful pull payout; no treasury attribution.
-            add_credit(&l.borrower, l.storage_bond.0); loans().remove(&token_id);
+            add_credit(&l.borrower, l.storage_bond.0); loans().remove(&token_id); disbursement_deadlines().remove(&token_id);
             emit_key_event("loan_closed", json_object!({"token_id": token_id, "nonce": nonce, "resolution": l.resolution}));
             return true;
         }
@@ -586,7 +594,7 @@ impl Contract {
 
     #[payable]
     pub fn fund_loan(&mut self, token_id: TokenId, nonce: U64, certificate: LoanCertificate, signature: Base64VecU8) -> bool {
-        enough_gas(); let mut c = config_required(); require_lending(&c);
+        enough_gas(); crate::v27::assert_not_wound_down(); let mut c = config_required(); require_lending(&c);
         let mut l = load_loan(&token_id, nonce);
         require!(l.state == LoanState::Offered && !l.policy_busy, "loan not fundable");
         require!(env::predecessor_account_id() == l.terms.lender, "only named lender");
@@ -710,6 +718,7 @@ impl Contract {
         require!(env::predecessor_account_id() == l.terms.lender, "only named lender");
         require!(l.state == LoanState::DisbursementPending && !l.policy_busy, "principal not in disbursement");
         let deadline = disbursement_deadlines().get(&token_id).unwrap_or_else(|| env::panic_str("no disbursement deadline recorded"));
+        require!(deadline.0 > 0, "disbursement deadline not started");
         require!(env::block_timestamp() > deadline.0, "disbursement window still open");
         require!(principal_dispatches().get(&token_id).is_none(), "principal cashout in flight or unresolved");
         let principal = l.terms.principal.0;

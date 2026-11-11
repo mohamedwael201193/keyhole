@@ -7,6 +7,8 @@ web/AGENTS.md
 
 # Generated only with the explicit sandbox fault-injection feature.
 contracts/keys-sandbox/tests/fixtures/callback_failure.wasm
+# Generated only with sandbox-short-delay. The release wasm keeps the 24h delay.
+contracts/keys-sandbox/tests/fixtures/v27_short_delay.wasm
 
 # Isolated local/CI sandbox UI output; never source or production evidence.
 web/.next-pledge-sandbox/

@@ -48,12 +48,12 @@ export const IDENTITY = {
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
-    "status": "deployed-mainnet",
-    "version": "2.6.0",
-    "release": "v2.6",
-    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
-    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
-    "bytes": 487260,
+    "status": "source-candidate-not-deployed",
+    "version": "2.7.0",
+    "release": "v2.7",
+    "wasm_sha256": "919a503f8645f80e490db1cd6ea7cb8d24096dfe6b3b4284afc0a0750a979f49",
+    "code_hash": "AoNbKnK9UrE2kU1VHhQQMywfzp7L9PXJxc1rF64m2h3n",
+    "bytes": 519328,
     "recipe": "contracts/keys/build.sh"
   }
 } as const;

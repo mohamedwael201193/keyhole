@@ -1,10 +1,10 @@
 #[path="support/payout_storage.rs"] mod payout_storage;
 use payout_storage::register_payouts;
 // v2.7 sandbox on the local NEAR runtime with the labelled custody mock (no live keystore enforcement).
-// (a) v2.6 state with NFTs, a listing and a full loan cycle, then a code-only upgrade to v2.7: every read is identical.
-// (b+c) one 24 h sandbox clock (about 40 minutes of block production on this runtime) covers two checks:
-//       the in-contract apply_upgrade with the real v2.7 wasm after its timelock, and the G1 reclaim of an
-//       unclaimed principal by the named lender after the 24 h window, with the loan unlocking.
+// (a) v2.6 state with NFTs, a listing and a full loan cycle, then a code-only upgrade to the release v2.7 wasm: every read is identical.
+// (b) stage the release wasm on the short-delay fixture, refuse apply before the delay, cancel, then apply after it.
+// (c) a loan the borrower never claims; the named lender reclaims the principal after the fixture deadline. Balances are exact.
+// The release wasm keeps a 24h delay. Only tests/fixtures/v27_short_delay.wasm (feature sandbox-short-delay) is short.
 use anyhow::Result;
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use ed25519_dalek::{Signer, SigningKey};
@@ -16,12 +16,14 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 const V26: &str = "../keys/release/v2.6/keyhole_keys.wasm";
-/// Output of the reproducible build of this source (contracts/keys/build.sh), final sha256 a0e6881f...
-const V27: &str = "../keys/target/near/keyhole_keys.wasm";
+/// Release v2.7 wasm from contracts/keys/build.sh. 24h upgrade delay. Not the short-delay fixture.
+const V27: &str = "../keys/release/v2.7/keyhole_keys.wasm";
+/// `contracts/keys/build-sandbox-delay.sh`. Upgrade delay and disbursement window are 30s. Never deploy this.
+const V27_SHORT: &str = "tests/fixtures/v27_short_delay.wasm";
 const MOCK: &str = "tests/fixtures/custody_policy_mock.wasm";
 const N: u128 = 1_000_000_000_000_000_000_000_000;
 const SEC: u64 = 1_000_000_000;
-const DAY: u64 = 86_400 * SEC;
+const RELEASE_DELAY: u64 = 86_400 * SEC;
 
 struct E { w: Worker<Sandbox>, c: Contract, alice: Account, lender: Account, bob: Account, minter: Account }
 
@@ -30,15 +32,26 @@ async fn account(root: &Account, name: &str) -> Result<Account> {
     Ok(root.create_subaccount(name).initial_balance(NearToken::from_near(50)).transact().await?.into_result()?)
 }
 async fn now(e: &E) -> u64 { e.w.view_block().await.unwrap().timestamp() }
-/// Advances the sandbox clock to at least `target_ns`.
+/// Advances the sandbox clock to at least `target_ns` without producing a day's worth of blocks.
+/// One short sample measures nanoseconds per block, then a single fast_forward covers the rest, capped at 400 blocks.
 async fn advance_to(w: &Worker<Sandbox>, target_ns: u64) -> Result<()> {
-    for _ in 0..400 {
-        let b = w.view_block().await?;
-        println!("CLOCK height {} timestamp {} target {}", b.height(), b.timestamp(), target_ns);
-        if b.timestamp() >= target_ns { return Ok(()); }
-        w.fast_forward(2_000).await?;
+    let start = w.view_block().await?;
+    if start.timestamp() >= target_ns { return Ok(()); }
+    w.fast_forward(20).await?;
+    let mid = w.view_block().await?;
+    println!("CLOCK sample height {} timestamp {} target {}", mid.height(), mid.timestamp(), target_ns);
+    if mid.timestamp() >= target_ns { return Ok(()); }
+    let elapsed = mid.timestamp().saturating_sub(start.timestamp()).max(1);
+    let blocks = mid.height().saturating_sub(start.height()).max(1);
+    let per = elapsed / blocks;
+    let need = target_ns.saturating_sub(mid.timestamp()).div_ceil(per).saturating_add(5).min(400);
+    println!("CLOCK {blocks} blocks covered {elapsed} ns; forwarding {need} more");
+    w.fast_forward(need).await?;
+    let end = w.view_block().await?;
+    println!("CLOCK height {} timestamp {} target {}", end.height(), end.timestamp(), target_ns);
+    if end.timestamp() >= target_ns { Ok(()) } else {
+        anyhow::bail!("sandbox clock {} did not reach {target_ns} within {need} blocks", end.timestamp())
     }
-    anyhow::bail!("sandbox clock did not reach the target")
 }
 
 /// v2.6 on chain, wired like the pledge fixture: k1 (Gold) with a bound collateral binding, k2 for a listing, lending on.
@@ -161,55 +174,93 @@ async fn a_v26_state_with_a_listing_and_a_full_loan_cycle_is_identical_after_a_c
     Ok(())
 }
 
+fn read_wasm(path: &str) -> Result<Vec<u8>> {
+    std::fs::read(path).map_err(|err| anyhow::anyhow!("missing {path} ({err}); build the release wasm and the short-delay fixture first"))
+}
+
+/// Credit ledger and the payout_claim event are the exact amount. Once every earlier receipt's
+/// gas refund has landed, `after + tokens_burnt + attached - before` equals that amount: the signer
+/// paid exactly the gas the receipts burnt.
+fn assert_native_cashout(logs: &[String], before: u128, after: u128, burnt: u128, credit: u128) {
+    assert!(logs.iter().any(|l| l.contains(&format!("\"amount\":\"{credit}\""))), "payout_claim event pays exactly the credit");
+    let gap = after as i128 + burnt as i128 + 1 - before as i128 - credit as i128;
+    assert_eq!(gap, 0, "native balance moves by exactly the credit, after gas burn and the 1 yocto");
+}
+
 #[tokio::test]
-async fn bc_one_24h_clock_covers_the_timelocked_in_contract_apply_and_the_g1_reclaim() -> Result<()> {
+async fn bc_short_delay_proves_timelock_cancel_apply_and_exact_principal_reclaim() -> Result<()> {
     let e = setup_v26().await?;
-    // v2.7 code is live before the loan is funded, so the disbursement deadline is recorded (no v2.6 loan is reclaimable).
-    upgrade_code_only(&e).await?;
+    // The running code is the short-delay fixture so the clocks are 30s. The bytes applied later are the release wasm.
+    e.c.as_account().deploy(&read_wasm(V27_SHORT)?).await?.into_result()?;
+    let release = read_wasm(V27)?;
     let principal = N / 10;
     open_loan(&e, "k1", principal).await?;
     fund_loan(&e, "k1", principal).await?;
     assert_eq!(view(&e.c, "get_loan", json!({"token_id": "k1"})).await["state"], "DisbursementPending");
     assert_eq!(view(&e.c, "get_payout_credit", json!({"account_id": e.alice.id()})).await, principal.to_string());
 
-    // Stage the same v2.7 bytes; the 24 h timelock starts now, after the funding deadline was recorded.
-    let wasm = std::fs::read(V27)?;
-    let sha: String = Sha256::digest(&wasm).iter().map(|b| format!("{b:02x}")).collect();
+    let sha: String = Sha256::digest(&release).iter().map(|b| format!("{b:02x}")).collect();
     e.c.call("stage_upgrade").args_json(json!({"code_sha256": sha})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
-    let not_before: u64 = view(&e.c, "governance_state", json!({})).await["staged_upgrade_not_before_ns"].as_str().unwrap().parse()?;
+    let first_deadline: u64 = view(&e.c, "governance_state", json!({})).await["staged_upgrade_not_before_ns"].as_str().unwrap().parse()?;
 
-    // Before the clocks run out: the apply is refused by its timelock and the reclaim by its window.
-    let early_apply = e.c.call("apply_upgrade").args(wasm.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    let early_apply = e.c.call("apply_upgrade").args(release.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
     assert!(format!("{:?}", early_apply.into_result().unwrap_err()).contains("timelock not expired"));
     let early_reclaim = e.lender.call(e.c.id(), "reclaim_unclaimed_principal").args_json(json!({"token_id": "k1", "nonce": "1"}))
         .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
     assert!(format!("{:?}", early_reclaim.into_result().unwrap_err()).contains("disbursement window still open"));
 
+    // Cancel works, and restaging restarts the clock. Apply is refused again before the new deadline.
+    e.c.call("cancel_upgrade").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    assert!(view(&e.c, "governance_state", json!({})).await["staged_upgrade_sha256"].is_null());
+    e.c.call("stage_upgrade").args_json(json!({"code_sha256": sha})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+    let not_before: u64 = view(&e.c, "governance_state", json!({})).await["staged_upgrade_not_before_ns"].as_str().unwrap().parse()?;
+    assert!(not_before > first_deadline, "cancel then stage restarts the timelock");
+    let early_again = e.c.call("apply_upgrade").args(release.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    assert!(format!("{:?}", early_again.into_result().unwrap_err()).contains("timelock not expired"));
+
     advance_to(&e.w, not_before + SEC).await?;
 
-    // G1: the named lender reclaims the unclaimed principal; the mock unfreezes in the same chain, so the loan closes.
-    let lender_before = e.lender.view_account().await?.balance.as_yoctonear();
+    // (c) The named lender reclaims exactly the principal. The borrower keeps the key and loses that credit.
     e.lender.call(e.c.id(), "reclaim_unclaimed_principal").args_json(json!({"token_id": "k1", "nonce": "1"}))
         .deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
     assert!(view(&e.c, "get_loan", json!({"token_id": "k1"})).await.is_null());
     assert_eq!(view(&e.c, "nft_token", json!({"token_id": "k1"})).await["owner_id"], e.alice.id().as_str(), "key never left the borrower");
-    assert_eq!(view(&e.c, "get_payout_credit", json!({"account_id": e.alice.id()})).await, "0", "borrower lost the unclaimed principal");
-    assert_eq!(view(&e.c, "get_payout_credit", json!({"account_id": e.lender.id()})).await, principal.to_string());
-    claim(&e, &e.lender).await?;
-    assert!(e.lender.view_account().await?.balance.as_yoctonear() > lender_before + principal - N / 100, "lender receives the principal");
+    assert_eq!(view(&e.c, "get_payout_credit", json!({"account_id": e.alice.id()})).await, keyhole_keys::LOAN_STORAGE_DEPOSIT.to_string(), "borrower keeps only the refundable bond, not the principal");
+    assert_eq!(view(&e.c, "get_payout_credit", json!({"account_id": e.lender.id()})).await, principal.to_string(), "lender credit is exactly the principal");
+    e.w.fast_forward(10).await?;
+    let lender_before = e.lender.view_account().await?.balance.as_yoctonear();
+    let claim_tx = e.lender.call(e.c.id(), "claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    let burnt: u128 = claim_tx.outcomes().iter().map(|o| o.tokens_burnt.as_yoctonear()).sum();
+    let logs: Vec<String> = claim_tx.logs().into_iter().map(|l| l.to_string()).collect();
+    claim_tx.into_result()?;
+    e.w.fast_forward(10).await?;
+    let lender_after = e.lender.view_account().await?.balance.as_yoctonear();
+    assert_native_cashout(&logs, lender_before, lender_after, burnt, principal);
+    assert_eq!(view(&e.c, "get_payout_credit", json!({"account_id": e.lender.id()})).await, "0");
 
-    // The timelocked in-contract apply with the real wasm, after the reclaim, on the same clock.
+    // (b) The timelocked in-contract apply of the release wasm. The delay view must then be 24h, which the fixture is not.
     let before = snapshot(&e).await;
-    let r = e.c.call("apply_upgrade").args(wasm.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
-    let gas = r.total_gas_burnt;
-    println!("apply_upgrade with {} bytes: total gas burnt {} (one call, limit 300 Tgas)", wasm.len(), gas);
+    let r = e.c.call("apply_upgrade").args(release.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    println!("apply_upgrade with {} bytes: total gas burnt {} (one call, limit 300 Tgas)", release.len(), r.total_gas_burnt);
     r.into_result()?;
-    assert!(view(&e.c, "governance_state", json!({})).await["staged_upgrade_sha256"].is_null(), "applied upgrade is consumed");
+    let g = view(&e.c, "governance_state", json!({})).await;
+    assert!(g["staged_upgrade_sha256"].is_null(), "applied upgrade is consumed");
+    assert_eq!(g["min_upgrade_delay_ns"].as_str().unwrap(), RELEASE_DELAY.to_string(), "applied wasm is the 24h release build");
     assert_eq!(before, snapshot(&e).await, "state identical after the in-contract deploy");
     assert_eq!(view(&e.c, "contract_source_metadata", json!({})).await["version"], "2.7.0");
 
-    // The borrower collects the bond the unlock returned, and nothing is left owed.
-    claim(&e, &e.alice).await?;
+    // The borrower collects only the bond the unlock returned, and nothing is left owed.
+    let bond = view(&e.c, "get_payout_credit", json!({"account_id": e.alice.id()})).await.as_str().unwrap().parse::<u128>()?;
+    assert_eq!(bond, keyhole_keys::LOAN_STORAGE_DEPOSIT);
+    e.w.fast_forward(10).await?;
+    let alice_before = e.alice.view_account().await?.balance.as_yoctonear();
+    let alice_tx = e.alice.call(e.c.id(), "claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+    let alice_burnt: u128 = alice_tx.outcomes().iter().map(|o| o.tokens_burnt.as_yoctonear()).sum();
+    let alice_logs: Vec<String> = alice_tx.logs().into_iter().map(|l| l.to_string()).collect();
+    alice_tx.into_result()?;
+    e.w.fast_forward(10).await?;
+    let alice_after = e.alice.view_account().await?.balance.as_yoctonear();
+    assert_native_cashout(&alice_logs, alice_before, alice_after, alice_burnt, bond);
     assert_eq!(view(&e.c, "get_pledge_config", json!({})).await["user_liabilities"], "0");
     Ok(())
 }

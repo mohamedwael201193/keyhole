@@ -113,7 +113,7 @@ impl Contract {
  }
  #[payable]
  pub fn buy_sale(&mut self,token_id:TokenId,nonce:U64,certificate:SaleCertificate,signature:Base64VecU8)->Promise{
-  enough_gas();require!(enabled(),"protected sales disabled");let mut s=load(&token_id,nonce);let mut c=config_required();
+  enough_gas();crate::v27::assert_not_wound_down();require!(enabled(),"protected sales disabled");let mut s=load(&token_id,nonce);let mut c=config_required();
   require!(s.state==SaleState::Offered&&!s.policy_busy&&!s.sold,"sale not purchasable");
   require!(env::predecessor_account_id()==s.terms.buyer,"only named buyer");self.assert_no_key(&s.terms.buyer);
   require!(self.royalty_bps==s.royalty_bps&&s.royalty_bps==0&&s.seller_net==s.terms.price,"sale royalty changed");

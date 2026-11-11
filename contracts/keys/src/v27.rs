@@ -8,15 +8,32 @@ use crate::*;
 use near_sdk::json_types::U64;
 use near_sdk::Promise;
 
-/// Minimum delay between stage_upgrade and apply_upgrade: 24 h.
-pub const MIN_UPGRADE_DELAY_NS: u64 = 86_400_000_000_000;
-/// wind_down may run from 2027-02-01T00:00:00Z (1 801 440 000 s after the Unix epoch).
+/// Release delay between stage_upgrade and apply_upgrade, and between propose_owner and accept_owner: 24 h.
+/// `build.sh` injects `keyhole_release` and refuses the feature below, so a release wasm cannot shrink this.
+pub const RELEASE_UPGRADE_DELAY_NS: u64 = 86_400_000_000_000;
+#[cfg(not(feature = "sandbox-short-delay"))]
+pub const MIN_UPGRADE_DELAY_NS: u64 = RELEASE_UPGRADE_DELAY_NS;
+/// Sandbox fixture only. A few seconds, so the local runtime reaches it in well under a few hundred blocks.
+#[cfg(feature = "sandbox-short-delay")]
+pub const MIN_UPGRADE_DELAY_NS: u64 = 30_000_000_000;
+#[cfg(all(feature = "sandbox-short-delay", keyhole_release))]
+compile_error!("sandbox-short-delay is refused on the release build path (contracts/keys/build.sh)");
+#[cfg(not(feature = "sandbox-short-delay"))]
+const _: () = assert!(MIN_UPGRADE_DELAY_NS == 86_400_000_000_000);
+/// wind_down may run from 2027-02-01T00:00:00Z (1 801 440 000 s after the Unix epoch). Not shortened by the sandbox feature.
 pub const WIND_DOWN_NS: u64 = 1_801_440_000_000_000_000;
 
 const OWNER_KEY: &[u8] = b"Q27/owner";
 const OWNER_PENDING_KEY: &[u8] = b"Q27/owner_pending";
 const UPGRADE_KEY: &[u8] = b"Q27/upgrade";
-const WIND_DOWN_KEY: &[u8] = b"Q27/wind_down";
+pub(crate) const WIND_DOWN_KEY: &[u8] = b"Q27/wind_down";
+
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [borsh])]
+struct OwnerProposal {
+    account: AccountId,
+    not_before_ns: u64,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers = [borsh])]
@@ -31,6 +48,7 @@ pub(crate) struct StagedUpgrade {
 pub struct GovernanceState {
     pub owner: AccountId,
     pub pending_owner: Option<AccountId>,
+    pub pending_owner_not_before_ns: Option<U64>,
     pub staged_upgrade_sha256: Option<String>,
     pub staged_upgrade_not_before_ns: Option<U64>,
     pub min_upgrade_delay_ns: U64,
@@ -40,6 +58,23 @@ pub struct GovernanceState {
 
 fn read_account(key: &[u8]) -> Option<AccountId> {
     env::storage_read(key).map(|v| near_sdk::borsh::from_slice::<AccountId>(&v).unwrap_or_else(|_| env::panic_str("governance state corrupt")))
+}
+fn read_proposal() -> Option<OwnerProposal> {
+    env::storage_read(OWNER_PENDING_KEY).map(|v| near_sdk::borsh::from_slice::<OwnerProposal>(&v).unwrap_or_else(|_| env::panic_str("owner proposal corrupt")))
+}
+/// Governance keys are singletons. Growing one must leave user liabilities, treasury and the operating reserve liquid.
+fn assert_can_grow(extra_bytes: u64) {
+    let Some(c) = pledge_config() else { return; };
+    let byte = env::storage_byte_cost().as_yoctonear();
+    let usage = (env::storage_usage() as u128).checked_add(extra_bytes as u128).unwrap_or_else(|| env::panic_str("storage reserve overflow"));
+    let storage = byte.checked_mul(usage).unwrap_or_else(|| env::panic_str("storage reserve overflow"));
+    let pending = c.treasury_pending.as_ref().map(|p| p.amount.0).unwrap_or(0);
+    let need = storage.checked_add(crate::pledge::OPERATING_RESERVE)
+        .and_then(|v| v.checked_add(c.user_liabilities.0))
+        .and_then(|v| v.checked_add(c.treasury_available.0))
+        .and_then(|v| v.checked_add(pending))
+        .unwrap_or_else(|| env::panic_str("reserve overflow"));
+    require!(env::account_balance().as_yoctonear() >= need, "governance storage would consume user funds");
 }
 fn write_account(key: &[u8], account: &AccountId) {
     env::storage_write(key, &near_sdk::borsh::to_vec(account).unwrap_or_else(|_| env::panic_str("governance encoding")));
@@ -76,26 +111,49 @@ impl Contract {
 
 #[near]
 impl Contract {
-    /// Step 1 of 2: the current owner names a successor. Overwrites an earlier unaccepted proposal.
+    /// Step 1 of 2: the current owner names a successor. Overwrites an earlier unaccepted proposal and restarts its delay.
+    /// There is no single-step set_owner: a mistype does not take effect, and the current owner stays in control until
+    /// the named account accepts after MIN_UPGRADE_DELAY_NS. The current owner can cancel_owner_proposal before that.
     #[payable]
-    pub fn propose_owner(&mut self, new_owner: AccountId) {
+    pub fn propose_owner(&mut self, new_owner: AccountId) -> U64 {
         assert_one_yocto();
         self.assert_owner();
         require!(new_owner != self.current_owner(), "already the owner");
-        write_account(OWNER_PENDING_KEY, &new_owner);
-        emit_key_event("owner_proposed", json_object!({"owner": self.current_owner(), "proposed_owner": new_owner}));
+        assert_can_grow(256);
+        let not_before = env::block_timestamp().checked_add(MIN_UPGRADE_DELAY_NS).unwrap_or_else(|| env::panic_str("time overflow"));
+        let proposal = OwnerProposal { account: new_owner.clone(), not_before_ns: not_before };
+        env::storage_write(OWNER_PENDING_KEY, &near_sdk::borsh::to_vec(&proposal).unwrap_or_else(|_| env::panic_str("owner proposal encoding")));
+        emit_key_event("owner_proposed", json_object!({"owner": self.current_owner(), "proposed_owner": new_owner, "not_before_ns": U64(not_before)}));
+        U64(not_before)
     }
 
-    /// Step 2 of 2: only the proposed account can accept, so a mistyped successor never takes effect.
+    /// The current owner drops an unaccepted proposal. The owner does not change.
+    #[payable]
+    pub fn cancel_owner_proposal(&mut self) {
+        assert_one_yocto();
+        self.assert_owner();
+        let proposal = read_proposal().unwrap_or_else(|| env::panic_str("no owner proposal"));
+        env::storage_remove(OWNER_PENDING_KEY);
+        emit_key_event("owner_proposal_cancelled", json_object!({"owner": self.current_owner(), "proposed_owner": proposal.account}));
+    }
+
+    /// Step 2 of 2: only the proposed account can accept, and only after the delay, so a mistyped or hostile successor
+    /// cannot take the contract before the current owner cancels. Accepting proves that account can attach 1 yocto.
+    /// A staged upgrade is cleared: the previous owner cannot leave a deploy the new owner did not stage.
     #[payable]
     pub fn accept_owner(&mut self) {
         assert_one_yocto();
-        let proposed = read_account(OWNER_PENDING_KEY).unwrap_or_else(|| env::panic_str("no owner proposal"));
-        require!(env::predecessor_account_id() == proposed, "only the proposed owner can accept");
+        let proposal = read_proposal().unwrap_or_else(|| env::panic_str("no owner proposal"));
+        require!(env::predecessor_account_id() == proposal.account, "only the proposed owner can accept");
+        require!(env::block_timestamp() >= proposal.not_before_ns, "owner handover timelock not expired");
+        if read_staged().is_some() {
+            env::storage_remove(UPGRADE_KEY);
+            emit_key_event("upgrade_cancelled", json_object!({"reason": "owner_changed"}));
+        }
         let previous = self.current_owner();
-        write_account(OWNER_KEY, &proposed);
+        write_account(OWNER_KEY, &proposal.account);
         env::storage_remove(OWNER_PENDING_KEY);
-        emit_key_event("owner_changed", json_object!({"previous_owner": previous, "owner": proposed}));
+        emit_key_event("owner_changed", json_object!({"previous_owner": previous, "owner": proposal.account}));
     }
 
     /// Owner only. Records the hash of a wasm that apply_upgrade may deploy after MIN_UPGRADE_DELAY_NS.
@@ -105,6 +163,7 @@ impl Contract {
         assert_one_yocto();
         self.assert_owner();
         require!(read_staged().is_none(), "an upgrade is already staged: cancel_upgrade first");
+        assert_can_grow(128);
         let hash = parse_sha256(&code_sha256);
         let not_before = env::block_timestamp().checked_add(MIN_UPGRADE_DELAY_NS).unwrap_or_else(|| env::panic_str("time overflow"));
         env::storage_write(UPGRADE_KEY, &near_sdk::borsh::to_vec(&StagedUpgrade { hash, not_before_ns: not_before }).unwrap_or_else(|_| env::panic_str("upgrade encoding")));
@@ -138,6 +197,7 @@ impl Contract {
         }
         let code = env::input().unwrap_or_else(|| env::panic_str("wasm must be the raw input"));
         require!(env::sha256(&code).as_slice() == staged.hash.as_slice(), "wasm sha256 does not match the staged hash");
+        require!(code.len() >= 8 && code.starts_with(b"\0asm"), "input is not a wasm module");
         env::storage_remove(UPGRADE_KEY);
         emit_key_event("upgrade_applied", json_object!({"code_sha256": hex(&staged.hash), "bytes": code.len() as u64}));
         Promise::new(env::current_account_id()).deploy_contract(code)
@@ -153,6 +213,7 @@ impl Contract {
         self.assert_owner();
         require!(env::block_timestamp() >= WIND_DOWN_NS, "wind-down date not reached: earliest 2027-02-01T00:00:00Z");
         require!(!wound_down(), "already wound down");
+        assert_can_grow(32);
         let c = config_required();
         require!(c.user_liabilities.0 == 0, "wind_down refused: user liabilities outstanding");
         require!(c.treasury_pending.is_none(), "wind_down refused: treasury recovery pending");
@@ -163,9 +224,11 @@ impl Contract {
 
     pub fn governance_state(&self) -> GovernanceState {
         let staged = read_staged();
+        let proposal = read_proposal();
         GovernanceState {
             owner: self.current_owner(),
-            pending_owner: read_account(OWNER_PENDING_KEY),
+            pending_owner: proposal.as_ref().map(|p| p.account.clone()),
+            pending_owner_not_before_ns: proposal.as_ref().map(|p| U64(p.not_before_ns)),
             staged_upgrade_sha256: staged.as_ref().map(|s| hex(&s.hash)),
             staged_upgrade_not_before_ns: staged.as_ref().map(|s| U64(s.not_before_ns)),
             min_upgrade_delay_ns: U64(MIN_UPGRADE_DELAY_NS),

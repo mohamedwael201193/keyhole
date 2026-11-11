@@ -9,6 +9,17 @@ rustc_vv="$(rustc -vV)"
 grep -q '^commit-hash: 05f9846f893b09a1be1fc8560e33fc3c815cfecb$' <<<"$rustc_vv" || { echo "Release requires rustc 1.86.0 (commit 05f9846f89)" >&2; exit 1; }
 grep -q '^host: x86_64-unknown-linux-gnu$' <<<"$rustc_vv" || { echo "Release requires pinned Linux host + official wasm32 target (not a locally rebuilt std)" >&2; exit 1; }
 
+# Release path. sandbox-short-delay shrinks the 24h upgrade timelock and the disbursement window.
+# The only extra argument this script accepts is the callback-failure fixture, which is never deployed.
+if [[ " $* " == *"sandbox-short-delay"* ]]; then
+  echo "release build refuses sandbox-short-delay" >&2
+  exit 1
+fi
+if [ $# -gt 0 ] && [ "$*" != "--features callback-failure-fixture" ]; then
+  echo "release build accepts only --features callback-failure-fixture" >&2
+  exit 1
+fi
+
 # Keep off-chain ABI JSON; omit the optional on-chain compressed ABI export.
 # Stable panic/source paths avoid baking machine-local registry/checkout names into code.
 # cargo-near may reuse a newer final Wasm; never post-optimize an already optimized output.
@@ -17,7 +28,7 @@ if [[ -f target/near/keyhole_keys.wasm ]]; then
   mv target/near/keyhole_keys.wasm target/near/keyhole_keys.previous.wasm
 fi
 cargo near build non-reproducible-wasm --locked --no-embed-abi \
-  --env "RUSTFLAGS=--remap-path-prefix=$CH=/cargo --remap-path-prefix=$PWD=/keyhole-contract" "$@"
+  --env "RUSTFLAGS=--remap-path-prefix=$CH=/cargo --remap-path-prefix=$PWD=/keyhole-contract --cfg keyhole_release" "$@"
 
 # cargo-near already applies wasm-opt -O. A pinned second pass reduces size further.
 # Never snip code, disable arithmetic checks, remove exports, or change live identities.
