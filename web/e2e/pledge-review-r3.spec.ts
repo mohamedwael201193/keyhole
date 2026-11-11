@@ -12,6 +12,8 @@ import {build} from "esbuild";
 import {createServer,type Server} from "node:http";
 import path from "node:path";
 let server:Server,url:string;
+/** Browser dialogs seen by the current test (window.confirm on exit), and how to answer them. */
+const dialogs:string[]=[];let dialogMode:'accept'|'dismiss'='accept';
 const terms={lender:"lender.near",principal:"10000000000000000000000",repayment:"10100000000000000000000",duration_sec:"7200",grace_sec:"900",floor_raw:"500000"};
 const last={token_id:"k1",nonce:"1",borrower:"alice.near",owner_epoch:"1",terms,state:"UnlockPending",resolution:"repaid",due_ns:"1"};
 const entry=`import React from 'react';import {createRoot} from 'react-dom/client';import {LivePledge} from './app/pledge/LivePledge';import * as money from './lib/pledgeMoney';import * as exits from './lib/pledgeExit';import * as intents from './lib/pledgeIntentStore';import * as redirect from './lib/walletRedirect';import * as auth from './lib/nep413';import {ed25519} from '@noble/curves/ed25519.js';import bs58 from 'bs58';
@@ -24,7 +26,7 @@ const mockWallet=`import {useEffect,useState} from 'react';import {sendRoutedKey
 export function useWallet(){const h=window.h;const [account,setAccount]=useState(h.account),[pending,setPending]=useState(()=>{const raw=sessionStorage.getItem('kh_pending_sign');if(raw&&location.hash){const recovered=h.redirect.parseWalletRedirect(raw,location.hash);if(recovered)sessionStorage.removeItem('kh_pending_sign');history.replaceState(null,'',location.pathname+location.search);if(recovered)return recovered;}return JSON.parse(sessionStorage.getItem('test-pending')||'null');});
 useEffect(()=>{h.setPending=p=>{sessionStorage.setItem('test-pending',JSON.stringify(p));setPending(p);};h.changeAccount=a=>{h.account=a;setAccount(a);};},[]);
 return {accountId:account,pending,clearPending:()=>{h.authConsumed++;sessionStorage.removeItem('test-pending');setPending(null);},connect:()=>{},sign:async(op,params)=>{const auth={account_id:account,signature:'sig-'+Date.now(),message:JSON.stringify({op,account_id:account,params})};if(op==='withdraw'&&h.deferSign)return new Promise((r,reject)=>{h.resolveSign=()=>r(auth);h.rejectSign=()=>reject(Error('wallet declined before worker'));});return auth;},sendTxBatch:async(calls,consent)=>sendRoutedKeysCalls(async()=>{if(h.deferRoute)await new Promise(r=>{h.resolveRoute=r;});return {kind:'nc',accountId:h.account,wallet:{signAndSendTransaction:async p=>{h.walletCalls++;return {transaction:{hash:'original',signer_id:p.signerId}};}}};},calls,consent,'keys.near')};}`;
-const mockWorker=`export async function callWorker(op,auth){const h=window.h;if(op==='pledge_inventory')return {output:{ok:true,complete:true,account:h.account,token_id:'k1',owner_epoch:'1',observed_at_ns:String(BigInt(Date.now())*1000000n),eligible_pending_zero:true,assets:[{token:'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1',amount:'1000000',decimals:6}],obligations:[],limits:{per_tx_usd_micro:1000000,daily_usd_micro:1000000},spent_today_usd_micro:0,withdraw_cooldown_until_ms:null}};if(op==='withdraw'){h.workerCalls++;h.sent.push(JSON.parse(auth.message).params);return {output:h.pendingExit?{status:'pending',admission_finished:false,value_op_id:'value-1'}:{status:'success',admission_finished:true}};}if(op==='reconcile_value_op'){h.reconcileCalls++;return h.pendingReconcile?{output:{admission_finished:false,status:'needs_review'}}:{output:{admission_finished:true}};}throw Error('Unexpected test worker call');}`;
+const mockWorker=`export async function callWorker(op,auth){const h=window.h;if(op==='pledge_inventory')return {output:{ok:true,complete:true,account:h.account,token_id:'k1',owner_epoch:'1',observed_at_ns:String(BigInt(Date.now())*1000000n),eligible_pending_zero:true,assets:[{token:'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1',amount:'1000000',decimals:6}],obligations:[],limits:{per_tx_usd_micro:1000000,daily_usd_micro:1000000},spent_today_usd_micro:0,withdraw_cooldown_until_ms:null}};if(op==='withdraw_dry_run'){h.dryRunCalls=(h.dryRunCalls||0)+1;const p=JSON.parse(auth.message).params;return {output:{ok:true,op:'withdraw_dry_run',to:p.to,amount:p.amount,token:p.token,chain:p.chain,amount_out:'990000',min_amount_out:'985000',broadcast:false}};}if(op==='withdraw'){h.workerCalls++;h.sent.push(JSON.parse(auth.message).params);return {output:h.pendingExit?{status:'pending',admission_finished:false,value_op_id:'value-1'}:{status:'success',admission_finished:true}};}if(op==='reconcile_value_op'){h.reconcileCalls++;return h.pendingReconcile?{output:{admission_finished:false,status:'needs_review'}}:{output:{admission_finished:true}};}throw Error('Unexpected test worker call');}`;
 test.beforeAll(async()=>{
  const result=await build({stdin:{contents:entry,resolveDir:process.cwd(),loader:"tsx"},bundle:true,write:false,platform:"browser",format:"iife",banner:{js:'window.process={env:{NODE_ENV:"development"}};'},jsx:"automatic",define:{"process.env.NODE_ENV":'"development"'},loader:{".css":"empty"},plugins:[{name:"test-transports",setup(builder){
   builder.onResolve({filter:/^(next\/link|@\/lib\/(wallet|worker|pledgeClient|usePayoutStorageFee|loanCertificate))$/},args=>({path:args.path,namespace:"fixture"}));
@@ -39,7 +41,14 @@ test.beforeAll(async()=>{
  });await new Promise<void>(resolve=>server.listen(0,"127.0.0.1",resolve));const address=server.address();if(!address||typeof address==='string')throw Error('Fixture unavailable');url=`http://127.0.0.1:${address.port}`;
 });
 test.afterAll(async()=>{if(server)await new Promise<void>((resolve,reject)=>server.close(e=>e?reject(e):resolve()));});
-test.beforeEach(async({page})=>{await page.addInitScript(value=>{if(!location.search.includes('no-history'))sessionStorage.setItem('keyhole:pledge-last:v1:keys.near:k1',JSON.stringify(value));},last);});
+test.beforeEach(async({page})=>{
+ // The exit confirm step is window.confirm. Accept it here so the existing recovery tests reach the withdrawal sign;
+ // the dedicated confirm test below cancels it and records the message.
+ dialogs.length=0;dialogMode='accept';
+ // Every tab of the test answers the confirm, including a second tab opened with context.newPage().
+ const answer=(d:import('@playwright/test').Dialog)=>{dialogs.push(d.message());if(dialogMode==='accept')void d.accept();else void d.dismiss();};
+ page.context().on('page',p=>p.on('dialog',answer));page.on('dialog',answer);
+ await page.addInitScript(value=>{if(!location.search.includes('no-history'))sessionStorage.setItem('keyhole:pledge-last:v1:keys.near:k1',JSON.stringify(value));},last);});
 test('mounted popup exit blocked by a failed poll is retryable after reload',async({page})=>{
  await page.clock.install();await page.goto(url);await expect(page.getByTestId('settlement')).toContainText('Repaid');await readPrivate(page);await expect(page.getByRole('button',{name:'Exit to my wallet'})).toBeEnabled();await page.evaluate('h.deferSign=true');await page.getByRole('button',{name:'Exit to my wallet'}).click();await page.evaluate('h.failRead=true');await page.clock.runFor(4100);await page.evaluate('h.resolveSign()');await expect.poll(()=>page.evaluate(`h.intents.createBrowserIntentStore("keyhole:pledge-exit:v1:keys.near:alice.near:k1",()=>{},h.intents.browserIntentEnvironment()).load()?.status`)).toBe("Retryable");expect(await page.evaluate('h.workerCalls')).toBe(0);
  await page.reload();await readPrivate(page);await expect(page.getByRole('button',{name:'Exit to my wallet'})).toBeEnabled();await page.getByLabel('Ordinary USDC self-exit').fill('0.90');await page.getByRole('button',{name:'Exit to my wallet'}).click();await expect.poll(()=>page.evaluate('h.workerCalls')).toBe(1);expect(await page.evaluate('h.sent[0].amount')).toBe('100000');await expect(page.getByText(/Ordinary self-exit confirmed/)).toBeVisible();
@@ -175,4 +184,24 @@ test('R5 wallet-boundary recheck refuses a legacy exit appearing during asynchro
  const other=await context.newPage();await page.clock.install();await page.goto(url+'/?no-history');await other.goto(url+'/?bare');await readPrivate(page);await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.getByRole('checkbox').check();await page.evaluate('h.deferRoute=true');await page.getByRole('button',{name:'Pledge this account',exact:true}).click();await expect.poll(()=>page.evaluate('typeof h.resolveRoute')).toBe('function');
  // Simulates pre-upgrade persisted state, not a cooperating new-version reservation.
  await other.evaluate(`localStorage.setItem('keyhole:pledge-exit:v1:keys.near:alice.near:k1',JSON.stringify({account:'alice.near',token:'k1',epoch:'1',amount:'100000',status:'Retryable',intent:'withdraw'}))`);await page.evaluate('h.resolveRoute()');await expect(page.getByRole('status')).toContainText('original exit');expect(await page.evaluate('h.walletCalls')).toBe(0);expect(await page.evaluate('h.workerCalls')).toBe(0);await expect(page.getByText(/Original exit Retryable/)).toBeVisible();await other.close();
+});
+
+test('exit confirm shows the route preview numbers, and cancelling signs no withdrawal',async({page})=>{
+ dialogMode='dismiss';
+ await page.clock.install();await page.goto(url);await expect(page.getByTestId('settlement')).toContainText('Repaid');await readPrivate(page);
+ await page.getByLabel('Ordinary USDC self-exit').fill('0.10');await page.getByRole('button',{name:'Exit to my wallet'}).click();
+ await expect.poll(()=>dialogs.length).toBe(1);
+ expect(dialogs[0]).toContain('amount_out 990000');expect(dialogs[0]).toContain('minimum accepted 985000');
+ await expect(page.getByText(/Withdrawal cancelled before signing/)).toBeVisible();
+ expect(await page.evaluate('h.dryRunCalls')).toBe(1);expect(await page.evaluate('h.workerCalls')).toBe(0);expect(await page.evaluate('h.sent.length')).toBe(0);
+});
+
+test('a route preview left pending by a redirect is discarded unsigned, and the next Exit previews again',async({page})=>{
+ await page.goto(url);await expect(page.getByTestId('settlement')).toContainText('Repaid');await readPrivate(page);
+ await page.evaluate(`h.setPending({account_id:'alice.near',public_key:'ed25519:x',signature:'s',nonce:'n',recipient:'keyhole',message:JSON.stringify({op:'withdraw_dry_run',account_id:'alice.near',params:{}})})`);
+ await expect(page.getByText(/route preview returned by the wallet was discarded/)).toBeVisible();
+ expect(await page.evaluate('h.authConsumed')).toBe(1);expect(await page.evaluate('h.workerCalls')).toBe(0);expect(await page.evaluate('h.dryRunCalls || 0')).toBe(0);
+ await page.getByLabel('Ordinary USDC self-exit').fill('0.10');await page.getByRole('button',{name:'Exit to my wallet'}).click();
+ await expect.poll(()=>page.evaluate('h.workerCalls')).toBe(1);
+ expect(await page.evaluate('h.dryRunCalls')).toBe(1);expect(await page.evaluate('h.sent[0].amount')).toBe('100000');
 });

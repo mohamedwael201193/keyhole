@@ -130,7 +130,10 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   if(!store||!operation||busy||loading||!/^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(originalHash))return;
   setBusy(true);try{if(!await recoverFinalMoneyOperation(store,operation,client.rpcUrl,originalHash))throw Error("No matching FINAL original receipt. The saved operation is unchanged; do not resend.");setOperation(store.load());await refresh();setMessage("Original FINAL receipt verified; the exact saved operation is resolved.");}catch(e){setMessage(errorText(e));}finally{setBusy(false);}
  }
- function exitPreflight(pending:ExitRecord){
+ // A redirect wallet returns the signed route preview in `pending`. Nothing consumes it, so it is discarded here, unsigned
+// withdrawal and nothing sent. The saved exit stays AwaitingSignature/Retryable, and the next Exit press previews again.
+useEffect(()=>{const p=wallet.pending;if(!p)return;let op="";try{op=(JSON.parse(p.message) as {op?:string}).op??"";}catch{return;}if(op!=="withdraw_dry_run")return;wallet.clearPending();setMessage("A route preview returned by the wallet was discarded, unsigned. Press Exit again to preview and sign the withdrawal.");},[wallet.pending]);
+function exitPreflight(pending:ExitRecord){
   readGate.capture(identity);const fresh=latestData.current;
   const nativeOp=store?.load();if(nativeOp&&opensLoan(nativeOp))throw Error("Original loan opening unresolved; do not dispatch an exit.");
   if(activeIdentity.current!==identity||!fresh||fresh.account!==pending.account||fresh.token!==pending.token||fresh.owner!==pending.account||fresh.loan||fresh.control?.owner_epoch!==pending.epoch||fresh.control.listed||fresh.control.transfer_pending||fresh.control.pending_value_ops!=="0")throw Error("Exit control changed. Refresh before signing the original intent again.");
