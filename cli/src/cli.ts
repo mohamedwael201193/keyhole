@@ -2,6 +2,7 @@
 // keyhole CLI. Usage: keyhole <command> [--account a.near] [--key-file f.json] [--json '{"..."}']
 import { payout } from "./payout.js";
 import { loadKey, run, verifyCall, explainPnl, guardedRun, GuardError, DEFAULTS } from "./core.js";
+import { pledgeStatus, renderPledgeStatus } from "./pledge.js";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 const HELP = `keyhole: private trading account behind a NEAR NFT key (TEE-attested)
@@ -16,6 +17,7 @@ const HELP = `keyhole: private trading account behind a NEAR NFT key (TEE-attest
   keyhole history | pnl                          your private trade log / summary
   keyhole withdraw --chain near --to you.near --token <id> --amount <base units>
   keyhole payout [--register --accept-storage-yocto <exact cost> | --claim]\n  keyhole reconcile --key <token_id> --value-op-id <original operation ID>
+  keyhole pledge status <token_id>               read-only lien status (views only, no signature)
   keyhole verify <call_id> [--wasm path]         check attestation vs FastFS (and your build)
 
 Auth: KEYHOLE_ACCOUNT + KEYHOLE_PRIVATE_KEY, or --key-file, or near-cli credentials.
@@ -42,6 +44,13 @@ async function main() {
     out(v); process.exitCode = v.ok ? 0 : 1; return;
   }
   if (cmd === "info") return out(await run(null, "info"));
+  if (cmd === "pledge") {
+    // Read-only: no key is loaded and nothing is signed. Only `pledge status <token_id>` exists.
+    if (pos[1] !== "status" || !pos[2]) throw new Error("usage: keyhole pledge status <token_id>");
+    const s = await pledgeStatus(pos[2]);
+    if (o.json) return out(s);
+    console.log(renderPledgeStatus(s)); return;
+  }
   const key = loadKey({ account: o.account as string, keyFile: o["key-file"] as string });
   const extra = o.json ? JSON.parse(o.json as string) : {};
   const from = (o.from as string) ?? USDC, to = (o.to as string) ?? "nep141:wrap.near";

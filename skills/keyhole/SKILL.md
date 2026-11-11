@@ -36,6 +36,7 @@ keyhole history | pnl                          your private trade log / summary
 keyhole withdraw --chain near --to you.near --token <id> --amount <base units>
 keyhole payout [--register --accept-storage-yocto <exact cost> | --claim]
 keyhole reconcile --key <token_id> --value-op-id <original operation ID>
+keyhole pledge status <token_id>               read-only lien status (views only, no signature)
 keyhole verify <call_id> [--wasm path]         check attestation vs FastFS (and your build)
 ```
 
