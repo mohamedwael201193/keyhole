@@ -14,6 +14,7 @@ import {abortable,createSingleFlightRefresh,startPledgePolling} from "@/lib/pled
 import {browserExitStore,dispatchExitContinuation,retryableExit,PLEDGE_EXIT_USDC,type ExitRecord} from "@/lib/pledgeExit";
 import {copyText} from "@/lib/copyText";
 import {withdrawDryRunDecision,exitConfirmText} from "@/lib/withdrawDryRun";
+import {exactExitFields} from "@/lib/exactExit";
 import {beginExitStep,bindingMatches,browserExitSteps,claimPreview,claimWithdraw,planExitReturn,readWalletReturn,releaseWithdraw,saveAwaitingWithdraw,saveConfirmed,saveDone} from "@/lib/exitContinuation";
 import {accountAccess,actionHeading,assetPresentation,cairoTime,cashoutCopy,currentStep,disbursementCopy,floorCaption,humanSeconds,loanStateLabel,pendingCashoutChrome,policyAction,SWAP_COMPARE_BODY,SWAP_COMPARE_COSTS,SWAP_COMPARE_SUMMARY,terminalLabel,unlockNotice,type AssetBits,type FloorKind} from "@/lib/pledgeCopy";
 import {FLOOR_NOTE} from "@/lib/pledgeDisclosure";
@@ -147,7 +148,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   try{
    const {result:r,pending:sent}=await dispatchExitContinuation(auth,pending,exitStore,()=>exitPreflight(pending),a=>callWorker("withdraw",a),consumeAuth);
    const next={...sent,...(r.output?.value_op_id?{value_op_id:String(r.output.value_op_id)}:{})};
-   if(r.output?.status==="success"&&r.output.admission_finished===true){await exitStore.clear(sent);setInventory(null);setMessage("Ordinary self-exit confirmed by provider; contract admission finished. Read a fresh private inventory before another exit.");}
+   if(r.output?.status==="success"&&r.output.admission_finished===true){await exitStore.clear(sent);setInventory(null);setMessage("Exact self-exit verified against FINAL token balances; contract admission finished. Read a fresh private inventory before another exit.");}
    else{await exitStore.replace(sent,{...next,status:r.error?"UNKNOWN":"Pending"});setMessage(r.error?.message??"Withdrawal not confirmed yet. Don’t send another. Original exit pending.");}
   }finally{setExitOp(exitStore.load());}
  }
@@ -165,7 +166,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   if(!exitStore||!account||!pending.id)throw Error("Exit storage unavailable");
   const store=browserExitSteps(sessionStorage);
   let step=store.loadIntent(pending.account,pending.id)??beginExitStep({account:pending.account,token:pending.token,epoch:pending.epoch,intentId:pending.id,amount:pending.amount,asset:USDC,chain:"near"});
-  const exitParams={intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"};
+  const exitParams={intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near",...exactExitFields(pending.amount)};
   if(mode==="run_preview"){
    if(!auth||!bindingMatches(step.binding,auth,"withdraw_dry_run"))throw Error("This returned route preview does not match the saved exit. No new withdrawal was signed.");
    const claim=claimPreview(store,step,auth.nonce);
@@ -200,7 +201,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   const next:ExitRecord=prior?{...prior,status:"AwaitingSignature"}:{account,token,epoch:inv.owner_epoch,amount,status:"AwaitingSignature",intent:"withdraw"};
   if(prior){if(!await exitStore.replace(prior,next))throw Error("Continue the original exit in its owning tab.");pending=next;}else pending=await exitStore.reserve(next);
   if(!pending.id)throw Error("Exit storage unavailable");
-  setExitOp(pending);const exitParams={intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"};
+  setExitOp(pending);const exitParams={intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near",...exactExitFields(pending.amount)};
   // Persist the step before the dry-run signature. A redirect wallet leaves the page and comes back with that signature.
   browserExitSteps(sessionStorage).save(beginExitStep({account,token,epoch:pending.epoch,intentId:pending.id,amount:pending.amount,asset:USDC,chain:"near"}));
   const previewAuth=await wallet.sign("withdraw_dry_run",exitParams);

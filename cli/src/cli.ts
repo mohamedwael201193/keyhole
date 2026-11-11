@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // keyhole CLI. Usage: keyhole <command> [--account a.near] [--key-file f.json] [--json '{"..."}']
 import { payout } from "./payout.js";
-import { loadKey, run, verifyCall, explainPnl, guardedRun, GuardError, DEFAULTS } from "./core.js";
+import { exactWithdrawParams, loadKey, run, verifyCall, explainPnl, guardedRun, GuardError, DEFAULTS } from "./core.js";
 import { pledgeStatus, renderPledgeStatus } from "./pledge.js";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
@@ -15,7 +15,7 @@ const HELP = `keyhole: private trading account behind a NEAR NFT key (TEE-attest
   keyhole balance                                confidential balances
   keyhole swap --amount 10000 [--from .. --to ..] confidential swap within your caps
   keyhole history | pnl                          your private trade log / summary
-  keyhole withdraw --chain near --to you.near --token <id> --amount <base units>
+  keyhole withdraw --exact-near --to you.near --amount <USDC base units>
   keyhole payout [--register --accept-storage-yocto <exact cost> | --claim]\n  keyhole reconcile --key <token_id> --value-op-id <original operation ID>
   keyhole pledge status <token_id>               read-only lien status (views only, no signature)
   keyhole verify <call_id> [--wasm path]         check attestation vs FastFS (and your build)
@@ -68,8 +68,10 @@ async function main() {
       return out(await run(key, "account", o.chain ? { chain: o.chain, token: o.token ?? "USDC", amount: String(o.amount) } : {}));
     case "swap":
       return out(await run(key, "swap", { token_in: from, token_out: to, amount_in: String(o.amount), ...extra }));
-    case "withdraw":
-      return out(await guardedRun(key, "withdraw", { chain: o.chain, to: o.to, token: o.token, amount: String(o.amount), ...extra }));
+    case "withdraw": {
+      if (!o["exact-near"] || (o.chain && o.chain !== "near") || (o.token && o.token !== USDC)) throw new Error("Use --exact-near for the typed NEAR USDC self-exit; other withdrawal routes are disabled");
+      return out(await guardedRun(key, "withdraw", { ...extra, ...exactWithdrawParams(String(o.to ?? key.accountId), String(o.amount)) }));
+    }
     case "reconcile":
       if (typeof o.key !== "string" || typeof o["value-op-id"] !== "string" || !/^[1-9]\d{0,19}:[0-9a-f]{64}$/.test(o["value-op-id"])) throw new Error("reconcile requires --key and --value-op-id from the original call");
       return out(await run(key, "reconcile_value_op", { token_id: o.key, value_op_id: o["value-op-id"] }));

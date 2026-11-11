@@ -301,3 +301,10 @@ export async function guardedRun(key: Key, op: string, params: Record<string, un
   deps.audit({ ...base, signed: true, decision: "signing" });
   return deps.execute(op, params);
 }
+
+export const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+/** Explicit holder consent to the typed same-chain exit; never a cross-chain fallback. */
+export function exactWithdrawParams(to: string, amount: string, now = Date.now()) {
+  if (!/^[1-9]\d*$/.test(amount) || BigInt(amount) > (1n << 128n) - 1n || !Number.isSafeInteger(now) || now < 0) throw new Error("Positive exact USDC amount and valid clock required");
+  return { chain: "near", to, token: USDC, amount, exit_mode: "exact-near-v1", min_amount_out: amount, deadline_ms: now + 300_000 };
+}

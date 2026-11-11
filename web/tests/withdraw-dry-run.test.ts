@@ -36,8 +36,8 @@ describe("withdraw dry-run decision (exit preflight)", () => {
   });
   it("the confirm text shows both preview numbers", () => {
     const text = exitConfirmText({ amount_out: "990000", min_amount_out: "985000" }, "1000");
-    expect(text).toContain("amount_out 990000");
-    expect(text).toContain("advisory minimum 985000");
+    expect(text).toContain("target output 990000");
+    expect(text).toContain("minimum 985000");
   });
 });
 
