@@ -562,6 +562,7 @@ mod host {
     fn op_withdraw(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "withdraw", true)?;
         guard_preflight(&c)?;
+        if input.pointer("/auth/scheme").and_then(Value::as_str) != Some("nep413") { return Err(err("no_auth","fresh NEP-413 required for exact exit")); }
         let p = &c.req.params;
         withdrawal_protection::dispatch(p, c.now_ms, || {
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
@@ -576,6 +577,7 @@ mod host {
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         let amt = digits(p, "amount")?;
         let (key, id) = guarded_wallet(&c.token_id())?;
+        exact_exit_policy(&c.token_id(),&key,&id)?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         assert_not_listed("withdraw", &c.token_id())?;
@@ -590,16 +592,19 @@ mod host {
             charge.release(&mut Host);
             return Err(e);
         }
-        let j=guard_begin(&c,input,"withdraw",json!({"chain":chain,"to":to,"amount":amt,"token":token}),Some(charge))?;
-        let r=guard_provider(&j,&key,false).map_err(|_|err("needs_review",format!("custody outcome unknown; reconcile {}",j.op_id)))?;
+        let plan=exact_exit::Plan::signed(p,c.now_ms,&c.account)?;
+        let j=guard_begin(&c,input,"withdraw",plan.body()?,Some(charge))?;
+        // Preserve the original recovery handle even when a post-send readback fails.
+        let r=match guard_provider(&j,&key,false) {Ok(v)=>v,Err(e)=>json!({"status":"needs_review","value_op_id":j.op_id,"admission_finished":false,"reason":e.code})};
         let raw_status = s(&r, "status").unwrap_or_default();
         // Re-read ownership and settlement epoch after the move: either drift reports needs_review.
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
         let status = after_move_status_epoch(&raw_status, still, stamped, guard_control(&c.token_id())?.epoch);
-        let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
+        // Gasless same-chain withdraw returns an intent ID, NOT a public tx hash.
+        let tx_hash = Value::Null;
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
         Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"),
-            "tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
+            "exit_mode":exact_exit::MODE,"step":r["step"],"reason":r["reason"],"tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
         })
     }
 

@@ -57,6 +57,9 @@ fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{
 impl guarded::ProviderHost for Host {
     fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>{
         provision_idle(&j.token_id)?;guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
+        let control=guard_control(&j.token_id)?;
+        if control.epoch!=j.epoch || control.pledged || control.listed || control.transfer_pending || control.pending!=1 || !owns(&j.token_id,&j.owner)? { return Err(err("guard_journal","current title/control changed")); }
+        assert_unlocked(&Host.get(&tkey(&j.token_id,"lock")),&j.owner,chain_now_ms()?)?;
         // A persisted journal cannot bypass the current ownership-epoch cooldown.
         if matches!(j.kind.as_str(),"withdraw"|"transfer") {
             let now=chain_now_ms()?;
@@ -65,7 +68,9 @@ impl guarded::ProviderHost for Host {
             assert_no_cooldown(&evs,&j.owner,now)?;
         }
         let (canonical,id)=guarded_wallet(&j.token_id)?;
-        if canonical!=key||id!=j.wallet_id{return Err(err("guard_journal","custody changed"));}Ok(())
+        if canonical!=key||id!=j.wallet_id{return Err(err("guard_journal","custody changed"));}
+        if j.kind=="withdraw" && j.body["exit_mode"]==exact_exit::MODE {exact_exit_policy(&j.token_id,key,&id)?;}
+        Ok(())
     }
     fn post(&mut self,j:&Journal,key:&str,path:&str)->Result<(u16,Value),Error>{
         // Provider reserves (wallet,key) BEFORE funds. The journal freezes body and key forever.
@@ -75,7 +80,9 @@ impl guarded::ProviderHost for Host {
     fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{guard_finish(j,t)}
 }
 fn guard_provider(j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{
-    let out=guarded::drive_provider(&mut Host,j,key,reconcile)?;
+    let out=if j.kind=="withdraw" && j.body["exit_mode"]==exact_exit::MODE {
+        exact_exit::drive(&mut Host,j,key)?
+    }else{guarded::drive_provider(&mut Host,j,key,reconcile)?};
     Ok(out)
 }
 fn op_reconcile_value(input:&Value)->Result<Value,Error>{
@@ -205,3 +212,5 @@ fn op_pledge_inventory(input:&Value)->Result<Value,Error>{
  let spent=Host.incr(&hkey(&c.cap(),&format!("spent/{}",now/86_400_000)),0)?;out["spent_today_usd_micro"]=json!(spent);
  out["ok"]=json!(true);out["op"]=json!("pledge_inventory");out["account"]=json!(c.account);out["token_id"]=json!(token);out["owner_epoch"]=json!(control.epoch.to_string());out["confidential_id"]=json!(id);out["observed_at_ns"]=json!((now*1_000_000).to_string());out["loan"]=loan;out["binding_ready"]=json!(binding["ready"]==true);out["limits"]=json!(limits);out["withdraw_cooldown_until_ms"]=json!(cooldown);Ok(out)
 }
+
+include!("exact_exit_host.rs");

@@ -1398,3 +1398,5 @@ pub mod collateral_evidence;
 
 pub mod rpc_view;
 pub mod withdrawal_protection;
+
+pub mod exact_exit;

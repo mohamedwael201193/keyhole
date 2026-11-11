@@ -96,7 +96,7 @@ fn restricted_policy_has_no_raw_or_external_signing() {
         json!([sha256_hex("sealed-key")])
     );
     assert_eq!(p["capabilities"]["sign_message"]["allowed"], false);
-    assert!(!p["rules"]["transaction_types"]
+    assert!(p["rules"]["transaction_types"]
         .as_array()
         .unwrap()
         .contains(&json!("call")));

@@ -13,9 +13,9 @@ impl Store for Memory {
  fn remove(&mut self,k:&str)->std::result::Result<(),Error>{self.0.remove(k);Ok(())}
  fn list_prefix(&mut self,p:&str)->std::result::Result<Vec<String>,Error>{Ok(self.0.keys().filter(|k|k.starts_with(p)).cloned().collect())}
 }
-struct Layer<'a>{e:&'a E,store:Memory,post_calls:usize,signatures:usize,admissions:usize,executions:usize,lose_post:bool,fail_finish:bool,legacy_count:u64,balance:u128,rows:BTreeMap<String,Value>,bodies:BTreeMap<String,Value>}
+struct Layer<'a>{e:&'a E,store:Memory,post_calls:usize,signatures:usize,admissions:usize,executions:usize,lose_post:bool,fail_finish:bool,legacy_count:u64,balance:u128,exact_intents:u128,exact_recipient:u128,exact_registered:bool,rows:BTreeMap<String,Value>,bodies:BTreeMap<String,Value>}
 impl<'a> Layer<'a>{
- fn new(e:&'a E)->Self{Self{e,store:Memory::default(),post_calls:0,signatures:0,admissions:0,executions:0,lose_post:false,fail_finish:false,legacy_count:1,balance:2_000_000,rows:BTreeMap::new(),bodies:BTreeMap::new()}}
+ fn new(e:&'a E)->Self{Self{e,store:Memory::default(),post_calls:0,signatures:0,admissions:0,executions:0,lose_post:false,fail_finish:false,legacy_count:1,balance:2_000_000,exact_intents:0,exact_recipient:0,exact_registered:false,rows:BTreeMap::new(),bodies:BTreeMap::new()}}
  fn journal(&mut self,owner:&Account,kind:&str,label:&str)->Journal{
   self.journal_for("k1",owner,kind,label)
  }
@@ -74,6 +74,33 @@ impl ProviderHost for Layer<'_>{
  fn fetch(&mut self,_key:&str,id:&str)->std::result::Result<(u16,Value),Error>{Ok((200,self.rows.values().find(|r|r["request_id"]==id).unwrap().clone()))}
  fn finish(&mut self,j:&Journal,t:&Terminal)->std::result::Result<bool,Error>{guarded::settle_admission(self,j,t)}
 }
+
+// The API ledger is an explicit mock. Admission/finish and title are actual local NEAR receipts.
+impl keyhole_worker::exact_exit::Host for Layer<'_>{
+ fn now_ms(&mut self)->std::result::Result<u64,Error>{Ok(1000)}
+ fn observe(&mut self,_j:&Journal,_key:&str)->std::result::Result<keyhole_worker::exact_exit::Observation,Error>{
+  use keyhole_worker::exact_exit::{Observation,NATIVE_MAX,STORAGE_MAX};
+  Ok(Observation{confidential:self.balance.to_string(),intents:self.exact_intents.to_string(),recipient:self.exact_recipient.to_string(),native:(NATIVE_MAX*2).to_string(),storage_min:STORAGE_MAX.to_string(),registered:self.exact_registered})
+ }
+ fn post_step(&mut self,key:&str,ik:&str,step:keyhole_worker::exact_exit::Step,body:&Value)->std::result::Result<(u16,Value),Error>{
+  use keyhole_worker::exact_exit::Step;
+  assert_eq!(key,"sealed-mock-key");assert!(!self.bodies.contains_key(ik),"no replay of typed money hops");
+  self.post_calls+=1;self.bodies.insert(ik.into(),body.clone());let id=format!("00000000-0000-4000-8000-{:012x}",self.rows.len()+1);
+  let mut reply=json!({"request_id":id,"status":"success"});
+  match step{Step::Unshield=>{self.balance-=100000;self.exact_intents+=100000;},Step::Storage=>{reply["token"]=body["token"].clone();reply["account_id"]=body["account_id"].clone();reply["already_registered"]=json!(self.exact_registered);self.exact_registered=true;},Step::Withdraw=>{self.exact_intents-=100000;self.exact_recipient+=100000;}}
+  let result=if step==Step::Withdraw{json!({"delivered":guarded::ASSET,"intent_hash":"mock-original-intent"})}else{json!({})};
+  self.rows.insert(ik.into(),json!({"request_id":id,"type":step.request_type(),"status":"success","result":result}));Ok((200,reply))
+ }
+}
+fn exact_exit(l:&mut Layer<'_>,owner:&Account,label:&str){
+ let mut j=l.journal(owner,"withdraw",label);
+ let p=json!({"exit_mode":"exact-near-v1","chain":"near","to":owner.id(),"token":guarded::ASSET,"amount":"100000","min_amount_out":"100000","deadline_ms":2000});
+ j.body=keyhole_worker::exact_exit::Plan::signed(&p,1000,owner.id().as_str()).unwrap().body().unwrap();
+ j.create(l).unwrap();guarded::confirm_admission(l,&j).unwrap();let before=l.post_calls;
+ assert_eq!(keyhole_worker::exact_exit::drive(l,&j,"sealed-mock-key").unwrap()["status"],"success");
+ assert_eq!(l.post_calls,before+3);assert_eq!(AdmissionHost::control(l,"k1").unwrap().pending,0);
+ keyhole_worker::exact_exit::drive(l,&j,"sealed-mock-key").unwrap();assert_eq!(l.post_calls,before+3);
+}
 async fn floor_certificate(e:&E,l:&Layer<'_>)->Result<(Value,String)>{
  let ts=now(e).await;let value=view(&e.c,"loan_certificate_template",json!({"token_id":"k1","observed_at_ns":ts.to_string(),"expires_at_ns":(ts+60_000_000_000).to_string()})).await;
  let cert:guarded::Certificate=serde_json::from_value(value.clone())?;let control=Control::parse(&view(&e.c,"get_control_state",json!({"token_id":"k1"})).await,"k1").unwrap();
@@ -121,7 +148,7 @@ async fn guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a()->Re
  assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,keyhole_keys::LOAN_STORAGE_DEPOSIT.to_string());
  e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,"0");assert!(view(&e.c,"get_pending_payout",json!({"account_id":e.alice.id()})).await.is_null());
- let floor=l.balance;l.refuse_exit(&e.alice,"after repay public exit denied");assert_eq!(l.balance,floor);assert!(l.balance>=1_000_000);Ok(())
+ let floor=l.balance;l.refuse_exit(&e.alice,"after repay public exit denied");assert_eq!(l.balance,floor);assert!(l.balance>=1_000_000);exact_exit(&mut l,&e.alice,"typed exact exit after repayment");assert!(l.balance>=1_000_000);Ok(())
 }
 #[tokio::test(flavor="multi_thread",worker_threads=2)]
 async fn guarded_worker_cross_layer_default_failures_and_new_holder_exit()->Result<()>{
@@ -142,7 +169,7 @@ async fn guarded_worker_cross_layer_default_failures_and_new_holder_exit()->Resu
  let exit=l.journal(&e.bob,"transfer","new holder private transfer");exit.create(&mut l).unwrap();guarded::confirm_admission(&mut l,&exit).unwrap();
  assert!(guarded::drive_provider(&mut l,&j,"sealed-mock-key",true).unwrap()["admission_finished"].as_bool().unwrap());assert_eq!(AdmissionHost::control(&mut l,"k1").unwrap().pending,1,"old settlement cannot clear the new holder's permit");
  guarded::drive_provider(&mut l,&exit,"sealed-mock-key",false).unwrap();l.status(&exit,"success",false);assert_eq!(guarded::drive_provider(&mut l,&exit,"sealed-mock-key",true).unwrap()["admission_finished"],true);
- l.assert_blocked(&e.alice,"old holder after exit");assert_eq!(l.executions,2);
+ l.assert_blocked(&e.alice,"old holder after exit");assert_eq!(l.executions,2);exact_exit(&mut l,&e.bob,"typed exact exit after default title");
  assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,keyhole_keys::LOAN_STORAGE_DEPOSIT.to_string());
  e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,"0");assert!(view(&e.c,"get_pending_payout",json!({"account_id":e.alice.id()})).await.is_null());

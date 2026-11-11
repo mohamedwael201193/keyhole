@@ -1,6 +1,5 @@
-//! No documented OutLayer WithdrawRequest quote/minimum lock exists. A preview
-//! cannot authorize a less constrained POST. Fail closed until such a provider
-//! mechanism is reviewed; no guessed API fields or public-route fallback.
+//! Only the explicitly signed exact NEAR exit is executable. Legacy quoted
+//! confidential withdrawals stay disabled; preview fields cannot enable them.
 use crate::{err, Error};
 use serde_json::Value;
 pub fn require_bound_execution(p: &Value, now_ms: u64) -> Result<(), Error> {
@@ -17,7 +16,13 @@ pub fn require_bound_execution(p: &Value, now_ms: u64) -> Result<(), Error> {
     if !p["deadline_ms"].as_u64().is_some_and(|t| t > now_ms && t <= now_ms.saturating_add(300_000)) {
         return Err(err("withdraw_quote_expired", "fresh holder-signed deadline required"));
     }
-    deny_unbound_provider_execution()
+    if p["exit_mode"] != "exact-near-v1" { return deny_unbound_provider_execution(); }
+    if p["chain"] != "near" || p["token"] != crate::guarded::ASSET
+        || p["amount"] != p["min_amount_out"] || !p["to"].as_str().is_some_and(crate::is_valid_account_id)
+        || !p["amount"].as_str().is_some_and(|s| s.starts_with(|c: char| c.is_ascii_digit() && c != '0') && s.bytes().all(|b| b.is_ascii_digit())) {
+        return Err(err("withdraw_exact_policy", "canonical USDC on NEAR and amount equal to signed exact minimum required"));
+    }
+    Ok(())
 }
 pub fn deny_unbound_provider_execution() -> Result<(), Error> {
     Err(err("withdraw_execution_unavailable", "provider cannot bind execution to the accepted minimum; preview advisory only; STOP for separately approved slippage/fee policy"))

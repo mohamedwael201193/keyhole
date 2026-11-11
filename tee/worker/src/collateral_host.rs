@@ -637,7 +637,22 @@ fn op_withdraw_dry_run(input: &Value) -> Result<Value, Error> {
     if amount.parse::<u128>().unwrap_or(0) == 0 {
         return Err(err("bad_params", "positive amount required"));
     }
-    let (key, _) = guarded_wallet(&c.token_id())?;
+    let (key, wallet_id) = guarded_wallet(&c.token_id())?;
+    if p["exit_mode"]==exact_exit::MODE {
+        let plan=exact_exit::Plan::signed(p,c.now_ms,&c.account)?;
+        exact_exit_policy(&c.token_id(),&key,&wallet_id)?;
+        let obs=exact_exit_observation(&wallet_id,&plan,&key)?;
+        let v=serde_json::to_value(&obs).map_err(|_|err("exit_readback","encode preview"))?;
+        if guarded::decimal(&v,"confidential")?<plan.units()? || guarded::decimal(&v,"storage_min")?>exact_exit::STORAGE_MAX || (!obs.registered && guarded::decimal(&v,"native")?<exact_exit::NATIVE_MAX) {
+            return Err(err("exit_budget","exact exit collateral/storage/native reserve unavailable"));
+        }
+        provision_unchanged(&c,&control)?;
+        return Ok(json!({"ok":true,"op":"withdraw_dry_run","to":to,"amount":amount,"token":token,"chain":chain,
+            "amount_out":amount,"min_amount_out":amount,"exit_mode":exact_exit::MODE,"execution_supported":true,
+            "requires_unshield_readback":true,"broadcast":false,"advisory_only":true,
+            "native_budget_max":exact_exit::NATIVE_MAX.to_string(),"deadline_ms":plan.deadline_ms,
+            "privacy_notice":"Unshield reveals this wallet and asset on the public chain; no quote/minimum is sent to the confidential withdrawal endpoint."}));
+    }
     let (st, q) = http(
         "POST",
         &format!("{OL}/wallet/v1/confidential/withdraw/dry-run"),

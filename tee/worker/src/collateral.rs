@@ -11,7 +11,7 @@ pub const DOMAIN: &str = "KEYHOLE_COLLATERAL_AUDIT_V1";
 pub const BINDING_DEPOSIT: u128 = 20_000_000_000_000_000_000_000;
 pub const MAX_QUOTE: u128 = 46_190_000_000_000_000_000_000;
 
-/// Only the worker constructs the policy. Raw signing, contract calls, external keys,
+/// Only the worker constructs the policy. Raw signing, arbitrary Intents calls, external keys,
 /// resting orders and cross-chain signing are not enabled. Ordinary confidential paths
 /// remain available after the controller thaws, under the existing holder/epoch gates.
 pub fn policy(
@@ -55,9 +55,9 @@ pub fn policy(
         ));
     }
     Ok(json!({"wallet_id":wallet_id,
-        "rules":{"transaction_types":["confidential","swap","cross_chain_withdraw"]},
+        "rules":{"transaction_types":["confidential","swap","cross_chain_withdraw","withdraw","call"]},
         "approval":{"locked":true,"threshold":threshold,"approvers":a,
-            "excluded_types":["confidential","swap","cross_chain_withdraw"]},
+            "excluded_types":["confidential","swap","cross_chain_withdraw","withdraw"]},
         "capabilities":{"confidential":{"allowed":true},"swap":{"allowed":true},
             "cross_chain_withdraw":{"allowed":true},"sign_message":{"allowed":false},
             "raw_sign":{"allowed":false},"evm_sign":{"allowed":false},
