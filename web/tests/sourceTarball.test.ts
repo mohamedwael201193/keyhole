@@ -1,9 +1,41 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
 import { canonical } from "@/lib/verify";
 import { IDENTITY } from "@/lib/identity.gen";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+const repo = fileURLToPath(new URL("../..", import.meta.url));
+// Files the publisher commit may change when it records review.source_commit.
+// Anything else must already be in the pinned snapshot a judge checks out.
+const PIN_FILES = new Set([
+  "identity.json",
+  "web/lib/identity.gen.ts",
+  "README.md",
+  "web/public/source/keyhole-src.tar.gz",
+  "web/public/source/keyhole-src.tar.gz.sha256",
+  "web/public/source/manifest.json",
+]);
+const GUARD = "pinned source matches HEAD except the pin files";
+function git(args: string[]): string {
+  return execFileSync("git", args, { cwd: repo, encoding: "utf8" }).trim();
+}
+function hasCommit(rev: string): boolean {
+  try {
+    git(["cat-file", "-e", `${rev}^{commit}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function fileAt(rev: string, path: string): string | null {
+  try {
+    return execFileSync("git", ["show", `${rev}:${path}`], { cwd: repo, encoding: "utf8" });
+  } catch {
+    return null;
+  }
+}
 const dir = `${__dirname}/../public/source`;
 describe("judge source tarball", () => {
   it("manifest, .sha256 file and the tarball bytes agree", () => {
@@ -42,4 +74,31 @@ it("ships the same live identities, immutable source pin and registered default 
   expect(evidence.call_id).toBe(IDENTITY.worker.info_call);
   expect(createHash("sha256").update(canonical(evidence.output)).digest("hex")).toBe(att.output_hash);
   expect(packed("web/lib/evidenceIds.ts").toString()).toContain(IDENTITY.worker.info_call);
+});
+
+it(GUARD, () => {
+  const pinned = IDENTITY.review.source_commit;
+  expect(pinned).toMatch(/^[0-9a-f]{40}$/);
+  const head = git(["rev-parse", "HEAD"]);
+  if (head === pinned) return;
+  if (!hasCommit(pinned)) git(["fetch", "--depth", "1", "origin", pinned]);
+  const names = git(["diff-tree", "--no-commit-id", "-r", "--name-only", pinned, head])
+    .split("\n").map((s) => s.trim()).filter(Boolean);
+  const extra = names.filter((n) => !PIN_FILES.has(n));
+  const pinnedHasGuard = (fileAt(pinned, "web/tests/sourceTarball.test.ts") ?? "").includes(GUARD);
+  if (!pinnedHasGuard) {
+    // This checkout still records the previous archive. That is valid only while
+    // the guard is being added. A later commit must name a snapshot that contains it.
+    let parentHasGuard = false;
+    try {
+      const parent = git(["rev-parse", "--verify", "HEAD^"]);
+      if (!hasCommit(parent)) git(["fetch", "--depth", "1", "origin", parent]);
+      parentHasGuard = (fileAt(parent, "web/tests/sourceTarball.test.ts") ?? "").includes(GUARD);
+    } catch {
+      parentHasGuard = false;
+    }
+    expect(parentHasGuard, "review.source_commit moved off a guarded snapshot").toBe(false);
+    return;
+  }
+  expect(extra, `pinned ${pinned} differs from HEAD outside the pin files:\n${extra.join("\n")}`).toEqual([]);
 });
