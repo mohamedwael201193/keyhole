@@ -73,3 +73,39 @@ test("mixed block heights stay unread and are not shown as Not locked", async ({
   await expect(panel.getByText("a.near")).toHaveCount(0);
   await expect(panel.getByText("Not locked")).toHaveCount(0);
 });
+
+test("a post-default UnlockPending lien stays Locked at the new owner and the original loan epoch", async ({ page }) => {
+  const hash = "h200cccccccccccccccccccccccccccccccc";
+  const loan = {
+    token_id: TOKEN, nonce: "1", borrower: "a.near", owner_epoch: "0",
+    terms: { lender: "lender.near", principal: "1000000000000000000000000", repayment: "1100000000000000000000000", duration_sec: "86400", grace_sec: "3600", floor_raw: "1", funding_deadline_ns: "1" },
+    state: "UnlockPending", due_ns: "1700000000000000000", storage_bond: "1", policy_sequence: "2", policy_busy: true, policy_call_complete: false, resolution: "default_claimed",
+  };
+  await page.route(/rpc\.mainnet\.fastnear\.com/, async (route) => {
+    const q = route.request().postDataJSON() as { method?: string; params?: { method_name?: string; block_id?: unknown } } | null;
+    if (q?.method === "block") {
+      await route.fulfill({ json: { jsonrpc: "2.0", id: "lien-block", result: { header: { height: 200, hash } } } });
+      return;
+    }
+    const method = q?.params?.method_name;
+    if (q?.method === "query" && method && LIEN.has(method)) {
+      const value = method === "nft_token" ? { token_id: TOKEN, owner_id: "receiver.near" }
+        : method === "get_control_state" ? { token_id: TOKEN, owner_epoch: "1", pending_value_ops: "0", listed: false, transfer_pending: false, pledged: true, value_op_nonce: "0" }
+        : method === "get_loan" ? loan : null;
+      await route.fulfill({ json: { jsonrpc: "2.0", id: "lien", result: { block_height: 200, block_hash: hash, result: bytes(value) } } });
+      return;
+    }
+    await route.continue();
+  });
+  await page.goto("/verify");
+  await page.getByLabel("Key id").fill(TOKEN);
+  await page.getByRole("button", { name: "Read lien" }).click();
+  const panel = page.getByTestId("verify-lien");
+  await expect(panel.getByTestId("lien-state")).toHaveText("Locked", { timeout: 20_000 });
+  await expect(panel.locator("dd").nth(0)).toHaveText("receiver.near");
+  await expect(panel.locator("dd").nth(1)).toHaveText("1");
+  await expect(panel.getByTestId("lien-pledged")).toHaveText("true");
+  await expect(panel.getByTestId("lien-loan")).toContainText("UnlockPending");
+  await expect(panel.getByTestId("lien-error")).toHaveCount(0);
+  await expect(panel.getByText("Not read")).toHaveCount(0);
+});

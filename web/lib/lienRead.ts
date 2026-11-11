@@ -47,10 +47,52 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+const U64_MAX = (1n << 64n) - 1n;
+
 function u64(v: unknown): string | null {
-  if (typeof v === "string" && /^\d+$/.test(v)) return v;
+  if (typeof v === "string" && /^\d+$/.test(v)) {
+    const n = BigInt(v);
+    return n <= U64_MAX ? n.toString() : null;
+  }
   if (typeof v === "number" && Number.isSafeInteger(v) && v >= 0) return String(v);
   return null;
+}
+
+function u64n(v: unknown): bigint | null {
+  const s = u64(v);
+  return s === null ? null : BigInt(s);
+}
+
+/**
+ * Loan / owner / epoch combinations one block can actually hold.
+ * pledged is true exactly when a loan record exists (lib.rs get_control_state).
+ *
+ * While a loan exists, assert_token_idle (pledge.rs:423-427) refuses every ordinary transfer, so the
+ * current owner epoch stays on the epoch copied at open (pledge.rs:451-453) except for one path.
+ *
+ * - Freezing, Offered, DisbursementPending, Active: owner is the borrower and control epoch equals
+ *   loan.owner_epoch. fund_loan rechecks both (pledge.rs:537-538). resolution is still unset.
+ * - UnlockPending / repaid: repay_loan (pledge.rs:561-568) does not transfer. Same owner, same epoch.
+ * - UnlockPending / canceled: cancel_loan (pledge.rs:572-577) does not transfer. Same owner, same epoch.
+ * - UnlockPending / default_claimed: claim_default (pledge.rs:581-593) calls transfer_key_unlocked
+ *   (lib.rs:438-455), which bumps the owner epoch once, then stores the same loan. The loan keeps its
+ *   opening epoch. The new owner is not the borrower. Thaw later deletes the loan (pledge.rs:510-513).
+ * - No loan: the record is gone. Any current owner and epoch are the chain's, and pledged is false.
+ */
+function loanBindingHolds(loan: Record<string, unknown>, ownerId: string, controlEpoch: bigint): boolean {
+  const state = loan.state;
+  const loanEpoch = u64n(loan.owner_epoch);
+  const borrower = loan.borrower;
+  if (typeof state !== "string" || loanEpoch === null || typeof borrower !== "string" || borrower.length === 0) return false;
+  const resolution = loan.resolution;
+  const sameTitle = ownerId === borrower && loanEpoch === controlEpoch;
+  if (state === "Freezing" || state === "Offered" || state === "DisbursementPending" || state === "Active") {
+    return (resolution === null || resolution === undefined) && sameTitle;
+  }
+  if (state !== "UnlockPending") return false;
+  if (resolution === "repaid" || resolution === "canceled") return sameTitle;
+  if (resolution === "default_claimed") return ownerId !== borrower && controlEpoch === loanEpoch + 1n;
+  return false;
 }
 
 function onBlock(view: PinnedView, block: { height: number; hash: string }): boolean {
@@ -59,8 +101,9 @@ function onBlock(view: PinnedView, block: { height: number; hash: string }): boo
 
 /**
  * Accept a lien snapshot only when every view executed on the same finalized block and the fields that must
- * move together still agree. A sale between reads (old owner, new epoch) fails the block check. A loan from
- * another block fails the pledged / owner-epoch checks. Either result is discarded.
+ * move together still agree. A sale between reads (old owner, new epoch) fails the block check. A loan is
+ * kept only when its state, epoch, and owner match the contract. A post-default UnlockPending loan keeps
+ * its opening epoch while the key epoch is one higher. Anything else is discarded.
  */
 export function lienSnapshotFromViews(input: {
   tokenId: string;
@@ -83,17 +126,17 @@ export function lienSnapshotFromViews(input: {
   const control = input.control.value;
   if (!isRecord(control)) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
   const ownerEpoch = u64(control.owner_epoch);
+  const controlEpoch = u64n(control.owner_epoch);
   const pending = u64(control.pending_value_ops);
   const nonce = u64(control.value_op_nonce);
-  if (control.token_id !== input.tokenId || ownerEpoch === null || pending === null || nonce === null) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
+  if (control.token_id !== input.tokenId || ownerEpoch === null || controlEpoch === null || pending === null || nonce === null) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
   if (typeof control.listed !== "boolean" || typeof control.transfer_pending !== "boolean" || typeof control.pledged !== "boolean") {
     return { ok: false, reason: LIEN_BLOCK_MISMATCH };
   }
   const loan = input.loan.value;
   if (loan !== null) {
     if (!isRecord(loan) || loan.token_id !== input.tokenId) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
-    const loanEpoch = u64(loan.owner_epoch);
-    if (loanEpoch === null || loanEpoch !== ownerEpoch) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
+    if (!loanBindingHolds(loan, ownerId, controlEpoch)) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
   }
   if (control.pledged !== (loan !== null)) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
   if (input.binding.value !== null && !isRecord(input.binding.value)) return { ok: false, reason: LIEN_BLOCK_MISMATCH };
