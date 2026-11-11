@@ -6,7 +6,17 @@ here authorizes a bot to send. Credit: devmo. Team reviewer is NOT independent.
 Security scope is reviewed worker + documented TEE/provider, not a global alias oracle.
 Do not run the old runbook's pre-install AuthorityAuditV1 flow.
 
-**BLOCKED: minimum-protected execution is unsupported by the documented provider API. Do not publish, pre-fund or enable lending using this runbook until the explicit execution gate in SECURITY.md is resolved.**
+**Scoped decision: `native-A-repay-B-title-no-public-redemption`.** Loan A proves
+collateral ingress, native principal payout, native repayment and pledge release.
+Loan B proves default and lender title/control of the same confined wallet via
+its NFT. **Public FT redemption is unavailable**: minimum-protected execution is unsupported by the documented provider API. This is NOT a slippage exception,
+private-transfer pilot, USDC liquidation or proof of public cash recovery. Keep
+both withdrawal safe-stops unchanged. No exit is part of the success criteria.
+
+This scope permits operator preparation/funding/ON only AFTER exact-head review,
+all six CI jobs, publication/measurement, real ingress/provider integration,
+policy enrollment and budget gates pass. No live step has happened here. The
+larger public-redemption task remains unavailable, not silently declared done.
 
 ## 1. Session, fresh public state, unsigned evidence
 ```bash
@@ -48,6 +58,12 @@ refresh_block
 q "$C" governance_state '{}' > "$E/governance.before.json"
 check_governance() { refresh_block; q "$C" governance_state '{}' > "$E/governance.current.json"; cmp <(jq -S . "$E/governance.before.json") <(jq -S . "$E/governance.current.json"); }
 q "$C" config '{}' > "$E/config.before.json"
+export GOVERNOR=$(jq -er .owner "$E/config.before.json")
+case "$GOVERNOR" in
+ "$C") export GOVERNOR_KEY="$OWNER_KEY" ;;
+ "$L") export GOVERNOR_KEY="$KROOT/test_holder3.json" ;;
+ *) printf '%s\n' 'STOP: unreviewed current governance owner'; exit 1 ;;
+esac
 q "$C" get_pledge_config '{}' > "$E/pledge.before.json"
 q outlayer.near get_project '{"project_id":"keyhole-devmo.near/keyhole"}' > "$E/project.before.json"
 q outlayer.near list_versions '{"project_id":"keyhole-devmo.near/keyhole","from_index":0,"limit":100}' > "$E/versions.before.json"
@@ -61,25 +77,35 @@ rpc gas_price "[\"$BLOCK\"]"
 # Canonical credential supplied securely; never echo it or rely on cwd .env.
 export OUTLAYER_PAYMENT_KEY="$(< /workspace/near_hackathon/.secrets/outlayer_payment_key_2.txt)"
 source scripts/worker/outlayer-grant.sh
+pilot_worker_call() {
+ node scripts/worker/pilot-budget.mjs "$E/budget.json" || return 1
+ worker_call "$1"
+}
 grant_balance
 call_json() {
   local signer="$1" key="$2" method="$3" args="$4" gas="$5" deposit="$6"
+  node scripts/worker/pilot-budget.mjs "$E/budget.json" || return 1
   "$NEAR" contract call-function as-transaction "$C" "$method" json-args "$args" \
     prepaid-gas "$gas" attached-deposit "$deposit" sign-as "$signer" \
     network-config mainnet sign-with-access-key-file "$key" send
 }
 call_file() {
   local signer="$1" key="$2" method="$3" argsfile="$4" gas="$5" deposit="$6"
+  node scripts/worker/pilot-budget.mjs "$E/budget.json" || return 1
   "$NEAR" contract call-function as-transaction "$C" "$method" file-args "$argsfile" \
     prepaid-gas "$gas" attached-deposit "$deposit" sign-as "$signer" \
     network-config mainnet sign-with-access-key-file "$key" send
 }
 ```
 Require code v2.7/hash26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c,
-owner C, immutable M/attestor, lending OFF, protocol2, singleton expected H0,
+owner equal to freshly verified governance owner, immutable M/attestor, lending OFF, protocol2, singleton expected H0,
 UUID p000000000000004b and no unresolved native/provider jobs. Record all signer
 balances/storage/access-key public identities. Pause UI/proxy AND direct submitters,
-drain all old jobs. No contract/governance methods beyond the lending toggle.
+drain all old jobs. No governance methods. `set_lending_enabled` must be signed by the ACTUAL current
+owner; do not assume C after the separate handover. Set GOVERNOR/GOVERNOR_KEY to
+that already-approved current-owner identity/key locally before a toggle or
+owner-only minter-credit claim; STOP on mismatch. Never apply/accept/stage/cancel
+a governance action to make this runbook work.
 
 After EVERY native/worker-native transaction: record original hash, query RPC FINAL,
 check complete receipt lineage and intended transfer/callback/state, then
@@ -87,6 +113,29 @@ check_governance. UNKNOWN means original-only recovery, never a second send.
 RPC: rpc tx '{"tx_hash":"ACTUAL_ORIGINAL_HASH","sender_account_id":"ACTUAL_SIGNER","wait_until":"FINAL"}'.
 Those public hashes cannot be known before execution. Expected-failed FastFS gas1
 uploads require exact indexed bytes, not a fictitious SuccessValue.
+
+### Exact receipt gate after EVERY native send (one operation at a time)
+
+The CLI prints the ORIGINAL transaction hash. Copy only that public hash and the
+actual signer into these variables, never a replacement submission. Run before
+the next command; missing/UNKNOWN output is STOP. This command alone is not the
+method-specific transfer/state proof described at every A/B step.
+```bash
+export ORIGINAL_TX=ACTUAL_ORIGINAL_HASH ORIGINAL_SIGNER=ACTUAL_SIGNER
+rpc tx "$(jq -cn --arg h "$ORIGINAL_TX" --arg s "$ORIGINAL_SIGNER" '{tx_hash:$h,sender_account_id:$s,wait_until:"FINAL"}')" > "$E/$ORIGINAL_TX.receipt.json"
+node scripts/worker/native-pilot-receipt.mjs "$E/$ORIGINAL_TX.receipt.json" "$ORIGINAL_TX" "$ORIGINAL_SIGNER" "$C"
+check_governance
+node scripts/worker/pilot-budget.mjs "$E/budget.json"
+```
+For worker-native calls obtain the ORIGINAL hash from verified decoded output and
+apply the same complete-lineage checker with the actual receiver. For Base ingress
+also require status1, chain8453, exact USDC contract/Transfer(from,to,900000) and
+actual gasUsed×effectiveGasPrice+L1fee within the ledger. Never treat a transport
+success, balance delta, preview, signed certificate or top-level SuccessValue alone
+as native/FT delivery. FastFS gas1 intentional failure uses its separate exact
+indexed-byte proof, NOT this all-success gate. For every claim_payout inspect the
+actual successful native Transfer receipt and callback, exact recipient/credit,
+zero pending payout, and matching loan_principal_delivered when it starts debt.
 
 ## 2. Build and publish worker (operator action, no contract deploy)
 From reviewed feature checkout:
@@ -100,6 +149,7 @@ node scripts/pledge/fastfs-payloads.mjs "$WASM" "$E/fastfs" auto 0 > "$E/fastfs-
 Inspect previous indexed FastFS nonce; substitute its actual value for0 if one exists.
 For CHUNK=1, then each NEXT NEVER-SUBMITTED chunk only after FINAL/indexing check:
 ```bash
+node scripts/worker/pilot-budget.mjs "$E/budget.json"
 CHUNK=1
 FILE=$(jq -er --argjson i "$CHUNK" '.chunks[$i-1].file' "$E/fastfs-plan.json")
 test ! -e "$FILE.signed.json"
@@ -118,6 +168,7 @@ cmp "$WASM" "$E/assembled.wasm"; sha256sum "$E/assembled.wasm"
 Only if the two new local key files do not already exist, generate them using the
 supplied helper (writes600 files, prints no secrets). Never overwrite existing keys:
 ```bash
+node scripts/worker/pilot-budget.mjs "$E/budget.json"
 python3 "$AUTH" keygen
 BKEY="$KROOT/fresh_loan_borrower.json"; REVIEWER="$KROOT/collateral_auditor.json"
 B=$(jq -er .account_id "$BKEY"); export B
@@ -132,6 +183,7 @@ Do not retry updater on UNKNOWN. Check governance unchanged.
 
 Atomic add-active/remove sole old worker (actual snapshot, NOT old22-version planner):
 ```bash
+node scripts/worker/pilot-budget.mjs "$E/budget.json"
 HOLD=$(jq -er 'if length==1 and .[0].is_active==true then .[0].wasm_hash else error("not singleton") end' "$E/versions.before.json")
 ADD=$(jq -cn --arg h "$HNEW" --arg u "https://main.fastfs.io/$C/outlayer.near/$HNEW.wasm" '{project_name:"keyhole",source:{WasmUrl:{url:$u,hash:$h,build_target:"wasm32-wasip2"}},set_active:true}')
 REMOVE=$(jq -cn --arg h "$HOLD" '{project_name:"keyhole",version_key:$h}')
@@ -179,14 +231,16 @@ PYLKEY
 ```
 BKEY is the new complete file from section2, not old test_holder2. No minter key export. No private values in argv/evidence; temp L file only is deleted on EXIT.
 
-Native fund new B from approved team signer, and M to its checked mint/install/exit
+Native fund new B from approved team signer, and M to its checked mint/install/completion
 reserve, one transfer<=.1 at a time. Source and amounts must fit actual spendable
 balance/storage; working capital is not a fee. Exact installed near-cli transfer:
 ```bash
+node scripts/worker/pilot-budget.mjs "$E/budget.json"
 # Only if B is a never-funded implicit account and C retains storage + operating/upgrade reserve:
 "$NEAR" tokens "$C" send-near "$B" '0.099 NEAR' network-config mainnet sign-with-access-key-file "$OWNER_KEY" send
 # Verify original FINAL + exact Transfer/create-account + B public FullAccess; check_governance.
 # M capital from L, only after reading its actual balance/storage and bounded reserve requirement:
+node scripts/worker/pilot-budget.mjs "$E/budget.json"
 "$NEAR" tokens "$L" send-near "$M" '0.06 NEAR' network-config mainnet sign-with-access-key-file "$LKEY" send
 # Verify original FINAL + exact M Transfer; check_governance. Do not repeat on UNKNOWN.
 ```
@@ -217,7 +271,7 @@ Mint: fresh B signed mint params{}; worker attaches.012/20T from M. Verify token
 owner/tier1; optional auto M refund is a SEPARATE70T native original, resolve it too.
 ```bash
 printf '{}' > "$E/mint.params.json"
-make_input "$BKEY" mint "$E/mint.params.json" "$E/mint.input.json"; worker_call "$E/mint.input.json"
+make_input "$BKEY" mint "$E/mint.params.json" "$E/mint.input.json"; pilot_worker_call "$E/mint.input.json"
 # Resolve mint and auto refund originals. Then:
 refresh_block
 q "$C" nft_token "{\"token_id\":\"$TOKEN\"}"
@@ -225,7 +279,7 @@ q "$C" get_control_state "{\"token_id\":\"$TOKEN\"}" > "$E/control.json"
 EPOCH=$(jq -er .owner_epoch "$E/control.json"); export EPOCH
 q "$C" nft_tokens_for_owner "{\"account_id\":\"$L\",\"from_index\":\"0\",\"limit\":100}"
 jq -n --arg t "$TOKEN" --arg e "$EPOCH" '{token_id:$t,owner_epoch:$e,fresh_only:true}' > "$E/create.params.json"
-make_input "$BKEY" create_collateral_wallet "$E/create.params.json" "$E/create.input.json"; worker_call "$E/create.input.json"
+make_input "$BKEY" create_collateral_wallet "$E/create.params.json" "$E/create.input.json"; pilot_worker_call "$E/create.input.json"
 ```
 Verify sanitized fresh manifest and actual source/namespace/registration/empty
 inventory provenance. Do NOT call ordinary account before strict fresh creation.
@@ -234,10 +288,10 @@ Save verified create.out.json. No USDC until this genuine review passes.
 ## 4. Candidate, PRE-INSTALL Base funding, guardian and pre-review
 ```bash
 jq -n --arg t "$TOKEN" --arg e "$EPOCH" --arg l "$L" '{token_id:$t,owner_epoch:$e,approvers:[{id:$l,role:"admin"}],threshold:1}' > "$E/candidate.params.json"
-make_input "$BKEY" collateral_candidate "$E/candidate.params.json" "$E/candidate.input.json"; worker_call "$E/candidate.input.json"
+make_input "$BKEY" collateral_candidate "$E/candidate.params.json" "$E/candidate.input.json"; pilot_worker_call "$E/candidate.input.json"
 # Resolve/verify/save candidate.out.json; review exact policy, not just a hash.
 jq -n --arg t "$TOKEN" --arg e "$EPOCH" '{token_id:$t,owner_epoch:$e,chain:"base",token:"USDC",amount:"900000",min_credit_raw:"800000"}' > "$E/funding.params.json"
-make_input "$BKEY" collateral_funding_quote "$E/funding.params.json" "$E/funding.input.json"; worker_call "$E/funding.input.json"
+make_input "$BKEY" collateral_funding_quote "$E/funding.params.json" "$E/funding.input.json"; pilot_worker_call "$E/funding.input.json"
 ```
 Quote creates a private incoming-deposit request, not an outgoing loan. MUST be
 before locked policy because documented deposit-family gates as call; never add
@@ -253,11 +307,11 @@ canonical confidential NEAR-USDC credit. No public fallback if503/unknown route.
 
 ```bash
 jq -n --arg t "$TOKEN" --arg e "$EPOCH" '{token_id:$t,owner_epoch:$e}' > "$E/funding-status.params.json"
-make_input "$BKEY" collateral_funding_status "$E/funding-status.params.json" "$E/funding-status.input.json"; worker_call "$E/funding-status.input.json"
+make_input "$BKEY" collateral_funding_status "$E/funding-status.params.json" "$E/funding-status.input.json"; pilot_worker_call "$E/funding-status.input.json"
 # Poll original, require credit_verified=true, >=800000 and complete terminal inventory.
 python3 "$AUTH" guardian "$LKEY" "$E/candidate.out.json" "$E/guardian-pre.json"
 jq --slurpfile g "$E/guardian-pre.json" '. + {guardian_proof:$g[0]}' "$E/candidate.params.json" > "$E/prepare.params.json"
-make_input "$BKEY" prepare_collateral "$E/prepare.params.json" "$E/prepare.input.json"; worker_call "$E/prepare.input.json"
+make_input "$BKEY" prepare_collateral "$E/prepare.params.json" "$E/prepare.input.json"; pilot_worker_call "$E/prepare.input.json"
 ```
 Resolve/verify prepare.out.json; preserve provision_id P and original epoch. Genuine
 team reviewer writes private pre-review.md after inspecting manifest, complete known
@@ -274,7 +328,7 @@ jq -n --arg c "$C" --arg p "$P" --arg r "$REVIEW_HASH" --slurpfile x "$E/prepare
  '{domain:"KEYHOLE_COLLATERAL_PRE_AUDIT_V2",project_uuid:"p000000000000004b",contract:$c,provision_id:$p,manifest_sha256:$x[0].manifest_sha256,candidate_policy_sha256:$x[0].candidate_policy_sha256,guardian_sha256:$x[0].guardian_sha256,authority_scope:"reviewed-worker-and-documented-tee-provider-v2",report_sha256:$r,candidate_policy_reviewed:true,fresh_creation_reviewed:true,known_authorities_reviewed:true,prior_jobs_drained:true,issued_at_sec:$n,expires_at_sec:($n+900)}' > "$E/pre.message.json"
 python3 "$AUTH" review "$REVIEWER" KEYHOLE_COLLATERAL_PRE_AUDIT_V2 "$E/pre.message.json" "$E/pre.signed.json"
 jq -n --arg t "$TOKEN" --arg e "$EPOCH" --arg p "$P" '{token_id:$t,owner_epoch:$e,provision_id:$p}' > "$E/quote.params.json"
-make_input "$BKEY" collateral_quote "$E/quote.params.json" "$E/quote.input.json"; worker_call "$E/quote.input.json"
+make_input "$BKEY" collateral_quote "$E/quote.params.json" "$E/quote.input.json"; pilot_worker_call "$E/quote.input.json"
 ```
 Save verified quote.out.json, Q<=.04619, D=.02+Q<=.06619, actual ciphertext size.
 Fund M to exact checked reserve if necessary; no oversized quote/historical shortcut.
@@ -283,7 +337,7 @@ Fund M to exact checked reserve if necessary; no oversized quote/historical shor
 ```bash
 D=$(jq -er .binding_deposit_yocto "$E/quote.out.json")
 jq --slurpfile a "$E/pre.signed.json" --arg d "$D" '.+{pre_audit_message:$a[0].message,pre_audit_signature:$a[0].signature,max_deposit_yocto:$d}' "$E/quote.params.json" > "$E/provision.params.json"
-make_input "$BKEY" provision_collateral "$E/provision.params.json" "$E/provision.input.json"; worker_call "$E/provision.input.json"
+make_input "$BKEY" provision_collateral "$E/provision.params.json" "$E/provision.input.json"; pilot_worker_call "$E/provision.input.json"
 # M native register_collateral:200T+D. Resolve genuine FINAL original and callbacks.
 check_governance
 refresh_block
@@ -296,7 +350,7 @@ if needed, never call register from a local M key. New guardian challenge:
 ```bash
 python3 "$AUTH" guardian "$LKEY" "$E/candidate.out.json" "$E/guardian-post.json"
 jq --slurpfile g "$E/guardian-post.json" --arg pe "$EPOCH" '.+{guardian_proof:$g[0],provision_owner_epoch:$pe}' "$E/quote.params.json" > "$E/report.params.json"
-make_input "$BKEY" collateral_report "$E/report.params.json" "$E/report.input.json"; worker_call "$E/report.input.json"
+make_input "$BKEY" collateral_report "$E/report.params.json" "$E/report.input.json"; pilot_worker_call "$E/report.input.json"
 ```
 Verify/save report.out.json. Team reviewer now reads actual report.message, exact
 decrypted effective policy, public policy/binding/FINAL receipts, complete inventory,
@@ -311,14 +365,14 @@ jq -n --arg c "$C" --arg p "$P" --slurpfile r "$E/report.out.json" --argjson n "
  '{domain:"KEYHOLE_COLLATERAL_POST_AUDIT_V2",project_uuid:"p000000000000004b",contract:$c,provision_id:$p,report_sha256:$r[0].report_sha256,authority_scope:"reviewed-worker-and-documented-tee-provider-v2",no_presigned_authorities:true,all_aliases_reviewed:true,old_jobs_drained:true,external_chain_authorities_reviewed:true,effective_policy_reviewed:true,reachable_quorum_verified:true,issued_at_sec:$n,expires_at_sec:($n+900)}' > "$E/post.message.json"
 python3 "$AUTH" review "$REVIEWER" KEYHOLE_COLLATERAL_POST_AUDIT_V2 "$E/post.message.json" "$E/post.signed.json"
 jq --slurpfile a "$E/post.signed.json" --slurpfile r "$E/report.out.json" --arg pe "$EPOCH" '.+{provision_owner_epoch:$pe,report_sha256:$r[0].report_sha256,post_audit_message:$a[0].message,post_audit_signature:$a[0].signature}' "$E/quote.params.json" > "$E/finalize.params.json"
-make_input "$BKEY" finalize_collateral "$E/finalize.params.json" "$E/finalize.input.json"; worker_call "$E/finalize.input.json"
+make_input "$BKEY" finalize_collateral "$E/finalize.params.json" "$E/finalize.input.json"; pilot_worker_call "$E/finalize.input.json"
 ```
 Require eligibility_sealed=true and immutable V2 companion; marker written last.
 No contract tx in finalize. Recheck actual private floor>=.50, no pending jobs/value/
 payout/registration, public matching locked/unfrozen policy, L still owns no NFT.
 Only with finish+OFF budget reserved:
 ```bash
-call_json "$C" "$OWNER_KEY" set_lending_enabled '{"enabled":true}' '20 Tgas' '1 yoctoNEAR'
+call_json "$GOVERNOR" "$GOVERNOR_KEY" set_lending_enabled '{"enabled":true}' '20 Tgas' '1 yoctoNEAR'
 check_governance
 q "$C" get_pledge_config '{}'
 ```
@@ -344,7 +398,7 @@ Read `get_lender_offer`: named L, `lender_has_no_key:true`, `lender_has_no_retur
 
 ```bash
 jq -n --arg t "$TOKEN" --arg n "$NA" '{op:"loan_certificate",params:{token_id:$t,loan_nonce:$n}}' > "$E/A.certificate.input.json"
-worker_call "$E/A.certificate.input.json"
+pilot_worker_call "$E/A.certificate.input.json"
 # Poll the returned ORIGINAL ID, verify the actual attestation/request/output.
 # Save its verified decoded worker output object (NOT the whole transport envelope) as:
 # "$E/A.certificate.output.json"
@@ -378,7 +432,7 @@ Check original receipts after EACH line; comments are gates, not permission to r
 
 ## 7. Loan B — quick genuine mainnet default -> default_claimed
 
-Only after ALL A custody/native operations (and optional A ordinary exit if selected) are terminal. Recheck floor and complete authority/inventory, L still empty, fresh chain/config/offer deadline. Same token/wallet, fresh nonce/certificate, **1-second duration and zero grace**:
+Only after ALL A native operations and original provider ingress/install jobs are terminal. No A collateral exit is requested or permitted. Recheck floor and complete authority/inventory, L still empty, fresh chain/config/offer deadline. Same token/wallet, fresh nonce/certificate, **1-second duration and zero grace**:
 
 ```bash
 refresh_block
@@ -391,7 +445,7 @@ refresh_block
 q "$C" get_loan "{\"token_id\":\"$TOKEN\"}" > "$E/B.loan.offered.json"
 export NB=$(jq -er '.nonce' "$E/B.loan.offered.json")
 jq -n --arg t "$TOKEN" --arg n "$NB" '{op:"loan_certificate",params:{token_id:$t,loan_nonce:$n}}' > "$E/B.certificate.input.json"
-worker_call "$E/B.certificate.input.json"
+pilot_worker_call "$E/B.certificate.input.json"
 # Resolve original call, verify actual attestation/certificate as for A, then save decoded output.
 jq -e --arg t "$TOKEN" --arg n "$NB" \
  'if .ok==true and .certificate.token_id==$t and .certificate.loan_nonce==$n then {token_id:$t,nonce:$n,certificate:.certificate,signature:.signature} else error("wrong certificate") end' \
@@ -425,54 +479,48 @@ Expected NB=2 only absent other opens. No `Default` enum or persistent `default_
 Result: NFT to L, same canonical wallet/binding, owner epoch **old+1**, approvals cleared, B no longer owns this token. Default takes **the entire confidential vault**, including unrelated assets and later deposits; there is no partial seizure/surplus refund. No new M/native repayment to L is invented. L keeps title in exchange for principal. A related-party intentional default is mechanism proof, NOT organic loan demand, independent-party safety or guaranteed lender profit.
 
 
-## After A and B: actual confidential recovery and minter credits
-Optional ordinary exit after A, before B (use actual current epoch, keep >=500000USDC units):
-```bash
-export HOLDER="$B" HOLDERKEY="$BKEY" EXIT_STEP=A.exit RAW=100000
-```
-After B instead set `HOLDER="$L" HOLDERKEY="$LKEY" EXIT_STEP=B.exit RAW=...` where RAW is the actual remaining private balance, <=900000 and within the $1 Bronze per-tx / $5 daily cap. L must first wait actual10min new-owner cooldown
-then exit remaining quoted USDC. Execute this exact guarded block for each selected exit, changing only the public amount and evidence step:
+## 8. No public redemption; prove confined control and preserve collateral
+
+There is no A exit or B exit command in this scope. Do not request `withdraw`,
+`transfer`, raw signing, public intents or a replacement wallet. A positive
+`withdraw_dry_run` is advisory only and is NOT recovery proof. Keep all collateral
+in the same confined wallet. No new admission deposit is required for an exit.
+
+After A and again after B, use actual current holder authentication to read:
 ```bash
 refresh_block
-q "$C" get_control_state "{\"token_id\":\"$TOKEN\"}" > "$E/$EXIT_STEP.control.json"
-export EXIT_EPOCH=$(jq -er '.owner_epoch' "$E/$EXIT_STEP.control.json")
-python3 - <<'PYEXIT'
-import json,os
-p={"token_id":os.environ['TOKEN'],"owner_epoch":os.environ['EXIT_EPOCH'],"chain":"near","token":os.environ['ASSET'],"amount":os.environ['RAW'],"to":os.environ['HOLDER']}
-json.dump(p,open(os.environ['E']+'/'+os.environ['EXIT_STEP']+'.params.json','w'))
-PYEXIT
-make_input "$HOLDERKEY" withdraw_dry_run "$E/$EXIT_STEP.params.json" "$E/$EXIT_STEP.preview.input.json"
-worker_call "$E/$EXIT_STEP.preview.input.json"
-# Resolve original FINAL + genuine output; require .ok, positive minimum, quoted route to HOLDER.
-# Abort on unknown schema, pending jobs, policy refusal, cooldown, or floor/cap violation.
-# Hard STOP: no supported minimum-bound mechanism. No real withdrawal is authorized.
-return 1 2>/dev/null || exit 1
-# Resolve the original provider operation and its native admit/finish journal. Never POST again on UNKNOWN.
-# If needed, take actual .value_op_id from the genuine output, then READ/RECONCILE only:
-export VALUE_OP_ID=ACTUAL_VALUE_OP_ID_FROM_ORIGINAL_OUTPUT
-jq -n --arg t "$TOKEN" --arg id "$VALUE_OP_ID" '{token_id:$t,value_op_id:$id}' > "$E/$EXIT_STEP.reconcile.params.json"
-make_input "$HOLDERKEY" reconcile_value_op "$E/$EXIT_STEP.reconcile.params.json" "$E/$EXIT_STEP.reconcile.input.json"
-worker_call "$E/$EXIT_STEP.reconcile.input.json"
-# Require status=success, admission_finished=true, exact source-asset debit and destination FT receipt.
-refresh_block
-q "$ASSET_CONTRACT" ft_balance_of "{\"account_id\":\"$HOLDER\"}" > "$E/$EXIT_STEP.destination.balance.json"
-q "$C" get_control_state "{\"token_id\":\"$TOKEN\"}" > "$E/$EXIT_STEP.control.after.json"
-q "$C" pending_value_op_count "{\"token_id\":\"$TOKEN\"}" > "$E/$EXIT_STEP.active.after.json"
-check_governance
+q "$C" nft_token "{\"token_id\":\"$TOKEN\"}" > "$E/title.final.json"
+q "$C" get_control_state "{\"token_id\":\"$TOKEN\"}" > "$E/control.final.json"
+q "$C" get_collateral_binding "{\"token_id\":\"$TOKEN\"}" > "$E/binding.final.json"
+q "$C" get_loan "{\"token_id\":\"$TOKEN\"}" > "$E/loan.final.json"
+jq -e '. == null' "$E/loan.final.json"
+jq -e '.pledged==false and .transfer_pending==false and .pending_value_ops=="0"' "$E/control.final.json"
+jq -e '.ready==true' "$E/binding.final.json"
+# A: HOLDER=B, HOLDERKEY=BKEY. B: HOLDER=L, HOLDERKEY=LKEY.
+# Set these to the actual phase; never reuse an old epoch or report template.
+export HOLDER="$L" HOLDERKEY="$LKEY"  # after B only
+jq -e --arg h "$HOLDER" '.owner_id==$h' "$E/title.final.json"
+jq -n --arg t "$TOKEN" '{token_id:$t}' > "$E/current.inventory.params.json"
+make_input "$HOLDERKEY" pledge_inventory "$E/current.inventory.params.json" "$E/current.inventory.input.json"
+pilot_worker_call "$E/current.inventory.input.json"
 ```
-Set `ASSET_CONTRACT=${ASSET#nep141:}` before this block. Query that account's FT storage registration and the exact dry quote first; don't add an unbudgeted storage payment. `ACTUAL_VALUE_OP_ID_FROM_ORIGINAL_OUTPUT` is a public runtime identifier, never a made-up retry id. No other receiver, no old-B signature after default.
-No other receiver, no old-B signature after default. First withdraw_dry_run positive
-amount_out/min_amount_out; preview is advisory, NOT a bound execution quote. STOP: provider WithdrawRequest has no documented minimum/quote lock. A separately approved slippage/fee policy and reviewed implementation are required before ANY real exit, funding or lending ON.
-Actual provider status and destination tx are required, not just a dry quote.
-Each real exit uses native begin35T+.01 deposit / finish35T+0. Resolve original
-provider/native journals; use reconcile_value_op with actual value_op_id if unknown.
-No retry or raw-signing workaround. A must leave floor>=.50 before B certificate.
+Poll that ORIGINAL call with worker_status, verify DCAP/input/output/measured HNEW
+and save decoded `current.inventory.out.json`. Require complete=true, zero pending
+obligations, current account/token/epoch, exact SAME canonical wallet and actual
+USDC balance >=500000. Compare A epoch to original; B epoch exactly original+1,
+NFT owner L, approvals cleared, lower policy locked/thawed with unchanged digest.
+Old B must receive an authenticated current-owner refusal with NO private output;
+use one fresh B-signed `pledge_inventory` read only (no value send) if budget allows.
+L's new-owner cooldown remains real and visible; reading inventory does not
+bypass it. No test or read proves an unavailable public FT delivery. L holds title
+and confined wallet control, NOT USDC in a public account. Preserve this distinction
+in the eventual evidence record and video/submission claims.
 
 M admission credits: current contract-owner NEP-413 claim_minter_credit params{};
 ```bash
 printf '{}' > "$E/M.claim.params.json"
-make_input "$OWNER_KEY" claim_minter_credit "$E/M.claim.params.json" "$E/M.claim.input.json"
-worker_call "$E/M.claim.input.json"
+make_input "$GOVERNOR_KEY" claim_minter_credit "$E/M.claim.params.json" "$E/M.claim.input.json"
+pilot_worker_call "$E/M.claim.input.json"
 # Require original native tx FINAL success, exact M→M transfer and payout callback;
 # query get_payout_credit(M) / get_pending_payout(M), public view_account(M), and governance.
 ```
@@ -480,8 +528,8 @@ Fixed M→M claim70T+1yocto, no arbitrary receiver/amount. Resolve original FINA
 transfer/callback. If UNKNOWN, the minter has a singleton WAL; inspect/reconcile only its ORIGINAL head, never a new claim:
 ```bash
 printf '{}' > "$E/M.reconcile.params.json"
-make_input "$OWNER_KEY" reconcile_minter_send "$E/M.reconcile.params.json" "$E/M.reconcile.input.json"
-worker_call "$E/M.reconcile.input.json"
+make_input "$GOVERNOR_KEY" reconcile_minter_send "$E/M.reconcile.params.json" "$E/M.reconcile.input.json"
+pilot_worker_call "$E/M.reconcile.input.json"
 # Verify returned original hash matches the recorded M claim; no abort_unsent flag.
 ```
 If a different unresolved minter head exists, stop for that original before doing anything else;
@@ -489,7 +537,7 @@ never repeated claim. This does not export M or sweep its working capital.
 
 ## Final OFF and receipt acceptance
 ```bash
-call_json "$C" "$OWNER_KEY" set_lending_enabled '{"enabled":false}' '20 Tgas' '1 yoctoNEAR'
+call_json "$GOVERNOR" "$GOVERNOR_KEY" set_lending_enabled '{"enabled":false}' '20 Tgas' '1 yoctoNEAR'
 check_governance
 q "$C" get_pledge_config '{}'
 q "$C" get_loan "{\"token_id\":\"$TOKEN\"}"
@@ -504,20 +552,20 @@ loan_closed resolution=repaid; B loan_default and loan_closed default_claimed,
 NEP171 nft_transfer B→L/memo loan default; actual native principal twice/L repayment/
 B bond transfers. No persistent Default/default_claimed enum exists. No mark_default
 method is needed: claim_default performs the due-time default claim. Record collateral_ready,
-payout_claim and registration events too, plus full successful private recovery.
+payout_claim and registration events too, plus current-holder-only inventory/control evidence (NOT public redemption).
 Final loan row null, policy thawed, owner L/epoch+1, no unexplained credits/pending/
 liabilities, correct singleton/UUID/M/attestor and unchanged governance. Signed report
 is worker evidence, not a fabricated NEP297 contract event. Intentional team default
 is mechanism proof, not independent lending demand.
 
 ## Budget, abort, timing
-Conditional expanded configured allocation approximately .343NEAR +.04 reserve=~.383; the new1248852-byte candidate increases upload cost relative to the old1085333-byte sample (roughly .0065 vs .005658NEAR for FastFS). Actual
+No guaranteed fee total is asserted. The scoped plan removes both private exits and their begin/finish/admission costs. Price the exact candidate FastFS bytes, actual quotes and every remaining native call. Actual
 Q/gas/secret retention may change it. Hard net expenditure<=.4NEAR with ledger and
 completion/OFF reserve. Gross funding transfers/temporary deposits/peak liquidity are
 separate columns: do not double-count internal transfers or assume refunds early.
 If .4 means every gross debit before refunds, STOP for that explicit interpretation.
-Source collateral0.90USDC (<=1); actual route fees fit that, Base ETH gas separate.
-Compute comes from the $20 grant on owner keyhole-devmo.near nonce 2; key 1 retains the untouched separate $0.50 personal credit, but this plan caps max job reservations at33×.003=$.099. With .90 source collateral, total USDC debits <=.999 (collateral is mostly recoverable), excluding the separately bounded Base ETH gas. Never count existing compute credit as free. No topup. All other txs
+Source collateral0.90USDC (<=0.90); actual route fees fit that, Base ETH gas separate.
+Compute comes from the $20 grant on owner keyhole-devmo.near nonce 2; key 1 retains the untouched separate $0.50 personal credit, but this plan caps max job reservations at33×.003=$.099. With .90 source collateral, total USDC-equivalent debits <=.999 (collateral remains in the confined wallet; public redemption unavailable), excluding the separately bounded Base ETH gas. Never count existing compute credit as free. No topup. All other txs
 <=.1 including gas; .1+gas secret update is the specifically approved exception.
 
 Any failed gate before lending: stay OFF and stop. Unknown fresh/create/install stays
@@ -542,19 +590,52 @@ jq -e --arg h "$HNEW" --arg id "$CALL_ID" '.call_id==$id and .project_id=="keyho
 Decode the actual CLI status output (stdout is not promised to be the API wrapper). Save the verified worker JSON to each named `.out.json` above. The existing website `/verify?call=CALL_ID` runs `web/lib/dcap.ts` plus `web/lib/pcs.ts` cryptographic Intel-chain, report-data and current collateral/TCB checks. Download and inspect its full findings. Merely `tdx_quote.length>100`, the CLI `keyhole verify`, or the older shell `verify.sh` is **not** full quote verification. A source candidate is not yet the historical live identity: compare measured hash to HNEW explicitly, do not change old proof history or treat a stale current-build badge as new evidence. Bindings must match exact requested `auth.message` SHA256 and nonce; output hash must match key-sorted canonical output. Stop on failed/unknown DCAP/collateral/TCB or measurement/source mismatch. No credential or private inventory may be pasted into a public verifier. The TEE/provider/future-publisher assumptions in SECURITY.md still apply even when every check passes.
 
 ### Final local candidate identity
-Source candidate only: SHA256 `d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60`, 1248852 bytes, generated candidate status `source-candidate-not-published`. Live worker identity remains `62398a8a…307f`; contract v2.7 bytes/ABI unchanged. Rebuild/check before operator publication; do not substitute a later artifact silently. The budget is a conditional conservative allocation, not a real provider quote or receipt. If the .003-per-job cap cannot execute a phase, STOP before signing a replacement, reassess the <=1USDC overall target and preserve UNKNOWN recovery.
+Source candidate only: read the exact current SHA256/size from `identity.json#/worker_candidate` (regenerated from two actual matching builds), generated candidate status `source-candidate-not-published`. Live worker identity remains `62398a8a…307f`; contract v2.7 bytes/ABI unchanged. Rebuild/check before operator publication; do not substitute a later artifact silently. The budget is a conditional conservative allocation, not a real provider quote or receipt. If the .003-per-job cap cannot execute a phase, STOP before signing a replacement, reassess the <=1USDC overall target and preserve UNKNOWN recovery.
 
 Public working-capital read during preparation (FINAL block224095396): C amount6.872881570179187962621659NEAR/storage525930B, L amount.178925427887895399999996NEAR/storage182B, M amount.040829047361825799999999NEAR/storage315B. At1e19yocto/B the approximate storage-adjusted amounts are1.61358157/.17710543/.03767905NEAR respectively; refresh before every send. C sponsoring B avoids draining L below lender/slot/gas capital. The .099 and .06 transfers are internal liquidity, not additional net fees. M's actual post-mint/install quote and reserve still gate any action; no second top-up is automatic.
 
-## Budget bound and existing identity drift — do not overlook
-The ~.383NEAR figure is a **conditional planning target**, not a proved all-prepaid upper bound. Combining the older .26579 core storage+gas envelope with the new secret/update, mint, upload/registry and private-exit/credit-cleanup envelopes can reach roughly **.43NEAR** at the maximum policy quote if every prepaid gas reserve is burned. Before funding or lending, calculate from actual Q, gas price, already FINAL burned/refunded amounts and the remaining worst completion/OFF reserve; require total <=.4 or STOP for a budget decision. Do not disguise a .43 worst-case envelope as .383 guaranteed cost. Typical actual burn can be lower, but has not been measured for these new live calls.
+## Hard budget gate — run before every value step, especially pre-funding and ON
 
-The live identity has been evidence-promoted to v2.7 from the genuine FINAL deployment `6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h`, current pinned-block code/version/config and exact local release bytes. Public evidence is docs/evidence/live-v2.7/promotion.public.json. No deploy/governance transaction is needed or permitted to repair metadata. All contracts/ files remain unchanged; strict verifiers select existing release/v2.7 bytes while historical deployed/v2.6 evidence is retained. Worker remains unpublished.
+The prior full-redemption plan could approach .43 NEAR at its maximum prepaid
+configuration. That is NOT an approved .4 upper bound. This smaller plan omits
+those exits but still needs an actual all-remaining worst-case calculation.
+Do not depend on a refund until FINAL. Count retained storage/fees and unresolved
+maximum charges; record internal capital transfers and peak liquidity separately.
 
-## PR208 corrected candidate gate
-All withdrawal execution is fail-closed before custody/spend/POST. A holder-signed
-minimum and deadline alone cannot make the provider enforce them. No invented API
-parameter is sent. Preview output explicitly reports advisory_only=true and
-minimum_bound_to_execution=false. Do not start live loans or pre-funding while
-terminal minimum-protected recovery cannot be completed. No slippage exception
-is approved by this runbook. See SECURITY.md and withdrawal_protection.rs.
+Create `$E/budget.json` from independently reviewed actual receipts/retention,
+current gas price, actual Q, Base recipient-specific estimate + L1 fee and worst
+remaining completion calls. **No zero/default estimate or fabricated quote.**
+Required schema (all quantities decimal integer STRINGS):
+```json
+{"scope":"native-A-repay-B-title-no-public-redemption","actual_final_receipts_reviewed":true,"remaining_worst_case_reviewed":true,"refunds_counted_only_when_final":true,"near_final_spent_yocto":"ACTUAL","near_unresolved_max_yocto":"ACTUAL","near_remaining_worst_yocto":"ACTUAL","near_off_reserve_yocto":"AT_LEAST_40000000000000000000000","usdc_source_raw":"900000","compute_reserved_micro_usd":"99000","base_eth_final_wei":"ACTUAL","base_eth_remaining_max_wei":"ACTUAL","receipt_refs":["actual evidence paths / original receipt hashes / quote / estimate"]}
+```
+The deliberate ACTUAL placeholders FAIL the checker until replaced from evidence.
+After each FINAL/UNKNOWN result update the ledger, then run:
+```bash
+node scripts/worker/pilot-budget.mjs "$E/budget.json"
+# Refresh governance and ACTUAL owner before the two toggles:
+refresh_block
+q "$C" config '{}' > "$E/config.current.json"
+test "$(jq -er .owner "$E/config.current.json")" = "$GOVERNOR"
+check_governance
+```
+Checks: completed+unknown+worst remaining+>=.04 OFF reserve <=.4 NEAR;
+source<=900000 + compute reserved<=99000 <=999000 USDC-equivalent; total Base
+ETH including L1 fee <=50000000000000 wei. Wrapper independently caps compute
+at33 jobs×3000microUSD using ONLY key2 submit/poll. Preserve original reservations
+on failure/UNKNOWN. STOP before any phase with a missing receipt/estimate or cap
+overrun. A failed budget cannot be repaired by key1 credit, a top-up, presumed
+future refund, omitted fee or silently reducing the OFF reserve.
+
+The live identity has been evidence-promoted to v2.7 from the genuine FINAL deployment `6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h`, current pinned-block code/version/config and exact local release bytes. Public evidence is docs/evidence/live-v2.7/promotion.public.json. No deploy/governance transaction is needed or permitted to repair metadata. Production contract source/release files remain unchanged; strict verifiers select existing release/v2.7 bytes while historical deployed/v2.6 evidence is retained. Worker remains unpublished.
+
+## PR208 scoped candidate gate
+All withdrawal execution stays fail-closed before custody/spend/sign/POST/admission.
+Even a holder-signed minimum/deadline cannot make today's provider enforce it.
+Preview reports advisory_only=true and minimum_bound_to_execution=false. The
+native A/B scope above does not depend on that unavailable capability and does
+not claim it completed. No slippage exception or guessed API parameter is approved.
+Future public redemption needs a separately reviewed typed immutable 1Click quote
+bound same-USDC confidential self-exit: recipient, asset, max debit, minimum net,
+deadline, quote commitment and measured keystore artifact validation, with actual
+FINAL FT destination receipts. No raw-sign/call capability broadening.

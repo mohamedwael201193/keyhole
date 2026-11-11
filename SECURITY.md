@@ -778,14 +778,14 @@ wrong object/array schemas fail closed before admission side effects.
 OutLayer's documented WithdrawRequest has no minimum/quote-lock field. Dry-run
 amount_out/min_amount_out is advisory only. This unpublished candidate blocks ALL
 withdraw execution before custody, spend reservations and POSTs, even when a
-holder signs a minimum/deadline. Live funding and lending must not begin until a
-documented minimum-bound mechanism is reviewed, or a separate explicit
-slippage/fee policy is approved and implemented. No API parameter was guessed, no
+holder signs a minimum/deadline. Public FT redemption remains unavailable until a
+documented minimum-bound mechanism is reviewed. The explicitly scoped native A/B
+pilot below does not request that capability or waive this denial. No API parameter was guessed, no
 public fallback substituted and no positive preview promoted into recovery proof.
 The UI also refuses to turn advisory previews into withdrawal authorization.
 
-Live contract metadata v2.7 is evidence-promoted, not redeployed. Existing
-contracts/ files are unchanged; verifiers select release/v2.7 bytes while keeping
+Live contract metadata v2.7 is evidence-promoted, not redeployed. Production
+contract source/release files are unchanged; verifiers select release/v2.7 bytes while keeping
 the old deployed/v2.6 evidence intact. Historical migration/worker attestations
 remain verifiable. The new worker remains unpublished; these local tests prove
 source behavior, not live provider confinement, runtime measurement or A/B loans.
@@ -793,3 +793,48 @@ Compute wrappers use OUTLAYER_PAYMENT_KEY nonce 2, with the pinned CLI's scoped
 PAYMENT_KEY alias on submission and polling. Key 1 personal credit is separate.
 Actual grant usage, fees, destination terminal receipts and all budget reserves
 remain execution evidence, never inferred from test fixtures.
+
+## PR208 native A/B scope (no public FT redemption)
+
+The operator scope is `native-A-repay-B-title-no-public-redemption`: collateral
+USDC ingress into a fresh confined wallet, native NEAR principal delivery and
+repayment/pledge release for A; native default with NFT title/whole-wallet control
+passing to the lender for B. The USDC remains confidential collateral. Title and
+an authenticated current-holder inventory read are NOT public cash recovery,
+liquidation, a minimum-net-delivery guarantee or proof of profit. Old borrower
+private access/authorization must fail after the real epoch increment; new-holder
+cooldown remains enforced. No private transfer, public Intents substitution or
+raw-sign/call authority is added. Both new execution and missing-original-ID
+withdrawal POSTs stay denied; known historical provider-ID reconciliation is
+GET-only and is not retroactively marked minimum-protected.
+
+The TEE/OutLayer operator/coordinator, actual policy enforcement, confidential
+ledger/deposit evidence, authenticated RPC/API, future project publisher and
+current governance remain trust assumptions. Fresh provenance and reviewed
+complete known authority inventory are not a universal provider-global alias
+oracle. The keystore currently trusts coordinator-supplied confidential artifacts
+rather than independently parsing all token/amount fields. Local tests and signed
+reports cannot prove hidden authority absence, future guardian availability or
+fresh measured mainnet execution. Independent exact-head review, all hosted jobs,
+actual publication/attestation, fresh ingress/enrollment and terminal original
+receipts are still gates; this change executes none of them.
+
+Any future public redemption needs a typed immutable non-dry 1Click-quote-bound
+confidential same-USDC self-exit: exact source wallet/verifier/asset, max debit,
+current-holder recipient, canonical destination asset/chain, minimum net after
+all fees/registration, deadline, nonce/epoch and quote commitment. The measured
+keystore must parse/rebuild and validate the signing artifact, reject extra
+intents/authority before signing and execute only that quote; no re-quote or
+unbound fallback. Actual FINAL FT destination receipts (including descendants),
+net amount and original identities must independently verify. A quote or
+post-balance refusal cannot undo a bad transfer. No current API supports this
+complete binding and no invented field is sent.
+
+Budget is <=0.4 NEAR including actual/unresolved/worst completion plus >=0.04 OFF
+reserve, <=0.999 USDC-equivalent (<=0.90 source+<=0.099 grant compute reserved),
+and <=0.00005 Base ETH including L1 fee. Existing grant credit is not zero cost.
+The previous ~0.43 full-redemption envelope is not a guaranteed ~0.383 budget.
+FINAL refunds only; temporary liquidity, internal capital and retained storage
+must be separately accounted for. The local integer budget/receipt checkers are
+operator gates, not a fabricated cost/delivery attestation. README has no
+weaknesses list; truthful unpublished/source-only labels remain mandatory.

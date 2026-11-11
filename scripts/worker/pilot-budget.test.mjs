@@ -1,0 +1,9 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {checkBudget} from './pilot-budget.mjs';
+const good={scope:'native-A-repay-B-title-no-public-redemption',actual_final_receipts_reviewed:true,remaining_worst_case_reviewed:true,refunds_counted_only_when_final:true,near_final_spent_yocto:'100000000000000000000000',near_unresolved_max_yocto:'0',near_remaining_worst_yocto:'200000000000000000000000',near_off_reserve_yocto:'40000000000000000000000',usdc_source_raw:'900000',compute_reserved_micro_usd:'99000',base_eth_final_wei:'0',base_eth_remaining_max_wei:'50000000000000',receipt_refs:['fixture-only']};
+test('scoped integer budget includes completed, unknown, worst remaining and OFF reserve',()=>{assert.equal(checkBudget(good),true);for(const patch of [{near_remaining_worst_yocto:'300000000000000000000000'},{near_unresolved_max_yocto:'100000000000000000000000'},{near_off_reserve_yocto:'0'},{usdc_source_raw:'900001'},{compute_reserved_micro_usd:'99001'},{base_eth_final_wei:'1'},{refunds_counted_only_when_final:false},{remaining_worst_case_reviewed:false},{receipt_refs:[]},{near_final_spent_yocto:'0.1'},{scope:'public-recovery'}])assert.throws(()=>checkBudget({...good,...patch}));});
+test('native scope runbook keeps withdrawal unavailable without blocking approved native A/B',()=>{
+ const b=readFileSync('docs/worker/LIVE_LOANS_EXEC.md','utf8'),d=readFileSync('docs/worker/LIVE_LOANS_DESIGN.md','utf8');
+ for(const s of [b,d]){assert.match(s,/native-A-repay-B-title-no-public-redemption/);assert.match(s,/public FT redemption.*unavailable/i);assert.doesNotMatch(s,/A repayment\/cashouts\/ordinary exit|full successful private recovery|Do not start live loans or pre-funding while/);}
+ assert.match(b,/pilot-budget.mjs/);assert.match(b,/get_payout_credit/);assert.match(b,/claim_default/);assert.match(b,/worker_call/);assert.doesNotMatch(b,/make_input "\$HOLDERKEY" withdraw "/);
+});

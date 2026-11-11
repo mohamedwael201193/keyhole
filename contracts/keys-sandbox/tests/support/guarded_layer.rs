@@ -13,9 +13,9 @@ impl Store for Memory {
  fn remove(&mut self,k:&str)->std::result::Result<(),Error>{self.0.remove(k);Ok(())}
  fn list_prefix(&mut self,p:&str)->std::result::Result<Vec<String>,Error>{Ok(self.0.keys().filter(|k|k.starts_with(p)).cloned().collect())}
 }
-struct Layer<'a>{e:&'a E,store:Memory,post_calls:usize,executions:usize,lose_post:bool,fail_finish:bool,legacy_count:u64,balance:u128,rows:BTreeMap<String,Value>,bodies:BTreeMap<String,Value>}
+struct Layer<'a>{e:&'a E,store:Memory,post_calls:usize,signatures:usize,admissions:usize,executions:usize,lose_post:bool,fail_finish:bool,legacy_count:u64,balance:u128,rows:BTreeMap<String,Value>,bodies:BTreeMap<String,Value>}
 impl<'a> Layer<'a>{
- fn new(e:&'a E)->Self{Self{e,store:Memory::default(),post_calls:0,executions:0,lose_post:false,fail_finish:false,legacy_count:1,balance:2_000_000,rows:BTreeMap::new(),bodies:BTreeMap::new()}}
+ fn new(e:&'a E)->Self{Self{e,store:Memory::default(),post_calls:0,signatures:0,admissions:0,executions:0,lose_post:false,fail_finish:false,legacy_count:1,balance:2_000_000,rows:BTreeMap::new(),bodies:BTreeMap::new()}}
  fn journal(&mut self,owner:&Account,kind:&str,label:&str)->Journal{
   self.journal_for("k1",owner,kind,label)
  }
@@ -26,6 +26,18 @@ impl<'a> Layer<'a>{
  }
  fn status(&mut self,j:&Journal,status:&str,never:bool){let row=self.rows.get_mut(&j.op_id).unwrap();row["status"]=json!(status);if never{row["result"]=json!({"never_submitted":true});}}
  fn assert_blocked(&mut self,owner:&Account,label:&str){let j=self.journal(owner,"withdraw",label);let before=self.post_calls;assert!(guarded::confirm_admission(self,&j).is_err());assert!(guarded::drive_provider(self,&j,"sealed-mock-key",false).is_err());assert_eq!(self.post_calls,before);}
+ fn refuse_exit(&mut self,owner:&Account,label:&str){
+  let mut j=self.journal(owner,"withdraw",label);j.body["min_amount_out"]=json!("90000");j.body["deadline_ms"]=json!(2000);
+  let before=(self.post_calls,self.signatures,self.admissions,self.executions,self.store.0.len());
+  let control=AdmissionHost::control(self,"k1").unwrap();
+  let refused=keyhole_worker::withdrawal_protection::dispatch(&j.body,1000,||{
+   j.create(self)?;guarded::confirm_admission(self,&j)?;guarded::drive_provider(self,&j,"sealed-mock-key",false)
+  }).unwrap_err();
+  assert_eq!(refused.code,"withdraw_execution_unavailable");
+  assert_eq!((self.post_calls,self.signatures,self.admissions,self.executions,self.store.0.len()),before,"refusal must not POST/sign/admit/write WAL");
+  assert_eq!(AdmissionHost::control(self,"k1").unwrap(),control);
+  assert!(sync(view(&self.e.c,"get_value_op",json!({"token_id":"k1","op_id":j.op_id}))).is_null());
+ }
  fn registry(&self)->std::result::Result<(),Error>{let h="f".repeat(64);guarded::registry(&json!({"project_id":guarded::PROJECT_ID,"uuid":guarded::PROJECT_UUID,"active_version":h}),&json!([{"wasm_hash":h,"is_active":true,"source":{"WasmUrl":{"hash":h}}}]),self.legacy_count,&h)}
 }
 impl Store for Layer<'_>{
@@ -38,7 +50,7 @@ impl Store for Layer<'_>{
 impl AdmissionHost for Layer<'_>{
  fn value_op(&mut self,j:&Journal)->std::result::Result<Value,Error>{Ok(sync(view(&self.e.c,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))))}
  fn control(&mut self,token:&str)->std::result::Result<Control,Error>{Control::parse(&sync(view(&self.e.c,"get_control_state",json!({"token_id":token}))),token)}
- fn begin(&mut self,j:&Journal)->std::result::Result<(),Error>{sync(async{self.e.minter.call(self.e.c.id(),"begin_value_op").args_json(j.admission_args()).deposit(NearToken::from_yoctonear(guarded::ADMISSION_DEPOSIT)).max_gas().transact().await.unwrap().into_result().map(|_|()).map_err(|_|err("admission_unknown","real NEAR begin rejected"))})}
+ fn begin(&mut self,j:&Journal)->std::result::Result<(),Error>{self.admissions+=1;sync(async{self.e.minter.call(self.e.c.id(),"begin_value_op").args_json(j.admission_args()).deposit(NearToken::from_yoctonear(guarded::ADMISSION_DEPOSIT)).max_gas().transact().await.unwrap().into_result().map(|_|()).map_err(|_|err("admission_unknown","real NEAR begin rejected"))})}
  fn complete(&mut self,j:&Journal,t:&Terminal)->std::result::Result<(),Error>{if self.fail_finish{self.fail_finish=false;return Err(err("rpc","injected missing finish submission"));}sync(async{self.e.minter.call(self.e.c.id(),"finish_value_op").args_json(j.finish_args(t.success)).max_gas().transact().await.unwrap().into_result().map(|_|()).map_err(|_|err("rpc","real NEAR finish rejected"))})}
 }
 impl ProviderHost for Layer<'_>{
@@ -51,7 +63,7 @@ impl ProviderHost for Layer<'_>{
  }
  fn post(&mut self,j:&Journal,_key:&str,_path:&str)->std::result::Result<(u16,Value),Error>{
   let policy=sync(view(&self.e.mock,"get_wallet_policy",json!({"wallet_pubkey":format!("ed25519:{}",j.wallet_id)})));
-  assert_eq!(policy["frozen"],false,"mock provider also refuses frozen custody");self.post_calls+=1;
+  assert_eq!(policy["frozen"],false,"mock provider also refuses frozen custody");self.post_calls+=1;self.signatures+=1;
   if let Some(body)=self.bodies.get(&j.op_id){assert_eq!(body,&j.body);let id=self.rows[&j.op_id]["request_id"].clone();return Ok((200,json!({"error":"duplicate_idempotency_key","request_id":id,"type":"confidential","status":self.rows[&j.op_id]["status"]})));}
   let id=format!("00000000-0000-4000-8000-{:012x}",self.rows.len()+1);
   self.bodies.insert(j.op_id.clone(),j.body.clone());self.rows.insert(j.op_id.clone(),json!({"request_id":id,"type":"confidential","status":"processing","created_at":"2026-11-09T22:00:00Z","result":null}));
@@ -77,7 +89,7 @@ async fn floor_certificate(e:&E,l:&Layer<'_>)->Result<(Value,String)>{
  let contract_typed:LoanCertificate=serde_json::from_value(value.clone())?;assert_eq!(cert.bytes().unwrap(),near_sdk::borsh::to_vec(&contract_typed)?);
  Ok((value,cert.sign(&[7;32]).unwrap()))
 }
-async fn fund_worker(e:&E,l:&Layer<'_>)->Result<Value>{let (cert,sig)=floor_certificate(e,l).await?;e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":cert["loan_nonce"],"certificate":cert,"signature":sig})).deposit(NearToken::from_near(1)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"DisbursementPending");e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"Active");Ok(cert)}
+async fn fund_worker(e:&E,l:&Layer<'_>)->Result<Value>{let (cert,sig)=floor_certificate(e,l).await?;e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":cert["loan_nonce"],"certificate":cert,"signature":sig})).deposit(NearToken::from_near(1)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"DisbursementPending");assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["due_ns"],"0");assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,N.to_string());e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["state"],"Active");assert!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await["due_ns"].as_str().unwrap().parse::<u64>()?>0);assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,"0");assert!(view(&e.c,"get_pending_payout",json!({"account_id":e.alice.id()})).await.is_null());Ok(cert)}
 #[tokio::test(flavor="multi_thread",worker_threads=2)]
 async fn guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a()->Result<()>{
  let e=setup().await?;let mut l=Layer::new(&e);let first=l.journal(&e.alice,"swap","initial swap");first.create(&mut l).unwrap();
@@ -103,7 +115,13 @@ async fn guarded_worker_cross_layer_repay_failures_and_transfer_call_a_b_a()->Re
  assert!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await.is_null());
  let stale_fund=e.lender.call(e.c.id(),"fund_loan").args_json(json!({"token_id":"k1","nonce":"1","certificate":certificate,"signature":""})).deposit(NearToken::from_near(1)).max_gas().transact().await?;assert!(stale_fund.is_failure());
  let lender=e.lender.deploy(&std::fs::read(MOCK)?).await?.into_result()?;lender.call("claim_then_delete").args_json(json!({"keys":e.c.id(),"beneficiary":e.bob.id()})).max_gas().transact().await?.into_result()?;assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,(11*N/10).to_string());
- let exit=l.journal(&e.alice,"withdraw","after repay exit");exit.create(&mut l).unwrap();guarded::confirm_admission(&mut l,&exit).unwrap();guarded::drive_provider(&mut l,&exit,"sealed-mock-key",false).unwrap();l.status(&exit,"success",false);assert_eq!(guarded::drive_provider(&mut l,&exit,"sealed-mock-key",true).unwrap()["admission_finished"],true);Ok(())
+ assert_eq!(view(&e.c,"nft_token",json!({"token_id":"k1"})).await["owner_id"],e.alice.id().as_str());
+ assert_eq!(AdmissionHost::control(&mut l,"k1").unwrap().epoch,2);assert!(!AdmissionHost::control(&mut l,"k1").unwrap().pledged);
+ assert_eq!(view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":"ed25519:".to_owned()+&"ab".repeat(32)})).await["frozen"],false);
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,keyhole_keys::LOAN_STORAGE_DEPOSIT.to_string());
+ e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,"0");assert!(view(&e.c,"get_pending_payout",json!({"account_id":e.alice.id()})).await.is_null());
+ let floor=l.balance;l.refuse_exit(&e.alice,"after repay public exit denied");assert_eq!(l.balance,floor);assert!(l.balance>=1_000_000);Ok(())
 }
 #[tokio::test(flavor="multi_thread",worker_threads=2)]
 async fn guarded_worker_cross_layer_default_failures_and_new_holder_exit()->Result<()>{
@@ -115,10 +133,20 @@ async fn guarded_worker_cross_layer_default_failures_and_new_holder_exit()->Resu
  e.mock.call("mock_refuse_thaw").args_json(json!({"refuse":true})).transact().await?.into_result()?;e.lender.call(e.c.id(),"claim_default").args_json(json!({"token_id":"k1","nonce":"1","receiver_id":e.bob.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&e.c,"nft_token",json!({"token_id":"k1"})).await["owner_id"],e.bob.id().as_str());l.assert_blocked(&e.bob,"new holder before thaw");l.assert_blocked(&e.alice,"old holder after seizure");
  e.mock.call("mock_refuse_thaw").args_json(json!({"refuse":false})).transact().await?.into_result()?;e.bob.call(e.c.id(),"retry_loan_policy").args_json(json!({"token_id":"k1","nonce":"1"})).max_gas().transact().await?.into_result()?;
- let exit=l.journal(&e.bob,"withdraw","new holder exit");exit.create(&mut l).unwrap();guarded::confirm_admission(&mut l,&exit).unwrap();
+ assert!(view(&e.c,"get_loan",json!({"token_id":"k1"})).await.is_null());
+ assert_eq!(AdmissionHost::control(&mut l,"k1").unwrap().epoch,1);assert!(!AdmissionHost::control(&mut l,"k1").unwrap().pledged);
+ assert_eq!(view(&e.c,"get_collateral_binding",json!({"token_id":"k1"})).await["wallet_pubkey"],"ed25519:".to_owned()+&"ab".repeat(32));
+ l.refuse_exit(&e.bob,"new holder public exit denied");
+ // Keep the independent late-settlement/new-permit regression on a supported
+ // private transfer. It is NOT evidence of public FT redemption.
+ let exit=l.journal(&e.bob,"transfer","new holder private transfer");exit.create(&mut l).unwrap();guarded::confirm_admission(&mut l,&exit).unwrap();
  assert!(guarded::drive_provider(&mut l,&j,"sealed-mock-key",true).unwrap()["admission_finished"].as_bool().unwrap());assert_eq!(AdmissionHost::control(&mut l,"k1").unwrap().pending,1,"old settlement cannot clear the new holder's permit");
  guarded::drive_provider(&mut l,&exit,"sealed-mock-key",false).unwrap();l.status(&exit,"success",false);assert_eq!(guarded::drive_provider(&mut l,&exit,"sealed-mock-key",true).unwrap()["admission_finished"],true);
- l.assert_blocked(&e.alice,"old holder after exit");assert_eq!(l.executions,2);Ok(())
+ l.assert_blocked(&e.alice,"old holder after exit");assert_eq!(l.executions,2);
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,keyhole_keys::LOAN_STORAGE_DEPOSIT.to_string());
+ e.alice.call(e.c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.alice.id()})).await,"0");assert!(view(&e.c,"get_pending_payout",json!({"account_id":e.alice.id()})).await.is_null());
+ assert_eq!(view(&e.c,"get_payout_credit",json!({"account_id":e.lender.id()})).await,"0","default exchanges principal for title, not invented repayment");Ok(())
 }
 
 #[path="ui_harness.rs"] mod ui_harness;

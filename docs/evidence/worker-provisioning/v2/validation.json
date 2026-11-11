@@ -2,32 +2,32 @@
   "status": "source-candidate-not-published",
   "credit": "devmo",
   "source_commit_reference": "identity.json#/review/source_commit",
-  "source_tree_sha256": "30d93a8b607f342931c1339c6d79c7006ecef011b792f8bb7600d00046954e20",
+  "source_tree_sha256": "dd75dcfeaf717aabd597469ccf2ba087dbdd6f95dace5b2ce7634736b97e9f27",
   "worker_candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60",
+    "wasm_sha256": "5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda",
     "bytes": 1248852,
     "recipe": "tee/worker/build.sh"
   },
   "tests": {
-    "worker": 720,
-    "javascript": 169,
+    "worker": 723,
+    "javascript": 177,
     "receipts": 9
   },
   "actual_wasi_builds": [
-    "d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60",
-    "d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60"
+    "5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda",
+    "5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda"
   ],
   "live_provider_installation": false,
   "live_loans": false,
   "logs": [
     {
       "path": "docs/evidence/worker-provisioning/v2/worker-tests.log",
-      "sha256": "4398f1df9e2a42a21d2f31bf914de0c507ace612257a9b5716ecdd8d95d6bb78"
+      "sha256": "be1163e951f44cb44bbdfdf6b726d9c000bf82e029091142f69c981ef35d7750"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/js-tests.log",
-      "sha256": "b4480eafe65ea05ffb8875125dfccc16552121fc27297f8beda5856a9ea13a70"
+      "sha256": "869d751e5341736b1e2eca86dc1eda1a3f833847071190c6104879c421d35b0b"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/receipt-tests.log",
@@ -35,23 +35,23 @@
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/cli-tests.log",
-      "sha256": "a5c811bc32160d6610759f8e935f41e34dca479a2977f20ff47cf01fbf6d8386"
+      "sha256": "f12aed7ab89ad4d871bd0ddddf8819e061c4c3761dbcdb7b979c78e3661e9deb"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/clippy-native.log",
-      "sha256": "6e5a8cc2b4d85d5b70c21b327c73f83121a0231bfe36c1467434584cb33492a0"
+      "sha256": "f2bf1525a6bc8a924b299d6154d1f1b8d3d23231bc4a12d04dbe41ba0d99c50e"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/clippy-wasi.log",
-      "sha256": "d6d6629435b089d3bcaef111f255097a9bd3c0f3738581474cb85bb484c27019"
+      "sha256": "c5283b351d14ea8e235e16132e3ae7d2308db3062402db691d1e576bf2b609d0"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/build1.log",
-      "sha256": "205ecf47aee2f83ff63064616f07b47ab2be1b5fc671b40585e682e0aa7fa4e9"
+      "sha256": "bba760459653f5adc13fd849b4152ef89b7b178e46f132de2c67b8bf8e7b4cd8"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/build2.log",
-      "sha256": "432177a57033ef6e730ac7fd1d9799a7aca87fda6c0c0eff97f58b0816b4b5ea"
+      "sha256": "44427043c6e2fc7c59786cec64e730e991840dbc1a01b9227595df5d758fb916"
     }
   ]
 }

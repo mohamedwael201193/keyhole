@@ -9,7 +9,7 @@ use keyhole_keys::LoanCertificate;
 use near_workspaces::{Account, Contract};
 use near_workspaces::types::NearToken;
 use serde_json::{json,Value};
-const WASM:&str="../keys/release/v2.6/keyhole_keys.wasm";
+const WASM:&str="../keys/release/v2.7/keyhole_keys.wasm";
 const MOCK:&str="tests/fixtures/custody_policy_mock.wasm";
 const N:u128=1_000_000_000_000_000_000_000_000;
 struct E { w:near_workspaces::Worker<near_workspaces::network::Sandbox>, c:Contract, mock:Contract, alice:Account, lender:Account, bob:Account, minter:Account }

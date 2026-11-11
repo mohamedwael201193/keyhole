@@ -563,7 +563,7 @@ mod host {
         let c = authenticate(input, "withdraw", true)?;
         guard_preflight(&c)?;
         let p = &c.req.params;
-        withdrawal_protection::require_bound_execution(p, c.now_ms)?;
+        withdrawal_protection::dispatch(p, c.now_ms, || {
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
         // Re-read the actual owner at final finality. Refuse before custody access or spend reservation.
@@ -600,6 +600,7 @@ mod host {
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
         Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"),
             "tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
+        })
     }
 
     fn load_prov(token: &str) -> Result<Vec<(ProvEvent, String)>, Error> {

@@ -116,7 +116,7 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 ```
 
-Worker source candidate: `d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60` (1,248,852 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
+Worker source candidate: `5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda` (1,248,852 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
 
 Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
@@ -808,7 +808,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 |---|---|---|
 | Keys contract unit tests | **306** pass | `cd contracts/keys && cargo test --locked` (historical contract measurement; contract files unchanged) |
 | Keys contract sandbox tests | **59** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 31 upgrade/sale/runtime cases |
-| TEE worker unit tests | **720** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
+| TEE worker unit tests | **723** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
 | CLI tests | **77** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/cli-tests.log) |
 | Web unit tests (Vitest) | **1961** pass in 111 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web e2e (Playwright) | **215** pass + 2 passed on retry, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/web-e2e.log) |

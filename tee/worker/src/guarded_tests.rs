@@ -224,3 +224,62 @@ fn blocked_withdrawal_still_allows_read_only_recovery_of_an_existing_original_pr
  assert_eq!(drive_provider(&mut host,&j,"key",true).unwrap()["admission_finished"],true);
  assert_eq!(host.post_calls,0);assert_eq!(host.executions,0);
 }
+
+/// Exercise the actual production withdrawal adapter with injected side effects,
+/// not a counter after an independent copy of the validation predicate.
+#[test]
+fn withdrawal_adapter_refuses_all_quote_context_faults_before_any_transport_or_admission() {
+    let good=json!({"token_id":"k1","owner_epoch":"0","chain":"near","to":"alice.near","token":ASSET,"amount":"100","min_amount_out":"90","deadline_ms":2000,"quote_id":"original","quote_sha256":"a".repeat(64)});
+    let mut cases=vec![("currently unsupported even if well formed",good.clone())];
+    for (field,value) in [
+        ("min_amount_out",json!(null)),("min_amount_out",json!("0")),("min_amount_out",json!("-1")),
+        ("min_amount_out",json!("340282366920938463463374607431768211456")),
+        ("quote_id",json!(null)),("quote_id",json!("changed")),("quote_sha256",json!("wrong")),
+        ("owner_epoch",json!("1")),("to",json!("wrong.near")),("token",json!("wrong-asset")),
+        ("chain",json!("base")),("deadline_ms",json!(999)),("deadline_ms",json!(301001)),
+        ("preview_amount_out",json!("1")),("execution_supported",json!(true)),("owner",json!("old.near")),
+    ] {let mut v=good.clone();v[field]=value;cases.push((field,v));}
+    for (label,p) in cases {
+        let mut h=ProviderFixture{admitted:false,..ProviderFixture::default()};
+        let j=journal();let mut custody_lookups=0;let mut signatures=0;let mut admissions=0;let mut spend=0;
+        let result=crate::withdrawal_protection::dispatch(&p,1000,|| {
+            custody_lookups+=1;spend+=1;signatures+=1;admissions+=1;
+            j.create(&mut h)?;confirm_admission(&mut h,&j)?;
+            drive_provider(&mut h,&j,"fixture-key",false)
+        });
+        assert!(result.is_err(),"{label}");
+        assert_eq!((custody_lookups,signatures,admissions,spend,h.post_calls,h.executions,h.finish_calls),(0,0,0,0,0,0,0),"{label}");
+        assert!(!h.admitted);assert!(h.store.0.is_empty(),"no WAL, eligibility or success marker on {label}");
+    }
+}
+#[test]
+fn withdrawal_unknown_without_original_id_never_resigns_or_posts_on_retry_or_false_terminal() {
+    for reconcile in [false,true] {
+        for dispatched in [false,true] {
+            let mut h=ProviderFixture::default();let mut j=journal();j.kind="withdraw".into();
+            j.body=json!({"chain":"near","to":"alice.near","token":ASSET,"amount":"100"});
+            j.create(&mut h).unwrap();
+            if dispatched {put_once(&mut h,&format!("{}/dispatch",j.key()),b"1").unwrap();}
+            // An unsolicited success, shortfall, wrong destination or failed FT
+            // descendant is not an original request identity or recovery proof.
+            for result in [json!({"amount_out":"1"}),json!({"to":"wrong.near"}),json!({"token":"wrong"}),json!({"receipt":{"status":"Failure"}})] {
+                h.row["result"]=result;
+                assert!(drive_provider(&mut h,&j,"fixture-key",reconcile).is_err());
+                assert_eq!((h.post_calls,h.executions,h.finish_calls),(0,0,0));
+                assert!(h.read(&format!("{}/terminal",j.key())).unwrap().is_empty());
+                assert!(h.read(&format!("{}/finish_ack",j.key())).unwrap().is_empty());
+            }
+        }
+    }
+}
+#[test]
+fn original_withdrawal_unknown_poll_is_get_only_and_keeps_admission_locked() {
+    for status in ["processing","needs_review","failed","partially_failed"] {
+        let mut h=ProviderFixture::default();h.row["status"]=json!(status);
+        let mut j=journal();j.kind="withdraw".into();j.body=json!({"chain":"near","to":"alice.near","token":ASSET,"amount":"100"});
+        put_once(&mut h,&format!("{}/provider",j.key()),ID.as_bytes()).unwrap();
+        assert_eq!(drive_provider(&mut h,&j,"fixture-key",true).unwrap()["admission_finished"],false);
+        h.lose_get=true;assert_eq!(drive_provider(&mut h,&j,"fixture-key",true).unwrap()["status"],"needs_review");
+        assert_eq!((h.post_calls,h.executions,h.finish_calls),(0,0,0));assert!(h.admitted);
+    }
+}

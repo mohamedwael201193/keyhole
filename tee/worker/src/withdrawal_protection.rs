@@ -22,6 +22,15 @@ pub fn require_bound_execution(p: &Value, now_ms: u64) -> Result<(), Error> {
 pub fn deny_unbound_provider_execution() -> Result<(), Error> {
     Err(err("withdraw_execution_unavailable", "provider cannot bind execution to the accepted minimum; preview advisory only; STOP for separately approved slippage/fee policy"))
 }
+/// Production adapter: every custody lookup, spend reservation, native admission,
+/// signature and execution transport is inside `execute`. The same adapter is
+/// injected with a recording transport by native and sandbox tests. It cannot
+/// be enabled by caller-supplied quote fields or an execution_supported boolean.
+/// The refusal predicate and the durable provider denial remain unchanged.
+pub fn dispatch<T>(p: &Value, now_ms: u64, execute: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
+    require_bound_execution(p, now_ms)?;
+    execute()
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -40,7 +49,7 @@ mod tests {
     #[test]
     fn production_gate_precedes_custody_and_spend() {
         let s = include_str!("main.rs").split("fn op_withdraw(").nth(1).unwrap().split("fn load_prov(").next().unwrap();
-        let gate = s.find("withdrawal_protection::require_bound_execution").unwrap();
+        let gate = s.find("withdrawal_protection::dispatch").unwrap();
         for after in ["guarded_wallet(", "charge_spend(", "guard_begin(", "guard_provider("] { assert!(gate < s.find(after).unwrap()); }
     }
 }
