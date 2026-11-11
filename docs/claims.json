@@ -8428,6 +8428,32 @@
    "verify": "node judge/verify-claims.mjs --only path-scripts/release/lifecycle.test.mjs"
   },
   {
+   "id": "path-docs/worker/outlayer-exact-exit-schemas.json",
+   "claim": "Linked repo path docs/worker/outlayer-exact-exit-schemas.json exists",
+   "where": "SECURITY.md:807",
+   "evidence_type": "file",
+   "evidence": "docs/worker/outlayer-exact-exit-schemas.json",
+   "check": {
+    "type": "path",
+    "path": "docs/worker/outlayer-exact-exit-schemas.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/worker/outlayer-exact-exit-schemas.json"
+  },
+  {
+   "id": "path-docs/worker/EXACT_NEAR_EXIT.md",
+   "claim": "Linked repo path docs/worker/EXACT_NEAR_EXIT.md exists",
+   "where": "SECURITY.md:815",
+   "evidence_type": "file",
+   "evidence": "docs/worker/EXACT_NEAR_EXIT.md",
+   "check": {
+    "type": "path",
+    "path": "docs/worker/EXACT_NEAR_EXIT.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/worker/EXACT_NEAR_EXIT.md"
+  },
+  {
    "id": "site-/",
    "claim": "Live page / serves",
    "where": "README.md:918",

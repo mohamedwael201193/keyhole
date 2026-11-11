@@ -79,7 +79,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  async function refusedExit(p:Page,label:string){
   const before=await fixture("metadata"),control=await view("get_control_state",{token_id:meta.token_id}),native=observed.length,signs=withdrawalSigns.length,posts=withdrawalPosts.length,dialogs=confirms.length;
   await p.getByRole("button",{name:"Exit to my wallet",exact:true}).click();
-  await expect(p.getByRole("status")).toContainText("Preview is advisory only: provider execution cannot enforce this minimum.",{timeout:20000});
+  await expect(p.getByRole("status")).toContainText("Preview is advisory only: only the explicitly signed three-step exact NEAR USDC exit is supported by the candidate.",{timeout:20000});
   await expect(p.getByRole("status")).toContainText("No withdrawal was signed.");
   const after=await fixture("metadata");
   for(const field of ["post_calls","custody_signatures","admissions","private_balance"])expect(after[field],`${label}: zero value side effects`).toBe(before[field]);
