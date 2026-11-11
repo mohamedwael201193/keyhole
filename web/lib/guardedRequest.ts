@@ -6,7 +6,7 @@ type Read = <T>(method: string, args: Record<string, unknown>) => Promise<T>;
 /** Historical v2.4 only. Never derive this exception from the current deployment identity. */
 export const LIVE_V24_CODE_HASH = "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ";
 export const guardedValueOp = (op: string, params: Record<string, unknown>) =>
-  ["swap", "copy", "withdraw", "transfer"].includes(op) || (op === "quote" && params.execute === true);
+  ["swap", "copy", "withdraw", "withdraw_dry_run", "transfer"].includes(op) || (op === "quote" && params.execute === true);
 export const decimalEpoch = (v: unknown): v is string => typeof v === "string" && /^(0|[1-9]\d*)$/.test(v) && BigInt(v) <= 18446744073709551615n;
 
 export type ContractProfile = "v2.4" | "v2.5";

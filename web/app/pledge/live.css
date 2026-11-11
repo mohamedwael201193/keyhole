@@ -71,3 +71,7 @@
   .pledge-live button.pledge-live-mobile-inventory { display: block; width: 100%; margin-top: 8px; }
   .pledge-live-mobile-summary { display: block; margin: 0 0 8px; font-size: 14px; }
 }
+
+.pledge-live-forfeit { display: grid; gap: 8px; margin-top: 8px; min-width: 0; }
+.pledge-live-forfeit-ack { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; }
+.pledge-live-forfeit-ack input { width: 20px; height: 20px; flex: 0 0 auto; }

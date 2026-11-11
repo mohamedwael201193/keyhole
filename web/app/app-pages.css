@@ -101,3 +101,12 @@
 @media (prefers-reduced-motion: reduce) {
   .gal-tab { transition: none; }
 }
+
+/* Holder check: the result wraps, and the action stays a full tap target on a phone. */
+.holders-body { display: grid; gap: 12px; min-width: 0; }
+.holders-body p, .holders-body li { overflow-wrap: anywhere; }
+.holders-body ul { margin: 0; padding-left: 1.2rem; }
+.holders-body button { max-width: 100%; }
+@media (max-width: 480px) {
+  .holders-body button { width: 100%; }
+}

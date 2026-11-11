@@ -33,8 +33,8 @@ export async function verifyLoanCertificate(bundle:CertificateEnvelope,expected:
  }catch{return false;}
 }
 /** Public exact-loan endpoint: caller cannot choose another floor, asset or certificate template. */
-export async function requestLoanCertificate(token_id:string,loan_nonce:string):Promise<CertificateEnvelope> {
- const response=await fetch("/api/worker",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({op:"loan_certificate",params:{token_id,loan_nonce}}),cache:"no-store"});
+export async function requestLoanCertificate(token_id:string,loan_nonce:string,signal?:AbortSignal):Promise<CertificateEnvelope> {
+ const response=await fetch("/api/worker",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({op:"loan_certificate",params:{token_id,loan_nonce}}),cache:"no-store",signal});
  const result=await response.json();const output=result.output;
  if(!response.ok||result.error||!output?.ok||!output.certificate||typeof output.signature!=="string")throw Error("Sealed certificate unavailable. Declared floor is not verified.");
  return {certificate:output.certificate,signature:output.signature};
