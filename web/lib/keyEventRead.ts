@@ -38,26 +38,27 @@ function stamp(v: unknown): number | null {
   return /^\d+$/.test(s) ? Number(BigInt(s) / 1_000_000n) : null;
 }
 
-/** One Nearblocks receipt row. A missing hash or a non-array action list is not a usable receipt. */
+/** One Nearblocks v3 receipt row. A missing hash or a non-array action list is not a usable receipt. */
 export function receiptRowOk(item: unknown): boolean {
   if (!item || typeof item !== "object" || Array.isArray(item)) return false;
-  const row = item as { transaction_hash?: unknown; actions?: unknown; predecessor_account_id?: unknown; block_timestamp?: unknown };
+  const row = item as { transaction_hash?: unknown; actions?: unknown; predecessor_account_id?: unknown; included_in_block_timestamp?: unknown };
   if (typeof row.transaction_hash !== "string" || row.transaction_hash.length === 0) return false;
   if (!Array.isArray(row.actions)) return false;
   if (row.actions.some((action) => !action || typeof action !== "object" || Array.isArray(action))) return false;
   if (row.predecessor_account_id != null && typeof row.predecessor_account_id !== "string") return false;
-  if (row.block_timestamp != null && typeof row.block_timestamp !== "string" && typeof row.block_timestamp !== "number") return false;
+  if (row.included_in_block_timestamp != null && typeof row.included_in_block_timestamp !== "string" && typeof row.included_in_block_timestamp !== "number") return false;
   return true;
 }
 
-/** Nearblocks receipt page. A 200 body without a `txns` array, or a row that is not a receipt, is not an empty history. */
+/** Nearblocks v3 receipt page: `{ data, meta.next_page }`. A 200 body without `data`, or a row that is not a receipt, is not an empty history. */
 export function receiptPage(body: unknown): { txns: unknown[]; cursor: string | null } | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
-  const row = body as { txns?: unknown; cursor?: unknown };
-  if (!Object.prototype.hasOwnProperty.call(row, "txns") || !Array.isArray(row.txns)) return null;
-  if (row.txns.some((item) => !receiptRowOk(item))) return null;
-  if (row.cursor != null && typeof row.cursor !== "string") return null;
-  return { txns: row.txns, cursor: row.cursor ? row.cursor : null };
+  const row = body as { data?: unknown; meta?: { next_page?: unknown } };
+  if (!Object.prototype.hasOwnProperty.call(row, "data") || !Array.isArray(row.data)) return null;
+  if (row.data.some((item) => !receiptRowOk(item))) return null;
+  const next = row.meta?.next_page;
+  if (next != null && typeof next !== "string") return null;
+  return { txns: row.data, cursor: next ? next : null };
 }
 
 /** One method's receipt pages, stopped at `MAX_EVENT_PAGES`. */
@@ -70,8 +71,8 @@ export async function pagesFor(
   const txns: unknown[] = [];
   let cursor: string | null = null;
   for (let i = 0; i < MAX_EVENT_PAGES; i++) {
-    const q = cursor ? `&cursor=${encodeURIComponent(cursor)}` : "";
-    const res = await getJson(fetchImpl, `${nearblocks}/v1/account/${contractId}/receipts?method=${method}&per_page=${EVENT_PAGE_SIZE}${q}`);
+    const q = cursor ? `&next=${encodeURIComponent(cursor)}` : "";
+    const res = await getJson(fetchImpl, `${nearblocks}/v3/accounts/${contractId}/receipts?method=${method}&limit=${EVENT_PAGE_SIZE}${q}`);
     if (!res.ok) return { txns, complete: false, unavailable: true };
     const parsed = receiptPage(res.body);
     if (!parsed) return { txns, complete: false, unavailable: true };
@@ -91,7 +92,7 @@ export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boo
   let bad = false;
   for (const raw of txns) {
     if (!receiptRowOk(raw)) { bad = true; continue; }
-    const t = raw as { transaction_hash: string; predecessor_account_id?: unknown; block_timestamp?: unknown; actions?: { args?: unknown }[] };
+    const t = raw as { transaction_hash: string; predecessor_account_id?: unknown; included_in_block_timestamp?: unknown; actions?: { args?: unknown }[] };
     const tx = t.transaction_hash;
     if (seen.has(tx)) continue;
     if (!account) {
@@ -109,7 +110,7 @@ export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boo
     hits.push({
       tx,
       signer: typeof t.predecessor_account_id === "string" ? t.predecessor_account_id : "",
-      atMs: stamp(t.block_timestamp),
+      atMs: stamp(t.included_in_block_timestamp),
       account,
     });
   }
@@ -118,9 +119,9 @@ export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boo
 
 export async function signerOf(fetchImpl: FetchLike, hit: Hit, contractId: string, nearblocks = NEARBLOCKS): Promise<string | null> {
   if (hit.signer && hit.signer !== contractId) return hit.signer;
-  const res = await getJson(fetchImpl, `${nearblocks}/v1/txns/${hit.tx}`);
+  const res = await getJson(fetchImpl, `${nearblocks}/v3/txns/${hit.tx}`);
   if (!res.ok) return null;
-  const id = (res.body as { txns?: { signer_account_id?: string }[] })?.txns?.[0]?.signer_account_id;
+  const id = (res.body as { data?: { signer_account_id?: string } })?.data?.signer_account_id;
   return typeof id === "string" && id ? id : null;
 }
 

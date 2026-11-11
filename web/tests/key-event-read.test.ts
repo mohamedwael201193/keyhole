@@ -11,7 +11,7 @@ function receipt(method: string, token: string | null, hash = TX) {
   return {
     transaction_hash: hash,
     predecessor_account_id: "buyer.near",
-    block_timestamp: "1794182936741174679",
+    included_in_block_timestamp: "1794182936741174679",
     actions: [{ args: token ? JSON.stringify({ token_id: token }) : "{}" }],
     method,
   };
@@ -29,8 +29,8 @@ describe("readKeyHistory", () => {
     let calls = 0;
     const fetchImpl = vi.fn(async (url: string) => {
       calls += 1;
-      if (String(url).includes("method=nft_buy")) return Response.json({ txns: [receipt("nft_buy", TOKEN)], cursor: null });
-      if (String(url).includes("/receipts?")) return Response.json({ txns: [], cursor: null });
+      if (String(url).includes("method=nft_buy")) return Response.json({ data: [receipt("nft_buy", TOKEN)], meta: {} });
+      if (String(url).includes("/receipts?")) return Response.json({ data: [], meta: {} });
       return Response.json(rpc([], { message: "down" }));
     }) as unknown as typeof fetch;
     const first = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
@@ -55,8 +55,8 @@ describe("readKeyHistory", () => {
     const closed = `EVENT_JSON:${JSON.stringify({ standard: "keyhole", version: "1.0.0", event: "loan_closed", data: [{ token_id: TOKEN, nonce: "4", resolution: "repaid" }] })}`;
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return Response.json(rpc([{ outcome: { executor_id: CONTRACT, status: { SuccessValue: "" }, logs: [closed] } }]));
-      if (String(url).includes("method=on_loan_policy")) return Response.json({ txns: [receipt("on_loan_policy", TOKEN, "closetx")], cursor: null });
-      return Response.json({ txns: [], cursor: null });
+      if (String(url).includes("method=on_loan_policy")) return Response.json({ data: [receipt("on_loan_policy", TOKEN, "closetx")], meta: {} });
+      return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
     expect(read.unavailable).toBe(false);
@@ -67,8 +67,8 @@ describe("readKeyHistory", () => {
   it("treats archival HTTP 503 as unavailable", async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return new Response("down", { status: 503 });
-      if (String(url).includes("method=nft_buy")) return Response.json({ txns: [receipt("nft_buy", TOKEN)] });
-      return Response.json({ txns: [] });
+      if (String(url).includes("method=nft_buy")) return Response.json({ data: [receipt("nft_buy", TOKEN)], meta: {} });
+      return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
     expect(read.unavailable).toBe(true);
@@ -87,10 +87,10 @@ describe("readKeyHistory", () => {
         const executor = hash.startsWith("H") ? CONTRACT : CONTRACT;
         return Response.json(rpc([{ outcome: { executor_id: executor, status: { SuccessValue: "" }, logs } }]));
       }
-      if (u.includes("method=nft_buy") && !u.includes("cursor=")) return Response.json({ txns: filler, cursor: "page2" });
-      if (u.includes("method=nft_buy") && u.includes("cursor=page2")) return Response.json({ txns: [receipt("nft_buy", TOKEN, TX)], cursor: null });
-      if (u.includes("method=claim_payout")) return Response.json({ txns: [{ transaction_hash: "claimtx", predecessor_account_id: "borrower.near", block_timestamp: "1794182936741174679", actions: [{ args: "{}" }] }] });
-      return Response.json({ txns: [] });
+      if (u.includes("method=nft_buy") && !u.includes("next=")) return Response.json({ data: filler, meta: { next_page: "page2" } });
+      if (u.includes("method=nft_buy") && u.includes("next=page2")) return Response.json({ data: [receipt("nft_buy", TOKEN, TX)], meta: {} });
+      if (u.includes("method=claim_payout")) return Response.json({ data: [{ transaction_hash: "claimtx", predecessor_account_id: "borrower.near", included_in_block_timestamp: "1794182936741174679", actions: [{ args: "{}" }] }], meta: {} });
+      return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
     expect(read.unavailable).toBe(false);
@@ -102,17 +102,17 @@ describe("readKeyHistory", () => {
     const hash = "H".padEnd(44, "a");
     const row = (actions: unknown[]) => ({ transaction_hash: hash, predecessor_account_id: "buyer.near", actions });
     const bodies = [
-      { txns: [row([{}])], cursor: null },
-      { txns: [row([{ args: 42 }])], cursor: null },
-      { txns: [row([{ args: "not-json-or-base64" }])], cursor: null },
-      { txns: [row([{ args: Buffer.from("nope").toString("base64") }])], cursor: null },
+      { data: [row([{}])], meta: {} },
+      { data: [row([{ args: 42 }])], meta: {} },
+      { data: [row([{ args: "not-json-or-base64" }])], meta: {} },
+      { data: [row([{ args: Buffer.from("nope").toString("base64") }])], meta: {} },
     ];
     for (const body of bodies) {
       let posts = 0;
       const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
         if (init?.method === "POST") { posts += 1; return Response.json({ result: {} }); }
         if (String(url).includes("method=nft_buy")) return Response.json(body);
-        return Response.json({ txns: [], cursor: null });
+        return Response.json({ data: [], meta: {} });
       }) as unknown as typeof fetch;
       const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
       expect(read.unavailable).toBe(true);
@@ -126,9 +126,9 @@ describe("readKeyHistory", () => {
     const other = Buffer.from(JSON.stringify({ token_id: "kother" })).toString("base64");
     const fetchImpl = vi.fn(async (url: string) => {
       if (String(url).includes("method=nft_buy")) {
-        return Response.json({ txns: [{ transaction_hash: TX, predecessor_account_id: "buyer.near", actions: [{ args: other }] }], cursor: null });
+        return Response.json({ data: [{ transaction_hash: TX, predecessor_account_id: "buyer.near", included_in_block_timestamp: "1794182936741174679", actions: [{ args: other }] }], meta: {} });
       }
-      return Response.json({ txns: [], cursor: null });
+      return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
     expect(read.unavailable).toBe(false);
@@ -137,7 +137,7 @@ describe("readKeyHistory", () => {
   });
 
   it("does not treat a malformed receipt row as a complete empty history", async () => {
-    for (const body of [{ txns: [{}], cursor: null }, { txns: [{ transaction_hash: 42, actions: [] }], cursor: null }]) {
+    for (const body of [{ data: [{}], meta: {} }, { data: [{ transaction_hash: 42, actions: [] }], meta: {} }]) {
       const fetchImpl = vi.fn(async () => Response.json(body)) as unknown as typeof fetch;
       const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
       expect(read.unavailable).toBe(true);

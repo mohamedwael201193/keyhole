@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
   let body: { receiverId?: unknown; idempotencyKey?: unknown };
   try { body = JSON.parse(raw) as { receiverId?: unknown; idempotencyKey?: unknown }; }
   catch { return json({ error: "bad_request", message: "The request was not JSON." }, 400); }
-  if (typeof body.receiverId !== "string" || typeof body.idempotencyKey !== "string") {
-    return json({ error: "bad_request", message: "A practice key can only be minted to a testnet account." }, 400);
+  if (typeof body.idempotencyKey !== "string" || (body.receiverId != null && typeof body.receiverId !== "string")) {
+    return json({ error: "bad_request", message: "Send the guest idempotency key from the account this server created." }, 400);
   }
-  const result = await mintPracticeKey(body.receiverId, body.idempotencyKey, trialClientIp(req.headers));
+  const result = await mintPracticeKey(body.idempotencyKey, trialClientIp(req.headers), body.receiverId ?? null);
   if (!result.ok) return json({ error: result.error, message: result.message }, result.status);
   return json({ tokenId: result.tokenId, tier: result.tier, txHash: result.txHash, replayed: result.replayed === true, receiverId: result.accountId, network: "testnet", contract: TRIAL_CONTRACT });
 }

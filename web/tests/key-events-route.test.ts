@@ -12,8 +12,8 @@ function req() {
 
 describe("GET /api/key-events", () => {
   it.each([
-    { txns: [{}], cursor: null },
-    { txns: [{ transaction_hash: 42, actions: [] }], cursor: null },
+    { data: [{}], meta: {} },
+    { data: [{ transaction_hash: 42, actions: [] }], meta: {} },
   ])("a malformed receipt row is unavailable, not a complete empty history", async (body) => {
     const fetchImpl = vi.fn(async () => Response.json(body));
     vi.stubGlobal("fetch", fetchImpl);
@@ -39,8 +39,8 @@ describe("GET /api/key-events", () => {
     const row = { transaction_hash: "H".padEnd(44, "b"), predecessor_account_id: "buyer.near", actions: [action] };
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return Response.json({ result: { final_execution_status: "FINAL" } });
-      if (String(url).includes("method=nft_buy")) return Response.json({ txns: [row], cursor: null });
-      return Response.json({ txns: [], cursor: null });
+      if (String(url).includes("method=nft_buy")) return Response.json({ data: [row], meta: {} });
+      return Response.json({ data: [], meta: {} });
     });
     vi.stubGlobal("fetch", fetchImpl);
     const first = await (await GET(req())).json();
@@ -59,7 +59,7 @@ describe("GET /api/key-events", () => {
     const row = (hash: string, args: unknown, predecessor = "alice.near") => ({
       transaction_hash: hash,
       predecessor_account_id: predecessor,
-      block_timestamp: "1794182936741174679",
+      included_in_block_timestamp: "1794182936741174679",
       actions: [{ args }],
     });
     const seeds: Record<string, unknown[]> = {
@@ -86,9 +86,9 @@ describe("GET /api/key-events", () => {
           },
         });
       }
-      if (String(url).includes("/v1/txns/")) return Response.json({ txns: [{ signer_account_id: "minter.near" }] });
+      if (String(url).includes("/v3/txns/")) return Response.json({ data: { signer_account_id: "minter.near" } });
       const method = new URL(String(url)).searchParams.get("method") ?? "";
-      return Response.json({ txns: seeds[method] ?? [], cursor: null });
+      return Response.json({ data: seeds[method] ?? [], meta: {} });
     });
     vi.stubGlobal("fetch", fetchImpl);
     const ask = () => GET(new Request(`http://localhost/api/key-events?id=${token}`, { headers: { "x-forwarded-for": "192.0.2.51" } }));
@@ -117,7 +117,7 @@ describe("GET /api/key-events", () => {
     const listed = {
       transaction_hash: "listtx",
       predecessor_account_id: "alice.near",
-      block_timestamp: "1794182936741174679",
+      included_in_block_timestamp: "1794182936741174679",
       actions: [{ args: { token_id: token } }],
     };
     const sale = `EVENT_JSON:${JSON.stringify({ standard: "keyhole", version: "1.0.0", event: "key_list", data: [{ token_id: token, seller: "alice.near", price: "1" }] })}`;
@@ -131,9 +131,9 @@ describe("GET /api/key-events", () => {
         });
       }
       const method = new URL(String(url)).searchParams.get("method");
-      if (method === "nft_transfer") return Response.json({ txns: filler, cursor: "more" });
-      if (method === "nft_list") return Response.json({ txns: [listed], cursor: null });
-      return Response.json({ txns: [], cursor: null });
+      if (method === "nft_transfer") return Response.json({ data: filler, meta: { next_page: "more" } });
+      if (method === "nft_list") return Response.json({ data: [listed], meta: {} });
+      return Response.json({ data: [], meta: {} });
     });
     vi.stubGlobal("fetch", fetchImpl);
     const ask = () => GET(new Request(`http://localhost/api/key-events?id=${token}`, { headers: { "x-forwarded-for": "192.0.2.52" } }));

@@ -82,7 +82,7 @@ export function TrialView({ autostart }: { autostart: boolean }) {
     try {
       const r = await fetch("/api/trial/mint", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ receiverId: saved.holder.accountId, idempotencyKey: material("mint").idempotencyKey }),
+        body: JSON.stringify({ receiverId: saved.holder.accountId, idempotencyKey: material("holder").idempotencyKey }),
       });
       const j = await r.json() as { tokenId?: string; txHash?: string; message?: string };
       if (!r.ok || !j.tokenId) throw new Error(j.message || "The practice key was not minted.");

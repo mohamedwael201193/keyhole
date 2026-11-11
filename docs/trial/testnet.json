@@ -25,6 +25,8 @@
     "set_minter": "4NNGS5LD4NJPPFZVkwDDX8Dv8wDzLZhpMn1J2ur8uvRP",
     "register_sponsor_payout": "6WSUSAjSVzDG4WJfS3YdT27ybPyYrJEJxsgG72oikuMQ"
   },
+  "sponsor_nonce_base": "277265680000000",
+  "sponsor_nonce_base_source": "web/lib/trialPublic.ts SPONSOR_NONCE_BASE",
   "guest_deposit_yocto": "250000000000000000000000",
   "guest_deposit_source": "web/lib/trialPublic.ts GUEST_DEPOSIT_YOCTO",
   "guest_accounts": "The server calls testnet.create_account with the visitor public key. The attached deposit is GUEST_DEPOSIT_YOCTO in web/lib/trialPublic.ts, 0.25 testnet NEAR per guest. The secret key is generated in the browser. The sponsor account is keyhole-trial-sponsor-b32ffa7796.testnet and its key is the server env var KEYHOLE_TESTNET_SPONSOR_SECRET.",

@@ -58,9 +58,12 @@ export function scrubSecret(text: string, secret: string): string {
 export const GUEST_PER_IP_HOUR = 4;
 export const GLOBAL_PER_HOUR = 12;
 export const GLOBAL_PER_DAY = 40;
-export const LIFETIME_GUESTS = 80;
-/** Each guest is one create_account plus one mint, with headroom for the payout registration. */
-export const LIFETIME_TX = LIFETIME_GUESTS * 2 + 8;
+/**
+ * About 8.67 testnet NEAR remains on the sponsor. A guest takes the 0.25 NEAR create deposit plus about 0.1 NEAR to mint.
+ * 16 guests fit that balance with gas headroom. The nonce ceiling counts from SPONSOR_NONCE_BASE, including creates and mints already signed.
+ */
+export const LIFETIME_GUESTS = 16;
+export const LIFETIME_TX = LIFETIME_GUESTS * 2;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 export const TRIAL_HOUR_MS = HOUR_MS;

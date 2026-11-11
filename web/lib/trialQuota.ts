@@ -1,6 +1,7 @@
 import {
   GLOBAL_PER_DAY, GLOBAL_PER_HOUR, GUEST_PER_IP_HOUR, LIFETIME_GUESTS, LIFETIME_TX, MIN_LIQUID_YOCTO, TRIAL_DAY_MS, TRIAL_HOUR_MS,
 } from "./trialPolicy";
+import { SPONSOR_NONCE_BASE } from "./trialPublic";
 
 export type IndexedCreate = { atMs: number; ok: boolean };
 
@@ -28,11 +29,21 @@ function over(n: number, cap: number, includeThis: boolean): boolean {
   return includeThis ? n > cap : n >= cap;
 }
 
+/** Transactions this key has signed since it was created. A nonce below the pinned base is not this key. */
+export function sponsorNonceSpent(nonce: bigint, base = SPONSOR_NONCE_BASE): bigint | null {
+  if (nonce < base) return null;
+  return nonce - base;
+}
+
 export function judgeQuota(facts: QuotaFacts): QuotaDecision {
   if (facts.liquidYocto < MIN_LIQUID_YOCTO) {
     return { ok: false, status: 503, message: "The sponsor balance is below the trial floor." };
   }
-  if (facts.nonce >= BigInt(LIFETIME_TX) || over(facts.lifetimeCreates, LIFETIME_GUESTS, facts.countsIncludeThis)) {
+  const spent = sponsorNonceSpent(facts.nonce);
+  if (spent == null) {
+    return { ok: false, status: 503, message: "The sponsor key nonce is not the recorded trial key." };
+  }
+  if (spent >= BigInt(LIFETIME_TX) || over(facts.lifetimeCreates, LIFETIME_GUESTS, facts.countsIncludeThis)) {
     return { ok: false, status: 429, message: "The trial lifetime ceiling is spent." };
   }
   if (over(facts.createsLastDay, GLOBAL_PER_DAY, facts.countsIncludeThis)) {

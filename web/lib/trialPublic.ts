@@ -11,6 +11,12 @@ export const TRIAL_BANNER = "Testnet · free · not real money";
 /** Attached to each sponsored create_account. The trial copy and the recorded deployment quote this constant. */
 export const GUEST_DEPOSIT_YOCTO = "250000000000000000000000";
 export const TRIAL_SPONSOR = "keyhole-trial-sponsor-b32ffa7796.testnet";
+/**
+ * Nonce of the sponsor's full-access key when that key was created.
+ * NEAR sets a new access key's nonce to block_height * 1e6, so the absolute nonce is never a small counter.
+ * Trial spends are (current nonce - this base). https://docs.near.org/protocol/access-keys
+ */
+export const SPONSOR_NONCE_BASE = 277265680000000n;
 /** Official testnet RPC, then the public fallback. Neither URL is mainnet. */
 export const TESTNET_RPCS = ["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"] as const;
 /** Testnet indexer. The mainnet host returns an empty list for these accounts and must not be used as a quota. */
