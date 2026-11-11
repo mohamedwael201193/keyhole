@@ -5928,17 +5928,17 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/worker/confinement-v2.md"
   },
   {
-   "id": "path-docs/evidence/worker-provisioning/v2/validation.json",
-   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/validation.json exists",
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/validation.json",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/validation.json exists",
    "where": "README.md:121",
    "evidence_type": "file",
-   "evidence": "docs/evidence/worker-provisioning/v2/validation.json",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/validation.json",
    "check": {
     "type": "path",
-    "path": "docs/evidence/worker-provisioning/v2/validation.json"
+    "path": "docs/evidence/worker-provisioning/v2/r3/validation.json"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/validation.json"
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/validation.json"
   },
   {
    "id": "path-tee/worker/src/collateral_evidence/tests.rs",
@@ -7501,6 +7501,19 @@
    "verify": "node judge/verify-claims.mjs --only path-tee/worker/verify-log.mjs"
   },
   {
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/README.md",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/README.md exists",
+   "where": "README.md:810",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/worker-provisioning/v2/r3/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/README.md"
+  },
+  {
    "id": "path-docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md exists",
    "where": "README.md:810",
@@ -7527,17 +7540,30 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/R2.md"
   },
   {
-   "id": "path-docs/evidence/worker-provisioning/v2/cli-tests.log",
-   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/cli-tests.log exists",
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/cli-tests.log",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/cli-tests.log exists",
    "where": "README.md:817",
    "evidence_type": "file",
-   "evidence": "docs/evidence/worker-provisioning/v2/cli-tests.log",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/cli-tests.log",
    "check": {
     "type": "path",
-    "path": "docs/evidence/worker-provisioning/v2/cli-tests.log"
+    "path": "docs/evidence/worker-provisioning/v2/r3/cli-tests.log"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/cli-tests.log"
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/cli-tests.log"
+  },
+  {
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/web-tests.log",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/web-tests.log exists",
+   "where": "README.md:818",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/web-tests.log",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/worker-provisioning/v2/r3/web-tests.log"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/web-tests.log"
   },
   {
    "id": "path-web/e2e",
@@ -7553,17 +7579,17 @@
    "verify": "node judge/verify-claims.mjs --only path-web/e2e"
   },
   {
-   "id": "path-docs/evidence/worker-provisioning/v2/web-e2e.log",
-   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/web-e2e.log exists",
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/web-e2e.log",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/web-e2e.log exists",
    "where": "README.md:819",
    "evidence_type": "file",
-   "evidence": "docs/evidence/worker-provisioning/v2/web-e2e.log",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/web-e2e.log",
    "check": {
     "type": "path",
-    "path": "docs/evidence/worker-provisioning/v2/web-e2e.log"
+    "path": "docs/evidence/worker-provisioning/v2/r3/web-e2e.log"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/web-e2e.log"
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/web-e2e.log"
   },
   {
    "id": "path-docs/evidence/lighthouse.json",

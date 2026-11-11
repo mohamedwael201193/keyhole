@@ -1,0 +1,75 @@
+   Compiling keyhole-keys-sandbox v0.1.0 (/workspace/near_hackathon/wt_worker_v2/contracts/keys-sandbox)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.02s
+     Running tests/upgrade.rs (target/debug/deps/upgrade-3236888ab1dc543a)
+
+running 13 tests
+test candidate_unregistered_minter_sale_unlist_buy_and_approval_refunds_cash_out ... ok
+test mainnet_path_v1_v2_v2_1_keeps_state ... ok
+test migrate_runs_once_and_only_as_self ... ok
+test transfer_call_race_is_closed_on_v2_2 ... ok
+test transfer_call_race_reaches_two_keys_on_v2_1 ... ok
+test upgrade_v1_to_v2_keeps_every_token_owner_tier_metadata_and_minter ... ok
+test v2_3_approval_cap_one_key_and_transfers_work_after_upgrade ... ok
+test v2_3_is_a_code_only_upgrade_of_v2_2 ... ok
+test v2_4_sale_settles_real_balances ... ok
+test v2_4_set_tier_is_code_only_and_minter_only ... ok
+test v2_5_admission_barrier_and_epoch_code_only ... ok
+test v2_6_plain_code_upgrade_preserves_six_live_nfts_owners_and_pledge_state ... ok
+test v2_one_key_nep178_and_a_real_royalty_sale ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 125.45s
+
+   Compiling keyhole-keys v0.1.0 (/workspace/near_hackathon/wt_worker_v2/contracts/keys)
+   Compiling keyhole-worker v0.1.0 (/workspace/near_hackathon/wt_worker_v2/tee/worker)
+   Compiling keyhole-keys-sandbox v0.1.0 (/workspace/near_hackathon/wt_worker_v2/contracts/keys-sandbox)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.63s
+     Running tests/audit_gas.rs (target/debug/deps/audit_gas-8382bd51b734d931)
+
+running 3 tests
+test audit_maximum_approvals_transfer_call_gas ... ok
+test audit_return_data_bomb_at_maximum_token_and_approval_bound ... ok
+test audit_return_data_bomb_does_not_strand_title ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.29s
+
+     Running tests/review3.rs (target/debug/deps/review3-9e506688cccd378d)
+
+running 4 tests
+test review3_deleted_seller_retains_exact_sale_and_bond_then_recreated_seller_claims ... ok
+test review3_sale_cashout_deleted_recipient_restores_once_or_stays_pending_if_callback_lost ... ok
+test review3_sale_delivered_but_callback_lost_keeps_reserved_pending_and_cannot_pay_again ... ok
+test review3_timeout_late_real_resolver_returns_false_with_and_without_new_transfer ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 72.50s
+
+     Running tests/review4.rs (target/debug/deps/review4-0f3ee573f3a7d400)
+
+running 3 tests
+test review4_real_dust_refund_storage_must_not_consume_old_backing ... ok
+test review4_real_failed_seller_cashout_restores_exact_credit_and_later_delivers ... ok
+test review4_real_registration_rejects_unfunded_refund_atomically_and_preserves_full_dust ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.14s
+
+     Running tests/sale.rs (target/debug/deps/sale-3c94be25d9083687)
+
+running 8 tests
+test cancelled_sale_reopen_cannot_use_old_certificate ... ok
+test failed_seller_cashout_restores_credit_once_without_reversing_title ... ok
+test lost_freeze_callback_stays_unknown_without_retry_or_view_only_clear ... ok
+test lost_seller_cashout_callback_keeps_liability_pending_in_both_native_worlds ... ok
+test protected_sale_atomic_title_backed_credit_and_real_seller_cashout ... ok
+test protected_seller_storage_is_prepaid_separately_before_freeze ... ok
+test sale_title_credit_survive_failed_thaw_and_alternate_routes_cannot_bypass ... ok
+test terminal_sale_action_with_unverified_read_stays_pending_until_read_recovery ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 101.37s
+
+     Running tests/v27.rs (target/debug/deps/v27-37284af21fa341ca)
+
+running 3 tests
+test a_v26_state_with_a_listing_and_a_full_loan_cycle_is_identical_after_a_code_only_upgrade_to_v27 ... ok
+test bc_short_delay_proves_timelock_cancel_apply_and_exact_principal_reclaim ... ok
+test parallel_timelock_apply_then_accept_then_zero_key_self_deploy ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 57.99s

@@ -118,7 +118,7 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 ```
 
-Worker source candidate: `3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377` (1,331,880 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
+Worker source candidate: `3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377` (1,331,880 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/r3/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
 
 Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
@@ -210,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `657 claims: 356 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `659 claims: 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -259,7 +259,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (657 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 356 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (659 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -807,17 +807,17 @@ Detailed trust boundaries (a broken TEE, privacy limits, the browser, agents, fu
 
 ## 9. Numbers
 
-Current V2 source-candidate validation: [exact source/artifact/count record](docs/evidence/worker-provisioning/v2/validation.json) and [CI reproduction map](docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md). [R4](docs/evidence/worker-provisioning/R4.md) and [R2](docs/evidence/worker-provisioning/R2.md) remain historical. Mainnet and product measurements below retain their explicitly named historical evidence.
+Current V2 source-candidate validation: [exact source/artifact/count record](docs/evidence/worker-provisioning/v2/r3/validation.json) and [Round 3 correction proof](docs/evidence/worker-provisioning/v2/r3/README.md), with the [CI reproduction recipe](docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md). [R4](docs/evidence/worker-provisioning/R4.md) and [R2](docs/evidence/worker-provisioning/R2.md) remain historical. Mainnet and product measurements below retain their explicitly named historical evidence.
 
 | Component | Count | How it was measured |
 |---|---|---|
 | Keys contract unit tests | **342** pass | `cd contracts/keys && cargo test --locked` (current local measurement) |
 | Keys contract sandbox tests | **62** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 34 upgrade/sale/runtime cases |
 | TEE worker unit tests | **758** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
-| CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/cli-tests.log) |
-| Web unit tests (Vitest) | **1976** pass in 112 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
-| Web e2e (Playwright) | **215** pass + 2 passed on retry, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/web-e2e.log) |
-| Claims in `docs/claims.json` | **657**: offline 356 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
+| Web unit tests (Vitest) | **2030** pass in 123 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
+| Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
+| Claims in `docs/claims.json` | **659**: offline 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |

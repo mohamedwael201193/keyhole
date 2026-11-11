@@ -1,0 +1,13 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 /workspace/near_hackathon/wt_worker_v2/web
+
+(node:1142001) ExperimentalWarning: The Ed25519 Web Crypto API algorithm is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  123 passed (123)
+      Tests  2030 passed (2030)
+   Start at  22:01:29
+   Duration  8.64s (transform 4.55s, setup 0ms, import 16.53s, tests 16.30s, environment 15ms)

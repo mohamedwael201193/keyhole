@@ -1,5 +1,7 @@
 # Exact NEAR exit: local validation, not publication
 
+> Historical pre-R3 snapshot. The corrected source candidate and causal original-FT/continuation proof are recorded in [Round 3 evidence](r3/README.md) and [its bound validation record](r3/validation.json). Do not read the earlier balance-delta result below as the current acceptance criterion.
+
 Credit: devmo. Source pin: `identity.json#/review/source_commit`.
 Worker artifact: `ce0a33a67b985eb7952a30493f6f28926e07e7ae57e953a55a20c63d63a42966` (1312726 bytes).
 Both actual WASI builds match; the second used a separate target directory.

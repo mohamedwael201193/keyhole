@@ -1,4 +1,6 @@
-# Exact NEAR exit — current local source candidate
+# Historical pre-R3 exact NEAR exit source validation
+
+> Current source correction proof, exact counts and log hashes: [Round 3](r3/README.md), [validation record](r3/validation.json). The pre-R3 balance-based narrative below is historical, not current causal receipt acceptance.
 
 Credit: devmo. The current candidate and test-log digests are in validation.json.
 The initial full remaining-sandbox run found the ignored short-delay fixture

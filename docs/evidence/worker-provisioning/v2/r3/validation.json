@@ -1,0 +1,119 @@
+{
+  "status": "source-candidate-not-published",
+  "credit": "devmo",
+  "source_commit_reference": "identity.json#/review/source_commit",
+  "source_tree_sha256": "634c535c39aef437334f2f4342e79d2fe80e455ce6b2e358e1040f7144f60cab",
+  "worker_candidate": {
+    "status": "source-candidate-not-published",
+    "wasm_sha256": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+    "bytes": 1331880,
+    "recipe": "tee/worker/build.sh"
+  },
+  "tests": {
+    "worker": 758,
+    "javascript": 192,
+    "receipts": 9,
+    "cli": 81,
+    "web": 2030,
+    "contract": 342,
+    "sandbox_pledge": 28,
+    "sandbox_other": 34,
+    "sandbox_total": 62,
+    "funded_browser": 1,
+    "general_browser": 221
+  },
+  "general_browser_summary": {
+    "passed": 221,
+    "retry_passes": 0,
+    "skipped": 15
+  },
+  "actual_wasi_builds": [
+    "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+    "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377"
+  ],
+  "coverage_qualifications": {
+    "funded_browser": "Current funded real-native sandbox UI fixture, including both repay/default endings and unchanged refusal/no-custody assertions; not real custody or FT-delivery evidence.",
+    "sandbox_pledge": "Current local native admission/title/finish with mocked custody ledger; no actual token/Intents provider.",
+    "general_browser": "Current production preview/consent guard with explicit mocked wallet, custody and RPC; no live wallet/provider."
+  },
+  "live_provider_installation": false,
+  "live_loans": false,
+  "logs": [
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/worker-tests.log",
+      "sha256": "8e844b9c57f0481c28baae97c68d0300e389e6cd08a9c638b3d25a0357784f3e"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/js-tests.log",
+      "sha256": "4fe6f094c90c89f3493a0e1793144ff828f17cb1ef8fcfef4f799158c1ae9214"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/receipt-tests.log",
+      "sha256": "42f237d7abc9eb371abada54db94861f647b2fd2e4008b692ec18dfdcc2e00d5"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/cli-tests.log",
+      "sha256": "b361fdddd314d51be1440f143c7ef6b513129136716b771aac7770bbbcd13f81"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/web-tests.log",
+      "sha256": "d877104475b72a544bc8e7cb59273b648daafbb6a842417eeca67a42cc29f1df"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/web-lint.log",
+      "sha256": "c3e2a0bd0b480da15f6a73c2f884e8ce9afa1a1ca5103f556d8a0427d879f7fe"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/web-typecheck.log",
+      "sha256": "3f0a69e1badaf43bb9611ef38dbc5da90c12285401dc67bb03e7726619aa3b19"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/sandbox-pledge.log",
+      "sha256": "ec8947d173beab25f4321412ed49e8e83b4878603f07651687da2bd708f60e1f"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/sandbox-other.log",
+      "sha256": "a170b0b47a7544e47e19ef0c92a2cb1d97c10f30b41a643be09cfef8ecf6a90d"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/sandbox-clippy.log",
+      "sha256": "1e5104dafb328bb13a1bde7141b89559fcb7206998a867a7eec6f77e1e2482d5"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/funded-e2e.log",
+      "sha256": "fd1136be5ba48c63e217f642b3671045ef0f292fc9db531859acecaada2f8f47"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/web-e2e.log",
+      "sha256": "e8cbd298cb5467dcbc36731402180dd3ee16f54149dd4f10b2a2816b24181186"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/hygiene-tests.log",
+      "sha256": "d0e7cd33ee3b83bca16607ed466de47e3bc59c83497b62f8e8bb4fd340ba3cfe"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/contract-unit.log",
+      "sha256": "93300d4f99b617bbe311bd147ab16f1774881b0f5b741a5258b88e538dd0dcd7"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/contract-clippy.log",
+      "sha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/clippy-native.log",
+      "sha256": "2473fd1119a861db8aba73c9d80bcc7c6023dd40e04e5faae6a37d7a7a95eede"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/clippy-wasi.log",
+      "sha256": "a41051563a4cb5fc1b1bcdd9aa0ba28ca80f7736d629d90cc138218756e8e3a9"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/build1.log",
+      "sha256": "0c01518ec256c0ec00258b144f342debdff0bc3dcd5acbf9f95977048e5e270f"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/r3/build2.log",
+      "sha256": "2e95f0ffbf9903ef0492c94ea95b097b9aac7675cf58be1cbf7e27bdf9c21688"
+    }
+  ]
+}
