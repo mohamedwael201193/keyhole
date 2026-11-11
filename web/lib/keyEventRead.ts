@@ -86,6 +86,52 @@ export async function pagesFor(
   return { txns, complete: false, unavailable: false };
 }
 
+const txnArgCache = new Map<string, unknown[]>();
+const TXN_CACHE_MAX = 200;
+const TXN_LOOKUPS_PER_READ = 32;
+
+function rememberTxnArgs(hash: string, args: unknown[]): void {
+  if (txnArgCache.has(hash)) txnArgCache.delete(hash);
+  txnArgCache.set(hash, args);
+  while (txnArgCache.size > TXN_CACHE_MAX) {
+    const oldest = txnArgCache.keys().next().value;
+    if (oldest === undefined) break;
+    txnArgCache.delete(oldest);
+  }
+}
+
+/** v3 receipt rows omit args. The transaction object carries them under actions[].args. */
+export async function attachTxnArgs(
+  fetchImpl: FetchLike,
+  txns: readonly unknown[],
+  nearblocks = NEARBLOCKS,
+): Promise<{ txns: unknown[]; unavailable: boolean }> {
+  const out: unknown[] = [];
+  let lookups = 0;
+  let unavailable = false;
+  for (const raw of txns) {
+    if (!receiptRowOk(raw)) { out.push(raw); continue; }
+    const row = raw as { transaction_hash: string; actions: { args?: unknown }[] };
+    if (row.actions.every((action) => action.args != null)) { out.push(raw); continue; }
+    const cached = txnArgCache.get(row.transaction_hash);
+    let args = cached;
+    if (!args) {
+      if (lookups >= TXN_LOOKUPS_PER_READ) { unavailable = true; out.push(raw); continue; }
+      lookups += 1;
+      const res = await getJson(fetchImpl, `${nearblocks}/v3/txns/${row.transaction_hash}`);
+      const actions = (res.ok ? (res.body as { data?: { actions?: unknown } })?.data?.actions : null);
+      if (!Array.isArray(actions)) { unavailable = true; out.push(raw); continue; }
+      args = actions.map((action) => (action && typeof action === "object" ? (action as { args?: unknown }).args : undefined));
+      rememberTxnArgs(row.transaction_hash, args);
+    }
+    out.push({
+      ...row,
+      actions: row.actions.map((action, i) => (action.args != null ? action : { ...action, args: args?.[i] })),
+    });
+  }
+  return { txns: out, unavailable };
+}
+
 export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boolean): { hits: Hit[]; bad: boolean } {
   const hits: Hit[] = [];
   const seen = new Set<string>();
@@ -164,7 +210,13 @@ export async function readKeyHistory(opts: {
     const page = await pagesFor(fetchImpl, opts.contractId, method, opts.nearblocks);
     if (!page.complete) complete = false;
     if (page.unavailable) unavailable = true;
-    const found = hitsFrom(page.txns, opts.tokenId, account);
+    let txns = page.txns;
+    if (!account) {
+      const filled = await attachTxnArgs(fetchImpl, txns, opts.nearblocks);
+      txns = filled.txns;
+      if (filled.unavailable) { unavailable = true; complete = false; }
+    }
+    const found = hitsFrom(txns, opts.tokenId, account);
     if (found.bad) { unavailable = true; complete = false; }
     for (const hit of found.hits) {
       if (seen.has(hit.tx)) continue;

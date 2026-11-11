@@ -162,9 +162,13 @@ function parseArgsObject(text: string): { token_id?: unknown } | null {
   }
 }
 
-/** Nearblocks sends decoded JSON. The RPC sends base64 of that JSON. A primitive or a broken encoding is unreadable. */
+/** Nearblocks sends decoded JSON. v3 transactions nest it under args_json. The RPC sends base64 of that JSON. A primitive or a broken encoding is unreadable. */
 export function decodeCallArgs(args: unknown): { token_id?: unknown } | null {
-  if (args && typeof args === "object" && !Array.isArray(args)) return args as { token_id?: unknown };
+  if (args && typeof args === "object" && !Array.isArray(args)) {
+    const row = args as { token_id?: unknown; args_json?: unknown };
+    if (row.args_json && typeof row.args_json === "object" && !Array.isArray(row.args_json)) return row.args_json as { token_id?: unknown };
+    return row;
+  }
   if (typeof args !== "string" || args.length === 0) return null;
   const direct = parseArgsObject(args);
   if (direct) return direct;

@@ -154,7 +154,7 @@ const publicRecord = {
   rpc: ["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"],
   explorer: `https://testnet.nearblocks.io/address/${accountId}`,
   transactions: { create: createTx, deploy: deployTx, init: initTx, register_payout: regTx },
-  guest_accounts: "The server calls testnet.create_account with the visitor public key. The deposit is GUEST_DEPOSIT_YOCTO in web/lib/trialPublic.ts (0.25 testnet NEAR per guest). The secret key is generated in the browser. The sponsor key is the server env var KEYHOLE_TESTNET_SPONSOR_SECRET.",
+  guest_accounts: "The server calls testnet.create_account with the visitor public key. The deposit is GUEST_DEPOSIT_YOCTO in web/lib/trialPublic.ts (0.05 testnet NEAR per guest). The secret key is generated in the browser. The sponsor key is the server env var KEYHOLE_TESTNET_SPONSOR_SECRET.",
   recorded_mainnet_trade: {
     label: "recorded on mainnet",
     call_id: "09d58c09-c1e9-48b6-bebb-485f5ae79539",

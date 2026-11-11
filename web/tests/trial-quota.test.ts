@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { judgeQuota, sponsorNonceSpent, upstashIncr, type QuotaFacts } from "@/lib/trialQuota";
-import { GUEST_PER_IP_HOUR, LIFETIME_TX, MIN_LIQUID_YOCTO } from "@/lib/trialPolicy";
+import { GLOBAL_PER_HOUR, GUEST_PER_IP_HOUR, LIFETIME_TX, MIN_LIQUID_YOCTO } from "@/lib/trialPolicy";
 import { trialClientIp } from "@/lib/trialIp";
 import { SPONSOR_NONCE_BASE } from "@/lib/trialPublic";
 
@@ -34,7 +34,9 @@ describe("shared trial quota", () => {
 
   it("refuses a spent lifetime, a full hour, and an incomplete indexer", () => {
     expect(judgeQuota({ ...base(), nonce: SPONSOR_NONCE_BASE + BigInt(LIFETIME_TX) }).ok).toBe(false);
-    expect(judgeQuota({ ...base(), createsLastHour: GUEST_PER_IP_HOUR }).ok).toBe(false);
+    expect(judgeQuota({ ...base(), createsLastHour: GLOBAL_PER_HOUR }).ok).toBe(false);
+    const hour = judgeQuota({ ...base(), createsLastHour: GLOBAL_PER_HOUR });
+    if (!hour.ok) expect(hour.retryAfter).toBe(3600);
     const incomplete = judgeQuota({ ...base(), indexerComplete: false, createsLastHour: 0 });
     expect(incomplete.ok).toBe(false);
     if (!incomplete.ok) expect(incomplete.status).toBe(503);

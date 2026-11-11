@@ -140,7 +140,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
         </div>
       </section>
 
-      {/* 7. For judges: three commands, each with a copy button. */}
+      {/* 7. Verification path: three commands, each with a copy button. */}
       <section className="lp-sec" id="judge" aria-labelledby="judge-h">
         <div className="lp-wrap">
           <h2 id="judge-h" className="lp-h2">{t("lp.judgeH")}</h2>

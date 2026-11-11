@@ -5,11 +5,11 @@ import {
   TRIAL_DAY_MS, TRIAL_HOUR_MS, accountIdForIdempotency, isEd25519PublicKey, isTrialReceiver, readSponsor, scrubSecret, tokenIdForIdempotency,
   type Sponsor,
 } from "./trialPolicy";
-import { countCreates, judgeQuota, upstashConfig, upstashIncr, type IndexedCreate, type QuotaFacts } from "./trialQuota";
+import { countCreates, judgeQuota, QUOTA_STORE_VARS, upstashConfig, upstashGet, upstashIncr, type IndexedCreate, type QuotaFacts } from "./trialQuota";
 import { isTestnetRpc, TESTNET_INDEXERS, TESTNET_RPCS, TRIAL_CONTRACT } from "./trialPublic";
 
 export type TrialOk = { ok: true; txHash: string; accountId?: string; tokenId?: string; tier?: number; replayed?: boolean };
-export type TrialFail = { ok: false; status: number; error: "rate_limited" | "bad_request" | "unavailable"; message: string };
+export type TrialFail = { ok: false; status: number; error: "rate_limited" | "bad_request" | "unavailable"; message: string; retryAfter?: number };
 export type TrialResult = TrialOk | TrialFail;
 
 const REFUSE: TrialFail = { ok: false, status: 503, error: "unavailable", message: "The shared trial quota is unavailable." };
@@ -135,7 +135,9 @@ async function indexedTrial(sponsor: Sponsor, fetchImpl: typeof fetch): Promise<
         for (const tx of body.data) {
           const method = tx.actions?.find((a) => a.method)?.method;
           if (tx.signer_account_id !== sponsor.accountId) continue;
-          if ((method !== "create_account" && method !== "nft_mint") || tx.outcomes?.status !== true) continue;
+          const status = tx.outcomes?.status;
+          if (method !== "create_account" && method !== "nft_mint") continue;
+          if (status !== true && status !== false) continue;
           if (!/^\d+$/.test(tx.block_timestamp ?? "") || !tx.transaction_hash) continue;
           rows.push({ atMs: Number(BigInt(tx.block_timestamp!) / 1_000_000n), ok: true, hash: tx.transaction_hash, method });
         }
@@ -165,10 +167,13 @@ function unindexed(seen: Set<string>, now: number): { hour: number; day: number;
   return { hour, day, life, creates };
 }
 
-async function reserve(sponsor: Sponsor, ip: string, fetchImpl: typeof fetch, env: Record<string, string | undefined>): Promise<TrialFail | null> {
+async function reserve(sponsor: Sponsor, ip: string, purpose: "create" | "mint", fetchImpl: typeof fetch, env: Record<string, string | undefined>): Promise<TrialFail | null> {
   const budget = await chainBudget(sponsor, fetchImpl);
   if (!budget) return REFUSE;
   const store = upstashConfig(env);
+  if (store === "invalid") {
+    return { ok: false, status: 503, error: "unavailable", message: `The shared quota store needs ${QUOTA_STORE_VARS}. Set both, or leave both unset to use the on-chain ceiling.` };
+  }
   let facts: QuotaFacts;
   if (store) {
     try {
@@ -176,7 +181,9 @@ async function reserve(sponsor: Sponsor, ip: string, fetchImpl: typeof fetch, en
         upstashIncr(store.url, store.token, `trial:ip:${ip}:h`, 3600, fetchImpl),
         upstashIncr(store.url, store.token, "trial:global:h", 3600, fetchImpl),
         upstashIncr(store.url, store.token, "trial:global:d", 86400, fetchImpl),
-        upstashIncr(store.url, store.token, "trial:global:life", 86400 * 365, fetchImpl),
+        purpose === "create"
+          ? upstashIncr(store.url, store.token, "trial:create:life", 86400 * 365, fetchImpl)
+          : upstashGet(store.url, store.token, "trial:create:life", fetchImpl),
       ]);
       facts = {
         liquidYocto: budget.liquid, nonce: budget.nonce,
@@ -200,7 +207,7 @@ async function reserve(sponsor: Sponsor, ip: string, fetchImpl: typeof fetch, en
     };
   }
   const decision = judgeQuota(facts);
-  if (!decision.ok) return { ok: false, status: decision.status, error: decision.status === 429 ? "rate_limited" : "unavailable", message: decision.message };
+  if (!decision.ok) return { ok: false, status: decision.status, error: decision.status === 429 ? "rate_limited" : "unavailable", message: decision.message, retryAfter: decision.retryAfter };
   return null;
 }
 
@@ -222,53 +229,100 @@ async function accountHasKey(accountId: string, publicKey: string, fetchImpl: ty
   }
 }
 
-async function withSponsor<T>(fn: (sponsor: Sponsor, url: string) => Promise<T>, env: Record<string, string | undefined>): Promise<T> {
+export class BroadcastError extends Error {}
+
+/**
+ * Probe each RPC, then sign once. A failure after the probe is an on-chain or post-broadcast error and is not sent again.
+ * Only a failed probe moves to the next URL.
+ */
+export async function sponsorSend<T>(
+  env: Record<string, string | undefined>,
+  probe: (url: string) => Promise<void>,
+  fn: (sponsor: Sponsor, url: string) => Promise<T>,
+): Promise<T> {
   const sponsor = readSponsor(env);
   if (!sponsor) throw new Error("sponsor unavailable");
   let last = "testnet rpc failed";
   for (const url of TESTNET_RPCS) {
     if (!isTestnetRpc(url)) throw new Error("refusing rpc");
+    try { await probe(url); }
+    catch (e) { last = scrubSecret(e instanceof Error ? e.message : "rpc", sponsor.secret); continue; }
     try { return await fn(sponsor, url); }
-    catch (e) { last = scrubSecret(e instanceof Error ? e.message : "rpc", sponsor.secret); }
+    catch (e) { throw new BroadcastError(scrubSecret(e instanceof Error ? e.message : "rpc", sponsor.secret)); }
   }
   throw new Error(last);
 }
 
+async function probeRpc(url: string): Promise<void> {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: "probe", method: "status", params: [] }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(4_000),
+  });
+  if (!r.ok) throw new Error("rpc");
+}
+
+function spendId(e: unknown): string {
+  const text = e instanceof Error ? `${e.message} ${e.stack ?? ""}` : String(e);
+  const hash = text.match(/[1-9A-HJ-NP-Za-km-z]{43,44}/)?.[0];
+  return hash ?? `failed:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function noteSpend(method: "create_account" | "nft_mint", hash: string | null, err?: unknown): void {
+  localSpends.push({ hash: hash ?? (err ? spendId(err) : spendId(new Error("unsigned"))), atMs: Date.now(), method });
+}
+
 async function signCreate(accountId: string, publicKey: string, env: Record<string, string | undefined>): Promise<string> {
   if (!accountId.endsWith(".testnet")) throw new Error("refusing account");
-  return withSponsor(async (sponsor, url) => {
+  return sponsorSend(env, probeRpc, async (sponsor, url) => {
     const account = new Account(sponsor.accountId, new JsonRpcProvider({ url }), sponsor.secret as KeyPairString);
-    const out = await account.callFunctionRaw({
-      contractId: "testnet", methodName: "create_account",
-      args: { new_account_id: accountId, new_public_key: publicKey },
-      deposit: GUEST_DEPOSIT_YOCTO, gas: CREATE_GAS, waitUntil: "FINAL",
-    });
-    const hash = hashOf(out);
-    if (!hash) throw new Error("create_account returned no hash");
-    localSpends.push({ hash, atMs: Date.now(), method: "create_account" });
-    return hash;
-  }, env);
+    let noted = false;
+    try {
+      const out = await account.callFunctionRaw({
+        contractId: "testnet", methodName: "create_account",
+        args: { new_account_id: accountId, new_public_key: publicKey },
+        deposit: GUEST_DEPOSIT_YOCTO, gas: CREATE_GAS, waitUntil: "FINAL",
+      });
+      const hash = hashOf(out);
+      noteSpend("create_account", hash);
+      noted = true;
+      if (!hash) throw new Error("create_account returned no hash");
+      return hash;
+    } catch (e) {
+      if (!noted) noteSpend("create_account", null, e);
+      throw e;
+    }
+  });
 }
 
 async function signMint(receiverId: string, tokenId: string, env: Record<string, string | undefined>, fetchImpl: typeof fetch): Promise<string> {
   if (!isTrialReceiver(receiverId)) throw new Error("refusing receiver");
-  return withSponsor(async (sponsor, url) => {
+  return sponsorSend(env, probeRpc, async (sponsor, url) => {
     const config = await viewCall<{ minter?: string }>(url, TRIAL_CONTRACT, "config", {}, fetchImpl);
     if (config.minter !== sponsor.accountId) throw new Error("sponsor is not the contract minter");
     const account = new Account(sponsor.accountId, new JsonRpcProvider({ url }), sponsor.secret as KeyPairString);
-    const out = await account.callFunctionRaw({
-      contractId: TRIAL_CONTRACT, methodName: "nft_mint",
-      args: {
-        token_id: tokenId, receiver_id: receiverId, tier: PRACTICE_TIER,
-        metadata: { title: "KEYHOLE practice key", description: "Testnet practice key. Not real money.", copies: 1 },
-      },
-      deposit: MINT_DEPOSIT_YOCTO, gas: MINT_GAS, waitUntil: "FINAL",
-    });
-    const hash = hashOf(out);
-    if (!hash) throw new Error("nft_mint returned no hash");
-    localSpends.push({ hash, atMs: Date.now(), method: "nft_mint" });
-    return hash;
-  }, env);
+    let noted = false;
+    try {
+      const out = await account.callFunctionRaw({
+        contractId: TRIAL_CONTRACT, methodName: "nft_mint",
+        args: {
+          token_id: tokenId, receiver_id: receiverId, tier: PRACTICE_TIER,
+          metadata: { title: "KEYHOLE practice key", description: "Testnet practice key. Not real money.", copies: 1 },
+        },
+        deposit: MINT_DEPOSIT_YOCTO, gas: MINT_GAS, waitUntil: "FINAL",
+      });
+      const hash = hashOf(out);
+      noteSpend("nft_mint", hash);
+      noted = true;
+      if (!hash) throw new Error("nft_mint returned no hash");
+      return hash;
+    } catch (e) {
+      if (!noted) noteSpend("nft_mint", null, e);
+      throw e;
+    }
+  });
 }
 
 export async function sendCreateAccount(accountId: string, publicKey: string, env: Record<string, string | undefined> = process.env): Promise<string> {
@@ -322,7 +376,7 @@ export async function createGuest(publicKey: string, idempotencyKey: string, ip:
     if (existing === "match") return { ok: true, accountId, txHash: "", replayed: true };
     if (existing === "other") return { ok: false, status: 409, error: "bad_request", message: "That trial key already belongs to a different guest." };
     if (existing === "unknown") return REFUSE;
-    const gate = await reserve(sponsor, ip, fetchImpl, env);
+    const gate = await reserve(sponsor, ip, "create", fetchImpl, env);
     if (gate) return gate;
     try {
       const txHash = await signCreate(accountId, publicKey, env);
@@ -346,18 +400,20 @@ export async function mintPracticeKey(idempotencyKey: string, ip: string | null,
   return enqueue(async () => {
     const minter = await assertMinter(sponsor, fetchImpl);
     if (minter) return minter;
-    let replay = false;
+    let existing: { owner_id?: string } | null = null;
     try {
-      const token = await withRpc((url) => viewCall<{ owner_id?: string } | null>(url, TRIAL_CONTRACT, "nft_token", { token_id: tokenId }, fetchImpl), fetchImpl);
-      replay = token?.owner_id === receiverId;
+      existing = await withRpc((url) => viewCall<{ owner_id?: string } | null>(url, TRIAL_CONTRACT, "nft_token", { token_id: tokenId }, fetchImpl), fetchImpl);
     } catch { return REFUSE; }
-    if (replay) return { ok: true, tokenId, tier: PRACTICE_TIER, accountId: receiverId, txHash: "", replayed: true };
+    if (existing && typeof existing === "object") {
+      const owner = typeof existing.owner_id === "string" ? existing.owner_id : receiverId;
+      return { ok: true, tokenId, tier: PRACTICE_TIER, accountId: owner, txHash: "", replayed: true };
+    }
     const guest = await guestGate(receiverId, fetchImpl);
     if (guest === "missing") return { ok: false, status: 400, error: "bad_request", message: "Create the guest before minting a practice key." };
     if (guest === "bad_key") return { ok: false, status: 400, error: "bad_request", message: "The guest account must have exactly one full-access key." };
     if (guest === "holds") return { ok: false, status: 409, error: "bad_request", message: "That guest already holds a practice key." };
     if (guest === "unknown") return REFUSE;
-    const gate = await reserve(sponsor, ip, fetchImpl, env);
+    const gate = await reserve(sponsor, ip, "mint", fetchImpl, env);
     if (gate) return gate;
     try {
       const txHash = await signMint(receiverId, tokenId, env, fetchImpl);

@@ -1,6 +1,6 @@
 {
   "nav": {
-    "judge": "Judge path",
+    "judge": "Verification path",
     "ask": "Ask privately",
     "atlas": "Atlas",
     "vault": "Vault",
@@ -347,7 +347,7 @@
     "mint": "Mint a key",
     "vault": "Vault",
     "trade": "Trade",
-    "judge": "Judge path",
+    "judge": "Verification path",
     "verify": "Verify",
     "gallery": "Gallery",
     "demo": "Demo",
@@ -643,7 +643,7 @@
     "c3d": "Your browser downloads the wasm from FastFS and hashes it itself."
   },
   "land": {
-    "judgeCta": "Judge path, 5 min, no wallet",
+    "judgeCta": "Verification path, 5 min, no wallet",
     "eyebrow": "Heirloom Nº 001 · Confidential by default",
     "h1a": "Sell a trading account",
     "h1b": "like an NFT.",

@@ -54,15 +54,16 @@ export function scrubSecret(text: string, secret: string): string {
   return text.split(secret).join("[redacted]").slice(0, 300);
 }
 
-/** Shared ceilings. They are not per-process counters. */
-export const GUEST_PER_IP_HOUR = 4;
-export const GLOBAL_PER_HOUR = 12;
-export const GLOBAL_PER_DAY = 40;
 /**
- * About 8.67 testnet NEAR remains on the sponsor. A guest takes the 0.25 NEAR create deposit plus about 0.1 NEAR to mint.
- * 16 guests fit that balance with gas headroom. The nonce ceiling counts from SPONSOR_NONCE_BASE, including creates and mints already signed.
+ * Shared ceilings, recomputed for a 0.05 NEAR guest deposit.
+ * A guest keeps 0.05 NEAR. Create and mint gas, plus the mint storage that is not refunded, are about 0.03 NEAR more.
+ * About 8.67 testnet NEAR on the sponsor fits 80 guests with headroom. The nonce ceiling counts every signed transaction from SPONSOR_NONCE_BASE.
+ * Per-address limits need UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN. Without both, the site-wide on-chain ceiling applies.
  */
-export const LIFETIME_GUESTS = 16;
+export const GUEST_PER_IP_HOUR = 8;
+export const GLOBAL_PER_HOUR = 40;
+export const GLOBAL_PER_DAY = 200;
+export const LIFETIME_GUESTS = 80;
 export const LIFETIME_TX = LIFETIME_GUESTS * 2;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;

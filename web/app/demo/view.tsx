@@ -46,7 +46,7 @@ export function DemoView() {
       </div>
       <div className="dnext">
         <Button href="/vault" testid="demo-open-vault">Open your own vault</Button>
-        <Button variant="secondary" href="/judge">Judge path</Button>
+        <Button variant="secondary" href="/judge">Verification path</Button>
         <Button variant="ghost" onClick={() => { setAt(0); setAuto(true); }}>Replay</Button>
       </div>
     </div>

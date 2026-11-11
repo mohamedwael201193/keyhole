@@ -91,7 +91,7 @@
 .priv-col--public li::before { background: var(--accent); }
 .priv-line { margin: 40px 0 0; padding-left: 20px; border-left: 3px solid var(--primary); font: 700 var(--text-heading)/1.3 var(--font-ui); color: var(--ink); }
 
-/* For judges: three commands in one code card, each with a copy button. */
+/* Verification path: three commands in one code card, each with a copy button. */
 .code-card { margin-top: 40px; max-width: 880px; background: var(--vault); color: var(--vault-ink); border-radius: var(--radius-lg); overflow: hidden; }
 .code-row { display: flex; align-items: center; gap: 16px; padding: 14px 20px; min-width: 0; }
 .code-row + .code-row { border-top: 1px solid #F6F1E729; }

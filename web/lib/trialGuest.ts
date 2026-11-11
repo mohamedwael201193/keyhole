@@ -113,7 +113,7 @@ export async function guestTransfer(guest: Guest, tokenId: string, receiverId: s
         receiverId: TRIAL_CONTRACT,
         throwOnFailure: false,
         waitUntil: "FINAL",
-        actions: [najActions.functionCall("nft_transfer", { receiver_id: receiverId, token_id: tokenId, memo: "practice handover" }, 50_000_000_000_000n, 1n)],
+        actions: [najActions.functionCall("nft_transfer", { receiver_id: receiverId, token_id: tokenId, memo: "practice handover" }, 30_000_000_000_000n, 1n)],
       });
       const sent = readTx(out);
       if (!sent.hash) return sent;

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EVENT_PAGE_SIZE } from "@/lib/chainEvents";
 import { readKeyHistory } from "@/lib/keyEventRead";
@@ -144,5 +145,30 @@ describe("readKeyHistory", () => {
       expect(read.complete).toBe(false);
       expect(read.events).toEqual([]);
     }
+  });
+
+  it("loads token args from a recorded v3 transaction when the receipt has none", async () => {
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/nearblocks-v3-nft-transfer.json", import.meta.url), "utf8")) as {
+      receipt: { actions: { args?: unknown }[] };
+      txn: unknown;
+    };
+    expect(fixture.receipt.actions[0].args).toBeUndefined();
+    const sale = `EVENT_JSON:${JSON.stringify({ standard: "keyhole", version: "1.0.0", event: "key_sale", data: [{ token_id: TOKEN, seller: "a.near", buyer: "b.near", price: "1", royalty: "0" }] })}`;
+    let txnGets = 0;
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = String(url);
+      if (init?.method === "POST") return Response.json(rpc([{ outcome: { executor_id: CONTRACT, status: { SuccessValue: "" }, logs: [sale] } }]));
+      if (u.includes("/v3/txns/")) { txnGets += 1; return Response.json({ data: fixture.txn }); }
+      if (u.includes("method=nft_transfer")) return Response.json({ data: [fixture.receipt], meta: {} });
+      return Response.json({ data: [], meta: {} });
+    }) as unknown as typeof fetch;
+    const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+    expect(txnGets).toBe(1);
+    expect(read.unavailable).toBe(false);
+    expect(read.complete).toBe(true);
+    expect(read.events.map((e) => e.event)).toEqual(["key_sale"]);
+    const again = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+    expect(again.events.map((e) => e.event)).toEqual(["key_sale"]);
+    expect(txnGets).toBe(1);
   });
 });

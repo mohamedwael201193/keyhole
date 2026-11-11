@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { KeyPairEd25519 } from "near-api-js";
 import { accountIdForIdempotency } from "@/lib/trialPolicy";
-import { mintPracticeKey, resetTrialQueueForTests } from "@/lib/trialSend";
-import { GUEST_PER_IP_HOUR } from "@/lib/trialPolicy";
+import { mintPracticeKey, resetTrialQueueForTests, sponsorSend } from "@/lib/trialSend";
+import { GLOBAL_PER_HOUR } from "@/lib/trialPolicy";
 import { SPONSOR_NONCE_BASE, TRIAL_SPONSOR } from "@/lib/trialPublic";
 
 const IDEM = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -26,6 +26,7 @@ function mockFetch(opt: {
   creates?: number;
   delayMs?: number;
   overlap?: { n: number; max: number };
+  failed?: boolean;
 } = {}): typeof fetch {
   return (async (url: string, init?: RequestInit) => {
     const track = opt.overlap;
@@ -36,7 +37,7 @@ function mockFetch(opt: {
       if (u.includes("api-testnet.nearblocks.io")) {
         const now = BigInt(Date.now()) * 1_000_000n;
         const rows = [
-          ...Array.from({ length: opt.mints ?? 0 }, (_, i) => ({ transaction_hash: `m${i}m${i}m${i}m${i}m${i}m${i}m`, signer_account_id: TRIAL_SPONSOR, block_timestamp: String(now), outcomes: { status: true }, actions: [{ method: "nft_mint" }] })),
+          ...Array.from({ length: opt.mints ?? 0 }, (_, i) => ({ transaction_hash: `m${i}m${i}m${i}m${i}m${i}m${i}m`, signer_account_id: TRIAL_SPONSOR, block_timestamp: String(now), outcomes: { status: opt.failed ? false : true }, actions: [{ method: "nft_mint" }] })),
           ...Array.from({ length: opt.creates ?? 0 }, (_, i) => ({ transaction_hash: `c${i}c${i}c${i}c${i}c${i}c${i}c`, signer_account_id: TRIAL_SPONSOR, block_timestamp: String(now), outcomes: { status: true }, actions: [{ method: "create_account" }] })),
         ];
         return Response.json({ data: rows, meta: {} });
@@ -97,11 +98,15 @@ describe("practice mint", () => {
     const replay = await mintPracticeKey(IDEM, "198.51.100.8", guest, env, mockFetch({ token: { owner_id: guest } }));
     expect(replay).toMatchObject({ ok: true, replayed: true, accountId: guest });
 
-    const minted = await mintPracticeKey(IDEM, "198.51.100.8", null, env, mockFetch({ mints: GUEST_PER_IP_HOUR }));
+    const minted = await mintPracticeKey(IDEM, "198.51.100.8", null, env, mockFetch({ mints: GLOBAL_PER_HOUR }));
     expect(minted.ok).toBe(false);
     if (!minted.ok) expect(minted.status).toBe(429);
 
-    const created = await mintPracticeKey(IDEM, "198.51.100.8", null, env, mockFetch({ creates: GUEST_PER_IP_HOUR }));
+    const failed = await mintPracticeKey(IDEM, "198.51.100.8", null, env, mockFetch({ mints: GLOBAL_PER_HOUR, failed: true }));
+    expect(failed.ok).toBe(false);
+    if (!failed.ok) expect(failed.status).toBe(429);
+
+    const created = await mintPracticeKey(IDEM, "198.51.100.8", null, env, mockFetch({ creates: GLOBAL_PER_HOUR }));
     expect(created.ok).toBe(false);
     if (!created.ok) expect(created.status).toBe(429);
   });
@@ -114,5 +119,47 @@ describe("practice mint", () => {
       mintPracticeKey(IDEM, "198.51.100.8", null, env, fetchImpl),
     ]);
     expect(overlap.max).toBe(1);
+  });
+
+  it("returns an existing token and does not ask the indexer to fund another mint", async () => {
+    const urls: string[] = [];
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      urls.push(String(url));
+      return mockFetch({ token: { owner_id: "khcd56ab78ef90.testnet" } })(url, init);
+    }) as typeof fetch;
+    const r = await mintPracticeKey(IDEM, "198.51.100.8", guest, env, fetchImpl);
+    expect(r).toMatchObject({ ok: true, replayed: true, accountId: "khcd56ab78ef90.testnet" });
+    expect(urls.some((url) => url.includes("nearblocks"))).toBe(false);
+  });
+
+  it("does not sign again after the first RPC has accepted the transaction", async () => {
+    let sends = 0;
+    await expect(sponsorSend(env, async () => {}, async () => {
+      sends += 1;
+      throw new Error("token_id must be unique");
+    })).rejects.toThrow(/token_id must be unique/);
+    expect(sends).toBe(1);
+  });
+
+  it("retries a dead RPC only before anything is signed", async () => {
+    let sends = 0;
+    const result = await sponsorSend(env, async (url) => {
+      if (url.includes("rpc.testnet.near.org")) throw new Error("down");
+    }, async () => {
+      sends += 1;
+      return "ok";
+    });
+    expect(result).toBe("ok");
+    expect(sends).toBe(1);
+  });
+
+  it("refuses a half-configured quota store and names both variables", async () => {
+    const r = await mintPracticeKey(IDEM, "198.51.100.8", null, { ...env, UPSTASH_REDIS_REST_URL: "https://example.upstash.io" }, mockFetch());
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.status).toBe(503);
+      expect(r.message).toContain("UPSTASH_REDIS_REST_URL");
+      expect(r.message).toContain("UPSTASH_REDIS_REST_TOKEN");
+    }
   });
 });

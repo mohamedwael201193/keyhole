@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
     return json({ error: "bad_request", message: "Send the guest's ed25519 public key and an idempotency key. The secret stays in the browser." }, 400);
   }
   const result = await createGuest(body.publicKey, body.idempotencyKey, trialClientIp(req.headers));
-  if (!result.ok) return json({ error: result.error, message: result.message }, result.status);
+  if (!result.ok) {
+    const headers: Record<string, string> = { "cache-control": "no-store" };
+    if (result.retryAfter) headers["retry-after"] = String(result.retryAfter);
+    return NextResponse.json({ error: result.error, message: result.message }, { status: result.status, headers });
+  }
   return json({ accountId: result.accountId, txHash: result.txHash, replayed: result.replayed === true, network: "testnet", contract: TRIAL_CONTRACT });
 }

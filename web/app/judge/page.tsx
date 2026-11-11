@@ -9,7 +9,7 @@ import { Trust, TrustLegend } from "@/components/Trust";
 import { CheckBuild, CheckContract } from "./live";
 import "../public-pages.css";
 
-export const metadata = { title: "Judge path · KEYHOLE" };
+export const metadata = { title: "Verification path · KEYHOLE" };
 
 const REPO = "https://github.com/mohamedwael201193/keyhole/blob/main";
 // Every live identity comes from identity.json (node scripts/gen-identity.mjs).
@@ -66,7 +66,7 @@ export default function JudgePage() {
   return (
     <div className="page pp pp-judge" data-testid="judge-page">
       <Purpose
-        eyebrow="Judge path · no wallet"
+        eyebrow="Verification path · no wallet"
         title={<>Check it yourself. <em>Trust nothing we say.</em></>}
         line={<>Seven checks, top to bottom. Each one has a button that runs in your browser and a box that says what you should see. If you see something else, the claim fails.</>}
       />

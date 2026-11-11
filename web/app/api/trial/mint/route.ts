@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
     return json({ error: "bad_request", message: "Send the guest idempotency key from the account this server created." }, 400);
   }
   const result = await mintPracticeKey(body.idempotencyKey, trialClientIp(req.headers), body.receiverId ?? null);
-  if (!result.ok) return json({ error: result.error, message: result.message }, result.status);
+  if (!result.ok) {
+    const headers: Record<string, string> = { "cache-control": "no-store" };
+    if (result.retryAfter) headers["retry-after"] = String(result.retryAfter);
+    return NextResponse.json({ error: result.error, message: result.message }, { status: result.status, headers });
+  }
   return json({ tokenId: result.tokenId, tier: result.tier, txHash: result.txHash, replayed: result.replayed === true, receiverId: result.accountId, network: "testnet", contract: TRIAL_CONTRACT });
 }

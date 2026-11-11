@@ -163,7 +163,7 @@ describe("removed noise", () => {
 
 describe("public top bar and footer", () => {
   const nav = src("../components/Nav.tsx");
-  it("the top bar holds How it works, Proof, For judges and Launch app, and no wallet control", () => {
+  it("the top bar holds How it works, Proof, Verification path and Launch app, and no wallet control", () => {
     expect(nav).toContain('href: "/#handover"');
     expect(nav).toContain('href: "/verify"');
     expect(nav).toContain('href: "/attack"');

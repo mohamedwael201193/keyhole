@@ -9,7 +9,8 @@ export const TRIAL_WASM_SHA256 = "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7e
 export const TRIAL_NETWORK = "testnet" as const;
 export const TRIAL_BANNER = "Testnet · free · not real money";
 /** Attached to each sponsored create_account. The trial copy and the recorded deployment quote this constant. */
-export const GUEST_DEPOSIT_YOCTO = "250000000000000000000000";
+/** 0.05 testnet NEAR. The guest transfer attaches 30 TGas so this balance can pay the prepay. */
+export const GUEST_DEPOSIT_YOCTO = "50000000000000000000000";
 export const TRIAL_SPONSOR = "keyhole-trial-sponsor-b32ffa7796.testnet";
 /**
  * Nonce of the sponsor's full-access key when that key was created.
