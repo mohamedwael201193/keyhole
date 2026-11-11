@@ -4,10 +4,10 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
  RUN  v4.1.12 /workspace/near_hackathon/wt_worker_v2/web
 
-(node:1142001) ExperimentalWarning: The Ed25519 Web Crypto API algorithm is an experimental feature and might change at any time
+(node:1714237) ExperimentalWarning: The Ed25519 Web Crypto API algorithm is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 
- Test Files  123 passed (123)
-      Tests  2030 passed (2030)
-   Start at  22:01:29
-   Duration  8.64s (transform 4.55s, setup 0ms, import 16.53s, tests 16.30s, environment 15ms)
+ Test Files  124 passed (124)
+      Tests  2032 passed (2032)
+   Start at  22:13:05
+   Duration  8.36s (transform 4.90s, setup 0ms, import 15.97s, tests 15.53s, environment 10ms)

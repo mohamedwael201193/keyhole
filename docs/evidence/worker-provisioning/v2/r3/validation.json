@@ -11,10 +11,10 @@
   },
   "tests": {
     "worker": 758,
-    "javascript": 192,
+    "javascript": 191,
     "receipts": 9,
     "cli": 81,
-    "web": 2030,
+    "web": 2032,
     "contract": 342,
     "sandbox_pledge": 28,
     "sandbox_other": 34,
@@ -27,11 +27,19 @@
     "retry_passes": 0,
     "skipped": 15
   },
+  "javascript_summary": {
+    "total": 192,
+    "passed": 191,
+    "failed": 1,
+    "cancelled": 0,
+    "skipped": 0
+  },
   "actual_wasi_builds": [
     "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
     "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377"
   ],
   "coverage_qualifications": {
+    "javascript": "Exact full-suite totals include failures; a source-candidate metadata PASS is not all-suites-green or hosted CI approval.",
     "funded_browser": "Current funded real-native sandbox UI fixture, including both repay/default endings and unchanged refusal/no-custody assertions; not real custody or FT-delivery evidence.",
     "sandbox_pledge": "Current local native admission/title/finish with mocked custody ledger; no actual token/Intents provider.",
     "general_browser": "Current production preview/consent guard with explicit mocked wallet, custody and RPC; no live wallet/provider."
@@ -45,7 +53,7 @@
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/r3/js-tests.log",
-      "sha256": "4fe6f094c90c89f3493a0e1793144ff828f17cb1ef8fcfef4f799158c1ae9214"
+      "sha256": "7f705f1c86edb58a86c031e0baea6a7b29b8fa72a3101c56522953f380cdb989"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/r3/receipt-tests.log",
@@ -57,7 +65,7 @@
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/r3/web-tests.log",
-      "sha256": "d877104475b72a544bc8e7cb59273b648daafbb6a842417eeca67a42cc29f1df"
+      "sha256": "5f658350cac73ae93eae90735857b4426d21e5222dabb6d84e124173e257d280"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/r3/web-lint.log",

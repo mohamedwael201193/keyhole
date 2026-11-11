@@ -815,7 +815,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 | Keys contract sandbox tests | **62** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 34 upgrade/sale/runtime cases |
 | TEE worker unit tests | **758** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
 | CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
-| Web unit tests (Vitest) | **2030** pass in 123 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
+| Web unit tests (Vitest) | **2032** pass in 124 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
 | Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
 | Claims in `docs/claims.json` | **659**: offline 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
