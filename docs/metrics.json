@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "total": 2055,
+  "total": 2058,
   "suites": {
     "cli": 77,
-    "web-unit": 1978
+    "web-unit": 1981
   },
   "excluded": [
     "contract",
@@ -11,15 +11,15 @@
     "sandbox",
     "playwright"
   ],
-  "commit": "8a3c85435b9dc129b457c728c0d8be98a9d572a6",
-  "measured_at": "2026-11-11T16:47:11Z",
+  "commit": "fcacb719b93c55888755148b844a46c42b692df2",
+  "measured_at": "2026-11-11T16:49:09Z",
   "failed": 0,
-  "run_id": "8d5b46eaf98db3f4d8e42e51ef136a7c46886b7e2d40e67e340c23a07caf3885",
+  "run_id": "2a020c0848a7fa766b8a6d59fc1070d1fb33fdd1307ec7e87c4feec63e787819",
   "runners": {
     "cli": "cd cli && npm test",
     "web-unit": "cd web && npx vitest run",
     "contract": "cd contracts/keys && cargo test --locked",
     "worker": "cd tee/worker && cargo test --locked"
   },
-  "note": "cli 77 and web-unit 1978 were measured on this commit with 0 failing tests. run_id is sha256 of the commit, the suite lines and the failing-test count. Contract, worker, sandbox and Playwright were not run and are not in total. A CI log count is not a row in this file."
+  "note": "cli 77 and web-unit 1981 were measured on this commit with 0 failing tests. run_id is sha256 of the commit, the suite lines and the failing-test count. Contract, worker, sandbox and Playwright were not run and are not in total. A CI log count is not a row in this file."
 }
