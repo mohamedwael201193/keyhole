@@ -361,7 +361,8 @@ impl Contract {
     }
 
     /// Minter only. Signals that the key's public card changed (new attested range).
-    /// No 1-yocto requirement (v2.7): the minter calls with a FunctionCall access key, which cannot attach a deposit.
+    /// No 1-yocto requirement (v2.7): the beat key on the minter is FunctionCall and cannot attach a deposit.
+    /// The minter account also has a full-access enclave key, used for payable mint, collateral and admission.
     pub fn beat(&mut self, token_ids: Vec<TokenId>) -> u64 {
         self.assert_minter();
         require!(!token_ids.is_empty() && token_ids.len() <= MAX_BEAT_BATCH, "bad batch");
@@ -381,8 +382,9 @@ impl Contract {
     /// Takes no deposit: the tiers entry already exists, so storage does not grow. Emits NEP-171 1.2.0
     /// `nft_metadata_update` for the token (same event as `beat`). The tier is read from the holder's key,
     /// so holder_tier and the TEE gate see the new tier at once, and it survives nft_transfer.
-    /// v2.7 note: no 1-yocto requirement. The minter is the TEE worker, which signs with a FunctionCall access key;
-    /// such a key cannot attach a deposit, so 1 yocto would make the earned-tier path unusable. Same reason for beat.
+    /// v2.7 note: no 1-yocto requirement, so a FunctionCall key can call this. The live beat key is FunctionCall
+    /// and deposit-free. The minter account also has a full-access enclave key for payable nft_mint,
+    /// register_collateral and begin_value_op. Deposit 0 keeps nft_set_tier callable from a scoped key.
     pub fn nft_set_tier(&mut self, token_id: TokenId, tier: u8) {
         self.assert_minter();
         require!(self.tokens.owner_by_id.get(&token_id).is_some(), "no token");
@@ -637,7 +639,8 @@ impl Contract {
 
     /// Finish ONLY after terminal reconciliation, never HTTP timeout/needs_review.
     /// Completion keeps a bounded high-water nonce, not an unbounded tombstone archive.
-    /// v2.7 note: no 1-yocto requirement. Same reason as beat and nft_set_tier: the minter is a FunctionCall key.
+    /// v2.7 note: no 1-yocto requirement, same as beat and nft_set_tier, so a FunctionCall key can finish a value-op.
+    /// The minter account is not only that key: payable methods use its full-access enclave key.
     pub fn finish_value_op(&mut self, token_id: TokenId, op_id: String, success: bool) {
         self.assert_minter();
         let key = value_op_key(&token_id, &op_id);

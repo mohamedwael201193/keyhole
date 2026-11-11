@@ -3693,7 +3693,7 @@
   {
    "id": "test-begin_value_op",
    "claim": "Named test or symbol `begin_value_op` exists in the source",
-   "where": "SECURITY.md:188",
+   "where": "README.md:615",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3710,6 +3710,27 @@
    },
    "expected": "`begin_value_op` found in source",
    "verify": "node judge/verify-claims.mjs --only test-begin_value_op"
+  },
+  {
+   "id": "test-cancel_owner_proposal",
+   "claim": "Named test or symbol `cancel_owner_proposal` exists in the source",
+   "where": "SECURITY.md:128",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "cancel_owner_proposal",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`cancel_owner_proposal` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-cancel_owner_proposal"
   },
   {
    "id": "test-code_changed_within_24h",
@@ -3840,7 +3861,7 @@
   {
    "id": "test-finish_value_op",
    "claim": "Named test or symbol `finish_value_op` exists in the source",
-   "where": "SECURITY.md:129",
+   "where": "README.md:615",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4342,6 +4363,48 @@
    "verify": "node judge/verify-claims.mjs --only test-is_full_access"
   },
   {
+   "id": "test-judge_governance_budget_omits_legacy_listing_reserve",
+   "claim": "Named test or symbol `judge_governance_budget_omits_legacy_listing_reserve` exists in the source",
+   "where": "SECURITY.md:128",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "judge_governance_budget_omits_legacy_listing_reserve",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`judge_governance_budget_omits_legacy_listing_reserve` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-judge_governance_budget_omits_legacy_listing_reserve"
+  },
+  {
+   "id": "test-judge_wind_down_storage_budget_underestimates_actual_write",
+   "claim": "Named test or symbol `judge_wind_down_storage_budget_underestimates_actual_write` exists in the source",
+   "where": "SECURITY.md:128",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "judge_wind_down_storage_budget_underestimates_actual_write",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`judge_wind_down_storage_budget_underestimates_actual_write` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-judge_wind_down_storage_budget_underestimates_actual_write"
+  },
+  {
    "id": "test-key_not_owned",
    "claim": "Named test or symbol `key_not_owned` exists in the source",
    "where": "README.md:326",
@@ -4741,6 +4804,48 @@
    "verify": "node judge/verify-claims.mjs --only test-over_cap_per_tx_refused"
   },
   {
+   "id": "test-parallel_owner_and_upgrade_timers_apply_before_accept",
+   "claim": "Named test or symbol `parallel_owner_and_upgrade_timers_apply_before_accept` exists in the source",
+   "where": "SECURITY.md:120",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "parallel_owner_and_upgrade_timers_apply_before_accept",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`parallel_owner_and_upgrade_timers_apply_before_accept` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-parallel_owner_and_upgrade_timers_apply_before_accept"
+  },
+  {
+   "id": "test-parallel_timelock_apply_then_accept_then_zero_key_self_deploy",
+   "claim": "Named test or symbol `parallel_timelock_apply_then_accept_then_zero_key_self_deploy` exists in the source",
+   "where": "README.md:617",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "parallel_timelock_apply_then_accept_then_zero_key_self_deploy",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`parallel_timelock_apply_then_accept_then_zero_key_self_deploy` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-parallel_timelock_apply_then_accept_then_zero_key_self_deploy"
+  },
+  {
    "id": "test-parse_usd_micro",
    "claim": "Named test or symbol `parse_usd_micro` exists in the source",
    "where": "README.md:751",
@@ -4823,6 +4928,27 @@
    },
    "expected": "`pending_return_count` found in source",
    "verify": "node judge/verify-claims.mjs --only test-pending_return_count"
+  },
+  {
+   "id": "test-propose_owner_and_accept_owner_reject_the_contract_account",
+   "claim": "Named test or symbol `propose_owner_and_accept_owner_reject_the_contract_account` exists in the source",
+   "where": "SECURITY.md:120",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "propose_owner_and_accept_owner_reject_the_contract_account",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`propose_owner_and_accept_owner_reject_the_contract_account` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-propose_owner_and_accept_owner_reject_the_contract_account"
   },
   {
    "id": "test-provenance_chain_verifies_and_rejects_a_tampered_owner",

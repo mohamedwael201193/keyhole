@@ -316,6 +316,23 @@ fn load_loan(token: &TokenId, nonce: U64) -> Loan {
     let l = loans().get(token).unwrap_or_else(||env::panic_str("no loan")); require!(l.nonce == nonce, "loan nonce mismatch"); l
 }
 
+/// Stake for `usage` bytes at the protocol storage price (10^19 yoctoNEAR per byte).
+pub(crate) fn storage_stake(usage: u64) -> u128 {
+    env::storage_byte_cost().as_yoctonear().checked_mul(usage as u128).unwrap_or_else(|| env::panic_str("storage reserve overflow"))
+}
+
+/// Terms shared with `treasury_recoverable`: the 0.1 NEAR operating reserve, one `LIST_STORAGE_DEPOSIT`
+/// per legacy listing, user liabilities, and a pending treasury recovery. Governance adds `treasury_available`
+/// on top of this so a governance write cannot spend the treasury pool either.
+pub(crate) fn non_treasury_obligations(c: &PledgeConfig) -> u128 {
+    let legacy_listings = (index_count() as u128).checked_mul(LIST_STORAGE_DEPOSIT).unwrap_or_else(|| env::panic_str("listing reserve overflow"));
+    let pending = c.treasury_pending.as_ref().map(|p| p.amount.0).unwrap_or(0);
+    OPERATING_RESERVE.checked_add(legacy_listings)
+        .and_then(|v| v.checked_add(c.user_liabilities.0))
+        .and_then(|v| v.checked_add(pending))
+        .unwrap_or_else(|| env::panic_str("reserve overflow"))
+}
+
 #[near]
 impl Contract {
     /// One-time, self-call initialization for deployed v2.4. No implicit attribution of existing native balance.
@@ -781,10 +798,9 @@ impl Contract {
 
     pub fn treasury_recoverable(&self) -> U128 {
         let c = config_required();
-        let storage = env::storage_byte_cost().as_yoctonear().checked_mul(env::storage_usage() as u128).unwrap_or_else(||env::panic_str("storage reserve overflow"));
-        let legacy_listings = (index_count() as u128).checked_mul(LIST_STORAGE_DEPOSIT).unwrap_or_else(||env::panic_str("listing reserve overflow"));
-        let reserve = storage.checked_add(OPERATING_RESERVE).and_then(|v| v.checked_add(legacy_listings))
-            .and_then(|v| v.checked_add(c.user_liabilities.0)).and_then(|v| v.checked_add(c.treasury_pending.as_ref().map(|p| p.amount.0).unwrap_or(0))).unwrap_or_else(||env::panic_str("reserve overflow"));
+        // Byte stake plus operating reserve, listing bonds, user liabilities and a pending recovery.
+        // treasury_available is the pool this view pays out, so it is not added to the reserve.
+        let reserve = storage_stake(env::storage_usage()).checked_add(non_treasury_obligations(&c)).unwrap_or_else(||env::panic_str("reserve overflow"));
         U128(c.treasury_available.0.min(env::account_balance().as_yoctonear().saturating_sub(reserve)))
     }
 

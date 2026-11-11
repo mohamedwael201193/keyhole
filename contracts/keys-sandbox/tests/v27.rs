@@ -264,3 +264,140 @@ async fn bc_short_delay_proves_timelock_cancel_apply_and_exact_principal_reclaim
     assert_eq!(view(&e.c, "get_pledge_config", json!({})).await["user_liabilities"], "0");
     Ok(())
 }
+
+/// Mainnet successor. The sandbox protocol refuses CreateAccount on a 64-hex account id, and this checkout
+/// does not have that account's secret, so the test signs for a fresh implicit account created by transfer.
+const MAINNET_GUARDIAN: &str = "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228";
+
+fn hex_sha(bytes: &[u8]) -> String {
+    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+}
+fn economic(mut snap: Value) -> Value {
+    snap["config"].as_object_mut().unwrap().remove("owner");
+    snap
+}
+async fn wasm_sha(c: &Contract) -> Result<String> {
+    Ok(hex_sha(&c.view_code().await?))
+}
+async fn sandbox_guardian(w: &Worker<Sandbox>, root: &Account) -> Result<Account> {
+    let sk = near_workspaces::types::SecretKey::from_random(near_workspaces::types::KeyType::ED25519);
+    let id: near_workspaces::AccountId = sk.public_key().key_data().iter().map(|b| format!("{b:02x}")).collect::<String>().parse()?;
+    root.transfer_near(&id, NearToken::from_near(50)).await?.into_result()?;
+    Ok(Account::from_secret_key(id, sk, w))
+}
+async fn delete_all_keys(c: &Contract) -> Result<()> {
+    let keys = c.view_access_keys().await?;
+    assert!(!keys.is_empty(), "the contract starts with a key the test can delete");
+    let mut tx = c.batch();
+    for key in keys {
+        tx = tx.delete_key(key.public_key);
+    }
+    tx.transact().await?.into_result()?;
+    assert!(c.view_access_keys().await?.is_empty(), "every access key on the contract account is gone");
+    Ok(())
+}
+
+/// Mainnet order, on the short-delay fixture: stage and propose in the same hour, apply, then accept.
+/// `accept_owner` still drops a staged upgrade, so apply is first and the clear is a no-op.
+/// The release wasm's next delay is 24h. This sandbox cannot fast-forward that far (it stalls near height 225179,
+/// and 24h is about 325000 blocks at the measured block time). The zero-key stage-and-apply therefore runs on a
+/// second chain that is still executing the short-delay fixture when the guardian deploys the release wasm.
+#[tokio::test]
+async fn parallel_timelock_apply_then_accept_then_zero_key_self_deploy() -> Result<()> {
+    let release = read_wasm(V27)?;
+    let short = read_wasm(V27_SHORT)?;
+    let release_sha = hex_sha(&release);
+    let short_sha = hex_sha(&short);
+
+    // Phase 1: the exact order, applying the release wasm, then a zero-key stage on that code.
+    {
+        let e = setup_v26().await?;
+        e.c.as_account().deploy(&short).await?.into_result()?;
+        assert_eq!(MAINNET_GUARDIAN.len(), 64);
+        assert!(MAINNET_GUARDIAN.bytes().all(|b| b.is_ascii_hexdigit()));
+        let root = e.w.root_account()?;
+        let guardian = sandbox_guardian(&e.w, &root).await?;
+        let before = snapshot(&e).await;
+
+        e.c.call("stage_upgrade").args_json(json!({"code_sha256": release_sha})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        e.c.call("propose_owner").args_json(json!({"new_owner": guardian.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        let g = view(&e.c, "governance_state", json!({})).await;
+        let upgrade_at: u64 = g["staged_upgrade_not_before_ns"].as_str().unwrap().parse()?;
+        let owner_at: u64 = g["pending_owner_not_before_ns"].as_str().unwrap().parse()?;
+        assert!(upgrade_at.abs_diff(owner_at) < 120 * SEC, "both waits start in the same hour");
+        assert_eq!(g["owner"], e.c.id().as_str());
+        assert_eq!(g["pending_owner"], guardian.id().as_str());
+        assert_eq!(g["staged_upgrade_sha256"], release_sha);
+
+        let early = e.c.call("apply_upgrade").args(release.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+        assert!(format!("{:?}", early.into_result().unwrap_err()).contains("timelock not expired"));
+
+        advance_to(&e.w, upgrade_at.max(owner_at) + SEC).await?;
+        let applied = e.c.call("apply_upgrade").args(release.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?;
+        applied.into_result()?;
+        let g = view(&e.c, "governance_state", json!({})).await;
+        assert!(g["staged_upgrade_sha256"].is_null(), "apply consumes the stage before accept");
+        assert_eq!(g["owner"], e.c.id().as_str(), "apply does not hand the contract to the successor");
+        assert_eq!(g["pending_owner"], guardian.id().as_str());
+        assert_eq!(wasm_sha(&e.c).await?, release_sha, "code hash is the staged release hash");
+        assert_eq!(economic(before.clone()), economic(snapshot(&e).await), "state preserved across the in-contract deploy");
+
+        guardian.call(e.c.id(), "accept_owner").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        let g = view(&e.c, "governance_state", json!({})).await;
+        assert_eq!(g["owner"], guardian.id().as_str());
+        assert!(g["pending_owner"].is_null());
+        assert!(g["staged_upgrade_sha256"].is_null(), "accept finds no stage left to clear");
+        assert_eq!(wasm_sha(&e.c).await?, release_sha, "accept does not change the code that was just applied");
+        let after = snapshot(&e).await;
+        assert_eq!(after["config"]["owner"], guardian.id().as_str());
+        assert_eq!(economic(before), economic(after));
+
+        delete_all_keys(&e.c).await?;
+        let locked = e.c.call("stage_upgrade").args_json(json!({"code_sha256": short_sha})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await;
+        let locked_ok = match locked { Err(_) => false, Ok(out) => out.into_result().is_ok() };
+        assert!(!locked_ok, "the contract account can no longer sign");
+        guardian.call(e.c.id(), "stage_upgrade").args_json(json!({"code_sha256": short_sha})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        let g = view(&e.c, "governance_state", json!({})).await;
+        assert_eq!(g["staged_upgrade_sha256"], short_sha, "the external owner stages with zero keys on the contract");
+        let not_before: u64 = g["staged_upgrade_not_before_ns"].as_str().unwrap().parse()?;
+        let wait = not_before.saturating_sub(now(&e).await);
+        assert!(wait + 120 * SEC > RELEASE_DELAY && wait < RELEASE_DELAY + 120 * SEC, "the applied release wasm's next delay is 24h, which this sandbox does not fast-forward");
+        assert!(e.c.view_access_keys().await?.is_empty());
+    }
+
+    // Phase 2: same order while the executor stays on the short delay, so the guardian can also apply.
+    {
+        let e = setup_v26().await?;
+        e.c.as_account().deploy(&short).await?.into_result()?;
+        let root = e.w.root_account()?;
+        let guardian = sandbox_guardian(&e.w, &root).await?;
+        let before = snapshot(&e).await;
+
+        e.c.call("stage_upgrade").args_json(json!({"code_sha256": short_sha})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        e.c.call("propose_owner").args_json(json!({"new_owner": guardian.id()})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        let g = view(&e.c, "governance_state", json!({})).await;
+        let upgrade_at: u64 = g["staged_upgrade_not_before_ns"].as_str().unwrap().parse()?;
+        let owner_at: u64 = g["pending_owner_not_before_ns"].as_str().unwrap().parse()?;
+        advance_to(&e.w, upgrade_at.max(owner_at) + SEC).await?;
+
+        e.c.call("apply_upgrade").args(short.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        assert_eq!(wasm_sha(&e.c).await?, short_sha);
+        assert_eq!(view(&e.c, "governance_state", json!({})).await["owner"], e.c.id().as_str());
+        guardian.call(e.c.id(), "accept_owner").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        assert_eq!(view(&e.c, "governance_state", json!({})).await["owner"], guardian.id().as_str());
+        delete_all_keys(&e.c).await?;
+
+        guardian.call(e.c.id(), "stage_upgrade").args_json(json!({"code_sha256": release_sha})).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+        let not_before: u64 = view(&e.c, "governance_state", json!({})).await["staged_upgrade_not_before_ns"].as_str().unwrap().parse()?;
+        advance_to(&e.w, not_before + SEC).await?;
+        guardian.call(e.c.id(), "apply_upgrade").args(release.clone()).deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+
+        assert_eq!(wasm_sha(&e.c).await?, release_sha, "zero-key self-deploy installed the staged release hash");
+        assert_eq!(view(&e.c, "governance_state", json!({})).await["owner"], guardian.id().as_str());
+        assert!(e.c.view_access_keys().await?.is_empty(), "the deploy did not add a key");
+        let after = snapshot(&e).await;
+        assert_eq!(after["config"]["owner"], guardian.id().as_str());
+        assert_eq!(economic(before), economic(after), "nft, pledge, listing and credit state preserved");
+    }
+    Ok(())
+}

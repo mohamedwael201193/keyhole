@@ -51,9 +51,9 @@ export const IDENTITY = {
     "status": "source-candidate-not-deployed",
     "version": "2.7.0",
     "release": "v2.7",
-    "wasm_sha256": "919a503f8645f80e490db1cd6ea7cb8d24096dfe6b3b4284afc0a0750a979f49",
-    "code_hash": "AoNbKnK9UrE2kU1VHhQQMywfzp7L9PXJxc1rF64m2h3n",
-    "bytes": 519328,
+    "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+    "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
+    "bytes": 519382,
     "recipe": "contracts/keys/build.sh"
   }
 } as const;

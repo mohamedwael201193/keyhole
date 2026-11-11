@@ -173,8 +173,121 @@ fn governance_storage_cannot_consume_user_liabilities() {
     let storage = env::storage_byte_cost().as_yoctonear() * env::storage_usage() as u128;
     ctx_bal("owner.near", 1, NOW, storage);
     rejected(|| { let _ = c.propose_owner(a("guardian.near")); });
-    assert!(c.governance_state().pending_owner.is_none());
+    // The mock VM keeps a write that panicked. A chain receipt rolls it back. The owner key is not written by propose_owner.
     assert_eq!(c.governance_state().owner, a("owner.near"));
+}
+
+/// The judge's listing budget (pre-write stake + operating reserve + the listing bond, and nothing for the new key) is refused.
+/// The exact post-write floor succeeds. One yocto under that floor is refused.
+/// The mock VM does not roll a panicked write back, so each refusal removes the proposal key before the next call.
+#[test]
+fn judge_governance_budget_omits_legacy_listing_reserve() {
+    let mut c = setup();
+    ctx("alice.near", LIST_STORAGE_DEPOSIT, NOW); c.nft_list("k1".into(), U128(N));
+    assert_eq!(crate::index_count(), 1);
+    assert_eq!(config_required().user_liabilities.0, 0, "an exact listing deposit is not a credit");
+    let before = env::storage_usage();
+    ctx("owner.near", 1, NOW); let _ = c.propose_owner(a("guardian.near"));
+    let growth = env::storage_usage() - before;
+    assert!(growth > 0, "a proposal writes a key");
+    env::storage_remove(OWNER_PENDING_KEY);
+    assert_eq!(env::storage_usage(), before);
+
+    let byte = env::storage_byte_cost().as_yoctonear();
+    let judge = before as u128 * byte + crate::pledge::OPERATING_RESERVE + LIST_STORAGE_DEPOSIT;
+    let floor = (before as u128 + growth as u128) * byte + crate::pledge::OPERATING_RESERVE + LIST_STORAGE_DEPOSIT;
+    let clear = || {
+        env::storage_remove(OWNER_PENDING_KEY);
+        assert_eq!(env::storage_usage(), before, "removing the panicked proposal restores the measured baseline");
+    };
+
+    // account_balance() includes the 1 yocto this call attaches, so the context balance is one less than the balance the check sees.
+    ctx_bal("owner.near", 1, NOW, judge - 1);
+    rejected(|| { let _ = c.propose_owner(a("guardian.near")); });
+    clear();
+    ctx_bal("owner.near", 1, NOW, floor - 2);
+    rejected(|| { let _ = c.propose_owner(a("guardian.near")); });
+    clear();
+    ctx_bal("owner.near", 1, NOW, floor - 1);
+    let _ = c.propose_owner(a("guardian.near"));
+    assert_eq!(env::storage_usage() - before, growth);
+    let cfg = config_required();
+    let need = env::storage_usage() as u128 * byte + crate::pledge::non_treasury_obligations(&cfg) + cfg.treasury_available.0;
+    assert_eq!(need, floor, "success sits on the shared reserve boundary");
+    assert_eq!(c.governance_state().pending_owner.unwrap(), a("guardian.near"));
+}
+
+/// The old 32-byte wind-down budget is below the measured write. That balance is refused.
+/// The balance that covers the measured growth, the operating reserve and treasury succeeds. One yocto under it is refused.
+#[test]
+fn judge_wind_down_storage_budget_underestimates_actual_write() {
+    let mut c = setup();
+    let mut cfg = config_required();
+    cfg.treasury_available = U128(N);
+    save_config(&cfg);
+    let before = env::storage_usage();
+    ctx("owner.near", 1, WIND_DOWN_NS); c.wind_down();
+    let growth = env::storage_usage() - before;
+    assert!(growth > 32, "Q27/wind_down costs more than the old 32-byte budget");
+    env::storage_remove(WIND_DOWN_KEY);
+    assert_eq!(env::storage_usage(), before);
+
+    let byte = env::storage_byte_cost().as_yoctonear();
+    let short = (before as u128 + 32) * byte + crate::pledge::OPERATING_RESERVE + N;
+    let floor = (before as u128 + growth as u128) * byte + crate::pledge::OPERATING_RESERVE + N;
+    let clear = || {
+        env::storage_remove(WIND_DOWN_KEY);
+        assert_eq!(env::storage_usage(), before, "removing the panicked flag restores the measured baseline");
+    };
+
+    // account_balance() includes the 1 yocto this call attaches, so the context balance is one less than the balance the check sees.
+    ctx_bal("owner.near", 1, WIND_DOWN_NS, short - 1);
+    rejected(|| c.wind_down());
+    clear();
+    ctx_bal("owner.near", 1, WIND_DOWN_NS, floor - 2);
+    rejected(|| c.wind_down());
+    clear();
+    ctx_bal("owner.near", 1, WIND_DOWN_NS, floor - 1);
+    c.wind_down();
+    assert!(c.governance_state().wound_down);
+    assert_eq!(env::storage_usage() - before, growth);
+    let cfg = config_required();
+    let need = env::storage_usage() as u128 * byte + crate::pledge::non_treasury_obligations(&cfg) + cfg.treasury_available.0;
+    assert_eq!(need, floor, "success sits on the measured reserve boundary");
+}
+
+#[test]
+fn propose_owner_and_accept_owner_reject_the_contract_account() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW);
+    rejected(|| { let _ = c.propose_owner(a("keys.near")); });
+    assert!(c.governance_state().pending_owner.is_none(), "the refusal is before the write");
+
+    let proposal = OwnerProposal { account: a("keys.near"), not_before_ns: NOW };
+    env::storage_write(OWNER_PENDING_KEY, &near_sdk::borsh::to_vec(&proposal).unwrap());
+    ctx("keys.near", 1, NOW);
+    rejected(|| c.accept_owner());
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+}
+
+/// stage_upgrade and propose_owner are independent keys. apply_upgrade does not wait for accept_owner.
+/// accept_owner after the stage is consumed does not need a staged record.
+#[test]
+fn parallel_owner_and_upgrade_timers_apply_before_accept() {
+    let mut c = setup();
+    let code = wasm();
+    ctx("owner.near", 1, NOW); let upgrade_at = c.stage_upgrade(sha_hex(&code));
+    ctx("owner.near", 1, NOW); let owner_at = c.propose_owner(a("guardian.near"));
+    assert_eq!(upgrade_at.0, owner_at.0, "both delays start from the same block");
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+    ctx_input("owner.near", 1, upgrade_at.0, code);
+    let _ = c.apply_upgrade();
+    assert!(c.governance_state().staged_upgrade_sha256.is_none(), "apply consumes the stage before accept");
+    assert_eq!(c.governance_state().pending_owner, Some(a("guardian.near")));
+    assert_eq!(c.governance_state().owner, a("owner.near"), "apply does not hand over the owner");
+    ctx("guardian.near", 1, owner_at.0); c.accept_owner();
+    assert_eq!(c.governance_state().owner, a("guardian.near"));
+    assert!(c.governance_state().staged_upgrade_sha256.is_none());
 }
 
 #[test]

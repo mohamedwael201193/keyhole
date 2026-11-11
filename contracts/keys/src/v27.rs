@@ -3,7 +3,7 @@
 //! Lazy defaults: an absent key means the v2.6 behaviour (legacy owner field, no staged upgrade, not wound down).
 //! wind_down closes new activity; existing obligations and transfers keep working; refused while liabilities > 0.
 //! It is not a pause: no method stops transfers, repayments, claims or payouts.
-use crate::pledge::{config_required, pledge_config};
+use crate::pledge::{config_required, non_treasury_obligations, pledge_config, storage_stake};
 use crate::*;
 use near_sdk::json_types::U64;
 use near_sdk::Promise;
@@ -62,17 +62,15 @@ fn read_account(key: &[u8]) -> Option<AccountId> {
 fn read_proposal() -> Option<OwnerProposal> {
     env::storage_read(OWNER_PENDING_KEY).map(|v| near_sdk::borsh::from_slice::<OwnerProposal>(&v).unwrap_or_else(|_| env::panic_str("owner proposal corrupt")))
 }
-/// Governance keys are singletons. Growing one must leave user liabilities, treasury and the operating reserve liquid.
-fn assert_can_grow(extra_bytes: u64) {
+/// Called after a governance write in the same receipt. A panic rolls that write back on chain.
+/// The floor is the byte stake of the storage that now exists, `non_treasury_obligations`
+/// (listing bonds, user liabilities, pending recovery, operating reserve — the same terms as
+/// `treasury_recoverable`) and the treasury pool, which governance must not spend.
+fn assert_governance_reserve() {
     let Some(c) = pledge_config() else { return; };
-    let byte = env::storage_byte_cost().as_yoctonear();
-    let usage = (env::storage_usage() as u128).checked_add(extra_bytes as u128).unwrap_or_else(|| env::panic_str("storage reserve overflow"));
-    let storage = byte.checked_mul(usage).unwrap_or_else(|| env::panic_str("storage reserve overflow"));
-    let pending = c.treasury_pending.as_ref().map(|p| p.amount.0).unwrap_or(0);
-    let need = storage.checked_add(crate::pledge::OPERATING_RESERVE)
-        .and_then(|v| v.checked_add(c.user_liabilities.0))
+    let need = storage_stake(env::storage_usage())
+        .checked_add(non_treasury_obligations(&c))
         .and_then(|v| v.checked_add(c.treasury_available.0))
-        .and_then(|v| v.checked_add(pending))
         .unwrap_or_else(|| env::panic_str("reserve overflow"));
     require!(env::account_balance().as_yoctonear() >= need, "governance storage would consume user funds");
 }
@@ -118,11 +116,12 @@ impl Contract {
     pub fn propose_owner(&mut self, new_owner: AccountId) -> U64 {
         assert_one_yocto();
         self.assert_owner();
+        require!(new_owner != env::current_account_id(), "successor cannot be the contract account");
         require!(new_owner != self.current_owner(), "already the owner");
-        assert_can_grow(256);
         let not_before = env::block_timestamp().checked_add(MIN_UPGRADE_DELAY_NS).unwrap_or_else(|| env::panic_str("time overflow"));
         let proposal = OwnerProposal { account: new_owner.clone(), not_before_ns: not_before };
         env::storage_write(OWNER_PENDING_KEY, &near_sdk::borsh::to_vec(&proposal).unwrap_or_else(|_| env::panic_str("owner proposal encoding")));
+        assert_governance_reserve();
         emit_key_event("owner_proposed", json_object!({"owner": self.current_owner(), "proposed_owner": new_owner, "not_before_ns": U64(not_before)}));
         U64(not_before)
     }
@@ -134,6 +133,7 @@ impl Contract {
         self.assert_owner();
         let proposal = read_proposal().unwrap_or_else(|| env::panic_str("no owner proposal"));
         env::storage_remove(OWNER_PENDING_KEY);
+        assert_governance_reserve();
         emit_key_event("owner_proposal_cancelled", json_object!({"owner": self.current_owner(), "proposed_owner": proposal.account}));
     }
 
@@ -146,6 +146,7 @@ impl Contract {
         let proposal = read_proposal().unwrap_or_else(|| env::panic_str("no owner proposal"));
         require!(env::predecessor_account_id() == proposal.account, "only the proposed owner can accept");
         require!(env::block_timestamp() >= proposal.not_before_ns, "owner handover timelock not expired");
+        require!(proposal.account != env::current_account_id(), "successor cannot be the contract account");
         if read_staged().is_some() {
             env::storage_remove(UPGRADE_KEY);
             emit_key_event("upgrade_cancelled", json_object!({"reason": "owner_changed"}));
@@ -153,6 +154,7 @@ impl Contract {
         let previous = self.current_owner();
         write_account(OWNER_KEY, &proposal.account);
         env::storage_remove(OWNER_PENDING_KEY);
+        assert_governance_reserve();
         emit_key_event("owner_changed", json_object!({"previous_owner": previous, "owner": proposal.account}));
     }
 
@@ -163,10 +165,10 @@ impl Contract {
         assert_one_yocto();
         self.assert_owner();
         require!(read_staged().is_none(), "an upgrade is already staged: cancel_upgrade first");
-        assert_can_grow(128);
         let hash = parse_sha256(&code_sha256);
         let not_before = env::block_timestamp().checked_add(MIN_UPGRADE_DELAY_NS).unwrap_or_else(|| env::panic_str("time overflow"));
         env::storage_write(UPGRADE_KEY, &near_sdk::borsh::to_vec(&StagedUpgrade { hash, not_before_ns: not_before }).unwrap_or_else(|_| env::panic_str("upgrade encoding")));
+        assert_governance_reserve();
         emit_key_event("upgrade_staged", json_object!({"code_sha256": code_sha256, "not_before_ns": U64(not_before)}));
         U64(not_before)
     }
@@ -177,6 +179,7 @@ impl Contract {
         self.assert_owner();
         let staged = read_staged().unwrap_or_else(|| env::panic_str("no upgrade staged"));
         env::storage_remove(UPGRADE_KEY);
+        assert_governance_reserve();
         emit_key_event("upgrade_cancelled", json_object!({"code_sha256": hex(&staged.hash)}));
     }
 
@@ -199,6 +202,7 @@ impl Contract {
         require!(env::sha256(&code).as_slice() == staged.hash.as_slice(), "wasm sha256 does not match the staged hash");
         require!(code.len() >= 8 && code.starts_with(b"\0asm"), "input is not a wasm module");
         env::storage_remove(UPGRADE_KEY);
+        assert_governance_reserve();
         emit_key_event("upgrade_applied", json_object!({"code_sha256": hex(&staged.hash), "bytes": code.len() as u64}));
         Promise::new(env::current_account_id()).deploy_contract(code)
     }
@@ -213,12 +217,12 @@ impl Contract {
         self.assert_owner();
         require!(env::block_timestamp() >= WIND_DOWN_NS, "wind-down date not reached: earliest 2027-02-01T00:00:00Z");
         require!(!wound_down(), "already wound down");
-        assert_can_grow(32);
         let c = config_required();
         require!(c.user_liabilities.0 == 0, "wind_down refused: user liabilities outstanding");
         require!(c.treasury_pending.is_none(), "wind_down refused: treasury recovery pending");
         require!(index_count() == 0, "wind_down refused: keys are listed, unlist first");
         env::storage_write(WIND_DOWN_KEY, &[1]);
+        assert_governance_reserve();
         emit_key_event("wind_down", json_object!({"at_ns": U64(env::block_timestamp())}));
     }
 
