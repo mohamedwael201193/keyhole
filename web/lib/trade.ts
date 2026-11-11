@@ -1,3 +1,4 @@
+import { exactExitFields } from "./exactExit";
 import { ASSETS, type AssetKey } from "./assets";
 import { validAccountId } from "./keysApi";
 
@@ -5,8 +6,7 @@ import { validAccountId } from "./keysApi";
  * Request params for the worker, matching the CLI in cli/src/cli.ts.
  *
  * Swap and withdraw send NEP-141 asset ids (`nep141:…`). `usd_of` prices a token
- * only when it equals the USDC asset id or is an origin asset id, then
- * `/wallet/v1/confidential/withdraw` receives that same string.
+ * only when it equals the USDC asset id or is an origin asset id, the canonical USDC self-exit uses the typed three-hop flow.
  *
  * Fund uses the symbol. `op_account` forwards `token` to the deposit API,
  * whose default is the symbol `"USDC"`.
@@ -29,7 +29,7 @@ export function swapParamsById(fromId: string, toId: string, amountIn: string, m
 /** Payout is fixed to the signed-in holder on NEAR; the worker independently verifies ownership. */
 export function withdrawParams(accountId: string, asset: AssetKey, amount: string) {
   if (!validAccountId(accountId)) throw new Error("A valid signed-in NEAR account is required.");
-  return { chain: "near" as const, to: accountId, token: ASSETS[asset].id, amount };
+  return { chain: "near" as const, to: accountId, token: ASSETS[asset].id, amount, ...(asset === "usdc" ? exactExitFields(amount) : {}) };
 }
 
 export function fundParams(asset: AssetKey, amount: string) {

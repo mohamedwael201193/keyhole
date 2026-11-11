@@ -136,7 +136,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const balance = useSigned("balance");
   const account = useSigned("account");
   const history = useSigned("history");
-  const withdraw = useSigned("withdraw");
+  const withdraw = useSigned("exact_near_exit_v1");
   const limits = useSigned("limits");
   const pnl = useSigned("pnl");
   const dash = useSigned("dashboard");
@@ -261,7 +261,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const readBalance = balance.run;
   useEffect(() => {
     const out = withdraw.res?.output;
-    if (!out?.ok || out.op !== "withdraw" || !live) return;
+    if (!out?.ok || out.op !== "exact_near_exit_v1" || !live) return;
     void readBalance({}, { quiet: true });
   }, [withdraw.res, readBalance, live]);
 
@@ -777,7 +777,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             {withdraw.busy ? withdraw.label : t("vault.withdrawBtn")}
           </Button>
           {withdraw.busy && <TxStatus state="pending" title="Waiting for the payout" testid="withdraw-pending" />}
-          {withdraw.res?.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw && (
+          {withdraw.res?.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw && (
             <div className="vlt-stack" data-testid="withdraw-out">
               <TxStatus state="confirmed" title={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} hash={withdraw.res.output.tx_hash ? String(withdraw.res.output.tx_hash) : undefined} callId={withdraw.res.call_id ?? undefined}>
                 <p className="vlt-sub">{String(withdraw.res.output.status ?? "")}</p>
@@ -789,7 +789,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             </div>
           )}
           {withdraw.res?.error && <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />}
-          {withdraw.res && !(withdraw.res.output?.ok && withdraw.res.output.op === "withdraw" && doneWithdraw) && <Attested r={withdraw.res} />}
+          {withdraw.res && !(withdraw.res.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw) && <Attested r={withdraw.res} />}
         </div>
       </Sheet>
     </div>

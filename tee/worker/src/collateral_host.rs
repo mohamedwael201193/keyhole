@@ -1,10 +1,12 @@
 // Included in WASI host. Every write below is enclave storage or an explicitly
 // holder-authorized production operation; native unit/sandbox tests never call it.
-use keyhole_worker::collateral::{self, AuthorityAudit, Prepared};
+use keyhole_worker::collateral::{self, Prepared};
+use keyhole_worker::collateral_evidence::{self as evidence, PreAudit};
 fn provision_root(token: &str, epoch: u64) -> String {
     collateral::provision_root(token, epoch)
 }
 fn provision_idle(token: &str) -> Result<(), Error> {
+    evidence::idle(&mut Host, token)?;
     collateral::assert_provision_idle(&mut Host, token, guard_control(token)?.epoch)
 }
 fn provision_auth(input: &Value, op: &str) -> Result<(Ctx, Control), Error> {
@@ -85,7 +87,17 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
                 "preparation belongs to previous title",
             ));
         }
-        return Ok(prepared_summary(&p));
+        let expected: Value =
+            serde_json::from_slice(&Store::read(&mut Host, &format!("{k}/expected_policy"))?)
+                .map_err(|_| err("evidence", "candidate missing"))?;
+        let guardian = if let Some(a) = c.req.params.get("guardian_proof") {
+            observe_guardian(&c, &control, &expected, &p.wallet_pubkey, a)?
+        } else {
+            serde_json::from_slice(&Store::read(&mut Host, &format!("{k}/guardian"))?)
+                .map_err(|_| err("guardian", "original guardian missing"))?
+        };
+        provision_unchanged(&c, &control)?;
+        return prepared_review_summary(&p, guardian);
     }
     let (key, id) = guarded_wallet(&token)?;
     let rec: Value = serde_json::from_slice(&Store::read(&mut Host, &tkey(&token, "wallet"))?)
@@ -99,7 +111,25 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
     let threshold = c.req.params["threshold"]
         .as_u64()
         .ok_or_else(|| err("bad_params", "threshold integer required"))?;
-    let policy = collateral::policy(wallet_id, &key, approvers, threshold)?;
+    let manifest = evidence_manifest(&token)?;
+    let policy = evidence::admin_policy(wallet_id, &key, approvers, threshold)?;
+    if manifest.owner != c.account
+        || manifest.owner_epoch != control.epoch
+        || manifest.wallet_pubkey != format!("ed25519:{id}")
+        || manifest.api_key_sha256 != sha256_hex(&key)
+    {
+        return Err(err(
+            "evidence",
+            "fresh creation owner/epoch/custody mismatch",
+        ));
+    }
+    let guardian = observe_guardian(
+        &c,
+        &control,
+        &policy,
+        &format!("ed25519:{id}"),
+        &c.req.params["guardian_proof"],
+    )?;
     if view(
         &keys_contract(),
         "get_collateral_binding",
@@ -137,6 +167,11 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
         }
         return Err(e);
     }
+    guarded::put_once(
+        &mut Host,
+        &format!("{k}/guardian"),
+        guardian.to_string().as_bytes(),
+    )?;
     guarded::put_once(
         &mut Host,
         &format!("{k}/expected_policy"),
@@ -203,7 +238,7 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
         &format!("{k}/prepared"),
         &serde_json::to_vec(&p).map_err(|_| err("storage", "plan encoding"))?,
     )?;
-    Ok(prepared_summary(&p))
+    prepared_review_summary(&p, guardian)
 }
 fn provision_identity(c: &Ctx, control: &Control, p: &Prepared) -> Result<(), Error> {
     if p.token_id != c.token_id()
@@ -231,14 +266,52 @@ fn op_provision_collateral(input: &Value) -> Result<Value, Error> {
     }
     let now = chain_now_ms()? / 1000;
     p.validate(&keys_contract(), now)?;
-    let a = collateral::audit(
-        guarded::text(&c.req.params, "audit_message")?,
-        guarded::text(&c.req.params, "audit_signature")?,
-        &cfg("COLLATERAL_AUDITOR_PUBLIC_KEY", ""),
+    let expected: Value =
+        serde_json::from_slice(&Store::read(&mut Host, &format!("{k}/expected_policy"))?)
+            .map_err(|_| err("evidence", "candidate policy missing"))?;
+    let message = guarded::text(&c.req.params, "pre_audit_message")?;
+    if message.len() > 32768 {
+        return Err(err("evidence", "oversized pre-review"));
+    }
+    let proposed: PreAudit =
+        serde_json::from_str(message).map_err(|_| err("evidence", "invalid pre-review"))?;
+    if !guarded::lower_hash(&proposed.guardian_sha256) {
+        return Err(err("guardian", "invalid guardian digest"));
+    }
+    let guardian: Value = serde_json::from_slice(&Store::read(
+        &mut Host,
+        &format!("{k}/guardians/{}", proposed.guardian_sha256),
+    )?)
+    .map_err(|_| err("evidence", "observed guardian proof missing"))?;
+    let a = evidence::pre_audit(
+        guarded::text(&c.req.params, "pre_audit_message")?,
+        guarded::text(&c.req.params, "pre_audit_signature")?,
+        &cfg_env_reviewer(),
         &p,
+        &evidence_manifest(&p.token_id)?,
+        &expected,
+        &evidence::digest(&guardian)?,
         &keys_contract(),
         now,
     )?;
+    let ga: Auth = serde_json::from_value(guardian["auth"].clone())
+        .map_err(|_| err("guardian", "observed proof missing"))?;
+    let (access, e) = rpc::view_access_key(&ga.account_id, &ga.public_key, "final");
+    if !e.is_empty() {
+        return Err(err("guardian", "current guardian unavailable"));
+    }
+    let access: Value =
+        serde_json::from_str(&access).map_err(|_| err("guardian", "unknown guardian key"))?;
+    let gp = evidence::guardian_params(
+        &expected,
+        &c.token_id(),
+        &p.wallet_pubkey,
+        &keys_contract(),
+        &c.account,
+        control.epoch,
+        &p.worker_hash,
+    )?;
+    evidence::guardian(&ga, &gp, &expected, &access, &recipient(), chain_now_ms()?)?;
     let (key, id) = guarded_wallet(&p.token_id)?;
     if p.wallet_pubkey != format!("ed25519:{id}") {
         return Err(err("collateral_ineligible", "canonical wallet changed"));
@@ -284,6 +357,7 @@ fn op_provision_collateral(input: &Value) -> Result<Value, Error> {
     )?;
     let deposit = collateral::quote(&q, guarded::text(&c.req.params, "max_deposit_yocto")?)?;
     provision_unchanged(&c, &control)?;
+    guarded::put_once(&mut Host,&format!("{k}/pre_signed"),json!({"message":guarded::text(&c.req.params,"pre_audit_message")?,"signature":guarded::text(&c.req.params,"pre_audit_signature")?}).to_string().as_bytes())?;
     let args = p.args().to_string();
     let seed = minter_secret(&msk)?;
     let outcome = native_send::execute(
@@ -372,7 +446,7 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
         .ok_or_else(|| err("storage", "missing quoted deposit"))?;
     let (mid, _) = guarded_minter()?;
     let (r, e) = rpc::tx_status(&hash, &mid, "FINAL");
-    let tx: Value = serde_json::from_str(&r).unwrap_or(Value::Null);
+    let tx: Value = serde_json::from_str(&r).map_err(|_| err("rpc_unavailable", "malformed RPC response"))?;
     let result = if e.is_empty() {
         collateral::registration_terminal(&tx, &hash, &mid, &keys_contract(), p, deposit)
     } else {
@@ -430,18 +504,82 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
     }
     certificate_inventory(&key)?;
     provision_unchanged(c, control)?;
-    let a: AuthorityAudit = serde_json::from_slice(&Store::read(&mut Host, &format!("{k}/audit"))?)
-        .map_err(|_| err("storage", "approved audit missing"))?;
-    collateral::seal_eligibility(&mut Host, p, &a, &b, &policy, &keys_contract(), terminal)?;
-    guarded::put_once(&mut Host, &format!("{k}/complete"), hash.as_bytes())?;
-    // Append-only native completion never deletes a newer generation.
-    if let Some(t) = native_send::current(&mut Host)? {
-        if t.id == p.id() {
-            native_send::reconcile(&mut Host, &mut NativeRpc { provision: None }, &t)?;
-        }
+    if !collateral::binding_matches(p, &b, &policy, &keys_contract()) {
+        return Err(err(
+            "evidence",
+            "binding/public policy differs from installed artifact",
+        ));
     }
+    let inv = evidence_inventory(&key)?;
+    let a: PreAudit = serde_json::from_slice(&Store::read(&mut Host, &format!("{k}/audit"))?)
+        .map_err(|_| err("evidence", "pre-review missing"))?;
+    let manifest = evidence_manifest(&p.token_id)?;
+    manifest.validate(p, &keys_contract())?;
+    evidence::validate_policy(&expected, &manifest)?;
+    guarded::put_once(&mut Host, &format!("{k}/installed"), hash.as_bytes())?;
+    if c.req.params.get("guardian_proof").is_none() {
+        return Ok(
+            json!({"ok":true,"op":"reconcile_collateral","status":"installed","provision_id":p.id(),"tx_hash":hash,"binding_ready":true,"eligibility_sealed":false,"post_review_required":true,"fresh_guardian_required":true}),
+        );
+    }
+    let guardian = observe_guardian(
+        c,
+        control,
+        &expected,
+        &p.wallet_pubkey,
+        &c.req.params["guardian_proof"],
+    )?;
+    provision_unchanged(c, control)?;
+    let now = chain_now_ms()? / 1000;
+    let r = evidence::EffectiveReport {
+        domain: evidence::REPORT.into(),
+        project_uuid: guarded::PROJECT_UUID.into(),
+        contract: keys_contract(),
+        provision_id: p.id(),
+        token_id: p.token_id.clone(),
+        current_owner: c.account.clone(),
+        current_epoch: control.epoch,
+        worker_hash: p.worker_hash.clone(),
+        wallet_pubkey: p.wallet_pubkey.clone(),
+        policy_hash: p.policy_hash(),
+        policy_version: p.version,
+        manifest_sha256: evidence::digest(&manifest)?,
+        pre_audit_sha256: evidence::digest(&a)?,
+        guardian_sha256: evidence::digest(&guardian["auth"])?,
+        guardian_auth: guardian["auth"].clone(),
+        guardian_access_key: guardian["access_key"].clone(),
+        candidate_policy_sha256: evidence::digest(&expected)?,
+        installed_tx: hash.clone(),
+        final_receipts_sha256: evidence::digest(&tx)?,
+        public_policy_sha256: evidence::digest(&policy)?,
+        inventory_sha256: evidence::digest(&inv)?,
+        effective_policy: effective,
+        authority_scope: evidence::SCOPE.into(),
+        issued_at_sec: now,
+        expires_at_sec: now.saturating_add(900),
+    };
+    let (_, msk) = guarded_minter()?;
+    let seed = minter_secret(&msk)?;
+    use base64::Engine;
+    let public = base64::engine::general_purpose::STANDARD.encode(
+        ed25519_dalek::SigningKey::from_bytes(&seed)
+            .verifying_key()
+            .to_bytes(),
+    );
+    if view(&keys_contract(), "get_pledge_config", json!({}))?["attestor_public_key"] != public {
+        return Err(err("evidence", "immutable attestor mismatch"));
+    }
+    let signed = evidence::signed(evidence::REPORT, &r, &seed)?;
+    evidence::report(&signed, &public, p, &expected, &keys_contract(), now, true)?;
+    provision_unchanged(c, control)?;
+    let report_hash = evidence::digest(&signed)?;
+    guarded::put_once(
+        &mut Host,
+        &format!("{}/reports/{report_hash}", evidence::root(&p.token_id)),
+        &serde_json::to_vec(&signed).map_err(|_| err("evidence", "report encoding"))?,
+    )?;
     Ok(
-        json!({"ok":true,"op":"reconcile_collateral","status":"success","provision_id":p.id(),"tx_hash":hash,"binding_ready":true,"eligibility_sealed":true,"deposit_yocto":deposit.to_string()}),
+        json!({"ok":true,"op":"collateral_report","status":"post_review_required","provision_id":p.id(),"tx_hash":hash,"binding_ready":true,"eligibility_sealed":false,"post_review_required":true,"report":signed,"report_sha256":report_hash,"candidate_policy":expected,"manifest":manifest,"inventory":inv,"original_installation":tx,"attestor_public_key":public,"authority_scope":evidence::SCOPE}),
     )
 }
 /// Public output is a quote and non-reusable hashes, never the policy signature or API key.
@@ -499,7 +637,22 @@ fn op_withdraw_dry_run(input: &Value) -> Result<Value, Error> {
     if amount.parse::<u128>().unwrap_or(0) == 0 {
         return Err(err("bad_params", "positive amount required"));
     }
-    let (key, _) = guarded_wallet(&c.token_id())?;
+    let (key, wallet_id) = guarded_wallet(&c.token_id())?;
+    if p["exit_mode"]==exact_exit::MODE {
+        let plan=exact_exit::Plan::signed(p,c.now_ms,&c.account)?;
+        exact_exit_policy(&c.token_id(),&key,&wallet_id)?;
+        let obs=exact_exit_observation(&wallet_id,&plan,&key)?;
+        let v=serde_json::to_value(&obs).map_err(|_|err("exit_readback","encode preview"))?;
+        if guarded::decimal(&v,"confidential")?<plan.units()? || guarded::decimal(&v,"storage_min")?>exact_exit::STORAGE_MAX || (!obs.registered && guarded::decimal(&v,"native")?<exact_exit::NATIVE_MAX) {
+            return Err(err("exit_budget","exact exit collateral/storage/native reserve unavailable"));
+        }
+        provision_unchanged(&c,&control)?;
+        return Ok(json!({"ok":true,"op":"withdraw_dry_run","to":to,"amount":amount,"token":token,"chain":chain,
+            "amount_out":amount,"min_amount_out":amount,"exit_mode":exact_exit::MODE,"execution_supported":true,
+            "requires_unshield_readback":true,"broadcast":false,"advisory_only":true,
+            "native_budget_max":exact_exit::NATIVE_MAX.to_string(),"deadline_ms":plan.deadline_ms,
+            "privacy_notice":"Unshield reveals this wallet and asset on the public chain; no quote/minimum is sent to the confidential withdrawal endpoint."}));
+    }
     let (st, q) = http(
         "POST",
         &format!("{OL}/wallet/v1/confidential/withdraw/dry-run"),
@@ -529,6 +682,6 @@ fn op_withdraw_dry_run(input: &Value) -> Result<Value, Error> {
         json!({"ok":true,"op":"withdraw_dry_run","to":to,"amount":amount,"token":token,"chain":chain,
         "amount_out":q["amount_out"],"min_amount_out":q["min_amount_out"],"deadline":q["deadline"],"time_estimate_seconds":q["time_estimate_seconds"],
         "estimated_fee":q["estimated_fee"],"fee_token":q["fee_token"],"hint":q["hint"],
-        "approval_and_cooldown_must_be_verified":true,"broadcast":false}),
+        "approval_and_cooldown_must_be_verified":true,"broadcast":false,"advisory_only":true,"minimum_bound_to_execution":false,"execution_supported":false}),
     )
 }

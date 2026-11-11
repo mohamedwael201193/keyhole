@@ -1,0 +1,51 @@
+
+Running 1 test using 1 worker
+
+[funded +967ms] capture 00_ready
+(node:1593104) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[funded +1829ms] capture 01_private_inventory
+[funded +2674ms] borrower: awaiting explicit wallet submission
+[funded +3954ms] borrower: FINAL 2gdAdfLEjM7dBsmeSu8w8bqwdiZQwhUKyaKpvvsWyFpT
+[funded +4091ms] capture repay_offered_declared
+[funded +4777ms] capture repay_certificate_verified
+[funded +5396ms] lender: awaiting explicit wallet submission
+[funded +6185ms] lender: FINAL BwG3AuJ2HL29hgnAd4uELH9nR8kjKhh67gTRaX2CyDun
+[funded +6296ms] capture repay_funded_no_debt
+[funded +6925ms] borrower: awaiting explicit wallet submission
+[funded +7926ms] borrower: FINAL GSQN7JLqSkRV4fVumju7nYVmpsacWwgTxU9ZFc1ZVVCa
+[funded +8039ms] capture repay_native_delivered_active
+[funded +8923ms] borrower: awaiting explicit wallet submission
+[funded +10146ms] borrower: FINAL 545YhDswrWjFoCLgjpcPD3oCSjXXF1xDRTW4WUzZ9SJi
+[funded +10242ms] capture repay_thaw_pending
+[funded +11025ms] borrower: awaiting explicit wallet submission
+[funded +12252ms] borrower: FINAL 8WoFXEUCZYQeaiyUGCFspSS62juYVWEUsenpbeNhsAKd
+[funded +12345ms] capture repay_thawed_credits
+[funded +12968ms] lender: awaiting explicit wallet submission
+[funded +13987ms] lender: FINAL 7yppiTEnJbjkGpzhggSzxz8b7qTqRe8Xk1ndsgsvNsZW
+[funded +14014ms] borrower: awaiting explicit wallet submission
+[funded +14978ms] borrower: FINAL FrgeCzT1TjG9CGJkXzPzUzC7HLRJqVbqt3ZsvjmwAghM
+[funded +15363ms] capture repay_ending_exit_refused
+[funded +16218ms] borrower: awaiting explicit wallet submission
+[funded +17452ms] borrower: FINAL 9kUBkWToqY44Eak4k9LAkd3A9rYmzuU12UucCt6rcv1V
+[funded +17580ms] capture default_offered_declared
+[funded +18343ms] capture default_certificate_verified
+[funded +19001ms] lender: awaiting explicit wallet submission
+[funded +19684ms] lender: FINAL 9intUr2LBCjT6Yt4eRBD76j6WTMc5Mit17rH4LncNmUC
+[funded +19781ms] capture default_funded_no_debt
+[funded +20427ms] borrower: awaiting explicit wallet submission
+[funded +21421ms] borrower: FINAL 7N8kjq3C2HCWed2E2jHa9y944eBoPGHpkrjCDjL12bQA
+[funded +21539ms] capture default_native_delivered_active
+[funded +31330ms] lender: awaiting explicit wallet submission
+[funded +32562ms] lender: FINAL GTaaMxQX3vcXHL1dUF9UvcqVArqgPwrzNPsQi9E8qv1w
+[funded +32678ms] capture default_new_title_thaw_pending
+[funded +33564ms] lender: awaiting explicit wallet submission
+[funded +34794ms] lender: FINAL BnZh5XvT1Zm5DLS1hKRaKNwjcJJYjvdPhgyuNzkpcuKx
+[funded +34983ms] capture default_cooldown_enforced
+[funded +61756ms] borrower: awaiting explicit wallet submission
+[funded +62733ms] borrower: FINAL HGHuQhHsHbokw87fpRpjFXW1mRKW4Xmum1hUnmrCygDn
+[funded +62825ms] capture default_ending_exit_refused
+
+  ✓  1 [desktop] › e2e/pledge-funded.spec.ts:13:5 › funded Pledge: real UI repay AND default endings with both holders and viewport evidence (1.1m)
+
+  1 passed (1.1m)

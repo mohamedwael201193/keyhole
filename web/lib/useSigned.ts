@@ -13,7 +13,7 @@ export const STAGE_TEXT: Record<Stage, string> = {
   enclave: "Enclave is checking",
   settling: "Settling on NEAR Intents",
 };
-const SETTLES = new Set<Op>(["swap", "withdraw"]);
+const SETTLES = new Set<Op>(["swap", "exact_near_exit_v1", "withdraw"]);
 
 /** Sign → send → result, including resume after redirect wallets. Exposes a stage and elapsed seconds. */
 export function useSigned(op: Op) {

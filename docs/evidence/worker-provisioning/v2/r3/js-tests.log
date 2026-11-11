@@ -1,0 +1,988 @@
+TAP version 13
+# Subtest: only a marked safe fence is collected, and a paid command is refused
+ok 1 - only a marked safe fence is collected, and a paid command is refused
+  ---
+  duration_ms: 1.643626
+  ...
+# Subtest: a safe fence keeps its exit code, sees a clean env, and times out
+ok 2 - a safe fence keeps its exit code, sees a clean env, and times out
+  ---
+  duration_ms: 236.787404
+  ...
+# Subtest: the README checkout fence is the one the runner executes
+not ok 3 - the README checkout fence is the one the runner executes
+  ---
+  duration_ms: 1632.276592
+  location: '/workspace/near_hackathon/wt_worker_v2/judge/check-readme.test.mjs:26:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/near_hackathon/wt_worker_v2/judge/check-readme.test.mjs:31:10)
+    async Test.run (node:internal/test_runner/test:797:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:526:7)
+  ...
+# Subtest: primary recipe fetches and checks the full immutable source commit
+ok 4 - primary recipe fetches and checks the full immutable source commit
+  ---
+  duration_ms: 1.235591
+  ...
+# Subtest: exact generated checkout contains byte-identical script, receipt checker and identity
+ok 5 - exact generated checkout contains byte-identical script, receipt checker and identity
+  ---
+  duration_ms: 1172.206528
+  ...
+# Subtest: unknown flags reject before any rebuild or live read
+ok 6 - unknown flags reject before any rebuild or live read
+  ---
+  duration_ms: 21.808536
+  ...
+# Subtest: rebuild actually invokes build and enforces byte equality
+ok 7 - rebuild actually invokes build and enforces byte equality
+  ---
+  duration_ms: 148.893658
+  ...
+# Subtest: strict online predicate rejects nonimplicit/wrong minter instead of warning success
+ok 8 - strict online predicate rejects nonimplicit/wrong minter instead of warning success
+  ---
+  duration_ms: 214.135586
+  ...
+# Subtest: live identity and the docs that quote it say v2.7
+ok 9 - live identity and the docs that quote it say v2.7
+  ---
+  duration_ms: 2.73207
+  ...
+# Subtest: an em dash leaves two hyphens, and repeated spaces stay
+ok 10 - an em dash leaves two hyphens, and repeated spaces stay
+  ---
+  duration_ms: 4.279609
+  ...
+# Subtest: relative doc links and anchors resolve
+ok 11 - relative doc links and anchors resolve
+  ---
+  duration_ms: 50.133616
+  ...
+# Subtest: live build claims bind exact identity bytes/hash/version, never old build constants
+ok 12 - live build claims bind exact identity bytes/hash/version, never old build constants
+  ---
+  duration_ms: 1.90727
+  ...
+# Subtest: judge/live.mts refuses to load a wallet unless opted in
+ok 13 - judge/live.mts refuses to load a wallet unless opted in
+  ---
+  duration_ms: 96.303949
+  ...
+# Subtest: historical v2.5 promotion is reproducible from FINAL public evidence
+ok 14 - historical v2.5 promotion is reproducible from FINAL public evidence
+  ---
+  duration_ms: 246.235734
+  ...
+# Subtest: promotion refuses unmatched live bytes without changing live identity
+ok 15 - promotion refuses unmatched live bytes without changing live identity
+  ---
+  duration_ms: 104.133757
+  ...
+# Subtest: promotion refuses pending receipt without changing live identity
+ok 16 - promotion refuses pending receipt without changing live identity
+  ---
+  duration_ms: 98.870323
+  ...
+# Subtest: promotion refuses failed receipt without changing live identity
+ok 17 - promotion refuses failed receipt without changing live identity
+  ---
+  duration_ms: 103.715957
+  ...
+# Subtest: promotion refuses different deployment bytes without changing live identity
+ok 18 - promotion refuses different deployment bytes without changing live identity
+  ---
+  duration_ms: 103.941299
+  ...
+# Subtest: promotion refuses different beneficiary without changing live identity
+ok 19 - promotion refuses different beneficiary without changing live identity
+  ---
+  duration_ms: 118.321712
+  ...
+# Subtest: historical promotion cannot downgrade the current v2.6 identity
+ok 20 - historical promotion cannot downgrade the current v2.6 identity
+  ---
+  duration_ms: 117.390313
+  ...
+# Subtest: no claim URL hits /api/health or OutLayer /call
+ok 21 - no claim URL hits /api/health or OutLayer /call
+  ---
+  duration_ms: 1.374067
+  ...
+# Subtest: the claims runner does not call OutLayer /call
+ok 22 - the claims runner does not call OutLayer /call
+  ---
+  duration_ms: 0.18154
+  ...
+# Subtest: a signed log verifies, and an owner or detail mutation does not
+ok 23 - a signed log verifies, and an owner or detail mutation does not
+  ---
+  duration_ms: 5.863935
+  ...
+# Subtest: full reproduction builds the untracked callback fixture before the sandbox
+ok 24 - full reproduction builds the untracked callback fixture before the sandbox
+  ---
+  duration_ms: 1.12803
+  ...
+# Subtest: full reproduction compiles the WASI host, not just native cfg
+ok 25 - full reproduction compiles the WASI host, not just native cfg
+  ---
+  duration_ms: 0.120741
+  ...
+# Subtest: judge checkout and raw paths share an immutable generated source ref
+ok 26 - judge checkout and raw paths share an immutable generated source ref
+  ---
+  duration_ms: 0.697196
+  ...
+# Subtest: all current README claim-count rows match actual offline verification
+ok 27 - all current README claim-count rows match actual offline verification
+  ---
+  duration_ms: 229.433386
+  ...
+# Subtest: live and source candidates stay distinct and presentation has no visible dates
+ok 28 - live and source candidates stay distinct and presentation has no visible dates
+  ---
+  duration_ms: 0.926818
+  ...
+# Subtest: successful receipts prove success
+ok 29 - successful receipts prove success
+  ---
+  duration_ms: 1.158452
+  ...
+# Subtest: a failed nested receipt cannot prove success
+ok 30 - a failed nested receipt cannot prove success
+  ---
+  duration_ms: 0.125825
+  ...
+# Subtest: intentional refusal must match its documented error
+ok 31 - intentional refusal must match its documented error
+  ---
+  duration_ms: 0.185777
+  ...
+# Subtest: an unrelated failure does not prove the documented refusal
+ok 32 - an unrelated failure does not prove the documented refusal
+  ---
+  duration_ms: 0.109012
+  ...
+# Subtest: success cannot prove refusal
+ok 33 - success cannot prove refusal
+  ---
+  duration_ms: 0.152762
+  ...
+# Subtest: failure claims without a reason fail closed
+ok 34 - failure claims without a reason fail closed
+  ---
+  duration_ms: 0.092009
+  ...
+# Subtest: unknown expectations fail closed
+ok 35 - unknown expectations fail closed
+  ---
+  duration_ms: 0.080458
+  ...
+# Subtest: CLI verifier and rebuild default derive the same exact history/current call as browser
+ok 36 - CLI verifier and rebuild default derive the same exact history/current call as browser
+  ---
+  duration_ms: 1.930284
+  ...
+# Subtest: candidate equality requires rebuilt bytes and every independent mirror
+ok 37 - candidate equality requires rebuilt bytes and every independent mirror
+  ---
+  duration_ms: 1.057872
+  ...
+# Subtest: a changed worker cannot pass with stale identity or manifest
+ok 38 - a changed worker cannot pass with stale identity or manifest
+  ---
+  duration_ms: 0.22857
+  ...
+# Subtest: wrong size or any stale candidate mirror fails
+ok 39 - wrong size or any stale candidate mirror fails
+  ---
+  duration_ms: 0.19846
+  ...
+# Cloning into '/tmp/kh-shallow-7y5AsO/shallow'...
+# fatal: git cat-file: could not get object info
+# Subtest: a consistent row is accepted, and a drifted total is not
+ok 40 - a consistent row is accepted, and a drifted total is not
+  ---
+  duration_ms: 1.429849
+  ...
+# Subtest: the recorded artifact names a real commit and its suites sum to the total
+ok 41 - the recorded artifact names a real commit and its suites sum to the total
+  ---
+  duration_ms: 4.156655
+  ...
+# Subtest: a depth-one clone resolves the recorded commit by fetching that object
+ok 42 - a depth-one clone resolves the recorded commit by fetching that object
+  ---
+  duration_ms: 66.044182
+  ...
+# Subtest: a runner that exits 1 does not write a success artifact
+ok 43 - a runner that exits 1 does not write a success artifact
+  ---
+  duration_ms: 10.21613
+  ...
+# Subtest: resume every atomic registry milestone without repeating successful batches
+ok 44 - resume every atomic registry milestone without repeating successful batches
+  ---
+  duration_ms: 1.211698
+  ...
+# Subtest: interruption before upload and secret merge remains in maintenance
+ok 45 - interruption before upload and secret merge remains in maintenance
+  ---
+  duration_ms: 0.261587
+  ...
+# Subtest: UNKNOWN, missing barrier, partial registry or namespace mismatch never resumes sends
+ok 46 - UNKNOWN, missing barrier, partial registry or namespace mismatch never resumes sends
+  ---
+  duration_ms: 0.286986
+  ...
+# Subtest: forged legacy Boolean cannot reopen without real guarded attestation
+ok 47 - forged legacy Boolean cannot reopen without real guarded attestation
+  ---
+  duration_ms: 0.503226
+  ...
+# Subtest: fresh attested guarded withdraw preview restores after all client gates
+ok 48 - fresh attested guarded withdraw preview restores after all client gates
+  ---
+  duration_ms: 23.979213
+  ...
+# Subtest: wrong expected hash cannot mark restore-ready
+ok 49 - wrong expected hash cannot mark restore-ready
+  ---
+  duration_ms: 17.256146
+  ...
+# Subtest: multiple versions cannot mark restore-ready
+ok 50 - multiple versions cannot mark restore-ready
+  ---
+  duration_ms: 11.331296
+  ...
+# Subtest: invalid canonical wallet cannot mark restore-ready
+ok 51 - invalid canonical wallet cannot mark restore-ready
+  ---
+  duration_ms: 21.568794
+  ...
+# Subtest: account compatibility read cannot mark restore-ready
+ok 52 - account compatibility read cannot mark restore-ready
+  ---
+  duration_ms: 11.937582
+  ...
+# Subtest: info read cannot mark restore-ready
+ok 53 - info read cannot mark restore-ready
+  ---
+  duration_ms: 10.728292
+  ...
+# Subtest: simple payload matches official Borsh variant, path, optional content and MIME
+ok 54 - simple payload matches official Borsh variant, path, optional content and MIME
+  ---
+  duration_ms: 2.389678
+  ...
+# Subtest: interrupted multi-chunk upload retains same nonce, offsets and exact bytes
+ok 55 - interrupted multi-chunk upload retains same nonce, offsets and exact bytes
+  ---
+  duration_ms: 5.869167
+  ...
+# Subtest: chunk threshold and fixed nonce reject accidental invalid journals
+ok 56 - chunk threshold and fixed nonce reject accidental invalid journals
+  ---
+  duration_ms: 3.55634
+  ...
+# Subtest: FastFS nonce boundaries match upstream signed-i32 validator
+ok 57 - FastFS nonce boundaries match upstream signed-i32 validator
+  ---
+  duration_ms: 4.040672
+  ...
+# Subtest: derived nonce is bounded, unique after persisted previous nonce, and fails closed on exhaustion
+ok 58 - derived nonce is bounded, unique after persisted previous nonce, and fails closed on exhaustion
+  ---
+  duration_ms: 0.407833
+  ...
+# Subtest: offline batch uses distinct new team identities and exact tiny amounts
+ok 59 - offline batch uses distinct new team identities and exact tiny amounts
+  ---
+  duration_ms: 1.457094
+  ...
+# Subtest: ordinary two-hour terms, grace, fresh certificate and UNKNOWN stop are explicit
+ok 60 - ordinary two-hour terms, grace, fresh certificate and UNKNOWN stop are explicit
+  ---
+  duration_ms: 0.305252
+  ...
+# Subtest: new accounts cannot exceed native account identifier limit
+ok 61 - new accounts cannot exceed native account identifier limit
+  ---
+  duration_ms: 0.228724
+  ...
+# Subtest: gross loan-stage attachments reconcile exactly without relabeling capital as fees
+ok 62 - gross loan-stage attachments reconcile exactly without relabeling capital as fees
+  ---
+  duration_ms: 0.187904
+  ...
+# Subtest: first actions batch permanent prepaid slots without shrinking principal or refundable loan bond
+ok 63 - first actions batch permanent prepaid slots without shrinking principal or refundable loan bond
+  ---
+  duration_ms: 0.290362
+  ...
+# Subtest: two ordinary exits preserve enough same-account USDC for the second fixed-floor loan
+ok 64 - two ordinary exits preserve enough same-account USDC for the second fixed-floor loan
+  ---
+  duration_ms: 0.941441
+  ...
+# Subtest: full pilot separately counts worker admission reserve and optional pinned-minter onboarding
+ok 65 - full pilot separately counts worker admission reserve and optional pinned-minter onboarding
+  ---
+  duration_ms: 0.222664
+  ...
+# Subtest: publishing plan retires each old version exactly once, without recreating project
+ok 66 - publishing plan retires each old version exactly once, without recreating project
+  ---
+  duration_ms: 2.036009
+  ...
+# Subtest: planner refuses changed snapshot, unsafe hashes, duplicate removals and removing candidate
+ok 67 - planner refuses changed snapshot, unsafe hashes, duplicate removals and removing candidate
+  ---
+  duration_ms: 0.404178
+  ...
+# Subtest: saved original hash verifies canonical signature without loading any key
+ok 68 - saved original hash verifies canonical signature without loading any key
+  ---
+  duration_ms: 9.418769
+  ...
+# Subtest: changed original bytes/signature cannot be journalled as genuine
+ok 69 - changed original bytes/signature cannot be journalled as genuine
+  ---
+  duration_ms: 3.248491
+  ...
+# Subtest: unsupported owner/key/version or malformed saved file fails closed
+ok 70 - unsupported owner/key/version or malformed saved file fails closed
+  ---
+  duration_ms: 3.002229
+  ...
+# Subtest: all missing real gates FAIL closed with execution-time labels
+ok 71 - all missing real gates FAIL closed with execution-time labels
+  ---
+  duration_ms: 3.913347
+  ...
+# Subtest: complete synthetic evidence exercises every gate positively
+ok 72 - complete synthetic evidence exercises every gate positively
+  ---
+  duration_ms: 45.006515
+  ...
+# Subtest: pilot-post freeze is not a prerequisite for ordinary restoration
+ok 73 - pilot-post freeze is not a prerequisite for ordinary restoration
+  ---
+  duration_ms: 15.392177
+  ...
+# Subtest: UNKNOWN original installation can only complete through successful attested reconciliation
+ok 74 - UNKNOWN original installation can only complete through successful attested reconciliation
+  ---
+  duration_ms: 50.495539
+  ...
+# Subtest: tampering fails closed: audit_report
+ok 75 - tampering fails closed: audit_report
+  ---
+  duration_ms: 18.53179
+  ...
+# Subtest: tampering fails closed: audit_key
+ok 76 - tampering fails closed: audit_key
+  ---
+  duration_ms: 20.90309
+  ...
+# Subtest: tampering fails closed: artifact_signature_commitment
+ok 77 - tampering fails closed: artifact_signature_commitment
+  ---
+  duration_ms: 20.338153
+  ...
+# Subtest: tampering fails closed: quorum
+ok 78 - tampering fails closed: quorum
+  ---
+  duration_ms: 19.909937
+  ...
+# Subtest: tampering fails closed: unbacked_funding
+ok 79 - tampering fails closed: unbacked_funding
+  ---
+  duration_ms: 13.977025
+  ...
+# Subtest: tampering fails closed: wrong_Q
+ok 80 - tampering fails closed: wrong_Q
+  ---
+  duration_ms: 24.21822
+  ...
+# Subtest: tampering fails closed: missing_ledger
+ok 81 - tampering fails closed: missing_ledger
+  ---
+  duration_ms: 17.694017
+  ...
+# Subtest: tampering fails closed: unapproved_submitter
+ok 82 - tampering fails closed: unapproved_submitter
+  ---
+  duration_ms: 11.575642
+  ...
+# Subtest: tampering fails closed: fake_alias
+ok 83 - tampering fails closed: fake_alias
+  ---
+  duration_ms: 11.606525
+  ...
+# Subtest: tampering fails closed: sealed_row
+ok 84 - tampering fails closed: sealed_row
+  ---
+  duration_ms: 34.296251
+  ...
+# Subtest: tampering fails closed: binding
+ok 85 - tampering fails closed: binding
+  ---
+  duration_ms: 18.840181
+  ...
+# Subtest: tampering fails closed: lower_policy
+ok 86 - tampering fails closed: lower_policy
+  ---
+  duration_ms: 18.312573
+  ...
+# Subtest: tampering fails closed: freeze_nonce
+ok 87 - tampering fails closed: freeze_nonce
+  ---
+  duration_ms: 31.563854
+  ...
+# Subtest: tampering fails closed: freeze_receipt
+ok 88 - tampering fails closed: freeze_receipt
+  ---
+  duration_ms: 29.613321
+  ...
+# Subtest: tampering fails closed: attestor
+ok 89 - tampering fails closed: attestor
+  ---
+  duration_ms: 25.71191
+  ...
+# Subtest: tampering fails closed: secret_refund
+ok 90 - tampering fails closed: secret_refund
+  ---
+  duration_ms: 14.203833
+  ...
+# Subtest: tampering fails closed: cooldown
+ok 91 - tampering fails closed: cooldown
+  ---
+  duration_ms: 17.886841
+  ...
+# Subtest: tampering fails closed: pending_approval
+ok 92 - tampering fails closed: pending_approval
+  ---
+  duration_ms: 23.31191
+  ...
+# Subtest: tampering fails closed: secret_row
+ok 93 - tampering fails closed: secret_row
+  ---
+  duration_ms: 12.665706
+  ...
+# Subtest: account cannot substitute for guarded restore
+ok 94 - account cannot substitute for guarded restore
+  ---
+  duration_ms: 10.750743
+  ...
+# Subtest: info cannot substitute for guarded restore
+ok 95 - info cannot substitute for guarded restore
+  ---
+  duration_ms: 10.51367
+  ...
+# Subtest: bad guarded context/probe never restores
+ok 96 - bad guarded context/probe never restores
+  ---
+  duration_ms: 14.667627
+  ...
+# Subtest: bad guarded context/probe never restores
+ok 97 - bad guarded context/probe never restores
+  ---
+  duration_ms: 12.539518
+  ...
+# Subtest: bad guarded context/probe never restores
+ok 98 - bad guarded context/probe never restores
+  ---
+  duration_ms: 19.912957
+  ...
+# Subtest: bad guarded context/probe never restores
+ok 99 - bad guarded context/probe never restores
+  ---
+  duration_ms: 10.480864
+  ...
+# Subtest: bad guarded context/probe never restores
+ok 100 - bad guarded context/probe never restores
+  ---
+  duration_ms: 12.466539
+  ...
+# Subtest: real WASI operation traverses registry/preflight AND strict canonical wallet before provider quote
+ok 101 - real WASI operation traverses registry/preflight AND strict canonical wallet before provider quote
+  ---
+  duration_ms: 2.302587
+  ...
+# Subtest: certificate encoder/signature matches exact Rust Borsh golden fixture
+ok 102 - certificate encoder/signature matches exact Rust Borsh golden fixture
+  ---
+  duration_ms: 1.748657
+  ...
+# Subtest: restore rejects forged executed hash
+ok 103 - restore rejects forged executed hash
+  ---
+  duration_ms: 14.867359
+  ...
+# Subtest: restore rejects forged input hash
+ok 104 - restore rejects forged input hash
+  ---
+  duration_ms: 10.007952
+  ...
+# Subtest: restore rejects forged output hash
+ok 105 - restore rejects forged output hash
+  ---
+  duration_ms: 17.559657
+  ...
+# Subtest: restore rejects forged stale attestation
+ok 106 - restore rejects forged stale attestation
+  ---
+  duration_ms: 10.093337
+  ...
+# Subtest: restore accepts attested same-asset NEAR-native USDC self-preview with explicit optional metadata nulls
+ok 107 - restore accepts attested same-asset NEAR-native USDC self-preview with explicit optional metadata nulls
+  ---
+  duration_ms: 16.548796
+  ...
+# Subtest: quoted route retains real future deadline and fee checks
+ok 108 - quoted route retains real future deadline and fee checks
+  ---
+  duration_ms: 12.581597
+  ...
+# Subtest: quoted route with null deadline and fees fails, rather than inheriting the NEAR-native USDC exception
+ok 109 - quoted route with null deadline and fees fails, rather than inheriting the NEAR-native USDC exception
+  ---
+  duration_ms: 17.412846
+  ...
+# Subtest: same-asset route exception fails closed: quoted_output
+ok 110 - same-asset route exception fails closed: quoted_output
+  ---
+  duration_ms: 12.216111
+  ...
+# Subtest: same-asset route exception fails closed: missing_not_null
+ok 111 - same-asset route exception fails closed: missing_not_null
+  ---
+  duration_ms: 16.014896
+  ...
+# Subtest: same-asset route exception fails closed: nonpositive
+ok 112 - same-asset route exception fails closed: nonpositive
+  ---
+  duration_ms: 11.535909
+  ...
+# Subtest: same-asset route exception fails closed: impossible_minimum
+ok 113 - same-asset route exception fails closed: impossible_minimum
+  ---
+  duration_ms: 25.305679
+  ...
+# Subtest: same-asset route exception fails closed: broadcast
+ok 114 - same-asset route exception fails closed: broadcast
+  ---
+  duration_ms: 12.266673
+  ...
+# Subtest: same-asset route exception fails closed: foreign_receiver
+ok 115 - same-asset route exception fails closed: foreign_receiver
+  ---
+  duration_ms: 11.571596
+  ...
+# Subtest: same-asset route exception fails closed: partial_metadata
+ok 116 - same-asset route exception fails closed: partial_metadata
+  ---
+  duration_ms: 13.087492
+  ...
+# Subtest: grant submit AND polling explicitly bind key-2 CLI auth, reject before dispatch
+ok 117 - grant submit AND polling explicitly bind key-2 CLI auth, reject before dispatch
+  ---
+  duration_ms: 21.733792
+  ...
+# Subtest: versioned operator runbook cannot select personal key 1 or unbound execution
+ok 118 - versioned operator runbook cannot select personal key 1 or unbound execution
+  ---
+  duration_ms: 0.652347
+  ...
+# Subtest: genuine exact-schema public deployment proof passes without losing its verifiable signature
+ok 119 - genuine exact-schema public deployment proof passes without losing its verifiable signature
+  ---
+  duration_ms: 55.448868
+  ...
+# Subtest: every other field rejects synthetic credential classes and unknown private fields
+ok 120 - every other field rejects synthetic credential classes and unknown private fields
+  ---
+  duration_ms: 537.139185
+  ...
+# Subtest: moved/extra/replaced signature, wrong tx, unknown schema, duplicate keys and malformed JSON fail
+ok 121 - moved/extra/replaced signature, wrong tx, unknown schema, duplicate keys and malformed JSON fail
+  ---
+  duration_ms: 360.905486
+  ...
+# Subtest: same signature in any other file fails; no JSON/evidence/package-lock or heuristic exclusion
+ok 122 - same signature in any other file fails; no JSON/evidence/package-lock or heuristic exclusion
+  ---
+  duration_ms: 242.341121
+  ...
+# Subtest: historical 1Click signatures retain only exact snapshot/pointer exceptions, not a file exclusion
+ok 123 - historical 1Click signatures retain only exact snapshot/pointer exceptions, not a file exclusion
+  ---
+  duration_ms: 227.022858
+  ...
+# Subtest: source bundle members are scanned too; a credential hidden only in the gzip archive fails
+ok 124 - source bundle members are scanned too; a credential hidden only in the gzip archive fails
+  ---
+  duration_ms: 58.16611
+  ...
+# Subtest: real-shaped sequential RPC collector: predeploy, code-only post, publication/restore, prepare, provision, genuine Offered
+ok 125 - real-shaped sequential RPC collector: predeploy, code-only post, publication/restore, prepare, provision, genuine Offered
+  ---
+  duration_ms: 725.736157
+  ...
+# Subtest: positive workerPublication collector verifies original three batches, singleton source, actual wasm, secret refund and guarded smoke
+ok 126 - positive workerPublication collector verifies original three batches, singleton source, actual wasm, secret refund and guarded smoke
+  ---
+  duration_ms: 137.51212
+  ...
+# Subtest: predeploy can honestly pass without any future transaction, policy, quote, eligibility or certificate evidence
+ok 127 - predeploy can honestly pass without any future transaction, policy, quote, eligibility or certificate evidence
+  ---
+  duration_ms: 11.365455
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: token_id
+ok 128 - individually measured foreign certificate fails exact pilot binding: token_id
+  ---
+  duration_ms: 26.762297
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: wallet_pubkey
+ok 129 - individually measured foreign certificate fails exact pilot binding: wallet_pubkey
+  ---
+  duration_ms: 25.494359
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: owner_epoch
+ok 130 - individually measured foreign certificate fails exact pilot binding: owner_epoch
+  ---
+  duration_ms: 21.337859
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: policy_hash
+ok 131 - individually measured foreign certificate fails exact pilot binding: policy_hash
+  ---
+  duration_ms: 22.963153
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: policy_version
+ok 132 - individually measured foreign certificate fails exact pilot binding: policy_version
+  ---
+  duration_ms: 21.261782
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: terms
+ok 133 - individually measured foreign certificate fails exact pilot binding: terms
+  ---
+  duration_ms: 23.148905
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: network
+ok 134 - individually measured foreign certificate fails exact pilot binding: network
+  ---
+  duration_ms: 20.933045
+  ...
+# Subtest: individually measured foreign certificate fails exact pilot binding: contract
+ok 135 - individually measured foreign certificate fails exact pilot binding: contract
+  ---
+  duration_ms: 22.477328
+  ...
+# Subtest: independent internally valid freeze bundle cannot satisfy another prepared token and wallet
+ok 136 - independent internally valid freeze bundle cannot satisfy another prepared token and wallet
+  ---
+  duration_ms: 21.30435
+  ...
+# Subtest: reject historical checkpoint/certificate replay: foreign-block
+ok 137 - reject historical checkpoint/certificate replay: foreign-block
+  ---
+  duration_ms: 126.780902
+  ...
+# Subtest: reject historical checkpoint/certificate replay: wrong-time
+ok 138 - reject historical checkpoint/certificate replay: wrong-time
+  ---
+  duration_ms: 152.172372
+  ...
+# Subtest: reject historical checkpoint/certificate replay: wrong-phase
+ok 139 - reject historical checkpoint/certificate replay: wrong-phase
+  ---
+  duration_ms: 83.128248
+  ...
+# Subtest: reject historical checkpoint/certificate replay: future-checkpoint
+ok 140 - reject historical checkpoint/certificate replay: future-checkpoint
+  ---
+  duration_ms: 81.187028
+  ...
+# Subtest: reject historical checkpoint/certificate replay: foreign-subject
+ok 141 - reject historical checkpoint/certificate replay: foreign-subject
+  ---
+  duration_ms: 120.802022
+  ...
+# Subtest: reject historical checkpoint/certificate replay: changed-snapshot
+ok 142 - reject historical checkpoint/certificate replay: changed-snapshot
+  ---
+  duration_ms: 80.391721
+  ...
+# Subtest: reject historical checkpoint/certificate replay: missing-original
+ok 143 - reject historical checkpoint/certificate replay: missing-original
+  ---
+  duration_ms: 131.430219
+  ...
+# Subtest: collector fails foreign token before accepting a separate valid loan/certificate graph
+ok 144 - collector fails foreign token before accepting a separate valid loan/certificate graph
+  ---
+  duration_ms: 143.22565
+  ...
+# Subtest: archived idle phase re-fetches actual canonical state and original measured rows, never a caller PASS
+ok 145 - archived idle phase re-fetches actual canonical state and original measured rows, never a caller PASS
+  ---
+  duration_ms: 86.228557
+  ...
+# Subtest: checkpoint cannot swap an equally signed alternative approved pilot subject
+ok 146 - checkpoint cannot swap an equally signed alternative approved pilot subject
+  ---
+  duration_ms: 15.317741
+  ...
+# Subtest: v2.7 promotion proves FINAL exact bytes and preserves immutable authorities/history/worker
+ok 147 - v2.7 promotion proves FINAL exact bytes and preserves immutable authorities/history/worker
+  ---
+  duration_ms: 3.213514
+  ...
+# Subtest: v2.7 promotion rejects hash
+ok 148 - v2.7 promotion rejects hash
+  ---
+  duration_ms: 0.792678
+  ...
+# Subtest: v2.7 promotion rejects version
+ok 149 - v2.7 promotion rejects version
+  ---
+  duration_ms: 0.551233
+  ...
+# Subtest: v2.7 promotion rejects minter
+ok 150 - v2.7 promotion rejects minter
+  ---
+  duration_ms: 0.475195
+  ...
+# Subtest: v2.7 promotion rejects attestor
+ok 151 - v2.7 promotion rejects attestor
+  ---
+  duration_ms: 0.469748
+  ...
+# Subtest: v2.7 promotion rejects recovery
+ok 152 - v2.7 promotion rejects recovery
+  ---
+  duration_ms: 0.561006
+  ...
+# Subtest: v2.7 promotion rejects lending
+ok 153 - v2.7 promotion rejects lending
+  ---
+  duration_ms: 1.986489
+  ...
+# Subtest: v2.7 promotion rejects not FINAL
+ok 154 - v2.7 promotion rejects not FINAL
+  ---
+  duration_ms: 0.635952
+  ...
+# Subtest: v2.7 promotion rejects wrong receipt
+ok 155 - v2.7 promotion rejects wrong receipt
+  ---
+  duration_ms: 0.778832
+  ...
+# Subtest: v2.7 promotion rejects wrong action
+ok 156 - v2.7 promotion rejects wrong action
+  ---
+  duration_ms: 0.677207
+  ...
+# Subtest: v2.7 promotion rejects failure
+ok 157 - v2.7 promotion rejects failure
+  ---
+  duration_ms: 0.762343
+  ...
+# Subtest: v2.7 promotion rejects missing lineage
+ok 158 - v2.7 promotion rejects missing lineage
+  ---
+  duration_ms: 0.553127
+  ...
+# Subtest: v2.7 promotion rejects modified local release bytes
+ok 159 - v2.7 promotion rejects modified local release bytes
+  ---
+  duration_ms: 0.172228
+  ...
+# Subtest: v2.7 evidence promotion preserves the prior deployment instead of erasing history
+ok 160 - v2.7 evidence promotion preserves the prior deployment instead of erasing history
+  ---
+  duration_ms: 0.856452
+  ...
+# Subtest: v2.7 evidence capture re-reads one pinned block, real bytes and original receipt
+ok 161 - v2.7 evidence capture re-reads one pinned block, real bytes and original receipt
+  ---
+  duration_ms: 7.121971
+  ...
+# Subtest: exact public six-NFT snapshot passes and code-only upgrade preserves every raw row/view
+ok 162 - exact public six-NFT snapshot passes and code-only upgrade preserves every raw row/view
+  ---
+  duration_ms: 4.195241
+  ...
+# Subtest: post rejects changed state
+ok 163 - post rejects changed state
+  ---
+  duration_ms: 2.685565
+  ...
+# Subtest: post rejects changed tokens
+ok 164 - post rejects changed tokens
+  ---
+  duration_ms: 2.031516
+  ...
+# Subtest: post rejects changed controls
+ok 165 - post rejects changed controls
+  ---
+  duration_ms: 0.843691
+  ...
+# Subtest: post rejects changed credits
+ok 166 - post rejects changed credits
+  ---
+  duration_ms: 1.666743
+  ...
+# Subtest: post rejects changed config
+ok 167 - post rejects changed config
+  ---
+  duration_ms: 0.731977
+  ...
+# Subtest: post rejects changed pledge
+ok 168 - post rejects changed pledge
+  ---
+  duration_ms: 1.831114
+  ...
+# Subtest: post rejects changed metadata
+ok 169 - post rejects changed metadata
+  ---
+  duration_ms: 0.741082
+  ...
+# Subtest: post rejects missing receipt
+ok 170 - post rejects missing receipt
+  ---
+  duration_ms: 0.886945
+  ...
+# Subtest: post rejects orphan receipt
+ok 171 - post rejects orphan receipt
+  ---
+  duration_ms: 0.846178
+  ...
+# Subtest: post rejects wrong code
+ok 172 - post rejects wrong code
+  ---
+  duration_ms: 4.576315
+  ...
+# Subtest: post rejects migration action
+ok 173 - post rejects migration action
+  ---
+  duration_ms: 1.134371
+  ...
+# Subtest: post rejects wrong owner key
+ok 174 - post rejects wrong owner key
+  ---
+  duration_ms: 0.968511
+  ...
+# Subtest: post rejects fake controls
+ok 175 - post rejects fake controls
+  ---
+  duration_ms: 0.559998
+  ...
+# Subtest: saved fixture transaction accepts only exact reviewed single DeployContract
+ok 176 - saved fixture transaction accepts only exact reviewed single DeployContract
+  ---
+  duration_ms: 27.923392
+  ...
+# Subtest: fsynced exclusive handoff survives UNKNOWN and refuses any second broadcast
+ok 177 - fsynced exclusive handoff survives UNKNOWN and refuses any second broadcast
+  ---
+  duration_ms: 9.406302
+  ...
+# Subtest: real evidence revalidation never trusts supplied capture alone
+ok 178 - real evidence revalidation never trusts supplied capture alone
+  ---
+  duration_ms: 0.944602
+  ...
+# Subtest: generator transition preserves historical migration, six owners and immutable configuration
+ok 179 - generator transition preserves historical migration, six owners and immutable configuration
+  ---
+  duration_ms: 10.929914
+  ...
+# Subtest: worker promotion fails closed without genuine full execution evidence
+ok 180 - worker promotion fails closed without genuine full execution evidence
+  ---
+  duration_ms: 1.038719
+  ...
+# Subtest: execute refuses missing approvals before any dispatch; malformed mode cannot weaken validation
+ok 181 - execute refuses missing approvals before any dispatch; malformed mode cannot weaken validation
+  ---
+  duration_ms: 2.741083
+  ...
+# Subtest: gen-identity rejects invented promotion evidence without mutating any live identity/bytes
+ok 182 - gen-identity rejects invented promotion evidence without mutating any live identity/bytes
+  ---
+  duration_ms: 118.312411
+  ...
+# Subtest: full generator code-only promotion works through real RPC boundary and retains historical migration
+ok 183 - full generator code-only promotion works through real RPC boundary and retains historical migration
+  ---
+  duration_ms: 851.217451
+  ...
+# Subtest: post rejects unreviewed account code-storage growth
+ok 184 - post rejects unreviewed account code-storage growth
+  ---
+  duration_ms: 1.014247
+  ...
+# Subtest: worker identity rotation preserves every prior build and remains idempotent
+ok 185 - worker identity rotation preserves every prior build and remains idempotent
+  ---
+  duration_ms: 0.602627
+  ...
+# Subtest: strict judge RPC has an honest identifying User-Agent and preserves pinned byte/version/minter assertions
+ok 186 - strict judge RPC has an honest identifying User-Agent and preserves pinned byte/version/minter assertions
+  ---
+  duration_ms: 1.550616
+  ...
+# Subtest: native pilot requires original FINAL all-success closed graph, not top-level success or an unrelated receipt
+ok 187 - native pilot requires original FINAL all-success closed graph, not top-level success or an unrelated receipt
+  ---
+  duration_ms: 3.526711
+  ...
+# Subtest: scoped integer budget includes completed, unknown, worst remaining and OFF reserve
+ok 188 - scoped integer budget includes completed, unknown, worst remaining and OFF reserve
+  ---
+  duration_ms: 13.2827
+  ...
+# Subtest: exact exit scope requires both exit/native/admission reserves without raising caps
+ok 189 - exact exit scope requires both exit/native/admission reserves without raising caps
+  ---
+  duration_ms: 0.346133
+  ...
+# Subtest: operator design names the exact three-hop flow without claiming live proof
+ok 190 - operator design names the exact three-hop flow without claiming live proof
+  ---
+  duration_ms: 1.741137
+  ...
+# Subtest: candidate record requires exact counts, source digest and both actual artifact hashes
+ok 191 - candidate record requires exact counts, source digest and both actual artifact hashes
+  ---
+  duration_ms: 4.000256
+  ...
+# Subtest: summaries distinguish failed JS checks, clean browser passes, retry passes and opt-in skips
+ok 192 - summaries distinguish failed JS checks, clean browser passes, retry passes and opt-in skips
+  ---
+  duration_ms: 0.492201
+  ...
+1..192
+# tests 192
+# suites 0
+# pass 191
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3013.770801

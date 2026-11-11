@@ -40,9 +40,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 51ecc536cbf713352d08abd346399ec161bdc142
+git fetch --depth 1 origin 9b080285e6bc4546cbf7492732cd03fa6a682cd5
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "51ecc536cbf713352d08abd346399ec161bdc142"
+test "$(git rev-parse HEAD)" = "9b080285e6bc4546cbf7492732cd03fa6a682cd5"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -56,9 +56,9 @@ No git? Download all three files from that same immutable source commit and run 
 <!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/51ecc536cbf713352d08abd346399ec161bdc142/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/51ecc536cbf713352d08abd346399ec161bdc142/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/51ecc536cbf713352d08abd346399ec161bdc142/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/9b080285e6bc4546cbf7492732cd03fa6a682cd5/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/9b080285e6bc4546cbf7492732cd03fa6a682cd5/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/9b080285e6bc4546cbf7492732cd03fa6a682cd5/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -99,7 +99,7 @@ The live worker is `62398a8a` (1,085,333 bytes).
 | Contract version | `2.7.0` | NEP-330 `contract_source_metadata` |
 | Pledge migration | `EwKUkWju…` | [nearblocks](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa) |
 | Contract code hash | `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH` | deploy tx [`6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h) |
-| Contract wasm sha256 | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` | [`contracts/keys/deployed/keyhole_keys.wasm`](contracts/keys/deployed/keyhole_keys.wasm) |
+| Contract wasm sha256 | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` | [`contracts/keys/release/v2.7/keyhole_keys.wasm`](contracts/keys/release/v2.7/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
 | Worker wasm sha256 | `62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
 | Worker publish tx | `3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P` | [nearblocks](https://nearblocks.io/txns/3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P) |
@@ -118,16 +118,16 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 ```
 
-Worker source candidate: `62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f` (1,085,333 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Provisioning proof](docs/evidence/worker-provisioning/README.md).
+Worker source candidate: `3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377` (1,331,880 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/r3/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
 
-Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning.
+Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
 Live governance (`governance_state`, `get_pledge_config`): owner `keyhole-devmo.near`; pending owner `0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228`; pending_owner_not_before_ns `1794486987377190950`; staged_upgrade_sha256 `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`; staged_upgrade_not_before_ns `1794486857027935824`; min_upgrade_delay_ns `86400000000000`; wind_down_ns `1801440000000000000`; wound_down false; lending_enabled false. Access keys: 2 FullAccess and 1 FunctionCall (`ed25519:7N1fLo9M…`, `ed25519:FNe2aYtz…`). Stage [tx](https://nearblocks.io/txns/5CYYbe6Zx1BVW3qmS63gR6XDGKMx2QzfJ8Pcft8BM3v5) · owner proposal [tx](https://nearblocks.io/txns/9fAHo9ckryNCXr6wxJzr89wayP6fTFKwqjFezXVGYnyk). The owner is still the contract account.
 
 Measured size steps are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [`docs/evidence/live-v2.5/all-live-views.json`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
 
-The downloadable source bundle carries the same generated live and candidate identities as this checkout. Public rollout evidence retains both FINAL receipt trees and transaction hashes; public transaction signatures are represented by SHA256 digests in the sanitized capture. The CLI's historical v2.4 compatibility pin stays tied to its released wasm, while current requests require the current owner epoch. The serial funded acceptance keeps its 13-transaction ledger and 96 screenshots, with bounded browser operations and an overall evidence-capture budget suitable for shared CI runners.
+The downloadable source bundle carries the same generated live and candidate identities as this checkout. Public rollout evidence retains both FINAL receipt trees and transaction hashes; historical sanitized captures use signature digests; the v2.7 proof retains its original public transaction signature. The CLI's historical v2.4 compatibility pin stays tied to its released wasm, while current requests require the current owner epoch. The serial funded acceptance keeps its 13-transaction ledger and 96 screenshots, with bounded browser operations and an overall evidence-capture budget suitable for shared CI runners.
 
 
 ---
@@ -210,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `644 claims: 343 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `659 claims: 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -259,7 +259,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (644 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 343 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (659 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -595,7 +595,7 @@ Not used: NEP-366 meta-transactions, NEP-145/148/141, sub-accounts, Intent Conne
 | v2.3 | `700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d` (210,474 bytes) | `8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG` | previous release |
 | **v2.4** | `b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c` (241,621 bytes) | **`DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ`** | superseded by v2.5 (deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn), [evidence](docs/evidence/contract-v2-4/README.md)) |
 
-| **v2.5** | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` (485,855 bytes) | **`3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b`** | recorded v2.5 rollout; superseded by live v2.6 ([deploy](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [Pledge migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)) |
+| **v2.5** | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` (485,855 bytes) | **`3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b`** | recorded v2.5 rollout; superseded by historical v2.6 and live v2.7 ([deploy](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [Pledge migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)) |
 | **v2.6** | `54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a` (487,260 bytes) | **`6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww`** | historical ([deploy](https://nearblocks.io/txns/4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj)) |
 | **v2.7** | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` (519,382 bytes) | **`3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH`** | **live** on `keyhole-devmo.near` ([deploy](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)) |
 
@@ -606,7 +606,7 @@ Contract configuration at capture (historical; `beats` grows with each heartbeat
 ```
 
 <!-- LIVE-ARTIFACT:START -->
-`contracts/keys/deployed/keyhole_keys.wasm` is the live **v2.7** code: **519,382 bytes**, SHA256 `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`. `bash judge/1-contract.sh --strict` checks actual finalized bytes, version and minter. [Historical v2.5 source rebuild proof](docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log) remains labelled historical. The current checkout rebuilds the separately generated source candidate, checked by CI against [`release/SHA256SUMS`](contracts/keys/release/SHA256SUMS) and its identity. The pinned recipe uses rustc 1.86.0, cargo-near 0.22.0 and Binaryen 123.
+`contracts/keys/release/v2.7/keyhole_keys.wasm` is the live **v2.7** code: **519,382 bytes**, SHA256 `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`. `bash judge/1-contract.sh --strict` checks actual finalized bytes, version and minter. [Historical v2.5 source rebuild proof](docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log) remains labelled historical. The current checkout rebuilds the separately generated source candidate, checked by CI against [`release/SHA256SUMS`](contracts/keys/release/SHA256SUMS) and its identity. The pinned recipe uses rustc 1.86.0, cargo-near 0.22.0 and Binaryen 123.
 <!-- LIVE-ARTIFACT:END -->
 
 <details>
@@ -621,7 +621,7 @@ Contract configuration at capture (historical; `beats` grows with each heartbeat
 
 </details>
 
-**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) reproduces the **published guarded worker** `62398a8a…cc307f`, 1,085,333 bytes. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json). `./verify.sh 962d4374-b9ec-411a-9efa-973b36260431 --rebuild` checks this checkout against the current measured build. Earlier proofs such as `dc3668db` retain their own historical build and remain verifiable, but do not match today's rebuild. The worker sha256 identifies KEYHOLE code; the TDX measurement names the OutLayer runtime. Published code is not proof that lending or a provider policy pilot is enabled: lending stays OFF.
+**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) reproduces the **unpublished V2 source candidate** in [candidate identity](docs/evidence/worker-provisioning/candidate.json); the separate published guarded worker remains `62398a8a…cc307f`, 1,085,333 bytes. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json). `node scripts/check-worker-candidate.mjs` compares this checkout with the candidate bytes; recorded live attestations retain the separate published hash. Earlier proofs such as `dc3668db` retain their own historical build and remain verifiable, but do not match today's rebuild. The worker sha256 identifies KEYHOLE code; the TDX measurement names the OutLayer runtime. Published code is not proof that lending or a provider policy pilot is enabled: lending stays OFF.
 
 The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` call is the one the browser verifier shows by default. Each earlier build was published with the same `add_version` method and has its own FastFS upload. [`identity.json`](identity.json) is the single source for the live build, the contract hashes and the publish transaction. `node scripts/gen-identity.mjs --check` fails CI when generated files drift.
 
@@ -657,9 +657,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 51ecc536cbf713352d08abd346399ec161bdc142
+git fetch --depth 1 origin 9b080285e6bc4546cbf7492732cd03fa6a682cd5
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "51ecc536cbf713352d08abd346399ec161bdc142"
+test "$(git rev-parse HEAD)" = "9b080285e6bc4546cbf7492732cd03fa6a682cd5"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -672,7 +672,7 @@ bash ./judge/1-contract.sh --strict          # committed live bytes == chain; so
 bash ./judge/2-attestations.sh           # every recorded call: attested build and output hash
 ./verify.sh 962d4374-b9ec-411a-9efa-973b36260431
 # --rebuild compiles THIS checkout. It matches executed wasm only on the publishing commit.
-# Current guarded source matches the published worker; previous builds need their own checkout.
+# Current exact-exit source is an unpublished candidate; use the publishing commit to match live bytes.
 # ./verify.sh 962d4374-b9ec-411a-9efa-973b36260431 --rebuild
 ```
 
@@ -807,17 +807,17 @@ Detailed trust boundaries (a broken TEE, privacy limits, the browser, agents, fu
 
 ## 9. Numbers
 
-Current repair validation: [R4 proof and exact finding map](docs/evidence/worker-provisioning/R4.md); [historical R2 proof](docs/evidence/worker-provisioning/R2.md). Mainnet and product measurements below retain their explicitly named historical evidence.
+Current V2 source-candidate validation: [exact source/artifact/count record](docs/evidence/worker-provisioning/v2/r3/validation.json) and [Round 3 correction proof](docs/evidence/worker-provisioning/v2/r3/README.md), with the [CI reproduction recipe](docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md). [R4](docs/evidence/worker-provisioning/R4.md) and [R2](docs/evidence/worker-provisioning/R2.md) remain historical. Mainnet and product measurements below retain their explicitly named historical evidence.
 
 | Component | Count | How it was measured |
 |---|---|---|
-| Keys contract unit tests | not in [`docs/metrics.json`](docs/metrics.json) | CI run [43043510571](https://github.com/mohamedwael201193/keyhole/actions/runs/43043510571) logged 342. That is a CI log count, not a local cargo rerun |
-| Keys contract sandbox tests | not in [`docs/metrics.json`](docs/metrics.json) | The same CI run logged 62 pass and 1 ignored. An older 59-pass note is historical |
-| TEE worker unit tests | not in [`docs/metrics.json`](docs/metrics.json) | The same CI run logged 656. That is a CI log count, not a local cargo rerun |
-| CLI tests | **77** in [`docs/metrics.json`](docs/metrics.json) | `cd cli && npm test` on commit `d451a25bab95817e73585dd5db3c323e230a9140`, 0 failing tests |
-| Web unit tests (Vitest) | **1991** in [`docs/metrics.json`](docs/metrics.json) | `cd web && npx vitest run` on that same commit, 0 failing tests |
-| Web e2e (Playwright) | excluded from [`docs/metrics.json`](docs/metrics.json) | [`web/e2e`](web/e2e), desktop and mobile. This artifact does not record a Playwright total |
-| Claims in `docs/claims.json` | **644**: offline 343 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Keys contract unit tests | **342** pass | `cd contracts/keys && cargo test --locked` (current local measurement) |
+| Keys contract sandbox tests | **62** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 34 upgrade/sale/runtime cases |
+| TEE worker unit tests | **758** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
+| CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
+| Web unit tests (Vitest) | **2032** pass in 124 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
+| Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
+| Claims in `docs/claims.json` | **659**: offline 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |
@@ -1015,7 +1015,7 @@ The shared app shell exposes **Claim your funds** for available native credits. 
 
 Clean checkouts, CI and the isolated box install use `cd web && npm run build` with the normal project root. Linked-dependency worktrees may explicitly set `KEYHOLE_TURBOPACK_ROOT` to their common checkout/dependency parent. Use Node 22.22.2 (`web/.nvmrc`) and npm 10.8.2; [dependency compatibility proof](docs/evidence/integration-stack/wallet-dependencies-r4.md) covers clean installation and wallet schemas.
 
-[Two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).
+The historical [two-team-account repay/default runbook](docs/pledge/TEAM_RUNBOOK.md) specifies public methods, tiny amounts, native cashout proof, real-chain waiting, ordinary self-exit and cost ledger. The current [scoped native A/B runbook](docs/worker/LIVE_LOANS_EXEC.md) proves repayment/release and default NFT title/control without public FT redemption. Release gates: [SECURITY.md](SECURITY.md#pledge-pilot-release-gates).
 
 
 
@@ -1048,7 +1048,7 @@ python3 judge/gen-claims.py && node judge/verify-claims.mjs --offline
 
 ### First-class Pledge UI candidate — NOT acceptance proof
 
-The live-flag UI now wires holder-authenticated complete at-risk inventory, immutable named-lender terms, batched first-use payout registration, verified-certificate funding, principal native cashout, exact repayment or eligible default, policy reconciliation/thaw, terminal credit claims and ordinary capped/cooldown self-exit. Full balances are never requested for visiting lenders; a genuine new holder can explicitly authorize them after default. Unpriced assets, pending obligations and later deposits are disclosed as whole-account collateral. A token with no decimals is shown as **Other token**, **Value unknown**, **Included in your collateral**, and **Amount unavailable in token units**. The full id and “base units · decimals unavailable” sit in a keyboard-reachable Token details disclosure, with a copy control. It is not turned into a dollar amount or a token count. A same-ledger swap quote is not part of this release. The borrower opens **Compare with a swap** to read that no savings estimate is shown. The lender does not see that note. Visible loan states use plain labels (**Locking account…**, **Offer open**, **Funds ready to claim**, **Loan active**, **Unlocking…**). Freezing says **Retry account lock**, not an unlock. A lender waiting on undisbursed principal sees **Waiting for borrower to claim**, not a claim of that principal. A pending cashout says **Cashout pending; checking chain**. The badge, step and heading say to wait and check the chain, and the page offers no claim action while that payout is pending. It does not say the funds are still in the contract or already delivered. A token with known decimals uses its metadata symbol, or a short id when that symbol is missing. The full protocol id stays in Token details. The nonce for that payout stays under **Technical details**, with the raw enum and owner epoch. Account status reads **Lock not confirmed**, **Locked while pledged**, **Unlocking**, or **Available**. Repay-by times include seconds in Africa/Cairo. On a 390px-wide screen, body text is at least 14px, supporting text at least 12px, and pledge controls are at least 44px tall. The header account control is an avatar plus a short name that can shrink instead of widening the page. The header says **Sandbox** on an isolated sandbox build and **NEAR mainnet** only on mainnet. Mobile uses deliberate Account and Action panels. Horizontal overflow is guarded; vertical scroll is allowed so the type stays readable. Label map: [web/tests/pledge-labels.test.ts](web/tests/pledge-labels.test.ts). Earlier funded receipts belong to the head that produced them, not to a later UI commit.
+The live-flag UI now wires holder-authenticated complete at-risk inventory, immutable named-lender terms, batched first-use payout registration, verified-certificate funding, principal native cashout, exact repayment or eligible default, policy reconciliation/thaw, terminal credit claims and an advisory-only self-exit preview (no withdrawal signature or dispatch). Full balances are never requested for visiting lenders; a genuine new holder can explicitly authorize them after default. Unpriced assets, pending obligations and later deposits are disclosed as whole-account collateral. A token with no decimals is shown as **Other token**, **Value unknown**, **Included in your collateral**, and **Amount unavailable in token units**. The full id and “base units · decimals unavailable” sit in a keyboard-reachable Token details disclosure, with a copy control. It is not turned into a dollar amount or a token count. A same-ledger swap quote is not part of this release. The borrower opens **Compare with a swap** to read that no savings estimate is shown. The lender does not see that note. Visible loan states use plain labels (**Locking account…**, **Offer open**, **Funds ready to claim**, **Loan active**, **Unlocking…**). Freezing says **Retry account lock**, not an unlock. A lender waiting on undisbursed principal sees **Waiting for borrower to claim**, not a claim of that principal. A pending cashout says **Cashout pending; checking chain**. The badge, step and heading say to wait and check the chain, and the page offers no claim action while that payout is pending. It does not say the funds are still in the contract or already delivered. A token with known decimals uses its metadata symbol, or a short id when that symbol is missing. The full protocol id stays in Token details. The nonce for that payout stays under **Technical details**, with the raw enum and owner epoch. Account status reads **Lock not confirmed**, **Locked while pledged**, **Unlocking**, or **Available**. Repay-by times include seconds in Africa/Cairo. On a 390px-wide screen, body text is at least 14px, supporting text at least 12px, and pledge controls are at least 44px tall. The header account control is an avatar plus a short name that can shrink instead of widening the page. The header says **Sandbox** on an isolated sandbox build and **NEAR mainnet** only on mainnet. Mobile uses deliberate Account and Action panels. Horizontal overflow is guarded; vertical scroll is allowed so the type stays readable. Label map: [web/tests/pledge-labels.test.ts](web/tests/pledge-labels.test.ts). Earlier funded receipts belong to the head that produced them, not to a later UI commit.
 
 Default production writes remain OFF. [Sandbox UI runbook](docs/pledge/UI_SANDBOX_RUNBOOK.md) · [Release and acceptance scope](SECURITY.md#two-sided-pledge-ui-release-gate).
 
@@ -1071,7 +1071,7 @@ Executable proofs: [negative/positive unit cases](web/tests/pledge-review-r3.tes
 
 Loan opening and ordinary exits now reserve their durable intent under the **same account/contract Web Lock**, checking the opposing record inside that short critical section. The lock is released before RPC or wallet confirmation; the persisted original intent preserves exclusion, and a final pre-signing check protects asynchronous wallet routing. Saved exits retain their recovery panel even alongside an unexpected active loan, with unsafe withdrawal disabled. Nonterminal provider reconciliation explicitly remains **pending / UNKNOWN** with its original operation ID.
 
-The funded browser acceptance enforces an ordered **7 + 6 = 13 unique browser-wallet transactions**, each bound to signer, receiver, hash, ordered arguments, deposits, gas and successful native execution. Its two deliberately refused mock-provider thaw receipts are classified separately. Every response is awaited, and the resulting manifest derives counts and hashes from raw receipts, screenshots and canonical committed Git blobs. Provider admission/finish and fixture-setup transactions have their own scope, outside those thirteen wallet submissions.
+The funded browser acceptance enforces an ordered **7 + 6 = 13 unique browser-wallet transactions**, each bound to signer, receiver, hash, ordered arguments, deposits, gas and successful native execution. Its two deliberately refused mock-provider thaw receipts are classified separately. Every response is awaited, and the resulting manifest derives counts and hashes from raw receipts, screenshots and canonical committed Git blobs. Provider admission/finish and fixture-setup transactions have their own scope, outside those thirteen wallet submissions. In the current scoped native A/B candidate, refused public exits assert zero custody POST/signing, zero withdrawal authorization and zero native admission, while preserving native repayment, default title and payout evidence.
 
 Executable proofs: [R5 concurrency and receipt-ledger negatives](web/tests/pledge-review-r5.test.ts), [actual two-tab/mounted recovery cases](web/e2e/pledge-review-r3.spec.ts), and [funded UI acceptance](web/e2e/pledge-funded.spec.ts). Each funded run emits `evidence.json`, `native-receipts.json`, and `manifest.json` with its exact source commit and screenshot hashes. [Security and rollout boundaries](SECURITY.md#pr194-r5-shared-lifecycle-and-evidence-boundaries).
 
@@ -1087,7 +1087,7 @@ The merged client requires the current storage-bond/binding quote, keeps first-u
 
 Public health cannot dispatch paid compute, even with stale opt-in flags: [GET and refused/replayed/concurrent POST tests](web/tests/health-route.test.ts). Inventory propagates provenance-load failures before iteration in the actual [WASI host](tee/worker/src/guarded_host.rs); the [dedicated WASI clippy and build gates](.github/workflows/ci.yml) check the production target. The [Revoke browser tests](web/e2e/site.spec.ts) retain real hit testing, keyboard focus, one revoke call and token deletion for both an epoch-bound v2.5 session and an explicitly pinned legacy-profile fixture. The [full reproduction fence](#pledge-reproduction--source-candidates-and-generated-live-identities) builds the callback-failure fixture before sandbox tests and restores byte-identical normal output; [recipe regression tests](judge/reproduction.test.mjs) keep that ordering executable. Operational boundaries remain in [SECURITY.md](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
 
-The real-native funded fixture mints the canonical public token ID returned in its metadata; the browser follows that exact ID through certificate issuance, funding, native cashout and both guarded exits. It does not widen the production token validator to accommodate a short synthetic ID. [Fixture/gateway regression](web/tests/pledge-certificate-gateway.test.ts), [native fixture](contracts/keys-sandbox/tests/support/ui_harness.rs), [13-receipt acceptance](web/e2e/pledge-funded.spec.ts).
+The real-native funded fixture mints the canonical public token ID returned in its metadata; the browser follows that exact ID through certificate issuance, funding, native cashout and both intentional zero-send public-exit refusals. It does not widen the production token validator to accommodate a short synthetic ID. [Fixture/gateway regression](web/tests/pledge-certificate-gateway.test.ts), [native fixture](contracts/keys-sandbox/tests/support/ui_harness.rs), [13-receipt acceptance](web/e2e/pledge-funded.spec.ts).
 
 The funded evidence collector captures each original transaction hash/signer as genuine FINAL immediately after submission, before later sandbox clock advances, and reads serially and permits at most three read-only attempts for the node's explicit timeout error (including its HTTP 408 JSON-RPC timeout response). It accepts only a genuine FINAL response; missing, pending, other RPC errors and exhausted reads fail closed, before the unchanged 13-transaction action/identity ledger. [Observer negatives](web/tests/funded-final-observer.test.ts), [collector](web/e2e/support/final-receipt.ts), [receipt-ledger negatives](web/tests/pledge-review-r5.test.ts).
 

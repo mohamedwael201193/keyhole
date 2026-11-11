@@ -6,15 +6,17 @@ STRICT=0; REBUILD=0
 for arg in "$@"; do
   case "$arg" in --strict) STRICT=1;; --rebuild) REBUILD=1;; *) echo "unknown argument: $arg" >&2; exit 2;; esac
 done
+LIVE_ARTIFACT=$(python3 -c 'import json;print("contracts/keys/release/v2.7/keyhole_keys.wasm" if json.load(open("identity.json"))["contract"]["version"]=="2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm")')
+export LIVE_ARTIFACT
 if [ "$REBUILD" -eq 1 ]; then
   (cd contracts/keys && CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" ./build.sh)
-  cmp contracts/keys/target/near/keyhole_keys.wasm contracts/keys/deployed/keyhole_keys.wasm
+  cmp contracts/keys/target/near/keyhole_keys.wasm "$LIVE_ARTIFACT"
   echo "OK   reproducible contract rebuild == committed deployed wasm"
 fi
 C="${KEYS_CONTRACT:-keyhole-devmo.near}"; RPC="${NEAR_RPC:-https://rpc.mainnet.fastnear.com}"
 q(){ curl -fsS --max-time 30 "$RPC" -H 'content-type: application/json' -d "$1"; }
 CH=$(q '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_account","finality":"final","account_id":"'"$C"'"}}' | jq -r .result.code_hash)
-LOCAL=$(sha256sum contracts/keys/deployed/keyhole_keys.wasm | cut -d' ' -f1)
+LOCAL=$(sha256sum "$LIVE_ARTIFACT" | cut -d' ' -f1)
 LOCAL58=$(python3 -c "import sys;h=bytes.fromhex('$LOCAL');a='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';n=int.from_bytes(h,'big');s='';
 while n: n,r=divmod(n,58); s=a[r]+s
 print(s)")
@@ -41,7 +43,7 @@ def view(method):return json.loads(bytes(query('call_function',block_id=block,me
 code=base64.b64decode(query('view_code',block_id=block)['code_base64'])
 assert a['code_hash']==identity['code_hash'],'live hash != identity'
 assert hashlib.sha256(code).hexdigest()==identity['wasm_sha256'],'live bytes != identity'
-assert code==open('contracts/keys/deployed/keyhole_keys.wasm','rb').read(),'live bytes != repository'
+assert code==open(os.environ['LIVE_ARTIFACT'],'rb').read(),'live bytes != repository'
 assert view('contract_source_metadata')['version']==identity['version'],'NEP-330 version mismatch'
 assert view('config')['minter']==identity['minter'],'minter mismatch'
 print('PASS strict online contract identity, actual code bytes, version and minter at final block',block)

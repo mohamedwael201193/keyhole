@@ -33,7 +33,7 @@ keyhole account [--chain base --amount 1000000] your confidential id (+ optional
 keyhole balance                                confidential balances
 keyhole swap --amount 10000 [--from .. --to ..] confidential swap within your caps
 keyhole history | pnl                          your private trade log / summary
-keyhole withdraw --chain near --to you.near --token <id> --amount <base units>
+keyhole withdraw --exact-near --to you.near --amount <USDC base units>
 keyhole payout [--register --accept-storage-yocto <exact cost> | --claim]
 keyhole reconcile --key <token_id> --value-op-id <original operation ID>
 keyhole pledge status <token_id>               read-only lien status (views only, no signature)
@@ -61,3 +61,5 @@ keyhole verify <call_id>
 ```
 
 Both fetch `https://api.outlayer.ai/attestations/by-call/<call_id>`. A pass is a TDX quote, `executed_wasm_sha256` equal to `wasm_hash`, and the FastFS bytes hashing to that same value. `./verify.sh <call_id> --rebuild` also runs `tee/worker/build.sh` and compares.
+
+Exact NEAR USDC exit uses confidential unshield to the same wallet, independent public-balance readback, recipient storage registration, then exact same-chain Intents withdrawal. It reveals this wallet publicly; storage can need guardian approval and native NEAR. Unknown operations reconcile the original ID, never send another. Other withdrawal modes remain disabled.
