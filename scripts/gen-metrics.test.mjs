@@ -31,13 +31,13 @@ test("a consistent row is accepted, and a drifted total is not", () => {
 test("the recorded artifact names a real commit and its suites sum to the total", () => {
   const doc = JSON.parse(readFileSync(new URL("../docs/metrics.json", import.meta.url), "utf8"));
   assert.equal(metricsOk(doc), true);
-  assert.equal(doc.total, 2058);
+  assert.equal(doc.total, 2065);
   assert.equal(doc.suites.cli, 77);
-  assert.equal(doc.suites["web-unit"], 1981);
+  assert.equal(doc.suites["web-unit"], 1988);
   assert.deepEqual(doc.excluded, ["contract", "worker", "sandbox", "playwright"]);
   assert.equal(doc.failed, 0);
   assert.match(doc.run_id, /^[0-9a-f]{64}$/);
-  assert.equal(doc.commit, "fcacb719b93c55888755148b844a46c42b692df2");
+  assert.equal(doc.commit, "6df7950d0142f41c0eddee98de43fce770b9d46f");
   assert.doesNotMatch(doc.note, /[1-9]\d* failed|projected/);
   assert.equal(ensureCommit(doc.commit), true);
 });
