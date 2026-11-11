@@ -3649,6 +3649,27 @@
    "verify": "node judge/verify-claims.mjs --only test-add_beat_key"
   },
   {
+   "id": "test-all_aliases_reviewed",
+   "claim": "Named test or symbol `all_aliases_reviewed` exists in the source",
+   "where": "SECURITY.md:686",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "all_aliases_reviewed",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`all_aliases_reviewed` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-all_aliases_reviewed"
+  },
+  {
    "id": "test-assert_withdraw_to",
    "claim": "Named test or symbol `assert_withdraw_to` exists in the source",
    "where": "README.md:338",
@@ -3775,6 +3796,27 @@
    "verify": "node judge/verify-claims.mjs --only test-code_changed_within_7d"
   },
   {
+   "id": "test-create_collateral_wallet",
+   "claim": "Named test or symbol `create_collateral_wallet` exists in the source",
+   "where": "SECURITY.md:711",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "create_collateral_wallet",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`create_collateral_wallet` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-create_collateral_wallet"
+  },
+  {
    "id": "test-del_beat_key",
    "claim": "Named test or symbol `del_beat_key` exists in the source",
    "where": "SECURITY.md:80",
@@ -3815,6 +3857,27 @@
    },
    "expected": "`derive_min_out` found in source",
    "verify": "node judge/verify-claims.mjs --only test-derive_min_out"
+  },
+  {
+   "id": "test-effective_policy_reviewed",
+   "claim": "Named test or symbol `effective_policy_reviewed` exists in the source",
+   "where": "SECURITY.md:720",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "effective_policy_reviewed",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`effective_policy_reviewed` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-effective_policy_reviewed"
   },
   {
    "id": "test-eip191_recovers_the_fixed_vector_and_rejects_a_tamper",

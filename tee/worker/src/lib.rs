@@ -1392,3 +1392,6 @@ pub mod collateral;
 
 pub mod receipts;
 pub mod native_send;
+
+/// Two-phase confinement evidence; loan certificate ABI is unchanged.
+pub mod collateral_evidence;

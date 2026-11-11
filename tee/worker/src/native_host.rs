@@ -1,7 +1,7 @@
 // Thin production transport: every minter entry uses native_send::execute.
 use keyhole_worker::native_send;
 struct NativeRpc {
-    provision: Option<(Prepared, u128, AuthorityAudit)>,
+    provision: Option<(Prepared, u128, PreAudit)>,
 }
 impl native_send::Rpc for NativeRpc {
     fn preflight(&mut self) -> Result<(), Error> {

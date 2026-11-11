@@ -428,6 +428,10 @@ mod host {
     /// transferring the NFT transfers the confidential account.
     fn holder_wallet(token: &str, owner: &str) -> Result<(String, String), Error> {
         let k = tkey(token, "wallet");
+        if !Store::read(&mut Host,&format!("{}/claim",evidence::root(token)))?.is_empty() {
+            // Fresh enrollment never adopts an owner alias, even on read paths.
+            return guarded_wallet(token);
+        }
         if let Some(v) = custody_lookup(&mut Host, token, owner)? {
             let j: Value = serde_json::from_slice(&v).map_err(|_| err("storage", "wallet record corrupt"))?;
             return Ok((s(&j, "api_key").unwrap_or_default(), s(&j, "near_account_id").unwrap_or_default()));
@@ -438,6 +442,7 @@ mod host {
             if !wallet_claim_free(&Host.get(&ck), now) { return Err(err("busy", "this key's wallet is being created, retry in a moment")); }
             Host.set(&ck, now.to_string().as_bytes());
         }
+        if !Store::read(&mut Host,&format!("{}/claim",evidence::root(token)))?.is_empty() {return Err(err("collateral_unknown","fresh enrollment claimed token; ordinary wallet creation refused"));}
         let (st, j) = http("POST", &format!("{}/register", OL), None, None)?;
         let (Some(key), Some(id)) = (s(&j, "api_key"), s(&j, "near_account_id")) else {
             return Err(err("upstream", format!("wallet registration failed ({})", st)));
@@ -451,6 +456,7 @@ mod host {
 
     include!("guarded_host.rs");
     include!("collateral_host.rs");
+    include!("collateral_evidence_host.rs");
 
     /// USD value (micro) of `amount` of `token`, priced by a dry 1Click quote into USDC.
     fn usd_of(token: &str, amount: &str, refund: &str, now_ms: u64) -> Result<u64, Error> {
@@ -478,10 +484,11 @@ mod host {
         let mut out = json!({"ok": true, "op": "account", "account": c.account, "confidential_id": id,
             "fund": "send a confidential transfer to confidential_id, or ask for a cross-chain deposit address with params {chain, token, amount}"});
         if let Some(chain) = s(&c.req.params, "chain") {
+            provision_idle(&c.token_id())?;
             let body = json!({"chain": chain, "token": s(&c.req.params, "token").unwrap_or_else(|| "USDC".into()), "amount": digits(&c.req.params, "amount")?});
             let (st, j) = http("POST", &format!("{}/wallet/v1/confidential/deposit/cross-chain", OL), Some(&key), Some(&body))?;
             if st >= 300 { return Err(err("upstream", format!("deposit address failed ({})", st))); }
-            out["deposit"] = json!({"deposit_address": j.get("deposit_address"), "amount": j.get("amount"), "expires_at": j.get("expires_at"), "hint": j.get("hint")});
+            out["deposit"] = json!({"deposit_address":j.get("deposit_address"),"amount":j.get("amount"),"expires_at":j.get("expires_at"),"hint":j.get("hint"),"intent_id":j.get("intent_id"),"request_id":j.get("request_id"),"amount_out":j.get("amount_out"),"min_amount_out":j.get("min_amount_out")});
             prov_append(&c.token_id(), "deposit", &c.account, c.now_ms, &body.to_string(), &c.operation_id)?;
         }
         Ok(out)
@@ -490,7 +497,7 @@ mod host {
     fn op_balance(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "balance", true)?;
         let (key, id) = c.wallet()?;
-        let (_, j) = http("GET", &format!("{}/wallet/v1/confidential/balance", OL), Some(&key), None)?;
+        let j = custody_get(&key,"/wallet/v1/confidential/balance")?;
         Ok(json!({"ok": true, "op": "balance", "account": c.account, "confidential_id": id, "balances": j.get("balances").cloned().unwrap_or(json!([]))}))
     }
 
@@ -907,7 +914,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "guarded_revision":guarded::REVISION, "guarded_registry_hash":cfg("GUARDED_WORKER_HASH",""), "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","reconcile_minter_send","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","collateral_funding_quote","collateral_funding_status","claim_minter_credit","create_collateral_wallet","collateral_candidate","collateral_report","finalize_collateral","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","reconcile_minter_send","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -933,6 +940,13 @@ mod host {
             "withdraw" => op_withdraw(&input),
             "transfer" => op_transfer(&input),
             "loan_certificate" => op_loan_certificate(&input),
+            "collateral_funding_quote" => op_collateral_funding_quote(&input),
+            "collateral_funding_status" => op_collateral_funding_status(&input),
+            "claim_minter_credit" => op_claim_minter_credit(&input),
+            "create_collateral_wallet" => op_create_collateral_wallet(&input),
+            "collateral_candidate" => op_collateral_candidate(&input),
+            "collateral_report" => op_collateral_report(&input),
+            "finalize_collateral" => op_finalize_collateral(&input),
             "prepare_collateral" => op_prepare_collateral(&input),
             "collateral_quote" => op_collateral_quote(&input),
             "withdraw_dry_run" => op_withdraw_dry_run(&input),
