@@ -13,11 +13,12 @@ export { TOTAL_CHECKS };
 function LienLookup() {
   const [draft, setDraft] = useState("");
   const [tokenId, setTokenId] = useState<string | null>(null);
-  const lien = useLien(tokenId);
+  const [lookup, setLookup] = useState(0);
+  const lien = useLien(tokenId, { marker: lookup });
   const bad = tokenId !== null && !KEY_ID_RE.test(tokenId);
   return (
     <section id="lien-check" className="vf-lien" aria-label="Lien check" data-testid="lien-check">
-      <form className="vf-lien-form" onSubmit={(e) => { e.preventDefault(); setTokenId(draft.trim()); }}>
+      <form className="vf-lien-form" onSubmit={(e) => { e.preventDefault(); setTokenId(draft.trim()); setLookup((n) => n + 1); }}>
         <label htmlFor="lien-id">Key id</label>
         <input id="lien-id" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
         <button type="submit" className="kh-btn kh-btn--secondary kh-btn--sm">Read lien</button>

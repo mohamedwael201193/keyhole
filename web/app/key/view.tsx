@@ -44,15 +44,18 @@ export function KeyHistoryView() {
   const [proof, setProof] = useState<string | null>(null);
   /** Bumped after a sale action, so the listing in the details panel is read again. */
   const [saleRound, setSaleRound] = useState(0);
+  /** Bumped on every lookup, including the same key id, so the lien read is not reused. */
+  const [lookup, setLookup] = useState(0);
   const chain = useKeyChain(active);
   const tier = useKeyTier(active);
   const listing = useKeyListing(active, saleRound);
   /** Lien facts read from the final chain (views only). Shared by the lien card and the timeline. */
-  const lien = useLien(active || null);
+  const lien = useLien(active || null, { owner: chain.owner ?? null, marker: `${saleRound}:${lookup}` });
   /** Derived Chain Signatures address: computed in the browser, labelled as not signing in this build. */
   const evm = active && legacy === null ? keyEvmAddress(active) : null;
 
   async function load(tid: string) {
+    setLookup((n) => n + 1);
     setErr(null); setBody(null); setCk(null); setCallId(null); setLegacy(null);
     setActive(ID.test(tid) ? tid : "");
     if (!ID.test(tid)) { setErr("That is not a key id. Paste one from the gallery, like k5f4750858f328940 or 0."); return; }
@@ -131,7 +134,7 @@ export function KeyHistoryView() {
             owner={chain.owner}
             royaltyBps={chain.royaltyBps}
             minter={chain.minter}
-            onChanged={() => { chain.refresh(); setSaleRound((n) => n + 1); }}
+            onChanged={() => { chain.refresh(); setSaleRound((n) => n + 1); lien.refresh(); }}
           />
         </div>
       )}

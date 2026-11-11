@@ -65,7 +65,7 @@ export function LienPanel({ lien, testid = "lien-panel" }: { lien: UseLien; test
                     {lien.cert.status === "checking" ? "Checking certificate…" : "Verify the loan certificate"}
                   </button>
                   {lien.cert.message && <p className="lien-note" data-testid="lien-cert-result" data-status={lien.cert.status}>{lien.cert.message}</p>}
-                  <p className="lien-note">This asks the enclave for the signed certificate and checks it here. Nothing is signed or sent.</p>
+                  <p className="lien-note">This asks the enclave for the signed certificate and checks it in this browser. No wallet signature and no on-chain transaction. The request is a network call to the enclave.</p>
                 </div>
               )}
             </div>
@@ -96,8 +96,8 @@ export function LienPanel({ lien, testid = "lien-panel" }: { lien: UseLien; test
             <h3 className="lien-h3">Default path</h3>
             {s.activeLoan && loan ? (
               <p className="lien-note">
-                Only <span className="mono">{loan.terms.lender}</span> can move this key, and only by claim_default, after{" "}
-                <b>{formatNs(s.defaultClaimableAtNs)}</b> (due + grace). Before that the contract returns &ldquo;default not due&rdquo;.
+                Only <span className="mono">{loan.terms.lender}</span> can move this key, and only by claim_default, once chain time is strictly after{" "}
+                <b>{formatNs(s.defaultClaimableAtNs)}</b> (due + grace). At that instant the contract still returns &ldquo;default not due&rdquo;.
                 The receiver must be external (&ldquo;distinct external receiver required&rdquo;). These are the borrower-signed terms shown above.
               </p>
             ) : (

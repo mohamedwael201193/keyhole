@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { DEFAULT_PATH_RULES, LIEN_REFUSALS, defaultClaimableAtNs, lienState, lendingText } from "@/lib/lien";
+import { DEFAULT_PATH_RULES, LIEN_REFUSALS, defaultClaimableAtNs, formatNs, lienState, lendingText } from "@/lib/lien";
 import { nearFromYocto } from "@/components/lien/LienPanel";
 import type { Loan } from "@/lib/pledgeClient";
 
@@ -84,6 +84,20 @@ describe("lending text uses the network the contract names", () => {
   });
   it("says so when the config is absent", () => {
     expect(lendingText(null)).toMatch(/not present/);
+  });
+});
+
+describe("formatNs", () => {
+  it("prints Africa/Cairo with seconds, and unknown for a missing or overflowing instant", () => {
+    const ns = 1_700_000_000_000_000_000n;
+    const formatted = new Date(Number(ns / 1_000_000n)).toLocaleString("en-GB", {
+      timeZone: "Africa/Cairo", day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    });
+    expect(formatNs(ns)).toBe(`${formatted} Africa/Cairo`);
+    expect(formatNs(ns)).toMatch(/\d{2}:\d{2}:\d{2}/);
+    expect(formatNs(null)).toBe("unknown");
+    expect(formatNs((BigInt(Number.MAX_SAFE_INTEGER) + 1n) * 1_000_000n)).toBe("unknown");
   });
 });
 

@@ -196,14 +196,24 @@ test('exit confirm shows the route preview numbers, and cancelling signs no with
  expect(await page.evaluate('h.dryRunCalls')).toBe(1);expect(await page.evaluate('h.workerCalls')).toBe(0);expect(await page.evaluate('h.sent.length')).toBe(0);
 });
 
-test('a route preview left pending by a redirect is discarded unsigned, and the next Exit previews again',async({page})=>{
+test('an unbound route preview is not a withdrawal, and the next Exit previews again',async({page})=>{
  await page.goto(url);await expect(page.getByTestId('settlement')).toContainText('Repaid');await readPrivate(page);
  await page.evaluate(`h.setPending({account_id:'alice.near',public_key:'ed25519:x',signature:'s',nonce:'n',recipient:'keyhole',message:JSON.stringify({op:'withdraw_dry_run',account_id:'alice.near',params:{}})})`);
- await expect(page.getByText(/route preview returned by the wallet was discarded/)).toBeVisible();
+ await expect(page.getByText(/does not match the saved exit/)).toBeVisible();
  expect(await page.evaluate('h.authConsumed')).toBe(1);expect(await page.evaluate('h.workerCalls')).toBe(0);expect(await page.evaluate('h.dryRunCalls || 0')).toBe(0);
  await page.getByLabel('Ordinary USDC self-exit').fill('0.10');await page.getByRole('button',{name:'Exit to my wallet'}).click();
  await expect.poll(()=>page.evaluate('h.workerCalls')).toBe(1);
  expect(await page.evaluate('h.dryRunCalls')).toBe(1);expect(await page.evaluate('h.sent[0].amount')).toBe('100000');
+});
+
+test('a redirect return of the matching dry-run signature continues that exit once',async({page})=>{
+ await page.goto(url);await expect(page.getByTestId('settlement')).toContainText('Repaid');await readPrivate(page);
+ const token='nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1';
+ await page.evaluate(`(async()=>{const rec=await h.exits.browserExitStore('alice.near','keys.near','k1').reserve({account:'alice.near',token:'k1',epoch:'1',amount:'100000',status:'AwaitingSignature',intent:'withdraw'});h.setPending({account_id:'alice.near',public_key:'ed25519:x',signature:'redirect-preview',nonce:'n1',recipient:'keyhole',message:JSON.stringify({op:'withdraw_dry_run',account_id:'alice.near',params:{intent_id:rec.id,token_id:'k1',owner_epoch:'1',amount:'100000',to:'alice.near',chain:'near',token:'${token}'}})});})()`);
+ await expect.poll(()=>page.evaluate('h.dryRunCalls||0')).toBe(1);
+ await expect.poll(()=>page.evaluate('h.workerCalls')).toBe(1);
+ expect(await page.evaluate('h.sent.length')).toBe(1);
+ expect(dialogs.some(d=>d.includes('amount_out 990000')&&d.includes('minimum accepted 985000'))).toBe(true);
 });
 
 test('the Pledge button stays disabled until the forfeiture checkbox is ticked, and the screen comes first',async({page})=>{

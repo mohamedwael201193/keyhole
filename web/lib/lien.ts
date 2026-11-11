@@ -70,7 +70,14 @@ export function lienState(control: LienControl | null, loan: Loan | null, config
   };
 }
 
+/** Chain time in Africa/Cairo, including seconds. The instant itself is not a claimable default: the contract uses a strict greater-than. */
 export function formatNs(ns: bigint | null): string {
   if (ns === null) return "unknown";
-  return new Date(Number(ns / 1_000_000n)).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const ms = ns / 1_000_000n;
+  if (ms > BigInt(Number.MAX_SAFE_INTEGER)) return "unknown";
+  const formatted = new Date(Number(ms)).toLocaleString("en-GB", {
+    timeZone: "Africa/Cairo", day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  });
+  return `${formatted} Africa/Cairo`;
 }

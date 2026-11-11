@@ -65,15 +65,23 @@ describe("withdraw_dry_run in the gateway", () => {
 describe("exit preflight wiring", () => {
   it("previews, decides, confirms, and only then signs withdraw, in LivePledge", () => {
     const src = readFileSync(new URL("../app/pledge/LivePledge.tsx", import.meta.url), "utf8");
-    const preview = src.indexOf('wallet.sign("withdraw_dry_run"');
-    const gate = src.indexOf("if(!preview.ok)throw Error(preview.reason)");
-    const confirm = src.indexOf("window.confirm(exitConfirmText(preview,pending.amount))");
-    const signWithdraw = src.indexOf('wallet.sign("withdraw",exitParams)');
-    expect(preview).toBeGreaterThan(0);
-    expect(gate).toBeGreaterThan(preview);
+    const fnStart = src.indexOf("async function continueExit");
+    const fnEnd = src.indexOf("async function ordinaryExit");
+    const fn = src.slice(fnStart, fnEnd);
+    const decided = fn.indexOf("const preview=withdrawDryRunDecision(");
+    const gate = fn.indexOf("if(!preview.ok)throw Error(preview.reason)");
+    const confirm = fn.indexOf("window.confirm(exitConfirmText(preview,pending.amount))");
+    const signWithdraw = fn.indexOf('wallet.sign("withdraw",exitParams)');
+    expect(decided).toBeGreaterThan(-1);
+    expect(gate).toBeGreaterThan(decided);
     expect(confirm).toBeGreaterThan(gate);
     expect(signWithdraw).toBeGreaterThan(confirm);
-    expect(src.slice(src.indexOf("const preview="), gate)).toContain("withdrawDryRunDecision(");
-    expect(src.slice(src.indexOf("const preview="), gate)).toContain("{account,token:USDC,amount:pending.amount,chain:\"near\"}");
+    expect(fn.slice(decided, gate)).toContain("{account,token:USDC,amount:pending.amount,chain:\"near\"}");
+    const ordinary = src.slice(fnEnd);
+    const dry = ordinary.indexOf('wallet.sign("withdraw_dry_run"');
+    expect(dry).toBeGreaterThan(-1);
+    expect(ordinary.indexOf("continueExit(")).toBeGreaterThan(dry);
+    expect(src).toContain("planExitReturn(");
+    expect(src).not.toContain("was discarded");
   });
 });
