@@ -97,4 +97,14 @@ describe("readKeyHistory", () => {
     expect(read.complete).toBe(true);
     expect(read.events.map((e) => e.event).sort()).toEqual(["key_sale", "loan_principal_delivered"]);
   });
+
+  it("does not treat a malformed receipt row as a complete empty history", async () => {
+    for (const body of [{ txns: [{}], cursor: null }, { txns: [{ transaction_hash: 42, actions: [] }], cursor: null }]) {
+      const fetchImpl = vi.fn(async () => Response.json(body)) as unknown as typeof fetch;
+      const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+      expect(read.unavailable).toBe(true);
+      expect(read.complete).toBe(false);
+      expect(read.events).toEqual([]);
+    }
+  });
 });

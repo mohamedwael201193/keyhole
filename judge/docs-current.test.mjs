@@ -12,6 +12,7 @@ const security = read("../SECURITY.md");
 const costs = read("../docs/COSTS_AND_RISK.md");
 const keys = read("../contracts/keys/README.md");
 const en = read("../web/messages/en.json");
+const contributions = read("../CONTRIBUTIONS.md");
 
 test("live identity and the docs that quote it say v2.7", () => {
   assert.equal(identity.contract.version, "2.7.0");
@@ -39,4 +40,18 @@ test("live identity and the docs that quote it say v2.7", () => {
   assert.match(track, /nearhackathon\.com\/HACKATHON\.md/);
   assert.match(en, /"s1": "Keys held by users"/);
   assert.doesNotMatch(en, /Keys minted on mainnet/);
+  assert.doesNotMatch(security, /Current v2\.6 release facts/);
+  assert.doesNotMatch(security, /There is no multisig and no timelock/);
+  assert.doesNotMatch(security, /There is no timelock or multisig yet/);
+  assert.doesNotMatch(security, /without a funding-deadline escape/);
+  assert.doesNotMatch(security, /SOURCE ONLY, NOT PUBLISHED/);
+  assert.doesNotMatch(security, /unpublished local head/);
+  assert.doesNotMatch(keys, /live on `keyhole-devmo\.near` since/);
+  assert.match(security, /1794486987377190950/);
+  assert.match(security, /86400000000000/);
+  assert.match(security, /reclaim_unclaimed_principal/);
+  assert.match(security, /62398a8a/);
+  assert.match(contributions, /compare\/7a8ec4a\.\.\.[0-9a-f]{40}/);
+  assert.match(readme, /compare\/7a8ec4a\.\.\.[0-9a-f]{40}/);
+  assert.doesNotMatch(contributions, /compare\/7a8ec4a\.\.\.66f7070\) is the reviewed source/);
 });

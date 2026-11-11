@@ -53,6 +53,7 @@ bash judge/0-live.sh
 
 No git? Download all three files from that same immutable source commit and run them together:
 
+<!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/c2d8bd390c01acb54d461ad3ce2267eb2ca52a6a/judge/0-live.sh -o keyhole-live.sh
@@ -209,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `643 claims: 342 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `644 claims: 343 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -229,7 +230,7 @@ Each step has a command or a link. The words after **See** are what you should g
 
 **Sign in** with a NEAR wallet (including Meteor and HOT through the wallet selector), MetaMask (signs with EIP-191 `personal_sign`), or Google or email on [/start](https://keyhole-seven.vercel.app/start). The Google and email path creates an embedded NEAR account through Privy, so Privy sees that login. A wallet sign-in does not use Privy. No KYC and no region check are asked for.
 
-Each step says whether it **moves real value on mainnet**. Payable mint/list operations require their prepaid payout slots and explicit onboarding; the current read-flow PASS does not certify every payable flow. [Operational boundary](SECURITY.md#current-v26-release-facts-and-retained-limitations).
+Each step says whether it **moves real value on mainnet**. Payable mint/list operations require their prepaid payout slots and explicit onboarding; the current read-flow PASS does not certify every payable flow. [Operational boundary](SECURITY.md#historical-v26-restoration-not-the-live-release).
 
 | # | Do | See | Moves real value? |
 |---|---|---|---|
@@ -258,7 +259,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (643 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 342 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (644 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 343 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -813,10 +814,10 @@ Current repair validation: [R4 proof and exact finding map](docs/evidence/worker
 | Keys contract unit tests | not in [`docs/metrics.json`](docs/metrics.json) | CI run [43043510571](https://github.com/mohamedwael201193/keyhole/actions/runs/43043510571) logged 342. That is a CI log count, not a local cargo rerun |
 | Keys contract sandbox tests | not in [`docs/metrics.json`](docs/metrics.json) | The same CI run logged 62 pass and 1 ignored. An older 59-pass note is historical |
 | TEE worker unit tests | not in [`docs/metrics.json`](docs/metrics.json) | The same CI run logged 656. That is a CI log count, not a local cargo rerun |
-| CLI tests | **77** in [`docs/metrics.json`](docs/metrics.json) | `cd cli && npm test` on commit `aa75699`, and only when that runner exits 0 |
-| Web unit tests (Vitest) | **1978** in [`docs/metrics.json`](docs/metrics.json) | `cd web && npx vitest run` on that same tree. The source-tarball check passes on the pinned tip |
+| CLI tests | **77** in [`docs/metrics.json`](docs/metrics.json) | `cd cli && npm test` on commit `8a3c85435b9dc129b457c728c0d8be98a9d572a6`, 0 failing tests |
+| Web unit tests (Vitest) | **1978** in [`docs/metrics.json`](docs/metrics.json) | `cd web && npx vitest run` on that same commit, 0 failing tests |
 | Web e2e (Playwright) | excluded from [`docs/metrics.json`](docs/metrics.json) | [`web/e2e`](web/e2e), desktop and mobile. This artifact does not record a Playwright total |
-| Claims in `docs/claims.json` | **643**: offline 342 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **644**: offline 343 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |
@@ -885,7 +886,7 @@ All 24 TEE calls were re-verified: the attestation is present, `executed_wasm_sh
 
 ## 10. Built during the hackathon
 
-- **History.** Original project source begins with [`66f7070`](https://github.com/mohamedwael201193/keyhole/commit/66f7070): contract, TEE worker, CLI/MCP, judge kit and website. Earlier bootstrap: [`7a8ec4a`](https://github.com/mohamedwael201193/keyhole/commit/7a8ec4a). The diff between those two commits is [`7a8ec4a...66f7070`](https://github.com/mohamedwael201193/keyhole/compare/7a8ec4a...66f7070). Disclosure, licenses and the eligible window: [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
+- **History.** Original project source begins with [`66f7070`](https://github.com/mohamedwael201193/keyhole/commit/66f7070): contract, TEE worker, CLI/MCP, judge kit and website. Earlier bootstrap: [`7a8ec4a`](https://github.com/mohamedwael201193/keyhole/commit/7a8ec4a). The diff between those two commits is [`7a8ec4a...66f7070`](https://github.com/mohamedwael201193/keyhole/compare/7a8ec4a...66f7070). The baseline through the reviewed source is [`7a8ec4a...8a3c85435b9dc129b457c728c0d8be98a9d572a6`](https://github.com/mohamedwael201193/keyhole/compare/7a8ec4a...8a3c85435b9dc129b457c728c0d8be98a9d572a6). Disclosure, licenses and the eligible window: [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
 - **Proof index.** Current, historical and source-only records, with team or unknown attribution: [PROOFS.md](PROOFS.md). The capability map is [TRACK_COVERAGE.md](TRACK_COVERAGE.md).
 - **Development.** AI-assisted implementation directed by devmo; original author/coauthor metadata is retained. Pull requests and CI expose each change. AI output is not independent review: the threat model, receipts and runnable judge kit are the checks a reader can run.
 - **Viewing right.** A lender-facing certificate is a loan-bound selective disclosure of that token, nonce, epoch and raw floor. Fetching it from the worker can be billed enclave compute, not only a network call. It is not spend authority. Lending is off and the next loan nonce is 0. [SECURITY.md](SECURITY.md#viewing-right-and-selective-disclosure).

@@ -11,13 +11,15 @@
     "sandbox",
     "playwright"
   ],
-  "commit": "aa75699b167351eb1bc7677e46ccdd3feb895935",
-  "measured_at": "2026-11-11T16:23:58Z",
+  "commit": "8a3c85435b9dc129b457c728c0d8be98a9d572a6",
+  "measured_at": "2026-11-11T16:47:11Z",
+  "failed": 0,
+  "run_id": "8d5b46eaf98db3f4d8e42e51ef136a7c46886b7e2d40e67e340c23a07caf3885",
   "runners": {
     "cli": "cd cli && npm test",
     "web-unit": "cd web && npx vitest run",
     "contract": "cd contracts/keys && cargo test --locked",
     "worker": "cd tee/worker && cargo test --locked"
   },
-  "note": "cli 77 is npm test on aa75699, 0 failed. web-unit 1978 is the vitest suite on that same tree: 1977 passed there and tests/sourceTarball.test.ts failed only because the packed pin still pointed at the previous snapshot. That test passes once the publisher commit repoints the pin, so the pinned tip is 1978 passing and 0 failing. Contract, worker, sandbox and Playwright were not run and are not in total. CI run 43043510571 logged contract 342, worker 656, and sandbox 62 pass with 1 ignored; those are CI log counts, not rows here."
+  "note": "cli 77 and web-unit 1978 were measured on this commit with 0 failing tests. run_id is sha256 of the commit, the suite lines and the failing-test count. Contract, worker, sandbox and Playwright were not run and are not in total. A CI log count is not a row in this file."
 }

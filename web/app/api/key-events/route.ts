@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   if (hit && Date.now() - hit.at < TTL) return json({ ok: true, id, events: hit.events, complete: true, unavailable: false });
   const read = await readKeyHistory({ tokenId: id, contractId: KEYS_CONTRACT });
   if (read.unavailable || !read.complete) {
-    return json({ ok: false, error: { code: "unavailable" }, id, events: read.events, complete: false });
+    return json({ ok: false, error: { code: "unavailable" }, id, events: read.events, complete: false, unavailable: true });
   }
   cache.set(id, { at: Date.now(), events: read.events });
   return json({ ok: true, id, events: read.events, complete: true, unavailable: false });

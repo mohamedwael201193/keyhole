@@ -30,4 +30,10 @@ test("the README checkout fence is the one the runner executes", async () => {
   const ran = await runFence(rows[0].body, { timeoutMs: 120_000 });
   assert.equal(ran.code, 0);
   assert.equal(safeFences(readFileSync("VERIFY.md", "utf8")).length, 0);
+  const raw = documentFences(["README.md"]).filter((row) => row.body.includes("receipt_proof.py") && row.body.includes("bash keyhole-live.sh"));
+  assert.equal(raw.length, 1);
+  assert.match(raw[0].body, /judge\/0-live\.sh/);
+  assert.match(raw[0].body, /IDENTITY_JSON="\$PWD\/identity\.json"/);
+  assert.match(raw[0].body, /curl -fsSL https:\/\/raw\.githubusercontent\.com\/mohamedwael201193\/keyhole\/[0-9a-f]{40}\/judge\/receipt_proof\.py/);
+  assert.equal(fenceAllowed(raw[0].body), true);
 });

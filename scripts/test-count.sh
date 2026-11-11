@@ -88,5 +88,9 @@ fi
 
 printf '%s\n' "${out[@]}"
 printf '%-14s %5d\n' TOTAL "$total"
-echo "commit $(git rev-parse HEAD)  $(date -u +%FT%TZ)"
-node scripts/gen-metrics.mjs --write --file "$dest" --total "$total" --lines "$(printf '%s\n' "${out[@]}")" --commit "$(git rev-parse HEAD)" --measured-at "$(date -u +%FT%TZ)" --excluded "$excluded"
+commit=$(git rev-parse HEAD)
+measured=$(date -u +%FT%TZ)
+run_id=$(printf '%s\n%s\n%s\n0\n' "$commit" "$measured" "$total" | sha256sum | awk '{print $1}')
+echo "commit $commit  $measured"
+echo "run_id $run_id"
+node scripts/gen-metrics.mjs --write --file "$dest" --total "$total" --lines "$(printf '%s\n' "${out[@]}")" --commit "$commit" --measured-at "$measured" --excluded "$excluded" --run-id "$run_id" --failed 0

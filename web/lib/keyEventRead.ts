@@ -38,12 +38,24 @@ function stamp(v: unknown): number | null {
   return /^\d+$/.test(s) ? Number(BigInt(s) / 1_000_000n) : null;
 }
 
-/** Nearblocks receipt page. A 200 body without a `txns` array is not an empty history. */
+/** One Nearblocks receipt row. A missing hash or a non-array action list is not a usable receipt. */
+export function receiptRowOk(item: unknown): boolean {
+  if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+  const row = item as { transaction_hash?: unknown; actions?: unknown; predecessor_account_id?: unknown; block_timestamp?: unknown };
+  if (typeof row.transaction_hash !== "string" || row.transaction_hash.length === 0) return false;
+  if (!Array.isArray(row.actions)) return false;
+  if (row.actions.some((action) => !action || typeof action !== "object" || Array.isArray(action))) return false;
+  if (row.predecessor_account_id != null && typeof row.predecessor_account_id !== "string") return false;
+  if (row.block_timestamp != null && typeof row.block_timestamp !== "string" && typeof row.block_timestamp !== "number") return false;
+  return true;
+}
+
+/** Nearblocks receipt page. A 200 body without a `txns` array, or a row that is not a receipt, is not an empty history. */
 export function receiptPage(body: unknown): { txns: unknown[]; cursor: string | null } | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const row = body as { txns?: unknown; cursor?: unknown };
   if (!Object.prototype.hasOwnProperty.call(row, "txns") || !Array.isArray(row.txns)) return null;
-  if (row.txns.some((item) => !item || typeof item !== "object" || Array.isArray(item))) return null;
+  if (row.txns.some((item) => !receiptRowOk(item))) return null;
   if (row.cursor != null && typeof row.cursor !== "string") return null;
   return { txns: row.txns, cursor: row.cursor ? row.cursor : null };
 }
@@ -73,14 +85,15 @@ export async function pagesFor(
   return { txns, complete: false, unavailable: false };
 }
 
-export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boolean): Hit[] {
+export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boolean): { hits: Hit[]; bad: boolean } {
   const hits: Hit[] = [];
   const seen = new Set<string>();
+  let bad = false;
   for (const raw of txns) {
-    if (!raw || typeof raw !== "object") continue;
-    const t = raw as { transaction_hash?: unknown; predecessor_account_id?: unknown; block_timestamp?: unknown; actions?: { args?: unknown }[] };
-    const tx = typeof t.transaction_hash === "string" ? t.transaction_hash : "";
-    if (!tx || seen.has(tx)) continue;
+    if (!receiptRowOk(raw)) { bad = true; continue; }
+    const t = raw as { transaction_hash: string; predecessor_account_id?: unknown; block_timestamp?: unknown; actions?: { args?: unknown }[] };
+    const tx = t.transaction_hash;
+    if (seen.has(tx)) continue;
     if (!account) {
       const args = (t.actions ?? []).map((a) => a?.args);
       if (!args.some((a) => receiptToken(a) === tokenId)) continue;
@@ -93,7 +106,7 @@ export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boo
       account,
     });
   }
-  return hits;
+  return { hits, bad };
 }
 
 export async function signerOf(fetchImpl: FetchLike, hit: Hit, contractId: string, nearblocks = NEARBLOCKS): Promise<string | null> {
@@ -143,7 +156,9 @@ export async function readKeyHistory(opts: {
     const page = await pagesFor(fetchImpl, opts.contractId, method, opts.nearblocks);
     if (!page.complete) complete = false;
     if (page.unavailable) unavailable = true;
-    for (const hit of hitsFrom(page.txns, opts.tokenId, account)) {
+    const found = hitsFrom(page.txns, opts.tokenId, account);
+    if (found.bad) { unavailable = true; complete = false; }
+    for (const hit of found.hits) {
       if (seen.has(hit.tx)) continue;
       seen.add(hit.tx);
       hits.push(hit);

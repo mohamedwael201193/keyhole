@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 
 const destDefault = new URL("../docs/metrics.json", import.meta.url);
 
-export function metricsFrom({ total, lines, commit, measuredAt, excluded }) {
+export function metricsFrom({ total, lines, commit, measuredAt, excluded, runId, failed = 0 }) {
   const suites = {};
   for (const line of String(lines || "").split("\n")) {
     const m = line.match(/^(\S+)\s+(\d+)\s*$/);
@@ -20,6 +20,8 @@ export function metricsFrom({ total, lines, commit, measuredAt, excluded }) {
   if (!/^[0-9a-f]{40}$/.test(commit || "")) throw new Error("missing commit");
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(measuredAt || "")) throw new Error("missing measured_at");
   if (!skip.length || skip.some((name) => name in suites)) throw new Error("excluded suites");
+  if (failed !== 0) throw new Error("failed tests");
+  if (!/^[0-9a-f]{64}$/.test(runId || "")) throw new Error("missing run_id");
   return {
     ok: true,
     total,
@@ -27,6 +29,8 @@ export function metricsFrom({ total, lines, commit, measuredAt, excluded }) {
     excluded: skip,
     commit,
     measured_at: measuredAt,
+    failed: 0,
+    run_id: runId,
     runners: {
       cli: "cd cli && npm test",
       "web-unit": "cd web && npx vitest run",
@@ -47,6 +51,18 @@ function fileUrl() {
   return named ? named : destDefault;
 }
 
+/** True when `sha` is a commit object. A depth-one checkout fetches that one object from origin. */
+export function ensureCommit(sha, cwd = process.cwd()) {
+  if (!/^[0-9a-f]{40}$/.test(sha || "")) return false;
+  const present = () => {
+    const seen = spawnSync("git", ["cat-file", "-t", sha], { cwd, encoding: "utf8" });
+    return seen.status === 0 && seen.stdout.trim() === "commit";
+  };
+  if (present()) return true;
+  const fetched = spawnSync("git", ["fetch", "--depth", "1", "origin", sha], { cwd, encoding: "utf8" });
+  return fetched.status === 0 && present();
+}
+
 export function metricsOk(doc) {
   if (!doc || doc.ok !== true || !doc.suites || typeof doc.total !== "number") return false;
   const sum = Object.values(doc.suites).reduce((n, v) => n + Number(v), 0);
@@ -55,6 +71,9 @@ export function metricsOk(doc) {
   if (typeof doc.measured_at !== "string" || !doc.measured_at) return false;
   if (!Array.isArray(doc.excluded) || doc.excluded.length === 0) return false;
   if (doc.excluded.some((name) => name in doc.suites)) return false;
+  if (doc.failed !== 0) return false;
+  if (!/^[0-9a-f]{64}$/.test(doc.run_id || "")) return false;
+  if (typeof doc.note === "string" && /[1-9]\d* failed|projected/.test(doc.note)) return false;
   return true;
 }
 
@@ -64,8 +83,7 @@ if (process.argv.includes("--check")) {
     console.error("metrics.json is not a consistent successful run");
     process.exit(1);
   }
-  const seen = spawnSync("git", ["cat-file", "-t", doc.commit], { encoding: "utf8" });
-  if (seen.status !== 0 || seen.stdout.trim() !== "commit") {
+  if (!ensureCommit(doc.commit)) {
     console.error("metrics commit is not in this repository");
     process.exit(1);
   }
@@ -79,6 +97,8 @@ if (process.argv.includes("--write")) {
     commit: arg("--commit") || "",
     measuredAt: arg("--measured-at") || "",
     excluded: arg("--excluded") || "",
+    runId: arg("--run-id") || "",
+    failed: Number(arg("--failed") || "0"),
   });
   const target = fileUrl();
   writeFileSync(target, JSON.stringify(doc, null, 2) + "\n");

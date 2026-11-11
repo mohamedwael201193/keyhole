@@ -48,13 +48,25 @@ export function recordedBindingHolds() {
   return bound && proof.ok === true && proof.statement.log_head.length === 64 && bodyMoved && proofMoved && ownerMoved;
 }
 
+/** Recorded key log. A flipped signature, a changed event body, and a reordered chain all fail. No network. Historical fixture, not a new enclave call. */
+export function recordedLogMutationsFail() {
+  const doc = JSON.parse(readFileSync(new URL("../web/tests/fixtures/keylog_k5f47.json", import.meta.url), "utf8"));
+  const ok = checkLog(doc);
+  const flipped = doc.sig.slice(0, -1) + (doc.sig.endsWith("a") ? "b" : "a");
+  const sig = checkLog({ ...doc, sig: flipped });
+  const events = doc.events.map((row, i) => (i === 0 ? { ...row, kind: row.kind === "deposit" ? "withdraw" : "deposit" } : row));
+  const body = checkLog({ ...doc, events });
+  const reordered = checkLog({ ...doc, events: [doc.events[1], doc.events[0], ...doc.events.slice(2)] });
+  return ok.ok === true && ok.head === doc.head && sig.ok === false && sig.reason === "signature" && body.ok === false && reordered.ok === false && reordered.reason === "chain";
+}
+
 if (process.env.KEYHOLE_NETWORK) {
   console.error("refusing: readme-verify does not use the network");
   process.exit(2);
 }
 if (import.meta.url === `file://${process.argv[1]}`) {
   const doc = signedFixture();
-  if (!checkLog(doc).ok || !mutationsFail(doc) || !recordedBindingHolds()) {
+  if (!checkLog(doc).ok || !mutationsFail(doc) || !recordedBindingHolds() || !recordedLogMutationsFail()) {
     console.error("FAIL mutation verifier");
     process.exit(1);
   }
