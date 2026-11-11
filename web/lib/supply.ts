@@ -1,8 +1,7 @@
 import { KEYS_CONTRACT } from "./config";
-import { view } from "./near";
-import type { ViewOpts } from "./rpc";
+import { nearViewMeta, type ViewOpts } from "./rpc";
 
-export type SupplySnapshot = { supply: number; minted: number; excluded_test_keys: number };
+export type SupplySnapshot = { supply: number; minted: number; excluded_test_keys: number; block_hash: string };
 
 /**
  * One finalized pair of views. `supply` is keys held by people: minted minus the contract-held test key.
@@ -14,20 +13,26 @@ export function holderSupply(total: string, own: string): SupplySnapshot | null 
   const excluded = Number(own);
   if (!Number.isSafeInteger(minted) || !Number.isSafeInteger(excluded)) return null;
   if (excluded > minted) return null;
-  return { supply: minted - excluded, minted, excluded_test_keys: excluded };
+  return { supply: minted - excluded, minted, excluded_test_keys: excluded, block_hash: "" };
 }
 
 /**
  * Keys held by people, for the home stat. Total minted (NEP-181 nft_total_supply) minus the tokens the
- * contract account itself holds (the test key, KEYHOLE Key #0). Live on every call unless `opts.shared` is set.
+ * contract account itself holds (the test key, KEYHOLE Key #0). Both reads use one finalized block hash.
  */
 export async function readHolderSupply(opts?: ViewOpts): Promise<SupplySnapshot | null> {
   try {
+    const pinOpts = { timeoutMs: opts?.timeoutMs, shared: false as const };
+    const pin = await nearViewMeta<string>("nft_total_supply", {}, KEYS_CONTRACT, pinOpts);
+    if (!pin.blockHash) return null;
+    const at = { ...pinOpts, blockId: pin.blockHash };
     const [total, own] = await Promise.all([
-      view<string>("nft_total_supply", {}, KEYS_CONTRACT, opts),
-      view<string>("nft_supply_for_owner", { account_id: KEYS_CONTRACT }, KEYS_CONTRACT, opts),
+      nearViewMeta<string>("nft_total_supply", {}, KEYS_CONTRACT, at),
+      nearViewMeta<string>("nft_supply_for_owner", { account_id: KEYS_CONTRACT }, KEYS_CONTRACT, at),
     ]);
-    return holderSupply(String(total), String(own));
+    if (total.blockHash !== pin.blockHash || own.blockHash !== pin.blockHash) return null;
+    const snap = holderSupply(String(total.value), String(own.value));
+    return snap ? { ...snap, block_hash: pin.blockHash } : null;
   } catch { return null; }
 }
 

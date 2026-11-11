@@ -22,7 +22,7 @@ Storage byte price used for prepaid slots is `env::storage_byte_cost()` (`10^19`
 
 ## Historical mainnet (v2.4)
 
-Live delivery is a native push refund on the deployed contract. It is not the candidate's pull-credit `claim_payout` path. The rows below are the deployed v2.4 behavior. Current `contracts/keys/src/lib.rs` is the v2.5 candidate; do not read it as the live refund path. Proof of what is deployed: [contract v2.4 evidence](evidence/contract-v2-4/README.md), [identity.json](../identity.json), and [`contracts/keys/deployed/keyhole_keys.wasm`](../contracts/keys/deployed/keyhole_keys.wasm).
+The rows below are the historical v2.4 behavior: a native push refund on that deployed contract. They are not the live v2.7 `claim_payout` path. Current `contracts/keys/src/lib.rs` is the live v2.7 source. Proof of the v2.4 observation: [contract v2.4 evidence](evidence/contract-v2-4/README.md). Proof of what is deployed now: [identity.json](../identity.json) and [`contracts/keys/deployed/keyhole_keys.wasm`](../contracts/keys/deployed/keyhole_keys.wasm).
 
 | Action | Constant | Amount | Refundable? | Source |
 |---|---|---|---|---|
@@ -44,7 +44,7 @@ Measured in [candidate identity](../contracts/keys/release/v2.5/identity.json). 
 | Code storage at 10^19 yoctoNEAR/byte | 2.41621 NEAR | 4.85855 NEAR | same records |
 | Increment over live code | — | 244,234 bytes / 2.44234 NEAR | [measured size record](evidence/integration-stack/contract-size.md) |
 
-## Candidate (v2.5, not deployed)
+## Historical v2.5 observation (that build was deployed and is not the live contract)
 
 Reconcile these with [`contracts/keys/src/pledge.rs`](../contracts/keys/src/pledge.rs) and [`contracts/keys/src/sale.rs`](../contracts/keys/src/sale.rs).
 

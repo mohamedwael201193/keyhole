@@ -8,6 +8,10 @@ const readme = read("../README.md");
 const track = read("../TRACK_COVERAGE.md");
 const judge = read("../JUDGE_AGENT.md");
 const verify = read("../VERIFY.md");
+const security = read("../SECURITY.md");
+const costs = read("../docs/COSTS_AND_RISK.md");
+const keys = read("../contracts/keys/README.md");
+const en = read("../web/messages/en.json");
 
 test("live identity and the docs that quote it say v2.7", () => {
   assert.equal(identity.contract.version, "2.7.0");
@@ -22,4 +26,17 @@ test("live identity and the docs that quote it say v2.7", () => {
   assert.match(readme, /ownership-and-limits/);
   assert.doesNotMatch(readme, /keeps no record of who the holder is/);
   assert.match(readme, /internal reproducible review|Internally reviewed/i);
+  assert.doesNotMatch(security, /worker serving the site is `d337e822`/);
+  assert.doesNotMatch(security, /current arbitrary/);
+  assert.doesNotMatch(security, /v2\.6 live/);
+  assert.doesNotMatch(keys, /NOT deployed/);
+  assert.doesNotMatch(keys, /Superseded by live v2\.6/);
+  assert.doesNotMatch(costs, /is the v2\.5 candidate/);
+  assert.doesNotMatch(costs, /Candidate \(v2\.5, not deployed\)/);
+  assert.doesNotMatch(readme, /Playwright\) \| recorded/);
+  assert.match(readme, /CONTRIBUTIONS\.md/);
+  assert.match(readme, /PROOFS\.md/);
+  assert.match(track, /nearhackathon\.com\/HACKATHON\.md/);
+  assert.match(en, /"s1": "Keys held by users"/);
+  assert.doesNotMatch(en, /Keys minted on mainnet/);
 });

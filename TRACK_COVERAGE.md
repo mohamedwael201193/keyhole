@@ -3,7 +3,7 @@
 Track mapping: implemented features and their concrete evidence. This is not certification that every optional prompt or trust property is complete; residual boundaries are retained in [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 Current release: contract v2.7 and guarded worker `62398a8a` are live; lending remains OFF. Each scope label describes only the feature actually evidenced.
 
-Official NFT-track sentence, quoted once from [tracks/10-nfts.md](https://github.com/nearai/near-hackathon-prompt-examples/blob/main/tracks/10-nfts.md): “Build NFTs as accounts — assets that own money, earn royalties, hold inventory, carry credentials, memberships or access rights. Ownership with behavior.”
+Official NFT-track sentence, quoted once from the [HACKATHON.md tracks table](https://nearhackathon.com/HACKATHON.md): “Build NFTs as accounts — assets that own money, earn royalties, hold inventory, carry credentials, memberships or access rights. Ownership with behavior.” The prompt file is a separate reference and is worded differently: [tracks/10-nfts.md](https://github.com/nearai/near-hackathon-prompt-examples/blob/main/tracks/10-nfts.md).
 
 | Capability | Implementation | Do this / see this | Proof | Status |
 |---|---|---|---|---|
@@ -59,9 +59,11 @@ Official NFT-track sentence, quoted once from [tracks/10-nfts.md](https://github
 | Attack demo on the guard: a scripted agent obeys an injected instruction, the guard refuses before signing | [`scripts/attack-demo.mts`](scripts/attack-demo.mts): the signer is a stub that throws, and the run asserts it was never called. Refusals only: the worker does not yet pay third parties | [log](docs/evidence/attack-demo/2026-11-07.log) | Local refusal-before-signing demo |
 | TEE attestation | /verify, `verify.sh`, judge kit | README §7 | ✅ |
 
-## Counts (reproduce in README §9)
+## Counts
 
-1551 passing tests at `d0305f2`: contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct (135 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
+Historical snapshot at `d0305f2`: 1551 passing tests (contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct). That snapshot is not the current artifact. Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md).
+
+Current recorded suites are in [`docs/metrics.json`](docs/metrics.json): the CLI and web unit rows only. Contract, worker, sandbox and Playwright are excluded from that total. CI run [43043510571](https://github.com/mohamedwael201193/keyhole/actions/runs/43043510571) logged contract 342, worker 656, and sandbox 62 pass with 1 ignored. Those are CI log counts, not a local cargo rerun, and they are not rows in `docs/metrics.json`.
 
 ## Continuity
 

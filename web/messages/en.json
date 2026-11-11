@@ -34,7 +34,7 @@
     "body": "The NFT is the viewing key. The account trades inside an attested enclave. Hold the key, run the account. Sell it, and the account goes with it.",
     "cta": "Enter the vault",
     "cta2": "Verify the enclave",
-    "s1": "Keys minted on mainnet",
+    "s1": "Keys held by users",
     "s2": "Checks run in your browser",
     "s3": "Worker code hash",
     "vault": "Vault open",

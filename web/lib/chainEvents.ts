@@ -20,6 +20,9 @@ export const TOKEN_METHODS = [
   "cancel_loan",
   "claim_default",
   "reclaim_unclaimed_principal",
+  "on_loan_policy",
+  "reconcile_loan_policy",
+  "retry_loan_policy",
 ] as const;
 
 /**
@@ -57,8 +60,41 @@ const REQUIRED: Record<string, readonly string[]> = {
   loan_default: ["token_id", "nonce", "receiver_id"],
   loan_reclaim: ["token_id", "nonce", "lender", "principal"],
   loan_principal_delivered: ["token_id", "nonce", "payout_nonce"],
+  loan_closed: ["token_id", "nonce", "resolution"],
   collateral_ready: ["token_id", "wallet_pubkey"],
 };
+
+/** Contract events this page does not present as sale or loan history. The source scan must match this set plus REQUIRED. */
+export const UNDISPLAYED_KEYHOLE_EVENTS = [
+  "value_op_begin",
+  "value_op_finish",
+  "royalty_policy",
+  "transfer_reservation_missing",
+  "treasury_credit",
+  "payout_storage_register",
+  "lending_toggle",
+  "payout_claim",
+  "payout_reconciled",
+  "payout_reconcile_refused",
+  "treasury_reconciled",
+  "treasury_reconcile_refused",
+  "treasury_recover",
+  "payout_apply_failed",
+  "principal_cashout_failed",
+  "principal_activation_refused",
+  "treasury_apply_failed",
+  "sale_policy_result_unknown",
+  "protected_sale",
+  "owner_proposed",
+  "owner_proposal_cancelled",
+  "upgrade_cancelled",
+  "owner_changed",
+  "upgrade_staged",
+  "upgrade_applied",
+  "wind_down",
+] as const;
+
+export const KEYHOLE_EVENT_FIELDS = REQUIRED;
 
 /** A NEAR execution status that produced a value or a follow-up receipt. `Failure` is not included. */
 export function outcomeSucceeded(status: unknown): boolean {
@@ -187,8 +223,11 @@ const TITLES: Record<string, string> = {
   loan_default: "Loan defaulted",
   loan_reclaim: "Unclaimed principal reclaimed",
   loan_principal_delivered: "Principal delivered",
+  loan_closed: "Loan closed",
   collateral_ready: "Collateral ready",
 };
+
+export const EVENT_TITLES = TITLES;
 
 /** A short title and a public detail line. Unknown kinds are not labelled as verified history. */
 export function describeChainEvent(e: IndexedEvent): { title: string; detail: string } | null {
@@ -202,6 +241,7 @@ export function describeChainEvent(e: IndexedEvent): { title: string; detail: st
     who(d.buyer) ? `buyer ${who(d.buyer)}` : "",
     who(d.lender) ? `lender ${who(d.lender)}` : "",
     present(d.nonce) ? `nonce ${d.nonce}` : "",
+    typeof d.resolution === "string" && d.resolution ? d.resolution : "",
   ].filter(Boolean);
   return { title, detail: parts.join(" · ") || "NEP-297 event" };
 }

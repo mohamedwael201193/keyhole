@@ -65,6 +65,31 @@ describe("GET /api/agent", () => {
     expect(await policy.json()).toEqual({ ok: false, error: { code: "upstream", upstream_status: 200 } });
   });
 
+  it("refuses a shaped 200 whose counters are negative or whose caps are missing", async () => {
+    vi.stubEnv("AGENT_API_BASE_URL", "https://agent.example.test");
+    vi.stubEnv("AGENT_API_KEY", "test-key-not-a-secret");
+    vi.stubEnv("AGENT_API_AGENT_ID", AGENT);
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (String(url).endsWith("/v1/quotas")) {
+        return new Response(JSON.stringify({ limits: { daily_agents: -1, requests_per_minute: -1 }, usage: { agents_last_24_hours: -2, requests_this_minute: -3 } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({
+        revision: 1,
+        status: "active",
+        policy: {
+          limits: { per_transaction: {}, daily: {} },
+          budget: { daily_usd: "not-a-number" },
+          actions: ["swap"],
+          destinations: { mode: "only", list: [] },
+        },
+      }), { status: 200 });
+    }));
+    const quotas = await GET(req("quotas", "192.0.2.27"));
+    expect(await quotas.json()).toEqual({ ok: false, error: { code: "upstream", upstream_status: 200 } });
+    const policy = await GET(req("policy", "192.0.2.28"));
+    expect(await policy.json()).toEqual({ ok: false, error: { code: "upstream", upstream_status: 200 } });
+  });
+
   it("names a timeout without a 502", async () => {
     vi.stubEnv("AGENT_API_BASE_URL", "https://agent.example.test");
     vi.stubEnv("AGENT_API_KEY", "test-key-not-a-secret");

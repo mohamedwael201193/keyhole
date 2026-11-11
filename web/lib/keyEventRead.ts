@@ -38,6 +38,16 @@ function stamp(v: unknown): number | null {
   return /^\d+$/.test(s) ? Number(BigInt(s) / 1_000_000n) : null;
 }
 
+/** Nearblocks receipt page. A 200 body without a `txns` array is not an empty history. */
+export function receiptPage(body: unknown): { txns: unknown[]; cursor: string | null } | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const row = body as { txns?: unknown; cursor?: unknown };
+  if (!Object.prototype.hasOwnProperty.call(row, "txns") || !Array.isArray(row.txns)) return null;
+  if (row.txns.some((item) => !item || typeof item !== "object" || Array.isArray(item))) return null;
+  if (row.cursor != null && typeof row.cursor !== "string") return null;
+  return { txns: row.txns, cursor: row.cursor ? row.cursor : null };
+}
+
 /** One method's receipt pages, stopped at `MAX_EVENT_PAGES`. */
 export async function pagesFor(
   fetchImpl: FetchLike,
@@ -51,9 +61,10 @@ export async function pagesFor(
     const q = cursor ? `&cursor=${encodeURIComponent(cursor)}` : "";
     const res = await getJson(fetchImpl, `${nearblocks}/v1/account/${contractId}/receipts?method=${method}&per_page=${EVENT_PAGE_SIZE}${q}`);
     if (!res.ok) return { txns, complete: false, unavailable: true };
-    const body = res.body as { txns?: unknown; cursor?: unknown };
-    const page = Array.isArray(body?.txns) ? body.txns : [];
-    const next = typeof body?.cursor === "string" && body.cursor ? body.cursor : null;
+    const parsed = receiptPage(res.body);
+    if (!parsed) return { txns, complete: false, unavailable: true };
+    const page = parsed.txns;
+    const next = parsed.cursor;
     txns.push(...page);
     const step = pageStep({ txns: page, cursor: next }, i);
     if (step.stop) return { txns, complete: step.complete, unavailable: false };

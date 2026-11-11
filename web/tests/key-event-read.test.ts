@@ -43,6 +43,27 @@ describe("readKeyHistory", () => {
     expect(calls).toBeGreaterThan(n);
   });
 
+  it("does not call an empty object a complete history", async () => {
+    const fetchImpl = vi.fn(async () => Response.json({})) as unknown as typeof fetch;
+    const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+    expect(read.unavailable).toBe(true);
+    expect(read.complete).toBe(false);
+    expect(read.events).toEqual([]);
+  });
+
+  it("keeps a loan_closed event from the policy callback", async () => {
+    const closed = `EVENT_JSON:${JSON.stringify({ standard: "keyhole", version: "1.0.0", event: "loan_closed", data: [{ token_id: TOKEN, nonce: "4", resolution: "repaid" }] })}`;
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") return Response.json(rpc([{ outcome: { executor_id: CONTRACT, status: { SuccessValue: "" }, logs: [closed] } }]));
+      if (String(url).includes("method=on_loan_policy")) return Response.json({ txns: [receipt("on_loan_policy", TOKEN, "closetx")], cursor: null });
+      return Response.json({ txns: [], cursor: null });
+    }) as unknown as typeof fetch;
+    const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+    expect(read.unavailable).toBe(false);
+    expect(read.complete).toBe(true);
+    expect(read.events.map((e) => e.event)).toEqual(["loan_closed"]);
+  });
+
   it("treats archival HTTP 503 as unavailable", async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return new Response("down", { status: 503 });

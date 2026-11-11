@@ -881,6 +881,27 @@ test("settle: a malformed agent 200 leaves Activity up", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("settle: a shaped invalid agent 200 does not render NaN", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  const usdc = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+  await page.route("**/api/agent**", (route) => {
+    const u = route.request().url();
+    if (u.includes("r=network")) return route.fulfill({ status: 200, json: { ok: true, body: { network: "mainnet", status: { overall: "operational" } } } });
+    if (u.includes("r=policy")) {
+      return route.fulfill({ status: 200, json: { ok: true, body: { revision: 1, status: "active", policy: { limits: { per_transaction: {}, daily: {} }, budget: { daily_usd: "not-a-number" }, actions: ["swap"], destinations: { mode: "only", list: [] } } } } });
+    }
+    return route.fulfill({ status: 200, json: { ok: true, body: { limits: { daily_agents: -1, requests_per_minute: -1 }, usage: { agents_last_24_hours: -2, requests_this_minute: -3 } } } });
+  });
+  await page.goto("/settle");
+  await expect(page.getByTestId("activity-page")).toBeVisible();
+  await expect(page.getByTestId("agent-policy-down")).toBeVisible();
+  await expect(page.getByTestId("agent-quotas-down")).toBeVisible();
+  await expect(page.getByText("NaN")).toHaveCount(0);
+  await expect(page.getByText(usdc)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("settle: a vault trade is shown end to end with its attested call and intent hash", async ({ page }) => {
   await page.goto("/settle");
   const v = page.getByTestId("vault-trade");

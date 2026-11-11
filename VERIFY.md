@@ -14,8 +14,4 @@ The check compares the on-chain code hash with `identity.json`, reads `config`, 
 
 Longer commands are in [JUDGE_AGENT.md](JUDGE_AGENT.md). `judge/live.mts` is opt-in (`KEYHOLE_LIVE_OPT_IN=1`) because it loads a wallet and can mint. It is not this check.
 
-<!-- keyhole-fence: safe -->
-```bash
-test -z "${KEYHOLE_SENTINEL-}"
-echo fence-ok
-```
+The executable checkout fence is the generated block in [README.md](README.md#1-verify-in-5-minutes-zero-install), marked `keyhole-fence: safe`. `node judge/check-readme.mjs README.md` runs that fence in a clean directory and a clean environment and keeps its exit code.

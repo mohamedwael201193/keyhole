@@ -71,10 +71,10 @@ export function AgentPanel() {
       )}
       {err && <p className="note" role="status" data-testid="agent-err">{agentErr(err)}</p>}
       {net && <p className="note" data-testid="agent-net">Network <b>{net.network}</b> · status <b>{net.status.overall}</b></p>}
-      {q && <p className="note" data-testid="agent-quotas">Quotas: {q.usage.agents_last_24_hours}/{q.limits.daily_agents} agents today · {q.usage.requests_this_minute}/{q.limits.requests_per_minute} requests this minute</p>}
+      {q && [q.usage.agents_last_24_hours, q.limits.daily_agents, q.usage.requests_this_minute, q.limits.requests_per_minute].every((n) => Number.isSafeInteger(n) && n >= 0) && <p className="note" data-testid="agent-quotas">Quotas: {q.usage.agents_last_24_hours}/{q.limits.daily_agents} agents today · {q.usage.requests_this_minute}/{q.limits.requests_per_minute} requests this minute</p>}
       {quotaNote && <p className="note" role="status" data-testid="agent-quotas-down">{quotaNote}</p>}
       {policyNote && <p className="note" role="status" data-testid="agent-policy-down">{policyNote}</p>}
-      {p && (
+      {p && [Number(p.limits.per_transaction[USDC]), Number(p.limits.daily[USDC]), Number(p.budget.daily_usd)].every((n) => Number.isFinite(n) && n >= 0) && (
         <table className="ptab" data-testid="agent-policy" data-match={canon({ limits: p.limits, budget: p.budget, actions: p.actions, destinations: p.destinations }) === canon({ limits: expect.limits, budget: expect.budget, actions: expect.actions, destinations: expect.destinations }) ? "1" : "0"}>
           <tbody>
             <tr><th>Per transaction</th><td>${(Number(p.limits.per_transaction[USDC]) / 1e6).toFixed(2)} USDC</td></tr>

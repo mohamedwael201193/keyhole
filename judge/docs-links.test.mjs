@@ -8,15 +8,17 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const files = [
   "README.md", "SECURITY.md", "THREAT_MODEL.md", "TRACK_COVERAGE.md", "JUDGE_AGENT.md",
   "VERIFY.md", "PROOFS.md", "tee/worker/README.md", "contracts/keys/README.md", "docs/COSTS_AND_RISK.md",
+  "docs/evidence/worker-provisioning/README.md",
 ];
 
-function slug(heading) {
+/** GitHub keeps each remaining space, including the spaces an em dash leaves behind. */
+export function slug(heading) {
   return heading
     .replace(/<[^>]+>/g, "")
     .trim()
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "-");
+    .replace(/ /g, "-");
 }
 
 function anchors(markdown) {
@@ -29,6 +31,12 @@ function anchors(markdown) {
 function stripCode(markdown) {
   return markdown.replace(/```[\s\S]*?```/g, "");
 }
+
+test("an em dash leaves two hyphens, and repeated spaces stay", () => {
+  assert.equal(slug("Pledge reproduction — source candidates and generated live identities"), "pledge-reproduction--source-candidates-and-generated-live-identities");
+  assert.equal(slug("Pledge authority graph — code deployed, lending OFF"), "pledge-authority-graph--code-deployed-lending-off");
+  assert.equal(slug("a  b"), "a--b");
+});
 
 test("relative doc links and anchors resolve", () => {
   const missing = [];
