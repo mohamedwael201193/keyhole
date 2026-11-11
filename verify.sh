@@ -23,7 +23,7 @@ if [ "$H" = "$PUB" ]; then ok "executed == published build ${PUB:0:8}"
 elif [[ " $PREV " == *" $H "* ]]; then ok "executed == previous build ${H:0:8}, superseded by ${PUB:0:8}"
 else bad "executed $H != published build $PUB"; fi
 URL="${FASTFS_BASE:-https://main.fastfs.io}/${P%%/*}/outlayer.near/$H.wasm"
-F=$(curl -fsS "$URL" | sha256sum | cut -d' ' -f1)
+F=$(curl -fsS --retry 5 --retry-all-errors --retry-delay 3 "$URL" | sha256sum | cut -d' ' -f1)
 [ "$F" = "$H" ] && ok "FastFS $URL sha256 matches" || bad "FastFS sha256 $F"
 if [ "${2:-}" = "--rebuild" ]; then
   B=$("$(dirname "$0")/tee/worker/build.sh")

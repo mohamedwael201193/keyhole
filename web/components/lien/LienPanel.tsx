@@ -1,6 +1,6 @@
 "use client";
 import { Card, CardHeader, StatusChip } from "@/components/v7";
-import { DEFAULT_PATH_RULES, LIEN_REFUSALS, formatNs, lienState } from "@/lib/lien";
+import { DEFAULT_PATH_RULES, LIEN_REFUSALS, formatNs, lienPanelLabel, lienState } from "@/lib/lien";
 import type { UseLien } from "./useLien";
 import "./lien.css";
 
@@ -21,7 +21,7 @@ export function LienPanel({ lien, testid = "lien-panel" }: { lien: UseLien; test
   if (!lien.tokenId) return null;
   const busy = lien.status === "loading";
   const s = lienState(lien.control, lien.loan, lien.config);
-  const label = busy ? "Reading" : lien.status === "error" || !s.controlRead ? "Not read" : s.locked ? "Locked" : "Not locked";
+  const label = lienPanelLabel(lien.status, lien.control, lien.loan);
   const tone = label === "Locked" ? "warn" : label === "Not locked" ? "success" : "neutral";
   const loan = lien.loan;
   return (

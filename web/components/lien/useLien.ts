@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPledgeClient, type CollateralBinding, type Loan, type PledgeConfig } from "@/lib/pledgeClient";
 import { requestLoanCertificate, verifyLoanCertificate } from "@/lib/loanCertificate";
 import type { LienControl } from "@/lib/lien";
-import { certificateCurrent, lienCacheKey, lienReadCurrent } from "@/lib/lienRead";
+import { applyLienSnapshot, certificateCurrent, lienCacheKey, lienReadCurrent } from "@/lib/lienRead";
 
 /** Read-only lien views. `live: true` reads the chain even while the Pledge flag is off; it never signs or sends. */
 export const KEY_ID_RE = /^(k[0-9a-f]{16}|\d{1,9})$/;
@@ -56,16 +56,19 @@ export function useLien(tokenId: string | null, scope: LienScope = {}) {
     const reader = createPledgeClient({ live: true, signal: ctrl.signal });
     void (async () => {
       try {
-        const [readOwner, control, loan, binding, config] = await Promise.all([
-          reader.getOwner(tokenId),
-          reader.getControl(tokenId),
-          reader.getLoan(tokenId),
-          reader.getCollateralBinding(tokenId),
-          reader.getPledgeConfig(),
-        ]);
+        const read = await reader.readLienAtFinalBlock(tokenId);
         if (!lienReadCurrent(started, { tokenId: tokenRef.current, generation: generation.current }, ctrl.signal.aborted)) return;
-        if (!readOwner) { setSt({ ...EMPTY, status: "error", tokenId, error: "No key with this id on the KEYHOLE contract." }); return; }
-        setSt({ status: "ready", tokenId, owner: readOwner, control: control as LienControl | null, loan, binding, config, error: null });
+        const next = applyLienSnapshot(tokenId, read);
+        setSt({
+          status: next.status,
+          tokenId,
+          owner: next.owner,
+          control: next.control as LienControl | null,
+          loan: next.loan as Loan | null,
+          binding: next.binding as CollateralBinding | null,
+          config: next.config as PledgeConfig | null,
+          error: next.error,
+        });
       } catch {
         if (!lienReadCurrent(started, { tokenId: tokenRef.current, generation: generation.current }, ctrl.signal.aborted)) return;
         setSt({ ...EMPTY, status: "error", tokenId, error: "Could not read the final chain. Try again in a moment." });

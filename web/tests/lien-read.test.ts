@@ -37,6 +37,9 @@ describe("lien read wiring", () => {
     expect(hook).toContain("new AbortController()");
     expect(hook).toContain("lienReadCurrent(");
     expect(hook).toContain('bundle.certificate.token_id !== token');
+    expect(hook).toContain("readLienAtFinalBlock(");
+    expect(hook).toContain("applyLienSnapshot(");
+    expect(hook).not.toContain("reader.getOwner(");
     expect(hook).toContain("requestLoanCertificate(token, loan.nonce, ctrl.signal)");
   });
   it("the key page passes owner and the sale round, and a repeat Open bumps the lookup", () => {
@@ -55,5 +58,6 @@ describe("lien read wiring", () => {
     expect(panel).toContain("strictly after");
     expect(panel).toContain("no on-chain transaction");
     expect(panel).toContain("network call to the enclave");
+    expect(panel).toContain("lienPanelLabel(");
   });
 });

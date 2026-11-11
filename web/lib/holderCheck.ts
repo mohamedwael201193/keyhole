@@ -41,6 +41,9 @@ export function holderResult(input: {
   return { status: "error", accountId: requestedAccount, message: "The gate did not answer. Try again." };
 }
 
+/** Shown when the signed POST fails and this account's check is still the one on screen. */
+export const HOLDER_NETWORK_ERROR = "The holder check could not reach the gate. Try again.";
+
 export type HolderResume =
   | { action: "ignore" }
   | { action: "wait" }
@@ -81,13 +84,7 @@ export async function settleHolderCheck(input: {
     });
   } catch {
     const now = input.current();
-    return holderResult({
-      requestedAccount: input.requestedAccount,
-      requestedSeq: input.requestedSeq,
-      activeAccount: now.account,
-      activeSeq: now.seq,
-      aborted: true,
-      body: null,
-    });
+    if (input.signal.aborted || now.seq !== input.requestedSeq || now.account !== input.requestedAccount) return { status: "idle" };
+    return { status: "error", accountId: input.requestedAccount, message: HOLDER_NETWORK_ERROR };
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { holderResult, holderResume, settleHolderCheck } from "@/lib/holderCheck";
+import { HOLDER_NETWORK_ERROR, holderResult, holderResume, settleHolderCheck } from "@/lib/holderCheck";
 
 const granted = { granted: true, account_id: "a.near", tier: 2, token_ids: ["k5f4750858f328940"], key_count: 1 };
 
@@ -68,6 +68,39 @@ describe("holder proof identity", () => {
     expect(holderResume({ account_id: "a.near", message: JSON.stringify({ op: "withdraw", params: {} }) }, "a.near")).toEqual({ action: "ignore" });
   });
 
+  it("an ordinary network error on the current account is a retryable error", async () => {
+    const view = await settleHolderCheck({
+      requestedAccount: "a.near",
+      requestedSeq: 1,
+      signal: new AbortController().signal,
+      current: () => ({ account: "a.near", seq: 1 }),
+      send: async () => { throw new TypeError("Failed to fetch"); },
+    });
+    expect(view).toEqual({ status: "error", accountId: "a.near", message: HOLDER_NETWORK_ERROR });
+    expect(view.status === "error" && /try again/i.test(view.message)).toBe(true);
+  });
+
+  it("an aborted or switched holder check stays idle when the POST throws", async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const aborted = await settleHolderCheck({
+      requestedAccount: "a.near",
+      requestedSeq: 1,
+      signal: ctrl.signal,
+      current: () => ({ account: "a.near", seq: 1 }),
+      send: async () => { throw new DOMException("The operation was aborted", "AbortError"); },
+    });
+    expect(aborted).toEqual({ status: "idle" });
+    const moved = await settleHolderCheck({
+      requestedAccount: "a.near",
+      requestedSeq: 1,
+      signal: new AbortController().signal,
+      current: () => ({ account: "b.near", seq: 2 }),
+      send: async () => { throw new TypeError("Failed to fetch"); },
+    });
+    expect(moved).toEqual({ status: "idle" });
+  });
+
   it("the holders screen clears on account change and drops a stale response", () => {
     const view = readFileSync(new URL("../app/holders/view.tsx", import.meta.url), "utf8");
     expect(view).toContain("settleHolderCheck(");
@@ -76,5 +109,8 @@ describe("holder proof identity", () => {
     expect(view).toContain("if (seq.current === my) setCheck(next)");
     expect(view).toContain("holderResume(wallet.pending, acct)");
     expect(view).toContain('check.accountId === acct');
+    expect(view).toContain('role="alert"');
+    expect(view).toContain('data-testid="holders-error"');
+    expect(view).toContain("{visible.message}");
   });
 });

@@ -70,6 +70,14 @@ export function lienState(control: LienControl | null, loan: Loan | null, config
   };
 }
 
+/** The word the lien panel prints. A failed or incomplete read stays "Not read" and never "Not locked". */
+export function lienPanelLabel(status: "idle" | "loading" | "ready" | "error", control: LienControl | null, loan: Loan | null): string {
+  if (status === "loading") return "Reading";
+  const s = lienState(control, loan, undefined);
+  if (status === "error" || !s.controlRead) return "Not read";
+  return s.locked ? "Locked" : "Not locked";
+}
+
 /** Chain time in Africa/Cairo, including seconds. The instant itself is not a claimable default: the contract uses a strict greater-than. */
 export function formatNs(ns: bigint | null): string {
   if (ns === null) return "unknown";

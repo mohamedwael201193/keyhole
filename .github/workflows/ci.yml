@@ -94,7 +94,7 @@ jobs:
       - name: key log verifier
         run: node verify-log.mjs --self-test
       - name: deployed bytes on FastFS match
-        run: test "$(curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$(cat DEPLOYED_SHA256).wasm | sha256sum | cut -d' ' -f1)" = "$(cat DEPLOYED_SHA256)"
+        run: test "$(curl -fsS --retry 5 --retry-all-errors --retry-delay 3 https://main.fastfs.io/keyhole-devmo.near/outlayer.near/$(cat DEPLOYED_SHA256).wasm | sha256sum | cut -d' ' -f1)" = "$(cat DEPLOYED_SHA256)"
   cli:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
