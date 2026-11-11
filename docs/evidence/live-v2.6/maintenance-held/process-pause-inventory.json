@@ -1,0 +1,13 @@
+{
+  "at_cairo": "2026-11-11T00:50:42.261868+02:00",
+  "processes": [
+    {
+      "pid": 2720613,
+      "executable": "node",
+      "cwd": "/workspace/near_hackathon/wt_release/web",
+      "relevant_env_names": [],
+      "actual_worker_cli": false
+    }
+  ],
+  "credential_values_exposed": false
+}

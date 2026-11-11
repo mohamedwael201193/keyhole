@@ -1,0 +1,41 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "block_hash": "GwPGKFQN7aBoF7gkEAzLuaLiuLVsht1AiR67U5AfF4U8",
+    "block_height": 223980577,
+    "keys": [
+      {
+        "access_key": {
+          "nonce": 221777577000129,
+          "permission": "FullAccess"
+        },
+        "public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF"
+      },
+      {
+        "access_key": {
+          "nonce": 223530132000014,
+          "permission": "FullAccess"
+        },
+        "public_key": "ed25519:8NP9x5eFZic4E8cL4Pq8NLoHwB5VG1tbhWPnHSPE2bdj"
+      },
+      {
+        "access_key": {
+          "nonce": 222499355000000,
+          "permission": {
+            "FunctionCall": {
+              "allowance": "1000000000000000000000000",
+              "method_names": [
+                "__fastdata_kv",
+                "__fastdata_fastfs"
+              ],
+              "receiver_id": "social"
+            }
+          }
+        },
+        "public_key": "ed25519:FNe2aYtzNZ3FicPYdCjxgWuVMTf29NK2F1UzoFSsQ6h1"
+      }
+    ]
+  },
+  "id": "release-inventory",
+  "observed_at_cairo": "2026-11-11T00:46:25.730580+02:00"
+}

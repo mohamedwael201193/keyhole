@@ -1,0 +1,6 @@
+PASS original_deploy-post_checkpoint: satisfied at execution time, verified by the post-check
+PASS maintenance_and_submitter_drain: satisfied at execution time, verified by the post-check
+PASS singleton_registry_and_guarded_restore: satisfied at execution time, verified by the post-check
+PASS exit_route_fee_deadline: satisfied at execution time, verified by the post-check
+PASS secret_storage_and_actual_refund: satisfied at execution time, verified by the post-check
+PHASE restore PASS; all_mainnet_gates=false

@@ -1,0 +1,4 @@
+PASS exact CI secret-pattern check; no matching files
+PASS full packed/live worker, contract and candidate identity equality; registered current default proof present
+PASS immutable source pin 75c97e5d42b779d48c4a2d224438ffcb06f55156
+PASS manifest SHA256 5f36a4295b5d17003309c501459d440c7b1a07839ae94aed4dabd76aff6ebaf7 bytes 7376931

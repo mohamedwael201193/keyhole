@@ -1,0 +1,53 @@
+{
+  "production_url": "https://keyhole-seven.vercel.app",
+  "deployment_url": "https://keyhole-7wl2s500y-mohamedwael201193s-projects.vercel.app",
+  "maintenance_off_promotion_completed_at_cairo": "2026-11-11T01:54:55.996329+02:00",
+  "maintenance_off_confirmed": true,
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "cache_control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "observed_at_cairo": "2026-11-11T01:55:09.454691+02:00"
+    },
+    {
+      "path": "/api/keyhole",
+      "status": 400,
+      "cache_control": "public, max-age=0, must-revalidate",
+      "observed_at_cairo": "2026-11-11T01:55:10.223634+02:00"
+    },
+    {
+      "path": "/api/worker",
+      "status": 400,
+      "cache_control": "public, max-age=0, must-revalidate",
+      "observed_at_cairo": "2026-11-11T01:55:11.163105+02:00"
+    },
+    {
+      "path": "/api/keys?account=keyhole-devmo.near",
+      "status": 200,
+      "cache_control": "no-store",
+      "observed_at_cairo": "2026-11-11T01:55:11.987039+02:00",
+      "read_flow": {
+        "token_id": "0",
+        "owner": "keyhole-devmo.near",
+        "keys_returned": 1,
+        "tier": 1,
+        "paid_compute": false
+      }
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "cache_control": "no-store",
+      "observed_at_cairo": "2026-11-11T01:55:12.519341+02:00",
+      "body": {
+        "at": 1794354912474,
+        "online": null,
+        "reason": "not_probed",
+        "mode": "passive",
+        "fresh": false,
+        "payer": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "at_cairo": "2026-11-11T01:42:21.873997+02:00",
+  "release_state": "WORKER_PUBLISHED_RESTORE_FAIL_CLOSED",
+  "contract_v26_live": true,
+  "worker_registry_singleton": true,
+  "lending_enabled": false,
+  "maintenance_on": true,
+  "production": [
+    {
+      "path": "/",
+      "status": 200,
+      "cache_control": "private, no-cache, no-store, max-age=0, must-revalidate"
+    },
+    {
+      "path": "/api/keyhole",
+      "status": 503,
+      "cache_control": "no-store"
+    },
+    {
+      "path": "/api/worker",
+      "status": 503,
+      "cache_control": "no-store"
+    }
+  ],
+  "native_burn_cumulative_NEAR": "0.0237255344705087",
+  "retirement_storage_refunds_NEAR": "0.0968",
+  "secret_storage_refund_NEAR": "0.0988",
+  "confirmed_storage_refunds_total_NEAR": "0.1956",
+  "new_version_retained_storage_NEAR": "0.0044",
+  "net_additional_secret_storage_NEAR": "0.0012",
+  "additional_contract_code_storage_NEAR": "0.01405",
+  "compute_calls": 2,
+  "compute_cost_micro_usd": 2012,
+  "restore_gate_passes": 4,
+  "restore_gate_failures": 1,
+  "restore_failed_gate": "exit_route_fee_deadline",
+  "failure_reason": "Successful measured near-to-self USDC preview returns deadline=null, estimated_fee=null and fee_token=null; unchanged reviewed gate requires all three. No values manufactured; no further paid call, worker promotion or maintenance-OFF deployment.",
+  "worker_identity_promoted": false,
+  "maintenance_off_deployment": false,
+  "artifact": {
+    "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f.wasm",
+    "status": 200,
+    "bytes": 1085333,
+    "sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f"
+  },
+  "no_push": true,
+  "compute_authorized_limits_micro_usd": 50000,
+  "strict_contract_judge": "PASS via dRPC with identifying User-Agent",
+  "release_and_pledge_tests": "109 PASS; 0 FAIL"
+}

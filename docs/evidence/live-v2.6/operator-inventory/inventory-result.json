@@ -1,0 +1,77 @@
+{
+  "observed_at_cairo": "2026-11-11T00:48:59.138985+02:00",
+  "complete": false,
+  "signatures_created": false,
+  "keys": [
+    {
+      "account": "keyhole-devmo.near",
+      "public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
+      "permission": "FullAccess",
+      "controller": "project deploy/owner operator",
+      "private_location": "Project private owner JSON and official OutLayer credential stores; exact paths retained privately",
+      "identified": true
+    },
+    {
+      "account": "keyhole-devmo.near",
+      "public_key": "ed25519:8NP9x5eFZic4E8cL4Pq8NLoHwB5VG1tbhWPnHSPE2bdj",
+      "permission": "FullAccess",
+      "controller": "Owner Meteor wallet, documented in SECURITY.md section 11",
+      "private_location": "Meteor wallet; no corresponding project JSON key or Vercel signer env was identified",
+      "identified": true,
+      "private_key_extracted": false
+    },
+    {
+      "account": "keyhole-devmo.near",
+      "public_key": "ed25519:FNe2aYtzNZ3FicPYdCjxgWuVMTf29NK2F1UzoFSsQ6h1",
+      "permission": {
+        "FunctionCall": {
+          "receiver_id": "social",
+          "method_names": [
+            "__fastdata_kv",
+            "__fastdata_fastfs"
+          ]
+        }
+      },
+      "controller": null,
+      "private_location": null,
+      "identified": false,
+      "can_target_keyhole_or_worker": false,
+      "classification": "Restricted FastFS key; not FullAccess, not evidence of arbitrary contract/worker authority"
+    },
+    {
+      "account": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+      "public_key": "ed25519:6H1iG1oHWKQZ7smE6yh5rMAeJ4tJ61tvtZGzuW7kSY2",
+      "permission": "FullAccess",
+      "controller": "Enclave-generated worker/minter signer",
+      "private_location": "Enclave only; deliberately not retrieved",
+      "identified": true
+    },
+    {
+      "account": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+      "public_key": "ed25519:9FiNXX2MQdv8r4fNagjeJ3NrodDoqoSTLTbPBW7d6LXR",
+      "permission": {
+        "FunctionCall": {
+          "receiver_id": "keyhole-devmo.near",
+          "method_names": [
+            "beat"
+          ]
+        }
+      },
+      "controller": "Project beat key",
+      "private_location": "Project private beat_key.json and private export copy; exact paths retained privately",
+      "identified": true
+    }
+  ],
+  "server_env_names_only": [
+    "NEXT_PUBLIC_PRIVY_APP_ID",
+    "NEXT_PUBLIC_PRIVY_APP_CLIENT_ID",
+    "AGENT_API_AGENT_ID",
+    "AGENT_API_KEY",
+    "AGENT_API_BASE_URL",
+    "ONECLICK_API_KEY",
+    "NEAR_AI_API_KEY",
+    "OUTLAYER_PAYMENT_KEY"
+  ],
+  "server_worker_submitter_env": "OUTLAYER_PAYMENT_KEY",
+  "decision": "HOLD on explicit stop-if-any-key-holder-unidentified condition. The unlocated FastFS key cannot target keyhole or worker, but no controller or private location was guessed. No key deletion, browser export or enclave extraction attempted."
+}

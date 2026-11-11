@@ -1,0 +1,81 @@
+[
+  {
+    "at_cairo": "2026-11-11T00:50:02.264861+02:00",
+    "args": [
+      "env",
+      "add",
+      "KEYHOLE_MAINTENANCE",
+      "production",
+      "--value",
+      "1",
+      "--yes",
+      "--scope",
+      "mohamedwael201193s-projects"
+    ],
+    "exit_code": 0
+  },
+  {
+    "at_cairo": "2026-11-11T00:53:01.244597+02:00",
+    "args": [
+      "deploy",
+      ".",
+      "--prod",
+      "--yes",
+      "--archive=tgz",
+      "--scope",
+      "mohamedwael201193s-projects"
+    ],
+    "exit_code": 1,
+    "deployment_urls": [
+      "https://keyhole-2yzso1onk-mohamedwael201193s-projects.vercel.app"
+    ]
+  },
+  {
+    "at_cairo": "2026-11-11T00:53:33.739842+02:00",
+    "args": [
+      "deploy",
+      "--help"
+    ],
+    "exit_code": 0,
+    "deployment_urls": []
+  },
+  {
+    "at_cairo": "2026-11-11T00:53:37.926410+02:00",
+    "args": [
+      "project",
+      "update",
+      "--help"
+    ],
+    "exit_code": 0
+  },
+  {
+    "at_cairo": "2026-11-11T00:54:25.420089+02:00",
+    "args": [
+      "project",
+      "update",
+      "keyhole",
+      "--root-directory",
+      "web",
+      "--yes",
+      "--scope",
+      "mohamedwael201193s-projects"
+    ],
+    "exit_code": 0
+  },
+  {
+    "at_cairo": "2026-11-11T00:56:52.345589+02:00",
+    "args": [
+      "deploy",
+      ".",
+      "--prod",
+      "--yes",
+      "--archive=tgz",
+      "--scope",
+      "mohamedwael201193s-projects"
+    ],
+    "exit_code": 0,
+    "deployment_urls": [
+      "https://keyhole-mgc182sxg-mohamedwael201193s-projects.vercel.app"
+    ]
+  }
+]

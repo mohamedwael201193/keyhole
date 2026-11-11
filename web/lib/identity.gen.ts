@@ -3,34 +3,52 @@ export const IDENTITY = {
   "_doc": "Single source of truth for live identities. Generate deployment updates with node scripts/gen-identity.mjs --promote-live <public-capture.json>. Refresh generated files with the same script.",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
-    "bytes": 765658,
-    "add_version_tx": "BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5",
-    "info_call": "dc3668db-674f-4865-a2ce-272f70c41b0d",
-    "previous_wasm_sha256": "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c"
+    "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+    "bytes": 1085333,
+    "add_version_tx": "3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P",
+    "info_call": "962d4374-b9ec-411a-9efa-973b36260431",
+    "previous_wasm_sha256": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    "historical_wasm_sha256": [
+      "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+      "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8",
+      "94c355ffa318ec0e6cafc5268afb6968c91cad5c99ebd343e14f9b85f2bca9ed",
+      "ebeb6a3496b9c3e2447cbca12919b33f631931150f6ab7565c525451060f583b",
+      "cff9fd3c4937ad5255cef8cda6f269d62f564af72cea65950471b94459aeb1bc",
+      "a55ebb14df4ebb26f2bcc45767d9ec794466f6debd8ce96a883c93223a80140e",
+      "09d481a5c3340856f0fe75d6ba89012887de5c1230c46bc1ef380d69d172aaf4",
+      "f7217ae291c7c39c3df699f33a0f84a262c37388f992fa62652d941a01a85381",
+      "452df1fd4f69fac618da0a5c11f9b8b5a9f7b0c1c95d5785850dd4746c5c134d",
+      "6367401a78ae4f193eae16f90925968e8c3b477f1a387a213540aa0c60479693",
+      "67c5cd77a46814e5a4286b0a6971f8bc533274b425e7fb3272be3145469e65b2",
+      "38bd67b930ea829cd0fdfad1c09d9d6b93e12f422c8c58a5c84b6899be9f5c78",
+      "b3fa1a394bceca3dc34efd044e430498d7d3bb9c5032290eaab87021fda2388a",
+      "f13efe92613284bac3a4d09b1e8eca45d0f36a84ec238be125975a8eca28119c",
+      "3ea56ee6078f019ba4c2880d0603dc01f30dad7a3716db158515a5accda8544c",
+      "fc4ae4ac70d7aafed5ea9d8b864b4bbbb912e226feeb6cc415ea515782b12fab"
+    ]
   },
   "contract": {
     "account": "keyhole-devmo.near",
     "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
-    "code_hash": "3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b",
-    "wasm_sha256": "28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce",
-    "deploy_tx": "BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S",
-    "version": "2.5.0",
-    "bytes": 485855,
+    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
+    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+    "deploy_tx": "4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
+    "version": "2.6.0",
+    "bytes": 487260,
     "migrate_pledge_tx": "EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "4dcf55ad2644dd6985eafd6a1cd65537f04ff610"
+    "source_commit": "75c97e5d42b779d48c4a2d224438ffcb06f55156"
   },
   "worker_candidate": {
-    "status": "source-candidate-not-published",
+    "status": "published-mainnet",
     "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
     "bytes": 1085333,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
-    "status": "source-candidate-not-deployed",
+    "status": "deployed-mainnet",
     "version": "2.6.0",
     "release": "v2.6",
     "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",

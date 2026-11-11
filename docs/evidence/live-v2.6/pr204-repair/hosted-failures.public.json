@@ -1,0 +1,65 @@
+{
+  "observed_at_cairo": "2026-11-11T02:28:03.821838+02:00",
+  "run_id": 42927693796,
+  "head": "536851adb92fce5a58c4523ec2db1fd3937db6d7",
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "name": "cli",
+      "databaseId": 130218268523,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "contract",
+      "databaseId": 130218268805,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "judge-kit",
+      "databaseId": 130218268813,
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "hygiene",
+      "databaseId": 130218268817,
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "worker",
+      "databaseId": 130218268902,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "web",
+      "databaseId": 130218268941,
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ],
+  "log_fetch": "gh run view 42927693796 --repo mohamedwael201193/keyhole --job <job-id> --log-failed; token only in subprocess environment, never printed",
+  "logs": {
+    "hygiene": {
+      "bytes": 4376,
+      "sha256": "fb2bb56778427effee2390eb12127008df0637b48990cfee5e28883680662d38"
+    },
+    "judge-kit": {
+      "bytes": 521737,
+      "sha256": "bfb840c7e67f4087fff76296cca2db2ff6ab73490d6c15c4bb4a6215b4b1b535"
+    },
+    "web": {
+      "bytes": 119763,
+      "sha256": "5074be10635be5d92f3c1dea400ff30068db34f47823ef94e690b5ebdb5e137d"
+    }
+  },
+  "root_causes": {
+    "hygiene": "Packed source was old worker d337e822 / contract v2.5, not current identity. Secret-pattern step was not the failure.",
+    "judge-kit": "docs/claims.json did not match regeneration, with old live identities and locations. Subsequent full local regressions also exposed historical-promotion and reproduction fixtures.",
+    "web": "8 unit failures: missing current proof/output pin, lost d337e822 history, stale current-build fixture, stale claims and missing current publish/hash README row."
+  },
+  "hosted_for_new_local_head": false
+}

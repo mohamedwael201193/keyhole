@@ -130,6 +130,8 @@ jobs:
         run: python3 judge/receipt_proof_test.py
       - name: strict rebuild semantics and publication recovery regressions
         run: node --test judge/contract-rebuild.test.mjs scripts/pledge/*.test.mjs scripts/release/*.test.mjs
+      - name: live identity rollback, proof history and identity-derived claim regressions
+        run: node --test judge/live-identity.test.mjs judge/identity-claims.test.mjs judge/verifier-history.test.mjs
       - name: primary judge checkout command
         run: node --test judge/checkout-command.test.mjs
       - name: full reproduction prepares sandbox fixtures and compiles WASI
@@ -159,8 +161,8 @@ jobs:
           # Release snapshots also have identity.json: select the root identity explicitly.
           member = "keyhole/identity.json"
           packed = json.loads(tf.extractfile(member).read())
-          assert packed["worker"]["wasm_sha256"] == live["worker"]["wasm_sha256"], (packed["worker"]["wasm_sha256"], live["worker"]["wasm_sha256"])
-          assert packed["contract"]["code_hash"] == live["contract"]["code_hash"], (packed["contract"]["code_hash"], live["contract"]["code_hash"])
+          assert packed["worker"] == live["worker"], "packed current/default/history worker identity drift"
+          assert packed["contract"] == live["contract"], "packed contract identity drift"
           assert packed.get("worker_candidate") == live.get("worker_candidate"), "source bundle worker candidate drift"
           assert packed.get("contract_candidate") == live.get("contract_candidate"), "source bundle contract candidate drift"
           print(f"OK source@{man['commit'][:12]} worker={live['worker']['wasm_sha256'][:8]} contract={live['contract']['code_hash'][:8]}")

@@ -1,0 +1,31 @@
+{
+  "step": "registry-1",
+  "hash": "3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P",
+  "status": "FINAL_SUCCESS",
+  "fees_yocto": "1906964567513400000000",
+  "storage_refund_yocto": "17600000000000000000000",
+  "verified_refund_receipts": [
+    {
+      "id": "BntpKxufAtLyAAMe5V4YcZ1ittaLzuqfzS6PcMn8QxGC",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "F2DVeAgtpDLSK85eFwukazjVostX9EWztGYh13HD6vrX",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "7kRpFKywqfVbXT3ByCzk8Gon5KMXDEa8qC6iFivaQSVn",
+      "amount": "4400000000000000000000"
+    },
+    {
+      "id": "CSWpWjhctp8Wm1P8oTXtt6joEhgDE3i38D3i5qHPYRGG",
+      "amount": "4400000000000000000000"
+    }
+  ],
+  "versions_remaining": 19,
+  "project_uuid": "p000000000000004b",
+  "active_version": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+  "block_height": 223985859,
+  "at_cairo": "2026-11-11 01:36:21 Africa/Cairo",
+  "blocks_after_publication_capture": 11
+}

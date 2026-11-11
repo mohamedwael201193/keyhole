@@ -1,0 +1,13 @@
+{
+  "at_cairo": "2026-11-11T00:50:28.473865+02:00",
+  "owner": "keyhole-devmo.near",
+  "nonce": 1,
+  "count": 733,
+  "status_counts": {
+    "completed": 729,
+    "failed": 4
+  },
+  "earliest_at_cairo": "2026-10-27T06:41:20.918961+03:00",
+  "latest_at_cairo": "2026-11-10T19:31:11.901725+02:00",
+  "pending_call_ids": []
+}

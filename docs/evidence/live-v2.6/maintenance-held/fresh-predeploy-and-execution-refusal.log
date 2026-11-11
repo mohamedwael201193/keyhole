@@ -1,0 +1,6 @@
+Reviewed single code-only deployment presigned, not dispatched. ORIGINAL_HASH 5Jse6SVCCHkETB7vUhFzKKEoYZ5WapoawH9d7c8KLuCU max_all_in=0.05 NEAR
+PASS maintenance_and_submitter_drain: required before execution
+PASS native_all_in_approval: required before execution
+PHASE predeploy PASS; all_mainnet_gates=false
+RPC_READ_HTTP_STATUS 429 RETRY_AFTER null
+FAIL promotion/check refused (details withheld); no automatic retry or rollback

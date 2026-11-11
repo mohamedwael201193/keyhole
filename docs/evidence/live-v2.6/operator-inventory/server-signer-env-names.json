@@ -1,0 +1,14 @@
+{
+  "scope": "mohamedwael201193s-projects",
+  "project": "keyhole",
+  "env_names": [
+    "NEXT_PUBLIC_PRIVY_APP_ID",
+    "NEXT_PUBLIC_PRIVY_APP_CLIENT_ID",
+    "AGENT_API_AGENT_ID",
+    "AGENT_API_KEY",
+    "AGENT_API_BASE_URL",
+    "ONECLICK_API_KEY",
+    "NEAR_AI_API_KEY",
+    "OUTLAYER_PAYMENT_KEY"
+  ]
+}

@@ -170,3 +170,36 @@ for (const [name, patch] of [
     f.ctx.fetchAttestation = async (id) => ({ ...(await fetch(id)), ...patch });
     await assert.rejects(restoreProbe(f.e.restore, f.ctx));
   });
+
+const nativeUsdc = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+function sameAssetNullPreview(f) {
+  const m=JSON.parse(f.e.restore.input.auth.message);m.params.token=nativeUsdc;
+  f.e.restore.input.auth.message=JSON.stringify(m);
+  Object.assign(f.e.restore.output,{token:nativeUsdc,amount_out:m.params.amount,
+    min_amount_out:"99000",deadline:null,estimated_fee:null,fee_token:null});
+}
+test("restore accepts attested same-asset NEAR-native USDC self-preview with explicit optional metadata nulls",async()=>{
+  const f=fixtures("restore");sameAssetNullPreview(f);
+  assert.equal((await releaseGates(f.e,f.trust,f.ctx)).ready_restore,true);
+});
+test("quoted route retains real future deadline and fee checks",async()=>{
+  const f=fixtures("restore");assert.equal((await releaseGates(f.e,f.trust,f.ctx)).ready_restore,true);
+  f.e.restore.output.deadline=new Date((f.ctx.now-1)*1000).toISOString();
+  assert.equal((await releaseGates(f.e,f.trust,f.ctx)).ready_restore,false);
+});
+test("quoted route with null deadline and fees fails, rather than inheriting the NEAR-native USDC exception",async()=>{
+  const f=fixtures("restore");Object.assign(f.e.restore.output,{deadline:null,estimated_fee:null,fee_token:null});
+  assert.equal((await releaseGates(f.e,f.trust,f.ctx)).ready_restore,false);
+});
+for(const [name,mutate]of Object.entries({
+  quoted_output:f=>f.e.restore.output.amount_out="99999",
+  missing_not_null:f=>delete f.e.restore.output.deadline,
+  nonpositive:f=>f.e.restore.output.min_amount_out="0",
+  impossible_minimum:f=>f.e.restore.output.min_amount_out="100001",
+  broadcast:f=>f.e.restore.output.broadcast=true,
+  foreign_receiver:f=>f.e.restore.output.to="mallory.near",
+  partial_metadata:f=>f.e.restore.output.estimated_fee="0",
+}))test("same-asset route exception fails closed: "+name,async()=>{
+  const f=fixtures("restore");sameAssetNullPreview(f);mutate(f);
+  assert.equal((await releaseGates(f.e,f.trust,f.ctx)).ready_restore,false);
+});

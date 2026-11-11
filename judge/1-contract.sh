@@ -32,7 +32,7 @@ if [ "$STRICT" -eq 1 ]; then
 import base64,hashlib,json,os,urllib.request
 identity=json.load(open('identity.json'))['contract']
 def query(kind,**kw):
- req=urllib.request.Request(os.environ['VERIFY_RPC'],data=json.dumps({'jsonrpc':'2.0','id':'strict-read-only','method':'query','params':dict(request_type=kind,account_id=os.environ['VERIFY_CONTRACT'],**kw)}).encode(),headers={'content-type':'application/json'})
+ req=urllib.request.Request(os.environ['VERIFY_RPC'],data=json.dumps({'jsonrpc':'2.0','id':'strict-read-only','method':'query','params':dict(request_type=kind,account_id=os.environ['VERIFY_CONTRACT'],**kw)}).encode(),headers={'content-type':'application/json','User-Agent':'KEYHOLE-release-verifier/2.6 (+https://github.com/mohamedwael201193/keyhole)'})
  with urllib.request.urlopen(req,timeout=30) as r:j=json.load(r)
  if 'error' in j:raise RuntimeError(j['error'])
  return j['result']

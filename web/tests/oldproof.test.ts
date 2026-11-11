@@ -30,3 +30,12 @@ describe("old proofs stay valid", () => {
     expect(createHash("sha256").update(bad).digest("hex")).not.toBe(P[id].output_hash);
   });
 });
+
+describe("complete pinned build rotation", () => {
+  it("keeps d337e822 and cc8d2fa8 historical, never current, and refuses unknown builds", () => {
+    expect(buildIndex("d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41")).toBeGreaterThan(0);
+    expect(buildIndex("cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c")).toBeGreaterThan(0);
+    expect(buildIndex("0".repeat(64))).toBe(-1);
+    expect(buildIndex("015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443")).toBe(-1);
+  });
+});

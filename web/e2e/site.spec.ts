@@ -1,6 +1,8 @@
 import {fixtureRedirect} from "./support/signed-redirect";
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { canonical } from "../lib/verify";
 import identity from "../../identity.json";
 const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge", "/ask"];
 const shots = process.env.SHOTS_DIR;
@@ -47,19 +49,25 @@ test("verify: the previous-build verdict says so, and the current call links its
   await expect(page.getByTestId("verdict")).toHaveText(/previous build/, { timeout: 30_000 });
   await page.goto("/verify");
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
-  await expect(page.locator('a[href*="BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5"]').first()).toBeVisible();
+  await expect(page.locator(`a[href*="${identity.worker.add_version_tx}"]`).first()).toBeVisible();
   await expect(page.locator('a[href*="MG7pGVSN"]')).toHaveCount(0);
   await expect(page.locator('a[href*="EA7S1TeV"]')).toHaveCount(0);
 });
 
-test("verify: the default page checks the published d337e822 info call", async ({ page }) => {
+test("verify: the default page checks the published guarded v2.6 info call", async ({ page }) => {
+  const published = await page.request.get(`/evidence/${identity.worker.info_call}.json`);
+  expect(published.status()).toBe(200);
+  const ev = await published.json();
+  const att = JSON.parse(readFileSync("tests/fixtures/att_962d4374.json", "utf8"));
+  expect(ev.call_id).toBe(identity.worker.info_call);
+  expect(createHash("sha256").update(canonical(ev.output)).digest("hex")).toBe(att.output_hash);
   await page.goto("/verify");
-  await expect(page.locator("#cid")).toHaveValue("dc3668db-674f-4865-a2ce-272f70c41b0d");
+  await expect(page.locator("#cid")).toHaveValue(identity.worker.info_call);
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "true", { timeout: 30_000 });
   await expect(page.locator(".ck .ok.bad")).toHaveCount(0);
   await expect(page.locator(".ck .ok.wait")).toHaveCount(0);
   await expect(page.locator(".ck .ok")).toHaveCount(6);
-  await expect(page.getByText("d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41").first()).toBeVisible();
+  await expect(page.getByText(identity.worker.wasm_sha256).first()).toBeVisible();
   await expect(page.getByTestId("ck-binding")).toContainText("✓ Bound");
   await expect(page.getByRole("button", { name: "earlier · 2 USDC over the $1 cap" })).toBeVisible();
   await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓");

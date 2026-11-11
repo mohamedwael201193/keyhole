@@ -1,0 +1,29 @@
+{
+  "at_cairo": "2026-11-11T00:44:29.656683+02:00",
+  "first_block": {
+    "hash": "ArM1jeLGsoWhBU3989haMRBAc5y7QZBgTm3qcJ9KUtEW",
+    "height": 223980086,
+    "timestamp": 1794350503727128600
+  },
+  "last_block": {
+    "hash": "EVa1AJYSP8U7mZRGmjk15qRKshGvjBg8krV1grXmABJU",
+    "height": 223980359,
+    "timestamp": 1794350659744737500
+  },
+  "equal": {
+    "code": true,
+    "state": true,
+    "tokens": true,
+    "controls": true,
+    "credits": true,
+    "config": true,
+    "pledge": true,
+    "metadata": true
+  },
+  "onchain_transactions_sent": [],
+  "fees_spent_yocto": "0",
+  "compute_spent_micro_usd": 0,
+  "maintenance_changed": false,
+  "maintenance_on_at_cairo": null,
+  "maintenance_off_at_cairo": null
+}

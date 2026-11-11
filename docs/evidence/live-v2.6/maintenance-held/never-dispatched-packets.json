@@ -1,0 +1,62 @@
+[
+  {
+    "packet": "initial",
+    "hash": "8cM2SwhXTooScH4XeqZVKJdYdbqthcuu7juyuwDgdxNY",
+    "status": "NEVER_DISPATCHED_PRE_BROADCAST_CONTEXT_REFUSAL",
+    "native_all_in_ceiling_yocto": "50000000000000000000000",
+    "predeploy_gate": "PASS",
+    "predeploy_block": {
+      "hash": "9B3Rg4U64WRPb1eaeSyoYUKXER3Atyq9uuYid12hQWAn",
+      "height": 223981774,
+      "timestamp": 1794351465249130800
+    },
+    "before_block": {
+      "hash": "EkVUAkFmrBiT6ajvY59S4HYEyScXxs6YR23n8hbi5iuA",
+      "height": 223981760,
+      "timestamp": 1794351457501346300
+    },
+    "maintenance_submitter_acknowledgements": 6,
+    "authorization_signatures_kept_outside_git": true,
+    "dispatch_journal_created": false
+  },
+  {
+    "packet": "attempt2",
+    "hash": "A1HGstxEdNqUAsmxzwNoqVi6vUxUSyssrmYuhAvdFhch",
+    "status": "NEVER_DISPATCHED_PRE_BROADCAST_CONTEXT_REFUSAL",
+    "native_all_in_ceiling_yocto": "50000000000000000000000",
+    "predeploy_gate": "PASS",
+    "predeploy_block": {
+      "hash": "3CqHbREGx1pPyBppUuH6oU1T8W7Jpetnazohuiu2JPaZ",
+      "height": 223982005,
+      "timestamp": 1794351596201170000
+    },
+    "before_block": {
+      "hash": "H1oTU7xYvEdsScT3D5UyYgRkYSet9WuHsu9yMR6HJUvn",
+      "height": 223981989,
+      "timestamp": 1794351587035920400
+    },
+    "maintenance_submitter_acknowledgements": 6,
+    "authorization_signatures_kept_outside_git": true,
+    "dispatch_journal_created": false
+  },
+  {
+    "packet": "attempt3",
+    "hash": "5Jse6SVCCHkETB7vUhFzKKEoYZ5WapoawH9d7c8KLuCU",
+    "status": "NEVER_DISPATCHED_PRE_BROADCAST_CONTEXT_REFUSAL",
+    "native_all_in_ceiling_yocto": "50000000000000000000000",
+    "predeploy_gate": "PASS",
+    "predeploy_block": {
+      "hash": "3T29QVYC4M2G5GuekEHjpVb3hLo13qWwGtXirvEuHETE",
+      "height": 223982601,
+      "timestamp": 1794351932548181200
+    },
+    "before_block": {
+      "hash": "FM7utNStzTgtwhs1PgV1nQDCFrpXpUXJ9g3irtoJqeSW",
+      "height": 223982581,
+      "timestamp": 1794351920167543000
+    },
+    "maintenance_submitter_acknowledgements": 6,
+    "authorization_signatures_kept_outside_git": true,
+    "dispatch_journal_created": false
+  }
+]

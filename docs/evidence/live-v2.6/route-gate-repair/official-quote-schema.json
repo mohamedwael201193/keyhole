@@ -1,0 +1,78 @@
+{
+  "source": "https://github.com/out-layer/api-spec/blob/main/openapi.json",
+  "source_git_blob": "47c4298eb8a181b30b976832853adefad28cbefe",
+  "endpoint": {
+    "post": {
+      "tags": [
+        "Confidential"
+      ],
+      "operationId": "confidentialWithdrawDryRun",
+      "summary": "Quote a confidential withdraw (no execution)",
+      "description": "Returns the indicative output for a confidential withdraw without\nsigning or submitting. Read-only.\n\nApplies the same gates as the real confidential withdraw, in the same\norder: `to` is required (400 without it), then the policy decision over\nthe same canonical op (403 when frozen or denied), then the upstream\nquote. A wallet whose policy requires approval still gets its quote \u2014\nthe op is executable once approvers sign.\n",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfidentialWithdrawRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Quote",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapQuoteResponse"
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/components/responses/BadRequest"
+        },
+        "401": {
+          "$ref": "#/components/responses/Unauthorized"
+        },
+        "403": {
+          "$ref": "#/components/responses/Forbidden"
+        },
+        "429": {
+          "$ref": "#/components/responses/OperationLimitReached"
+        },
+        "500": {
+          "$ref": "#/components/responses/InternalError"
+        },
+        "503": {
+          "$ref": "#/components/responses/ServiceUnavailable"
+        }
+      }
+    }
+  },
+  "SwapQuoteResponse": {
+    "type": "object",
+    "properties": {
+      "amount_out": {
+        "type": "string",
+        "description": "Expected output in minimal units. Absent on a confidential\nswap-quote or withdraw dry-run when 1Click gave no estimate for the\nroute; `hint` then says so. Such an answer is final for the route:\nasking again quotes the same way."
+      },
+      "min_amount_out": {
+        "type": "string",
+        "description": "Minimum guaranteed output (after slippage). Absent together with `amount_out`."
+      },
+      "deadline": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "time_estimate_seconds": {
+        "type": "integer"
+      },
+      "hint": {
+        "type": "string",
+        "description": "Present only when `amount_out` is absent, and says why."
+      }
+    }
+  }
+}

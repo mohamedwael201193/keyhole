@@ -1,0 +1,16 @@
+[
+  {
+    "endpoint": "https://free.rpc.fastnear.com",
+    "http": 400,
+    "ms": 127,
+    "body": "{\"jsonrpc\":\"2.0\",\"error\":{\"name\":\"REQUEST_VALIDATION_ERROR\",\"cause\":{\"name\":\"PARSE_ERROR\",\"info\":{\"error_message\":\"Failed to decode transaction: Unexpected length of input\"}},\"code\":-32700,\"message\":\"Parse error\",\"data\":\"Failed to decode transaction: Unexpected length of input\"},\"id\":\"keyhole-no-signature-legacy-support-probe\"}",
+    "no_signed_transaction": true
+  },
+  {
+    "endpoint": "https://rpc.mainnet.near.org",
+    "http": 400,
+    "ms": 3125,
+    "body": "{\"jsonrpc\":\"2.0\",\"error\":{\"name\":\"REQUEST_VALIDATION_ERROR\",\"cause\":{\"name\":\"PARSE_ERROR\",\"info\":{\"error_message\":\"Failed to decode transaction: Unexpected length of input\"}},\"code\":-32700,\"message\":\"Parse error\",\"data\":\"Failed to decode transaction: Unexpected length of input\"},\"id\":\"keyhole-no-signature-legacy-support-probe\"}",
+    "no_signed_transaction": true
+  }
+]

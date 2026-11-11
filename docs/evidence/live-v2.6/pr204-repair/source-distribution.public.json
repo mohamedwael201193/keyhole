@@ -1,0 +1,14 @@
+{
+  "source_commit": "75c97e5d42b779d48c4a2d224438ffcb06f55156",
+  "manifest": {
+    "commit": "75c97e5d42b779d48c4a2d224438ffcb06f55156",
+    "sha256": "5f36a4295b5d17003309c501459d440c7b1a07839ae94aed4dabd76aff6ebaf7",
+    "bytes": 7376931,
+    "files": 1146
+  },
+  "immutable_pin_is_tested_code_snapshot_not_self_referential_metadata_commit": true,
+  "packed_judge_pass": 9,
+  "packed_judge_fail": 0,
+  "raw_signed_transactions_added": false,
+  "source_commit_local_only_until_owner_push": true
+}

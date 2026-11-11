@@ -1,0 +1,13 @@
+{
+  "at_cairo": "2026-11-11T01:52:44.038808+02:00",
+  "reviewed_main_source": "9d661db70a70e00e4d23544fc75dbc523d17e626",
+  "release_branch": "chore/live-v2.6",
+  "web_delta_vs_reviewed_main": [
+    "web/lib/identity.gen.ts"
+  ],
+  "handwritten_web_unchanged": true,
+  "gate_fixes_used_in_production_runtime": false,
+  "only_web_delta": "Reviewed generator promotion of contract/worker identities. No handwritten web fixes.",
+  "deploy_from": "repository root",
+  "rootDirectory": "web"
+}

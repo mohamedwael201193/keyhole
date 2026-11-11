@@ -1,0 +1,198 @@
+{
+  "schema": "keyhole-v26-replacement-upload-held-public-v1",
+  "at_cairo": "2026-11-11 01:30:41 Africa/Cairo",
+  "planner_commit": "090c97e963f689aa93b7a84e0feceeec81443377",
+  "tests": {
+    "total": 108,
+    "pass": 108,
+    "fail": 0
+  },
+  "rpc": "https://near.drpc.org",
+  "uploads": [
+    {
+      "step": "replacement-upload-1",
+      "hash": "8wfH4CYGksrqT9L6SvKSzJYJYyUcKwLMpg18V959CYMY",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "exact_payload_sha256": "aa3ca86112afa983999775f02d388cde06c99f7ba27bda8fa9ef6e00efe5260b",
+      "closed_receipt_graph": true,
+      "fees_yocto": "5354700466524800000000",
+      "block_height": 223984755,
+      "block_hash": "8o5RdxnPaJ68KmJdjG5XWUC9tmtZyMJ872nCAJF7Ld3C",
+      "at_cairo": "2026-11-11 01:25:53 Africa/Cairo"
+    },
+    {
+      "step": "replacement-upload-2",
+      "hash": "GTBXzw5izJCSc5J19q5X7YyrzwcXtjPaSv2q1M6Bh2nU",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "exact_payload_sha256": "e9c5f236ab052b4be2cbd352469475766983597596fa8e61c99f25a4cc607ac7",
+      "closed_receipt_graph": true,
+      "fees_yocto": "303735533371700000000",
+      "block_height": 223984773,
+      "block_hash": "63B44xVh2tqkfXQVAzihu2gPWBcpjdMTaT6z5Yhcm3Xk",
+      "at_cairo": "2026-11-11 01:26:03 Africa/Cairo"
+    }
+  ],
+  "fastfs": {
+    "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f.wasm?v=1794353171",
+    "http": 200,
+    "at_cairo": "2026-11-11T01:26:12.477113+02:00",
+    "sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+    "bytes": 1085333,
+    "headers": {
+      "x-fastdata-block-height": "223984757",
+      "x-fastdata-nonce": "1794353148",
+      "x-fastdata-parts": "2",
+      "x-fastdata-block-timestamp": "1794353154354583968",
+      "x-fastdata-tx-hash": "8wfH4CYGksrqT9L6SvKSzJYJYyUcKwLMpg18V959CYMY",
+      "x-fastdata-receipt-id": "DKcdbMeNJ1VD3CWy7ea9xmLDXkaafFkrK384GKvNQowu",
+      "etag": "W/\"DKcdbMeNJ1VD3CWy7ea9xmLDXkaafFkrK384GKvNQowu-1794353148\""
+    },
+    "exact_assembly": "PASS"
+  },
+  "known_transactions": [
+    {
+      "hash": "4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
+      "status": "FINAL_SUCCESS",
+      "at_cairo": "2026-11-11 01:11:39 Africa/Cairo",
+      "block_height": 223983247,
+      "before_height": 223983159,
+      "dispatch_distance_blocks": 88,
+      "code_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+      "code_bytes": 487260,
+      "fees_yocto": "3536916508618000000000",
+      "storage_delta_yocto": "14050000000000000000000",
+      "all_state_preserved": true,
+      "predeploy": "PASS",
+      "post": "PASS",
+      "deploy_post": "PASS",
+      "contract_identity": "PROMOTED"
+    },
+    {
+      "step": "upload-1",
+      "hash": "Fm5j4jfF933r9jqZDHy3d2Ph1scmMVt6h3KMZfLABWd3",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "at_cairo": "2026-11-11 01:16:20 Africa/Cairo",
+      "block_height": 223983744,
+      "fees_yocto": "5354700466524800000000",
+      "closed_receipt_graph": true
+    },
+    {
+      "step": "upload-2",
+      "hash": "J581HTWGiV7NVJjMFKtrWqaJAbqdTSRDsjbAyE5dCCU4",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "at_cairo": "2026-11-11 01:16:44 Africa/Cairo",
+      "block_height": 223983785,
+      "fees_yocto": "303735533371700000000",
+      "closed_receipt_graph": true
+    },
+    {
+      "step": "replacement-upload-1",
+      "hash": "8wfH4CYGksrqT9L6SvKSzJYJYyUcKwLMpg18V959CYMY",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "exact_payload_sha256": "aa3ca86112afa983999775f02d388cde06c99f7ba27bda8fa9ef6e00efe5260b",
+      "closed_receipt_graph": true,
+      "fees_yocto": "5354700466524800000000",
+      "block_height": 223984755,
+      "block_hash": "8o5RdxnPaJ68KmJdjG5XWUC9tmtZyMJ872nCAJF7Ld3C",
+      "at_cairo": "2026-11-11 01:25:53 Africa/Cairo"
+    },
+    {
+      "step": "replacement-upload-2",
+      "hash": "GTBXzw5izJCSc5J19q5X7YyrzwcXtjPaSv2q1M6Bh2nU",
+      "status": "FINAL_EXPECTED_GAS1_FAILURE",
+      "exact_payload_sha256": "e9c5f236ab052b4be2cbd352469475766983597596fa8e61c99f25a4cc607ac7",
+      "closed_receipt_graph": true,
+      "fees_yocto": "303735533371700000000",
+      "block_height": 223984773,
+      "block_hash": "63B44xVh2tqkfXQVAzihu2gPWBcpjdMTaT6z5Yhcm3Xk",
+      "at_cairo": "2026-11-11 01:26:03 Africa/Cairo"
+    }
+  ],
+  "total_known_fees_yocto": "14853788508411000000000",
+  "additional_code_storage_yocto": "14050000000000000000000",
+  "confirmed_refunds_yocto": "0",
+  "compute_calls": 0,
+  "secret_merge": {
+    "official_cli_invocations": 1,
+    "reported_hash": null,
+    "result": "HTTP 400 bad request while storing updated secrets; original UNKNOWN",
+    "before": {
+      "schema": "keyhole-secret-merge-before-v1",
+      "block": {
+        "hash": "8i8dSmrHfeH4PuYWsrFxhj7qdGx99zWeycWLRsEzDF8T",
+        "height": 223984828,
+        "timestamp": 1794353195619801300
+      },
+      "signer_id": "keyhole-devmo.near",
+      "public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
+      "nonce_before": 221777577000134,
+      "expected_nonce": "221777577000135",
+      "receiver_id": "outlayer.near",
+      "method": "store_secrets",
+      "gas": "50000000000000",
+      "deposit": "100000000000000000000000",
+      "keys_to_merge": [
+        "GUARDED_WORKER_HASH"
+      ],
+      "guarded_worker_hash": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "reason_auditor_untouched": "R4 ordinary disabled-lending restoration does not enroll a provisioning auditor; preserve every existing value and access rule."
+    },
+    "recovery": {
+      "before_height": 223984828,
+      "scan_end_height": 223985047,
+      "scan_last_height": 223984828,
+      "blocks_scanned": 220,
+      "chunk_reads": 91,
+      "signer_shard": 7,
+      "original_nonce": "221777577000135",
+      "nonce_after_scan": 221777577000134,
+      "matching_hashes": [],
+      "state": "UNKNOWN_NO_AUTOMATIC_RETRY",
+      "one_official_cli_invocation": true
+    },
+    "finalized_metadata_unchanged": true,
+    "retry": false,
+    "invoked_at_cairo": "2026-11-11T01:27:00.819941+02:00"
+  },
+  "held": {
+    "block": {
+      "hash": "HxyutBbu2YmTAgT3ieKo223PtcqXwxGyBypSwTWXyMM7",
+      "height": 223985249,
+      "timestamp": 1794353432059172600
+    },
+    "maintenance": "ON",
+    "aliases": [
+      {
+        "path": "/api/keyhole",
+        "status": 503,
+        "cache_control": "no-store"
+      },
+      {
+        "path": "/api/worker",
+        "status": 503,
+        "cache_control": "no-store"
+      }
+    ],
+    "lending_enabled": false,
+    "registry_count": 22,
+    "registry_active": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    "registry_unchanged": true,
+    "full_state_preservation": "PASS",
+    "registry_batches_dispatched": 0,
+    "restore": "NOT EVALUATED: secret original UNKNOWN",
+    "worker_promotion": false,
+    "maintenance_off": false
+  },
+  "auxiliary_strict_judge": {
+    "rpc": "https://near.drpc.org",
+    "exit_code": 1,
+    "result": "Code and minter match; unchanged Python urllib phase still returns HTTP 403. Full strict judge not PASS."
+  },
+  "next": "Operator-reviewed recovery for original secret merge; do not rerun updater, advance registry, or lift maintenance while original is UNKNOWN.",
+  "operator_packet_sha256": {
+    "secret-merge.before.json": "2b71cf820e16a3e5a344915962a3a3b87a64ff6f1e834ef1f2a34d2d985c1107",
+    "secret-merge.dispatch.wal.json": "9ed290d228b7d243b7f7e2d79f2c0769abe24abde1d20283e3500fc97ad0051a",
+    "secret-recovery-scan.jsonl": "bb28dd1b58611d56d6aad2ffb36f9d4d3b26ac8597145692fc396851bbf1ca9c",
+    "secret-recovery-result.json": "313a4581ccdcd1e8d14b838cf300c639bf37c33518b54a3002c8235d706cd3a8"
+  }
+}

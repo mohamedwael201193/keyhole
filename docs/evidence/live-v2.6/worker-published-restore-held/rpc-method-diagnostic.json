@@ -1,0 +1,46 @@
+{
+  "at_cairo": "2026-11-11T01:32:57.789629+02:00",
+  "note": "Fresh diagnostic only: AA== is a single zero byte, never a valid or signed transaction. The original CLI did not retain its HTTP response body or signed request.",
+  "responses": [
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "keyhole-invalid-one-byte-format-diagnostic",
+        "method": "broadcast_tx_commit",
+        "params": [
+          "AA=="
+        ]
+      },
+      "http": 400,
+      "response_body": "{\"id\":\"keyhole-invalid-one-byte-format-diagnostic\",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"method is not available\",\"code\":-32601}}",
+      "no_signed_transaction": true
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "keyhole-invalid-one-byte-format-diagnostic",
+        "method": "broadcast_tx_commit",
+        "params": {
+          "signed_tx_base64": "AA=="
+        }
+      },
+      "http": 400,
+      "response_body": "{\"id\":\"keyhole-invalid-one-byte-format-diagnostic\",\"jsonrpc\":\"2.0\",\"error\":{\"message\":\"method is not available\",\"code\":-32601}}",
+      "no_signed_transaction": true
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "keyhole-invalid-one-byte-format-diagnostic",
+        "method": "send_tx",
+        "params": {
+          "signed_tx_base64": "AA==",
+          "wait_until": "NONE"
+        }
+      },
+      "http": 200,
+      "response_body": "{\"id\":\"keyhole-invalid-one-byte-format-diagnostic\",\"jsonrpc\":\"2.0\",\"error\":{\"name\":\"REQUEST_VALIDATION_ERROR\",\"cause\":{\"name\":\"PARSE_ERROR\",\"info\":{\"error_message\":\"Failed parsing args: the value could not decoded from borsh due to: Unexpected length of input\"}},\"code\":-32700,\"message\":\"Parse error\",\"data\":\"Failed parsing args: the value could not decoded from borsh due to: Unexpected length of input\"}}",
+      "no_signed_transaction": true
+    }
+  ]
+}

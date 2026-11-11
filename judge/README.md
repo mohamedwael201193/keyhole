@@ -7,7 +7,7 @@ The zero-install path (`./judge/0-live.sh`) needs only `bash`, `curl` and `pytho
 | 0 | `./judge/0-live.sh` | live `code_hash` equals `identity.json`; `config`, source metadata and supply views; the live worker `info` attestation; one recorded mainnet refusal receipt. No wallet, no Rust, no npm |
 | 1 | `./judge/1-contract.sh` | the keys NFT contract on `keyhole-devmo.near` runs exactly `contracts/keys/deployed/keyhole_keys.wasm` (on-chain `code_hash`), and its minter is the TEE-held account |
 | 2 | `./judge/2-attestations.sh` | each recorded refusal and trade was produced by the attested worker build; the published output hashes to the attested `output_hash` |
-| 3 | `./judge/3-verify.sh [call_id]` (same as `./verify.sh <call_id> --rebuild`) | rebuilds the worker in the current checkout. The sha256 equals the attested wasm only when this checkout is the publishing commit. On this candidate branch the CI worker job warns and still succeeds; that is not live byte equality |
+| 3 | `./judge/3-verify.sh [call_id]` (same as `./verify.sh <call_id> --rebuild`) | rebuilds this checkout against the current info call selected from identity.json. The guarded worker62398a8a matches the published source artifact; a historical call still requires its own publishing checkout for rebuild equality |
 | 4 | `./judge/4-live-refusals.sh` | live, with your own NEAR account: replay and over-cap requests are refused by the TEE right now |
 
 `judge/evidence.json` lists the recorded mainnet calls (over-cap, replay, wrong recipient, tampered, stale, op mismatch, no auth, double mint, confidential swaps, MCP copy with confirmation, withdraws).

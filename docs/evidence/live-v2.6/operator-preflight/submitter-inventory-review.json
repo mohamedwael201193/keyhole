@@ -1,0 +1,55 @@
+{
+  "schema": "keyhole-submitter-inventory-review-v1",
+  "complete": false,
+  "eligible_for_release_trust": false,
+  "source_commit": "9d661db70a70e00e4d23544fc75dbc523d17e626",
+  "confirmed_entry_points": [
+    {
+      "id": "production-worker-gateway",
+      "source": "web/app/api/worker/route.ts:21-49",
+      "aliases": [
+        "/api/keyhole",
+        "/api/worker"
+      ],
+      "upstream": "https://api.outlayer.ai/call/keyhole-devmo.near/keyhole",
+      "pause_method": "Reviewed first-in-handler KEYHOLE_MAINTENANCE=1 deployment",
+      "actual_controller_enrollment": null,
+      "pause_acknowledgement": null
+    },
+    {
+      "id": "cli-and-mcp-direct-worker",
+      "source": "cli/src/core.ts:75-86; cli/src/cli.ts; cli/src/mcp.ts",
+      "route": "KEYHOLE_GATEWAY, else caller OUTLAYER_PAYMENT_KEY directly to OutLayer",
+      "pause_method": "Explicit acknowledgement by each actual process/controller; web barrier does not cover direct mode",
+      "actual_controller_enrollment": null,
+      "pause_acknowledgement": null
+    },
+    {
+      "id": "operator-outlayer-cli",
+      "source": "upgrade/WORKER_AND_LOANS_RUNBOOK.md; official OutLayer CLI",
+      "namespace": "keyhole-devmo.near, payment nonce 1",
+      "native_owner_public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
+      "pause_method": "Exclusive operator handoff and no run invocation",
+      "pause_acknowledgement": null
+    }
+  ],
+  "additional_routes_to_review": [
+    {
+      "source": "scripts/sign-and-call.js",
+      "project": "keyhole-devmo.near/keyhole-probe",
+      "scope": "Legacy separate probe; not silently counted as a keyhole production submitter"
+    },
+    {
+      "route": "OutLayer HTTPS with explicit version_key or native request_execution",
+      "scope": "Supported direct paths; no assertion that an undiscovered third party actually used them"
+    }
+  ],
+  "observation_limits": [
+    "Source entry points are not a complete actual-controller, machine, routine or credential-copy inventory.",
+    "No actual signed submitter pause acknowledgements were supplied or created.",
+    "No current process with a KEYHOLE checkout cwd was observed apart from this read-only operator shell. Other process cwds, machines, hosted jobs and routines were not thereby excluded.",
+    "Nonce-1 CLI logs return 100 of 733 history entries even when --limit 1000 is requested. All returned rows are completed. This is not a complete original native/provider operation audit.",
+    "Nonce-1 reserved balance is zero; that scoped observation alone is not a provider-global old-job or UNKNOWN drain attestation."
+  ],
+  "release_decision": "HOLD before trust enrollment or maintenance mutation; do not fabricate old_jobs=0 / unknown_native=0 / unknown_provider=0 or sign unsupported pause declarations."
+}

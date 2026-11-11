@@ -1,0 +1,8 @@
+{
+  "at_cairo": "2026-11-11T01:10:52.185434+02:00",
+  "endpoint": "https://near.drpc.org",
+  "selection_reason": "Healthy distinct provider, mainnet/not syncing, exact canonical finalized block agreement, subsecond ordinary reads; avoids the previously exhausted FastNEAR endpoint",
+  "configuration": "Existing NEAR_RPC environment variable; no repository source change",
+  "minimum_request_start_interval_ms": 150,
+  "single_endpoint_per_release_packet": true
+}

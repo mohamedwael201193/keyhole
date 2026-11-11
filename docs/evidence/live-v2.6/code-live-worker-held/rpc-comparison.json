@@ -1,0 +1,145 @@
+{
+  "at_cairo": "2026-11-11T01:10:03.419965+02:00",
+  "same_canonical_finalized_block": {
+    "height": 223982733,
+    "hash": "3M5xPTqr7uAhj2kkpnx7nibSZJ8zB9DH68kF7nTWjaVT"
+  },
+  "providers": [
+    {
+      "endpoint": "https://free.rpc.fastnear.com",
+      "requests": [
+        {
+          "method": "status",
+          "http": 200,
+          "ms": 201,
+          "chain_id": "mainnet",
+          "syncing": false
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 81,
+          "hash": "3M5xPTqr7uAhj2kkpnx7nibSZJ8zB9DH68kF7nTWjaVT",
+          "height": 223982733
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 90,
+          "hash": "BkutHAgc8JQEdRAFzgeArdwGJfT6nyb4zu3XphjbovT7",
+          "height": 223983055
+        }
+      ],
+      "valid": true,
+      "total_ms": 372
+    },
+    {
+      "endpoint": "https://rpc.mainnet.fastnear.com",
+      "requests": [
+        {
+          "method": "status",
+          "http": 200,
+          "ms": 200,
+          "chain_id": "mainnet",
+          "syncing": false
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 88,
+          "hash": "3M5xPTqr7uAhj2kkpnx7nibSZJ8zB9DH68kF7nTWjaVT",
+          "height": 223982733
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 77,
+          "hash": "BkutHAgc8JQEdRAFzgeArdwGJfT6nyb4zu3XphjbovT7",
+          "height": 223983055
+        }
+      ],
+      "valid": true,
+      "total_ms": 365
+    },
+    {
+      "endpoint": "https://near.lava.build",
+      "requests": [
+        {
+          "method": "status",
+          "http": 410,
+          "ms": 151
+        }
+      ],
+      "valid": false,
+      "error": "410 Client Error: Gone for url: https://near.lava.build/"
+    },
+    {
+      "endpoint": "https://near.drpc.org",
+      "requests": [
+        {
+          "method": "status",
+          "http": 200,
+          "ms": 196,
+          "chain_id": "mainnet",
+          "syncing": false
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 185,
+          "hash": "3M5xPTqr7uAhj2kkpnx7nibSZJ8zB9DH68kF7nTWjaVT",
+          "height": 223982733
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 90,
+          "hash": "Dp6GqNVAfLSm1oonSsqBGt4brnBnCaMQmbiiSQDgy6xw",
+          "height": 223983056
+        }
+      ],
+      "valid": true,
+      "total_ms": 471
+    },
+    {
+      "endpoint": "https://1rpc.io/near",
+      "requests": [
+        {
+          "method": "status",
+          "http": 200,
+          "ms": 642
+        }
+      ],
+      "valid": false,
+      "error": "{'code': -32601, 'message': 'the method status does not exist/is not available'}"
+    },
+    {
+      "endpoint": "https://rpc.mainnet.near.org",
+      "requests": [
+        {
+          "method": "status",
+          "http": 200,
+          "ms": 3167,
+          "chain_id": "mainnet",
+          "syncing": false
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 3046,
+          "hash": "3M5xPTqr7uAhj2kkpnx7nibSZJ8zB9DH68kF7nTWjaVT",
+          "height": 223982733
+        },
+        {
+          "method": "block",
+          "http": 200,
+          "ms": 3047,
+          "hash": "GU3c8MFPbieA8De9MwhKUSSaKPwKffo4wvgHaRUgsFAJ",
+          "height": 223983072
+        }
+      ],
+      "valid": true,
+      "total_ms": 9260
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "release_public_key": "c8FueRrHVlejvFljMa5pytNzKvKhMjdtbIY9PFpAa9M=",
+  "direct_submitters": [
+    {
+      "id": "owner-offline:ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
+      "public_key": "XogQ5elQtLnC9FyNjvCk5xzXWTCo60fAbd4/HwZgZpQ=",
+      "acknowledgement_authority": "own-key"
+    },
+    {
+      "id": "owner-meteor:ed25519:8NP9x5eFZic4E8cL4Pq8NLoHwB5VG1tbhWPnHSPE2bdj",
+      "public_key": "c8FueRrHVlejvFljMa5pytNzKvKhMjdtbIY9PFpAa9M=",
+      "acknowledgement_authority": "operator-attestation"
+    },
+    {
+      "id": "enclave-minter:ed25519:6H1iG1oHWKQZ7smE6yh5rMAeJ4tJ61tvtZGzuW7kSY2",
+      "public_key": "c8FueRrHVlejvFljMa5pytNzKvKhMjdtbIY9PFpAa9M=",
+      "acknowledgement_authority": "operator-attestation"
+    },
+    {
+      "id": "beat:ed25519:9FiNXX2MQdv8r4fNagjeJ3NrodDoqoSTLTbPBW7d6LXR",
+      "public_key": "eqJnvYpBNnTM8vFxbDKpu4lQQ2I/w/s8NrYRjNUy45g=",
+      "acknowledgement_authority": "own-key"
+    },
+    {
+      "id": "gateway-payment:keyhole-devmo.near:1:/api/keyhole+/api/worker",
+      "public_key": "c8FueRrHVlejvFljMa5pytNzKvKhMjdtbIY9PFpAa9M=",
+      "acknowledgement_authority": "operator-attestation"
+    },
+    {
+      "id": "operator-worker-cli:keyhole-devmo.near:1",
+      "public_key": "c8FueRrHVlejvFljMa5pytNzKvKhMjdtbIY9PFpAa9M=",
+      "acknowledgement_authority": "operator-attestation"
+    }
+  ],
+  "exclusions": [
+    {
+      "public_key": "ed25519:FNe2aYtzNZ3FicPYdCjxgWuVMTf29NK2F1UzoFSsQ6h1",
+      "reason": "FunctionCall only to social::__fastdata_kv/__fastdata_fastfs; cannot target KEYHOLE or its worker. Operator explicitly excludes; no key mutation."
+    }
+  ]
+}
