@@ -564,7 +564,7 @@
   {
    "id": "att-dc3668db-build",
    "claim": "Call dc3668db executed worker build d337e822",
-   "where": "README.md:215",
+   "where": "README.md:628",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d",
    "check": {
@@ -1821,7 +1821,7 @@
   {
    "id": "att-dc3668db",
    "claim": "Attested call dc3668db linked from README.md",
-   "where": "README.md:570",
+   "where": "README.md:628",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d",
    "check": {
@@ -5099,17 +5099,17 @@
   },
   {
    "id": "e2e-verify: the default page checks the publ",
-   "claim": "e2e test named 'verify: the default page checks the published d337e822 info call' exists",
+   "claim": "e2e test named 'verify: the default page checks the published guarded v2.6 info call' exists",
    "where": "README.md:676",
    "evidence_type": "test file",
    "evidence": "web/e2e/site.spec.ts",
    "check": {
     "type": "grep",
     "path": "web/e2e/site.spec.ts",
-    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ d337e822\\ info\\ call"
+    "pattern": "test\\(\"verify:\\ the\\ default\\ page\\ checks\\ the\\ published\\ guarded\\ v2\\.6\\ info\\ call"
    },
    "expected": "test name found",
-   "verify": "grep -n \"verify: the default page checks the published d337e822 info call\" web/e2e/site.spec.ts"
+   "verify": "grep -n \"verify: the default page checks the published guarded v2.6 info call\" web/e2e/site.spec.ts"
   },
   {
    "id": "e2e-settle: the real SOL→NEAR order reads SU",
@@ -5675,7 +5675,7 @@
   {
    "id": "path-SECURITY.md",
    "claim": "Linked repo path SECURITY.md exists",
-   "where": "README.md:234",
+   "where": "README.md:224",
    "evidence_type": "file",
    "evidence": "SECURITY.md",
    "check": {
@@ -8321,7 +8321,7 @@
   {
    "id": "att-129161f9",
    "claim": "Attested call 129161f9 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:45",
+   "where": "web/lib/evidence.ts:46",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/129161f9-2534-4a3f-9544-44f8da9dd7c2",
    "check": {
@@ -8334,7 +8334,7 @@
   {
    "id": "att-dda27438",
    "claim": "Attested call dda27438 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:49",
+   "where": "web/lib/evidence.ts:50",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/dda27438-67e6-4c8a-8f32-888d3ff17760",
    "check": {
@@ -8347,7 +8347,7 @@
   {
    "id": "att-3e53ce83",
    "claim": "Attested call 3e53ce83 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:50",
+   "where": "web/lib/evidence.ts:51",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/3e53ce83-4c4c-4769-820d-ba8a446dd335",
    "check": {
@@ -8360,7 +8360,7 @@
   {
    "id": "att-4eae763a",
    "claim": "Attested call 4eae763a shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:51",
+   "where": "web/lib/evidence.ts:52",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/4eae763a-5732-4e6b-9907-2b8c6294f170",
    "check": {
@@ -8373,7 +8373,7 @@
   {
    "id": "att-e099f957",
    "claim": "Attested call e099f957 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:56",
+   "where": "web/lib/evidence.ts:57",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/e099f957-e3c6-4035-999a-907d9782997e",
    "check": {
@@ -8386,7 +8386,7 @@
   {
    "id": "att-b8a83c55",
    "claim": "Attested call b8a83c55 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:57",
+   "where": "web/lib/evidence.ts:58",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b8a83c55-61bb-448f-8196-08dc23a574df",
    "check": {
@@ -8399,7 +8399,7 @@
   {
    "id": "att-cb3e197b",
    "claim": "Attested call cb3e197b shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:58",
+   "where": "web/lib/evidence.ts:59",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/cb3e197b-61d0-44cb-8fdf-99114b409b25",
    "check": {
@@ -8412,7 +8412,7 @@
   {
    "id": "att-a8097323",
    "claim": "Attested call a8097323 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:60",
+   "where": "web/lib/evidence.ts:61",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a8097323-9fdd-457e-b417-721599793c08",
    "check": {
@@ -8425,7 +8425,7 @@
   {
    "id": "att-806a1150",
    "claim": "Attested call 806a1150 shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:61",
+   "where": "web/lib/evidence.ts:62",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/806a1150-8ebb-42b7-b848-fa1dc69299a4",
    "check": {
@@ -8438,7 +8438,7 @@
   {
    "id": "att-b14ffaea",
    "claim": "Attested call b14ffaea shown on the site (web/lib/evidence.ts)",
-   "where": "web/lib/evidence.ts:62",
+   "where": "web/lib/evidence.ts:63",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b14ffaea-21fe-4fa2-88f8-15a411f8e08f",
    "check": {

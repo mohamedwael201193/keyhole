@@ -39,9 +39,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 536851adb92fce5a58c4523ec2db1fd3937db6d7
+git fetch --depth 1 origin 353ef92c465a88553d6d9aaaf662c0f1d93b5e40
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "536851adb92fce5a58c4523ec2db1fd3937db6d7"
+test "$(git rev-parse HEAD)" = "353ef92c465a88553d6d9aaaf662c0f1d93b5e40"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -54,9 +54,9 @@ No git? Download all three files from that same immutable source commit and run 
 
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/536851adb92fce5a58c4523ec2db1fd3937db6d7/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/536851adb92fce5a58c4523ec2db1fd3937db6d7/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/536851adb92fce5a58c4523ec2db1fd3937db6d7/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/353ef92c465a88553d6d9aaaf662c0f1d93b5e40/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/353ef92c465a88553d6d9aaaf662c0f1d93b5e40/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/353ef92c465a88553d6d9aaaf662c0f1d93b5e40/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -212,7 +212,7 @@ Each step has a command or a link. The words after **See** are what you should g
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
 5. **Open a key's history.** Do: open [keyhole-seven.vercel.app/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940). See: the holders with from and to dates, deposits, withdrawals and its recorded transfer. The page shows "19 events chain, head matches, head signed, signer is the TEE minter. Confirmed", re-checked in your browser.
 6. **Check that the contract on chain is the repo's wasm.** Do: `bash ./judge/1-contract.sh` (needs `bash`, `curl`, `jq`, `sha256sum` and `python3`). See: `on-chain code_hash 3kFeCRQM…zqK3b`, then `OK   contract code matches the committed wasm`, then `OK   minter is an implicit account`. Checked against the finalized v2.5 rollout evidence.
-7. **Verify one call from the terminal.** Do: `cd cli && npm ci && npx tsx src/cli.ts verify dc3668db-674f-4865-a2ce-272f70c41b0d`. See: `"ok": true` and three `OK` lines: TDX quote present; registered wasm_hash equals executed_wasm_sha256; FastFS bytes equal the attested hash. No key is needed. Previously checked with `./verify.sh` (the same checks, plus FastFS) on `dc3668db`.
+7. **Verify one call from the terminal.** Do: `cd cli && npm ci && npx tsx src/cli.ts verify 962d4374-b9ec-411a-9efa-973b36260431`. See: `"ok": true` and three `OK` lines: TDX quote present; registered wasm_hash equals executed_wasm_sha256; FastFS bytes equal the attested hash. No key is needed. Previously checked with `./verify.sh` (the same checks, plus FastFS) on `dc3668db`.
 8. **Open an attested refusal.** Do: open [keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533](https://keyhole-seven.vercel.app/verify?call=a02613a2-d503-45e2-83b8-ef71927c2533). See: the attestation checks pass. The refusal is `over_cap_per_tx`: a 2 USDC swap against the $1 Bronze cap. The attestation has no output body, so the recorded outcome is in [`docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json`](docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json).
 9. **Use the agent path (optional).** Do: run `keyhole-mcp` (`cli/src/mcp.ts`), a stdio MCP server with four tools: `verify`, `explain_pnl`, `quote_buy` and `copy`. See: `verify` needs no key. `copy` needs the operator to type a code on the operator's own terminal; the code never appears in a tool result.
 10. **Open the Pledge preview.** Do: open `/pledge` on a local build of this checkout. See: headline **Borrow NEAR without publishing your full balance**; whole-account collateral warning; locked USDC/NEAR chips (no fake asset picker); tier exit-caps line; How it works column; floating key art unclipped; sidebar **Pledge** lit. Banner **Preview — in review · not live**. CTA disabled: **Pledge launches after audit**. Example terms labelled **Example** (0.50 USDC / 0.01 NEAR); due line marked example until live `get_loan`. Density matches the other dashboard pages (fits 1440×900 and 1280×800 without scrolling). No wallet and no value moved. Live lending stays behind `NEXT_PUBLIC_PLEDGE_LIVE` until the reviewed contract (PR #184 method surface: `open_loan`, `fund_loan`, `repay_loan`, `claim_default`, …) and audit gate clear.
@@ -221,7 +221,7 @@ Each step has a command or a link. The words after **See** are what you should g
 
 **Sign in** with a NEAR wallet (including Meteor and HOT through the wallet selector), MetaMask (signs with EIP-191 `personal_sign`), or Google or email on [/start](https://keyhole-seven.vercel.app/start). The Google and email path creates an embedded NEAR account through Privy, so Privy sees that login. A wallet sign-in does not use Privy. No KYC and no region check are asked for.
 
-Each step says whether it **moves real value on mainnet**.
+Each step says whether it **moves real value on mainnet**. Payable mint/list operations require their prepaid payout slots and explicit onboarding; the current read-flow PASS does not certify every payable flow. [Operational boundary](SECURITY.md#current-v26-release-facts-and-retained-limitations).
 
 | # | Do | See | Moves real value? |
 |---|---|---|---|
@@ -567,7 +567,7 @@ KEYHOLE's next holder surface after Swap (sidebar **Pledge**): **borrow NEAR wit
 | NEAR Intents 1Click | Dry and live quotes, deposits, swaps, status. 216 tokens on 39 chains (live `/api/tokens`, historical) | [`op_quote`, `tee/worker/src/main.rs:287`](tee/worker/src/main.rs), [`web/lib/oneclick.ts`](web/lib/oneclick.ts), [`web/app/api/oneclick/route.ts`](web/app/api/oneclick/route.ts) | [`oneclick-sol`](docs/evidence/oneclick-sol/README.md) |
 | NEAR Intents Agent API | Demo partner policy for the Bronze caps | [`docs/evidence/agent-api`](docs/evidence/agent-api/demo_2026-11-03.json), [`web/tests/agentPolicy.test.ts`](web/tests/agentPolicy.test.ts) | [`biJNTxXc…`](https://nearblocks.io/txns/biJNTxXc9zbQw6nTMJoPM2HeAE9snEf1mSdbsZ1CWEQ) |
 | Chain Signatures (`v1.signer`) | Per-key EVM address and MPC signature from the TEE | [`tee/worker/src/chainsig.rs`](tee/worker/src/chainsig.rs), [`chain_address`, `:829`](tee/worker/src/main.rs), [`chain_sign`, `:844`](tee/worker/src/main.rs) | [evidence](docs/evidence/publish-09d481a5/README.md#chain-signatures-one-real-mpc-signature) |
-| OutLayer TEE (Intel TDX) | Runs the worker, attests every call, seals storage, custody wallet, payment key | [`tee/worker`](tee/worker), [`verify.sh`](verify.sh), [`web/app/api/worker/route.ts`](web/app/api/worker/route.ts) | [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| OutLayer TEE (Intel TDX) | Runs the worker, attests every call, seals storage, custody wallet, payment key | [`tee/worker`](tee/worker), [`verify.sh`](verify.sh), [`web/app/api/worker/route.ts`](web/app/api/worker/route.ts) | [/verify](https://keyhole-seven.vercel.app/verify?call=962d4374-b9ec-411a-9efa-973b36260431) |
 | NEAR AI Cloud | Private model with TEE attestation for [/ask](https://keyhole-seven.vercel.app/ask) | [`web/app/api/ai/route.ts`](web/app/api/ai/route.ts), [`web/lib/ai.ts`](web/lib/ai.ts) | [`ai_poisoned_note.json`](docs/evidence/prompt-injection/ai_poisoned_note.json) |
 | NEAR wallet selector and NEAR Connect | Sign-in and NEP-413 signing for Meteor, HOT and other NEAR wallets | [`web/lib/nearConnect.ts`](web/lib/nearConnect.ts), [`web/package.json`](web/package.json) (`@near-wallet-selector/*`, `@hot-labs/near-connect`) | [`web/tests/near-connect.test.ts`](web/tests/near-connect.test.ts) |
 | Privy embedded NEAR wallet | Google and email sign-in; Privy creates the account | [`web/lib/privy.ts`](web/lib/privy.ts), [`web/lib/privySigner.ts`](web/lib/privySigner.ts) | — |
@@ -625,7 +625,7 @@ The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` 
 | Build | Role | `add_version` tx | Live `info` call |
 |---|---|---|---|
 | `62398a8a` (1,085,333 bytes) | current guarded singleton | [`3emr8M4R…`](https://nearblocks.io/txns/3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P) | [`962d4374`](https://api.outlayer.ai/attestations/by-call/962d4374-b9ec-411a-9efa-973b36260431) |
-| `d337e822` (765,658 bytes) | historical; accepted for old proofs only | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| `d337e822` (765,658 bytes) | previous; accepted for historical proofs only | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
 | `cc8d2fa8` (755,751 bytes) | previous | [`Epaz3aMA…`](https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6) | [`0847b924`](https://api.outlayer.ai/attestations/by-call/0847b924-df76-4cee-ab5a-a96c789d2983) |
 | `a985fd87` (745,180 bytes) | previous | [`A1o8882h…`](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG) | [`246e4a7a`](https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751) |
 | `ebeb6a34` | previous, rolled back to `94c355ff` | [`MG7pGVSN…`](https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq) | [`5650a6b7`](https://api.outlayer.ai/attestations/by-call/5650a6b7-b7de-410c-b206-e189171bad15) |
@@ -651,9 +651,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 536851adb92fce5a58c4523ec2db1fd3937db6d7
+git fetch --depth 1 origin 353ef92c465a88553d6d9aaaf662c0f1d93b5e40
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "536851adb92fce5a58c4523ec2db1fd3937db6d7"
+test "$(git rev-parse HEAD)" = "353ef92c465a88553d6d9aaaf662c0f1d93b5e40"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -662,18 +662,18 @@ test "$(git rev-parse HEAD)" = "536851adb92fce5a58c4523ec2db1fd3937db6d7"
 bash ./judge/0-live.sh                   # curl + python3 only: live code hash, views, one existing attestation, one FINAL receipt
 node judge/verify-claims.mjs --offline   # file checks only; live checks are SKIP. Does not call OutLayer /call
 node judge/verify-claims.mjs             # public reads (mainnet, site pages, existing attestations, CI). Not a paid info probe
-bash ./judge/1-contract.sh --strict          # committed live bytes == chain; candidate rebuild below
+bash ./judge/1-contract.sh --strict          # committed live bytes == chain; source rebuild below
 bash ./judge/2-attestations.sh           # every recorded call: attested build and output hash
-./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d
+./verify.sh 962d4374-b9ec-411a-9efa-973b36260431
 # --rebuild compiles THIS checkout. It matches executed wasm only on the publishing commit.
-# Do not read a mismatch on this candidate branch as a failed live attestation.
-# ./verify.sh dc3668db-674f-4865-a2ce-272f70c41b0d --rebuild
+# Current guarded source matches the published worker; previous builds need their own checkout.
+# ./verify.sh 962d4374-b9ec-411a-9efa-973b36260431 --rebuild
 bash ./judge/4-live-refusals.sh          # with your own NEAR account: replay and over-cap refused right now
 ```
 
 [`judge/README.md`](judge/README.md) lists the sources each check reads (NEAR RPC, `api.outlayer.ai`, `main.fastfs.io`, the live site and the GitHub API). None of them uses keys from this project. [`docs/claims.json`](docs/claims.json) lists each claim with the file that states it, its evidence and its check.
 
-**In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=dc3668db-674f-4865-a2ce-272f70c41b0d) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published d337e822 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. Which browser transcript is recorded: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
+**In the browser.** [/verify](https://keyhole-seven.vercel.app/verify?call=962d4374-b9ec-411a-9efa-973b36260431) downloads the wasm from FastFS and hashes it with `crypto.subtle`. It runs the 6 attestation checks, the 19 Intel DCAP checks on the quote and the 12 Intel revocation and TCB checks. Intel data comes through a fixed-URL pass-through because Intel sends no CORS headers. The e2e test [`verify: the default page checks the published guarded v2.6 info call`](web/e2e/site.spec.ts) runs this on desktop and mobile. Which browser transcript is recorded: [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
 
 GET `/api/health` is passive and has a permanent zero compute budget, including POST. [Route tests](web/tests/health-route.test.ts) · [Operator verification and historical observations](SECURITY.md#integrated-stack-online-verification-limitation-2026-11-10).
 
@@ -731,7 +731,7 @@ OK   FastFS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/f13efe926132
 | FastFS upload for `a985fd87` (expected prepaid-gas revert) | [`Bc8YArR3…`](https://nearblocks.io/txns/Bc8YArR3dwjaTY5fVPbqxCVEXf7xp62DkSBuWjuUmdUY) |
 | Live `info` on `a985fd87` (now previous) | [`246e4a7a`](https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751) |
 | Publish recorded worker `d337e822` (`add_version`, set active): the public signed `record` op for listed keys, and withdraw to any address the holder signs (#177) | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) |
-| Recorded `info` on `d337e822` (25 ops, lists `record`) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
+| Previous recorded `info` on `d337e822` (25 ops, lists `record`) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
 | First signed call on `d337e822` (`balance`, ok) | [`740191ec`](https://api.outlayer.ai/attestations/by-call/740191ec-48a4-4bbb-87f9-906b27c8116e) |
 | Signed `record` call for a listed key (statement signed by the minter) | [`b5fbed71`](https://api.outlayer.ai/attestations/by-call/b5fbed71-d497-43fe-bbd4-6e28efc4dacf) |
 | Publish worker `cc8d2fa8` (`add_version`, set active; now previous): earned tiers (`level_up`, #164) and the freeze of a listed key's account on sale (#173) | [`Epaz3aMA…`](https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6) |

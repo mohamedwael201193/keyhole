@@ -130,6 +130,8 @@ jobs:
         run: python3 judge/receipt_proof_test.py
       - name: strict rebuild semantics and publication recovery regressions
         run: node --test judge/contract-rebuild.test.mjs scripts/pledge/*.test.mjs scripts/release/*.test.mjs
+      - name: live identity rollback, proof history and identity-derived claim regressions
+        run: node --test judge/live-identity.test.mjs judge/identity-claims.test.mjs judge/verifier-history.test.mjs
       - name: primary judge checkout command
         run: node --test judge/checkout-command.test.mjs
       - name: full reproduction prepares sandbox fixtures and compiles WASI

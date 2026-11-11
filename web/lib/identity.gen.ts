@@ -39,7 +39,7 @@ export const IDENTITY = {
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "536851adb92fce5a58c4523ec2db1fd3937db6d7"
+    "source_commit": "353ef92c465a88553d6d9aaaf662c0f1d93b5e40"
   },
   "worker_candidate": {
     "status": "published-mainnet",
