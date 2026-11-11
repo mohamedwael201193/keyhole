@@ -24,11 +24,11 @@ Nonce records are kept for good: no pruning on the call path. (Build ebeb6a34 pr
 
 ## Withdraw to an address the holder names
 
-`assert_withdraw_to(chain, to)` returns `bad_params` unless `params.to` is well formed for `params.chain`: a NEAR account id for `near`, `0x` and 40 hex digits (EIP-55 checksum required when mixed case) for the EVM chains, base58 of 32 bytes for `sol`. An unknown chain is refused. Any well-formed address is allowed, not only the signer's. The holder's NEP-413 or EIP-191 signature covers `params.to`, so the wallet shows the destination the holder signs.
+The published worker (`identity.json` worker `62398a8a…`) sends NEAR only to the authenticated current holder. A different `to` is refused. Sessions cannot withdraw. Unknown chain mappings fail closed. This is the live destination rule. It is not a new capability beyond that published worker.
 
-What this changes: a key that can get a withdraw signature can now send to an address that is not the holder's. Before, a withdraw could only go to the signer's own account. The limits still apply: the per-trade and daily caps, the 10-minute cooldown after a transfer, the seller lock, and the listing freeze. A session token still cannot withdraw. The main risk left is a signature prompt that a phisher gets the holder to sign with an attacker's `to`, and it is bounded by those caps.
+Historical worker `d337e822` accepted any well-formed destination the holder signed. That behavior is historical. The format checks (`assert_withdraw_to`: NEAR account, EIP-55 `0x` address, 32-byte base58) still refuse a malformed `to`. The caps, the 10-minute cooldown, the seller lock and the listing freeze still apply. A phisher who gets a signature is bounded by those caps, and on the published worker the destination must still be the holder.
 
-Proof: the `assert_withdraw_to` cases in [`tee/worker/src/p2fail.rs`](tee/worker/src/p2fail.rs), [`tee/worker/src/matrix.rs`](tee/worker/src/matrix.rs) and [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs). The vault still sets `to` to the connected account, which the worker accepts.
+Proof: holder-only derivation in [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs) (`self_withdraw`); historical format cases in [`tee/worker/src/p2fail.rs`](tee/worker/src/p2fail.rs), [`tee/worker/src/matrix.rs`](tee/worker/src/matrix.rs) and [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs). The vault sets `to` to the connected account.
 
 ## A withdraw racing the transfer
 
@@ -102,9 +102,9 @@ What an intact enclave still prevents, and a broken one does not: the worker wil
 
 A user's NEAR full-access key and a MetaMask key never enter the enclave. A TDX failure does not hand those over.
 
-## Contract v2.7 (staged for deploy, not live)
+## Contract v2.7 (live)
 
-v2.7 is source in this checkout. It is not the wasm on `keyhole-devmo.near`. Live code remains v2.6 (`54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a`). The worker does not call the new methods. `beat`, `nft_set_tier` and `finish_value_op` still take no deposit. `register_collateral` still takes `version` and `valid_until` as JSON numbers and `expected_owner_epoch` as a string (`tee/worker/src/collateral.rs`).
+v2.7 is the wasm on `keyhole-devmo.near` (`26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`, deploy tx `6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h`). v2.6 (`54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a`) is the previous code. The worker does not call the new methods. `beat`, `nft_set_tier` and `finish_value_op` still take no deposit. `register_collateral` still takes `version` and `valid_until` as JSON numbers and `expected_owner_epoch` as a string (`tee/worker/src/collateral.rs`).
 
 **Owner handover.** There is no single-step setter. The current owner calls `propose_owner`. Until the named account calls `accept_owner` after `MIN_UPGRADE_DELAY_NS` (24 h in the release wasm), the current owner can still administer the contract and can `cancel_owner_proposal`. A proposal to the current owner is refused, and so is a proposal that names the contract account. Repeating a proposal overwrites one key and restarts the delay. Accepting clears a staged upgrade, so a departing owner cannot leave a loaded deploy. When both timers are started together, the owner applies the staged wasm before the successor accepts; the clear is then a no-op. Proof: `owner_handover_is_two_step_and_only_the_proposed_account_accepts`, `a_bad_owner_proposal_can_be_cancelled_before_it_can_take_effect`, `accepting_ownership_clears_a_staged_upgrade`, `propose_owner_and_accept_owner_reject_the_contract_account`, `parallel_owner_and_upgrade_timers_apply_before_accept` in [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs).
 

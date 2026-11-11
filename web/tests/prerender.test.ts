@@ -20,21 +20,25 @@ describe("landing is ISR with a bounded read", () => {
 
   afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
 
-  const rpcResult = (v: unknown) => ({ jsonrpc: "2.0", id: "kh", result: { result: Array.from(new TextEncoder().encode(JSON.stringify(v))) } });
+  const rpcResult = (v: unknown) => ({ jsonrpc: "2.0", id: "kh", result: { result: Array.from(new TextEncoder().encode(JSON.stringify(v))), block_hash: "landingblock" } });
   const tokens = [0, 1, 2, 3].map((i) => ({ token_id: `k${i}`, owner_id: "a.near", metadata: null }));
   const answers: Record<string, unknown> = { nft_total_supply: "10", nft_supply_for_owner: "1", nft_tokens: tokens, nft_tier: 1 };
 
-  it("reads 2 supply values, 1 key page and one tier per shown key (7 calls, not 15)", async () => {
-    const calls: string[] = [];
+  it("pins supply to one block, then reads 1 key page and one tier per shown key", async () => {
+    const calls: { method: string; block?: string }[] = [];
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init: { body: string }) => {
-      const method = JSON.parse(init.body).params.method_name as string;
-      calls.push(method);
-      return new Response(JSON.stringify(rpcResult(answers[method])), { status: 200 });
+      const params = JSON.parse(init.body).params as { method_name: string; block_id?: string };
+      calls.push({ method: params.method_name, block: params.block_id });
+      return new Response(JSON.stringify(rpcResult(answers[params.method_name])), { status: 200 });
     }));
     const { loadLanding } = await import("@/lib/landing");
     const data = await loadLanding();
-    expect(calls.filter((m) => m === "nft_tier").length).toBe(4);
-    expect(calls.length).toBe(7);
+    const names = calls.map((c) => c.method);
+    expect(names.filter((m) => m === "nft_tier").length).toBe(4);
+    expect(calls.filter((c) => c.method === "nft_total_supply" && c.block === undefined).length).toBe(1);
+    expect(calls.filter((c) => c.method === "nft_total_supply" && c.block === "landingblock").length).toBe(1);
+    expect(calls.filter((c) => c.method === "nft_supply_for_owner" && c.block === "landingblock").length).toBe(1);
+    expect(calls.length).toBe(8);
     expect(data.supply).toBe(9);
     expect(data.tokens.length).toBe(4);
     expect(data.tiers).toEqual([1, 1, 1, 1]);

@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "total": 2068,
+  "suites": {
+    "cli": 77,
+    "web-unit": 1991
+  },
+  "excluded": [
+    "contract",
+    "worker",
+    "sandbox",
+    "playwright"
+  ],
+  "commit": "d451a25bab95817e73585dd5db3c323e230a9140",
+  "measured_at": "2026-11-11T19:09:41Z",
+  "failed": 0,
+  "run_id": "c49fad1563e4bab5a44ce88e344009bf0962f6458a318038d96c8bfaa9021aca",
+  "runners": {
+    "cli": "cd cli && npm test",
+    "web-unit": "cd web && npx vitest run",
+    "contract": "cd contracts/keys && cargo test --locked",
+    "worker": "cd tee/worker && cargo test --locked"
+  },
+  "note": "ok is true only when every invoked runner exited 0 and total equals the sum of suites. Suites listed in excluded were not run for this file and are not in total. Token reach is feed-derived, not adoption. A CI log count is not a row in this file."
+}
