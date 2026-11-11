@@ -52,12 +52,12 @@ export const IDENTITY = {
     ]
   },
   "review": {
-    "source_commit": "18c94913f2c5faf04a3894ba0a4f5f045b095480"
+    "source_commit": "a101ecc5377d4dd140b9d7947e4ebc927252304f"
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "5a30a377e76a0f0aaf9775e774920b480d74f2a4923e6563fe017d6e5e88b08f",
-    "bytes": 1332085,
+    "wasm_sha256": "43afa9a3c06809de2740a6ba7c5a5eff959d996710baabefb5e75ea841911ba2",
+    "bytes": 1332198,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
