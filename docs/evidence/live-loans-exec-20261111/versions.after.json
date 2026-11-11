@@ -1,0 +1,59 @@
+{
+  "at_cairo": "2026-11-11T23:57:55.221354+02:00",
+  "step": "post-registry",
+  "tx": "2casVEri1dP4J2RH92bLGDjYPq6oseL9jua3NRAQZFs7",
+  "explorer": "https://explorer.near.org/transactions/2casVEri1dP4J2RH92bLGDjYPq6oseL9jua3NRAQZFs7",
+  "final_execution_status": "FINAL",
+  "status": {
+    "SuccessValue": ""
+  },
+  "tokens_burnt": "52894496717000000000",
+  "amount_near": 6.857318667337235,
+  "amount": "6857318667337234162621659",
+  "block_height": 224122893,
+  "governance_state": {
+    "owner": "keyhole-devmo.near",
+    "pending_owner": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+    "pending_owner_not_before_ns": "1794486987377190950",
+    "staged_upgrade_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+    "staged_upgrade_not_before_ns": "1794486857027935824",
+    "min_upgrade_delay_ns": "86400000000000",
+    "wind_down_ns": "1801440000000000000",
+    "wound_down": false
+  },
+  "config": {
+    "owner": "keyhole-devmo.near",
+    "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+    "treasury": "keyhole-devmo.near",
+    "royalty_bps": 500,
+    "beats": "2"
+  },
+  "lending_enabled": false,
+  "attestor": "AVoCWQaln59Ayhfa8qPGHF5jo3wIHHUjCHDKpqgqxEM=",
+  "recovery": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+  "project": {
+    "uuid": "p000000000000004b",
+    "owner": "keyhole-devmo.near",
+    "name": "keyhole",
+    "project_id": "keyhole-devmo.near/keyhole",
+    "active_version": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+    "created_at": 1793124564786701492,
+    "storage_deposit": "2670000000000000000000"
+  },
+  "get_version_count": 1,
+  "list_versions": [
+    {
+      "wasm_hash": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+      "source": {
+        "WasmUrl": {
+          "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377.wasm",
+          "hash": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+          "build_target": "wasm32-wasip2"
+        }
+      },
+      "added_at": 1794434256568279602,
+      "is_active": true
+    }
+  ],
+  "checks_ok": true
+}

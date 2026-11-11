@@ -1,0 +1,37 @@
+{
+  "lending": false,
+  "accounts": {
+    "C": {
+      "amount": "6752976251866280362621659",
+      "amount_near": 6.75297625186628,
+      "storage_usage": 526057
+    },
+    "B": {
+      "amount": "99000000000000000000000",
+      "amount_near": 0.099,
+      "storage_usage": 182
+    },
+    "L": {
+      "amount": "175494885563029499999996",
+      "amount_near": 0.1754948855630295,
+      "storage_usage": 182
+    },
+    "M": {
+      "amount": "40829047361825799999999",
+      "amount_near": 0.0408290473618258,
+      "storage_usage": 315
+    }
+  },
+  "M_slot": true,
+  "token_predicted": "ka6ad6993999b8fee",
+  "nft_token_predicted": null,
+  "uuid_active": {
+    "uuid": "p000000000000004b",
+    "owner": "keyhole-devmo.near",
+    "name": "keyhole",
+    "project_id": "keyhole-devmo.near/keyhole",
+    "active_version": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+    "created_at": 1793124564786701492,
+    "storage_deposit": "2670000000000000000000"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "project": {
+    "uuid": "p000000000000004b",
+    "owner": "keyhole-devmo.near",
+    "name": "keyhole",
+    "project_id": "keyhole-devmo.near/keyhole",
+    "active_version": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+    "created_at": 1793124564786701492,
+    "storage_deposit": "2670000000000000000000"
+  },
+  "get_version_count": 1,
+  "list_versions": [
+    {
+      "wasm_hash": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "source": {
+        "WasmUrl": {
+          "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f.wasm",
+          "hash": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+          "build_target": "wasm32-wasip2"
+        }
+      },
+      "added_at": 1794353781728843992,
+      "is_active": true
+    }
+  ],
+  "block_hash": "HWo7AuNzuq6scKNpTEuPniLfkwD8puE5Rbm157AUqFst"
+}

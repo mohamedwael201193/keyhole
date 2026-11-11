@@ -1,0 +1,17 @@
+{
+  "at_cairo": "2026-11-12T00:17:18.987784+02:00",
+  "C": {
+    "exists": true,
+    "amount": "6855891241403780362621659",
+    "amount_near": 6.85589124140378,
+    "storage_usage": 525930
+  },
+  "C_nonce": 221777577000146,
+  "B": "0c086e0918ab2f8b23e943012b9995b7bdc0a8db6bde9b44069c8ad66dbd5f10",
+  "B_account": {
+    "exists": false,
+    "error": "{'name': 'HANDLER_ERROR', 'cause': {'info': {'block_hash': '6r27wF3f48BBBmPACyuWrdjCGS5mUWSnfhXE3q34dv6e', 'block_height': 224124856, 'requested_account_id': '0c086e0918ab2f8b23e943012b9995b7bdc0a8db6"
+  },
+  "fund_near": "0.099",
+  "source": "keyhole-devmo.near"
+}

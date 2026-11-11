@@ -1,0 +1,25 @@
+{
+  "step": "fastfs-chunk-1",
+  "tx": "D1HQ3VzitDUdJqiR9Bzhkyjvz2aBrgNk4y2CgYjyEZYZ",
+  "at_cairo": "2026-11-11T23:54:31.835033+02:00",
+  "final_execution_status": "FINAL",
+  "status": {
+    "Failure": {
+      "ActionError": {
+        "index": 0,
+        "kind": {
+          "FunctionCallError": {
+            "ExecutionError": "Exceeded the prepaid gas."
+          }
+        }
+      }
+    }
+  },
+  "tokens_burnt": "5031411447164500000000",
+  "gas_burnt": 50314114471645,
+  "block_hash": "CWcZHpdWJKZwchM7Eo5MJEgjmtypS22VT9gsBZrYkArt",
+  "expected": "FINAL_EXPECTED_GAS1_FAILURE (FastFS indexes args; same pattern as prior 8wfH4C\u2026)",
+  "contract_amount_after": "6867526869712663162621659",
+  "explorer": "https://explorer.near.org/transactions/D1HQ3VzitDUdJqiR9Bzhkyjvz2aBrgNk4y2CgYjyEZYZ",
+  "do_not_resend": true
+}
