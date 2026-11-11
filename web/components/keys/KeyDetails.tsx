@@ -11,6 +11,7 @@ import { KEYS_CONTRACT } from "@/lib/config";
 import { shortAccount, shortKeyId } from "@/lib/near";
 import { nearText } from "@/lib/sale";
 import { CAPS, keyIdentity, serialOf } from "@/lib/traits";
+import { NO_PREMIUM_NOTE, tierMeans } from "@/lib/keyCopy";
 import { formatTradePrice } from "@/lib/price";
 import { Card, CopyButton, Icon, IconButton, StatusChip, TierChip, TxLinkPill } from "@/components/v7";
 import type { SaleRead } from "./keyData";
@@ -90,6 +91,8 @@ export function KeyDetails({ tokenId, owner, tier, viewer, sale, proofHref, sale
 
         <p className="kd-sale" data-testid="kd-sale">{saleLine}</p>
         <p className="kd-cap">{tier === null || tier === undefined ? "" : `${formatTradePrice(CAPS[id.finish].perTx)} · $${CAPS[id.finish].daily} / day`}</p>
+        {tier === null || tier === undefined ? null : <p className="kd-note" data-testid="key-tier-means">{tierMeans(id.finish)}</p>}
+        <p className="kd-note" data-testid="key-no-premium">{NO_PREMIUM_NOTE}</p>
 
         <div className="kd-actions">
           {isOwner && <Button href="/vault" icon={<Icon name="vault" size={18} />} testid="kd-open-vault">Open in vault</Button>}

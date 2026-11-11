@@ -129,6 +129,35 @@ These limits are part of the v2.7 source. They are not live until that wasm is d
 - `beat`, `nft_set_tier` and `finish_value_op` stay at deposit 0 so a FunctionCall key can call them. The beat key on the minter is that FunctionCall key. The minter account also holds a full-access enclave key, which the worker uses for deposit-bearing `nft_mint`, `register_collateral` and `begin_value_op`. `register_collateral` still takes `version` and `valid_until` as JSON numbers. No worker change is required for v2.7.
 - Events are emitted when the state transition is committed, before an async custody or transfer receipt confirms. A later callback failure does not un-emit the log.
 
+## Accepted key-deletion freeze (not done on mainnet)
+
+The owner has accepted this limit. It is not done. `keyhole-devmo.near` still has its access keys. This file does not claim a keyless account, and it does not record a `DeleteKey` transaction.
+
+**What becomes frozen.** After every access key on `keyhole-devmo.near` is deleted, that account can no longer sign. Three operations that need its signature stop, by design:
+
+- **Worker publish.** Adding or replacing the published worker is a transaction the project account signs. With no key left, that transaction cannot be sent.
+- **OutLayer secrets.** Writing or rotating a secret for that project is an authenticated action by the same account. With no key left, a new secret cannot be installed.
+- **FastFS uploads.** The FunctionCall key `ed25519:FNe2aYtz…` is what calls `social` methods `__fastdata_kv` and `__fastdata_fastfs`. Deleting it, together with both full-access keys, stops new uploads. Bytes already stored stay public and readable. A FunctionCall key can call only its named methods, and an account with no keys cannot attach a new transaction ([NEAR access keys](https://docs.near.org/protocol/access-keys)).
+
+The minter account is a different account. This deletion is the contract account's keys. It does not, by itself, remove the enclave key on the minter.
+
+**Why.** A full-access key can `DeployContract` without `apply_upgrade`, and it can sign anything else the account can sign ([lock a contract by deleting its keys](https://docs.near.org/smart-contracts/release/lock)). The accepted choice is to finish the operations that need that signature, then remove the keys, and to live with the freeze. No spare key is kept for a later publish, secret, or upload.
+
+**What can still change the contract.** Once v2.7 is the running code and the guardian has accepted ownership, a later upgrade is only `stage_upgrade` and, after 24 h, `apply_upgrade`, called by that guardian owner. The contract deploys its own code with a promise ([contract upgrade](https://docs.near.org/smart-contracts/release/upgrade)). The contract account does not need an access key of its own for that path. The sandbox proof is `parallel_timelock_apply_then_accept_then_zero_key_self_deploy`. While a full-access key still exists, that key can skip the delay. Nothing in this section says the keys are already gone.
+
+**Checklist, in this order, before any deletion.** Every step is still to do. This checkout claims none of them.
+
+1. Finish the worker publish that should stay live. The wasm is on FastFS under its hash, the registry points at that hash, and a fresh `info` attestation matches it.
+2. Write the OutLayer secrets that worker needs, and confirm the worker reads them, while a key on `keyhole-devmo.near` can still sign.
+3. Finish every FastFS upload this account still has to make. Confirm the public hashes. There is no later upload.
+4. Deploy the reviewed v2.7 wasm with a direct code deploy and no init call. v2.6 has no `apply_upgrade`, so this first deploy still uses a full-access key. Do not call `new`, `migrate`, or `migrate_pledge`.
+5. In the same hour, as the current owner, call `stage_upgrade` with the hash of the wasm that should be next if one is already known, and `propose_owner` of the guardian `0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228`. Wait 24 h. Call `apply_upgrade` before `accept_owner`, because accept clears a staged upgrade. The guardian then calls `accept_owner`. The owner of record is the guardian, and that guardian can still sign with its own key.
+6. Leave the chain quiescent. No pending treasury recovery that this account still has to send, and no in-flight receipt that still needs this account's signature.
+7. Read `view_access_key_list` and delete every key it returns, including both full-access keys and the FastFS function-call key. Do that only after steps 1–6.
+8. Read `view_access_key_list` again. Only an empty list means the account is locked. Until that read is public, do not say the keys are gone.
+
+The README may state that positive fact, with a link to the empty-list proof, after step 8. It must not say it before.
+
 ## Sessions (one signature, then no wallet popups for 30 minutes)
 
 **Connect and unlock in one popup.** NEAR wallets connect through `@hot-labs/near-connect`, the connector the NEAR docs use for wallet login (https://docs.near.org/web3-apps/tutorials/wallet-login). Its `connect({ signMessageParams })` signs in and signs one NEP-413 message in the same wallet prompt (https://github.com/hot-dao/near-selector, README "Initialize connection to wallet and sign in"). That message is the `session` request. Because it is built before the account is known, a `session` request (and only that op) may leave `account_id` empty; the enclave then uses the NEP-413 signer and still requires that the public key is a full-access key of that account, exactly as the backend-auth doc describes. The session binds to the first key that account holds. MetaMask is not offered by near-connect with message signing, so EVM accounts keep the EIP-191 path: connect, then one `personal_sign` to unlock.
@@ -199,7 +228,7 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
 
 - **Decision.** `keyhole-devmo.near` holds full-access keys, and its owner can change the contract immediately. There is no multisig, and the account is not keyless. v2.7 source, staged for deploy and not live, adds an in-contract 24 h delay for `stage_upgrade` / `apply_upgrade` and for `propose_owner` / `accept_owner`. There is no single-step owner setter.
 - **Why.** Live versions through v2.6 were deployed by a full-access key. The in-contract delay does not bind that key. A full-access signer can replace the wasm without calling `apply_upgrade`.
-- **Mitigation.** Release bytes are in `contracts/keys/release` with their sha256. CI rebuilds the source candidate and checks the committed v2.6 file. `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`. The delay, the handover and the tests are in [`contracts/keys/src/v27.rs`](contracts/keys/src/v27.rs) and [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs). Do not delete the full-access keys because this delay exists. The caveats are in [v2.7 contract caveats](#v27-contract-caveats-staged-for-deploy-not-live). The key list is in [README §8](README.md#8-security-model).
+- **Mitigation.** Release bytes are in `contracts/keys/release` with their sha256. CI rebuilds the source candidate and checks the committed v2.6 file. `judge/1-contract.sh` compares the on-chain `code_hash` with `contracts/keys/deployed`. The delay, the handover and the tests are in [`contracts/keys/src/v27.rs`](contracts/keys/src/v27.rs) and [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs). The full-access keys are still present, so the delay does not bind them yet. The accepted later deletion, and what it freezes, is in [Accepted key-deletion freeze](#accepted-key-deletion-freeze-not-done-on-mainnet). The caveats are in [v2.7 contract caveats](#v27-contract-caveats-staged-for-deploy-not-live). The key list is in [README §8](README.md#8-security-model).
 
 ### 4. Intents solvers see the pair and amount
 
@@ -251,7 +280,7 @@ Each entry gives the decision, the reason for it, and the mitigation. Each one i
   - FunctionCall `ed25519:FNe2aYtzNZ3FicPYdCjxgWuVMTf29NK2F1UzoFSsQ6h1` → receiver `social`, methods `__fastdata_kv` / `__fastdata_fastfs` (FastFS), allowance 1 NEAR.
   The TEE minter `015a0259…ac443` holds one FullAccess (enclave-generated) and one FunctionCall limited to `beat` on `keyhole-devmo.near`. There is no multisig and no timelock. `config.treasury` is the contract account itself. Live count is re-checked on [/verify](https://keyhole-seven.vercel.app/verify).
 - **Why.** Deploys so far are FA-signed (v1–v2.5 historical; v2.6 live). Classic FunctionCall keys **cannot attach NEAR** ([docs](https://docs.near.org/protocol/accounts-contracts/access-keys)), so payable `nft_mint`, `register_collateral` and storage-funded `begin_value_op` cannot move to a pure FC minter; FC can cover only non-payable methods such as `beat`, `finish_value_op` and `nft_set_tier` once separately approved/provisioned.
-- **Mitigation.** Do **not** delete FullAccess keys from mainnet without a verified recovery plan and separate approval of exact current keys/commands. The prepared pledge recovery method below is treasury-only; it cannot restore upgrade authority or operate the minter. No key-change command is executed by this code/test PR. The abandoned desk surface and its ledgers are removed, not a future recovery mechanism.
+- **Mitigation.** The keys are still on mainnet. The accepted deletion plan, including what freezes and the checklist that must be finished first, is in [Accepted key-deletion freeze](#accepted-key-deletion-freeze-not-done-on-mainnet). The prepared pledge recovery method below is treasury-only; it cannot restore upgrade authority or operate the minter. No key-change command is executed by this document. The abandoned desk surface and its ledgers are removed, not a future recovery mechanism.
 
 
 ## Pledge authority graph — code deployed, lending OFF
@@ -275,7 +304,7 @@ Native liabilities include pending registration deposits/bonds, refundable loan 
 
 Treasury recovery is bounded twice: by provenance-tracked `treasury_available` and by native account balance after all those reserves. A time gate alone never makes an active loan's money treasury. Legacy balance is initialized as **zero recoverable ledger**, not “balance less code storage.” Future built-in sale royalties directed to the contract are provenance-tracked when earned; external-market transfers and pre-migration royalties are not assumed attributable. No new lending fee is invented. Any future request to attribute legacy operating capital requires its own auditable migration design. All generated callbacks have private access guards; ordinary callers cannot manufacture success.
 
-Removing the full-access keys is still not authorized by the v2.7 source. `apply_upgrade` is an owner path with a 24 h delay. It refuses a pending treasury recovery. It does not refuse while user liabilities are above zero, so an owner who waits out the delay can still replace the escrow rules while loans exist. A remaining full-access key can do that immediately and skip the delay. Deleting those keys would leave `apply_upgrade` as an owner-controlled upgrade, which is not treasury-only recovery. That deletion needs its own audit. No promise of instant fixability or emergency admin seizure is made. An upgrade should be quiescent: no legacy transfer-call receipts or old worker jobs still pending; pre-v2.5 in-flight receivers cannot retroactively acquire token-specific locks.
+Key deletion is not performed here and is not claimed on mainnet. The accepted plan and checklist are in [Accepted key-deletion freeze](#accepted-key-deletion-freeze-not-done-on-mainnet). `apply_upgrade` remains an owner path with a 24 h delay. It refuses a pending treasury recovery. It does not refuse while user liabilities are above zero, so an owner who waits out the delay can still replace the escrow rules while loans exist. A remaining full-access key can do that immediately and skip the delay. After the keys are gone, that immediate path is gone too, and the same owner path is what remains. That is not treasury-only recovery. No promise of instant fixability or emergency admin seizure is made. An upgrade should be quiescent: no legacy transfer-call receipts or old worker jobs still pending; pre-v2.5 in-flight receivers cannot retroactively acquire token-specific locks.
 
 ### Economic and privacy consent
 

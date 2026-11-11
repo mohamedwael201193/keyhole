@@ -13,7 +13,11 @@ import {assertStorageConsent,storageConsentMatches,createPledgeReadGate,type Pay
 import {abortable,createSingleFlightRefresh,startPledgePolling} from "@/lib/pledgeRefresh";
 import {browserExitStore,dispatchExitContinuation,retryableExit,PLEDGE_EXIT_USDC,type ExitRecord} from "@/lib/pledgeExit";
 import {copyText} from "@/lib/copyText";
+import {withdrawDryRunDecision,exitConfirmText} from "@/lib/withdrawDryRun";
+import {beginExitStep,bindingMatches,browserExitSteps,claimPreview,claimWithdraw,planExitReturn,readWalletReturn,releaseWithdraw,saveAwaitingWithdraw,saveConfirmed,saveDone} from "@/lib/exitContinuation";
 import {accountAccess,actionHeading,assetPresentation,cairoTime,cashoutCopy,currentStep,disbursementCopy,floorCaption,humanSeconds,loanStateLabel,pendingCashoutChrome,policyAction,SWAP_COMPARE_BODY,SWAP_COMPARE_COSTS,SWAP_COMPARE_SUMMARY,terminalLabel,unlockNotice,type AssetBits,type FloorKind} from "@/lib/pledgeCopy";
+import {FLOOR_NOTE} from "@/lib/pledgeDisclosure";
+import {BorrowerScreen} from "./BorrowerScreen";
 import "./live.css";
 
 type Control={owner_epoch:string;listed:boolean;transfer_pending:boolean;pending_value_ops:string};
@@ -52,6 +56,9 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  const readGate=useMemo(()=>createPledgeReadGate(),[]);
  const consentRef=useRef<PayoutStorageConsent|null>(null),feeRef=useRef(fee);
  const ack=storageConsentMatches(consent,account,client.contractId,fee);
+ /** Borrower forfeiture acknowledgement. The sign button stays disabled until it is ticked. */
+ const [forfeitAck,setForfeitAck]=useState(false);
+ const yoctoOrNull=(v:string)=>{try{return exactUnits(v);}catch{return null;}};
  useEffect(()=>{consentRef.current=null;setConsent(null);feeRef.current=fee;},[account,client.contractId,fee]);
  const token=tokenId||tracked,identity=`${account}|${token}`,activeIdentity=useRef(identity);
  useLayoutEffect(()=>{activeIdentity.current=identity;},[identity]);
@@ -60,6 +67,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  const latestData=useRef(data);useLayoutEffect(()=>{latestData.current=data;},[data]);
  const refreshRunner=useMemo(()=>createSingleFlightRefresh(),[]);
  const exitResume=useRef<string|null>(null);
+ const exitPreviewOnce=useRef<string|null>(null);
  const exitKey=`keyhole:pledge-exit:v1:${client.contractId}:${account}:${token}`;
  const exitStore=useMemo(()=>account&&typeof window!=="undefined"?browserExitStore(account,client.contractId,token):null,[account,token,client.contractId]);
  useEffect(()=>{const q=new URLSearchParams(location.search).get("token");if(!tokenId&&q&&q.length<=128)setTracked(q);},[tokenId]);
@@ -98,7 +106,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  const invFresh=!!inv&&!!current&&BigInt(inv.observed_at_ns)<=BigInt(current.now)&&BigInt(current.now)-BigInt(inv.observed_at_ns)<=30_000_000_000n;
  const certified=!!bundle&&!!loan&&loan.state==="Offered"&&bundle.certificate.loan_nonce===loan.nonce&&bundle.certificate.owner_epoch===loan.owner_epoch&&certUntil>0&&!!current&&BigInt(current.now)<BigInt(bundle.certificate.expires_at_ns);
  const enabled=client.canTransact()&&!!account&&native(account)&&!!current&&!loading&&!busy&&!operation&&!current.pending;
- const openReady=enabled&&owned&&!loan&&!exitOp&&invFresh&&inv?.eligible_pending_zero&&current.binding?.ready&&current.config?.lending_enabled&&!current.control?.listed&&!current.control?.transfer_pending&&current.control?.pending_value_ops==="0"&&fee!==null&&ack;
+ const openReady=enabled&&owned&&!loan&&!exitOp&&invFresh&&inv?.eligible_pending_zero&&current.binding?.ready&&current.config?.lending_enabled&&!current.control?.listed&&!current.control?.transfer_pending&&current.control?.pending_value_ops==="0"&&fee!==null&&ack&&forfeitAck;
  const exitReady=enabled&&owned&&!loan&&invFresh&&(!exitOp||retryableExit(exitOp))&&!!inv&&(!inv.withdraw_cooldown_until_ms||!!current&&BigInt(inv.withdraw_cooldown_until_ms)*1_000_000n<=BigInt(current.now))&&!current?.control?.listed&&!current?.control?.transfer_pending&&current?.control?.pending_value_ops==="0";
  const ref=loan?{token_id:token,nonce:loan.nonce}:null;
  const named=!!loan&&account===loan.terms.lender;
@@ -111,7 +119,7 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
  useEffect(()=>{const p=wallet.pending;if(!p||!owned)return;try{const r=JSON.parse(p.message);if(r.op!=="pledge_inventory"||r.account_id!==account||r.params?.token_id!==token)return;wallet.clearPending();setBusy(true);void acceptInventory(p).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));}catch{/* unrelated pending operation belongs to its originating screen */}
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[wallet.pending,owned,account,token]);
- async function verify(){if(!loan||!current||loading||busy)return;setBusy(true);setBundle(null);try{const start=performance.now(),b=await requestLoanCertificate(token,loan.nonce);const [config,expected,fresh,now]=await Promise.all([client.getPledgeConfig(),client.getCertificateTemplate(token,b.certificate.observed_at_ns,b.certificate.expires_at_ns),client.getLenderOffer(token),client.chainNowNs()]);if(!config||!expected||!fresh||fresh.loan.nonce!==loan.nonce||fresh.loan.state!=="Offered"||fresh.loan.policy_busy||!fresh.funding_open||!await verifyLoanCertificate(b,expected,config,now))throw Error("Certificate not verified against the exact current loan.");const left=Number((BigInt(b.certificate.expires_at_ns)-BigInt(now))/1_000_000n)-(performance.now()-start)-1000;if(left<=0)throw Error("Certificate expired; verify a fresh one.");setBundle(b);setCertUntil(performance.now()+Math.min(left,30000));setMessage("Certified: pinned Ed25519 signature and final-chain loan binding verified. Trusted sealed statement, not a ZK proof.");}catch(e){setMessage(errorText(e));}finally{setBusy(false);}}
+ async function verify(){if(!loan||!current||loading||busy)return;setBusy(true);setBundle(null);try{const start=performance.now(),b=await requestLoanCertificate(token,loan.nonce);const [config,expected,fresh,now]=await Promise.all([client.getPledgeConfig(),client.getCertificateTemplate(token,b.certificate.observed_at_ns,b.certificate.expires_at_ns),client.getLenderOffer(token),client.chainNowNs()]);if(!config||!expected||!fresh||fresh.loan.nonce!==loan.nonce||fresh.loan.state!=="Offered"||fresh.loan.policy_busy||!fresh.funding_open||!await verifyLoanCertificate(b,expected,config,now))throw Error("Certificate not verified against the exact current loan.");const left=Number((BigInt(b.certificate.expires_at_ns)-BigInt(now))/1_000_000n)-(performance.now()-start)-1000;if(left<=0)throw Error("Certificate expired; verify a fresh one.");setBundle(b);setCertUntil(performance.now()+Math.min(left,30000));setMessage(`Certified: pinned Ed25519 signature and final-chain loan binding verified. Trusted sealed statement, not a ZK proof. ${FLOOR_NOTE}`);}catch(e){setMessage(errorText(e));}finally{setBusy(false);}}
  async function send(action:KeysCall,registration=true){if(!enabled||!account||!store)return;setBusy(true);try{
   const lease=readGate.capture(identity);
   if(lease.sequence!==current?.readSequence)throw Error("Displayed chain snapshot changed. Review the fresh state before dispatch.");
@@ -152,6 +160,38 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   if(r.output?.admission_finished===true){await exitStore.clear(sent);setExitOp(exitStore.load());setInventory(null);}
   await refresh();setMessage(r.output?.admission_finished===true?"Original exit reconciled. Refresh inventory; no replacement withdrawal was sent.":`Withdrawal not confirmed yet. Don’t send another. Original exit still pending / UNKNOWN (${pending.value_op_id}). No replacement withdrawal was sent.`);
  }
+ /** One preview, one confirm, one withdraw sign. Redirect returns call this again with the same nonce; a second claim does not sign another withdrawal. */
+ async function continueExit(auth:SignedAuth|null,pending:ExitRecord,mode:"run_preview"|"confirm"){
+  if(!exitStore||!account||!pending.id)throw Error("Exit storage unavailable");
+  const store=browserExitSteps(sessionStorage);
+  let step=store.loadIntent(pending.account,pending.id)??beginExitStep({account:pending.account,token:pending.token,epoch:pending.epoch,intentId:pending.id,amount:pending.amount,asset:USDC,chain:"near"});
+  const exitParams={intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"};
+  if(mode==="run_preview"){
+   if(!auth||!bindingMatches(step.binding,auth,"withdraw_dry_run"))throw Error("This returned route preview does not match the saved exit. No new withdrawal was signed.");
+   const claim=claimPreview(store,step,auth.nonce);
+   if(claim==="stop")throw Error("This route preview was already continued. No new withdrawal was signed.");
+   if(claim==="claimed"){
+    const preview=withdrawDryRunDecision((await callWorker("withdraw_dry_run",auth)).output,{account,token:USDC,amount:pending.amount,chain:"near"});
+    if(!preview.ok)throw Error(preview.reason);
+    step=saveConfirmed(store,store.loadIntent(pending.account,pending.id)??step,preview);
+    if(!window.confirm(exitConfirmText(preview,pending.amount))){store.drop(step);throw Error("Withdrawal cancelled before signing. No withdrawal was signed.");}
+   }else{
+    const shown=store.loadNonce(account,auth.nonce)?.preview;
+    if(!shown)throw Error("Route preview unavailable. No withdrawal was signed.");
+    if(!window.confirm(exitConfirmText(shown,pending.amount))){store.drop(store.loadIntent(pending.account,pending.id)??step);throw Error("Withdrawal cancelled before signing. No withdrawal was signed.");}
+    step=store.loadIntent(pending.account,pending.id)??step;
+   }
+  }else{
+   const shown=step.preview;
+   if(!shown)throw Error("Route preview unavailable. No withdrawal was signed.");
+   if(!window.confirm(exitConfirmText(shown,pending.amount))){store.drop(step);throw Error("Withdrawal cancelled before signing. No withdrawal was signed.");}
+  }
+  step=saveAwaitingWithdraw(store,store.loadIntent(pending.account,pending.id)??step);
+  const withdrawAuth=await wallet.sign("withdraw",exitParams);
+  if(!claimWithdraw(store,step,withdrawAuth))throw Error("This withdrawal signature was already used. No new withdrawal was signed.");
+  try{await finishExit(withdrawAuth,pending,wallet.clearPending);saveDone(store,step,withdrawAuth.nonce);}
+  catch(e){releaseWithdraw(store,step);throw e;}
+ }
  async function ordinaryExit(){if(!exitReady||!account||!current||!inv||!exitStore)return;setBusy(true);let pending:ExitRecord|null=null;try{
   const prior=exitStore.load();if(prior&&!retryableExit(prior))throw Error("Original exit unresolved; reconcile only.");
   const amount=prior?.amount??exactUnits(exitAmount,6),asset=inv.assets.find(a=>a.token===USDC);if(!asset||BigInt(amount)>BigInt(asset.amount))throw Error("Insufficient supported USDC; unpriced assets are not assumed liquid.");
@@ -159,8 +199,13 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   if(prior&&prior.epoch!==inv.owner_epoch)throw Error("Original exit epoch changed; no withdrawal was dispatched.");
   const next:ExitRecord=prior?{...prior,status:"AwaitingSignature"}:{account,token,epoch:inv.owner_epoch,amount,status:"AwaitingSignature",intent:"withdraw"};
   if(prior){if(!await exitStore.replace(prior,next))throw Error("Continue the original exit in its owning tab.");pending=next;}else pending=await exitStore.reserve(next);
-  setExitOp(pending);const auth=await wallet.sign("withdraw",{intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"});await finishExit(auth,pending);
- }catch(e){if(pending&&(!(e instanceof Error)||!("code" in e)||e.code!=="redirect")){const saved=exitStore.load();if(saved?.id===pending.id&&saved?.status==="AwaitingSignature")await exitStore.replace(saved,{...saved,status:"Retryable"});setExitOp(exitStore.load());}setMessage(errorText(e));}finally{setBusy(false);}}
+  if(!pending.id)throw Error("Exit storage unavailable");
+  setExitOp(pending);const exitParams={intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"};
+  // Persist the step before the dry-run signature. A redirect wallet leaves the page and comes back with that signature.
+  browserExitSteps(sessionStorage).save(beginExitStep({account,token,epoch:pending.epoch,intentId:pending.id,amount:pending.amount,asset:USDC,chain:"near"}));
+  const previewAuth=await wallet.sign("withdraw_dry_run",exitParams);
+  await continueExit(previewAuth,pending,"run_preview");
+ }catch(e){if(pending&&(!(e instanceof Error)||!("code" in e)||e.code!=="redirect")){const saved=exitStore.load();if(saved?.id===pending.id&&saved?.status==="AwaitingSignature")await exitStore.replace(saved,{...saved,status:"Retryable"});setExitOp(exitStore.load());try{const steps=browserExitSteps(sessionStorage);const step=pending.id?steps.loadIntent(pending.account,pending.id):null;if(step&&step.phase!=="done")steps.drop(step);}catch{/* the exit record remains the source of truth */}}setMessage(errorText(e));}finally{setBusy(false);}}
  async function discardUnsentExit(){
   if(!exitStore||!retryableExit(exitOp)||busy||loading||!exitOp)return;
   const original=exitOp;if(await exitStore.clear(original)){
@@ -173,9 +218,49 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   const request=JSON.parse(auth.message),saved=exitStore.load(),p=request.params;
   if(!saved||!saved.id||p?.intent_id!==saved.id||saved.status!=="AwaitingSignature"||saved.account!==account||saved.token!==token||request.account_id!==account||auth.account_id!==account||p?.token_id!==token||p?.owner_epoch!==saved.epoch)return;
   if(request.op==="withdraw"&&saved.intent==="withdraw"&&p.token===USDC&&p.amount===saved.amount&&p.to===account&&p.chain==="near"){
-   exitResume.current=auth.signature;setBusy(true);void finishExit(auth,saved,wallet.clearPending).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));
+   exitResume.current=auth.signature;setBusy(true);void finishExit(auth,saved,wallet.clearPending).then(()=>{const steps=browserExitSteps(sessionStorage);const step=steps.loadIntent(saved.account,saved.id??"");if(step&&step.phase!=="done")saveDone(steps,step,auth.nonce);}).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));
   }else if(request.op==="reconcile_value_op"&&saved.intent==="reconcile_value_op"&&saved.value_op_id&&p.value_op_id===saved.value_op_id){exitResume.current=auth.signature;setBusy(true);void finishReconcile(auth,saved).then(wallet.clearPending).catch(e=>setMessage(errorText(e))).finally(()=>setBusy(false));}
  }catch{setMessage("Pending exit signature could not bind to its saved intent. Nothing new was dispatched.");}
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[wallet.pending,owned,account,token,exitStore,loading,busy,current?.readSequence]);
+ // A redirect wallet returns the dry-run signature in `pending`, or errorCode / transactionHashes on the callback URL.
+ // The step saved under account + nonce decides whether to preview, confirm, or sign nothing. A reload does not sign a withdrawal by itself.
+ useEffect(()=>{
+  if(!account||!token||!owned||loading||busy||!exitStore||typeof window==="undefined")return;
+  const callback=readWalletReturn(location.search);
+  if(callback.kind==="rejected"){
+   const url=new URL(location.href);
+   if(url.searchParams.has("errorCode")){url.searchParams.delete("errorCode");url.searchParams.delete("errorMessage");history.replaceState(null,"",url);}
+  }
+  let saved:ExitRecord|null=null;
+  try{saved=exitStore.load();}catch{return;}
+  const pendingAuth=wallet.pending;
+  const store=browserExitSteps(sessionStorage);
+  const step=(pendingAuth?store.loadNonce(account,pendingAuth.nonce):null)||(saved?.id?store.loadIntent(account,saved.id):null);
+  const plan=planExitReturn({activeAccount:account,activeToken:token,callback,pending:pendingAuth,step,exit:saved});
+  if(plan.type==="ignore")return;
+  const mark=`${plan.type}:${pendingAuth?.signature??callback.kind}:${"reason" in plan?plan.reason:plan.step.previewNonce}`;
+  if(exitPreviewOnce.current===mark)return;
+  exitPreviewOnce.current=mark;
+  if(plan.type==="ambiguous"){if(plan.clearPending)wallet.clearPending();setMessage(plan.reason);return;}
+  if(plan.type==="cancel"){
+   wallet.clearPending();store.drop(plan.step);
+   void (async()=>{try{const cur=exitStore.load();if(cur&&cur.id===plan.step.binding.intentId&&cur.status==="AwaitingSignature"){await exitStore.replace(cur,{...cur,status:"Retryable"});setExitOp(exitStore.load());}}catch{/* keep the saved exit */}})();
+   setMessage(plan.reason);return;
+  }
+  if(!saved?.id)return;
+  const open=saved;
+  if(pendingAuth)wallet.clearPending();
+  setBusy(true);
+  void continueExit(plan.type==="run_preview"?pendingAuth:null,open,plan.type).catch(async e=>{
+   setMessage(errorText(e));
+   try{
+    const cur=exitStore.load();
+    if(cur&&cur.id===open.id&&cur.status==="AwaitingSignature"){await exitStore.replace(cur,{...cur,status:"Retryable"});setExitOp(exitStore.load());}
+    const left=store.loadIntent(open.account,open.id??"");
+    if(left&&left.phase!=="done"&&left.phase!=="awaiting_withdraw")store.drop(left);
+   }catch{/* keep the saved exit */}
+  }).finally(()=>setBusy(false));
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[wallet.pending,owned,account,token,exitStore,loading,busy,current?.readSequence]);
 
@@ -196,13 +281,13 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   {!token?<p>Select an owned account on the dashboard to begin. No example balance is shown as live.</p>:<><div className="pledge-live-tabs" role="tablist" aria-label="Pledge panels"><button role="tab" aria-selected={mobileTab==="account"} aria-controls="pledge-account-panel" onClick={()=>setMobileTab("account")}>Account & inventory</button><button role="tab" aria-selected={mobileTab==="action"} aria-controls="pledge-action-panel" onClick={()=>setMobileTab("action")}>Loan action</button></div><div className="pledge-live-grid" data-tab={mobileTab}>
    <section id="pledge-account-panel" className="pledge-live-card"><div className="pledge-live-card-title"><h2>{owned?"Your at-risk account":"Sealed account"}</h2><span>#{token}</span></div>
     <p className="pledge-live-risk">Pledging risks the entire account and later deposits. Default transfers everything. There is no surplus return.</p>
-    <dl className="pledge-live-facts"><div><dt>Current owner</dt><dd>{current?.owner??"Unavailable"}</dd></div><div><dt>USDC minimum</dt><dd>{publicLoan?`${units(publicLoan.terms.floor_raw,6)} USDC`: `${floor} USDC · proposed`}<small>{floorCaption(floorKind)}</small>{certified&&bundle?<small>Observed {cairo(bundle.certificate.observed_at_ns)}</small>:null}</dd></div><div><dt>Account status</dt><dd title={access.detail}>{access.label}</dd></div></dl>
+    <dl className="pledge-live-facts"><div><dt>Current owner</dt><dd>{current?.owner??"Unavailable"}</dd></div><div><dt>USDC minimum</dt><dd>{publicLoan?`${units(publicLoan.terms.floor_raw,6)} USDC`: `${floor} USDC · proposed`}<small>{floorCaption(floorKind)}</small><small>{FLOOR_NOTE}</small>{certified&&bundle?<small>Observed {cairo(bundle.certificate.observed_at_ns)}</small>:null}</dd></div><div><dt>Account status</dt><dd title={access.detail}>{access.label}</dd></div></dl>
     {owned?<div className="pledge-live-private"><button className={inv?undefined:"pledge-live-primary"} disabled={busy||loading} onClick={()=>void readInventory()}>{inv?"Refresh private inventory":"Read private at-risk inventory"}</button>{inv?<><p data-testid="inventory-summary">{inv.assets.length} assets · {inv.obligations.length} pending obligations · {invFresh?"fresh":"refresh required"}</p><ul>{inv.assets.slice(0,2).map(a=><AssetLine key={a.token} asset={a}/>)}</ul><button className="pledge-live-link" onClick={()=>setDialog(true)}>Review all assets and obligations</button></>:<p>Private balances stay on this account until you ask to read them.</p>}</div>:<p className="pledge-live-muted">Full balances, unpriced assets and obligations stay with the holder. Default conveys the same account, not a cash guarantee.</p>}
     {role==="borrower"?<details className="pledge-live-compare" data-testid="live-comparison"><summary>{SWAP_COMPARE_SUMMARY}</summary><p>{SWAP_COMPARE_BODY}</p><p>{SWAP_COMPARE_COSTS}</p></details>:null}
    </section>
    <section id="pledge-action-panel" className="pledge-live-card pledge-live-action"><div className="pledge-live-card-title"><h2>{heading}</h2><button className="pledge-live-link" disabled={busy||loading} onClick={()=>void refresh().catch(()=>{/* refresh centrally fails closed */})}>Refresh chain</button></div>
     <p className="pledge-live-mobile-summary">{pendingNow?.badge??state}{publicLoan?` · ${units(publicLoan.terms.floor_raw,6)} USDC minimum`:""}</p>
-    {!loan&&owned&&!last&&!exitOp?<><div className="pledge-live-form"><label className="full">Named lender<input aria-label="Named lender" value={lender} onChange={e=>setLender(e.target.value.trim())} placeholder="lender.near"/></label><label>Borrow NEAR<input aria-label="Borrow NEAR" inputMode="decimal" value={principal} onChange={e=>setPrincipal(e.target.value)}/></label><label>Repay NEAR<input aria-label="Repay NEAR" inputMode="decimal" value={repayment} onChange={e=>setRepayment(e.target.value)}/></label><label>Declared USDC floor<input aria-label="Declared USDC floor" inputMode="decimal" value={floor} onChange={e=>setFloor(e.target.value)}/></label><label>Term <small title={`${duration} seconds`}>{/^\d+$/.test(duration)?humanSeconds(duration):""}</small><input aria-label="Term seconds" value={duration} onChange={e=>setDuration(e.target.value)}/></label><label>Grace <small title={`${grace} seconds`}>{/^\d+$/.test(grace)?humanSeconds(grace):""}</small><input aria-label="Grace seconds" value={grace} onChange={e=>setGrace(e.target.value)}/></label></div>{!inv?<button className="pledge-live-mobile-inventory" onClick={()=>setMobileTab("account")}>First review your private at-risk account →</button>:null}<p className="pledge-live-muted">Refundable bond: {current?.limits?units(current.limits.storage_bond):"Unavailable"} NEAR. Debt starts only after confirmed native delivery. First-use storage and gas are separate.</p>{current&&!current.binding?.ready?<p>Not eligible yet: sealed collateral registration is not ready.</p>:null}<button className="pledge-live-primary" disabled={!openReady} onClick={()=>void open()}>Pledge this account</button></>:null}
+    {!loan&&owned&&!last&&!exitOp?<><div className="pledge-live-form"><label className="full">Named lender<input aria-label="Named lender" value={lender} onChange={e=>setLender(e.target.value.trim())} placeholder="lender.near"/></label><label>Borrow NEAR<input aria-label="Borrow NEAR" inputMode="decimal" value={principal} onChange={e=>setPrincipal(e.target.value)}/></label><label>Repay NEAR<input aria-label="Repay NEAR" inputMode="decimal" value={repayment} onChange={e=>setRepayment(e.target.value)}/></label><label>Declared USDC floor<input aria-label="Declared USDC floor" inputMode="decimal" value={floor} onChange={e=>setFloor(e.target.value)}/></label><label>Term <small title={`${duration} seconds`}>{/^\d+$/.test(duration)?humanSeconds(duration):""}</small><input aria-label="Term seconds" value={duration} onChange={e=>setDuration(e.target.value)}/></label><label>Grace <small title={`${grace} seconds`}>{/^\d+$/.test(grace)?humanSeconds(grace):""}</small><input aria-label="Grace seconds" value={grace} onChange={e=>setGrace(e.target.value)}/></label></div>{!inv?<button className="pledge-live-mobile-inventory" onClick={()=>setMobileTab("account")}>First review your private at-risk account →</button>:null}<BorrowerScreen principal={yoctoOrNull(principal)} repayment={yoctoOrNull(repayment)} durationText={/^\d+$/.test(duration)?humanSeconds(duration):"Term not valid"} graceText={/^\d+$/.test(grace)?humanSeconds(grace):"Grace not valid"} ack={forfeitAck} onAck={setForfeitAck}/><p className="pledge-live-muted">Refundable bond:{current?.limits?units(current.limits.storage_bond):"Unavailable"} NEAR. Debt starts only after confirmed native delivery. First-use storage and gas are separate.</p>{current&&!current.binding?.ready?<p>Not eligible yet: sealed collateral registration is not ready.</p>:null}<button className="pledge-live-primary" disabled={!openReady} onClick={()=>void open()}>Pledge this account</button></>:null}
     {publicLoan?<dl className="pledge-live-facts pledge-live-money"><div><dt>Principal / repayment</dt><dd>{units(publicLoan.terms.principal)} / {units(publicLoan.terms.repayment)} NEAR</dd></div><div><dt>Named lender</dt><dd>{publicLoan.terms.lender}</dd></div><div><dt>Repay by</dt><dd title={publicLoan.due_ns==="0"?"due_ns 0":`${publicLoan.due_ns} ns`}>{publicLoan.due_ns==="0"?"Not started":cairo(publicLoan.due_ns)}<small>{publicLoan.due_ns==="0"?"No debt clock until delivery is confirmed":"Chain time, Africa/Cairo, including seconds"}</small></dd></div><div><dt>Grace period</dt><dd title={`${publicLoan.terms.grace_sec} seconds`}>{humanSeconds(publicLoan.terms.grace_sec)}</dd></div></dl>:null}
     {loan?.state==="Freezing"?<p>The account is locking as collateral. Funding is not open, and the debt clock has not started.</p>:null}
     {loan?.state==="Offered"?<>{named?<><button disabled={busy||loading||!current} onClick={()=>void verify()}>Verify sealed certificate</button><button className="pledge-live-primary" disabled={!enabled||!certified||!ack||fee===null} onClick={()=>void fund()}>Fund {units(loan.terms.principal)} NEAR</button></>:<p>Share the named lender’s link. It shows the minimum, never your private inventory.</p>}<Link data-testid="lender-link" href={`/pledge/lend/${encodeURIComponent(token)}`}>Open lender review</Link>{owned&&ref?<button className="pledge-live-link" disabled={!enabled} onClick={()=>void send(client.buildCancelLoan(ref))}>Cancel offer and unlock</button>:null}</>:null}

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// KEYHOLE MCP server (stdio). Tools: verify, explain_pnl, quote_buy, copy (guarded; operator confirms on their own terminal).
+// KEYHOLE MCP server (stdio). Tools: verify, explain_pnl, quote_buy, pledge_status (read-only), copy (guarded; operator confirms on their own terminal).
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { loadKey, run, verifyCall, explainPnl, guardedRun, GuardError, type Key, type GuardDeps } from "./core.js";
+import { pledgeStatus } from "./pledge.js";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 const text = (x: unknown) => ({ content: [{ type: "text" as const, text: typeof x === "string" ? x : JSON.stringify(x, null, 2) }] });
@@ -51,6 +52,10 @@ export function buildServer() {
       return text((await run(key, "quote", { origin_asset: token_in, destination_asset: token_out, amount, deposit_type: "INTENTS", refund_to: key.accountId,
         refund_type: "INTENTS", recipient: key.accountId, recipient_type: "INTENTS", confidentiality: "basic" })).output);
     });
+  // Read-only: contract views only. An agent calls this before any buy, transfer or action on a key.
+  s.tool("pledge_status", "Read-only lien status of a key: whether it is pledged, the loan terms (lender, due, grace), and the actions the contract and enclave refuse while the lien is open. Views only; signs nothing.",
+    { token_id: z.string().min(1).max(64) },
+    async ({ token_id }) => text(await pledgeStatus(token_id)));
   s.tool("copy", "Copy a trade into the holder's confidential account. The operator must confirm on their own terminal (a code shown there, not in this result). Refused if the counterparty check blocks, or when there is no operator terminal.",
     { amount: z.string().regex(/^\d+$/).optional(), token_in: z.string().default(USDC), token_out: z.string().default("nep141:wrap.near"),
       source: z.string().optional() },

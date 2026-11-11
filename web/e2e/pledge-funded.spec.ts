@@ -19,6 +19,8 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  const bctx=await browser.newContext({baseURL:process.env.BASE_URL}),lctx=await browser.newContext({baseURL:process.env.BASE_URL});
  for(const context of [bctx,lctx]){context.setDefaultTimeout(20000);context.setDefaultNavigationTimeout(45000);}
  const borrower=await bctx.newPage(),lender=await lctx.newPage();
+ // The exit's confirm step is window.confirm. Answer it on both holders' pages; the borrower's text is checked at its exit.
+ const confirms:string[]=[];for(const p of [borrower,lender])p.on("dialog",d=>{confirms.push(d.message());void d.accept();});;
  const evidence:{network:string;provider:string;states:unknown[];native_receipts:unknown[];negatives:unknown[]}={network:"local NEAR sandbox",provider:"custody HTTP, registry and WASI host mocked; native contract/wallet/receipts and guarded production pure drivers real",states:[],native_receipts:[],negatives:[]};
  const fixture=async(action:string,params:Record<string,unknown>={})=>{const r=await request.post("/api/pledge-sandbox",{data:{action,...params}});expect(r.ok()).toBeTruthy();const j=await r.json();expect(j.error).toBeFalsy();return j;};
  const meta=await fixture("metadata");
@@ -74,7 +76,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  /** Sandbox blocks are not fixed-duration seconds: advance until the FINAL clock passes a real chain-time bound. */
  async function advancePast(ns:bigint){for(let i=0;i<10&&await finalNs()<=ns;i++)await fixture("advance",{blocks:1000});expect(await finalNs()).toBeGreaterThan(ns);}
  async function begin(label:string){
-  await readInventory(borrower);await borrower.getByLabel("Named lender",{exact:true}).fill(meta.lender);await borrower.getByLabel("Term seconds",{exact:true}).fill("120");await borrower.getByLabel("Grace seconds",{exact:true}).fill("30");await borrower.getByRole("checkbox").check();
+  await readInventory(borrower);await borrower.getByLabel("Named lender",{exact:true}).fill(meta.lender);await borrower.getByLabel("Term seconds",{exact:true}).fill("120");await borrower.getByLabel("Grace seconds",{exact:true}).fill("30");await borrower.locator(".pledge-live-consent input").check();await expect(borrower.getByTestId("forfeit-line")).toHaveText(/receives the whole key/);await expect(borrower.getByTestId("borrower-numbers")).toContainText("Total cost");await borrower.getByTestId("forfeit-ack").check();
   const open=borrower.getByRole("button",{name:"Pledge this account",exact:true});await expect(open).toBeEnabled({timeout:20000});const before=await finalNs();await submit(borrower,async sent=>{
    const deadline=(sent.args as {terms:{funding_deadline_ns:string}}).terms.funding_deadline_ns;
    expect(BigInt(deadline)).toBeGreaterThanOrEqual(before+600_000_000_000n);expect(BigInt(deadline)).toBeLessThanOrEqual(await finalNs()+600_000_000_000n);
@@ -90,7 +92,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   await fixture("policy",{refuse_thaw:true});await submit(borrower,action("repay_loan",{token_id:meta.token_id,nonce:(await loan()).nonce},"10100000000000000000000"),()=>borrower.getByRole("button",{name:"Repay 0.0101 NEAR",exact:true}).click());await state("Unlocking…");await capture("repay_thaw_pending");
   await fixture("policy",{refuse_thaw:false});await submit(borrower,action("retry_loan_policy",{token_id:meta.token_id,nonce:(await loan()).nonce}),()=>borrower.getByRole("button",{name:"Retry account unlock",exact:true}).click(),false);await state("Repaid · unlock confirmed");await capture("repay_thawed_credits");
   const before=await balance(meta.lender);await claim(lender);expect(await balance(meta.lender)-before).toBeGreaterThan(5_000_000_000_000_000_000_000n);await claim(borrower);
-  await readInventory(borrower);await borrower.getByRole("button",{name:"Exit to my wallet",exact:true}).click();await expect(borrower.getByRole("status")).toContainText("Ordinary self-exit confirmed",{timeout:20000});await readInventory(borrower);await capture("repay_ending_exit_confirmed");
+  await readInventory(borrower);await borrower.getByRole("button",{name:"Exit to my wallet",exact:true}).click();await expect(borrower.getByRole("status")).toContainText("Ordinary self-exit confirmed",{timeout:20000});expect(confirms.some(m=>m.includes("amount_out")&&m.includes("minimum accepted"))).toBe(true);await readInventory(borrower);await capture("repay_ending_exit_confirmed");
   await borrower.getByRole("button",{name:"Prepare another loan",exact:true}).click();await begin("default");
   {const l=await loan();await advancePast(BigInt(l.due_ns)+BigInt(l.terms.grace_sec)*1_000_000_000n);}await refresh();await expect(lender.getByRole("button",{name:"Claim entire collateral account",exact:true})).toBeEnabled({timeout:20000});
   await lender.getByLabel("Default receiver",{exact:true}).fill(meta.borrower);await lender.getByRole("button",{name:"Claim entire collateral account",exact:true}).click();await expect(lender.getByRole("status")).toContainText("no key or return reservation");expect((await loan()).state).toBe("Active");evidence.negatives.push({test:"ineligible default receiver",result:"UI blocked, real loan remains Active"});

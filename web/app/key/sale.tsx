@@ -16,6 +16,7 @@ import { KEYS_CONTRACT } from "@/lib/config";
 import { GAS_BUY, GAS_LIST, ONE_YOCTO, type KeysCall, type SendResult, type TxError } from "@/lib/keysTx";
 import { accountState } from "@/lib/nearAccount";
 import { useSaleSupport } from "@/lib/useSaleSupport";
+import { NO_PREMIUM_NOTE } from "@/lib/keyCopy";
 import {
   LIST_DEPOSIT_YOCTO, buyBlockReason, isHolder, listBlockReason, nearText, parsePriceNear, readListing, royaltyOf,
   royaltyPercentText, sellerNetOf, type Listing,
@@ -403,6 +404,7 @@ function SignedRecord({ listing, owner, minter }: { listing: Listing; owner: str
               <div><dt>Signed</dt><dd>{when(st.ts_ms)} · {ageLabel(st.ts_ms, at)}</dd></div>
             </dl>
           )}
+          <p className="kp-say" data-testid="sale-record-no-premium">{NO_PREMIUM_NOTE}</p>
           <ol className="kp-checks" data-testid="sale-record-checks">
             {report.checks.map((c) => (
               <li key={c.id} className="kp-check" data-testid={`sale-record-check-${c.id}`} data-pass={String(c.pass)}>

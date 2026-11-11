@@ -6,6 +6,7 @@
  */
 import type {KeysCall} from "./keysTx";
 import { KEYS_CONTRACT, PLEDGE_LIVE, PLEDGE_TRANSACTIONS, RPC_URL } from "./config";
+import { LIEN_BLOCK_MISMATCH, lienSnapshotFromViews, type LienSnapshot, type PinnedView } from "./lienRead";
 
 /** NEAR JSON stringified u128 / u64 wrappers as the contract serde uses them. */
 export type U128 = string;
@@ -192,6 +193,8 @@ export type PledgeClientOpts = {
   rpcUrl?: string;
   /** Injected view fn for tests. */
   view?: <T>(method: string, args: Record<string, unknown>) => Promise<T>;
+  /** Injected transport for tests. Lien snapshots use this so a mock can return different block heights. */
+  fetchImpl?: typeof fetch;
 };
 
 function b64encode(s: string): string {
@@ -204,6 +207,7 @@ function utf8FromBytes(bytes: number[]): string {
   return new TextDecoder().decode(u);
 }
 
+/** One view at whatever the node currently calls final. A lien snapshot must not use this; it shares one block via readLienAtFinalBlock. */
 async function rpcView<T>(rpcUrl: string, contractId: string, method: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
   const res = await fetch(rpcUrl, {
     method: "POST",
@@ -230,6 +234,53 @@ async function rpcView<T>(rpcUrl: string, contractId: string, method: string, ar
   return JSON.parse(utf8FromBytes(bytes)) as T;
 }
 
+async function rpcPost(rpcUrl: string, body: unknown, signal: AbortSignal | undefined, fetchImpl: typeof fetch): Promise<{ ok: boolean; json: RpcJson }> {
+  const res = await fetchImpl(rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    cache: "no-store",
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000),
+    body: JSON.stringify(body),
+  });
+  return { ok: res.ok, json: (await res.json()) as RpcJson };
+}
+
+type RpcJson = {
+  error?: { message?: string };
+  result?: {
+    result?: number[];
+    block_height?: unknown;
+    block_hash?: unknown;
+    header?: { height?: unknown; hash?: unknown };
+  };
+};
+
+/** One contract view at a block hash. finality and block_id are mutually exclusive, so this sends block_id only. */
+async function pinnedCall(rpcUrl: string, contractId: string, method: string, args: Record<string, unknown>, blockHash: string, signal: AbortSignal | undefined, fetchImpl: typeof fetch): Promise<PinnedView | null> {
+  const sent = await rpcPost(rpcUrl, {
+    jsonrpc: "2.0",
+    id: "lien-view",
+    method: "query",
+    params: {
+      request_type: "call_function",
+      block_id: blockHash,
+      account_id: contractId,
+      method_name: method,
+      args_base64: b64encode(JSON.stringify(args)),
+    },
+  }, signal, fetchImpl);
+  if (!sent.ok || sent.json.error) throw new Error(sent.json.error?.message || "rpc error");
+  const bytes = sent.json.result?.result;
+  const blockHeight = sent.json.result?.block_height;
+  const hash = sent.json.result?.block_hash;
+  if (!Array.isArray(bytes) || typeof blockHeight !== "number" || !Number.isInteger(blockHeight) || typeof hash !== "string" || hash.length === 0) return null;
+  try {
+    return { value: JSON.parse(utf8FromBytes(bytes)) as unknown, blockHeight, blockHash: hash };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Typed Pledge client. When `live` is false (production default), view helpers refuse to
  * present chain data as live balances — callers must treat the UI as a labelled preview.
@@ -238,6 +289,7 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
   const live = opts.live ?? PLEDGE_LIVE;
   const contractId = opts.contractId ?? KEYS_CONTRACT;
   const rpcUrl = opts.rpcUrl ?? RPC_URL;
+  const fetchImpl = opts.fetchImpl ?? fetch;
   const viewFn = opts.view ?? (<T,>(method: string, args: Record<string, unknown>) => rpcView<T>(rpcUrl, contractId, method, args, opts.signal));
 
   return {
@@ -299,6 +351,41 @@ export function createPledgeClient(opts: PledgeClientOpts = {}) {
     async getCollateralBinding(token_id: TokenId): Promise<CollateralBinding | null> {
       if (!live) return null;
       return viewFn<CollateralBinding | null>("get_collateral_binding", { token_id });
+    },
+    /**
+     * Owner, control, loan, binding and config at one finalized block. The block is read first; every view uses
+     * that hash as block_id and must report the same height and hash back. A mismatch is discarded and retried
+     * once. Nothing is returned ready when the five views span a sale.
+     */
+    async readLienAtFinalBlock(tokenId: TokenId): Promise<LienSnapshot> {
+      if (!live) return { ok: false, reason: "Could not read the final chain. Try again in a moment." };
+      let reason = LIEN_BLOCK_MISMATCH;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const head = await rpcPost(rpcUrl, { jsonrpc: "2.0", id: "lien-block", method: "block", params: { finality: "final" } }, opts.signal, fetchImpl);
+          const header = head.json.result?.header;
+          const height = header?.height;
+          const hash = header?.hash;
+          if (!head.ok || head.json.error || typeof height !== "number" || !Number.isInteger(height) || height < 0 || typeof hash !== "string" || hash.length === 0) {
+            throw new Error("Final block unavailable");
+          }
+          const [owner, control, loan, binding, config] = await Promise.all([
+            pinnedCall(rpcUrl, contractId, "nft_token", { token_id: tokenId }, hash, opts.signal, fetchImpl),
+            pinnedCall(rpcUrl, contractId, "get_control_state", { token_id: tokenId }, hash, opts.signal, fetchImpl),
+            pinnedCall(rpcUrl, contractId, "get_loan", { token_id: tokenId }, hash, opts.signal, fetchImpl),
+            pinnedCall(rpcUrl, contractId, "get_collateral_binding", { token_id: tokenId }, hash, opts.signal, fetchImpl),
+            pinnedCall(rpcUrl, contractId, "get_pledge_config", {}, hash, opts.signal, fetchImpl),
+          ]);
+          if (!owner || !control || !loan || !binding || !config) { reason = LIEN_BLOCK_MISMATCH; continue; }
+          const decided = lienSnapshotFromViews({ tokenId, block: { height, hash }, owner, control, loan, binding, config });
+          if (decided.ok) return decided;
+          reason = decided.reason;
+        } catch (e) {
+          if (opts.signal?.aborted) throw e;
+          if (attempt === 1) throw e;
+        }
+      }
+      return { ok: false, reason };
     },
   };
 }
