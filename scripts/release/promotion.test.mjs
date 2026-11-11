@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   ACCOUNT,
   CANDIDATE,
+  WORKER,
   b58,
   canonical,
   sha,
@@ -420,4 +421,21 @@ test("post rejects unreviewed account code-storage growth", () => {
   const e = proof();
   e.after.account.storage_usage++;
   assert.throws(() => validatePost(e));
+});
+
+test("worker identity rotation preserves every prior build and remains idempotent", () => {
+  const id = JSON.parse(readFileSync(new URL("../../identity.json", import.meta.url))),
+    old = "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    older = "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
+    original = {...id, worker:{...id.worker,wasm_sha256:old,previous_wasm_sha256:older}},
+    proof = {ctx:{snapshot:{code:{sha256:CANDIDATE},config:{minter:id.contract.minter}}},publication_tx:"fixture-publish"},
+    e = {info:{call_id:"fixture-info"}}, next = promotedWorker(original, proof, e);
+  assert.equal(next.wasm_sha256, WORKER);
+  assert.equal(next.previous_wasm_sha256, old);
+  assert.ok(next.historical_wasm_sha256.includes(older));
+  for (const hash of original.worker.historical_wasm_sha256) {
+    assert.ok([next.previous_wasm_sha256,...next.historical_wasm_sha256].includes(hash));
+  }
+  assert.deepEqual(promotedWorker({...id,worker:next},proof,e),next);
+  assert.equal(original.worker.wasm_sha256,old);
 });

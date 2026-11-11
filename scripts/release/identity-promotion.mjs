@@ -37,8 +37,17 @@ export function promotedWorker(id, proof, e) {
       proof.ctx.snapshot.config.minter === id.contract.minter,
     "promote reviewed contract before worker",
   );
+  // Rotation must not drop a formerly accepted proof, including on idempotent promotion.
+  const previous = id.worker.wasm_sha256 === WORKER
+    ? id.worker.previous_wasm_sha256 : id.worker.wasm_sha256;
+  const historical = [...new Set([
+    ...(id.worker.historical_wasm_sha256 ?? []),
+    id.worker.previous_wasm_sha256,
+  ])].filter(hash => hash && hash !== WORKER && hash !== previous);
   return {
     ...id.worker,
+    previous_wasm_sha256: previous,
+    historical_wasm_sha256: historical,
     wasm_sha256: WORKER,
     bytes: 1085333,
     add_version_tx: proof.publication_tx,
