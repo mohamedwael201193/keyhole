@@ -130,15 +130,56 @@ function present(v: unknown): boolean {
   return false;
 }
 
-/** Token id inside a Nearblocks function-call `args` string, or null. */
-export function receiptToken(args: unknown): string | null {
-  if (typeof args !== "string" || !args) return null;
+/** How a token-method argument reads. `other` is a different key. Anything we cannot decode is `unreadable`, not a different key. */
+export type TokenArg = "match" | "other" | "unreadable";
+
+function parseArgsObject(text: string): { token_id?: unknown } | null {
   try {
-    const j = JSON.parse(args) as { token_id?: unknown };
-    return typeof j.token_id === "string" && KEY_ID.test(j.token_id) ? j.token_id : null;
+    const j = JSON.parse(text) as unknown;
+    if (!j || typeof j !== "object" || Array.isArray(j)) return null;
+    return j as { token_id?: unknown };
   } catch {
     return null;
   }
+}
+
+/** Nearblocks sends decoded JSON. The RPC sends base64 of that JSON. A primitive or a broken encoding is unreadable. */
+export function decodeCallArgs(args: unknown): { token_id?: unknown } | null {
+  if (args && typeof args === "object" && !Array.isArray(args)) return args as { token_id?: unknown };
+  if (typeof args !== "string" || args.length === 0) return null;
+  const direct = parseArgsObject(args);
+  if (direct) return direct;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(args) || args.length % 4 !== 0) return null;
+  try {
+    const text = Buffer.from(args, "base64").toString("utf8");
+    return text ? parseArgsObject(text) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function classifyTokenArg(args: unknown, tokenId: string): TokenArg {
+  const decoded = decodeCallArgs(args);
+  const token = decoded?.token_id;
+  if (typeof token !== "string" || !KEY_ID.test(token)) return "unreadable";
+  return token === tokenId ? "match" : "other";
+}
+
+/** Token id inside a function-call `args` value, or null when it is missing or unreadable. */
+export function receiptToken(args: unknown): string | null {
+  const token = decodeCallArgs(args)?.token_id;
+  return typeof token === "string" && KEY_ID.test(token) ? token : null;
+}
+
+/** The key page's history state. Only a complete success may say there is no history. */
+export function chainEventView(body: { ok?: unknown; complete?: unknown; events?: unknown } | null | undefined): {
+  state: "ready" | "partial" | "unavailable";
+  events: IndexedEvent[];
+} {
+  const events = Array.isArray(body?.events) ? body.events as IndexedEvent[] : [];
+  if (body?.ok === true && body.complete === true) return { state: "ready", events };
+  if (events.length) return { state: "partial", events };
+  return { state: "unavailable", events: [] };
 }
 
 type RawEvent = { event: string; data: Record<string, unknown> };

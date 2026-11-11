@@ -11,7 +11,7 @@ import {
   authenticatedLogs,
   eventsForToken,
   pageStep,
-  receiptToken,
+  classifyTokenArg,
   type HistoryState,
   type IndexedEvent,
 } from "./chainEvents";
@@ -95,8 +95,15 @@ export function hitsFrom(txns: readonly unknown[], tokenId: string, account: boo
     const tx = t.transaction_hash;
     if (seen.has(tx)) continue;
     if (!account) {
-      const args = (t.actions ?? []).map((a) => a?.args);
-      if (!args.some((a) => receiptToken(a) === tokenId)) continue;
+      const actions = t.actions ?? [];
+      if (!actions.length) { bad = true; continue; }
+      let matched = false;
+      for (const action of actions) {
+        const kind = classifyTokenArg((action as { args?: unknown }).args, tokenId);
+        if (kind === "unreadable") bad = true;
+        if (kind === "match") matched = true;
+      }
+      if (!matched) continue;
     }
     seen.add(tx);
     hits.push({

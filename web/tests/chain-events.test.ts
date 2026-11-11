@@ -6,6 +6,8 @@ import {
   eventsForToken,
   pageStep,
   parseKeyholeEvents,
+  chainEventView,
+  classifyTokenArg,
   receiptToken,
   type IndexedEvent,
 } from "@/lib/chainEvents";
@@ -68,7 +70,16 @@ describe("NEP-297 schema", () => {
   });
   it("reads a token id from receipt args", () => {
     expect(receiptToken(JSON.stringify({ token_id: TOKEN }))).toBe(TOKEN);
+    expect(receiptToken(Buffer.from(JSON.stringify({ token_id: TOKEN })).toString("base64"))).toBe(TOKEN);
     expect(receiptToken("not-json")).toBeNull();
+    expect(classifyTokenArg(JSON.stringify({ token_id: "kother" }), TOKEN)).toBe("other");
+    expect(classifyTokenArg(42, TOKEN)).toBe("unreadable");
+    expect(classifyTokenArg("not-json-or-base64", TOKEN)).toBe("unreadable");
+    expect(classifyTokenArg({}, TOKEN)).toBe("unreadable");
+  });
+  it("shows unavailable rather than an empty history when the read is not complete", () => {
+    expect(chainEventView({ ok: false, complete: false, events: [] }).state).toBe("unavailable");
+    expect(chainEventView({ ok: true, complete: true, events: [] }).state).toBe("ready");
   });
 });
 

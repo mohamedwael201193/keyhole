@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { blockResponse, callFunctionResponse } from "../tests/fixtures/nearRpc";
 import { build } from "esbuild";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -23,10 +24,10 @@ test("ordinary payout consent and original custody recovery survive reload witho
   await page.addInitScript(({id})=>{const k='kh_value_recovery_v1:'+JSON.stringify(['alice.near','k1234',id]);if(!sessionStorage.getItem('seeded')){localStorage.setItem(k,JSON.stringify({account:'alice.near',token_id:'k1234',value_op_id:id,status:'processing'}));sessionStorage.setItem('seeded','1');}},{id});
   await page.route(/https:\/\/.*(?:fastnear|near).*|https:\/\/rpc\.mainnet.*/,async route=>{
     const j=route.request().postDataJSON();const m=j.params?.method_name;
-    if(j.method==='block')return route.fulfill({json:{result:{header:{hash:'block42',height:41}}}});
+    if(j.method==='block')return route.fulfill({json:blockResponse()});
     if(j.method==='tx')return route.fulfill({json:{error:{message:'Unknown transaction'}}});
     const value=({payout_storage_cost:payoutCost,payout_account_registered:registered,get_payout_credit:'0',get_pending_payout:null} as any)[m];
-    await route.fulfill({json:{result:{block_hash:"block42",result:[...Buffer.from(JSON.stringify(value))]}}});
+    await route.fulfill({json:callFunctionResponse(value)});
   });
   await page.route('**/api/worker',async route=>{const j=route.request().postDataJSON();expect(j.op).toBe('reconcile_value_op');const signed=JSON.parse(j.auth.message);expect(signed.params).toEqual({token_id:'k1234',value_op_id:id});reconciles++;await route.fulfill({json:{call_id:'local-test',output:{ok:reconciles>1,value_op_id:id,status:reconciles>1?'success':'processing',admission_finished:reconciles>1}}});});
   await page.goto(url);
@@ -62,12 +63,12 @@ test("Vault cashout keeps UNKNOWN across reload and binds FINAL receipt before d
       if (!final) return route.fulfill({ json: { error: { message: 'Unknown transaction' } } });
       return route.fulfill({ json: { result: { final_execution_status: 'FINAL', transaction_outcome: {block_hash:'block42'},
         transaction: {hash:'local-test-claim', signer_id:wrongSigner?'bob.near':'alice.near', receiver_id:'keyhole-devmo.near', actions:[{FunctionCall:{method_name:'claim_payout',args:Buffer.from('{}').toString('base64'),deposit:'1',gas:'70000000000000'}}]},
-        status:{SuccessValue:'dHJ1ZQ=='}, receipts_outcome:[{outcome:{status:{SuccessValue:''}}},{outcome:{status:{SuccessValue:'dHJ1ZQ=='}}}] } } });
+        status:{SuccessValue:'dHJ1ZQ=='}, receipts_outcome:[{block_hash:'block42',outcome:{status:{SuccessValue:''}}},{block_hash:'block42',outcome:{status:{SuccessValue:'dHJ1ZQ=='}}}] } } });
     }
-    if (j.method === 'block') return route.fulfill({json:{result:{header:{hash:'block42',height:j.params?.block_id?42:41}}}});
+    if (j.method === 'block') return route.fulfill({json:blockResponse({ height: j.params?.block_id ? 42 : 41 })});
     const m = j.params?.method_name;
     const value = ({payout_storage_cost:'3200000000000000000000',payout_account_registered:true,get_payout_credit:claimed?'0':'10',get_pending_payout:claimed&&chainPending?{nonce:'1',amount:'10'}:null} as any)[m];
-    await route.fulfill({json:{result:{block_hash:"block42",result:[...Buffer.from(JSON.stringify(value))]}}});
+    await route.fulfill({json:callFunctionResponse(value, { height: 41 })});
   });
   await page.goto(url);
   const claim = page.getByRole('button',{name:'Claim native NEAR'});

@@ -98,6 +98,44 @@ describe("readKeyHistory", () => {
     expect(read.events.map((e) => e.event).sort()).toEqual(["key_sale", "loan_principal_delivered"]);
   });
 
+  it("does not treat unreadable action args as a complete empty history", async () => {
+    const hash = "H".padEnd(44, "a");
+    const row = (actions: unknown[]) => ({ transaction_hash: hash, predecessor_account_id: "buyer.near", actions });
+    const bodies = [
+      { txns: [row([{}])], cursor: null },
+      { txns: [row([{ args: 42 }])], cursor: null },
+      { txns: [row([{ args: "not-json-or-base64" }])], cursor: null },
+      { txns: [row([{ args: Buffer.from("nope").toString("base64") }])], cursor: null },
+    ];
+    for (const body of bodies) {
+      let posts = 0;
+      const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST") { posts += 1; return Response.json({ result: {} }); }
+        if (String(url).includes("method=nft_buy")) return Response.json(body);
+        return Response.json({ txns: [], cursor: null });
+      }) as unknown as typeof fetch;
+      const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+      expect(read.unavailable).toBe(true);
+      expect(read.complete).toBe(false);
+      expect(read.events).toEqual([]);
+      expect(posts).toBe(0);
+    }
+  });
+
+  it("keeps a readable other key as a complete empty history", async () => {
+    const other = Buffer.from(JSON.stringify({ token_id: "kother" })).toString("base64");
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (String(url).includes("method=nft_buy")) {
+        return Response.json({ txns: [{ transaction_hash: TX, predecessor_account_id: "buyer.near", actions: [{ args: other }] }], cursor: null });
+      }
+      return Response.json({ txns: [], cursor: null });
+    }) as unknown as typeof fetch;
+    const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+    expect(read.unavailable).toBe(false);
+    expect(read.complete).toBe(true);
+    expect(read.events).toEqual([]);
+  });
+
   it("does not treat a malformed receipt row as a complete empty history", async () => {
     for (const body of [{ txns: [{}], cursor: null }, { txns: [{ transaction_hash: 42, actions: [] }], cursor: null }]) {
       const fetchImpl = vi.fn(async () => Response.json(body)) as unknown as typeof fetch;

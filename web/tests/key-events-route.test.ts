@@ -28,4 +28,25 @@ describe("GET /api/key-events", () => {
     expect(second.unavailable).toBe(true);
     expect(fetchImpl.mock.calls.length).toBeGreaterThan(calls);
   });
+
+  it.each([
+    [{}],
+    [{ args: 42 }],
+    [{ args: "not-json-or-base64" }],
+  ])("unreadable action args are not cached as a complete empty history", async (action) => {
+    const row = { transaction_hash: "H".padEnd(44, "b"), predecessor_account_id: "buyer.near", actions: [action] };
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") return Response.json({ result: { final_execution_status: "FINAL" } });
+      if (String(url).includes("method=nft_buy")) return Response.json({ txns: [row], cursor: null });
+      return Response.json({ txns: [], cursor: null });
+    });
+    vi.stubGlobal("fetch", fetchImpl);
+    const first = await (await GET(req())).json();
+    expect(first).toMatchObject({ ok: false, complete: false, unavailable: true, events: [] });
+    expect(fetchImpl.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === "POST")).toBe(false);
+    const calls = fetchImpl.mock.calls.length;
+    const second = await (await GET(req())).json();
+    expect(second).toMatchObject({ ok: false, complete: false, unavailable: true, events: [] });
+    expect(fetchImpl.mock.calls.length).toBeGreaterThan(calls);
+  });
 });

@@ -14,6 +14,7 @@ import { useKeyChain } from "./useKeyChain";
 import { keyEvmAddress } from "@/lib/chainsig";
 import { LienPanel } from "@/components/lien/LienPanel";
 import { useLien } from "@/components/lien/useLien";
+import { chainEventView } from "@/lib/chainEvents";
 import { ChainEvents, KeyTimeline, type ChainEventState } from "@/components/keylog/KeyTimeline";
 import { BeforeYouBuy, BuyerProof, ProofPanel } from "./buyer";
 import { SaleCard } from "./sale";
@@ -80,9 +81,9 @@ export function KeyHistoryView() {
       .then((r) => r.json())
       .then((j) => {
         if (!live) return;
-        const events = Array.isArray(j?.events) ? j.events : [];
-        if (j?.ok && j.complete === true) setChainEvents({ state: "ready", events, complete: true });
-        else if (events.length) setChainEvents({ state: "partial", events });
+        const view = chainEventView(j);
+        if (view.state === "ready") setChainEvents({ state: "ready", events: view.events, complete: true });
+        else if (view.state === "partial") setChainEvents({ state: "partial", events: view.events });
         else setChainEvents({ state: "unavailable", events: [] });
       })
       .catch(() => { if (live) setChainEvents({ state: "unavailable", events: [] }); });
