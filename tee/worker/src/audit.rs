@@ -24,6 +24,28 @@ const LIVE_NONCE: u64 = 221_861_956_000_009;
         assert_eq!(access_key_nonce(raw), None, "{raw}");
     }
 }
+
+// Same live envelope the nonce parser has to accept; used by native_host::block.
+const BLOCK_HASH: &str = "AFDCcbNx2Pp9kq4z23HxwgAndiXjfY1ST1SmxG4teKm";
+fn expected_block_hash() -> [u8; 32] {
+    let b = bs58::decode(BLOCK_HASH).into_vec().expect("test vector");
+    b.try_into().expect("32 bytes")
+}
+#[test] fn final_block_hash_reads_flat_header() {
+    let raw = format!(r#"{{"header":{{"hash":"{BLOCK_HASH}","timestamp":1}}}}"#);
+    assert_eq!(final_block_hash(&raw), Some(expected_block_hash()));
+}
+#[test] fn final_block_hash_reads_rpc_result_envelope() {
+    let raw = format!(r#"{{"jsonrpc":"2.0","result":{{"header":{{"hash":"{BLOCK_HASH}","height":1}}}},"id":"1"}}"#);
+    assert_eq!(final_block_hash(&raw), Some(expected_block_hash()));
+    let raw = format!(r#"{{"result":{{"header":{{"hash":"{BLOCK_HASH}"}}}}}}"#);
+    assert_eq!(final_block_hash(&raw), Some(expected_block_hash()));
+}
+#[test] fn final_block_hash_rejects_missing_or_malformed() {
+    for raw in ["", "{", r#"{"header":{}}"#, r#"{"header":{"hash":"not-base58"}}"#, r#"{"result":{"header":{}}}"#, &format!(r#"{{"result":{{"hash":"{BLOCK_HASH}"}}}}"#)] {
+        assert_eq!(final_block_hash(raw), None, "{raw}");
+    }
+}
 #[test] fn fc_key_with_method_named_full_access_fails() {
     assert!(!is_full_access(r#"{"nonce":1,"permission":{"FunctionCall":{"allowance":null,"receiver_id":"x.near","method_names":["FullAccess"]}}}"#));
 }

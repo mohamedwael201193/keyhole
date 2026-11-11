@@ -1188,6 +1188,16 @@ pub fn access_key_nonce(raw: &str) -> Option<u64> {
     }
 }
 
+/// Hash from a `block` body. Accepts flattened `{ "header": { "hash": … } }`
+/// or a JSON-RPC `{ "result": { "header": { "hash": … } } }` envelope — the same
+/// shapes `chain_now_ms` already allows for the timestamp. The pre-#208 send path
+/// used both pointers; dropping the envelope would fail after the nonce is read.
+pub fn final_block_hash(raw: &str) -> Option<[u8; 32]> {
+    let v: serde_json::Value = serde_json::from_str(raw).ok()?;
+    let h = v.pointer("/header/hash").or_else(|| v.pointer("/result/header/hash"))?.as_str()?;
+    bs58::decode(h).into_vec().ok().and_then(|b| b.try_into().ok())
+}
+
 /// Which key a request operates: the one named in the signed params, or the only one held.
 /// Holding several keys without naming one is refused, so a buyer never runs the wrong account.
 pub fn pick_token(named: Option<&str>, owned: u64) -> Result<(), Error> {
