@@ -38,7 +38,7 @@
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "75c97e5d42b779d48c4a2d224438ffcb06f55156"
+    "source_commit": "595c25a86e823c1a51df3e8494e27ce97092c099"
   },
   "worker_candidate": {
     "status": "published-mainnet",
