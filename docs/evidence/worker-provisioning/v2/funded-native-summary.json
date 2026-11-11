@@ -1,0 +1,68 @@
+{
+  "commit": "cedb3e55d9e835d623a3623d54bad1a1406eebf4",
+  "source_fingerprints": [
+    {
+      "file": "web/app/pledge/LivePledge.tsx",
+      "sha256": "1e6d8c243d34a626d393a248f6bb9629ed5205444613815c91bb45f74ed53bdc"
+    },
+    {
+      "file": "web/lib/pledgeExit.ts",
+      "sha256": "b496076e45ded5b3da6e0ccab485c1e7727e810afeddd8091f38b0b68271c1e4"
+    },
+    {
+      "file": "web/lib/pledgeIntentStore.ts",
+      "sha256": "23e1b4ddd9448c780f3368c76cad19da0ca295ca03b56cc4d5cbfdec9cb134da"
+    },
+    {
+      "file": "web/lib/pledgeMoney.ts",
+      "sha256": "ae901feabf2560c200818d81e56886d135b7dbfff2279023ae4cddf7d2902f3f"
+    },
+    {
+      "file": "web/lib/keysTx.ts",
+      "sha256": "315d1ff9267b675ab3c0289b8152ce1df555957ad9cc4177f24582997599f45b"
+    },
+    {
+      "file": "web/e2e/pledge-funded.spec.ts",
+      "sha256": "fe4109f322e7878ac401348ec84aa50bae9f80b0bd8036cfa78921b706e74100"
+    },
+    {
+      "file": "web/e2e/support/pledge-ledger.ts",
+      "sha256": "83c4968dbbe353507ffa27f37dddf54169df443c5c1b2bc8dd4fa241ebe0dd3b"
+    },
+    {
+      "file": "web/e2e/support/final-receipt.ts",
+      "sha256": "c7f4ad2c470257868ec2df54545a6855bec58a5f64eb9e361792397923e36d40"
+    },
+    {
+      "file": "contracts/keys-sandbox/tests/pledge.rs",
+      "sha256": "0e60039215f360616f358df76a8bb992af2fe0eb52210cc495429d558e4142c3"
+    },
+    {
+      "file": "contracts/keys-sandbox/tests/support/ui_harness.rs",
+      "sha256": "5c3b5534e10d1d14ddf9c7e7c91de95fb5a0bcc90d1856adfc7c6cac65752888"
+    },
+    {
+      "file": "contracts/keys-sandbox/tests/support/guarded_layer.rs",
+      "sha256": "8ff8d970f4f71c569ad70fd9028dab65d362a81aff2daadecf0ad491e4528245"
+    },
+    {
+      "file": "tee/worker/src/withdrawal_protection.rs",
+      "sha256": "cf4b9f0682c2f5a1f92dabffb9b5432cd785db37999b2d8d127e687f1121d9d7"
+    }
+  ],
+  "counts": {
+    "browser_wallet_submissions": 13,
+    "unique_final_native_receipts": 13,
+    "state_viewport_checks": 64,
+    "negative_cases": 5,
+    "screenshots": 96
+  },
+  "receipt_scope": "13 browser-wallet submissions only; provider admission/finish and fixture setup transactions are separate",
+  "provider": "custody HTTP, registry and WASI host mocked; native contract/wallet/receipts and guarded production pure drivers real",
+  "evidence_sha256": "4ff9f0b7aca8a091874b5023c16cbcce59c5e913b0a6f27f43619fea8ae9673b",
+  "native_receipts_sha256": "512e63f208c476b93da4a90c5f9c2f8625ddb27cd9fea196dd8114a139032990",
+  "status": "local-sandbox-native-scope-only",
+  "public_ft_redemption": false,
+  "manifest_sha256": "11d70f57189bcde27efb8e77fd8496a24c81d26d5d0dbaa2e4c35bc4816b3fb8",
+  "local_artifacts_directory": "/workspace/handoff/pr208-native-scope/funded-artifacts"
+}

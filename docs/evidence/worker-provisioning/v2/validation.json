@@ -11,8 +11,13 @@
   },
   "tests": {
     "worker": 723,
-    "javascript": 177,
-    "receipts": 9
+    "javascript": 178,
+    "receipts": 9,
+    "cli": 77,
+    "web": 1961,
+    "sandbox_pledge": 28,
+    "funded_browser": 1,
+    "general_browser": 217
   },
   "actual_wasi_builds": [
     "5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda",
@@ -27,7 +32,7 @@
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/js-tests.log",
-      "sha256": "869d751e5341736b1e2eca86dc1eda1a3f833847071190c6104879c421d35b0b"
+      "sha256": "460ff0faaabb135dd795e8bbe0908e44c4973bdbfbf787692ff4aaa6e4abbd9e"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/receipt-tests.log",
@@ -36,6 +41,46 @@
     {
       "path": "docs/evidence/worker-provisioning/v2/cli-tests.log",
       "sha256": "f12aed7ab89ad4d871bd0ddddf8819e061c4c3761dbcdb7b979c78e3661e9deb"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/web-tests.log",
+      "sha256": "59fda878c6528c25e4871b6832c964db51f00a7e0ef36d4af26dcc7e0e0b0c94"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/web-lint.log",
+      "sha256": "b8d3558af978167d2258e499cf98d32aa2f30ed8e4ef66d378b17f9f2edd57ca"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/web-typecheck.log",
+      "sha256": "73643c41fbf2ed58d67db2acadc5c28be91931128ec8f05ff8da91320eb59554"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/sandbox-pledge.log",
+      "sha256": "9ca0b36fc71445682491f7e33d908f4ed3fab416e0ebef6aed4ed8e34dadd6d2"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/sandbox-clippy.log",
+      "sha256": "e9736e2ebce772ff44119fa7d67d9909a436569472b560f2701472adc70ba51a"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/funded-e2e.log",
+      "sha256": "f3b3a06f323d1cce0a977326b9727194e4a35b563a0d14e8b4b038efe4f4deaf"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/web-e2e.log",
+      "sha256": "6adae4dde2b57cf48a59b2022c03ff6ba3f24b368d9ae3e2c6d3c6681a789be8"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/hygiene-tests.log",
+      "sha256": "9ce8ee26e05d693308166233e1585bad0cfe73ef991f74850a326a2defd319ed"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/contract-unit.log",
+      "sha256": "7a908076163975304f1e443bb60f106b331cc7f63d969060718c4a013f3abec4"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/contract-clippy.log",
+      "sha256": "25eba79ee619efe4366f64361e140d19fed6ee7256f3c62f653068140a5f6ae3"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/clippy-native.log",

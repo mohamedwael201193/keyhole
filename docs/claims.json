@@ -7856,6 +7856,19 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/pledge/TEAM_RUNBOOK.md"
   },
   {
+   "id": "path-docs/worker/LIVE_LOANS_EXEC.md",
+   "claim": "Linked repo path docs/worker/LIVE_LOANS_EXEC.md exists",
+   "where": "README.md:1011",
+   "evidence_type": "file",
+   "evidence": "docs/worker/LIVE_LOANS_EXEC.md",
+   "check": {
+    "type": "path",
+    "path": "docs/worker/LIVE_LOANS_EXEC.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/worker/LIVE_LOANS_EXEC.md"
+  },
+  {
    "id": "path-docs/evidence/integration-stack/artifact-repro-r2.json",
    "claim": "Linked repo path docs/evidence/integration-stack/artifact-repro-r2.json exists",
    "where": "README.md:1017",
