@@ -2,37 +2,50 @@
   "status": "source-candidate-not-published",
   "credit": "devmo",
   "source_commit_reference": "identity.json#/review/source_commit",
-  "source_tree_sha256": "dd75dcfeaf717aabd597469ccf2ba087dbdd6f95dace5b2ce7634736b97e9f27",
+  "source_tree_sha256": "c1c900d02802925952853dbb86823b19014fd317d6d41b16b5cdd35ffb883208",
   "worker_candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda",
-    "bytes": 1248852,
+    "wasm_sha256": "ce0a33a67b985eb7952a30493f6f28926e07e7ae57e953a55a20c63d63a42966",
+    "bytes": 1312726,
     "recipe": "tee/worker/build.sh"
   },
   "tests": {
-    "worker": 723,
-    "javascript": 178,
+    "worker": 752,
+    "javascript": 180,
     "receipts": 9,
-    "cli": 77,
-    "web": 1961,
+    "cli": 79,
+    "web": 1976,
+    "contract": 342,
     "sandbox_pledge": 28,
+    "sandbox_other": 34,
+    "sandbox_total": 62,
     "funded_browser": 1,
     "general_browser": 217
   },
+  "general_browser_summary": {
+    "passed": 215,
+    "retry_passes": 2,
+    "skipped": 15
+  },
   "actual_wasi_builds": [
-    "5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda",
-    "5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda"
+    "ce0a33a67b985eb7952a30493f6f28926e07e7ae57e953a55a20c63d63a42966",
+    "ce0a33a67b985eb7952a30493f6f28926e07e7ae57e953a55a20c63d63a42966"
   ],
+  "coverage_qualifications": {
+    "funded_browser": "Historical native-only funded fixture log retained, not rerun for exact exit; never custody or exact-delivery evidence.",
+    "sandbox_pledge": "Current local native admission/title/finish with mocked custody ledger; no actual token/Intents provider.",
+    "general_browser": "Current production preview/consent guard with explicit mocked wallet, custody and RPC; no live wallet/provider."
+  },
   "live_provider_installation": false,
   "live_loans": false,
   "logs": [
     {
       "path": "docs/evidence/worker-provisioning/v2/worker-tests.log",
-      "sha256": "be1163e951f44cb44bbdfdf6b726d9c000bf82e029091142f69c981ef35d7750"
+      "sha256": "4a887a953922b457da8f4843912b5b10466e433267b14bbec71d11ea564fe8ac"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/js-tests.log",
-      "sha256": "7cb1fdc70d741530dca429d5f98a4b93ff562d5f05bf343d618a478816b46422"
+      "sha256": "29f140e9d1e84d99d1a54eb893bd3db1e6bb34dd75b2a753daebd36ac1974751"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/receipt-tests.log",
@@ -40,27 +53,31 @@
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/cli-tests.log",
-      "sha256": "f12aed7ab89ad4d871bd0ddddf8819e061c4c3761dbcdb7b979c78e3661e9deb"
+      "sha256": "848690ae8c03997e4aea3e8881666d5e4655c0ecbe0087de967d10dbc53f2ec7"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/web-tests.log",
-      "sha256": "59fda878c6528c25e4871b6832c964db51f00a7e0ef36d4af26dcc7e0e0b0c94"
+      "sha256": "d9e8f9d6969e6e35a9d7468734faa9d45e4469975d6f4029f90799f0be125b72"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/web-lint.log",
-      "sha256": "b8d3558af978167d2258e499cf98d32aa2f30ed8e4ef66d378b17f9f2edd57ca"
+      "sha256": "c3e2a0bd0b480da15f6a73c2f884e8ce9afa1a1ca5103f556d8a0427d879f7fe"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/web-typecheck.log",
-      "sha256": "73643c41fbf2ed58d67db2acadc5c28be91931128ec8f05ff8da91320eb59554"
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/sandbox-pledge.log",
-      "sha256": "9ca0b36fc71445682491f7e33d908f4ed3fab416e0ebef6aed4ed8e34dadd6d2"
+      "sha256": "3dfe969acc5d8044e558e0a7a92d5fc5edf4d23c65ca0431fe09657ab906388c"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/sandbox-other.log",
+      "sha256": "fb8b0c0ce54dffd69ab3a2e0335e546c1bf25b3fc7ff4b49d60218930ae53351"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/sandbox-clippy.log",
-      "sha256": "e9736e2ebce772ff44119fa7d67d9909a436569472b560f2701472adc70ba51a"
+      "sha256": "9c107cd08eb18c0aeeb924f2381b3edcd486023ef915ede9b974c662781590db"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/funded-e2e.log",
@@ -68,35 +85,35 @@
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/web-e2e.log",
-      "sha256": "6adae4dde2b57cf48a59b2022c03ff6ba3f24b368d9ae3e2c6d3c6681a789be8"
+      "sha256": "0d3ed4b4327ae1f0970f76eed3f9d934048816a5d6c20f9ae400567de620f3fe"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/hygiene-tests.log",
-      "sha256": "9ce8ee26e05d693308166233e1585bad0cfe73ef991f74850a326a2defd319ed"
+      "sha256": "d16cf091d37ae06aa5ed03d872dc4a56c97c45f9a849b5141db9e16856b16027"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/contract-unit.log",
-      "sha256": "7a908076163975304f1e443bb60f106b331cc7f63d969060718c4a013f3abec4"
+      "sha256": "1fe367213768925b3aa091ac2bdb166ed4eab93bc6df51924b39e13b82e7f6ca"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/contract-clippy.log",
-      "sha256": "25eba79ee619efe4366f64361e140d19fed6ee7256f3c62f653068140a5f6ae3"
+      "sha256": "b2c020f27a01faabb96e5d55c11fd219cf7c484c9cf34b3342bfc8444d934c89"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/clippy-native.log",
-      "sha256": "f2bf1525a6bc8a924b299d6154d1f1b8d3d23231bc4a12d04dbe41ba0d99c50e"
+      "sha256": "ce4f4411e07a33a71c9e38b5cfe25ae986d40b4fa102f5c36c72baac5ce0101e"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/clippy-wasi.log",
-      "sha256": "c5283b351d14ea8e235e16132e3ae7d2308db3062402db691d1e576bf2b609d0"
+      "sha256": "1d573fbc6f14e346cfc84d22f1364f57c99c045998004b18bce46e30bf13f674"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/build1.log",
-      "sha256": "bba760459653f5adc13fd849b4152ef89b7b178e46f132de2c67b8bf8e7b4cd8"
+      "sha256": "abc2683ec18227f8d2fc811025ed998067ae2e5074cb7e2d2f9a4ee3ed5bcb8e"
     },
     {
       "path": "docs/evidence/worker-provisioning/v2/build2.log",
-      "sha256": "44427043c6e2fc7c59786cec64e730e991840dbc1a01b9227595df5d758fb916"
+      "sha256": "22095f8d9ee243a889331b8656b273e974dfb1fc6248c9668570cfd25c5bb6c6"
     }
   ]
 }

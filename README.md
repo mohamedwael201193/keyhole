@@ -39,9 +39,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 49cfad020cecb8de7e3a60b7d49e6b0b35571965
+git fetch --depth 1 origin e65cfc5af81d26f29866c88d874d3fc3d899eef8
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "49cfad020cecb8de7e3a60b7d49e6b0b35571965"
+test "$(git rev-parse HEAD)" = "e65cfc5af81d26f29866c88d874d3fc3d899eef8"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -54,9 +54,9 @@ No git? Download all three files from that same immutable source commit and run 
 
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/49cfad020cecb8de7e3a60b7d49e6b0b35571965/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/49cfad020cecb8de7e3a60b7d49e6b0b35571965/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/49cfad020cecb8de7e3a60b7d49e6b0b35571965/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/e65cfc5af81d26f29866c88d874d3fc3d899eef8/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/e65cfc5af81d26f29866c88d874d3fc3d899eef8/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/e65cfc5af81d26f29866c88d874d3fc3d899eef8/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -116,7 +116,7 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 ```
 
-Worker source candidate: `5b4eb074abb31f689a1b7574fb47124593b3b7a49173bb845d95dc11d76e9eda` (1,248,852 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
+Worker source candidate: `ce0a33a67b985eb7952a30493f6f28926e07e7ae57e953a55a20c63d63a42966` (1,312,726 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
 
 Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
@@ -659,9 +659,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 49cfad020cecb8de7e3a60b7d49e6b0b35571965
+git fetch --depth 1 origin e65cfc5af81d26f29866c88d874d3fc3d899eef8
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "49cfad020cecb8de7e3a60b7d49e6b0b35571965"
+test "$(git rev-parse HEAD)" = "e65cfc5af81d26f29866c88d874d3fc3d899eef8"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -806,11 +806,11 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 
 | Component | Count | How it was measured |
 |---|---|---|
-| Keys contract unit tests | **306** pass | `cd contracts/keys && cargo test --locked` (historical contract measurement; contract files unchanged) |
-| Keys contract sandbox tests | **59** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 31 upgrade/sale/runtime cases |
-| TEE worker unit tests | **723** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
-| CLI tests | **77** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/cli-tests.log) |
-| Web unit tests (Vitest) | **1961** pass in 111 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
+| Keys contract unit tests | **342** pass | `cd contracts/keys && cargo test --locked` (current local measurement) |
+| Keys contract sandbox tests | **62** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 34 upgrade/sale/runtime cases |
+| TEE worker unit tests | **752** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
+| CLI tests | **79** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/cli-tests.log) |
+| Web unit tests (Vitest) | **1976** pass in 112 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web e2e (Playwright) | **215** pass + 2 passed on retry, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/web-e2e.log) |
 | Claims in `docs/claims.json` | **641**: offline 344 PASS, 0 FAIL, 0 ERROR, 297 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |

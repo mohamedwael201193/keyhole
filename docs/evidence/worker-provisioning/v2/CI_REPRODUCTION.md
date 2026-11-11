@@ -1,3 +1,25 @@
+# Exact NEAR exit — current local source candidate
+
+Credit: devmo. The current candidate and test-log digests are in validation.json.
+The initial full remaining-sandbox run found the ignored short-delay fixture
+missing, not a production failure. The fixture was rebuilt with the existing
+`contracts/keys/build-sandbox-delay.sh`; release bytes are restored by its trap.
+The original diagnostic is retained in the handoff directory, not counted as a pass.
+The endpoint schemas, official sources, exact balance-based proof and remaining
+live-provider gates are in [EXACT_NEAR_EXIT.md](../../../worker/EXACT_NEAR_EXIT.md).
+The worker, JavaScript, CLI, web unit, native/WASI clippy, contract unit and Pledge
+sandbox logs were rerun for this implementation. The retained funded-browser log
+is HISTORICAL native-only coverage, not a current exact-exit acceptance run.
+Current committed logs normalize trailing whitespace; original raw logs remain
+in /workspace/handoff/exact-exit. Browser recovery fixtures use the production preview/consent guard and mock only
+wallet/custody/RPC transport; no synthetic minimum-bound guard bypass remains.
+No local custody HTTP test, native sandbox fixture or two matching builds proves
+live unshield settlement, provider policy parity or causally unique FT delivery.
+Hosted CI, independent review, fresh policy enrollment and separately approved
+live acceptance remain gates; no mainnet action, publication or secret change.
+
+The following Round 2 narrative is historical and is not the exact-exit scope.
+
 # PR208 Round 2 repair — local source candidate, not published
 
 Credit: devmo. Original exact-head run:

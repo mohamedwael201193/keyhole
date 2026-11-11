@@ -20,4 +20,3 @@
   49:39  warning  React Hook useEffect has a missing dependency: 'runAll'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
 ✖ 10 problems (0 errors, 10 warnings)
-

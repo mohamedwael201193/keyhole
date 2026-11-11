@@ -24,6 +24,7 @@ export function validateRecord(record,id,digest,counts) {
  assert.equal(record.actual_wasi_builds[0],id.worker_candidate.wasm_sha256);
  assert.equal(record.actual_wasi_builds[1],id.worker_candidate.wasm_sha256);
 }
+export function browserCounts(log) { return {passed:Number(log.match(/(\d+) passed/)?.[1]||0),retry_passes:Number(log.match(/(\d+) flaky/)?.[1]||0),skipped:Number(log.match(/(\d+) skipped/)?.[1]||0)}; }
 export function makeRecord() {
  const worker=[...read(dir+'worker-tests.log').toString().matchAll(/test result: ok\. (\d+) passed/g)].reduce((s,m)=>s+Number(m[1]),0);
  const js=Number(read(dir+'js-tests.log').toString().match(/# pass (\d+)/)?.[1]);
@@ -31,9 +32,11 @@ export function makeRecord() {
  const cli=Number(read(dir+'cli-tests.log').toString().match(/# pass (\d+)/)?.[1]);
  const web=Number(read(dir+'web-tests.log').toString().match(/Tests\s+(\d+) passed/)?.[1]);
  const sandbox=Number(read(dir+'sandbox-pledge.log').toString().match(/test result: ok\. (\d+) passed/)?.[1]);
+ const contract=[...read(dir+'contract-unit.log').toString().matchAll(/test result: ok\. (\d+) passed/g)].reduce((s,m)=>s+Number(m[1]),0);
+ const sandbox_other=[...read(dir+'sandbox-other.log').toString().matchAll(/test result: ok\. (\d+) passed/g)].reduce((s,m)=>s+Number(m[1]),0);
  const funded=Number(read(dir+'funded-e2e.log').toString().match(/(\d+) passed/)?.[1]);
- const browser=Number(read(dir+'web-e2e.log').toString().match(/(\d+) passed/)?.[1]);
- return {status:'source-candidate-not-published',credit:'devmo',source_commit_reference:'identity.json#/review/source_commit',source_tree_sha256:sourceDigest(),worker_candidate:JSON.parse(read('identity.json')).worker_candidate,tests:{worker,javascript:js,receipts,cli,web,sandbox_pledge:sandbox,funded_browser:funded,general_browser:browser},actual_wasi_builds:['build1.sha256','build2.sha256'].map(p=>read(dir+p).toString().trim()),live_provider_installation:false,live_loans:false,logs:['worker-tests.log','js-tests.log','receipt-tests.log','cli-tests.log','web-tests.log','web-lint.log','web-typecheck.log','sandbox-pledge.log','sandbox-clippy.log','funded-e2e.log','web-e2e.log','hygiene-tests.log','contract-unit.log','contract-clippy.log','clippy-native.log','clippy-wasi.log','build1.log','build2.log'].map(p=>({path:dir+p,sha256:sha(read(dir+p))}))};
+ const browser=browserCounts(read(dir+'web-e2e.log').toString());
+ return {status:'source-candidate-not-published',credit:'devmo',source_commit_reference:'identity.json#/review/source_commit',source_tree_sha256:sourceDigest(),worker_candidate:JSON.parse(read('identity.json')).worker_candidate,tests:{worker,javascript:js,receipts,cli,web,contract,sandbox_pledge:sandbox,sandbox_other,sandbox_total:sandbox+sandbox_other,funded_browser:funded,general_browser:browser.passed+browser.retry_passes},general_browser_summary:browser,actual_wasi_builds:['build1.sha256','build2.sha256'].map(p=>read(dir+p).toString().trim()),coverage_qualifications:{funded_browser:'Historical native-only funded fixture log retained, not rerun for exact exit; never custody or exact-delivery evidence.',sandbox_pledge:'Current local native admission/title/finish with mocked custody ledger; no actual token/Intents provider.',general_browser:'Current production preview/consent guard with explicit mocked wallet, custody and RPC; no live wallet/provider.'},live_provider_installation:false,live_loans:false,logs:['worker-tests.log','js-tests.log','receipt-tests.log','cli-tests.log','web-tests.log','web-lint.log','web-typecheck.log','sandbox-pledge.log','sandbox-other.log','sandbox-clippy.log','funded-e2e.log','web-e2e.log','hygiene-tests.log','contract-unit.log','contract-clippy.log','clippy-native.log','clippy-wasi.log','build1.log','build2.log'].map(p=>({path:dir+p,sha256:sha(read(dir+p))}))};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)) {
  const actual=makeRecord(),id=JSON.parse(read('identity.json'));

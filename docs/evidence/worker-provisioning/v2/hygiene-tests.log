@@ -2,32 +2,32 @@ TAP version 13
 # Subtest: genuine exact-schema public deployment proof passes without losing its verifiable signature
 ok 1 - genuine exact-schema public deployment proof passes without losing its verifiable signature
   ---
-  duration_ms: 44.727406
+  duration_ms: 46.233487
   ...
 # Subtest: every other field rejects synthetic credential classes and unknown private fields
 ok 2 - every other field rejects synthetic credential classes and unknown private fields
   ---
-  duration_ms: 446.940205
+  duration_ms: 447.507839
   ...
 # Subtest: moved/extra/replaced signature, wrong tx, unknown schema, duplicate keys and malformed JSON fail
 ok 3 - moved/extra/replaced signature, wrong tx, unknown schema, duplicate keys and malformed JSON fail
   ---
-  duration_ms: 325.99129
+  duration_ms: 329.694145
   ...
 # Subtest: same signature in any other file fails; no JSON/evidence/package-lock or heuristic exclusion
 ok 4 - same signature in any other file fails; no JSON/evidence/package-lock or heuristic exclusion
   ---
-  duration_ms: 214.462798
+  duration_ms: 222.793272
   ...
 # Subtest: historical 1Click signatures retain only exact snapshot/pointer exceptions, not a file exclusion
 ok 5 - historical 1Click signatures retain only exact snapshot/pointer exceptions, not a file exclusion
   ---
-  duration_ms: 217.019938
+  duration_ms: 362.445145
   ...
 # Subtest: source bundle members are scanned too; a credential hidden only in the gzip archive fails
 ok 6 - source bundle members are scanned too; a credential hidden only in the gzip archive fails
   ---
-  duration_ms: 55.158273
+  duration_ms: 65.004788
   ...
 1..6
 # tests 6
@@ -37,4 +37,4 @@ ok 6 - source bundle members are scanned too; a credential hidden only in the gz
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 1412.388626
+# duration_ms 1585.322336
