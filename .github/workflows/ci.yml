@@ -42,7 +42,7 @@ jobs:
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
           want=$(grep ' v2.7/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
-          # Live v2.6 bytes stay in the release tree. This checks the committed file, not a rebuild of main.
+          # Historical v2.6 bytes stay in the release tree. This checks the committed file, not a rebuild of main.
           live=$(sha256sum release/v2.6/keyhole_keys.wasm | cut -d' ' -f1)
           [ "$live" = "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a" ]
       - name: build sandbox-only callback failure fixture (never deploy)
@@ -143,6 +143,8 @@ jobs:
         run: node --test judge/reproduction.test.mjs
       - name: default claims mode does not spend on health
         run: node --test judge/passive-claims.test.mjs
+      - name: docs currentness, link anchors, safe fences, mutation verifier, metrics fail-closed
+        run: node --test judge/docs-current.test.mjs judge/docs-links.test.mjs judge/check-readme.test.mjs judge/readme-verify.test.mjs judge/live-guard.test.mjs scripts/gen-metrics.test.mjs
       - name: claims.json file checks (paths, named tests, constants, committed wasm)
         run: node judge/verify-claims.mjs --offline
   hygiene:
@@ -188,7 +190,19 @@ jobs:
       - run: npx vitest run --reporter=default --reporter=json --outputFile="$RUNNER_TEMP/v.json"
       - run: echo "| web-unit | $(node -p "require(process.env.RUNNER_TEMP+'/v.json').numPassedTests") |" >> "$GITHUB_STEP_SUMMARY"
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - name: install chromium
+        run: |
+          set -euo pipefail
+          npx playwright install chromium
+          deps=0
+          for i in 1 2 3; do
+            if npx playwright install-deps chromium; then deps=1; break; fi
+            echo "system library install attempt ${i} failed"
+            sleep 25
+          done
+          if [ "$deps" != 1 ]; then
+            echo "system libraries were not installed; the browser launch is the check"
+          fi
       - name: e2e against the local production build (reads mainnet live)
         run: |
           PORT="${KH_E2E_PORT:-3174}"; export BASE_URL="http://localhost:$PORT"

@@ -29,16 +29,16 @@
   "contract": {
     "account": "keyhole-devmo.near",
     "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
-    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
-    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
-    "deploy_tx": "4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
-    "version": "2.6.0",
-    "bytes": 487260,
+    "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
+    "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+    "deploy_tx": "6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
+    "version": "2.7.0",
+    "bytes": 519382,
     "migrate_pledge_tx": "EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "9296fe4acfa94cf603fd823518e375e6cd7c9944"
+    "source_commit": "51ecc536cbf713352d08abd346399ec161bdc142"
   },
   "worker_candidate": {
     "status": "published-mainnet",
@@ -47,12 +47,28 @@
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
-    "status": "source-candidate-not-deployed",
+    "status": "deployed-mainnet",
     "version": "2.7.0",
     "release": "v2.7",
     "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
     "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
     "bytes": 519382,
     "recipe": "contracts/keys/build.sh"
+  },
+  "governance": {
+    "owner": "keyhole-devmo.near",
+    "pending_owner": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+    "pending_owner_not_before_ns": "1794486987377190950",
+    "staged_upgrade_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+    "staged_upgrade_not_before_ns": "1794486857027935824",
+    "min_upgrade_delay_ns": "86400000000000",
+    "wind_down_ns": "1801440000000000000",
+    "wound_down": false,
+    "lending_enabled": false,
+    "stage_upgrade_tx": "5CYYbe6Zx1BVW3qmS63gR6XDGKMx2QzfJ8Pcft8BM3v5",
+    "propose_owner_tx": "9fAHo9ckryNCXr6wxJzr89wayP6fTFKwqjFezXVGYnyk",
+    "full_access_keys": 2,
+    "function_call_keys": 1,
+    "access_key_total": 3
   }
 }

@@ -1,4 +1,5 @@
 // Server-side Agent API (agentsonintents) helpers. Reads only; swaps are always dry. Pure parts are unit-tested.
+import { USD6 } from "./agentPolicy";
 import { assetById } from "./oneclick";
 
 export const AGENT_READS = ["network", "whoami", "quotas", "policy"] as const;
@@ -35,6 +36,88 @@ export const policyWarnings = (q: any): string[] =>
 /** Balance codes from a dry quote (e.g. insufficient_balance). Shown, never hidden: the demo agent is unfunded. */
 export const balanceWarnings = (q: any): string[] =>
   (Array.isArray(q?.warnings) ? q.warnings : []).map((w: any) => String(w?.code ?? "")).filter((c: string) => /balance|insufficient|fund/i.test(c) && !c.startsWith("policy_") && !c.startsWith("budget"));
+
+/** Env names the Agent API bridge needs. Values stay on the server. */
+export function missingAgentEnv(env: { base?: string; key?: string; agent?: string }, read: string): string[] {
+  const missing: string[] = [];
+  if (!env.base) missing.push("AGENT_API_BASE_URL");
+  if (!env.key) missing.push("AGENT_API_KEY");
+  if (read === "policy" && !/^[0-9a-f]{64}$/.test(env.agent ?? "")) missing.push("AGENT_API_AGENT_ID");
+  return missing;
+}
+
+const rec = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const counter = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v >= 0;
+const counterMap = (v: unknown): v is Record<string, number> => rec(v) && Object.values(v).every(counter);
+/** A non-negative amount the table can print. Caps are integer base units. A budget may be a decimal string. */
+function money(v: unknown, integer: boolean): boolean {
+  if (typeof v === "number") return integer ? Number.isSafeInteger(v) && v >= 0 : Number.isFinite(v) && v >= 0;
+  if (typeof v !== "string" || !(integer ? /^\d+$/ : /^\d+(\.\d+)?$/).test(v)) return false;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && (!integer || Number.isSafeInteger(n));
+}
+function capMap(v: unknown): v is Record<string, number | string> {
+  if (!rec(v) || USD6.length === 0 || USD6.some((id) => !money(v[id], true))) return false;
+  return Object.values(v).every((item) => money(item, true));
+}
+
+/** A network body the panel can render. Anything else is unavailable. */
+export function networkBody(v: unknown): { network: string; status: { overall: string } } | null {
+  if (!rec(v) || typeof v.network !== "string" || !rec(v.status) || typeof v.status.overall !== "string") return null;
+  return { network: v.network, status: { overall: v.status.overall } };
+}
+
+/** Quota counters the panel prints. A 200 with a different shape is not a quota. */
+export function quotasBody(v: unknown): { limits: Record<string, number>; usage: Record<string, number> } | null {
+  if (!rec(v) || !counterMap(v.limits) || !counterMap(v.usage)) return null;
+  const limits = v.limits as Record<string, number>;
+  const usage = v.usage as Record<string, number>;
+  if (!counter(limits.daily_agents) || !counter(limits.requests_per_minute) || !counter(usage.agents_last_24_hours) || !counter(usage.requests_this_minute)) return null;
+  return { limits, usage };
+}
+
+export type PolicyView = {
+  revision: number;
+  status: string;
+  policy_hash?: string;
+  transaction_hash?: string;
+  policy: {
+    limits: { per_transaction: Record<string, number | string>; daily: Record<string, number | string> };
+    budget: { daily_usd: string | number };
+    actions: string[];
+    destinations: { mode: string; list: unknown[] };
+  };
+};
+
+/** A policy body with the fields the table reads. A bare `{ policy: {} }` is refused. */
+export function policyBody(v: unknown): PolicyView | null {
+  if (!rec(v) || !counter(v.revision) || typeof v.status !== "string" || !rec(v.policy)) return null;
+  const p = v.policy;
+  if (!rec(p.limits) || !capMap(p.limits.per_transaction) || !capMap(p.limits.daily)) return null;
+  if (!rec(p.budget) || !money(p.budget.daily_usd, false)) return null;
+  if (!Array.isArray(p.actions) || !p.actions.every((a) => typeof a === "string")) return null;
+  if (!rec(p.destinations) || typeof p.destinations.mode !== "string" || !Array.isArray(p.destinations.list)) return null;
+  return {
+    revision: v.revision,
+    status: v.status,
+    policy_hash: typeof v.policy_hash === "string" ? v.policy_hash : undefined,
+    transaction_hash: typeof v.transaction_hash === "string" ? v.transaction_hash : undefined,
+    policy: {
+      limits: { per_transaction: p.limits.per_transaction as Record<string, number | string>, daily: p.limits.daily as Record<string, number | string> },
+      budget: { daily_usd: p.budget.daily_usd as string | number },
+      actions: p.actions,
+      destinations: { mode: p.destinations.mode, list: p.destinations.list },
+    },
+  };
+}
+
+/** A read the upstream refused. HTTP stays 200 so the page can show the state without a failed-request console error. */
+export function agentUnavailable(kind: "upstream" | "timeout" | "config", extra?: { upstream_status?: number; missing?: string[] }) {
+  const error: { code: string; upstream_status?: number; missing?: string[] } = { code: kind };
+  if (extra?.upstream_status !== undefined) error.upstream_status = extra.upstream_status;
+  if (extra?.missing?.length) error.missing = extra.missing;
+  return { ok: false as const, error };
+}
 
 /** Key-order-independent JSON, so a live policy can be compared with the builder's output. */
 export const canon = (v: unknown): string =>

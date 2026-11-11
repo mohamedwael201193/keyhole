@@ -14,7 +14,8 @@ import { useKeyChain } from "./useKeyChain";
 import { keyEvmAddress } from "@/lib/chainsig";
 import { LienPanel } from "@/components/lien/LienPanel";
 import { useLien } from "@/components/lien/useLien";
-import { KeyTimeline } from "@/components/keylog/KeyTimeline";
+import { chainEventView } from "@/lib/chainEvents";
+import { ChainEvents, KeyTimeline, type ChainEventState } from "@/components/keylog/KeyTimeline";
 import { BeforeYouBuy, BuyerProof, ProofPanel } from "./buyer";
 import { SaleCard } from "./sale";
 import "./key.css";
@@ -44,6 +45,8 @@ export function KeyHistoryView() {
   const [proof, setProof] = useState<string | null>(null);
   /** Bumped after a sale action, so the listing in the details panel is read again. */
   const [saleRound, setSaleRound] = useState(0);
+  const [chainEvents, setChainEvents] = useState<ChainEventState>({ state: "loading", events: [] });
+  const [eventTry, setEventTry] = useState(0);
   /** Bumped on every lookup, including the same key id, so the lien read is not reused. */
   const [lookup, setLookup] = useState(0);
   const chain = useKeyChain(active);
@@ -58,6 +61,7 @@ export function KeyHistoryView() {
     setLookup((n) => n + 1);
     setErr(null); setBody(null); setCk(null); setCallId(null); setLegacy(null);
     setActive(ID.test(tid) ? tid : "");
+    setChainEvents({ state: "loading", events: [] });
     if (!ID.test(tid)) { setErr("That is not a key id. Paste one from the gallery, like k5f4750858f328940 or 0."); return; }
     if (/^\d+$/.test(tid)) { setLegacy(tid); return; }
     setBusy(true);
@@ -70,6 +74,21 @@ export function KeyHistoryView() {
     } catch { setErr("Could not reach the enclave. Try again in a moment."); }
     finally { setBusy(false); }
   }
+  useEffect(() => {
+    if (!active) return;
+    let live = true;
+    fetch(`/api/key-events?id=${encodeURIComponent(active)}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!live) return;
+        const view = chainEventView(j);
+        if (view.state === "ready") setChainEvents({ state: "ready", events: view.events, complete: true });
+        else if (view.state === "partial") setChainEvents({ state: "partial", events: view.events });
+        else setChainEvents({ state: "unavailable", events: [] });
+      })
+      .catch(() => { if (live) setChainEvents({ state: "unavailable", events: [] }); });
+    return () => { live = false; };
+  }, [active, lookup, eventTry]);
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
     const q = sp.get("id") ?? "";
@@ -138,6 +157,11 @@ export function KeyHistoryView() {
           />
         </div>
       )}
+      {active && !(body && ck) && (
+        <Card as="section" className="klog" labelledBy="chain-events-h" testid="key-chain-events">
+          <ChainEvents chainEvents={chainEvents} onRetry={() => setEventTry((n) => n + 1)} />
+        </Card>
+      )}
       {active && legacy === null && <BuyerProof id={active} owner={chain.owner} />}
       {body && ck && (
         <>
@@ -169,7 +193,7 @@ export function KeyHistoryView() {
             </div>
             <p className="kg-note">Paid out counts withdraw events. USD totals are private to each holder; a holder can publish a signed total from the vault (<Link href="/pnl">signed swap log</Link>).</p>
           </Card>
-          <KeyTimeline body={body} ownerNow={chain.owner} lien={lien} listing={listing} />
+          <KeyTimeline body={body} ownerNow={chain.owner} lien={lien} listing={listing} chainEvents={chainEvents} onRetry={() => setEventTry((n) => n + 1)} />
           <Card as="section" className="klog" labelledBy="log-h" testid="key-log-card">
             <span id="key-log" className="kd-anchor" />
             <CardHeader title="Event log" id="log-h" meta={<StatusChip tone={ok ? "success" : "error"}>{ok ? "Checked" : "Not checked"}</StatusChip>} />

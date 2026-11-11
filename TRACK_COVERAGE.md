@@ -1,7 +1,18 @@
 # Track coverage
 
 Track mapping: implemented features and their concrete evidence. This is not certification that every optional prompt or trust property is complete; residual boundaries are retained in [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
-Current release: contract v2.6 and guarded worker62398a8a are live; lending remains OFF. Each scope label describes only the feature actually evidenced.
+Current release: contract v2.7 and guarded worker `62398a8a` are live; lending remains OFF. Each scope label describes only the feature actually evidenced.
+
+Official NFT-track sentence, quoted once from the [HACKATHON.md tracks table](https://nearhackathon.com/HACKATHON.md): “Build NFTs as accounts — assets that own money, earn royalties, hold inventory, carry credentials, memberships or access rights. Ownership with behavior.” The prompt file is a separate reference and is worded differently: [tracks/10-nfts.md](https://github.com/nearai/near-hackathon-prompt-examples/blob/main/tracks/10-nfts.md).
+
+| Capability | Implementation | Do this / see this | Proof | Status |
+|---|---|---|---|---|
+| NFT as the account | `keyhole-devmo.near` plus one TEE custody wallet per token | Open [/key](https://keyhole-seven.vercel.app/key) | [THREAT_MODEL.md](THREAT_MODEL.md) | Current. Not a NEAR subaccount |
+| Royalties | `nft_buy` pays `royalty_bps` 500 | Read the recorded sale | [docs/evidence/contract-v2](docs/evidence/contract-v2/README.md) | Current |
+| Sealed inventory | Holder vault inside the enclave | Open [/vault](https://keyhole-seven.vercel.app/vault) as the holder | [SECURITY.md](SECURITY.md#viewing-right-and-selective-disclosure) | Current for the holder. Not a zero-knowledge balance |
+| Access right | `/holders` checks the connected account's tokens | Open [/holders](https://keyhole-seven.vercel.app/holders) | [web/app/holders](web/app/holders) | Authenticated holder proof. Not authorization for every confidential byte |
+| Borrow caps | `tier_loan_cap`: 0.05 / 0.5 / 5 NEAR | Read the mint page | [`contracts/keys/src/pledge.rs`](contracts/keys/src/pledge.rs) | Configured maxima. Lending is off. Nonce 0. Not a completed loan |
+| Chain address | Browser derivation from the minter and token id | Open `/key` | [signature evidence, historical](docs/evidence/publish-09d481a5/README.md#chain-signatures-one-real-mpc-signature) | Derivation only. Signing is disabled |
 
 ## NFTs That Do Something (primary)
 
@@ -10,7 +21,7 @@ Current release: contract v2.6 and guarded worker62398a8a are live; lending rema
 | NEP-171 contract tying each token to an account it controls | `keyhole-devmo.near` keys contract (NEP-171/177/178/181/199/330, one key per account enforced on-chain; [royalty sale on mainnet](docs/evidence/contract-v2/README.md); v2.3 historical, [evidence](docs/evidence/contract-v2-3/README.md)); each key maps to a confidential account inside the TEE that only the current owner can drive | [`contracts/keys`](contracts/keys), README §5, live [/gallery](https://keyhole-seven.vercel.app/gallery) | ✅ |
 | README: how control passes on transfer, what stops the old owner | The worker reads `nft_token` owner on every request; old owner gets `not_owner`; holder limits and locks bind only the holder who set them; 10-minute withdraw cooldown after a transfer | README §5 and §9, [THREAT_MODEL.md](THREAT_MODEL.md); historical build a985fd87: sale run with team test wallets, [docs/evidence/transfer-a985fd87](docs/evidence/transfer-a985fd87/README.md) (calls `2a52742a`, `3e996273`, `15f93f58`, `8485f8d4`); earlier builds: calls `e72dc176`, `711795b9`, `369f522d` | ✅ |
 | Gated page only current holders can open | /vault: balances, history and actions need a fresh NEP-413/EIP-191 signature from the current owner | live [/vault](https://keyhole-seven.vercel.app/vault), e2e | ✅ |
-| History per NFT: earned, paid out, who held it | /key?id=…: holders with from/to, deposits, payouts, trades; hash-chained log signed by the TEE minter, re-verified in the browser; USD totals as signed PnL | [/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940), [/pnl](https://keyhole-seven.vercel.app/pnl), `tests/keylog.test.ts` | ✅ (USD per holder is private by design; holders publish it as signed PnL) |
+| History per NFT: earned, paid out, who held it | /key?id=…: holders with from/to, deposits, payouts, trades; hash-chained log signed by the TEE minter, re-verified in the browser; USD totals as signed PnL | [/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940), [/pnl](https://keyhole-seven.vercel.app/pnl), [`web/tests/keylog.test.ts`](web/tests/keylog.test.ts) | ✅ (USD per holder is private by design; holders publish it as signed PnL) |
 | Tests for the transfer path incl. a sale in the middle of a payout | 6 worker invariant tests; mainnet run where the key moved while a payout was in flight | `tee/worker/src/tests.rs`, [docs/evidence/mid-payout](docs/evidence/mid-payout/README.md) | ✅ |
 | Threat model for the transfer | Every way a seller could keep the money, with the control that stops it | [THREAT_MODEL.md](THREAT_MODEL.md) | ✅ |
 | Sub-accounts / Top Level Accounts | Confidential per-key accounts live in the TEE (OutLayer), not NEAR sub-accounts | README §5 | Per-token TEE wallets; architecture boundary in SECURITY |
@@ -48,9 +59,11 @@ Current release: contract v2.6 and guarded worker62398a8a are live; lending rema
 | Attack demo on the guard: a scripted agent obeys an injected instruction, the guard refuses before signing | [`scripts/attack-demo.mts`](scripts/attack-demo.mts): the signer is a stub that throws, and the run asserts it was never called. Refusals only: the worker does not yet pay third parties | [log](docs/evidence/attack-demo/2026-11-07.log) | Local refusal-before-signing demo |
 | TEE attestation | /verify, `verify.sh`, judge kit | README §7 | ✅ |
 
-## Counts (reproduce in README §9)
+## Counts
 
-1551 passing tests at `d0305f2`: contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct (135 passing runs at 1440 and 390 px, 5 skipped by design). Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md). 8 of 10 common integrations live on mainnet: OutLayer, NEAR AI Cloud, 1Click, wallets (NEAR + MetaMask), NEP-171, NEP-177, NEP-199, NEP-413.
+Historical snapshot at `d0305f2`: 1551 passing tests (contract 119 + 6 sandbox, worker 432, CLI 7, web unit 916, e2e 71 distinct). That snapshot is not the current artifact. Evidence: [CI run 41731806624](https://github.com/mohamedwael201193/keyhole/actions/runs/41731806624), [`docs/evidence/tests`](docs/evidence/tests/README.md).
+
+Current recorded suites are in [`docs/metrics.json`](docs/metrics.json): the CLI and web unit rows only. Contract, worker, sandbox and Playwright are excluded from that total. CI run [43043510571](https://github.com/mohamedwael201193/keyhole/actions/runs/43043510571) logged contract 342, worker 656, and sandbox 62 pass with 1 ignored. Those are CI log counts, not a local cargo rerun, and they are not rows in `docs/metrics.json`.
 
 ## Continuity
 

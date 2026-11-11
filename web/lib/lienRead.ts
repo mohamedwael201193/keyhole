@@ -74,6 +74,8 @@ function u64n(v: unknown): bigint | null {
  *   loan.owner_epoch. fund_loan rechecks both (pledge.rs:623). resolution is still unset.
  * - UnlockPending / repaid: repay_loan (pledge.rs:648) does not transfer. Same owner, same epoch.
  * - UnlockPending / canceled: cancel_loan (pledge.rs:663) does not transfer. Same owner, same epoch.
+ * - UnlockPending / unclaimed_principal_reclaimed: reclaim_unclaimed_principal does not transfer.
+ *   Same borrower, same epoch.
  * - UnlockPending / default_claimed: claim_default (pledge.rs:676-681) calls transfer_key_unlocked
  *   (lib.rs:448), which bumps the owner epoch once, then stores the same loan. The loan keeps its
  *   opening epoch. The new owner is not the borrower. The thaw callback later deletes the loan (pledge.rs:595-597).
@@ -90,7 +92,7 @@ function loanBindingHolds(loan: Record<string, unknown>, ownerId: string, contro
     return (resolution === null || resolution === undefined) && sameTitle;
   }
   if (state !== "UnlockPending") return false;
-  if (resolution === "repaid" || resolution === "canceled") return sameTitle;
+  if (resolution === "repaid" || resolution === "canceled" || resolution === "unclaimed_principal_reclaimed") return sameTitle;
   if (resolution === "default_claimed") return ownerId !== borrower && controlEpoch === loanEpoch + 1n;
   return false;
 }

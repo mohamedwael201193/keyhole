@@ -8,6 +8,8 @@ describe("/key tier copy", () => {
     expect(t).toContain(`$${CAPS[f].perTx} per trade`);
     expect(t).toContain(`$${CAPS[f].daily} per day`);
     expect(t).toContain("The tier sets only those limits.");
+    expect(t).toContain("NEAR");
+    if (f === "Legendary") expect(t).toContain("cosmetic Gold finish");
   });
   it.each(FINISHES)("%s never claims a price, rarity or value", (f) => {
     expect(tierMeans(f)).not.toMatch(/worth|premium|rare|rarity|value|price|collect|scarc/i);

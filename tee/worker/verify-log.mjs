@@ -7,6 +7,7 @@
 // minter is the hex ed25519 public key (the minter's implicit account id).
 import { createHash, generateKeyPairSync, sign, verify } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const zero = "0".repeat(64);
 const sha = (s) => createHash("sha256").update(s).digest("hex");
@@ -85,7 +86,10 @@ function selfTest() {
 }
 
 const arg = process.argv[2];
-if (arg === "--self-test") selfTest();
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (!isMain) {
+  // imported by the mutation verifier
+} else if (arg === "--self-test") selfTest();
 else if (arg === "--proof") {
   const res = checkProof(JSON.parse(readFileSync(process.argv[3], "utf8")));
   console.log(res.ok ? `OK   ${res.statement.owner} holds_at_least ${res.statement.min} ${res.statement.asset}: ${res.statement.holds_at_least} (locked_until_ms ${res.statement.locked_until_ms})` : `FAIL ${res.reason}`);

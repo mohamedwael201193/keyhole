@@ -11,41 +11,47 @@ export function isHolderRead(method: string, args: Record<string, unknown>): boo
   return method === "nft_tokens_for_owner" || Object.prototype.hasOwnProperty.call(args, "account_id");
 }
 
-/** `shared` reuses a public read for 60 s (fetch cache and in-memory map); `timeoutMs` bounds each RPC attempt. */
-export interface ViewOpts { shared?: boolean; timeoutMs?: number }
+/** `shared` reuses a public read for 60 s (fetch cache and in-memory map); `timeoutMs` bounds each RPC attempt. `blockId` pins the read to one block instead of `finality: final`. */
+export interface ViewOpts { shared?: boolean; timeoutMs?: number; blockId?: string }
 
-async function callOne<T>(url: string, method: string, args: Record<string, unknown>, contract: string, share: boolean, timeoutMs: number): Promise<T> {
+export type ViewMeta<T> = { value: T; blockHash: string };
+
+async function callOne<T>(url: string, method: string, args: Record<string, unknown>, contract: string, share: boolean, timeoutMs: number, blockId?: string): Promise<ViewMeta<T>> {
   const args_base64 = typeof btoa === "function" ? btoa(JSON.stringify(args)) : Buffer.from(JSON.stringify(args)).toString("base64");
+  const pin = blockId ? { block_id: blockId } : { finality: "final" as const };
   const r = await fetch(url, {
     method: "POST", headers: { "content-type": "application/json" },
     signal: AbortSignal.timeout(timeoutMs),
     ...(share ? { next: { revalidate: 60 } } : { cache: "no-store" as const }),
     body: JSON.stringify({
       jsonrpc: "2.0", id: "kh", method: "query",
-      params: { request_type: "call_function", finality: "final", account_id: contract, method_name: method, args_base64 },
+      params: { request_type: "call_function", ...pin, account_id: contract, method_name: method, args_base64 },
     }),
   });
   const j = await r.json();
   if (!r.ok || j.error || j.result?.error) throw new Error(j.error?.cause?.name || j.result?.error || "rpc");
-  return JSON.parse(new TextDecoder().decode(new Uint8Array(j.result.result))) as T;
+  const blockHash = typeof j.result?.block_hash === "string" ? j.result.block_hash : "";
+  if (!blockHash) throw new Error("rpc");
+  const value = JSON.parse(new TextDecoder().decode(new Uint8Array(j.result.result))) as T;
+  return { value, blockHash };
 }
 
-/** Public contract reads are reused for a minute. Holder reads always hit the chain unless the caller passes `shared: true`. */
-export async function nearView<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT, opts: ViewOpts = {}): Promise<T> {
+/** One contract view plus the block hash the node reported. The cache key includes `blockId`, so two blocks do not share a row. */
+export async function nearViewMeta<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT, opts: ViewOpts = {}): Promise<ViewMeta<T>> {
   const share = opts.shared ?? !isHolderRead(method, args);
   const timeoutMs = opts.timeoutMs ?? 8_000;
-  const key = JSON.stringify([contract, method, args]);
+  const key = JSON.stringify([contract, method, args, opts.blockId ?? ""]);
   if (share) {
     const hit = cache.get(key);
-    if (hit && Date.now() - hit.at < TTL) return hit.value as T;
+    if (hit && Date.now() - hit.at < TTL) return hit.value as ViewMeta<T>;
     const pending = inflight.get(key);
-    if (pending) return pending as Promise<T>;
+    if (pending) return pending as Promise<ViewMeta<T>>;
   }
   const run = (async () => {
     let last: unknown;
     for (const url of NEAR_RPCS) {
       try {
-        const value = await callOne<T>(url, method, args, contract, share, timeoutMs);
+        const value = await callOne<T>(url, method, args, contract, share, timeoutMs, opts.blockId);
         if (share) cache.set(key, { at: Date.now(), value });
         return value;
       } catch (e) { last = e; }
@@ -56,4 +62,10 @@ export async function nearView<T>(method: string, args: Record<string, unknown> 
   inflight.set(key, run);
   try { return await run; }
   finally { inflight.delete(key); }
+}
+
+/** Public contract reads are reused for a minute. Holder reads always hit the chain unless the caller passes `shared: true`. */
+export async function nearView<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT, opts: ViewOpts = {}): Promise<T> {
+  const meta = await nearViewMeta<T>(method, args, contract, opts);
+  return meta.value;
 }

@@ -9,6 +9,7 @@ import {
   WORKER,
   b58,
   canonical,
+  ROLLBACK,
   sha,
   validateBefore,
   validatePost,
@@ -179,13 +180,21 @@ test("generator transition preserves historical migration, six owners and immuta
     ),
     old = clone(id),
     e = proof(),
-    k = promotedContract(id, e, artifacts().wasm);
+    predecessor = clone(id);
+  predecessor.contract = {
+    ...predecessor.contract,
+    version: "2.5.0",
+    wasm_sha256: ROLLBACK,
+    code_hash: b58(Buffer.from(ROLLBACK, "hex")),
+  };
+  assert.throws(() => promotedContract(id, e, artifacts().wasm), /identity continuity mismatch/);
+  const k = promotedContract(predecessor, e, artifacts().wasm);
   assert.equal(k.version, "2.6.0");
   assert.equal(k.migrate_pledge_tx, id.contract.migrate_pledge_tx);
   assert.deepEqual(id, old);
   assert.deepEqual(e.before.tokens, e.after.tokens);
   assert.deepEqual(e.before.pledge, e.after.pledge);
-  assert.throws(() => promotedContract(id, e, Buffer.alloc(487260)));
+  assert.throws(() => promotedContract(predecessor, e, Buffer.alloc(487260)));
   const live = { ...id, contract: k },
     w = promotedWorker(
       live,
@@ -295,6 +304,11 @@ test("full generator code-only promotion works through real RPC boundary and ret
       copyFileSync(new URL(p, root), join(d, p));
     }
     writeFileSync(join(d, "post.json"), JSON.stringify(e));
+    const seeded = JSON.parse(readFileSync(join(d, "identity.json"), "utf8"));
+    seeded.contract.version = "2.5.0";
+    seeded.contract.wasm_sha256 = ROLLBACK;
+    seeded.contract.code_hash = b58(Buffer.from(ROLLBACK, "hex"));
+    writeFileSync(join(d, "identity.json"), JSON.stringify(seeded, null, 2) + "\n");
     server = createServer(async (req, res) => {
       try {
         let body = "";
@@ -430,14 +444,17 @@ test("worker identity rotation preserves every prior build and remains idempoten
     old = "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
     older = "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
     original = {...id, worker:{...id.worker,wasm_sha256:old,previous_wasm_sha256:older}},
+    predecessor = {...original, contract:{...original.contract, version:"2.6.0", wasm_sha256:CANDIDATE}},
     proof = {ctx:{snapshot:{code:{sha256:CANDIDATE},config:{minter:id.contract.minter}}},publication_tx:"fixture-publish"},
-    e = {info:{call_id:"fixture-info"}}, next = promotedWorker(original, proof, e);
+    e = {info:{call_id:"fixture-info"}};
+  assert.throws(() => promotedWorker(original, proof, e), /promote reviewed contract before worker/);
+  const next = promotedWorker(predecessor, proof, e);
   assert.equal(next.wasm_sha256, WORKER);
   assert.equal(next.previous_wasm_sha256, old);
   assert.ok(next.historical_wasm_sha256.includes(older));
   for (const hash of original.worker.historical_wasm_sha256) {
     assert.ok([next.previous_wasm_sha256,...next.historical_wasm_sha256].includes(hash));
   }
-  assert.deepEqual(promotedWorker({...id,worker:next},proof,e),next);
+  assert.deepEqual(promotedWorker({...predecessor,worker:next},proof,e),next);
   assert.equal(original.worker.wasm_sha256,old);
 });

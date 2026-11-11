@@ -6,6 +6,7 @@ import { LIEN_REFUSALS, DEFAULT_PATH_RULES, formatNs, lienState } from "@/lib/li
 import { nearFromYocto } from "@/components/lien/LienPanel";
 import type { UseLien } from "@/components/lien/useLien";
 import type { SaleRead } from "@/components/keys/keyData";
+import { describeChainEvent, type IndexedEvent } from "@/lib/chainEvents";
 
 const when = (ms: number) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -30,10 +31,56 @@ export function describeEvent(e: KeyEvent): { title: string; detail: string } {
 
 /**
  * One timeline for a key. Log rows are the enclave's signed, hash-chained history (already checked by the page).
- * "Now" rows are the current contract state; past sale and loan events are contract logs this build does not index,
- * so they are not listed as history.
+ * "Now" rows are the current contract state. Sale and loan rows are NEP-297 `keyhole` events read from the public index.
  */
-export function KeyTimeline({ body, ownerNow, lien, listing }: { body: KeyLogBody; ownerNow: string | null | undefined; lien: UseLien; listing: SaleRead }) {
+export type ChainEventState =
+  | { state: "loading"; events: IndexedEvent[] }
+  | { state: "ready"; events: IndexedEvent[]; complete: true }
+  | { state: "partial"; events: IndexedEvent[] }
+  | { state: "unavailable"; events: IndexedEvent[] };
+
+export function ChainEvents({ chainEvents, onRetry }: { chainEvents: ChainEventState; onRetry?: () => void }) {
+  const rows = chainEvents.events.flatMap((e) => {
+    const d = describeChainEvent(e);
+    return d ? [{ e, d }] : [];
+  });
+  return (
+    <>
+      <h3 className="lien-h3">Sales and loans, from chain events</h3>
+      {chainEvents.state === "loading" && <p className="kg-note" data-testid="timeline-events-loading">Reading NEP-297 sale and loan events.</p>}
+      {chainEvents.state === "unavailable" && (
+        <p className="kg-note" data-testid="timeline-events-unavailable">
+          Sale and loan history is unavailable. Retry.{" "}
+          {onRetry && <button type="button" className="linkbtn" onClick={onRetry} data-testid="timeline-events-retry">Retry</button>}
+        </p>
+      )}
+      {chainEvents.state === "partial" && (
+        <p className="kg-note" data-testid="timeline-events-partial">
+          This scan did not cover every receipt page. An empty list is not a complete history. Retry.{" "}
+          {onRetry && <button type="button" className="linkbtn" onClick={onRetry} data-testid="timeline-events-retry">Retry</button>}
+        </p>
+      )}
+      {chainEvents.state === "ready" && rows.length === 0 && <p className="kg-note" data-testid="timeline-events-empty">No sale or loan event is recorded for this key.</p>}
+      {rows.length > 0 && (
+        <ol className="ktimeline" data-testid="timeline-events">
+          {rows.map(({ e, d }) => (
+            <li key={`${e.tx}-${e.event}`} data-testid="timeline-event" data-event={e.event}>
+              <b>{d.title}</b>
+              <span>{d.detail}</span>
+              <span className="mono"><TxLink hash={e.tx}>{e.tx.slice(0, 8)}…</TxLink></span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </>
+  );
+}
+
+export function KeyTimeline({ body, ownerNow, lien, listing, chainEvents, onRetry }: {
+  body: KeyLogBody; ownerNow: string | null | undefined; lien: UseLien; listing: SaleRead;
+  chainEvents: ChainEventState;
+  onRetry?: () => void;
+}) {
   const rows: Row[] = body.events.map((e) => {
     const d = describeEvent(e);
     return { key: `log-${e.i}`, title: d.title, detail: d.detail, ev: e };
@@ -72,7 +119,7 @@ export function KeyTimeline({ body, ownerNow, lien, listing }: { body: KeyLogBod
         {now.map((r) => <li key={r.key} data-testid="timeline-now-row"><b>{r.title}</b><span>{r.detail}</span></li>)}
         {now.length === 0 && <li>Nothing read from the contract yet.</li>}
       </ol>
-      <p className="kg-note">Sales and loan events are contract logs this build does not index, so past sales and loan steps are not listed here. Only the current contract state is shown.</p>
+      <ChainEvents chainEvents={chainEvents} onRetry={onRetry} />
 
       {s.refusalsApply && (
         <div data-testid="timeline-enforcement">

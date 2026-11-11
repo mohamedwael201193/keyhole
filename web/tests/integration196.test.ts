@@ -5,7 +5,9 @@ import { sessionAuth, sessionFromGrant, loadSession, saveSession, type Session }
 import { checkBody } from "@/lib/gateway";
 import { rememberRecovery, recoveries } from "@/lib/valueRecovery";
 import { readPayout, registerPayoutCall, claimPayoutCall, payoutReceiptFinal } from "@/lib/payout";
+import { nearView } from "@/lib/rpc";
 import { KEYS_CONTRACT } from "@/lib/config";
+import { blockResponse, callFunctionResponse, FIXTURE_BLOCK_HASH, FIXTURE_BLOCK_HEIGHT, FIXTURE_BLOCK_TIMESTAMP_NS } from "./fixtures/nearRpc";
 const read = (epoch="7", owner="alice.near") => vi.fn(async (m: string) => m === "nft_tokens_for_owner" ? [{token_id:"k1234"}] : m === "nft_token" ? {owner_id:owner} : {token_id:"k1234",owner_epoch:epoch,transfer_pending:false}) as any;
 const session: Session = {token:"x",account:"alice.near",token_id:"k1234",owner_epoch:"7",exp_ms:999999,max_usd_micro:5000000};
 const auth = (op: string, params: any) => ({account_id:"alice.near",public_key:"pk",signature:"sig",nonce:"nonce",recipient:"keyhole",message:JSON.stringify({op,account_id:"alice.near",ts_ms:1,params})});
@@ -86,6 +88,25 @@ describe("ordinary-flow payout onboarding",()=>{
       await expect(readPayout("alice.near",vi.fn().mockRejectedValue(new Error(message)) as any)).rejects.toThrow(message);
     }
     await expect(readPayout("alice.near",vi.fn(async()=>"not-digits") as any)).rejects.toThrow("Invalid payout state");
+  });
+  it("reads payout state from a call_function body that names its block", async () => {
+    const header = blockResponse().result.header;
+    expect(header.hash).toBe(FIXTURE_BLOCK_HASH);
+    expect(header.height).toBe(FIXTURE_BLOCK_HEIGHT);
+    expect(header.timestamp_nanosec).toBe(FIXTURE_BLOCK_TIMESTAMP_NS);
+    expect(typeof header.timestamp).toBe("number");
+    const values: Record<string, unknown> = { payout_storage_cost: "3200000000000000000000", payout_account_registered: false, get_payout_credit: "0", get_pending_payout: null };
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      const j = JSON.parse(String(init?.body));
+      if (j.method === "block") return Response.json(blockResponse());
+      const shaped = callFunctionResponse(values[j.params.method_name]);
+      expect(shaped.result.block_hash).toBe(header.hash);
+      expect(shaped.result.block_height).toBe(header.height);
+      return Response.json(shaped);
+    }));
+    await expect(nearView("payout_storage_cost", {}, KEYS_CONTRACT, { shared: false })).resolves.toBe("3200000000000000000000");
+    const state = await readPayout("alice.near");
+    expect(state).toEqual({ supported: true, registered: false, cost: "3200000000000000000000", credit: "0", pending: null });
   });
   it("does not label wallet hash, optimistic status or callback failure as cash delivered",()=>{
     const j={final_execution_status:"FINAL",transaction:{signer_id:"alice.near",receiver_id:KEYS_CONTRACT,actions:[{FunctionCall:{method_name:"claim_payout"}}]},status:{SuccessValue:"dHJ1ZQ=="},receipts_outcome:[{outcome:{status:{SuccessValue:""}}},{outcome:{status:{SuccessValue:"dHJ1ZQ=="}}}]};

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { statusOf } from "@/lib/oneclick";
-import { RECORDED_FAILED } from "@/lib/settlements";
+import { RECORDED_FAILED, publicOrderCensus } from "@/lib/settlements";
 import { inSession, loadSession, minutesLeft } from "@/lib/session";
 import { useWallet } from "@/lib/wallet";
 import { useKeyStore } from "@/lib/keyStore";
@@ -185,7 +185,7 @@ export function SettleView() {
         </div>
       )}
 
-      <ActivityStats counts={counts} ready={!mineGated} notReadText={mineGated ? MINE_NOT_READY[mineState as Exclude<MineState, "ready">] : undefined} />
+      <ActivityStats counts={counts} ready={!mineGated} notReadText={mineGated ? MINE_NOT_READY[mineState as Exclude<MineState, "ready">] : undefined} totalLabel={source === "public" ? publicOrderCensus().label : "Trades on this key"} totalDetail={source === "public" ? publicOrderCensus().detail : undefined} />
 
       {mineGated && (
         <MineGate
