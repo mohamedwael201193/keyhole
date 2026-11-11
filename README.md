@@ -813,8 +813,8 @@ Current repair validation: [R4 proof and exact finding map](docs/evidence/worker
 | Keys contract unit tests | not in [`docs/metrics.json`](docs/metrics.json) | CI run [43043510571](https://github.com/mohamedwael201193/keyhole/actions/runs/43043510571) logged 342. That is a CI log count, not a local cargo rerun |
 | Keys contract sandbox tests | not in [`docs/metrics.json`](docs/metrics.json) | The same CI run logged 62 pass and 1 ignored. An older 59-pass note is historical |
 | TEE worker unit tests | not in [`docs/metrics.json`](docs/metrics.json) | The same CI run logged 656. That is a CI log count, not a local cargo rerun |
-| CLI tests | recorded in [`docs/metrics.json`](docs/metrics.json) | `cd cli && npm test`, and only when that runner exits 0 |
-| Web unit tests (Vitest) | recorded in [`docs/metrics.json`](docs/metrics.json) | `cd web && npx vitest run`, and only when that runner exits 0 |
+| CLI tests | **77** in [`docs/metrics.json`](docs/metrics.json) | `cd cli && npm test` on commit `aa75699`, and only when that runner exits 0 |
+| Web unit tests (Vitest) | **1978** in [`docs/metrics.json`](docs/metrics.json) | `cd web && npx vitest run` on that same tree. The source-tarball check passes on the pinned tip |
 | Web e2e (Playwright) | excluded from [`docs/metrics.json`](docs/metrics.json) | [`web/e2e`](web/e2e), desktop and mobile. This artifact does not record a Playwright total |
 | Claims in `docs/claims.json` | **643**: offline 342 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |

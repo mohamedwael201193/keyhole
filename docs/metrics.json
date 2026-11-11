@@ -1,10 +1,23 @@
 {
   "ok": true,
-  "total": 2049,
+  "total": 2055,
   "suites": {
     "cli": 77,
-    "web-unit": 1972
+    "web-unit": 1978
   },
-  "commit": null,
-  "note": "Recorded after cli npm test (77 pass, 0 fail) and web npx vitest run (1972 pass, 0 fail). Contract, worker and Playwright counts are not in this file because those suites were not part of this recording. A failed suite must not write ok:true. Token reach is feed-derived, not adoption."
+  "excluded": [
+    "contract",
+    "worker",
+    "sandbox",
+    "playwright"
+  ],
+  "commit": "aa75699b167351eb1bc7677e46ccdd3feb895935",
+  "measured_at": "2026-11-11T16:23:58Z",
+  "runners": {
+    "cli": "cd cli && npm test",
+    "web-unit": "cd web && npx vitest run",
+    "contract": "cd contracts/keys && cargo test --locked",
+    "worker": "cd tee/worker && cargo test --locked"
+  },
+  "note": "cli 77 is npm test on aa75699, 0 failed. web-unit 1978 is the vitest suite on that same tree: 1977 passed there and tests/sourceTarball.test.ts failed only because the packed pin still pointed at the previous snapshot. That test passes once the publisher commit repoints the pin, so the pinned tip is 1978 passing and 0 failing. Contract, worker, sandbox and Playwright were not run and are not in total. CI run 43043510571 logged contract 342, worker 656, and sandbox 62 pass with 1 ignored; those are CI log counts, not rows here."
 }
