@@ -153,7 +153,11 @@ async fn ui_bridge_authenticates_real_fullaccess_and_keeps_inventory_holder_only
 
 #[tokio::test(flavor="multi_thread",worker_threads=2)]
 async fn ui_bridge_certificate_uses_final_clock_and_exact_template()->Result<()>{
- let e=ui_setup().await?;register_payouts(&e.c,&e.alice,&[e.alice.id()]).await?;open_token(&e,UI_TOKEN).await?;
+ let e=ui_setup().await?;register_payouts(&e.c,&e.alice,&[e.alice.id()]).await?;
+ // Match the actual Bronze UI loan (0.01), not the Gold conservation helper's
+ // 1 NEAR principal. The current v2.7 tier cap remains enforced unchanged.
+ let ts=now(&e).await;
+ e.alice.call(e.c.id(),"open_loan").args_json(json!({"token_id":UI_TOKEN,"terms":{"lender":e.lender.id(),"principal":(N/100).to_string(),"repayment":(101*N/10000).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"500000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?.into_result()?;
  let mut l=Layer::new(&e);let request=json!({"op":"loan_certificate","params":{"token_id":UI_TOKEN,"loan_nonce":"1"}});
  let out=worker(&mut l,&request).await?;let cert=&out["output"]["certificate"];
  let final_block=ui_final_block(&e).await?;
