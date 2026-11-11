@@ -28,11 +28,11 @@ describe("site trade params match the CLI", () => {
   });
 
   it("withdraw uses the asset id, the same shape as `keyhole withdraw --token <id>`", () => {
-    expect(withdrawParams("you.near", "usdc", "10000")).toEqual({
+    expect(withdrawParams("you.near", "usdc", "10000")).toMatchObject({
       chain: "near",
       to: "you.near",
       token: CLI_USDC,
-      amount: "10000",
+      amount: "10000", exit_mode: "exact-near-v1", min_amount_out: "10000", deadline_ms: expect.any(Number),
     });
     expect(withdrawParams("you.near", "wnear", "1").token).toBe(CLI_WNEAR);
     expect(withdrawParams("you.near", "usdc", "1").token).not.toBe("USDC");

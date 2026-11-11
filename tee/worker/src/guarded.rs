@@ -186,6 +186,7 @@ pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:
         if j.kind=="quote"{return Err(err("needs_review","quote outcome unknown; automatic resend/unlock unsupported"));}
         j.validate_destination()?;
         let path=match j.kind.as_str(){"swap"|"copy"=>"swap","withdraw"=>"withdraw","transfer"=>"transfer",_=>return Err(err("guard_journal","unsupported kind"))};
+        if j.kind=="withdraw" {crate::withdrawal_protection::deny_unbound_provider_execution()?;}
         let id=host.post(j,key,path).ok().and_then(|(status,v)|posted_request_id(status,&v).map(str::to_string));
         let Some(id)=id else{return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"admission_finished":false}));};
         put_once(host,&pk,id.as_bytes())?;id

@@ -4,7 +4,7 @@
  * auth object whose signed message names that same op. `provenance` and `record` are public and
  * carry no auth (`record` is answered only for a key listed for sale). The TEE still verifies the signature, the nonce and the caps.
  */
-export const ALLOWED_OPS = ["reconcile_value_op", "loan_certificate", "pledge_inventory", "info", "provenance", "record", "status", "quote", "mint", "account", "balance", "history", "swap", "withdraw", "withdraw_dry_run", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"] as const;
+export const ALLOWED_OPS = ["reconcile_value_op", "loan_certificate", "pledge_inventory", "info", "provenance", "record", "status", "quote", "mint", "account", "balance", "history", "swap", "exact_near_exit_v1", "withdraw", "withdraw_dry_run", "lock", "prove", "limits", "pnl", "dashboard", "level_up", "session", "session_revoke"] as const;
 export const MAX_BODY = 8 * 1024;
 /** A key id as the key page reads it: k + hex, or a legacy number. Mirrors KEY_ID in app/key/view.tsx. */
 const KEY_ID = /^(k[a-z0-9]{4,39}|\d{1,9})$/i;
@@ -38,7 +38,7 @@ export function checkBody(raw: string): GatewayCheck {
       : ["account_id", "public_key", "signature", "nonce", "message", "recipient"];
     if (!fields.every((f) => typeof a[f] === "string" && (a[f] as string).length > 0)) return { ok: false, status: 400, code: "no_auth" };
     // Withdraw needs a fresh wallet signature. The enclave refuses a session token for it too; this is the early refusal.
-    if ((op === "withdraw" || op === "withdraw_dry_run" || op === "reconcile_value_op") && a.scheme === "session") return { ok: false, status: 403, code: "session_scope" };
+    if ((op === "exact_near_exit_v1" || op === "withdraw" || op === "withdraw_dry_run" || op === "reconcile_value_op") && a.scheme === "session") return { ok: false, status: 403, code: "session_scope" };
     try { if ((JSON.parse(a.message as string) as { op?: string }).op !== op) return { ok: false, status: 400, code: "op_mismatch" }; }
     catch { return { ok: false, status: 400, code: "bad_message" }; }
     if (op === "reconcile_value_op") {

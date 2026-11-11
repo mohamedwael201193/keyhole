@@ -19,7 +19,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  const bctx=await browser.newContext({baseURL:process.env.BASE_URL}),lctx=await browser.newContext({baseURL:process.env.BASE_URL});
  for(const context of [bctx,lctx]){context.setDefaultTimeout(20000);context.setDefaultNavigationTimeout(45000);}
  const borrower=await bctx.newPage(),lender=await lctx.newPage();
- // The exit's confirm step is window.confirm. Answer it on both holders' pages; the borrower's text is checked at its exit.
+ // Refused previews must never reach a withdrawal confirm/sign step. Capture any unexpected dialog.
  const confirms:string[]=[];for(const p of [borrower,lender])p.on("dialog",d=>{confirms.push(d.message());void d.accept();});;
  const evidence:{network:string;provider:string;states:unknown[];native_receipts:unknown[];negatives:unknown[]}={network:"local NEAR sandbox",provider:"custody HTTP, registry and WASI host mocked; native contract/wallet/receipts and guarded production pure drivers real",states:[],native_receipts:[],negatives:[]};
  const fixture=async(action:string,params:Record<string,unknown>={})=>{const r=await request.post("/api/pledge-sandbox",{data:{action,...params}});expect(r.ok()).toBeTruthy();const j=await r.json();expect(j.error).toBeFalsy();return j;};
@@ -30,7 +30,8 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  const balance=async(account:string)=>BigInt((await rpc("query",{request_type:"view_account",finality:"final",account_id:account})).amount);
  const nativeReceipts:FinalWalletReceipt[]=[];
  const submissions:WalletSubmission[]=[],observed:{role:WalletRole;request:Request}[]=[];
- const privateLenderRequests:string[]=[];
+ const privateLenderRequests:string[]=[],withdrawalSigns:string[]=[],withdrawalPosts:string[]=[];
+ for(const p of [borrower,lender])p.on("request",r=>{if(r.url().includes("/api/pledge-sandbox")&&r.postDataJSON()?.action==="sign"&&["withdraw","exact_near_exit_v1"].includes(r.postDataJSON()?.op))withdrawalSigns.push(r.postData()!);if(r.url().includes("/api/worker")&&["withdraw","exact_near_exit_v1"].includes(r.postDataJSON()?.op))withdrawalPosts.push(r.postData()!);});
  lender.on("request",r=>{if(r.url().includes("/api/worker")&&r.postData()?.includes('"pledge_inventory"'))privateLenderRequests.push(r.postData()!);});
  // Collect requests synchronously; EVERY response body is awaited below, never swallowed in an async listener.
  for(const [role,page] of [["borrower",borrower],["lender",lender]] as const){page.on("request",r=>{if(r.url().includes("/api/pledge-sandbox")&&r.postDataJSON()?.action==="tx")observed.push({role,request:r});});await page.goto(role==="borrower"?`/pledge?token=${meta.token_id}`:`/pledge/lend/${meta.token_id}`);await page.getByRole("button",{name:`Use ${role} wallet`,exact:true}).click();}
@@ -75,6 +76,21 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  const finalNs=async()=>BigInt((await rpc("block",{finality:"final"})).header.timestamp_nanosec);
  /** Sandbox blocks are not fixed-duration seconds: advance until the FINAL clock passes a real chain-time bound. */
  async function advancePast(ns:bigint){for(let i=0;i<10&&await finalNs()<=ns;i++)await fixture("advance",{blocks:1000});expect(await finalNs()).toBeGreaterThan(ns);}
+ async function refusedExit(p:Page,label:string){
+  const before=await fixture("metadata"),control=await view("get_control_state",{token_id:meta.token_id}),native=observed.length,signs=withdrawalSigns.length,posts=withdrawalPosts.length,dialogs=confirms.length;
+  await p.getByRole("button",{name:"Exit to my wallet",exact:true}).click();
+  await expect(p.getByRole("status")).toContainText("Preview is advisory only: only the explicitly signed three-step exact NEAR USDC exit is supported by the candidate.",{timeout:20000});
+  await expect(p.getByRole("status")).toContainText("No withdrawal was signed.");
+  const after=await fixture("metadata");
+  for(const field of ["post_calls","custody_signatures","admissions","private_balance"])expect(after[field],`${label}: zero value side effects`).toBe(before[field]);
+  expect(await view("get_control_state",{token_id:meta.token_id})).toEqual(control);
+  expect(observed).toHaveLength(native);expect(withdrawalSigns).toHaveLength(signs);expect(withdrawalPosts).toHaveLength(posts);expect(confirms).toHaveLength(dialogs);
+  expect(control.pending_value_ops).toBe("0");
+  evidence.negatives.push({test:label,result:"advisory refusal; zero custody POST/sign, native admission and withdrawal signature; balance unchanged"});
+  // This record is proven unsent, so explicit discard is safe and does not hide UNKNOWN.
+  await p.getByRole("button",{name:"Discard unsent withdrawal",exact:true}).click();
+  await expect(p.getByRole("status")).toContainText("Unsent exit intent discarded. No withdrawal was sent");
+ }
  async function begin(label:string){
   await readInventory(borrower);await borrower.getByLabel("Named lender",{exact:true}).fill(meta.lender);await borrower.getByLabel("Term seconds",{exact:true}).fill("120");await borrower.getByLabel("Grace seconds",{exact:true}).fill("30");await borrower.locator(".pledge-live-consent input").check();await expect(borrower.getByTestId("forfeit-line")).toHaveText(/receives the whole key/);await expect(borrower.getByTestId("borrower-numbers")).toContainText("Total cost");await borrower.getByTestId("forfeit-ack").check();
   const open=borrower.getByRole("button",{name:"Pledge this account",exact:true});await expect(open).toBeEnabled({timeout:20000});const before=await finalNs();await submit(borrower,async sent=>{
@@ -92,7 +108,9 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   await fixture("policy",{refuse_thaw:true});await submit(borrower,action("repay_loan",{token_id:meta.token_id,nonce:(await loan()).nonce},"10100000000000000000000"),()=>borrower.getByRole("button",{name:"Repay 0.0101 NEAR",exact:true}).click());await state("Unlocking…");await capture("repay_thaw_pending");
   await fixture("policy",{refuse_thaw:false});await submit(borrower,action("retry_loan_policy",{token_id:meta.token_id,nonce:(await loan()).nonce}),()=>borrower.getByRole("button",{name:"Retry account unlock",exact:true}).click(),false);await state("Repaid · unlock confirmed");await capture("repay_thawed_credits");
   const before=await balance(meta.lender);await claim(lender);expect(await balance(meta.lender)-before).toBeGreaterThan(5_000_000_000_000_000_000_000n);await claim(borrower);
-  await readInventory(borrower);await borrower.getByRole("button",{name:"Exit to my wallet",exact:true}).click();await expect(borrower.getByRole("status")).toContainText("Ordinary self-exit confirmed",{timeout:20000});expect(confirms.some(m=>m.includes("amount_out")&&m.includes("minimum accepted"))).toBe(true);await readInventory(borrower);await capture("repay_ending_exit_confirmed");
+  expect(await view("nft_token",{token_id:meta.token_id})).toMatchObject({owner_id:meta.borrower});expect(await loan()).toBeNull();
+  const floorAfterA=(await fixture("metadata")).private_balance;expect(BigInt(floorAfterA)).toBeGreaterThanOrEqual(500000n);
+  await readInventory(borrower);await refusedExit(borrower,"repaid holder public exit unavailable");expect((await fixture("metadata")).private_balance).toBe(floorAfterA);await readInventory(borrower);await capture("repay_ending_exit_refused");
   await borrower.getByRole("button",{name:"Prepare another loan",exact:true}).click();await begin("default");
   {const l=await loan();await advancePast(BigInt(l.due_ns)+BigInt(l.terms.grace_sec)*1_000_000_000n);}await refresh();await expect(lender.getByRole("button",{name:"Claim entire collateral account",exact:true})).toBeEnabled({timeout:20000});
   await lender.getByLabel("Default receiver",{exact:true}).fill(meta.borrower);await lender.getByRole("button",{name:"Claim entire collateral account",exact:true}).click();await expect(lender.getByRole("status")).toContainText("no key or return reservation");expect((await loan()).state).toBe("Active");evidence.negatives.push({test:"ineligible default receiver",result:"UI blocked, real loan remains Active"});
@@ -100,15 +118,20 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   const stale=await fixture("sign",{account_id:meta.borrower,op:"pledge_inventory",params:{token_id:meta.token_id}});const denied=await request.post("/api/worker",{data:{op:"pledge_inventory",auth:stale}});const rejected=await denied.json();expect(rejected.error).toBeTruthy();expect(rejected.output?.assets).toBeFalsy();evidence.negatives.push({test:"old holder signed private inventory",result:"real final ownership check denies; no private output"});
   const staleValue=await fixture("sign",{account_id:meta.borrower,op:"withdraw",params:{token_id:meta.token_id,owner_epoch:"0",token:"nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",chain:"near",amount:"100000",to:meta.borrower}});const bad=await request.post("/api/worker",{data:{op:"withdraw",auth:staleValue}});expect((await bad.json()).error).toBeTruthy();evidence.negatives.push({test:"old holder signed value exit",result:"rejected before provider dispatch"});
   await fixture("policy",{refuse_thaw:false});await submit(lender,action("retry_loan_policy",{token_id:meta.token_id,nonce:(await loan()).nonce}),()=>lender.getByRole("button",{name:"Retry account unlock",exact:true}).click(),false);await state("Loan defaulted · unlock confirmed");await readInventory(lender);await expect(lender.getByRole("button",{name:"Exit to my wallet",exact:true})).toBeDisabled();const cooldownSeenNs=await finalNs();await capture("default_cooldown_enforced");
-  await advancePast(cooldownSeenNs+600_000_000_000n);await refresh();await readInventory(lender);await expect(lender.getByRole("button",{name:"Exit to my wallet",exact:true})).toBeEnabled({timeout:20000});await lender.getByRole("button",{name:"Exit to my wallet",exact:true}).click();await expect(lender.getByRole("status")).toContainText("Ordinary self-exit confirmed",{timeout:20000});await claim(borrower);await readInventory(lender);await capture("default_ending_exit_confirmed");
+  await advancePast(cooldownSeenNs+600_000_000_000n);await refresh();await readInventory(lender);await expect(lender.getByRole("button",{name:"Exit to my wallet",exact:true})).toBeEnabled({timeout:20000});
+  await refusedExit(lender,"current lender public exit unavailable after cooldown");await claim(borrower);await readInventory(lender);await capture("default_ending_exit_refused");
+  expect(await loan()).toBeNull();expect(await view("nft_token",{token_id:meta.token_id})).toMatchObject({owner_id:meta.lender});
+  const finalControl=await view("get_control_state",{token_id:meta.token_id});expect(finalControl.owner_epoch).toBe("1");expect(finalControl.pledged).toBe(false);expect(finalControl.pending_value_ops).toBe("0");
+  for(const account_id of [meta.borrower,meta.lender]){expect(await view("get_payout_credit",{account_id})).toBe("0");expect(await view("get_pending_payout",{account_id})).toBeNull();}
+  expect((await fixture("metadata")).private_balance).toBe(floorAfterA);expect(withdrawalSigns).toEqual([]);expect(withdrawalPosts).toEqual([]);
   // Drain every observed response deterministically, including unexpected extra submissions.
   const collected=await Promise.all(observed.map(async x=>{const r=await x.request.response();expect(r?.ok()).toBeTruthy();const j=await r!.json();expect(j.error).toBeFalsy();return {role:x.role,hash:j.transaction.hash};}));
   expect(collected).toEqual(submissions.map(({role,hash})=>({role,hash})));
   assertFundedWalletLedger(submissions,nativeReceipts);
-  evidence.native_receipts=nativeReceipts;expect(evidence.states).toHaveLength(64);expect(evidence.negatives).toHaveLength(3);
+  evidence.native_receipts=nativeReceipts;expect(evidence.states).toHaveLength(64);expect(evidence.negatives).toHaveLength(5);
   const pngs=readdirSync(shots).filter(x=>x.endsWith(".png"));expect(pngs).toHaveLength(96);
   const sha=(bytes:Buffer)=>createHash("sha256").update(bytes).digest("hex");
-  const committedFiles=["web/app/pledge/LivePledge.tsx","web/lib/pledgeExit.ts","web/lib/pledgeIntentStore.ts","web/lib/pledgeMoney.ts","web/lib/keysTx.ts","web/e2e/pledge-funded.spec.ts","web/e2e/support/pledge-ledger.ts","web/e2e/support/final-receipt.ts","contracts/keys-sandbox/tests/support/ui_harness.rs"];
+  const committedFiles=["web/app/pledge/LivePledge.tsx","web/lib/pledgeExit.ts","web/lib/pledgeIntentStore.ts","web/lib/pledgeMoney.ts","web/lib/keysTx.ts","web/e2e/pledge-funded.spec.ts","web/e2e/support/pledge-ledger.ts","web/e2e/support/final-receipt.ts","contracts/keys-sandbox/tests/pledge.rs","contracts/keys-sandbox/tests/support/ui_harness.rs","contracts/keys-sandbox/tests/support/guarded_layer.rs","tee/worker/src/withdrawal_protection.rs"];
   const git=(...args:string[])=>execFileSync("git",args,{cwd:join(process.cwd(),"..")});
   const sources=committedFiles.map(file=>({file,sha256:sha(git("show",`HEAD:${file}`))}));
   // Canonical committed blobs, never re-encoded git-show text or OS-local CRLF bytes.

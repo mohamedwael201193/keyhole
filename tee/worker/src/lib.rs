@@ -993,7 +993,7 @@ pub const LISTED_MSG: &str = "This key is listed for sale; unlist it to move fun
 /// Reads (balance, history, pnl, dashboard, account, prove, ...) are not here and are never refused for a listing.
 /// `quote` with `execute: true` is a value move too: see `is_value_move_or_wet_quote`.
 pub fn is_value_move(op: &str) -> bool {
-    matches!(op, "withdraw" | "swap" | "copy" | "chain_sign")
+    matches!(op, "withdraw" | "exact_near_exit_v1" | "swap" | "copy" | "chain_sign")
 }
 
 /// True for every listing-frozen op, including a wet quote (`quote` with `execute: true`).
@@ -1392,3 +1392,12 @@ pub mod collateral;
 
 pub mod receipts;
 pub mod native_send;
+
+/// Two-phase confinement evidence; loan certificate ABI is unchanged.
+pub mod collateral_evidence;
+
+pub mod rpc_view;
+pub mod withdrawal_protection;
+
+pub mod exact_exit;
+pub mod exact_receipt;

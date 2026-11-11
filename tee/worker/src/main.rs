@@ -65,7 +65,7 @@ mod host {
     fn view(contract: &str, method: &str, args: Value) -> Result<Value, Error> {
         let (r, e) = rpc::view(contract, method, &args.to_string(), "final");
         if !e.is_empty() { return Err(err("rpc", format!("{}: {}", method, e))); }
-        Ok(serde_json::from_str(&r).unwrap_or(Value::Null))
+        rpc_view::decode(method, &r)
     }
 
     fn holder_tier(account: &str) -> Result<Option<u8>, Error> {
@@ -428,6 +428,10 @@ mod host {
     /// transferring the NFT transfers the confidential account.
     fn holder_wallet(token: &str, owner: &str) -> Result<(String, String), Error> {
         let k = tkey(token, "wallet");
+        if !Store::read(&mut Host,&format!("{}/claim",evidence::root(token)))?.is_empty() {
+            // Fresh enrollment never adopts an owner alias, even on read paths.
+            return guarded_wallet(token);
+        }
         if let Some(v) = custody_lookup(&mut Host, token, owner)? {
             let j: Value = serde_json::from_slice(&v).map_err(|_| err("storage", "wallet record corrupt"))?;
             return Ok((s(&j, "api_key").unwrap_or_default(), s(&j, "near_account_id").unwrap_or_default()));
@@ -438,6 +442,7 @@ mod host {
             if !wallet_claim_free(&Host.get(&ck), now) { return Err(err("busy", "this key's wallet is being created, retry in a moment")); }
             Host.set(&ck, now.to_string().as_bytes());
         }
+        if !Store::read(&mut Host,&format!("{}/claim",evidence::root(token)))?.is_empty() {return Err(err("collateral_unknown","fresh enrollment claimed token; ordinary wallet creation refused"));}
         let (st, j) = http("POST", &format!("{}/register", OL), None, None)?;
         let (Some(key), Some(id)) = (s(&j, "api_key"), s(&j, "near_account_id")) else {
             return Err(err("upstream", format!("wallet registration failed ({})", st)));
@@ -451,6 +456,7 @@ mod host {
 
     include!("guarded_host.rs");
     include!("collateral_host.rs");
+    include!("collateral_evidence_host.rs");
 
     /// USD value (micro) of `amount` of `token`, priced by a dry 1Click quote into USDC.
     fn usd_of(token: &str, amount: &str, refund: &str, now_ms: u64) -> Result<u64, Error> {
@@ -478,10 +484,11 @@ mod host {
         let mut out = json!({"ok": true, "op": "account", "account": c.account, "confidential_id": id,
             "fund": "send a confidential transfer to confidential_id, or ask for a cross-chain deposit address with params {chain, token, amount}"});
         if let Some(chain) = s(&c.req.params, "chain") {
+            provision_idle(&c.token_id())?;
             let body = json!({"chain": chain, "token": s(&c.req.params, "token").unwrap_or_else(|| "USDC".into()), "amount": digits(&c.req.params, "amount")?});
             let (st, j) = http("POST", &format!("{}/wallet/v1/confidential/deposit/cross-chain", OL), Some(&key), Some(&body))?;
             if st >= 300 { return Err(err("upstream", format!("deposit address failed ({})", st))); }
-            out["deposit"] = json!({"deposit_address": j.get("deposit_address"), "amount": j.get("amount"), "expires_at": j.get("expires_at"), "hint": j.get("hint")});
+            out["deposit"] = json!({"deposit_address":j.get("deposit_address"),"amount":j.get("amount"),"expires_at":j.get("expires_at"),"hint":j.get("hint"),"intent_id":j.get("intent_id"),"request_id":j.get("request_id"),"amount_out":j.get("amount_out"),"min_amount_out":j.get("min_amount_out")});
             prov_append(&c.token_id(), "deposit", &c.account, c.now_ms, &body.to_string(), &c.operation_id)?;
         }
         Ok(out)
@@ -490,7 +497,7 @@ mod host {
     fn op_balance(input: &Value) -> Result<Value, Error> {
         let c = authenticate(input, "balance", true)?;
         let (key, id) = c.wallet()?;
-        let (_, j) = http("GET", &format!("{}/wallet/v1/confidential/balance", OL), Some(&key), None)?;
+        let j = custody_get(&key,"/wallet/v1/confidential/balance")?;
         Ok(json!({"ok": true, "op": "balance", "account": c.account, "confidential_id": id, "balances": j.get("balances").cloned().unwrap_or(json!([]))}))
     }
 
@@ -553,9 +560,12 @@ mod host {
     }
 
     fn op_withdraw(input: &Value) -> Result<Value, Error> {
-        let c = authenticate(input, "withdraw", true)?;
+        let c = authenticate(input, exact_exit::OP, true)?;
+        if cfg("INTENTS_READ_API_KEY","").is_empty(){return Err(err("exit_receipt","configure the documented read-only intent resolver before starting exact exit"));}
         guard_preflight(&c)?;
+        if input.pointer("/auth/scheme").and_then(Value::as_str) != Some("nep413") { return Err(err("no_auth","fresh NEP-413 required for exact exit")); }
         let p = &c.req.params;
+        withdrawal_protection::dispatch(p, c.now_ms, || {
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
         // Re-read the actual owner at final finality. Refuse before custody access or spend reservation.
@@ -568,6 +578,7 @@ mod host {
         assert_no_cooldown(&evs, &c.account, c.now_ms)?;
         let amt = digits(p, "amount")?;
         let (key, id) = guarded_wallet(&c.token_id())?;
+        exact_exit_policy(&c.token_id(),&key,&id)?;
         let usd = usd_of(&token, &amt, &id, c.now_ms)?;
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         assert_not_listed("withdraw", &c.token_id())?;
@@ -582,16 +593,20 @@ mod host {
             charge.release(&mut Host);
             return Err(e);
         }
-        let j=guard_begin(&c,input,"withdraw",json!({"chain":chain,"to":to,"amount":amt,"token":token}),Some(charge))?;
-        let r=guard_provider(&j,&key,false).map_err(|_|err("needs_review",format!("custody outcome unknown; reconcile {}",j.op_id)))?;
+        let plan=exact_exit::Plan::signed(p,c.now_ms,&c.account)?;
+        let j=guard_begin(&c,input,"withdraw",plan.body()?,Some(charge))?;
+        // Preserve the original recovery handle even when a post-send readback fails.
+        let r=match guard_provider(&j,&key,false) {Ok(v)=>v,Err(e)=>json!({"status":"needs_review","value_op_id":j.op_id,"admission_finished":false,"reason":e.code})};
         let raw_status = s(&r, "status").unwrap_or_default();
         // Re-read ownership and settlement epoch after the move: either drift reports needs_review.
         let still = owns(&c.token_id(), &c.account).unwrap_or(false);
         let status = after_move_status_epoch(&raw_status, still, stamped, guard_control(&c.token_id())?.epoch);
-        let tx_hash = r.pointer("/result/tx_hash").or(r.pointer("/tx_hash")).or(r.pointer("/result/transaction_hash")).cloned().unwrap_or(Value::Null);
+        // Gasless same-chain withdraw returns an intent ID, NOT a public tx hash.
+        let tx_hash = Value::Null;
         let fee = r.pointer("/result/fee").or(r.pointer("/fee")).cloned().unwrap_or(Value::Null);
-        Ok(json!({"ok": status == "success", "op": "withdraw", "status": status, "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"),
-            "tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
+        Ok(json!({"ok": status == "success", "op": exact_exit::OP, "status": status, "settlement_epoch": stamped, "value_op_id":j.op_id,"admission_finished":r.get("admission_finished"), "request_id": r.get("request_id"),
+            "exit_mode":exact_exit::MODE,"continuation":r["continuation"],"step":r["step"],"reason":r["reason"],"tx_hash": tx_hash, "amount": amt, "to": to, "fee": fee}))
+        })
     }
 
     fn load_prov(token: &str) -> Result<Vec<(ProvEvent, String)>, Error> {
@@ -907,7 +922,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "guarded_revision":guarded::REVISION, "guarded_registry_hash":cfg("GUARDED_WORKER_HASH",""), "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","transfer","loan_certificate","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","reconcile_minter_send","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","exact_near_exit_v1","transfer","loan_certificate","collateral_funding_quote","collateral_funding_status","claim_minter_credit","create_collateral_wallet","collateral_candidate","collateral_report","finalize_collateral","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","reconcile_minter_send","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -930,9 +945,17 @@ mod host {
             "balance" => op_balance(&input),
             "swap" => op_swap(&input, "swap"),
             "copy" => op_swap(&input, "copy"),
-            "withdraw" => op_withdraw(&input),
+            "exact_near_exit_v1" => op_withdraw(&input),
+            "withdraw" => Err(err("withdraw_version", "legacy withdrawal is disabled; sign exact_near_exit_v1")),
             "transfer" => op_transfer(&input),
             "loan_certificate" => op_loan_certificate(&input),
+            "collateral_funding_quote" => op_collateral_funding_quote(&input),
+            "collateral_funding_status" => op_collateral_funding_status(&input),
+            "claim_minter_credit" => op_claim_minter_credit(&input),
+            "create_collateral_wallet" => op_create_collateral_wallet(&input),
+            "collateral_candidate" => op_collateral_candidate(&input),
+            "collateral_report" => op_collateral_report(&input),
+            "finalize_collateral" => op_finalize_collateral(&input),
             "prepare_collateral" => op_prepare_collateral(&input),
             "collateral_quote" => op_collateral_quote(&input),
             "withdraw_dry_run" => op_withdraw_dry_run(&input),

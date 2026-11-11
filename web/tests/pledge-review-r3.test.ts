@@ -16,8 +16,8 @@ function tabs(){
  return {storage,env};
 }
 const call={method:"claim_payout",args:{},deposit:"1",gas:"200000000000000"};
-const exit:ExitRecord={account:"alice.near",token:"k1",epoch:"1",amount:"100",status:"AwaitingSignature",intent:"withdraw"};
-const auth={account_id:"alice.near",signature:"signature",message:JSON.stringify({op:"withdraw",account_id:exit.account,params:{token_id:exit.token,owner_epoch:exit.epoch,amount:exit.amount,to:exit.account,chain:"near",token:PLEDGE_EXIT_USDC}})} as SignedAuth;
+const exit:ExitRecord={account:"alice.near",token:"k1",epoch:"1",amount:"100",status:"AwaitingSignature",intent:"exact_near_exit_v1"};
+const auth={account_id:"alice.near",signature:"signature",message:JSON.stringify({op:"exact_near_exit_v1",account_id:exit.account,params:{token_id:exit.token,owner_epoch:exit.epoch,amount:exit.amount,to:exit.account,chain:"near",token:PLEDGE_EXIT_USDC}})} as SignedAuth;
 const authFor=(op:ExitRecord):SignedAuth=>{const request=JSON.parse(auth.message);request.params.intent_id=op.id;return {...auth,message:JSON.stringify(request)};};
 afterEach(()=>vi.useRealTimers());
 describe("H194-R3-01 unsent exit recovery",()=>{

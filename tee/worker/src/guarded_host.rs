@@ -56,7 +56,10 @@ fn guard_finish(j:&Journal,t:&Terminal)->Result<bool,Error>{
 }
 impl guarded::ProviderHost for Host {
     fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>{
-        guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
+        provision_idle(&j.token_id)?;guard_registry()?;j.validate_permit(&view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))?)?;
+        let control=guard_control(&j.token_id)?;
+        if control.epoch!=j.epoch || control.pledged || control.listed || control.transfer_pending || control.pending!=1 || !owns(&j.token_id,&j.owner)? { return Err(err("guard_journal","current title/control changed")); }
+        assert_unlocked(&Host.get(&tkey(&j.token_id,"lock")),&j.owner,chain_now_ms()?)?;
         // A persisted journal cannot bypass the current ownership-epoch cooldown.
         if matches!(j.kind.as_str(),"withdraw"|"transfer") {
             let now=chain_now_ms()?;
@@ -65,7 +68,9 @@ impl guarded::ProviderHost for Host {
             assert_no_cooldown(&evs,&j.owner,now)?;
         }
         let (canonical,id)=guarded_wallet(&j.token_id)?;
-        if canonical!=key||id!=j.wallet_id{return Err(err("guard_journal","custody changed"));}Ok(())
+        if canonical!=key||id!=j.wallet_id{return Err(err("guard_journal","custody changed"));}
+        if j.kind=="withdraw" && j.body["exit_mode"]==exact_exit::MODE {exact_exit_policy(&j.token_id,key,&id)?;}
+        Ok(())
     }
     fn post(&mut self,j:&Journal,key:&str,path:&str)->Result<(u16,Value),Error>{
         // Provider reserves (wallet,key) BEFORE funds. The journal freezes body and key forever.
@@ -75,7 +80,9 @@ impl guarded::ProviderHost for Host {
     fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{guard_finish(j,t)}
 }
 fn guard_provider(j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{
-    let out=guarded::drive_provider(&mut Host,j,key,reconcile)?;
+    let out=if j.kind=="withdraw" && j.body["exit_mode"]==exact_exit::MODE {
+        exact_exit::drive(&mut Host,j,key)?
+    }else{guarded::drive_provider(&mut Host,j,key,reconcile)?};
     Ok(out)
 }
 fn op_reconcile_value(input:&Value)->Result<Value,Error>{
@@ -84,8 +91,14 @@ fn op_reconcile_value(input:&Value)->Result<Value,Error>{
     let j:Journal=serde_json::from_slice(&Store::read(&mut Host,&format!("{key}/record"))?).map_err(|_|err("guard_journal","unknown operation"))?;j.validate()?;
     if j.owner!=c.account||j.token_id!=c.token_id()||j.contract!=keys_contract()||j.op_id!=id{return Err(err("not_owner","wrong journal owner/token/contract"));}
     if Store::read(&mut Host,&format!("{}/terminal",j.key()))?.is_empty(){guard_registry()?;guard_admit(&j)?;}
-    let (wallet_key,_) =guarded_wallet(&j.token_id)?;let out=guard_provider(&j,&wallet_key,true)?;
-    Ok(json!({"ok":out["admission_finished"],"op":"reconcile_value_op","value_op_id":j.op_id,"status":out["status"],"request_id":out["request_id"],"admission_finished":out["admission_finished"]}))
+    let (wallet_key,_) =guarded_wallet(&j.token_id)?;
+    let out=if j.kind=="withdraw" && j.body["exit_mode"]==exact_exit::MODE {
+        if input.pointer("/auth/scheme").and_then(Value::as_str)!=Some("nep413"){return Err(err("session_scope","exact exit recovery requires full-access NEP-413"));}
+        guarded::signed_epoch(&c.req.params,j.epoch)?;
+        EXIT_DELIVERY_LOCATOR.with(|p|*p.borrow_mut()=c.req.params.get("original_delivery_locator").cloned());
+        exact_exit::drive_continued(&mut Host,&j,&wallet_key,c.req.params.get("exit_continue"))?
+    }else{guard_provider(&j,&wallet_key,true)?};
+    Ok(json!({"ok":out["admission_finished"],"op":"reconcile_value_op","value_op_id":j.op_id,"status":out["status"],"continuation":out["continuation"],"request_id":out["request_id"],"admission_finished":out["admission_finished"]}))
 }
 
 fn op_transfer(input:&Value)->Result<Value,Error>{
@@ -102,7 +115,7 @@ fn op_transfer(input:&Value)->Result<Value,Error>{
     let charge=charge_spend(&mut Host,&c.cap(),&lim,None,usd,c.now_ms)?;
     let j=guard_begin(&c,input,"transfer",json!({"to":to,"token":token,"amount":amount}),Some(charge))?;
     let out=guard_provider(&j,&key,false).map_err(|_|err("needs_review",format!("custody outcome unknown; reconcile {}",j.op_id)))?;
-    Ok(json!({"ok":out["status"]=="success","op":"transfer","status":out["status"],"request_id":out["request_id"],"value_op_id":j.op_id,"admission_finished":out["admission_finished"]}))
+    Ok(json!({"ok":out["status"]=="success","op":"transfer","status":out["status"],"continuation":out["continuation"],"request_id":out["request_id"],"value_op_id":j.op_id,"admission_finished":out["admission_finished"]}))
 }
 fn custody_get(key:&str,path:&str)->Result<Value,Error>{
     match http("GET",&format!("{OL}{path}"),Some(key),None){Ok((200,v))=>Ok(v),_=>Err(err("collateral_ineligible","custody observation unavailable"))}
@@ -140,16 +153,22 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     let template=view(&contract,"loan_certificate_template",json!({"token_id":token,"observed_at_ns":observed.to_string(),"expires_at_ns":expires.to_string()}))?;
     let cert:guarded::Certificate=serde_json::from_value(template).map_err(|_|err("certificate","malformed contract template"))?;
     cert.live(&contract,token,nonce,control.epoch,observed)?;guarded::loan_binding(&cert,&loan,&binding,&control,&config)?;
-    guarded::eligible(&Store::read(&mut Host,&tkey(token,"confinement_v1"))?,&cert)?;
+    evidence::idle(&mut Host,token)?;
+    evidence::eligible(&mut Host,token,&cert,&cfg_env_reviewer(),guarded::text(&config,"attestor_public_key")?,&contract,&cfg("GUARDED_WORKER_HASH",""))?;
     let (key,id)=guarded_wallet(token)?;
     let custody=guarded::text(&config,"custody_contract")?;
     let policy=view(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?;guarded::frozen_policy(&cert,&policy)?;
-    certificate_inventory(&key)?;
+    evidence_inventory(&key)?;
+    let proof=evidence::load_proof(&mut Host,token)?;
+    let effective=custody_get(&key,"/wallet/v1/policy")?;
+    if !evidence::effective_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true){return Err(err("evidence","live decrypted policy differs from V2 reviewed policy"));}
     let balance=custody_get(&key,&format!("/wallet/v1/confidential/balance?token=nep141%3A{}",guarded::ASSET.trim_start_matches("nep141:")))?;
     guarded::fixed_floor(&cert,&balance,&id)?;
     // Re-read control, exact loan and policy after balance/inventory collection; no stale-loan signing.
     if guard_control(token)?!=control||view(&contract,"get_loan",json!({"token_id":token}))?!=loan||view(&contract,"get_collateral_binding",json!({"token_id":token}))?!=binding
         ||view(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?!=policy{return Err(err("collateral_ineligible","loan/custody changed during observation"));}
+    let effective=custody_get(&key,"/wallet/v1/policy")?;
+    if !evidence::effective_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true){return Err(err("evidence","decrypted policy changed during certificate observation"));}
     guard_registry()?;
     cert.live(&contract,token,nonce,control.epoch,chain_now_ms()?.checked_mul(1_000_000).ok_or_else(||err("certificate","timestamp overflow"))?)?;
     let (_,msk)=guarded_minter()?;let seed=minter_secret(&msk)?;
@@ -199,3 +218,5 @@ fn op_pledge_inventory(input:&Value)->Result<Value,Error>{
  let spent=Host.incr(&hkey(&c.cap(),&format!("spent/{}",now/86_400_000)),0)?;out["spent_today_usd_micro"]=json!(spent);
  out["ok"]=json!(true);out["op"]=json!("pledge_inventory");out["account"]=json!(c.account);out["token_id"]=json!(token);out["owner_epoch"]=json!(control.epoch.to_string());out["confidential_id"]=json!(id);out["observed_at_ns"]=json!((now*1_000_000).to_string());out["loan"]=loan;out["binding_ready"]=json!(binding["ready"]==true);out["limits"]=json!(limits);out["withdraw_cooldown_until_ms"]=json!(cooldown);Ok(out)
 }
+
+include!("exact_exit_host.rs");

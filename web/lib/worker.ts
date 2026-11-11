@@ -3,7 +3,9 @@ import { rememberRecovery } from "./valueRecovery";
 import type { Op, SignedAuth } from "./nep413";
 export interface WorkerResult { call_id: string | null; status: string | null; output: Record<string, any> | null; attestation_url: string | null; time_ms: number | null; error?: { code: string; message?: string; retry_after?: number } }
 export async function callWorker(op: Op, auth?: SignedAuth): Promise<WorkerResult> {
-  const r = await fetch("/api/worker", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op, auth }) });
+  // NEAR wallets omit the optional scheme; native/exact host admission requires an explicit NEP-413 tag.
+  const transportAuth = auth && auth.scheme === undefined ? { ...auth, scheme: "nep413" as const } : auth;
+  const r = await fetch("/api/worker", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op, auth: transportAuth }) });
   const j = await r.json().catch(() => ({ ok: false, error: { code: "gateway" } }));
   if (typeof window !== "undefined") { try { rememberRecovery(auth, j.output ?? j); window.dispatchEvent(new Event("keyhole-recovery")); } catch { /* storage unavailable; worker retains journal */ } }
   if (typeof window !== "undefined" && auth?.scheme === "session" && ["session_epoch", "session_expired", "session_revoked", "not_owner"].includes(j.output?.error?.code ?? j.error?.code)) {

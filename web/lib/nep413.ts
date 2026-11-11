@@ -3,7 +3,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import bs58 from "bs58";
 import { NEP413_RECIPIENT } from "./config";
 
-export type Op = "reconcile_value_op" | "loan_certificate" | "pledge_inventory" | "info" | "record" | "status" | "quote" | "mint" | "account" | "balance" | "history" | "swap" | "withdraw" | "withdraw_dry_run" | "holder_gate" | "limits" | "pnl" | "prove" | "dashboard" | "level_up" | "session" | "session_revoke";
+export type Op = "reconcile_value_op" | "loan_certificate" | "pledge_inventory" | "info" | "record" | "status" | "quote" | "mint" | "account" | "balance" | "history" | "swap" | "exact_near_exit_v1" | "withdraw" | "withdraw_dry_run" | "holder_gate" | "limits" | "pnl" | "prove" | "dashboard" | "level_up" | "session" | "session_revoke";
 export const NEP413_TAG = 2147484061; // 2^31 + 413
 
 export interface SignedAuth {
@@ -13,7 +13,7 @@ export interface SignedAuth {
   nonce: string; // base64, 32 bytes
   message: string;
   recipient: string;
-  scheme?: "eip191" | "session";
+  scheme?: "nep413" | "eip191" | "session";
   token?: string;
   address?: string;
   /** NEP-413 callbackUrl that the signature covers (Option<String> in the payload). Only set when the signature verifies with it. */
@@ -25,6 +25,7 @@ export const EIP191_ENCLAVE_LIVE: boolean = true;
 
 /** Intent JSON signed by personal_sign. Same fields the worker parses for scheme eip191. */
 export function intentMessage(op: Op, accountId: string, params: Record<string, unknown>, nonceB64: string, recipient: string, ts: number): string {
+  if (op === "withdraw" && params.exit_mode === "exact-near-v1") throw new Error("Exact exit must use exact_near_exit_v1, never legacy withdraw");
   return JSON.stringify({ op, account_id: accountId, ts_ms: ts, params, nonce: nonceB64, recipient });
 }
 
@@ -38,6 +39,7 @@ export function utf8ToHex(message: string): string {
 
 /** The exact message the worker re-parses: JSON {op, account_id, ts_ms, params}. */
 export function buildMessage(op: Op, accountId: string, params: Record<string, unknown> = {}, now = Date.now()): string {
+  if (op === "withdraw" && params.exit_mode === "exact-near-v1") throw new Error("Exact exit must use exact_near_exit_v1, never legacy withdraw");
   return JSON.stringify({ op, account_id: accountId, ts_ms: now, params });
 }
 

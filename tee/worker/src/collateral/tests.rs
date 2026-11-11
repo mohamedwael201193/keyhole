@@ -96,7 +96,7 @@ fn restricted_policy_has_no_raw_or_external_signing() {
         json!([sha256_hex("sealed-key")])
     );
     assert_eq!(p["capabilities"]["sign_message"]["allowed"], false);
-    assert!(!p["rules"]["transaction_types"]
+    assert!(p["rules"]["transaction_types"]
         .as_array()
         .unwrap()
         .contains(&json!("call")));
@@ -439,4 +439,28 @@ fn exact_closed_false_or_failure_is_terminal_but_incomplete_failure_is_unknown()
             None
         );
     }
+}
+
+#[test]
+fn observed_wallet_and_every_authority_field_are_exact() {
+    let p = plan();
+    let expected = policy("wallet", "sealed-key", &json!([{"id":"review.near"}]), 1).unwrap();
+    let mut good = expected.clone();
+    for (k,v) in [("policy",json!("stored")),("controller",json!("keys.near")),("version",json!(1)),("locked",json!(true)),("frozen",json!(false))] { good[k]=v; }
+    for (k,v) in [("wallet_id",json!("different-wallet")),("wallet_id",Value::Null),("refund_addresses",json!({"base":"other-address"})),("refund_addresses",Value::Null),("unknown_authority",json!({"allowed":true})),("rules",Value::Null),("authorized_key_hashes",json!(["extra-key"])),("usage",json!(null))] {
+        let mut bad=good.clone();bad[k]=v;
+        assert!(!effective_policy_matches(&expected,&bad,&p,"keys.near"),"{k}");
+    }
+    let mut bad=good.clone();bad["capabilities"]["new_signing_door"]=json!({"allowed":true});
+    assert!(!effective_policy_matches(&expected,&bad,&p,"keys.near"));
+    good["usage"]=json!({"daily":{"usdc":"123"}});
+    good["refund_addresses"]=json!({});
+    assert!(effective_policy_matches(&expected,&good,&p,"keys.near"));
+    let mut with_refund=expected.clone();with_refund["refund_addresses"]=json!({"base":"reviewed-address"});
+    good["refund_addresses"]=with_refund["refund_addresses"].clone();
+    assert!(effective_policy_matches(&with_refund,&good,&p,"keys.near"));
+    good["refund_addresses"]["base"]=json!("changed-address");
+    assert!(!effective_policy_matches(&with_refund,&good,&p,"keys.near"));
+    good.as_object_mut().unwrap().remove("wallet_id");
+    assert!(!effective_policy_matches(&expected,&good,&p,"keys.near"));
 }

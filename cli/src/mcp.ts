@@ -36,8 +36,10 @@ export async function copyTrade(key: Key, a: { amount?: string; token_in: string
 export function buildServer() {
   const s = new McpServer({ name: "keyhole", version: "0.1.0" });
   s.tool("reconcile_value_op", "Reconcile the SAME original pending custody journal. Holder-only, never creates a replacement payment.",
-    { token_id: z.string().min(1).max(64), value_op_id: z.string().regex(/^[1-9]\d{0,19}:[0-9a-f]{64}$/) },
-    async ({ token_id, value_op_id }) => text((await run(loadKey(), "reconcile_value_op", { token_id, value_op_id })).output));
+    { token_id: z.string().min(1).max(64), value_op_id: z.string().regex(/^[1-9]\d{0,19}:[0-9a-f]{64}$/),
+      exit_continue:z.object({step:z.enum(["unshield","storage","withdraw"]),value_op_id:z.string(),action_hash:z.string(),original_provider_id:z.string().nullable(),deadline_ms:z.number().int()}).optional(),
+      original_delivery_locator:z.object({tx_hash:z.string(),signer_id:z.string()}).optional() },
+    async (params) => text((await run(loadKey(), "reconcile_value_op", params)).output));
   s.tool("verify", "Verify a KEYHOLE TEE call: attestation hash vs the published FastFS wasm (and an optional local build).",
     { call_id: z.string(), wasm_path: z.string().optional() }, async ({ call_id, wasm_path }) => text(await verifyCall(call_id, wasm_path)));
   s.tool("explain_pnl", "Explain the holder's private trades and confidential balances in plain language.", {}, async () => {

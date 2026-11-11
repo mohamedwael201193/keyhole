@@ -610,7 +610,7 @@ The source candidate adds holder-signed `prepare_collateral`, `collateral_quote`
 
 A signed review is an auditable external assertion, not cryptographic proof that all historical presigned/MPC/cross-chain authority is absent. Its real report must audit aliases, external keys/signatures, prior jobs and effective provider policy, including a reachable policy-edit quorum. Empty pending inventories alone cannot establish confinement. The publisher can still register future code with the same project storage privileges; retiring old versions does not cancel dispatched jobs or remove that future upgrade power. Keep a maintenance window and independently audit the exact measured source before release.
 
-Preparation deliberately accepts only a fresh absent provider policy and never backfills a legacy audit. It constructs a restricted policy and obtains the genuine provider encryption and caller-bound Ed25519 signature internally. Lost/ambiguous provider POSTs hold the token and cannot be automatically repeated; policy pending approval is not success. This initial-policy implementation does not repair an interrupted preparation or update an existing locked policy. Preparation is now epoch-scoped: an unsent old preparation does not block a new epoch. The contract CAS refuses its late submission, including A→B→A. A genuine current holder may adopt only an already-installed original proof via reconciliation; there is no reset timer or arbitrary replacement wallet. Do not use existing unrelated holders as pilot collateral.
+Preparation deliberately accepts only a fresh absent provider policy and never backfills a legacy audit. It constructs a restricted policy and obtains the genuine provider encryption and caller-bound Ed25519 signature internally. Lost/ambiguous provider POSTs hold the token and cannot be automatically repeated; policy pending approval is not success. This initial-policy implementation does not repair an interrupted preparation or update an existing locked policy. Historical V1 preparation was epoch-scoped; the V2 source protocol below supersedes it with a token-scoped pending latch that survives owner-epoch changes. The contract CAS refuses its late submission, including A→B→A. A genuine current holder may adopt only an already-installed original proof via reconciliation; there is no reset timer or arbitrary replacement wallet. Do not use existing unrelated holders as pilot collateral.
 
 Every minter transaction now uses the same production `native_send` protocol, atomically claiming a durable append-only generation before nonce selection/signing. Its sealed signed plan and exact original hash precede a competing atomic dispatch/never-submitted decision; once dispatch wins it is never rebroadcast or timeout-cleared. Complete original receipt lineage alone releases dispatched work. An original actor or project owner may atomically fence proven never-dispatched work; a late signer then cannot broadcast. Immutable completion rows prevent a stale reconciler from removing a new generation's lock. Storage errors after dispatch remain UNKNOWN; bounded head repair and token-specific recovery after a crash between preparation/journal boundaries may still require an independently reviewed incident. There is no fabricated InvalidNonce/timeout recovery. Old versions must be drained before cutover because they do not share the new protocol.
 
@@ -683,6 +683,183 @@ This section is the v2.6 restoration record. It is not the live release. The liv
 No loan pilot, real new collateral binding, lender exit, lower-provider confinement or independent policy-installation proof is implied by publication/restoration. Lending and Pledge transaction flags stay OFF. Existing slots/onboarding and provider/audit/approval/cooldown checks remain prerequisites for operations that require them; a public read200 is not proof that every payable flow is provisioned. Retained operator FullAccess/platform authorities and external committed requests remain trust boundaries. Source tests and mock acceptance are not live-provider proof.
 
 Track tables describe only implemented scope. Custody is per-token TEE wallets, not NEAR sub-accounts. Public history counts events and holders rather than disclosing private earned/payout amounts; signed PnL is opt-in. Historical in-flight payout proof is separate from the unit settlement predicate, and payouts already sent cannot be recalled. The threat model was written after initial code. Balance/deposit/status views do not prove uninterrupted complete funds tracing or complete historical explorer-link coverage. Only heartbeat has a scoped function-call key; holder payments still require full-holder authentication. The counterparty checker is advisory outside the enclave; its injected-agent demo uses a throwing stub signer, not a real third-party payment. Intel DCAP/request binding and NVIDIA verification have the distinct scopes documented above. None of these limitations is relabelled completed to clean up presentation.
+
+## Worker V2 phased confinement (source candidate; not published)
+
+Credit: devmo. This worker-only protocol does not change the v2.7 contract, its
+immutable minter/certificate attestor, the loan certificate Borsh ABI, the project
+UUID or its sealed custody namespace. A source candidate/PR is not live-loan
+proof and must not be described as an independently audited production release.
+
+### Threat and trust boundary
+
+A fresh anonymous OutLayer registration, enclave-sealed creation journal and
+never-exported canonical API key provide provenance **within the documented
+TEE/provider model**. There is no provider-global alias-enumeration API and no
+universal oracle for hidden keys, foreign approvals or unreported signatures.
+`all_aliases_reviewed` and the other authority assertions are explicitly scoped
+to `reviewed-worker-and-documented-tee-provider-v2`, not an assertion that a
+malicious provider or compromised enclave could not lie. Contract/project
+administrators, provider registration/key-derivation/policy behavior, attestation
+verification and authenticated RPC observations remain trust assumptions.
+
+The configured reviewer is a **team reviewer, not an independent auditor**.
+An actual fresh guardian NEP-413 challenge and FINAL FullAccess-key check prove
+present account control and the reviewed policy quorum identity. They do not
+prove future availability or a successfully executed positive provider vote.
+The V2 candidate accepts one explicitly reviewed `admin` guardian, threshold1;
+the provider's default `signer` role cannot authorize policy changes. Admin is a
+real authority and must be reviewed as such. Its API key is not exported and the
+worker has no generic policy-update/signature-export endpoint.
+
+Never positively approve a policy-update “liveness probe”: it creates a reusable
+version2 policy-write signature valid seven days. Deleting a local copy does not
+remove the provider's stored request result. The V2 path creates no such probe.
+The only policy signature it prepares is the caller-bound version1 artifact,
+which must be consumed by the original FINAL installation before final review.
+Existing/traded wallets without this creation provenance cannot be backfilled
+into the fresh path by supplying six booleans.
+
+### Ordering and durable evidence
+
+`create_collateral_wallet` refuses token wallets, owner legacy aliases, prior
+wallet claims and old eligibility. It claims a **token-scoped** journal before
+one anonymous provider POST and seals the original response. Transport loss,
+malformed identity, duplicate provider wallet or an interrupted write remains
+held/UNKNOWN; a new nonce or owner epoch does not repeat the POST.
+
+The holder exports exact candidate plaintext for review; only API-key hashes,
+never credentials, are returned. PreAuditV2 covers creation/known authority paths,
+idle inventories, candidate plaintext and guardian proof. It cannot contain an
+`effective_policy_reviewed` assertion. The immutable minter then uses the
+unchanged owner/epoch-CAS `register_collateral` with the genuine exact storage
+quote, original signed-transaction WAL and actual provider/contract callbacks.
+
+Binding-ready is **not eligibility**. Reconciliation reads the original FINAL
+receipt graph, public installed policy and authenticated decrypted keystore
+policy, requiring exact controller/version/ciphertext/rules/approval/capabilities/
+authorized-key hashes. A domain-separated minter-signed report commits to those
+observations, provenance, inventory, guardian and current title. The team reviewer
+must inspect it and separately sign PostAuditV2. Finalization rechecks real state
+and fresh guardian control; it writes a content-addressed V2 proof companion first and the
+compatible `confinement_v1` commit marker **last**. The marker selects that exact report/proof. Uncommitted companions can be superseded by fresh reviews after a crash without deleting or overwriting prior evidence. Certificates require both and
+verify their signatures/exact binding; a legacy V1 marker is not grandfathered.
+
+The token-scoped pending latch blocks outgoing custody/alias creation across
+all ownership epochs. A current new holder may reconcile the original installed
+plan and obtain a fresh current-epoch report/post-review; the previous holder's
+review cannot authorize finalization after transfer. An ownership change during
+unfinished creation/preparation can remain fail-closed without a safe automatic
+resume; it must not trigger credential adoption, marker deletion or reinstall.
+Provider request inventory is bounded and complete; terminal unknown request
+types and reusable signature artifacts are rejected, not counted as “drained”.
+
+### Funding, release and economic limitations
+
+Fund the fresh wallet **before** installing confinement, after reviewing the
+candidate. The documented deposit family gates as `call`; confinement deliberately
+does not permit arbitrary calls. The fixed funding operation creates one Base
+native-USDC confidential quote (0.90 source, actual minimum0.80) to the canonical
+NEAR-USDC asset. It never broadens policy to fund a wallet. Unknown quotes, absent
+minimum/deadline, unsupported private route or incomplete original status/credit
+are STOP conditions. The source Base sender/amount and solvers remain visible;
+this is not solver privacy or an independently verified private-shard light client.
+
+Before publication, drain old/direct submitters and remove old registered versions
+atomically with new activation; a singleton version count alone does not prove no
+old job is running. Preserve UUID/sealed storage/minter and merge secrets, never
+replace them. No worker publication, secret update or governance operation is
+performed by this implementation. Keep lending OFF until actual final review and
+funding gates pass; finish/reconcile both pilots and turn it OFF before separate
+staged-upgrade/owner-handover maintenance.
+
+The unchanged contract uses a fixed USDC floor against NEAR debt, not a dynamic
+price/LTV liquidation oracle. Default transfers the **entire** wallet/NFT,
+including excess/unrelated assets; there is no auction or proportional surplus
+return. Team-party repayment/default pilots prove mechanism, not organic demand,
+independent-party safety, immutable governance or guaranteed lender recovery.
+
+## PR208 V2 repair boundary
+
+Credit: devmo. Exact decrypted readback is closed-schema: wallet_id binds to the
+manifest, policy-bearing fields compare exactly, refund_addresses absence/empty
+map means reviewed provider-derived defaults, and null/unknown authority fields
+are refused. Only documented usage counters are variable metadata. The common
+predicate is re-used for reports, finalization and frozen certificate reads.
+Malformed successful RPC text is unavailable, not absence; error wrappers and
+wrong object/array schemas fail closed before admission side effects.
+
+Historical pre-exact-exit candidate: OutLayer's WithdrawRequest has no
+minimum/quote-lock field, so direct confidential-withdraw previews never authorized
+execution. That universal stop is superseded ONLY for the explicit three-hop
+`exact-near-v1` candidate below. All other old/unbound withdrawal modes stay denied.
+
+Live contract metadata v2.7 is evidence-promoted, not redeployed. Production
+contract source/release files are unchanged; verifiers select release/v2.7 bytes while keeping
+the old deployed/v2.6 evidence intact. Historical migration/worker attestations
+remain verifiable. The new worker remains unpublished; these local tests prove
+source behavior, not live provider confinement, runtime measurement or A/B loans.
+Compute wrappers use OUTLAYER_PAYMENT_KEY nonce 2, with the pinned CLI's scoped
+PAYMENT_KEY alias on submission and polling. Key 1 personal credit is separate.
+Actual grant usage, fees, destination terminal receipts and all budget reserves
+remain execution evidence, never inferred from test fixtures.
+
+## PR208 exact NEAR USDC exit — source candidate, not live proof
+
+Credit: devmo. The documented three-step API is implemented in the shared native-
+tested/WASI driver: unshield to this wallet, independently confirm exact public
+Intents self-credit, register this holder's FT storage, then typed same-chain
+withdrawal. A repaid borrower or the actual default-title holder after cooldown
+is the only allowlisted recipient. The exact amount equals the holder-signed
+minimum and every immutable hop amount. Current title/epoch/permit, pledge,
+listing, seller lock, confinement, registry and spend limits remain checked.
+
+Authoritative sources read: [Getting Started](https://app.outlayer.ai/docs/getting-started),
+[Agent Custody](https://app.outlayer.ai/docs/agent-custody) (Withdraw, Confidential
+Intents, Policy Engine/API Reference), and official [OpenAPI](https://api.outlayer.ai/openapi.json).
+Exact request/response schemas and source hash are preserved in
+[the schema snapshot](docs/worker/outlayer-exact-exit-schemas.json). The only POST
+bodies are unshield `{token,amount}`, storage `{token,account_id}`, and withdraw
+`{chain:"near",to,amount,token,async:true}`. No guessed min/quote/deadline fields go
+to OutLayer. Detailed source pages:
+[confidential](https://skills.outlayer.ai/agent-custody/references/confidential.md),
+[storage](https://skills.outlayer.ai/agent-custody/references/wallet-ops.md),
+[withdraw/status/idempotency](https://skills.outlayer.ai/agent-custody/references/intents-withdraw.md).
+
+[Exact-exit protocol/runbook](docs/worker/EXACT_NEAR_EXIT.md) records every
+precondition, response and trust limit. Append-only per-hop request/baseline,
+atomic dispatch, original UUID, terminal GET and readback precede completion.
+Lost replies/IDs never retransmit; known-ID recovery is GET-only. Unissued later
+hops require the same immutable plan and an unexpired original or freshly signed next-hop continuation; no blind retry/top-up. Malformed,
+wrong asset/amount/recipient/status/error envelopes or inconsistent balances
+never create successful history or release admission. Full observed unshield
+refund terminates failed, conservatively keeping spend charged. Same-chain
+`result.intent_hash` is NOT a transaction hash.
+
+Public Intents balances are independently read from `intents.near`; confidential
+balances remain authenticated private-ledger/provider observations. The original
+FINAL FT event must credit the exact amount; net recipient balance changes alone
+neither establish delivery nor prevent recovery after legitimate spending.
+Original exact exits now require causal FINAL receipt/event proof, not recipient
+balance deltas. The original provider request's intent ID is resolved by documented
+read-only solver relay `get_status` or a signed untrusted transaction locator, then
+independently fetched by NEAR RPC. Every original descendant must be present and
+successful; a unique original wallet/token/holder/amount DIP-4 withdrawal and its
+unique exact NEP-141 FT child are required. Failed/refunded/missing/ambiguous graphs
+stay UNKNOWN and retain native admission. Recipient spending after genuine delivery
+does not invalidate this historical receipt. Relay availability/auth and archival RPC
+remain operational dependencies; configure `INTENTS_READ_API_KEY` before starting.
+No OutLayer tx hash field, balance-only proof or broad signing permission is invented.
+
+The signed `exact_near_exit_v1` operation rejects rollback to every worker that only
+understands `withdraw`. Old outer-op substitution cannot change the signed operation.
+The exact three-hop policy remains immutable. An expired deadline gates only an
+unsent hop: dispatched IDs continue GET-only settlement forever. A fresh holder
+NEP-413 continuation can authorize only the named unsent next hop, <=5 minutes ahead,
+with the same action hash/value permit/previous provider ID. Policy/budget/title/epoch
+checks and original CAS are still mandatory. Lost-ID sends remain UNKNOWN, never
+replaced. All native/provider/receipt mocks are explicitly local; source tests do not
+claim publication, reviewer enrollment, funding or a future mainnet exit.
 
 ## Testnet free trial
 

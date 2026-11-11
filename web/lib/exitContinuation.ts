@@ -134,7 +134,7 @@ export function previewFields(message: string): (Parsed & Record<string, unknown
   } catch { return null; }
 }
 
-export function bindingMatches(binding: ExitBinding, auth: Pick<SignedAuth, "account_id" | "message">, op: "withdraw_dry_run" | "withdraw"): boolean {
+export function bindingMatches(binding: ExitBinding, auth: Pick<SignedAuth, "account_id" | "message">, op: "withdraw_dry_run" | "exact_near_exit_v1"): boolean {
   const p = previewFields(auth.message);
   if (!p) return false;
   return auth.account_id === binding.account
@@ -156,7 +156,7 @@ function openExit(exit: ExitSnapshot | null, binding: ExitBinding): boolean {
     && exit.token === binding.token
     && exit.epoch === binding.epoch
     && exit.amount === binding.amount
-    && exit.intent === "withdraw"
+    && exit.intent === "exact_near_exit_v1"
     && !exit.value_op_id
     && (exit.status === "AwaitingSignature" || exit.status === "Retryable");
 }
@@ -190,7 +190,7 @@ export function planExitReturn(input: {
   if (pending) {
     const fields = previewFields(pending.message);
     const op = fields?.op;
-    if (op === "withdraw") return { type: "ignore" };
+    if (op === "exact_near_exit_v1") return { type: "ignore" };
     if (op !== "withdraw_dry_run") return { type: "ignore" };
     if (!activeAccount || pending.account_id !== activeAccount) {
       return { type: "ambiguous", reason: `The returned route preview is for another account. ${NO_NEW_WITHDRAWAL}`, clearPending: false };
@@ -259,7 +259,7 @@ export function saveDone(store: StepStore, step: ExitStep, withdrawNonce: string
 export function claimWithdraw(store: StepStore, step: ExitStep, auth: Pick<SignedAuth, "account_id" | "message" | "nonce">): boolean {
   const current = store.loadIntent(step.binding.account, step.binding.intentId);
   if (!current || current.phase !== "awaiting_withdraw" || current.withdrawNonce) return false;
-  if (!bindingMatches(current.binding, auth, "withdraw")) return false;
+  if (!bindingMatches(current.binding, auth, "exact_near_exit_v1")) return false;
   store.save({ ...current, withdrawNonce: auth.nonce });
   return true;
 }

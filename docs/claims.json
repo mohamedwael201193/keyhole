@@ -13,7 +13,7 @@
    "check": {
     "type": "code_hash",
     "account": "keyhole-devmo.near",
-    "wasm": "contracts/keys/deployed/keyhole_keys.wasm",
+    "wasm": "contracts/keys/release/v2.7/keyhole_keys.wasm",
     "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH"
    },
    "expected": "chain == committed deployed wasm == identity",
@@ -24,10 +24,10 @@
    "claim": "Deployed contract wasm is 519,382 bytes with sha256 26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
    "where": "README.md:102",
    "evidence_type": "file",
-   "evidence": "contracts/keys/deployed/keyhole_keys.wasm",
+   "evidence": "contracts/keys/release/v2.7/keyhole_keys.wasm",
    "check": {
     "type": "sha256",
-    "path": "contracts/keys/deployed/keyhole_keys.wasm",
+    "path": "contracts/keys/release/v2.7/keyhole_keys.wasm",
     "sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
     "bytes": 519382
    },
@@ -3333,17 +3333,17 @@
   },
   {
    "id": "src-gw-allow",
-   "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, pledge_inventory, info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, withdraw_dry_run, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
+   "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, pledge_inventory, info, provenance, record, status, quote, mint, account, balance, history, swap, exact_near_exit_v1, withdraw, withdraw_dry_run, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
    "where": "README.md:371",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
     "type": "grep",
     "path": "web/lib/gateway.ts",
-    "pattern": "ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]"
+    "pattern": "ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"exact_near_exit_v1\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]"
    },
    "expected": "exact list",
-   "verify": "grep -nE 'ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]' web/lib/gateway.ts"
+   "verify": "grep -nE 'ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"exact_near_exit_v1\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]' web/lib/gateway.ts"
   },
   {
    "id": "src-gw-nocopy",
@@ -3691,6 +3691,27 @@
    "verify": "node judge/verify-claims.mjs --only test-add_beat_key"
   },
   {
+   "id": "test-all_aliases_reviewed",
+   "claim": "Named test or symbol `all_aliases_reviewed` exists in the source",
+   "where": "SECURITY.md:700",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "all_aliases_reviewed",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`all_aliases_reviewed` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-all_aliases_reviewed"
+  },
+  {
    "id": "test-assert_withdraw_to",
    "claim": "Named test or symbol `assert_withdraw_to` exists in the source",
    "where": "README.md:344",
@@ -3817,6 +3838,27 @@
    "verify": "node judge/verify-claims.mjs --only test-code_changed_within_7d"
   },
   {
+   "id": "test-create_collateral_wallet",
+   "claim": "Named test or symbol `create_collateral_wallet` exists in the source",
+   "where": "SECURITY.md:725",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "create_collateral_wallet",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`create_collateral_wallet` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-create_collateral_wallet"
+  },
+  {
    "id": "test-del_beat_key",
    "claim": "Named test or symbol `del_beat_key` exists in the source",
    "where": "SECURITY.md:80",
@@ -3859,6 +3901,27 @@
    "verify": "node judge/verify-claims.mjs --only test-derive_min_out"
   },
   {
+   "id": "test-effective_policy_reviewed",
+   "claim": "Named test or symbol `effective_policy_reviewed` exists in the source",
+   "where": "SECURITY.md:734",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "effective_policy_reviewed",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`effective_policy_reviewed` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-effective_policy_reviewed"
+  },
+  {
    "id": "test-eip191_recovers_the_fixed_vector_and_rejects_a_tamper",
    "claim": "Named test or symbol `eip191_recovers_the_fixed_vector_and_rejects_a_tamper` exists in the source",
    "where": "SECURITY.md:27",
@@ -3878,6 +3941,27 @@
    },
    "expected": "`eip191_recovers_the_fixed_vector_and_rejects_a_tamper` found in source",
    "verify": "node judge/verify-claims.mjs --only test-eip191_recovers_the_fixed_vector_and_rejects_a_tamper"
+  },
+  {
+   "id": "test-exact_near_exit_v1",
+   "claim": "Named test or symbol `exact_near_exit_v1` exists in the source",
+   "where": "SECURITY.md:854",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "exact_near_exit_v1",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`exact_near_exit_v1` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-exact_near_exit_v1"
   },
   {
    "id": "test-executed_wasm_sha256",
@@ -5792,17 +5876,17 @@
    "verify": "node judge/verify-claims.mjs --only path-judge/0-live.sh"
   },
   {
-   "id": "path-contracts/keys/deployed/keyhole_keys.wasm",
-   "claim": "Linked repo path contracts/keys/deployed/keyhole_keys.wasm exists",
+   "id": "path-contracts/keys/release/v2.7/keyhole_keys.wasm",
+   "claim": "Linked repo path contracts/keys/release/v2.7/keyhole_keys.wasm exists",
    "where": "README.md:102",
    "evidence_type": "file",
-   "evidence": "contracts/keys/deployed/keyhole_keys.wasm",
+   "evidence": "contracts/keys/release/v2.7/keyhole_keys.wasm",
    "check": {
     "type": "path",
-    "path": "contracts/keys/deployed/keyhole_keys.wasm"
+    "path": "contracts/keys/release/v2.7/keyhole_keys.wasm"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-contracts/keys/deployed/keyhole_keys.wasm"
+   "verify": "node judge/verify-claims.mjs --only path-contracts/keys/release/v2.7/keyhole_keys.wasm"
   },
   {
    "id": "path-tee/worker/DEPLOYED_SHA256",
@@ -5829,6 +5913,58 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys/release/v2.7/identity.json"
+  },
+  {
+   "id": "path-docs/worker/confinement-v2.md",
+   "claim": "Linked repo path docs/worker/confinement-v2.md exists",
+   "where": "README.md:121",
+   "evidence_type": "file",
+   "evidence": "docs/worker/confinement-v2.md",
+   "check": {
+    "type": "path",
+    "path": "docs/worker/confinement-v2.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/worker/confinement-v2.md"
+  },
+  {
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/validation.json",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/validation.json exists",
+   "where": "README.md:121",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/validation.json",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/worker-provisioning/v2/r3/validation.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/validation.json"
+  },
+  {
+   "id": "path-tee/worker/src/collateral_evidence/tests.rs",
+   "claim": "Linked repo path tee/worker/src/collateral_evidence/tests.rs exists",
+   "where": "README.md:121",
+   "evidence_type": "file",
+   "evidence": "tee/worker/src/collateral_evidence/tests.rs",
+   "check": {
+    "type": "path",
+    "path": "tee/worker/src/collateral_evidence/tests.rs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-tee/worker/src/collateral_evidence/tests.rs"
+  },
+  {
+   "id": "path-docs/evidence/live-v2.7/promotion.public.json",
+   "claim": "Linked repo path docs/evidence/live-v2.7/promotion.public.json exists",
+   "where": "README.md:123",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/live-v2.7/promotion.public.json",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/live-v2.7/promotion.public.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/live-v2.7/promotion.public.json"
   },
   {
    "id": "path-docs/evidence/integration-stack/contract-size.md",
@@ -7287,19 +7423,6 @@
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys/release/SHA256SUMS"
   },
   {
-   "id": "path-contracts/keys/release/v2.7/keyhole_keys.wasm",
-   "claim": "Linked repo path contracts/keys/release/v2.7/keyhole_keys.wasm exists",
-   "where": "README.md:622",
-   "evidence_type": "file",
-   "evidence": "contracts/keys/release/v2.7/keyhole_keys.wasm",
-   "check": {
-    "type": "path",
-    "path": "contracts/keys/release/v2.7/keyhole_keys.wasm"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-contracts/keys/release/v2.7/keyhole_keys.wasm"
-  },
-  {
    "id": "path-contracts/keys/src/v27.rs",
    "claim": "Linked repo path contracts/keys/src/v27.rs exists",
    "where": "README.md:622",
@@ -7404,6 +7527,32 @@
    "verify": "node judge/verify-claims.mjs --only path-tee/worker/verify-log.mjs"
   },
   {
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/README.md",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/README.md exists",
+   "where": "README.md:812",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/README.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/worker-provisioning/v2/r3/README.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/README.md"
+  },
+  {
+   "id": "path-docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md exists",
+   "where": "README.md:812",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md"
+  },
+  {
    "id": "path-docs/evidence/worker-provisioning/R2.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/R2.md exists",
    "where": "README.md:812",
@@ -7417,17 +7566,30 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/R2.md"
   },
   {
-   "id": "path-docs/metrics.json",
-   "claim": "Linked repo path docs/metrics.json exists",
-   "where": "README.md:816",
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/cli-tests.log",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/cli-tests.log exists",
+   "where": "README.md:819",
    "evidence_type": "file",
-   "evidence": "docs/metrics.json",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/cli-tests.log",
    "check": {
     "type": "path",
-    "path": "docs/metrics.json"
+    "path": "docs/evidence/worker-provisioning/v2/r3/cli-tests.log"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-docs/metrics.json"
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/cli-tests.log"
+  },
+  {
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/web-tests.log",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/web-tests.log exists",
+   "where": "README.md:820",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/web-tests.log",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/worker-provisioning/v2/r3/web-tests.log"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/web-tests.log"
   },
   {
    "id": "path-web/e2e",
@@ -7441,6 +7603,19 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-web/e2e"
+  },
+  {
+   "id": "path-docs/evidence/worker-provisioning/v2/r3/web-e2e.log",
+   "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/web-e2e.log exists",
+   "where": "README.md:821",
+   "evidence_type": "file",
+   "evidence": "docs/evidence/worker-provisioning/v2/r3/web-e2e.log",
+   "check": {
+    "type": "path",
+    "path": "docs/evidence/worker-provisioning/v2/r3/web-e2e.log"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/evidence/worker-provisioning/v2/r3/web-e2e.log"
   },
   {
    "id": "path-docs/evidence/lighthouse.json",
@@ -7911,6 +8086,19 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/pledge/TEAM_RUNBOOK.md"
   },
   {
+   "id": "path-docs/worker/LIVE_LOANS_EXEC.md",
+   "claim": "Linked repo path docs/worker/LIVE_LOANS_EXEC.md exists",
+   "where": "README.md:1020",
+   "evidence_type": "file",
+   "evidence": "docs/worker/LIVE_LOANS_EXEC.md",
+   "check": {
+    "type": "path",
+    "path": "docs/worker/LIVE_LOANS_EXEC.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/worker/LIVE_LOANS_EXEC.md"
+  },
+  {
    "id": "path-docs/evidence/integration-stack/artifact-repro-r2.json",
    "claim": "Linked repo path docs/evidence/integration-stack/artifact-repro-r2.json exists",
    "where": "README.md:1026",
@@ -8275,6 +8463,19 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/tests/README.md"
   },
   {
+   "id": "path-docs/metrics.json",
+   "claim": "Linked repo path docs/metrics.json exists",
+   "where": "TRACK_COVERAGE.md:66",
+   "evidence_type": "file",
+   "evidence": "docs/metrics.json",
+   "check": {
+    "type": "path",
+    "path": "docs/metrics.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/metrics.json"
+  },
+  {
    "id": "path-docs/audit/keys-contract.md",
    "claim": "Linked repo path docs/audit/keys-contract.md exists",
    "where": "SECURITY.md:3",
@@ -8481,6 +8682,32 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-scripts/release/lifecycle.test.mjs"
+  },
+  {
+   "id": "path-docs/worker/outlayer-exact-exit-schemas.json",
+   "claim": "Linked repo path docs/worker/outlayer-exact-exit-schemas.json exists",
+   "where": "SECURITY.md:821",
+   "evidence_type": "file",
+   "evidence": "docs/worker/outlayer-exact-exit-schemas.json",
+   "check": {
+    "type": "path",
+    "path": "docs/worker/outlayer-exact-exit-schemas.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/worker/outlayer-exact-exit-schemas.json"
+  },
+  {
+   "id": "path-docs/worker/EXACT_NEAR_EXIT.md",
+   "claim": "Linked repo path docs/worker/EXACT_NEAR_EXIT.md exists",
+   "where": "SECURITY.md:829",
+   "evidence_type": "file",
+   "evidence": "docs/worker/EXACT_NEAR_EXIT.md",
+   "check": {
+    "type": "path",
+    "path": "docs/worker/EXACT_NEAR_EXIT.md"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/worker/EXACT_NEAR_EXIT.md"
   },
   {
    "id": "site-/",
@@ -9493,20 +9720,6 @@
    "verify": "node judge/verify-claims.mjs --only site-37"
   },
   {
-   "id": "ci-43043510571",
-   "claim": "CI run 43043510571 concluded success",
-   "where": "README.md:816",
-   "evidence_type": "CI run",
-   "evidence": "https://github.com/mohamedwael201193/keyhole/actions/runs/43043510571",
-   "check": {
-    "type": "ci_run",
-    "repo": "mohamedwael201193/keyhole",
-    "run": "43043510571"
-   },
-   "expected": "conclusion == success",
-   "verify": "node judge/verify-claims.mjs --only ci-43043510571"
-  },
-  {
    "id": "ci-41731806624",
    "claim": "CI run 41731806624 concluded success",
    "where": "TRACK_COVERAGE.md:64",
@@ -9519,6 +9732,20 @@
    },
    "expected": "conclusion == success",
    "verify": "node judge/verify-claims.mjs --only ci-41731806624"
+  },
+  {
+   "id": "ci-43043510571",
+   "claim": "CI run 43043510571 concluded success",
+   "where": "TRACK_COVERAGE.md:66",
+   "evidence_type": "CI run",
+   "evidence": "https://github.com/mohamedwael201193/keyhole/actions/runs/43043510571",
+   "check": {
+    "type": "ci_run",
+    "repo": "mohamedwael201193/keyhole",
+    "run": "43043510571"
+   },
+   "expected": "conclusion == success",
+   "verify": "node judge/verify-claims.mjs --only ci-43043510571"
   }
  ]
 }

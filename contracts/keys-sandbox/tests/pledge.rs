@@ -9,7 +9,7 @@ use keyhole_keys::LoanCertificate;
 use near_workspaces::{Account, Contract};
 use near_workspaces::types::NearToken;
 use serde_json::{json,Value};
-const WASM:&str="../keys/release/v2.6/keyhole_keys.wasm";
+const WASM:&str="../keys/release/v2.7/keyhole_keys.wasm";
 const MOCK:&str="tests/fixtures/custody_policy_mock.wasm";
 const N:u128=1_000_000_000_000_000_000_000_000;
 struct E { w:near_workspaces::Worker<near_workspaces::network::Sandbox>, c:Contract, mock:Contract, alice:Account, lender:Account, bob:Account, minter:Account }
@@ -21,9 +21,13 @@ async fn setup()->Result<E>{
  let alice=account(&root,"alice").await?;let lender=account(&root,"lender").await?;let bob=account(&root,"bob").await?;let minter=account(&root,"minter").await?;
  c.call("new").args_json(json!({"owner":c.id(),"minter":minter.id(),"treasury":c.id(),"royalty_bps":500})).max_gas().transact().await?.into_result()?;
  register_payouts(&c,&root,&[minter.id(),alice.id(),lender.id(),bob.id()]).await?;
- minter.call(c.id(),"nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":2,"metadata":{"title":"Sealed collateral","copies":1}}))
+ minter.call(c.id(),"nft_mint").args_json(json!({"token_id":"k1","receiver_id":alice.id(),"tier":3,"metadata":{"title":"Sealed collateral","copies":1}}))
   .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  minter.call(c.id(),"claim_payout").deposit(NearToken::from_yoctonear(1)).max_gas().transact().await?.into_result()?;
+ // These legacy conservation scenarios use 1 NEAR principal. On the current
+ // v2.7 binary this must be a Gold fixture (Silver cap is 0.5); do not relax
+ // production caps or shrink any payout/conservation assertion to make it pass.
+ assert_eq!(view(&c,"nft_tier",json!({"token_id":"k1"})).await,3);
  let pk=SigningKey::from_bytes(&[7;32]).verifying_key().to_bytes();
  c.call("migrate_pledge").args_json(json!({"recovery_account":root.id(),"attestor_public_key":B64.encode(pk),"custody_contract":mock.id(),"network":"sandbox"})).max_gas().transact().await?.into_result()?;
  assert_eq!(view(&c,"get_pledge_config",json!({})).await["lending_enabled"],false);
@@ -198,7 +202,7 @@ async fn raw_fund(e:&E)->Result<near_workspaces::result::ExecutionFinalResult>{
 fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{:?}",r.receipt_failures()).contains("injected callback failure"));}
 #[tokio::test]async fn actual_lost_freeze_callback_stays_unknown_and_cannot_dispatch_an_opposite_command()->Result<()> {
  let e=setup().await?;fault_callbacks(&e).await?;let ts=now(&e).await;
- // The callback fixture is current v2.7 code. This key is tier 2, so the principal must sit inside the Silver cap (0.5 NEAR).
+ // The callback fixture is current v2.7 code. The shared fixture is Gold for 1 NEAR conservation cases; this injected-freeze path deliberately uses only 0.5 NEAR.
  let r=e.alice.call(e.c.id(),"open_loan").args_json(json!({"token_id":"k1","terms":{"lender":e.lender.id(),"principal":(N/2).to_string(),"repayment":(11*(N/2)/10).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"1000000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?;injected(&r);
  let policy=view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":format!("ed25519:{}","ab".repeat(32))})).await;assert_eq!(policy["frozen"],true);assert!(policy.get("generation").is_none());
  // Even restoring the normal binary does not invent the missing receipt result.

@@ -1,0 +1,622 @@
+{
+  "source": "https://api.outlayer.ai/openapi.json",
+  "guide": "https://app.outlayer.ai/docs/agent-custody",
+  "reference_guides": [
+    "https://skills.outlayer.ai/agent-custody/references/confidential.md",
+    "https://skills.outlayer.ai/agent-custody/references/wallet-ops.md",
+    "https://skills.outlayer.ai/agent-custody/references/intents-withdraw.md"
+  ],
+  "version": "0.1.0-alpha.4",
+  "full_spec_sha256": "56a4ab8b3f8c5d708b9ef5785da2ff035ffc1ca192505b00e7c80b3fb6948e39",
+  "schemas": {
+    "ConfidentialUnshieldRequest": {
+      "description": "UNSHIELD body \u2014 same shape as `IntentsDepositRequest`.",
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/IntentsDepositRequest"
+        }
+      ]
+    },
+    "IntentsDepositRequest": {
+      "type": "object",
+      "required": [
+        "token",
+        "amount"
+      ],
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string"
+        }
+      }
+    },
+    "ConfidentialOpResponse": {
+      "type": "object",
+      "description": "Result of a confidential shield / unshield / withdraw / transfer / swap.\nThe op is asynchronous \u2014 the user's signed intent settles on the private\nshard (`intents.far`, no public RPC), so there is no public `tx_hash`;\ntrack via `intent_hash` / `deposit_address` and poll\n`GET /wallet/v1/requests/{id}`.\n\nOnce the op is terminal, the request row's `result.swap_details`\ncarries `intentHashes`, `nearTxHashes`, `originChainTxHashes` and\n`destinationChainTxHashes` \u2014 **all arrays of plain hash strings**,\nwith 1Click-style **camelCase** inner keys (the `swap_details`\ncontainer itself is snake_case). Upstream 1Click emits\n`{hash, explorerUrl}` objects; the coordinator normalizes them to\nplain strings, so this wire shape is stable regardless of upstream\nchanges. Also present: settled amounts and refund fields\n(`amountIn`, `amountOut`, `refundedAmount`, `refundReason`, \u2026). For\nan external-chain `confidentialWithdraw`, `destinationChainTxHashes`\nholds the actual delivery transaction on the destination chain; the\narrays are empty until settlement and may stay empty for\nshard-internal ops (shield / unshield / transfer / swap).\n\n**Multisig:** the Trusted confidential ops (withdraw / transfer / swap)\nare subject to the wallet's approval policy. When approval is required the\nresponse inlines `approval_id` / `required` / `approved` / `request_hash`\n(same shape as `WithdrawResponse` / `SwapResponse`) \u2014 sign `request_hash`\nand submit your approval vote; the op executes after the threshold is met.\n",
+      "required": [
+        "request_id",
+        "status"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "description": "Normalized lifecycle status (1Click's UPPERCASE state machine mapped to lowercase): `pending_deposit` \u2192 `processing` \u2192 `success` / `failed` / `refunded`. `pending_approval` is returned instead when a multisig wallet must approve the op first. The raw upstream status is in the request row's `result.oneclick_status`. A call answers `processing` with a `poll_url` when the intent was submitted and the upstream's answer was lost: the intent may have been taken, so do not retry \u2014 the request settles on its own.",
+          "enum": [
+            "pending_deposit",
+            "processing",
+            "success",
+            "failed",
+            "refunded",
+            "pending_approval"
+          ]
+        },
+        "intent_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Confidential-shard intent hash (never appears on the public chain)."
+        },
+        "deposit_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Opaque 1Click hop address \u2014 the status primary key."
+        },
+        "approval_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Present only on `pending_approval` (multisig) \u2014 the approval to vote on."
+        },
+        "required": {
+          "type": "integer",
+          "description": "Present only on `pending_approval` \u2014 approvals needed."
+        },
+        "approved": {
+          "type": "integer",
+          "description": "Present only on `pending_approval` \u2014 approvals collected so far (0 at creation)."
+        },
+        "request_hash": {
+          "type": "string",
+          "description": "Present only on `pending_approval` \u2014 sha256(canonical_json(op)); sign this to approve."
+        },
+        "poll_url": {
+          "type": "string",
+          "description": "Present with `status=processing` \u2014 `GET /wallet/v1/requests/{request_id}`."
+        }
+      }
+    },
+    "StorageDepositRequest": {
+      "type": "object",
+      "required": [
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "NEP-141 token contract (e.g. `wrap.near`). A `nep141:` prefix is stripped if present."
+        },
+        "account_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Account to register. Defaults to the wallet's own NEAR address."
+        }
+      }
+    },
+    "StorageDepositResponse": {
+      "type": "object",
+      "description": "Response for `storageDeposit`. `storage_deposit` is multisig-capable: on\na multisig wallet that requires approval the response carries\n`status=pending_approval` with the `approval_id` / `required` / `approved`\n/ `request_hash` fields populated (same shape as `CallResponse`); the\ndeposit executes only after the approval threshold is met. On the direct\npath those fields are omitted and the single-sig response is byte-identical\nto before.\n",
+      "required": [
+        "request_id",
+        "status",
+        "token",
+        "account_id",
+        "already_registered"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "$ref": "#/components/schemas/RequestStatus"
+        },
+        "tx_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "token": {
+          "type": "string"
+        },
+        "account_id": {
+          "type": "string"
+        },
+        "already_registered": {
+          "type": "boolean",
+          "description": "True when the account was already storage-registered; no transaction was sent."
+        },
+        "approval_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Present only on `pending_approval` (multisig) \u2014 the approval to vote on."
+        },
+        "required": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Present only on `pending_approval` \u2014 approvals needed."
+        },
+        "approved": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Present only on `pending_approval` \u2014 approvals collected so far."
+        },
+        "request_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Present on `pending_approval` \u2014 sha256(canonical_json(op)); sign to approve."
+        }
+      }
+    },
+    "WithdrawRequest": {
+      "type": "object",
+      "required": [
+        "chain",
+        "amount"
+      ],
+      "properties": {
+        "chain": {
+          "$ref": "#/components/schemas/WithdrawChain"
+        },
+        "to": {
+          "type": "string",
+          "description": "Destination address on the target chain."
+        },
+        "amount": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string",
+          "description": "Token ID, e.g. `nep141:usdt.tether-token.near`. For `chain=near`, omit (or use `near`/`native`) to deliver **native NEAR** (unwraps the wallet's wNEAR); use `nep141:wrap.near` to deliver wNEAR instead. For other chains, this is the source Intents asset bridged via 1Click. The asset's NEAR-side 1Click id `1cs_v1:near:nep141:<contract>` names the same balance and is accepted everywhere `nep141:<contract>` is; a `1cs_v1:` id on another chain is not a source (`unsupported_token`)."
+        },
+        "async": {
+          "type": "boolean",
+          "default": false,
+          "description": "When `true`, the call returns immediately with `status=processing` and a `poll_url`; the withdrawal settles in the background and the caller polls `GET /wallet/v1/requests/{request_id}` for the terminal status. **Recommended for cross-chain withdrawals**, whose bridge can take longer than the synchronous response window. When `false` (default) the call blocks until the withdrawal settles. Auth, policy and validation errors are returned synchronously in both modes; in async mode only an execution failure surfaces as the request's `failed` status."
+        }
+      }
+    },
+    "WithdrawResponse": {
+      "type": "object",
+      "description": "Response for `intentsWithdraw` (same-chain AND cross-chain). On a\nmultisig wallet that requires approval, `status=pending_approval` and the\n`approval_id` / `required` / `approved` / `request_hash` fields are\npopulated; approvers vote over `request_hash` (see `Nep413Auth`, or\n`ContractVoteAuth` for an approver without keys). On the\ndirect path these fields are omitted/null.\n\nAlso the response of `intentsTransfer`.\n\nA synchronous call answers once the withdrawal settles. When settlement\noutlasts its wait \u2014 the solver relay for a same-chain withdraw, the\nbridge for a cross-chain one \u2014 or anything fails after the funds were\nhanded over, it answers `status=processing` with a `poll_url`, and the\nrequest settles on its own. It never answers an error once funds may\nhave moved. The withdrawal runs to its outcome even if the caller\ndisconnects.\n",
+      "required": [
+        "request_id",
+        "status"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "$ref": "#/components/schemas/RequestStatus"
+        },
+        "approval_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "required": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "approved": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "request_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Canonical request hash to sign when `status=pending_approval` (otherwise absent)."
+        },
+        "poll_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Present when `status=processing` \u2014 after `async=true`, or a synchronous call whose settlement outlasted its wait. Poll this path (`GET /wallet/v1/requests/{request_id}`) for the terminal status."
+        }
+      }
+    },
+    "WithdrawResult": {
+      "type": "object",
+      "description": "Result payload for a successful `withdraw` request \u2014 what the\nrecipient actually received on-chain. Emitted in the `result` field of\n`GET /wallet/v1/requests/{id}` and in the `result` field of the\n`request_completed` webhook for withdraw requests.",
+      "required": [
+        "intent_hash",
+        "delivered"
+      ],
+      "properties": {
+        "intent_hash": {
+          "type": "string",
+          "description": "Base58-encoded NEAR Intents hash returned by `solver-relay`.\nEmpty string if the relay did not return one \u2014 the field is\nalways present so clients can index it without `Option` handling.",
+          "example": "4GArqMi1WJwsw7p4tWHAbYG2Se5Wp6YSb8Ab3C8cUTJg"
+        },
+        "delivered": {
+          "description": "Canonical identifier of the asset the recipient received on-chain.\nFormat mirrors the request `token` field of\n`POST /wallet/v1/intents/withdraw`, so clients can compare request\nvs. response directly:\n\n- `\"native_near\"` \u2014 the wallet emitted a `native_withdraw` intent\n  that unwrapped wNEAR and sent native NEAR. The recipient\n  received native NEAR regardless of what the request `token`\n  field named (`\"\"`, `\"near\"`, or `\"native\"`).\n- `\"nep141:<contract>\"` \u2014 the wallet emitted a NEP-141 `transfer`\n  intent. The recipient received that token, including wNEAR\n  (`\"nep141:wrap.near\"`), USDC, USDT, etc.\n\nNever returned: the legacy short symbol `\"wnear\"` (was emitted\nin error by coordinator versions prior to the\n`WithdrawResult`-typed response \u2014 see api-spec CHANGELOG).",
+          "oneOf": [
+            {
+              "type": "string",
+              "const": "native_near"
+            },
+            {
+              "type": "string",
+              "pattern": "^nep141:.+",
+              "example": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"
+            }
+          ]
+        }
+      }
+    },
+    "BalanceResponse": {
+      "type": "object",
+      "required": [
+        "balance",
+        "token",
+        "account_id",
+        "account"
+      ],
+      "properties": {
+        "balance": {
+          "type": "string",
+          "description": "Amount in token's smallest unit."
+        },
+        "token": {
+          "type": "string"
+        },
+        "account_id": {
+          "type": "string"
+        },
+        "account": {
+          "type": "string",
+          "enum": [
+            "asset",
+            "executor"
+          ],
+          "description": "Which identity `account_id` is, so the figure cannot be misattributed. `executor` for every wallet without a binding."
+        }
+      }
+    },
+    "RequestStatusResponse": {
+      "type": "object",
+      "required": [
+        "request_id",
+        "type",
+        "status",
+        "created_at"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "$ref": "#/components/schemas/RequestType"
+        },
+        "status": {
+          "$ref": "#/components/schemas/RequestStatus"
+        },
+        "result": {
+          "description": "Operation-specific result payload, present once `status` is\n`success` (otherwise `null` or an `{ \"error\": \"<reason>\" }` object\non `failed`). The shape depends on `type`:\n\n- `type = \"withdraw\"` \u2014 conforms to\n  [`WithdrawResult`](#/components/schemas/WithdrawResult).\n- Cross-chain withdraws (`intents_cross_chain_withdraw`) and\n  gasless swaps additionally carry a nullable\n  `destination_tx_hash` \u2014 the real delivery transaction on the\n  destination chain (safe to render as an explorer link on the\n  requested chain). `null` until the 1Click bridge settles; the\n  lazy on-read refresh fills it in, and the `request_completed`\n  webhook carries it. All other identifier fields\n  (`transfer_intent_hash`, `intent_hash`) are NEAR-Intents\n  hashes, NOT destination-chain transactions.\n- Withdraws and swaps: `settled_late: true` marks a request whose\n  outcome was settled from the chain after its response came\n  back `processing`. A `failed` request carrying\n  `never_executed: true` or `never_submitted: true` moved no\n  funds and is safe to retry under a new idempotency key. A\n  `failed` one without them may have moved funds \u2014 a bridge\n  that failed or refunded (`result.reason`), or a NEAR\n  transaction that failed on chain after its gas was spent \u2014\n  so reconcile the balance before acting again.\n- Other request types are not yet schema-documented; treat the\n  object as opaque until added in a later spec release.\n\nUses `anyOf` (not `oneOf`) deliberately \u2014 `WithdrawResult` is also\na valid `object`, and `oneOf` would require exactly one match,\nso a successful withdraw would fail strict validators.",
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/WithdrawResult"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "RequestType": {
+      "type": "string",
+      "description": "Tracked async request / policy transaction type. `withdraw` is a\nsame-chain intents withdrawal; `cross_chain_withdraw` is a separate type\nfor 1Click bridge-out (a policy must list it explicitly \u2014 it is NOT\nfolded into `withdraw`). `confidential` covers every confidential-shard\nop (shield / unshield / withdraw / transfer / swap). The deposit family\n(`intents/deposit`, `storage-deposit`, cross-chain deposit) all gate as\n`call`. `limit_order` is a rested 1Click order and, like\n`cross_chain_withdraw`, its own type: permitting swaps or cross-chain\nexits does not permit it. `intents_storage_deposit` pays a token\nregistration from the intents wNEAR balance and is its own type:\n`call` does not permit it. `policy_update` is a write to a locked\npolicy awaiting the approvers' quorum (`signPolicy`); it is never\nsubject to `excluded_types` \u2014 the lock is its own check.\n",
+      "enum": [
+        "call",
+        "transfer",
+        "withdraw",
+        "cross_chain_withdraw",
+        "limit_order",
+        "deposit",
+        "swap",
+        "confidential",
+        "intents_storage_deposit",
+        "policy_update"
+      ]
+    },
+    "RequestStatus": {
+      "type": "string",
+      "description": "`partially_failed` occurs only for `w_execute_extension` (Agent Connect's extension door) and is a NORMAL outcome, not an error: the wallet detaches its promises, they execute concurrently and independently, and one failing neither reverts the others nor undoes the value they moved. Read `result.promises[]` for which did what.",
+      "enum": [
+        "pending_deposit",
+        "processing",
+        "success",
+        "completed",
+        "partially_failed",
+        "failed",
+        "refunded",
+        "pending_approval",
+        "approved",
+        "rejected",
+        "cancelled",
+        "needs_review"
+      ]
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": [
+        "error"
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/components/schemas/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      }
+    }
+  },
+  "endpoints": {
+    "/wallet/v1/confidential/unshield": {
+      "post": {
+        "tags": [
+          "Confidential"
+        ],
+        "operationId": "confidentialUnshield",
+        "summary": "UNSHIELD \u2014 move confidential balance back to public intents",
+        "description": "Reverse of SHIELD (deposit-type `CONFIDENTIAL_INTENTS` \u2192 recipient-type\n`INTENTS`). Like SHIELD, this links the wallet on-chain (exit-to-public\nreveal). Async \u2014 poll `GET /wallet/v1/requests/{id}`.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfidentialUnshieldRequest"
+              },
+              "example": {
+                "token": "nep141:wrap.near",
+                "amount": "10000000000000000000000"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Unshield submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfidentialOpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/OperationLimitReached"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/wallet/v1/storage-deposit": {
+      "post": {
+        "tags": [
+          "Wallet"
+        ],
+        "operationId": "storageDeposit",
+        "summary": "Register storage on a NEP-141 token contract",
+        "description": "Calls `storage_deposit` (with `registration_only: true`) on a NEP-141\ntoken contract so `account_id` (defaults to the wallet's own NEAR\naddress) can hold that token. Idempotent: if the account is already\nregistered the call returns `already_registered: true` without signing\na transaction. The wallet must have NEAR to pay gas when a transaction\nis required. Policy gates this as a `call`; multisig is not supported\nfor this endpoint.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageDepositRequest"
+              },
+              "example": {
+                "token": "wrap.near"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Storage registered (or already registered)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageDepositResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/OnChainTxFailed"
+          },
+          "429": {
+            "$ref": "#/components/responses/OperationLimitReached"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/wallet/v1/intents/withdraw": {
+      "post": {
+        "tags": [
+          "Wallet"
+        ],
+        "operationId": "intentsWithdraw",
+        "summary": "Withdraw via NEAR Intents (native NEAR / wNEAR / cross-chain)",
+        "description": "Gasless withdrawal through NEAR Intents solver relay. The wallet's\nintents.near balance is debited; the receiver gets funds without paying\ngas on either side.\n\n**`chain=near`** \u2014 the `token` field selects what the recipient receives:\n  - omitted / `near` / `native` (default): **native NEAR**. intents.near\n    unwraps the wallet's wNEAR (`native_withdraw` intent) and sends native\n    NEAR. The recipient needs **no** `wrap.near` storage. The recipient\n    account must already exist (or be a 64-char implicit account) \u2014\n    withdrawing to a non-existent named account is rejected (the unwrapped\n    wNEAR would otherwise be burned).\n  - `nep141:wrap.near`: **wNEAR** (NEP-141). Recipient must be\n    storage-registered on `wrap.near`.\n  - other `nep141:<token>`: that NEP-141. Recipient must be storage-registered.\n\n**Other chains** (`ethereum`, `solana`, `bitcoin`, ...) \u2014 `token` is the\nsource Intents asset; 1Click bridges and delivers the destination chain's\nnative asset.\n\nIf the policy requires approval, returns `status=pending_approval` with\nan `approval_id`.\n\n**Cross-chain withdrawals are best called with `async=true`**: the bridge\ncan take longer than the synchronous response window, so the call returns\n`status=processing` + a `poll_url` immediately and you poll\n`GET /wallet/v1/requests/{request_id}` for the terminal status.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/AnswerWithin"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawRequest"
+              },
+              "examples": {
+                "nativeNear": {
+                  "summary": "Native NEAR (default for chain=near)",
+                  "value": {
+                    "chain": "near",
+                    "to": "receiver.near",
+                    "amount": "1000000000000000000000000",
+                    "token": "near"
+                  }
+                },
+                "wnear": {
+                  "summary": "wNEAR (NEP-141, recipient needs wrap.near storage)",
+                  "value": {
+                    "chain": "near",
+                    "to": "receiver.near",
+                    "amount": "1000000000000000000000000",
+                    "token": "nep141:wrap.near"
+                  }
+                },
+                "crossChain": {
+                  "summary": "Cross-chain (1Click delivers native on the target chain)",
+                  "value": {
+                    "chain": "ethereum",
+                    "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f8b4f5",
+                    "amount": "1000000",
+                    "token": "nep141:usdt.tether-token.near"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Withdraw submitted (or queued for approval)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/OperationLimitReached"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/RouteUnavailable"
+          }
+        }
+      }
+    }
+  }
+}

@@ -303,6 +303,10 @@ test("full generator code-only promotion works through real RPC boundary and ret
       mkdirSync(join(d, p, ".."), { recursive: true });
       copyFileSync(new URL(p, root), join(d, p));
     }
+    const historical=JSON.parse(original);
+    historical.contract={...historical.contract,version:"2.6.0",wasm_sha256:CANDIDATE};
+    historical.contract_candidate.status="source-candidate-not-deployed";
+    writeFileSync(join(d,"identity.json"),JSON.stringify(historical));
     writeFileSync(join(d, "post.json"), JSON.stringify(e));
     const seeded = JSON.parse(readFileSync(join(d, "identity.json"), "utf8"));
     seeded.contract.version = "2.5.0";

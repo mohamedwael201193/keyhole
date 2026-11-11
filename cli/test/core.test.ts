@@ -17,6 +17,7 @@ test("nep413 layout matches the worker", () => {
 
 test("signature verifies over sha256(payload)", () => {
   const a = signRequest(key, "status", {}, "keyhole", 1000);
+  assert.equal(a.scheme, "nep413", "full-key exact/native host admission needs the explicit NEP-413 scheme");
   const msg = sha256(nep413Bytes(a.message, Buffer.from(a.nonce, "base64"), a.recipient));
   const pub = bs58.decode(a.public_key.slice(8));
   assert.ok(ed25519.verify(Buffer.from(a.signature, "base64"), msg, pub));

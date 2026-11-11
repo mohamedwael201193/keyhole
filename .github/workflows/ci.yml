@@ -152,10 +152,12 @@ jobs:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
-      # docs/evidence/oneclick-sol holds 1Click's own public quote signatures (ed25519:…), kept so the quotes stay verifiable
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
       - name: no secrets or keys committed
         run: |
-          ! git grep -lE 'wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|eyJhbGci[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE' -- . ':!cli/package-lock.json' ':!docs/evidence/oneclick-sol/*.json'
+          python3 scripts/check-hygiene.py
+          node --test scripts/release/hygiene.test.mjs
       - name: source tarball identity matches identity.json (worker wasm + contract code hash)
         run: |
           python3 - <<'PY'
