@@ -1,0 +1,213 @@
+{
+  "schema": "KEYHOLE_V27_EVIDENCE_V1",
+  "block": {
+    "hash": "RPH8iqiP9pNP92YL7e5GEKRo9s6JgaeGSczifkEgKdd",
+    "height": 224097571
+  },
+  "account": {
+    "amount": "6872881570179187962621659",
+    "block_hash": "RPH8iqiP9pNP92YL7e5GEKRo9s6JgaeGSczifkEgKdd",
+    "block_height": 224097571,
+    "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
+    "locked": "0",
+    "storage_paid_at": 0,
+    "storage_usage": 525930
+  },
+  "code": {
+    "sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+    "bytes": 519382
+  },
+  "metadata": {
+    "version": "2.7.0",
+    "link": "https://github.com/mohamedwael201193/keyhole",
+    "standards": [
+      {
+        "standard": "nep171",
+        "version": "1.2.0"
+      },
+      {
+        "standard": "nep177",
+        "version": "2.0.0"
+      },
+      {
+        "standard": "nep178",
+        "version": "1.0.0"
+      },
+      {
+        "standard": "nep181",
+        "version": "1.0.0"
+      },
+      {
+        "standard": "nep199",
+        "version": "2.1.0"
+      },
+      {
+        "standard": "nep330",
+        "version": "1.2.0"
+      }
+    ],
+    "build_info": null
+  },
+  "config": {
+    "owner": "keyhole-devmo.near",
+    "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+    "treasury": "keyhole-devmo.near",
+    "royalty_bps": 500,
+    "beats": "2"
+  },
+  "pledge": {
+    "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+    "recovery_unlock_ns": "1796169600000000000",
+    "attestor_public_key": "AVoCWQaln59Ayhfa8qPGHF5jo3wIHHUjCHDKpqgqxEM=",
+    "custody_contract": "outlayer.near",
+    "network": "mainnet",
+    "lending_enabled": false,
+    "next_loan_nonce": "0",
+    "next_payout_nonce": "0",
+    "treasury_available": "0",
+    "user_liabilities": "0",
+    "treasury_pending": null
+  },
+  "deployment": {
+    "final_execution_status": "FINAL",
+    "receipts_outcome": [
+      {
+        "block_hash": "BNALwW9xYh7RNJtSCq2SSusgisK9rn9uvTqBrr3D1u1F",
+        "id": "2pzHNyiKRnjBLYbU17TNYYCTro4Z6ZxRYgZuMuoVYkeo",
+        "outcome": {
+          "executor_id": "keyhole-devmo.near",
+          "gas_burnt": 33830850050608,
+          "logs": [],
+          "metadata": {
+            "contracts": [
+              {
+                "local": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww"
+              }
+            ],
+            "gas_profile": [],
+            "version": 4
+          },
+          "receipt_ids": [
+            "2ZDTFc29myfnjpfPGifT5tdXvGA6ZJ46P5tNyp66SB3h"
+          ],
+          "status": {
+            "SuccessValue": ""
+          },
+          "tokens_burnt": "3383085005060800000000"
+        },
+        "proof": [
+          {
+            "direction": "Right",
+            "hash": "F4gzJ4DcTX4xbCowRKuZZw1TzEvSH4HHQ5GPbF8kTAT6"
+          },
+          {
+            "direction": "Right",
+            "hash": "Anv2C3P7DEMCLeTPtoPnt9QQqmDR6D8x7EMgBC1jWFS1"
+          },
+          {
+            "direction": "Left",
+            "hash": "FZbKXcpwExm8XiJ2dhRxeupcaVrKBvJzgADFMfGDvKmJ"
+          },
+          {
+            "direction": "Right",
+            "hash": "9Gbw1rZB4mtjar2uh5mzqDadcp8KYFb5LNzMsZsYGdfT"
+          }
+        ]
+      },
+      {
+        "block_hash": "AKG1ZjUPHsfEBdQ8Yp6Df88dFpHumZD5VUwHzbS2LJMq",
+        "id": "2ZDTFc29myfnjpfPGifT5tdXvGA6ZJ46P5tNyp66SB3h",
+        "outcome": {
+          "executor_id": "keyhole-devmo.near",
+          "gas_burnt": 223182562500,
+          "logs": [],
+          "metadata": {
+            "contracts": [
+              {
+                "local": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH"
+              }
+            ],
+            "gas_profile": [],
+            "version": 4
+          },
+          "receipt_ids": [],
+          "status": {
+            "SuccessValue": ""
+          },
+          "tokens_burnt": "0"
+        },
+        "proof": [
+          {
+            "direction": "Left",
+            "hash": "GFLYBZ9uNRZWYeANH4cR4ycDFcTCcECgcWZkfN6mumob"
+          },
+          {
+            "direction": "Right",
+            "hash": "9Sj6fyQUc1HeKer87hZrgjEDzSKM1W74yEFHRptx1ugJ"
+          },
+          {
+            "direction": "Left",
+            "hash": "HJSatpZ4smMs3AdNXFXo9BU1JtcvbG1ZzQNCVnYZo3Wy"
+          }
+        ]
+      }
+    ],
+    "status": {
+      "SuccessValue": ""
+    },
+    "transaction": {
+      "actions": [
+        {
+          "DeployContract": {
+            "code": "JtPe7/ikRFUV1jVgl712NOiyberufn6h6+R4SbgHwIw="
+          }
+        }
+      ],
+      "hash": "6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
+      "nonce": 221777577000139,
+      "priority_fee": 0,
+      "public_key": "ed25519:7N1fLo9MssKJoiL3kqBHX1zhmqjPxyDuzG5Fk583mxzF",
+      "receiver_id": "keyhole-devmo.near",
+      "signature": "ed25519:4Fmr5L6PzUa93PRQW445JQ2NvMAd7SKub2bc8aRt7cQyfFEEpFPkaufECXgDYaxsW9acPqee9H5hNnAGv6RJT2X",
+      "signer_id": "keyhole-devmo.near"
+    },
+    "transaction_outcome": {
+      "block_hash": "BNALwW9xYh7RNJtSCq2SSusgisK9rn9uvTqBrr3D1u1F",
+      "id": "6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
+      "outcome": {
+        "executor_id": "keyhole-devmo.near",
+        "gas_burnt": 3831374296618,
+        "logs": [],
+        "metadata": {
+          "gas_profile": null,
+          "version": 1
+        },
+        "receipt_ids": [
+          "2pzHNyiKRnjBLYbU17TNYYCTro4Z6ZxRYgZuMuoVYkeo"
+        ],
+        "status": {
+          "SuccessReceiptId": "2pzHNyiKRnjBLYbU17TNYYCTro4Z6ZxRYgZuMuoVYkeo"
+        },
+        "tokens_burnt": "383137429661800000000"
+      },
+      "proof": [
+        {
+          "direction": "Right",
+          "hash": "EsuZdEqPT7SudqP2ry7gM4xdCzH1yPmannehSTaomdvz"
+        },
+        {
+          "direction": "Right",
+          "hash": "ECvUfJhpWJQALAdiqHyPHJGvAWhK1qS7kAkV7DfLPC4d"
+        },
+        {
+          "direction": "Right",
+          "hash": "91ys8anfEAWqcgAoxxemwJnZsfb3eKwUkXAxiMry2xDu"
+        },
+        {
+          "direction": "Right",
+          "hash": "9Gbw1rZB4mtjar2uh5mzqDadcp8KYFb5LNzMsZsYGdfT"
+        }
+      ]
+    }
+  }
+}

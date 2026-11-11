@@ -29,25 +29,38 @@
   "contract": {
     "account": "keyhole-devmo.near",
     "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
-    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
-    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
-    "deploy_tx": "4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
-    "version": "2.6.0",
-    "bytes": 487260,
+    "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
+    "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+    "deploy_tx": "6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
+    "version": "2.7.0",
+    "bytes": 519382,
     "migrate_pledge_tx": "EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
-    "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
+    "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+    "historical_deployments": [
+      {
+        "account": "keyhole-devmo.near",
+        "minter": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+        "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
+        "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
+        "deploy_tx": "4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
+        "version": "2.6.0",
+        "bytes": 487260,
+        "migrate_pledge_tx": "EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
+        "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
+      }
+    ]
   },
   "review": {
     "source_commit": "9296fe4acfa94cf603fd823518e375e6cd7c9944"
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "350b7bc7c84c84cccf1d1b42f488e774dd253fa04b69f3c189204eb85191dc68",
-    "bytes": 1243749,
+    "wasm_sha256": "d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60",
+    "bytes": 1248852,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
-    "status": "source-candidate-not-deployed",
+    "status": "deployed-mainnet",
     "version": "2.7.0",
     "release": "v2.7",
     "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",

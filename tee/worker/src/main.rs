@@ -65,7 +65,7 @@ mod host {
     fn view(contract: &str, method: &str, args: Value) -> Result<Value, Error> {
         let (r, e) = rpc::view(contract, method, &args.to_string(), "final");
         if !e.is_empty() { return Err(err("rpc", format!("{}: {}", method, e))); }
-        Ok(serde_json::from_str(&r).unwrap_or(Value::Null))
+        rpc_view::decode(method, &r)
     }
 
     fn holder_tier(account: &str) -> Result<Option<u8>, Error> {
@@ -563,6 +563,7 @@ mod host {
         let c = authenticate(input, "withdraw", true)?;
         guard_preflight(&c)?;
         let p = &c.req.params;
+        withdrawal_protection::require_bound_execution(p, c.now_ms)?;
         let (chain, to, token) = (s(p, "chain").ok_or_else(|| err("bad_params", "missing params.chain"))?,
             s(p, "to").ok_or_else(|| err("bad_params", "missing params.to"))?, s(p, "token").ok_or_else(|| err("bad_params", "missing params.token"))?);
         // Re-read the actual owner at final finality. Refuse before custody access or spend reservation.

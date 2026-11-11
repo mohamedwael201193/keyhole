@@ -1,0 +1,308 @@
+
+Running 232 tests using 4 workers
+
+  -    3 [desktop] › e2e/live-v25.spec.ts:4:5 › live v2.5: finalized public views retain their browser contract
+  -    5 [desktop] › e2e/pledge-funded.spec.ts:13:5 › funded Pledge: real UI repay AND default endings with both holders and viewport evidence
+  ✓    4 [desktop] › e2e/judgewalk.spec.ts:4:5 › key: numeric id 0 explains itself instead of erroring (581ms)
+  ✓    2 [desktop] › e2e/lien-snapshot.spec.ts:21:5 › a sale between lien reads never renders a mixed owner and epoch (910ms)
+  ✓    7 [desktop] › e2e/judgewalk.spec.ts:10:5 › key: a bad id gets a plain hint (371ms)
+  ✓    1 [desktop] › e2e/integration196.spec.ts:20:5 › ordinary payout consent and original custody recovery survive reload without duplicate dispatch (1.1s)
+  ✓    6 [desktop] › e2e/pledge-review-r3.spec.ts:59:5 › mounted popup exit blocked by a failed poll is retryable after reload (1.3s)
+  ✓    8 [desktop] › e2e/lien-snapshot.spec.ts:52:5 › mixed block heights stay unread and are not shown as Not locked (825ms)
+  ✓    9 [desktop] › e2e/judgewalk.spec.ts:15:5 › gallery titles use the same short id as the vault (772ms)
+  ✓   10 [desktop] › e2e/integration196.spec.ts:53:5 › Vault cashout keeps UNKNOWN across reload and binds FINAL receipt before delivery (865ms)
+  ✓   11 [desktop] › e2e/pledge-review-r3.spec.ts:63:5 › redirect auth remains unconsumed during failed reads and resumes the saved intent after reload (674ms)
+  ✓   13 [desktop] › e2e/judgewalk.spec.ts:26:5 › every explorer link on /judge has a second explorer beside it (661ms)
+  ✓   12 [desktop] › e2e/lien-snapshot.spec.ts:77:5 › a post-default UnlockPending lien stays Locked at the new owner and the original loan epoch (871ms)
+  ✓   15 [desktop] › e2e/pledge-review-r3.spec.ts:69:5 › mounted component makes progress with sustained five-second reads (520ms)
+  ✓   14 [desktop] › e2e/pledge.spec.ts:14:7 › Pledge dashboard › preview at 1440x900 fits without vertical scroll (893ms)
+  ✓   19 [desktop] › e2e/pledge.spec.ts:37:7 › Pledge dashboard › preview at 1280x800 fits without vertical scroll (499ms)
+  -   20 [desktop] › e2e/pledge.spec.ts:50:7 › Pledge dashboard › preview at 390 and morph to active chrome
+  ✓   16 [desktop] › e2e/judgewalk.spec.ts:33:5 › judge: stepper, in-browser build check, current calls first, previous collapsed (1.3s)
+  ✓   21 [desktop] › e2e/pledge.spec.ts:62:7 › Pledge dashboard › sidebar lists Pledge and marks it current (399ms)
+  ✓   18 [desktop] › e2e/pledge-review-r3.spec.ts:72:5 › two real tabs preserve Y when a delayed FINAL X returns, including reload (1.3s)
+  ✓   17 [desktop] › e2e/site.spec.ts:11:7 › renders / without console errors (1.5s)
+  ✓   23 [desktop] › e2e/pledge.spec.ts:74:6 › lender 1440x900: public floor is declared until sealed verification (666ms)
+  -   26 [desktop] › e2e/pledge.spec.ts:74:6 › lender 390: public floor is declared until sealed verification
+  ✓   24 [desktop] › e2e/pledge-review-r3.spec.ts:108:5 › simultaneous real tabs open one wallet and receive storage notifications (685ms)
+  ✓   25 [desktop] › e2e/site.spec.ts:11:7 › renders /atlas without console errors (1.0s)
+  ✓   28 [desktop] › e2e/pledge-review-r3.spec.ts:113:32 › storage notification survives contender 1 finishing before the other starts (549ms)
+  ✓   27 [desktop] › e2e/start.spec.ts:3:5 › landing primary CTA launches the app (716ms)
+  ✓   22 [desktop] › e2e/judgewalk.spec.ts:44:5 › settle: order details show a 3-step timeline, the note and a collapsed proof (1.8s)
+  ✓   31 [desktop] › e2e/start.spec.ts:7:5 › /start shows the first step and progress dots without a wallet (356ms)
+  ✓   30 [desktop] › e2e/pledge-review-r3.spec.ts:113:32 › storage notification survives contender 2 finishing before the other starts (681ms)
+  ✓   33 [desktop] › e2e/start.spec.ts:13:5 › /start fits 390px without horizontal scroll (334ms)
+  ✓   32 [desktop] › e2e/judgewalk.spec.ts:60:5 › settle: a refused quote reads as a sentence, not a code (607ms)
+  ✘   29 [desktop] › e2e/site.spec.ts:11:7 › renders /vault without console errors (1.0s)
+  ✓   34 [desktop] › e2e/pledge-review-r3.spec.ts:120:5 › mounted signing aborts if the signer changes during delayed wallet routing (543ms)
+  ✓   36 [desktop] › e2e/pledge-review-r3.spec.ts:123:5 › mounted timeout recovers and late reads never replace the successful retry (515ms)
+  ✓   35 [desktop] › e2e/start.spec.ts:19:5 › P1: landing hash and proof links, verify label, key help, gallery traits (1.4s)
+  ✓   39 [desktop] › e2e/pledge-review-r3.spec.ts:126:5 › mounted observation age is request-start bounded, with a recoverable error (535ms)
+  ✓   40 [desktop] › e2e/start.spec.ts:30:5 › /start step 1: Google, email code, then wallets (when the Privy app is configured) (343ms)
+  ✓   37 [mobile] › e2e/integration196.spec.ts:20:5 › ordinary payout consent and original custody recovery survive reload without duplicate dispatch (1.1s)
+  ✓   42 [desktop] › e2e/start.spec.ts:46:5 › /start back from Google: Privy mounts by itself and shows 'Finishing Google sign-in' (266ms)
+  ✓   38 [desktop] › e2e/site.spec.ts:11:7 › renders /vault without console errors (retry #1) (1.2s)
+  ✓   41 [desktop] › e2e/pledge-review-r3.spec.ts:131:5 › R4 intact delayed X cannot bind to identical-fields Y after reload (831ms)
+  ✓   43 [mobile] › e2e/integration196.spec.ts:53:5 › Vault cashout keeps UNKNOWN across reload and binds FINAL receipt before delivery (688ms)
+  ✓   45 [desktop] › e2e/pledge-review-r3.spec.ts:136:5 › R4 production callback parser rejects X signature paired with overwritten Y challenge (815ms)
+  ✘   44 [desktop] › e2e/site.spec.ts:11:7 › renders /mint without console errors (988ms)
+  ✓   47 [mobile] › e2e/judgewalk.spec.ts:4:5 › key: numeric id 0 explains itself instead of erroring (556ms)
+  ✓   46 [mobile] › e2e/lien-snapshot.spec.ts:21:5 › a sale between lien reads never renders a mixed owner and epoch (736ms)
+  ✓   49 [mobile] › e2e/judgewalk.spec.ts:10:5 › key: a bad id gets a plain hint (298ms)
+  ✓   50 [mobile] › e2e/lien-snapshot.spec.ts:52:5 › mixed block heights stay unread and are not shown as Not locked (685ms)
+  ✓   48 [desktop] › e2e/pledge-review-r3.spec.ts:141:5 › R4 actual Prepare button cannot hide awaiting or Retryable exit recovery (1.2s)
+  ✓   51 [mobile] › e2e/judgewalk.spec.ts:15:5 › gallery titles use the same short id as the vault (741ms)
+  ✓   55 [mobile] › e2e/judgewalk.spec.ts:26:5 › every explorer link on /judge has a second explorer beside it (520ms)
+  ✓   53 [mobile] › e2e/lien-snapshot.spec.ts:77:5 › a post-default UnlockPending lien stays Locked at the new owner and the original loan epoch (854ms)
+  -   57 [mobile] › e2e/live-v25.spec.ts:4:5 › live v2.5: finalized public views retain their browser contract
+  -   58 [mobile] › e2e/pledge-funded.spec.ts:13:5 › funded Pledge: real UI repay AND default endings with both holders and viewport evidence
+  ✓   54 [desktop] › e2e/pledge-review-r3.spec.ts:145:5 › R4 Pending exit survives Prepare and reload; reconcile never resends it (937ms)
+  ✓   52 [desktop] › e2e/site.spec.ts:11:7 › renders /mint without console errors (retry #1) (1.3s)
+  ✓   56 [mobile] › e2e/judgewalk.spec.ts:33:5 › judge: stepper, in-browser build check, current calls first, previous collapsed (623ms)
+  ✓   60 [desktop] › e2e/pledge-review-r3.spec.ts:149:5 › R4 saved exit recovery renders without any presentation history (695ms)
+  ✓   59 [mobile] › e2e/pledge-review-r3.spec.ts:59:5 › mounted popup exit blocked by a failed poll is retryable after reload (1.2s)
+  ✓   63 [desktop] › e2e/pledge-review-r3.spec.ts:152:5 › R4 new tab recovers FINAL after originating session closes, but not wrong-signer evidence (623ms)
+  ✓   61 [desktop] › e2e/site.spec.ts:11:7 › renders /gallery without console errors (1.3s)
+  ✓   64 [mobile] › e2e/pledge-review-r3.spec.ts:63:5 › redirect auth remains unconsumed during failed reads and resumes the saved intent after reload (553ms)
+  ✓   67 [mobile] › e2e/pledge-review-r3.spec.ts:69:5 › mounted component makes progress with sustained five-second reads (377ms)
+  ✓   65 [desktop] › e2e/pledge-review-r3.spec.ts:155:5 › R4 lost-owner hash recovery verifies first; a forged hash cannot overwrite the intent (804ms)
+  ✓   62 [mobile] › e2e/judgewalk.spec.ts:44:5 › settle: order details show a 3-step timeline, the note and a collapsed proof (2.1s)
+  ✓   66 [desktop] › e2e/site.spec.ts:11:7 › renders /verify without console errors (1.6s)
+  ✓   68 [mobile] › e2e/pledge-review-r3.spec.ts:72:5 › two real tabs preserve Y when a delayed FINAL X returns, including reload (1.3s)
+  ✓   69 [desktop] › e2e/pledge-review-r3.spec.ts:158:5 › R5 actual two-tab preflight race: held exit signature excludes delayed loan open and survives reload (1.3s)
+  ✓   72 [mobile] › e2e/pledge-review-r3.spec.ts:108:5 › simultaneous real tabs open one wallet and receive storage notifications (493ms)
+  ✓   71 [desktop] › e2e/site.spec.ts:11:7 › renders /judge without console errors (913ms)
+  ✓   70 [mobile] › e2e/judgewalk.spec.ts:60:5 › settle: a refused quote reads as a sentence, not a code (1.8s)
+  -   76 [mobile] › e2e/pledge.spec.ts:14:7 › Pledge dashboard › preview at 1440x900 fits without vertical scroll
+  -   77 [mobile] › e2e/pledge.spec.ts:37:7 › Pledge dashboard › preview at 1280x800 fits without vertical scroll
+  ✓   74 [mobile] › e2e/pledge-review-r3.spec.ts:113:32 › storage notification survives contender 1 finishing before the other starts (589ms)
+  ✓   73 [desktop] › e2e/pledge-review-r3.spec.ts:167:5 › R5 inverse two-tab race: reserved loan excludes an ordinary exit while wallet routing is held (1.2s)
+  ✓   75 [desktop] › e2e/site.spec.ts:11:7 › renders /ask without console errors (944ms)
+  ✓   79 [mobile] › e2e/pledge-review-r3.spec.ts:113:32 › storage notification survives contender 2 finishing before the other starts (676ms)
+  ✓   80 [desktop] › e2e/pledge-review-r3.spec.ts:177:5 › R5 shared Web Lock admits only one simultaneous open or exit across real tabs (551ms)
+  ✓   82 [mobile] › e2e/pledge-review-r3.spec.ts:120:5 › mounted signing aborts if the signer changes during delayed wallet routing (472ms)
+  ✓   81 [desktop] › e2e/site.spec.ts:27:5 › hero shows live supply from mainnet and official logos (762ms)
+  ✓   83 [desktop] › e2e/pledge-review-r3.spec.ts:181:5 › R5 unexpected active loan keeps saved exit visible but cannot withdraw (631ms)
+  ✓   84 [mobile] › e2e/pledge-review-r3.spec.ts:123:5 › mounted timeout recovers and late reads never replace the successful retry (419ms)
+  ✓   85 [desktop] › e2e/site.spec.ts:33:5 › gallery renders every on-chain key (594ms)
+  ✓   78 [mobile] › e2e/pledge.spec.ts:50:7 › Pledge dashboard › preview at 390 and morph to active chrome (2.1s)
+  -   89 [mobile] › e2e/pledge.spec.ts:62:7 › Pledge dashboard › sidebar lists Pledge and marks it current
+  -   90 [mobile] › e2e/pledge.spec.ts:74:6 › lender 1440x900: public floor is declared until sealed verification
+  ✓   87 [mobile] › e2e/pledge-review-r3.spec.ts:126:5 › mounted observation age is request-start bounded, with a recoverable error (494ms)
+  ✓   86 [desktop] › e2e/pledge-review-r3.spec.ts:186:5 › R5 nonterminal reconciliation remains UNKNOWN with original ID across reload and never says reconciled (919ms)
+  ✓   92 [mobile] › e2e/pledge-review-r3.spec.ts:131:5 › R4 intact delayed X cannot bind to identical-fields Y after reload (789ms)
+  ✓   91 [mobile] › e2e/pledge.spec.ts:74:6 › lender 390: public floor is declared until sealed verification (855ms)
+  ✓   93 [desktop] › e2e/pledge-review-r3.spec.ts:190:5 › R5 wallet-boundary recheck refuses a legacy exit appearing during asynchronous routing (832ms)
+  ✓   94 [mobile] › e2e/pledge-review-r3.spec.ts:136:5 › R4 production callback parser rejects X signature paired with overwritten Y challenge (672ms)
+  ✓   88 [desktop] › e2e/site.spec.ts:42:5 › verify: a previous-build mainnet call still passes in the browser (1.7s)
+  ✓   96 [desktop] › e2e/pledge-review-r3.spec.ts:196:5 › exit confirm shows the route preview numbers, and cancelling signs no withdrawal (566ms)
+  ✓   95 [mobile] › e2e/site.spec.ts:11:7 › renders / without console errors (1.1s)
+  ✓   99 [desktop] › e2e/pledge-review-r3.spec.ts:206:5 › an unbound route preview is not a withdrawal, and the next Exit previews again (598ms)
+  ✓   97 [mobile] › e2e/pledge-review-r3.spec.ts:141:5 › R4 actual Prepare button cannot hide awaiting or Retryable exit recovery (1.0s)
+  ✓  101 [desktop] › e2e/pledge-review-r3.spec.ts:216:5 › a redirect return of the matching dry-run signature continues that exit once (392ms)
+  ✓  100 [mobile] › e2e/site.spec.ts:11:7 › renders /atlas without console errors (814ms)
+  ✓  103 [desktop] › e2e/pledge-review-r3.spec.ts:226:5 › the Pledge button stays disabled until the forfeiture checkbox is ticked, and the screen comes first (508ms)
+  ✓  102 [mobile] › e2e/pledge-review-r3.spec.ts:145:5 › R4 Pending exit survives Prepare and reload; reconcile never resends it (862ms)
+  ✓  104 [mobile] › e2e/site.spec.ts:11:7 › renders /vault without console errors (829ms)
+  ✓  105 [desktop] › e2e/pledge-review-r3.spec.ts:238:5 › production preview cannot authorize a withdrawal without a provider minimum lock (461ms)
+  ✓  106 [mobile] › e2e/pledge-review-r3.spec.ts:149:5 › R4 saved exit recovery renders without any presentation history (741ms)
+  ✓  107 [mobile] › e2e/site.spec.ts:11:7 › renders /mint without console errors (865ms)
+  ✓   98 [desktop] › e2e/site.spec.ts:47:5 › verify: the previous-build verdict says so, and the current call links its own publish tx (3.2s)
+  ✓  108 [mobile] › e2e/pledge-review-r3.spec.ts:152:5 › R4 new tab recovers FINAL after originating session closes, but not wrong-signer evidence (732ms)
+  ✓  109 [mobile] › e2e/start.spec.ts:3:5 › landing primary CTA launches the app (744ms)
+  ✓  113 [mobile] › e2e/start.spec.ts:7:5 › /start shows the first step and progress dots without a wallet (308ms)
+  ✓  112 [mobile] › e2e/pledge-review-r3.spec.ts:155:5 › R4 lost-owner hash recovery verifies first; a forged hash cannot overwrite the intent (848ms)
+  ✓  114 [mobile] › e2e/start.spec.ts:13:5 › /start fits 390px without horizontal scroll (255ms)
+  ✓  110 [mobile] › e2e/site.spec.ts:11:7 › renders /gallery without console errors (2.1s)
+  ✓  116 [mobile] › e2e/start.spec.ts:19:5 › P1: landing hash and proof links, verify label, key help, gallery traits (1.1s)
+  ✓  115 [mobile] › e2e/pledge-review-r3.spec.ts:158:5 › R5 actual two-tab preflight race: held exit signature excludes delayed loan open and survives reload (1.2s)
+  ✓  111 [desktop] › e2e/site.spec.ts:57:5 › verify: the default page checks the published guarded v2.6 info call (2.4s)
+  ✓  118 [mobile] › e2e/start.spec.ts:30:5 › /start step 1: Google, email code, then wallets (when the Privy app is configured) (316ms)
+  ✓  121 [mobile] › e2e/start.spec.ts:46:5 › /start back from Google: Privy mounts by itself and shows 'Finishing Google sign-in' (285ms)
+  ✓  119 [mobile] › e2e/pledge-review-r3.spec.ts:167:5 › R5 inverse two-tab race: reserved loan excludes an ordinary exit while wallet routing is held (1.2s)
+  ✓  117 [mobile] › e2e/site.spec.ts:11:7 › renders /verify without console errors (1.9s)
+  ✓  122 [mobile] › e2e/pledge-review-r3.spec.ts:177:5 › R5 shared Web Lock admits only one simultaneous open or exit across real tabs (430ms)
+  ✓  120 [desktop] › e2e/site.spec.ts:77:5 › verify: rejects a non-uuid (1.7s)
+  ✓  125 [desktop] › e2e/site.spec.ts:94:5 › gateway: unsigned trades, junk and oversized bodies are refused (40ms)
+  ✓  124 [mobile] › e2e/pledge-review-r3.spec.ts:181:5 › R5 unexpected active loan keeps saved exit visible but cannot withdraw (567ms)
+  ✓  123 [mobile] › e2e/site.spec.ts:11:7 › renders /judge without console errors (856ms)
+  ✓  127 [mobile] › e2e/pledge-review-r3.spec.ts:186:5 › R5 nonterminal reconciliation remains UNKNOWN with original ID across reload and never says reconciled (700ms)
+  ✓  126 [desktop] › e2e/site.spec.ts:103:5 › English only: no language switcher, and /ar redirects home (1.1s)
+  ✓  128 [mobile] › e2e/site.spec.ts:11:7 › renders /ask without console errors (804ms)
+  ✓  131 [mobile] › e2e/site.spec.ts:27:5 › hero shows live supply from mainnet and official logos (652ms)
+  ✓  129 [mobile] › e2e/pledge-review-r3.spec.ts:190:5 › R5 wallet-boundary recheck refuses a legacy exit appearing during asynchronous routing (949ms)
+  ✓  132 [mobile] › e2e/site.spec.ts:33:5 › gallery renders every on-chain key (442ms)
+  ✓  133 [mobile] › e2e/pledge-review-r3.spec.ts:196:5 › exit confirm shows the route preview numbers, and cancelling signs no withdrawal (572ms)
+  ✓  135 [mobile] › e2e/pledge-review-r3.spec.ts:206:5 › an unbound route preview is not a withdrawal, and the next Exit previews again (592ms)
+  ✓  136 [mobile] › e2e/pledge-review-r3.spec.ts:216:5 › a redirect return of the matching dry-run signature continues that exit once (408ms)
+  ✓  137 [mobile] › e2e/pledge-review-r3.spec.ts:226:5 › the Pledge button stays disabled until the forfeiture checkbox is ticked, and the screen comes first (492ms)
+  ✓  134 [mobile] › e2e/site.spec.ts:42:5 › verify: a previous-build mainnet call still passes in the browser (1.7s)
+  ✓  130 [desktop] › e2e/site.spec.ts:115:5 › header Connect wallet opens the selector on the first click on a 6x slower CPU (3.1s)
+  ✓  140 [desktop] › e2e/site.spec.ts:125:5 › header Connect wallet is disabled in server HTML and enabled after hydration (386ms)
+  ✓  138 [mobile] › e2e/pledge-review-r3.spec.ts:238:5 › production preview cannot authorize a withdrawal without a provider minimum lock (574ms)
+  ✓  141 [desktop] › e2e/site.spec.ts:133:5 › header Connect wallet opens the selector on the first click (1.0s)
+  ✓  142 [desktop] › e2e/site.spec.ts:163:5 › sealed vault names MetaMask and a gas-free signature (274ms)
+  ✓  143 [desktop] › e2e/site.spec.ts:172:5 › passive health stays unknown after one GET and never requests a paid probe (306ms)
+  ✓  139 [mobile] › e2e/site.spec.ts:47:5 › verify: the previous-build verdict says so, and the current call links its own publish tx (2.7s)
+  ✓  144 [desktop] › e2e/site.spec.ts:218:5 › holder-only withdrawal shows an immutable NEAR receiver (1.7s)
+  ✓  145 [mobile] › e2e/site.spec.ts:57:5 › verify: the default page checks the published guarded v2.6 info call (1.7s)
+  ✓  146 [desktop] › e2e/site.spec.ts:231:5 › connected account opens a menu instead of disconnecting (885ms)
+  ✓  148 [desktop] › e2e/site.spec.ts:259:7 › a redirect return restores the swap card (756ms)
+  ✓  147 [mobile] › e2e/site.spec.ts:77:5 › verify: rejects a non-uuid (1.3s)
+  ✓  150 [mobile] › e2e/site.spec.ts:94:5 › gateway: unsigned trades, junk and oversized bodies are refused (42ms)
+  ✓  149 [desktop] › e2e/site.spec.ts:259:7 › a redirect return restores the withdraw card (604ms)
+  ✓  151 [mobile] › e2e/site.spec.ts:103:5 › English only: no language switcher, and /ar redirects home (1.0s)
+  ✓  152 [desktop] › e2e/site.spec.ts:287:5 › a decline is gone after a later trade success (2.3s)
+  ✓  153 [mobile] › e2e/site.spec.ts:115:5 › header Connect wallet opens the selector on the first click on a 6x slower CPU (2.7s)
+  ✓  154 [desktop] › e2e/site.spec.ts:316:5 › the session popover stays visible at 390 and Revoke is clickable (v2.5) (1.3s)
+  ✓  155 [mobile] › e2e/site.spec.ts:125:5 › header Connect wallet is disabled in server HTML and enabled after hydration (265ms)
+  ✓  157 [mobile] › e2e/site.spec.ts:133:5 › header Connect wallet opens the selector on the first click (789ms)
+  ✓  158 [mobile] › e2e/site.spec.ts:163:5 › sealed vault names MetaMask and a gas-free signature (252ms)
+  ✓  156 [desktop] › e2e/site.spec.ts:316:5 › the session popover stays visible at 390 and Revoke is clickable (v2.4) (1.3s)
+  ✓  159 [mobile] › e2e/site.spec.ts:172:5 › passive health stays unknown after one GET and never requests a paid probe (279ms)
+  ✓  160 [desktop] › e2e/site.spec.ts:399:5 › the app font and sidebar render at 1440 (317ms)
+  -  162 [desktop] › e2e/site.spec.ts:419:5 › asset rows stay one line at desktop and 390
+  ✓  163 [desktop] › e2e/site.spec.ts:476:5 › MetaMask connect copy names the side panel and the network switch is cream (687ms)
+  ✓  164 [desktop] › e2e/site.spec.ts:494:5 › vault shows a premium empty or offline state; connect opens the wallet selector (554ms)
+  ✓  161 [mobile] › e2e/site.spec.ts:218:5 › holder-only withdrawal shows an immutable NEAR receiver (1.6s)
+  ✓  166 [mobile] › e2e/site.spec.ts:231:5 › connected account opens a menu instead of disconnecting (886ms)
+  ✓  165 [desktop] › e2e/site.spec.ts:502:5 › a connected wallet with no key cannot open the vault (1.3s)
+  ✓  167 [mobile] › e2e/site.spec.ts:259:7 › a redirect return restores the swap card (584ms)
+  ✓  168 [desktop] › e2e/site.spec.ts:524:5 › music is off by default and toggles (563ms)
+  ✓  169 [mobile] › e2e/site.spec.ts:259:7 › a redirect return restores the withdraw card (533ms)
+  ✓  170 [desktop] › e2e/site.spec.ts:531:5 › reduced motion: content is visible immediately (602ms)
+  ✓  171 [mobile] › e2e/site.spec.ts:287:5 › a decline is gone after a later trade success (2.2s)
+  ✓  172 [desktop] › e2e/site.spec.ts:541:5 › navbar: full lockup shown and every page fits the viewport (2.0s)
+  ✓  173 [mobile] › e2e/site.spec.ts:316:5 › the session popover stays visible at 390 and Revoke is clickable (v2.5) (1.3s)
+  ✓  175 [mobile] › e2e/site.spec.ts:316:5 › the session popover stays visible at 390 and Revoke is clickable (v2.4) (1.3s)
+  ✓  176 [mobile] › e2e/site.spec.ts:399:5 › the app font and sidebar render at 1440 (283ms)
+  ✓  177 [mobile] › e2e/site.spec.ts:419:5 › asset rows stay one line at desktop and 390 (931ms)
+  ✓  178 [mobile] › e2e/site.spec.ts:476:5 › MetaMask connect copy names the side panel and the network switch is cream (603ms)
+  ✓  179 [mobile] › e2e/site.spec.ts:494:5 › vault shows a premium empty or offline state; connect opens the wallet selector (489ms)
+  ✓  180 [mobile] › e2e/site.spec.ts:502:5 › a connected wallet with no key cannot open the vault (579ms)
+  ✓  181 [mobile] › e2e/site.spec.ts:524:5 › music is off by default and toggles (504ms)
+  ✓  182 [mobile] › e2e/site.spec.ts:531:5 › reduced motion: content is visible immediately (555ms)
+  ✓  183 [mobile] › e2e/site.spec.ts:541:5 › navbar: full lockup shown and every page fits the viewport (1.8s)
+  -  184 [mobile] › e2e/site.spec.ts:563:5 › home scroll stays inside the viewport
+  -  185 [mobile] › e2e/site.spec.ts:593:5 › pages stay inside the viewport after content loads
+  -  186 [mobile] › e2e/site.spec.ts:616:5 › technical lists are left-aligned; vault traits keep the body face
+  -  187 [mobile] › e2e/site.spec.ts:668:5 › hero: official token logos are visible in the gold-dust hero
+  ✓  188 [mobile] › e2e/site.spec.ts:679:7 › /vault: how-it-works strip is numbered 01/02/03 in order (214ms)
+  ✓  189 [mobile] › e2e/site.spec.ts:679:7 › /mint: how-it-works strip is numbered 01/02/03 in order (225ms)
+  ✓  190 [mobile] › e2e/site.spec.ts:685:5 › judge path links every evidence call to /verify and is reachable from the top bar (1.7s)
+  ✓  191 [mobile] › e2e/site.spec.ts:704:5 › verify: an old-build refusal shows the binding, the previous version and the attested output (1.6s)
+  ✓  192 [mobile] › e2e/site.spec.ts:711:5 › pnl: a tampered share link fails the signature check (263ms)
+  ✓  193 [mobile] › e2e/site.spec.ts:719:5 › ask: a reply whose quote does not carry this browser's nonce is not marked verified (1.2s)
+  ✓  194 [mobile] › e2e/site.spec.ts:732:5 › verify: Intel DCAP passes in the browser and a signed answer shows its key and request binding (2.1s)
+  ✓  195 [mobile] › e2e/site.spec.ts:741:5 › verify: an edited input hash fails the binding and the verdict, and Undo restores it (1.8s)
+  ✓  196 [mobile] › e2e/site.spec.ts:754:5 › verify: one flipped byte of the TD report fails Intel DCAP while the binding still holds (1.2s)
+  ✓  197 [mobile] › e2e/site.spec.ts:763:5 › landing: the handover shows the real withdraw, transfer and refused call, each with its proof (558ms)
+  ✓  174 [desktop] › e2e/site.spec.ts:563:5 › home scroll stays inside the viewport (20.0s)
+  ✓  198 [mobile] › e2e/site.spec.ts:771:5 › verify: Intel revocation lists, TCB Info and QE identity are checked live and the status is shown as Intel reports it (1.6s)
+  ✓  200 [mobile] › e2e/site.spec.ts:779:5 › api/pcs only forwards the fixed Intel endpoints (20ms)
+  ✓  201 [mobile] › e2e/site.spec.ts:788:5 › landing: the 37 browser checks stat links to /verify (540ms)
+  ✓  202 [mobile] › e2e/site.spec.ts:795:5 › key history: a real log re-verifies and an edited row fails (703ms)
+  ✓  199 [desktop] › e2e/site.spec.ts:593:5 › pages stay inside the viewport after content loads (3.7s)
+  ✓  203 [mobile] › e2e/site.spec.ts:809:5 › settle: the real SOL→NEAR order reads SUCCESS live from 1Click and the NO_LIQUIDITY one reads REFUNDED (2.1s)
+  ✓  205 [mobile] › e2e/site.spec.ts:825:5 › settle: dry-run quote and every 1Click status, including REFUNDED and FAILED (1.9s)
+  ✓  204 [desktop] › e2e/site.spec.ts:616:5 › technical lists are left-aligned; vault traits keep the body face (2.8s)
+  ✓  206 [mobile] › e2e/site.spec.ts:842:5 › gallery: every live card shows its token id and links to its history (344ms)
+  ✓  208 [mobile] › e2e/site.spec.ts:852:5 › home: the final band leads to the app and to the proof (559ms)
+  ✓  207 [desktop] › e2e/site.spec.ts:668:5 › hero: official token logos are visible in the gold-dust hero (1.6s)
+  ✓  210 [desktop] › e2e/site.spec.ts:679:7 › /vault: how-it-works strip is numbered 01/02/03 in order (274ms)
+  ✓  211 [desktop] › e2e/site.spec.ts:679:7 › /mint: how-it-works strip is numbered 01/02/03 in order (222ms)
+  ✓  209 [mobile] › e2e/site.spec.ts:859:5 › judge: who sees what, and the Chain Signatures step verifies a published output (1.8s)
+  ✓  213 [mobile] › e2e/site.spec.ts:867:5 › settle: a vault trade is shown end to end with its attested call and intent hash (318ms)
+  ✓  212 [desktop] › e2e/site.spec.ts:685:5 › judge path links every evidence call to /verify and is reachable from the top bar (1.7s)
+  ✓  215 [desktop] › e2e/site.spec.ts:704:5 › verify: an old-build refusal shows the binding, the previous version and the attested output (1.1s)
+  ✓  214 [mobile] › e2e/site.spec.ts:875:5 › verify: when Intel PCS does not answer, the page says so and counts what did pass (2.1s)
+  ✓  216 [desktop] › e2e/site.spec.ts:711:5 › pnl: a tampered share link fails the signature check (252ms)
+  ✓  217 [mobile] › e2e/site.spec.ts:883:5 › production redirect parsing does not consume an overwritten challenge on an older signature (676ms)
+  ✓  218 [desktop] › e2e/site.spec.ts:719:5 › ask: a reply whose quote does not carry this browser's nonce is not marked verified (1.3s)
+  ✓  219 [desktop] › e2e/site.spec.ts:732:5 › verify: Intel DCAP passes in the browser and a signed answer shows its key and request binding (1.6s)
+  ✓  220 [desktop] › e2e/site.spec.ts:741:5 › verify: an edited input hash fails the binding and the verdict, and Undo restores it (1.3s)
+  ✓  221 [desktop] › e2e/site.spec.ts:754:5 › verify: one flipped byte of the TD report fails Intel DCAP while the binding still holds (1.7s)
+  ✓  222 [desktop] › e2e/site.spec.ts:763:5 › landing: the handover shows the real withdraw, transfer and refused call, each with its proof (578ms)
+  ✓  223 [desktop] › e2e/site.spec.ts:771:5 › verify: Intel revocation lists, TCB Info and QE identity are checked live and the status is shown as Intel reports it (2.1s)
+  ✓  224 [desktop] › e2e/site.spec.ts:779:5 › api/pcs only forwards the fixed Intel endpoints (21ms)
+  ✓  225 [desktop] › e2e/site.spec.ts:788:5 › landing: the 37 browser checks stat links to /verify (539ms)
+  ✓  226 [desktop] › e2e/site.spec.ts:795:5 › key history: a real log re-verifies and an edited row fails (581ms)
+  ✓  227 [desktop] › e2e/site.spec.ts:809:5 › settle: the real SOL→NEAR order reads SUCCESS live from 1Click and the NO_LIQUIDITY one reads REFUNDED (1.6s)
+  ✓  228 [desktop] › e2e/site.spec.ts:825:5 › settle: dry-run quote and every 1Click status, including REFUNDED and FAILED (2.2s)
+  ✓  229 [desktop] › e2e/site.spec.ts:842:5 › gallery: every live card shows its token id and links to its history (388ms)
+  ✓  230 [desktop] › e2e/site.spec.ts:852:5 › home: the final band leads to the app and to the proof (541ms)
+  ✓  231 [desktop] › e2e/site.spec.ts:859:5 › judge: who sees what, and the Chain Signatures step verifies a published output (1.2s)
+  ✓  232 [desktop] › e2e/site.spec.ts:867:5 › settle: a vault trade is shown end to end with its attested call and intent hash (288ms)
+  ✓  233 [desktop] › e2e/site.spec.ts:875:5 › verify: when Intel PCS does not answer, the page says so and counts what did pass (1.6s)
+  ✓  234 [desktop] › e2e/site.spec.ts:883:5 › production redirect parsing does not consume an overwritten challenge on an older signature (436ms)
+
+
+  1) [desktop] › e2e/site.spec.ts:11:7 › renders /vault without console errors ─────────────────────
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    +   "Refused to execute script from 'http://127.0.0.1:3189/_next/static/chunks/2np94tfp-4yhs.js' because its MIME type ('text/plain') is not executable, and strict MIME type checking is enabled.",
+    + ]
+
+      21 |     else await expect(page.getByRole("link", { name: /Built on NEAR/ }).first()).toBeVisible();
+      22 |     if (shots) { await page.waitForTimeout(p === "/" ? 8000 : 800); await page.screenshot({ path: `${shots}/${info.project.name}${p === "/" ? "/home" : p}.png`, fullPage: p !== "/" }); }
+    > 23 |     expect(errors).toEqual([]);
+         |                    ^
+      24 |   });
+      25 | }
+      26 |
+        at /workspace/near_hackathon/wt_worker_v2/web/e2e/site.spec.ts:23:20
+
+    Error Context: test-results/site-renders-vault-without-console-errors-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/site-renders-vault-without-console-errors-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/site-renders-vault-without-console-errors-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › e2e/site.spec.ts:11:7 › renders /mint without console errors ──────────────────────
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    +   "Refused to execute script from 'http://127.0.0.1:3189/_next/static/chunks/2np94tfp-4yhs.js' because its MIME type ('text/plain') is not executable, and strict MIME type checking is enabled.",
+    + ]
+
+      21 |     else await expect(page.getByRole("link", { name: /Built on NEAR/ }).first()).toBeVisible();
+      22 |     if (shots) { await page.waitForTimeout(p === "/" ? 8000 : 800); await page.screenshot({ path: `${shots}/${info.project.name}${p === "/" ? "/home" : p}.png`, fullPage: p !== "/" }); }
+    > 23 |     expect(errors).toEqual([]);
+         |                    ^
+      24 |   });
+      25 | }
+      26 |
+        at /workspace/near_hackathon/wt_worker_v2/web/e2e/site.spec.ts:23:20
+
+    Error Context: test-results/site-renders-mint-without-console-errors-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/site-renders-mint-without-console-errors-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/site-renders-mint-without-console-errors-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 flaky
+    [desktop] › e2e/site.spec.ts:11:7 › renders /vault without console errors ──────────────────────
+    [desktop] › e2e/site.spec.ts:11:7 › renders /mint without console errors ───────────────────────
+  15 skipped
+  215 passed (1.6m)

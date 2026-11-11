@@ -1,0 +1,57 @@
+{
+  "status": "source-candidate-not-published",
+  "credit": "devmo",
+  "source_commit_reference": "identity.json#/review/source_commit",
+  "source_tree_sha256": "30d93a8b607f342931c1339c6d79c7006ecef011b792f8bb7600d00046954e20",
+  "worker_candidate": {
+    "status": "source-candidate-not-published",
+    "wasm_sha256": "d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60",
+    "bytes": 1248852,
+    "recipe": "tee/worker/build.sh"
+  },
+  "tests": {
+    "worker": 720,
+    "javascript": 169,
+    "receipts": 9
+  },
+  "actual_wasi_builds": [
+    "d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60",
+    "d0849f3e61d27aeb6e7a18a89b8909e1b2f03d0cfbeffd97937a664f2d4dfe60"
+  ],
+  "live_provider_installation": false,
+  "live_loans": false,
+  "logs": [
+    {
+      "path": "docs/evidence/worker-provisioning/v2/worker-tests.log",
+      "sha256": "4398f1df9e2a42a21d2f31bf914de0c507ace612257a9b5716ecdd8d95d6bb78"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/js-tests.log",
+      "sha256": "b4480eafe65ea05ffb8875125dfccc16552121fc27297f8beda5856a9ea13a70"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/receipt-tests.log",
+      "sha256": "42f237d7abc9eb371abada54db94861f647b2fd2e4008b692ec18dfdcc2e00d5"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/cli-tests.log",
+      "sha256": "a5c811bc32160d6610759f8e935f41e34dca479a2977f20ff47cf01fbf6d8386"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/clippy-native.log",
+      "sha256": "6e5a8cc2b4d85d5b70c21b327c73f83121a0231bfe36c1467434584cb33492a0"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/clippy-wasi.log",
+      "sha256": "d6d6629435b089d3bcaef111f255097a9bd3c0f3738581474cb85bb484c27019"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/build1.log",
+      "sha256": "205ecf47aee2f83ff63064616f07b47ab2be1b5fc671b40585e682e0aa7fa4e9"
+    },
+    {
+      "path": "docs/evidence/worker-provisioning/v2/build2.log",
+      "sha256": "432177a57033ef6e730ac7fd1d9799a7aca87fda6c0c0eff97f58b0816b4b5ea"
+    }
+  ]
+}

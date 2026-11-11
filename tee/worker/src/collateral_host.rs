@@ -446,7 +446,7 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
         .ok_or_else(|| err("storage", "missing quoted deposit"))?;
     let (mid, _) = guarded_minter()?;
     let (r, e) = rpc::tx_status(&hash, &mid, "FINAL");
-    let tx: Value = serde_json::from_str(&r).unwrap_or(Value::Null);
+    let tx: Value = serde_json::from_str(&r).map_err(|_| err("rpc_unavailable", "malformed RPC response"))?;
     let result = if e.is_empty() {
         collateral::registration_terminal(&tx, &hash, &mid, &keys_contract(), p, deposit)
     } else {
@@ -667,6 +667,6 @@ fn op_withdraw_dry_run(input: &Value) -> Result<Value, Error> {
         json!({"ok":true,"op":"withdraw_dry_run","to":to,"amount":amount,"token":token,"chain":chain,
         "amount_out":q["amount_out"],"min_amount_out":q["min_amount_out"],"deadline":q["deadline"],"time_estimate_seconds":q["time_estimate_seconds"],
         "estimated_fee":q["estimated_fee"],"fee_token":q["fee_token"],"hint":q["hint"],
-        "approval_and_cooldown_must_be_verified":true,"broadcast":false}),
+        "approval_and_cooldown_must_be_verified":true,"broadcast":false,"advisory_only":true,"minimum_bound_to_execution":false,"execution_supported":false}),
     )
 }

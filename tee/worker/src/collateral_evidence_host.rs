@@ -281,7 +281,7 @@ fn op_finalize_collateral(input: &Value) -> Result<Value, Error> {
     // Re-read the original FINAL install and the exact public/private policy, not a caller assertion.
     let (mid, _) = guarded_minter()?;
     let (raw, e) = rpc::tx_status(&r.installed_tx, &mid, "FINAL");
-    let tx: Value = serde_json::from_str(&raw).unwrap_or(Value::Null);
+    let tx: Value = serde_json::from_str(&raw).map_err(|_| err("rpc_unavailable", "malformed RPC response"))?;
     let deposit = String::from_utf8(Store::read(&mut Host, &format!("{k}/deposit"))?)
         .ok()
         .and_then(|s| s.parse::<u128>().ok())
@@ -319,7 +319,7 @@ fn op_finalize_collateral(input: &Value) -> Result<Value, Error> {
     let auth: Auth = serde_json::from_value(r.guardian_auth.clone())
         .map_err(|_| err("guardian", "proof missing"))?;
     let (raw, e) = rpc::view_access_key(&auth.account_id, &auth.public_key, "final");
-    let access: Value = serde_json::from_str(&raw).unwrap_or(Value::Null);
+    let access: Value = serde_json::from_str(&raw).map_err(|_| err("rpc_unavailable", "malformed RPC response"))?;
     if !e.is_empty() {
         return Err(err("guardian", "guardian key unavailable"));
     }

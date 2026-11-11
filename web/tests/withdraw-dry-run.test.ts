@@ -8,9 +8,9 @@ const intent = { account: "a.near", token: "nep141:usdc", amount: "1000", chain:
 const good = { ok: true, op: "withdraw_dry_run", to: "a.near", amount: "1000", token: "nep141:usdc", chain: "near", amount_out: "990000", min_amount_out: "985000", broadcast: false };
 
 describe("withdraw dry-run decision (exit preflight)", () => {
-  it("allows the signed withdrawal only when bound to the intent and both route numbers are positive", () => {
-    expect(withdrawDryRunDecision(good, intent)).toEqual({ ok: true, amount_out: "990000", min_amount_out: "985000" });
-    expect(withdrawDryRunDecision({ ...good, amount_out: 990000, min_amount_out: 985000 }, intent)).toMatchObject({ ok: true });
+  it("never authorizes an unbound execution even with a positive matching preview", () => {
+    expect(withdrawDryRunDecision(good, intent)).toMatchObject({ ok: false, reason: expect.stringMatching(/advisory only/) });
+    expect(withdrawDryRunDecision({ ...good, amount_out: 990000, min_amount_out: 985000 }, intent)).toMatchObject({ ok: false });
   });
   it.each([
     ["missing output", undefined, /Route preview unavailable/],
@@ -37,7 +37,7 @@ describe("withdraw dry-run decision (exit preflight)", () => {
   it("the confirm text shows both preview numbers", () => {
     const text = exitConfirmText({ amount_out: "990000", min_amount_out: "985000" }, "1000");
     expect(text).toContain("amount_out 990000");
-    expect(text).toContain("minimum accepted 985000");
+    expect(text).toContain("advisory minimum 985000");
   });
 });
 

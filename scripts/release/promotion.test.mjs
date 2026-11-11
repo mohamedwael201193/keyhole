@@ -179,7 +179,7 @@ test("generator transition preserves historical migration, six owners and immuta
     ),
     old = clone(id),
     e = proof(),
-    k = promotedContract(id, e, artifacts().wasm);
+    k = promotedContract({...id, contract:{...id.contract,wasm_sha256:CANDIDATE,version:"2.6.0"}}, e, artifacts().wasm);
   assert.equal(k.version, "2.6.0");
   assert.equal(k.migrate_pledge_tx, id.contract.migrate_pledge_tx);
   assert.deepEqual(id, old);
@@ -294,6 +294,10 @@ test("full generator code-only promotion works through real RPC boundary and ret
       mkdirSync(join(d, p, ".."), { recursive: true });
       copyFileSync(new URL(p, root), join(d, p));
     }
+    const historical=JSON.parse(original);
+    historical.contract={...historical.contract,version:"2.6.0",wasm_sha256:CANDIDATE};
+    historical.contract_candidate.status="source-candidate-not-deployed";
+    writeFileSync(join(d,"identity.json"),JSON.stringify(historical));
     writeFileSync(join(d, "post.json"), JSON.stringify(e));
     server = createServer(async (req, res) => {
       try {
@@ -429,7 +433,7 @@ test("worker identity rotation preserves every prior build and remains idempoten
   const id = JSON.parse(readFileSync(new URL("../../identity.json", import.meta.url))),
     old = "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
     older = "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
-    original = {...id, worker:{...id.worker,wasm_sha256:old,previous_wasm_sha256:older}},
+    original = {...id, contract:{...id.contract,wasm_sha256:CANDIDATE,version:"2.6.0"}, worker:{...id.worker,wasm_sha256:old,previous_wasm_sha256:older}},
     proof = {ctx:{snapshot:{code:{sha256:CANDIDATE},config:{minter:id.contract.minter}}},publication_tx:"fixture-publish"},
     e = {info:{call_id:"fixture-info"}}, next = promotedWorker(original, proof, e);
   assert.equal(next.wasm_sha256, WORKER);
@@ -438,6 +442,6 @@ test("worker identity rotation preserves every prior build and remains idempoten
   for (const hash of original.worker.historical_wasm_sha256) {
     assert.ok([next.previous_wasm_sha256,...next.historical_wasm_sha256].includes(hash));
   }
-  assert.deepEqual(promotedWorker({...id,worker:next},proof,e),next);
+  assert.deepEqual(promotedWorker({...original,worker:next},proof,e),next);
   assert.equal(original.worker.wasm_sha256,old);
 });

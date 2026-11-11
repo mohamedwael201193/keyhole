@@ -42,7 +42,7 @@ jobs:
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
           want=$(grep ' v2.7/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
-          # Live v2.6 bytes stay in the release tree. This checks the committed file, not a rebuild of main.
+          # Historical v2.6 bytes stay unchanged. The live v2.7 hash is checked below against chain.
           live=$(sha256sum release/v2.6/keyhole_keys.wasm | cut -d' ' -f1)
           [ "$live" = "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a" ]
       - name: build sandbox-only callback failure fixture (never deploy)

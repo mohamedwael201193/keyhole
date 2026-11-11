@@ -764,3 +764,32 @@ price/LTV liquidation oracle. Default transfers the **entire** wallet/NFT,
 including excess/unrelated assets; there is no auction or proportional surplus
 return. Team-party repayment/default pilots prove mechanism, not organic demand,
 independent-party safety, immutable governance or guaranteed lender recovery.
+
+## PR208 V2 repair boundary
+
+Credit: devmo. Exact decrypted readback is closed-schema: wallet_id binds to the
+manifest, policy-bearing fields compare exactly, refund_addresses absence/empty
+map means reviewed provider-derived defaults, and null/unknown authority fields
+are refused. Only documented usage counters are variable metadata. The common
+predicate is re-used for reports, finalization and frozen certificate reads.
+Malformed successful RPC text is unavailable, not absence; error wrappers and
+wrong object/array schemas fail closed before admission side effects.
+
+OutLayer's documented WithdrawRequest has no minimum/quote-lock field. Dry-run
+amount_out/min_amount_out is advisory only. This unpublished candidate blocks ALL
+withdraw execution before custody, spend reservations and POSTs, even when a
+holder signs a minimum/deadline. Live funding and lending must not begin until a
+documented minimum-bound mechanism is reviewed, or a separate explicit
+slippage/fee policy is approved and implemented. No API parameter was guessed, no
+public fallback substituted and no positive preview promoted into recovery proof.
+The UI also refuses to turn advisory previews into withdrawal authorization.
+
+Live contract metadata v2.7 is evidence-promoted, not redeployed. Existing
+contracts/ files are unchanged; verifiers select release/v2.7 bytes while keeping
+the old deployed/v2.6 evidence intact. Historical migration/worker attestations
+remain verifiable. The new worker remains unpublished; these local tests prove
+source behavior, not live provider confinement, runtime measurement or A/B loans.
+Compute wrappers use OUTLAYER_PAYMENT_KEY nonce 2, with the pinned CLI's scoped
+PAYMENT_KEY alias on submission and polling. Key 1 personal credit is separate.
+Actual grant usage, fees, destination terminal receipts and all budget reserves
+remain execution evidence, never inferred from test fixtures.

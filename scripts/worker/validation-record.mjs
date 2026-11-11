@@ -1,0 +1,42 @@
+// Candidate-scoped reproducible source validation, never live-provider evidence.
+import {readFileSync,writeFileSync,readdirSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import {resolve} from 'node:path';
+import assert from 'node:assert/strict';
+const root=fileURLToPath(new URL('../..',import.meta.url));
+const read=p=>readFileSync(resolve(root,p));
+const sha=b=>createHash('sha256').update(b).digest('hex');
+const dir='docs/evidence/worker-provisioning/v2/';
+const walk=p=>readdirSync(resolve(root,p),{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
+export function sourceDigest() {
+ const paths=[...walk('tee/worker/src'),...walk('tee/worker/wit'),'tee/worker/Cargo.toml','tee/worker/Cargo.lock','tee/worker/build.sh','tee/worker/rust-toolchain.toml'].sort();
+ return sha(paths.map(p=>p+'\0'+sha(read(p))+'\n').join(''));
+}
+export function validateRecord(record,id,digest,counts) {
+ assert.equal(record.status,'source-candidate-not-published');
+ assert.deepEqual(record.worker_candidate,id.worker_candidate);
+ assert.equal(record.source_tree_sha256,digest);
+ assert.deepEqual(record.tests,counts);
+ assert.equal(record.source_commit_reference,'identity.json#/review/source_commit');
+ assert.ok(record.tests.worker>=711 && record.tests.javascript>=151 && record.tests.receipts===9);
+ assert.equal(record.actual_wasi_builds[0],id.worker_candidate.wasm_sha256);
+ assert.equal(record.actual_wasi_builds[1],id.worker_candidate.wasm_sha256);
+}
+export function makeRecord() {
+ const worker=[...read(dir+'worker-tests.log').toString().matchAll(/test result: ok\. (\d+) passed/g)].reduce((s,m)=>s+Number(m[1]),0);
+ const js=Number(read(dir+'js-tests.log').toString().match(/# pass (\d+)/)?.[1]);
+ const receipts=Number(read(dir+'receipt-tests.log').toString().match(/Ran (\d+) tests/)?.[1]);
+ return {status:'source-candidate-not-published',credit:'devmo',source_commit_reference:'identity.json#/review/source_commit',source_tree_sha256:sourceDigest(),worker_candidate:JSON.parse(read('identity.json')).worker_candidate,tests:{worker,javascript:js,receipts},actual_wasi_builds:['build1.sha256','build2.sha256'].map(p=>read(dir+p).toString().trim()),live_provider_installation:false,live_loans:false,logs:['worker-tests.log','js-tests.log','receipt-tests.log','cli-tests.log','clippy-native.log','clippy-wasi.log','build1.log','build2.log'].map(p=>({path:dir+p,sha256:sha(read(dir+p))}))};
+}
+if(process.argv[1]===fileURLToPath(import.meta.url)) {
+ const actual=makeRecord(),id=JSON.parse(read('identity.json'));
+ if(process.argv.includes('--write'))writeFileSync(resolve(root,dir+'validation.json'),JSON.stringify(actual,null,2)+'\n');
+ const record=JSON.parse(read(dir+'validation.json'));
+ validateRecord(record,id,sourceDigest(),actual.tests);
+ assert.deepEqual(record,actual);
+ const readme=read('README.md').toString();
+ assert.ok(readme.includes(`TEE worker unit tests | **${record.tests.worker}**`));
+ for(const p of ['docs/worker/confinement-v2.md',dir+'validation.json','tee/worker/src/collateral_evidence/tests.rs'])assert.ok(readme.includes(p));
+ console.log('PASS candidate source digest, exact counts, artifacts, logs and proof links');
+}

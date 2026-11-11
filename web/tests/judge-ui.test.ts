@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CONTRACT_CODE_HASH, WORKER_WASM_SHA256 } from "@/lib/config";
+import { IDENTITY } from "@/lib/identity.gen";
 import { GLOSSARY } from "@/lib/glossary";
 
 const b58 = (buf: Buffer) => { const A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"; let n = BigInt("0x" + buf.toString("hex")), s = ""; while (n > 0n) { s = A[Number(n % 58n)] + s; n /= 58n; } return s; };
@@ -9,7 +10,8 @@ const judge = readFileSync(new URL("../app/judge/page.tsx", import.meta.url), "u
 
 describe("judge page", () => {
   it("CONTRACT_CODE_HASH is the base58 sha256 of the committed wasm", () => {
-    const w = readFileSync(new URL("../../contracts/keys/deployed/keyhole_keys.wasm", import.meta.url));
+    const path = IDENTITY.contract.version === "2.7.0" ? "../../contracts/keys/release/v2.7/keyhole_keys.wasm" : "../../contracts/keys/deployed/keyhole_keys.wasm";
+    const w = readFileSync(new URL(path, import.meta.url));
     expect(CONTRACT_CODE_HASH).toBe(b58(createHash("sha256").update(w).digest()));
   });
   it("step 1 names the current build, not a previous one", () => {

@@ -145,8 +145,13 @@ fn production_driver_rejects_wrong_request_identity_and_unknown_quote_resend() {
 fn production_driver_routes_each_confidential_mutation_through_identical_journal_protocol() {
     for (kind,path)in [("swap","swap"),("copy","swap"),("withdraw","withdraw"),("transfer","transfer")] {
         let mut host=ProviderFixture::default();let mut j=journal();j.kind=kind.into();j.body=match kind{"withdraw"=>json!({"chain":"near","to":"alice.near","token":ASSET,"amount":"100"}),"transfer"=>json!({"to":"alice.near","token":ASSET,"amount":"100"}),_=>json!({"token_in":ASSET,"token_out":"nep141:wrap.near","amount_in":"100","min_amount_out":"1"})};
-        assert_eq!(drive_provider(&mut host,&j,"key",false).unwrap()["admission_finished"],true);
-        assert_eq!(host.paths,vec![path]);assert_eq!(host.executions,1);
+        if kind=="withdraw" {
+            assert_eq!(drive_provider(&mut host,&j,"key",false).unwrap_err().code,"withdraw_execution_unavailable");
+            assert_eq!(host.post_calls,0);assert_eq!(host.executions,0);
+        } else {
+            assert_eq!(drive_provider(&mut host,&j,"key",false).unwrap()["admission_finished"],true);
+            assert_eq!(host.paths,vec![path]);assert_eq!(host.executions,1);
+        }
     }
 }
 
@@ -197,4 +202,25 @@ fn production_driver_routes_each_confidential_mutation_through_identical_journal
  let mut host=ProviderFixture::default();host.row["status"]=json!("completed");let j=journal();
  let out=drive_provider(&mut host,&j,"key",false).unwrap();assert_eq!(out["status"],"success");assert_eq!(out["admission_finished"],true);
  assert_eq!(merged_history(&mut host,"keys.near","k1",vec![]).unwrap()[0]["status"],"success");
+}
+
+#[test]
+fn no_withdrawal_preview_can_bypass_the_actual_provider_driver_or_reconciler() {
+ for reconcile in [false,true] {
+  for (field,value) in [("min_amount_out",json!(null)),("min_amount_out",json!("90")),("deadline_ms",json!(0)),("preview_amount_out",json!("1")),("quote_id",json!("changed"))] {
+   let mut j=journal();j.kind="withdraw".into();j.body=json!({"chain":"near","to":"alice.near","amount":"100","token":ASSET,"min_amount_out":"90","deadline_ms":2000});j.body[field]=value;
+   let mut host=ProviderFixture::default();
+   assert!(drive_provider(&mut host,&j,"key",reconcile).is_err());
+   assert_eq!(host.post_calls,0);assert_eq!(host.executions,0);
+  }
+ }
+}
+
+#[test]
+fn blocked_withdrawal_still_allows_read_only_recovery_of_an_existing_original_provider_id() {
+ let mut j=journal();j.kind="withdraw".into();j.body=json!({"chain":"near","to":"alice.near","token":ASSET,"amount":"100"});
+ let mut host=ProviderFixture::default();
+ put_once(&mut host,&format!("{}/provider",j.key()),ID.as_bytes()).unwrap();
+ assert_eq!(drive_provider(&mut host,&j,"key",true).unwrap()["admission_finished"],true);
+ assert_eq!(host.post_calls,0);assert_eq!(host.executions,0);
 }

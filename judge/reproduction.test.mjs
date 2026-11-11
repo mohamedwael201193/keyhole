@@ -43,6 +43,6 @@ test("live and source candidates stay distinct and presentation has no visible d
   const visible = readme.replace(/\]\([^\n]*?\)/g, "](...)");
   assert.doesNotMatch(visible, /\b20\d{2}-\d{2}-\d{2}\b/);
   assert.doesNotMatch(visible, /health FAIL|result remains the FAIL|mainnet remains v2\.4|v2\.4[^\n]*live now/);
-  assert.match(readme, /Contract source candidate \*\*2\.7\.0\*\*, staged for deploy, not live/);
+  assert.match(readme, /Contract source candidate \*\*2\.7\.0\*\*, matches live deployment/);
   assert.match(readme, /worker-provisioning\/R2\.md/);
 });

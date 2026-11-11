@@ -26,9 +26,9 @@ ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
 # ---------------- contract (live RPC) ----------------
 add("contract-code-hash", f"Mainnet code_hash {K['code_hash']} equals base58 sha256 of the committed deployed contract", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
-    {"type":"code_hash","account":K["account"],"wasm":"contracts/keys/deployed/keyhole_keys.wasm","code_hash":K["code_hash"]}, "chain == committed deployed wasm == identity", "bash judge/1-contract.sh --strict")
-add("contract-wasm-sha", f"Deployed contract wasm is {K['bytes']:,} bytes with sha256 {K['wasm_sha256']}", where(RD,K["wasm_sha256"]), "file", "contracts/keys/deployed/keyhole_keys.wasm",
-    {"type":"sha256","path":"contracts/keys/deployed/keyhole_keys.wasm","sha256":K["wasm_sha256"],"bytes":K["bytes"]}, f"sha256 {K['wasm_sha256']}, {K['bytes']} bytes")
+    {"type":"code_hash","account":K["account"],"wasm":("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),"code_hash":K["code_hash"]}, "chain == committed deployed wasm == identity", "bash judge/1-contract.sh --strict")
+add("contract-wasm-sha", f"Deployed contract wasm is {K['bytes']:,} bytes with sha256 {K['wasm_sha256']}", where(RD,K["wasm_sha256"]), "file", ("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),
+    {"type":"sha256","path":("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),"sha256":K["wasm_sha256"],"bytes":K["bytes"]}, f"sha256 {K['wasm_sha256']}, {K['bytes']} bytes")
 add("contract-source-version", f"NEP-330 mainnet source metadata reports version {K['version']}", where(RD,K["version"]), "mainnet view", "contract_source_metadata()",
     {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":K["version"]}, f"version == {K['version']}")
 cfg = {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}

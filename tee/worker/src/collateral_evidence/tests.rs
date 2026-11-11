@@ -969,3 +969,19 @@ fn different_uuid_and_key_cannot_alias_existing_fresh_public_identity() {
     assert!(st.read(&tkey("second", "wallet")).unwrap().is_empty());
     assert_eq!(alias.0, 1);
 }
+
+#[test]
+fn resigned_wrong_readback_wallet_or_extra_authority_never_finalizes_or_certifies() {
+    for (field, value) in [("wallet_id",json!("different-wallet")),("refund_addresses",json!({"base":"unreviewed-address"})),("unknown_authority",json!({"allowed":true}))] {
+        let mut p = fixture();
+        let mut r: EffectiveReport = serde_json::from_str(&p.report.message).unwrap();
+        r.effective_policy[field] = value;
+        p.report = signed(REPORT, &r, &[21; 32]).unwrap();
+        assert!(verify(&p).is_err());
+        let mut s = Mem::default();
+        assert!(finish(&mut s, &p).is_err());
+        assert!(s.writes.is_empty());
+        r.effective_policy["frozen"] = json!(true);
+        assert!(!effective_with_freeze(&p.expected_policy,&r.effective_policy,&p.prepared,"keys.near",true));
+    }
+}

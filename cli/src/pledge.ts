@@ -25,9 +25,9 @@ export const LIEN_REFUSALS = [
   { action: "list", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:472-478 nft_list (assert_token_idle)" },
   { action: "buy", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:521-522 nft_buy (assert_can_change_owner)" },
   { action: "sale", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/sale.rs:49 open_sale (assert_can_change_owner)" },
-  { action: "withdraw", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_withdraw via guard_preflight (tee/worker/src/main.rs:557)" },
-  { action: "swap", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap via guard_preflight (tee/worker/src/main.rs:508)" },
-  { action: "copy", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap(copy) via guard_preflight (tee/worker/src/main.rs:508)" },
+  { action: "withdraw", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_withdraw via guard_preflight (tee/worker/src/main.rs:564)" },
+  { action: "swap", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap via guard_preflight (tee/worker/src/main.rs:515)" },
+  { action: "copy", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap(copy) via guard_preflight (tee/worker/src/main.rs:515)" },
   { action: "withdraw_dry_run", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached via guard_preflight (tee/worker/src/guarded_host.rs:23-24)" },
 ] as const;
 

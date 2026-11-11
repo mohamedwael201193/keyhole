@@ -242,11 +242,33 @@ pub fn effective_policy_matches(
     p: &Prepared,
     contract: &str,
 ) -> bool {
+    // Complete reviewed policy projection; metadata is a closed allowlist, never
+    // a reason to ignore a newly introduced authority surface.
+    const POLICY: &[&str] = &["wallet_id", "rules", "approval", "capabilities", "authorized_key_hashes", "refund_addresses"];
+    const META: &[&str] = &["policy", "controller", "version", "locked", "frozen", "usage"];
+    let (Some(e), Some(o)) = (expected.as_object(), observed.as_object()) else { return false; };
+    if e.keys().any(|k| !POLICY.contains(&k.as_str()))
+        || o.keys().any(|k| !POLICY.contains(&k.as_str()) && !META.contains(&k.as_str()))
+        || !e.get("wallet_id").and_then(Value::as_str).is_some_and(|s| !s.is_empty())
+        || o.get("wallet_id") != e.get("wallet_id")
+        || o.get("usage").is_some_and(|v| !v.is_object())
+    { return false; }
+    // No refund entries means provider-derived destination defaults. Explicit
+    // empty object and absence are equivalent; null is NOT an empty map.
+    let refunds = |v: &Value| -> Option<Value> {
+        match v.get("refund_addresses") {
+            None => Some(json!({})),
+            Some(Value::Object(m)) if m.values().all(Value::is_string) => Some(json!(m)),
+            _ => None,
+        }
+    };
+    let Some(refunds_expected) = refunds(expected) else { return false; };
     observed["policy"] == "stored"
         && observed["controller"] == contract
         && observed["version"].as_u64() == Some(p.version)
         && observed["locked"] == true
         && observed["frozen"] == false
+        && refunds(observed) == Some(refunds_expected)
         && ["rules", "approval", "capabilities", "authorized_key_hashes"]
             .iter()
             .all(|k| !expected[*k].is_null() && observed[*k] == expected[*k])

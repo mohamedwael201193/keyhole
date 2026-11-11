@@ -1395,3 +1395,6 @@ pub mod native_send;
 
 /// Two-phase confinement evidence; loan certificate ABI is unchanged.
 pub mod collateral_evidence;
+
+pub mod rpc_view;
+pub mod withdrawal_protection;
