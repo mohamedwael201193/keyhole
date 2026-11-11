@@ -1,0 +1,145 @@
+{
+  "network": "DISPOSABLE LOCAL NEAR SANDBOX ONLY; never mainnet",
+  "provider": "Custody/keystore/registry/HTTP/sealing are explicit mocks, not a live provider confinement proof",
+  "started_at_cairo": "2026-11-11T02:19:46.811000+02:00",
+  "finished_at_cairo": "2026-11-11T02:20:57.472687+02:00",
+  "browser_passed": 1,
+  "failed": 0,
+  "flaky": 0,
+  "receipts": [
+    {
+      "hash": "8HX6iGZqq5zEFUXAVX6jXHSRmynZcbyPqKfgEZXcBs9A",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "register_payout_account",
+        "open_loan"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "JMV9MHdkgwibgZxHBWdT67Sfn2REQ3YuEPWBYthV16W",
+      "signer_id": "ui-lender.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "register_payout_account",
+        "fund_loan"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "5fU45wds22eU3VoJV983bwvwJVsS6Y6ZYneiJEo75cgt",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "claim_payout"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "4J2kwN34XzipMWwJoXR8DgeJjgHTagifueotYxLKsHSx",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "repay_loan"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "3FrS2NGZXpfZr9vnGAC5c5twV5yycxUbQnKkJXdK9Bqw",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "retry_loan_policy"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "CusxDPqwALphFkvv43zZSRbww6XHRmMmqzH33fcNpMF6",
+      "signer_id": "ui-lender.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "claim_payout"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "HqYqoBhcLTa9r92nA4ztLFVr7XiWbiUBPvBhg2X4gmPB",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "claim_payout"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "JEDUPC2dTvMACB7LC8wZ7cyLY9u8op6FjrfzwprvXotc",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "open_loan"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "6AnLorxvWMTFeZ2KBasWSmVGzq8Nzu379xgeFRcpjekG",
+      "signer_id": "ui-lender.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "fund_loan"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "3eJyxajDzgVbuUa7qozXo5m4TWDytZFNf9TErFUz2DgS",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "claim_payout"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "ELCrUfxKGeVLhHL3N32w1xSc6u5tt6AYuKBqgXDnhZGL",
+      "signer_id": "ui-lender.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "claim_default"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "H7p9V2YuBBFeG89woxb2HjYBUY4TBXQemGEoRF2GqgYm",
+      "signer_id": "ui-lender.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "retry_loan_policy"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    },
+    {
+      "hash": "aQXqAGB7we8YrfULM8BK8TiXkp7gxBmvCVhyLDwssiP",
+      "signer_id": "ui-borrower.test.near",
+      "receiver_id": "ui-keys.test.near",
+      "method_names": [
+        "claim_payout"
+      ],
+      "final_execution_status": "FINAL",
+      "success": true
+    }
+  ],
+  "original_receipt_file_sha256": "1f6ad11599d509673c5142f280cc47d4e4ea0f68f18d48f5ecb09a1a27b3738d",
+  "original_bodies_private_not_committed": true
+}

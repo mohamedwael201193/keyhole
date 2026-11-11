@@ -1,0 +1,186 @@
+
+> keyhole-web@1.0.0 test
+> vitest run --reporter=default --reporter=json --outputFile=/workspace/near_hackathon/.secrets/ci-v26/web-unit-delivery.json
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.12 /workspace/near_hackathon/wt_release/web
+
+ ✓ tests/nearai-dcap.test.ts (24 tests) 261ms
+ ✓ tests/sourceTarball.test.ts (2 tests) 298ms
+ ✓ tests/pcs.test.ts (29 tests) 288ms
+ ✓ tests/claims.test.ts (5 tests) 397ms
+ ✓ tests/near-connect.test.ts (10 tests) 410ms
+ ✓ tests/integration196.test.ts (20 tests) 133ms
+ ✓ tests/dcap.test.ts (6 tests) 109ms
+ ✓ tests/pledge-review-r4.test.ts (26 tests) 142ms
+ ✓ tests/tamper.test.ts (6 tests) 146ms
+ ✓ tests/keyRecord.test.ts (21 tests) 183ms
+ ✓ tests/nep413.test.ts (9 tests) 168ms
+ ✓ tests/keyProof.test.ts (22 tests) 127ms
+ ✓ tests/more.test.ts (25 tests) 137ms
+ ✓ tests/pledge-review-r3.test.ts (30 tests) 129ms
+ ✓ tests/dashboard.test.ts (36 tests) 474ms
+ ✓ tests/prerender.test.ts (5 tests) 293ms
+ ✓ tests/domain.test.ts (31 tests) 79ms
+ ✓ tests/keys-v7.test.ts (13 tests) 88ms
+ ✓ tests/wallet-dependencies.test.ts (7 tests) 2420ms
+     ✓ migrates x402's single-argument records in both ESM and CJS without loosening payment validation  699ms
+     ✓ keeps all old and current viem ABI encoders compatible with the dual-zod ABI release  1407ms
+ ✓ tests/ai.test.ts (7 tests) 47ms
+ ✓ tests/privy-signer.test.ts (1 test) 104ms
+ ✓ tests/pledge-labels.test.ts (14 tests) 52ms
+ ✓ tests/tokens-list.test.ts (13 tests) 93ms
+ ✓ tests/chainsig.test.ts (14 tests) 84ms
+ ✓ tests/activity-orders.test.ts (45 tests) 117ms
+ ✓ tests/keylog.test.ts (5 tests) 101ms
+ ✓ tests/app-shell.test.ts (24 tests) 133ms
+ ✓ tests/health-route.test.ts (5 tests) 30ms
+ ✓ tests/token-marks.test.ts (30 tests) 37ms
+ ✓ tests/pnl.test.ts (3 tests) 40ms
+ ✓ tests/design-system-v2.test.ts (30 tests) 45ms
+ ✓ tests/activity-mine.test.ts (33 tests) 101ms
+ ✓ tests/ui-kit-v3.test.ts (26 tests) 38ms
+ ✓ tests/oldproof.test.ts (225 tests) 25ms
+ ✓ tests/agentPolicy.test.ts (48 tests) 16ms
+ ✓ tests/binding.test.ts (5 tests) 15ms
+ ✓ tests/audit.test.ts (35 tests) 39ms
+ ✓ tests/tokens-registry.test.ts (13 tests) 19ms
+ ✓ tests/amount.test.ts (8 tests) 55ms
+ ✓ tests/pointers.test.ts (8 tests) 37ms
+ ✓ tests/pledge-client.test.ts (15 tests) 14ms
+ ✓ tests/signin-modal.test.ts (12 tests) 21ms
+ ✓ tests/p2-errors.test.ts (136 tests) 27ms
+ ✓ tests/pledge-lifecycle.test.ts (6 tests) 14ms
+ ✓ tests/landing.test.ts (18 tests) 24ms
+ ✓ tests/pledge-view.test.ts (4 tests) 17ms
+ ✓ tests/judgepanel.test.ts (24 tests) 8ms
+ ✓ tests/check.test.ts (6 tests) 13ms
+ ✓ tests/p2-policy-verify.test.ts (79 tests) 15ms
+ ✓ tests/p2-agentapi.test.ts (65 tests) 17ms
+ ✓ tests/locked-hashes.test.ts (1 test) 14ms
+ ✓ tests/pledge-review-r5.test.ts (23 tests) 12ms
+ ✓ tests/loan-certificate.test.ts (21 tests) 15ms
+ ✓ tests/oneclick-table.test.ts (47 tests) 15ms
+ ✓ tests/pledge-review-safety.test.ts (22 tests) 10ms
+ ✓ tests/sale.test.ts (22 tests) 7ms
+ ✓ tests/pledge-money.test.ts (8 tests) 21ms
+ ✓ tests/keysTx.test.ts (21 tests) 11ms
+ ✓ tests/deposit-quote.test.ts (11 tests) 10ms
+ ✓ tests/judge-ui.test.ts (22 tests) 11ms
+ ✓ tests/pledge-lender.test.ts (2 tests) 10ms
+ ✓ tests/gateway.test.ts (18 tests) 10ms
+ ✓ tests/pairCheck.test.ts (8 tests) 5ms
+ ✓ tests/swap-v3.test.ts (17 tests) 7ms
+ ✓ tests/session-client.test.ts (16 tests) 10ms
+ ✓ tests/workerMaintenance.test.ts (1 test) 13ms
+ ✓ tests/swap-progress.test.ts (17 tests) 9ms
+ ✓ tests/destination.test.ts (9 tests) 8ms
+ ✓ tests/fundsPath.test.ts (15 tests) 5ms
+ ✓ tests/keylog-v2.test.ts (7 tests) 6ms
+ ✓ tests/tokens-v3.test.ts (5 tests) 9ms
+ ✓ tests/social-start.test.ts (10 tests) 10ms
+ ✓ tests/pledge-integration-merge.test.ts (4 tests) 9ms
+ ✓ tests/vault-v3.test.ts (12 tests) 10ms
+ ✓ tests/oneclick.test.ts (10 tests) 11ms
+ ✓ tests/keyStore.test.ts (6 tests) 4ms
+ ✓ tests/funded-final-observer.test.ts (9 tests) 7ms
+ ✓ tests/trade.test.ts (4 tests) 7ms
+ ✓ tests/pledge-economics.test.ts (12 tests) 5ms
+ ✓ tests/judge-step4-builds.test.ts (3 tests) 4ms
+ ✓ tests/fund-order.test.ts (7 tests) 5ms
+ ✓ tests/live-checks.test.ts (9 tests) 5ms
+ ✓ tests/gpuNonce.test.ts (16 tests) 6ms
+ ✓ tests/keys-api.test.ts (8 tests) 6ms
+ ✓ tests/pledge-certificate-gateway.test.ts (2 tests) 4ms
+ ✓ tests/judgewalk-p0.test.ts (27 tests) 6ms
+ ✓ tests/fund-any-chain.test.ts (5 tests) 5ms
+ ✓ tests/demo.test.ts (4 tests) 4ms
+ ✓ tests/shell-topbar.test.ts (8 tests) 4ms
+ ✓ tests/settle-v3.test.ts (6 tests) 6ms
+ ✓ tests/healthLabel.test.ts (5 tests) 4ms
+ ✓ tests/privy-oauth-resume.test.ts (5 tests) 3ms
+ ✓ tests/start-ux.test.ts (4 tests) 4ms
+ ✓ tests/trust.test.ts (2 tests) 3ms
+ ✓ tests/vault-labels.test.ts (3 tests) 3ms
+ ✓ tests/metamask-flag.test.ts (4 tests) 3ms
+ ✓ tests/price.test.ts (2 tests) 2ms
+ ✓ tests/reown.test.ts (2 tests) 2ms
+ ✓ tests/wallet-patch-lifecycle.test.ts (7 tests) 5741ms
+     ✓ patches every pristine ESM/CJS file, then accepts two byte-identical repeat runs  2026ms
+     ✓ rejects unknown pristine bytes even with unchanged match counts, before any file is modified  1071ms
+     ✓ rejects corrupted patched bytes instead of accepting arbitrary six-match content  989ms
+     ✓ rejects a consumer version change before writing any otherwise valid file  753ms
+     ✓ rejects a missing consumer before partially migrating the other package  779ms
+
+ Test Files  99 passed (99)
+      Tests  1793 passed (1793)
+   Start at  02:27:22
+   Duration  6.00s (transform 4.04s, setup 0ms, import 12.81s, tests 13.78s, environment 7ms)
+
+JSON report written to /workspace/near_hackathon/.secrets/ci-v26/web-unit-delivery.json
+
+> keyhole-web@1.0.0 build
+> next build
+
+▲ Next.js 16.4.3 (Turbopack)
+✓ Running next.config.ts took 189ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 708ms
+  Running TypeScript ...
+  Finished TypeScript in 8.8s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/29) ...
+  Generating static pages using 7 workers (7/29)
+  Generating static pages using 7 workers (14/29)
+  Generating static pages using 7 workers (21/29)
+✓ Generating static pages using 7 workers (29/29) in 618ms
+  Finalizing page optimization ...
+
+Route (app)                 Revalidate  Expire
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /api/agent
+├ ƒ /api/ai
+├ ƒ /api/check
+├ ƒ /api/health
+├ ƒ /api/keyhole
+├ ƒ /api/keys
+├ ƒ /api/oneclick
+├ ƒ /api/oneclick/deposit
+├ ƒ /api/oneclick/fund
+├ ƒ /api/pcs
+├ ƒ /api/pledge-sandbox
+├ ƒ /api/prices
+├ ƒ /api/supply
+├ ƒ /api/tokens
+├ ƒ /api/worker
+├ ○ /apple-icon.png
+├ ○ /ask
+├ ○ /atlas
+├ ○ /attack
+├ ○ /dashboard
+├ ○ /demo
+├ ƒ /gallery
+├ ƒ /identity
+├ ○ /judge
+├ ○ /key
+├ ○ /keys
+├ ○ /manifest.webmanifest
+├ ○ /mint                           1m      1y
+├ ○ /pledge
+├ ƒ /pledge/lend/[tokenId]
+├ ○ /pnl
+├ ○ /settle
+├ ○ /source
+├ ○ /start
+├ ○ /swap
+├ ○ /vault                          1m      1y
+└ ƒ /verify
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

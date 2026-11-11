@@ -1,0 +1,2 @@
+PASS python3 judge/gen-claims.py . produces byte-identical docs/claims.json
+SHA256 177b4d9f1f75630e0697f0ec3fa33d37edfc47c045a3d3b961f664e7c2d58df7
