@@ -26,7 +26,7 @@ test("ordinary payout consent and original custody recovery survive reload witho
     if(j.method==='block')return route.fulfill({json:{result:{header:{hash:'block42',height:41}}}});
     if(j.method==='tx')return route.fulfill({json:{error:{message:'Unknown transaction'}}});
     const value=({payout_storage_cost:payoutCost,payout_account_registered:registered,get_payout_credit:'0',get_pending_payout:null} as any)[m];
-    await route.fulfill({json:{result:{result:[...Buffer.from(JSON.stringify(value))]}}});
+    await route.fulfill({json:{result:{block_hash:"block42",result:[...Buffer.from(JSON.stringify(value))]}}});
   });
   await page.route('**/api/worker',async route=>{const j=route.request().postDataJSON();expect(j.op).toBe('reconcile_value_op');const signed=JSON.parse(j.auth.message);expect(signed.params).toEqual({token_id:'k1234',value_op_id:id});reconciles++;await route.fulfill({json:{call_id:'local-test',output:{ok:reconciles>1,value_op_id:id,status:reconciles>1?'success':'processing',admission_finished:reconciles>1}}});});
   await page.goto(url);
@@ -67,7 +67,7 @@ test("Vault cashout keeps UNKNOWN across reload and binds FINAL receipt before d
     if (j.method === 'block') return route.fulfill({json:{result:{header:{hash:'block42',height:j.params?.block_id?42:41}}}});
     const m = j.params?.method_name;
     const value = ({payout_storage_cost:'3200000000000000000000',payout_account_registered:true,get_payout_credit:claimed?'0':'10',get_pending_payout:claimed&&chainPending?{nonce:'1',amount:'10'}:null} as any)[m];
-    await route.fulfill({json:{result:{result:[...Buffer.from(JSON.stringify(value))]}}});
+    await route.fulfill({json:{result:{block_hash:"block42",result:[...Buffer.from(JSON.stringify(value))]}}});
   });
   await page.goto(url);
   const claim = page.getByRole('button',{name:'Claim native NEAR'});
