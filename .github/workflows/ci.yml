@@ -190,7 +190,19 @@ jobs:
       - run: npx vitest run --reporter=default --reporter=json --outputFile="$RUNNER_TEMP/v.json"
       - run: echo "| web-unit | $(node -p "require(process.env.RUNNER_TEMP+'/v.json').numPassedTests") |" >> "$GITHUB_STEP_SUMMARY"
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - name: install chromium
+        run: |
+          set -euo pipefail
+          npx playwright install chromium
+          deps=0
+          for i in 1 2 3; do
+            if npx playwright install-deps chromium; then deps=1; break; fi
+            echo "system library install attempt ${i} failed"
+            sleep 25
+          done
+          if [ "$deps" != 1 ]; then
+            echo "system libraries were not installed; the browser launch is the check"
+          fi
       - name: e2e against the local production build (reads mainnet live)
         run: |
           PORT="${KH_E2E_PORT:-3174}"; export BASE_URL="http://localhost:$PORT"
