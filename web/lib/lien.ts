@@ -1,28 +1,36 @@
 /**
  * Lien facts for one key, read from the final chain. Pure functions only: the panel and the timeline call these
- * with views they already read. Every refusal row names the file and the exact string the code returns, and a
- * test checks those strings against the source (web/tests/lien.test.ts), so the table cannot drift silently.
+ * with views they already read. Every refusal row names the file and lines it was read from. The CLI carries an
+ * identical copy of LIEN_REFUSALS and cli/test/pledge.test.ts fails if the two tables differ.
+ * This is the set of paths read in the source, not a full audit of every owner-changing path.
  */
 import type { Loan, PledgeConfig } from "./pledgeClient";
 
 export type LienControl = { token_id?: string; owner_epoch: string; pending_value_ops: string; listed: boolean; transfer_pending: boolean; pledged: boolean; value_op_nonce?: string };
 
+export const PLEDGED_CONTRACT = "pledged: ownership and value operations locked";
+export const PLEDGED_ENCLAVE = "pledged: all custody value operations are locked";
+
 export const LIEN_REFUSALS = [
-  { action: "Transfer", refused_by: "Contract", code: "pledged: ownership and value operations locked", source: "contracts/keys/src/pledge.rs assert_token_idle (nft_transfer, nft_transfer_call, nft_transfer_payout)" },
-  { action: "List for sale", refused_by: "Contract", code: "pledged: ownership and value operations locked", source: "contracts/keys/src/pledge.rs assert_token_idle (nft_list)" },
-  { action: "Protected sale", refused_by: "Contract", code: "pledged: ownership and value operations locked", source: "contracts/keys/src/pledge.rs assert_token_idle (open_sale)" },
-  { action: "Withdraw", refused_by: "Enclave", code: "pledged", message: "pledged: all custody value operations are locked", source: "tee/worker/src/guarded.rs GuardControl.admit" },
-  { action: "Swap", refused_by: "Enclave", code: "pledged", message: "pledged: all custody value operations are locked", source: "tee/worker/src/guarded.rs GuardControl.admit" },
-  { action: "Copy", refused_by: "Enclave", code: "pledged", message: "pledged: all custody value operations are locked", source: "tee/worker/src/guarded.rs GuardControl.admit" },
-  { action: "Withdraw route preview", refused_by: "Enclave", code: "pledged", message: "pledged: all custody value operations are locked", source: "tee/worker/src/guarded_host.rs guard_preflight" },
+  { action: "transfer", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:736-738 nft_transfer and 747-749 nft_transfer_call (assert_can_change_owner, lib.rs:401-402, then assert_token_idle, pledge.rs:423-427); nft_transfer_payout lib.rs:704-728 via transfer_key lib.rs:433-434" },
+  { action: "list", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:462-467 nft_list (assert_token_idle)" },
+  { action: "buy", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:510-511 nft_buy (assert_can_change_owner)" },
+  { action: "sale", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/sale.rs:49 open_sale (assert_can_change_owner)" },
+  { action: "withdraw", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_withdraw via guard_preflight (tee/worker/src/main.rs:557)" },
+  { action: "swap", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap via guard_preflight (tee/worker/src/main.rs:508)" },
+  { action: "copy", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap(copy) via guard_preflight (tee/worker/src/main.rs:508)" },
+  { action: "withdraw_dry_run", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached via guard_preflight (tee/worker/src/guarded_host.rs:23-24)" },
 ] as const;
 
-/** The only way the key moves under a loan: the named lender's default claim, after due + grace. */
+/**
+ * The only way the key moves under a loan that this page reads: the named lender's claim_default, after due + grace.
+ * claim_default (contracts/keys/src/pledge.rs:581-593) calls transfer_key_unlocked, which skips assert_token_idle.
+ */
 export const DEFAULT_PATH_RULES = [
-  { code: "only lender", meaning: "only the lender named in the loan terms can call claim_default", source: "contracts/keys/src/pledge.rs claim_default" },
-  { code: "loan not active", meaning: "the loan must be Active (funded and delivered)", source: "contracts/keys/src/pledge.rs claim_default" },
-  { code: "default not due", meaning: "refused until block time is after due + grace", source: "contracts/keys/src/pledge.rs claim_default" },
-  { code: "distinct external receiver required", meaning: "the receiver cannot be the borrower or the contract", source: "contracts/keys/src/pledge.rs claim_default" },
+  { code: "only lender", meaning: "only the lender named in the loan terms can call claim_default", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
+  { code: "loan not active", meaning: "the loan must be Active (funded and delivered)", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
+  { code: "default not due", meaning: "refused until block time is after due + grace", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
+  { code: "distinct external receiver required", meaning: "the receiver cannot be the borrower or the contract", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
   { code: "default claim period", meaning: "repay_loan is refused after due + grace; the lender can claim from then", source: "contracts/keys/src/pledge.rs repay_loan" },
 ] as const;
 
@@ -31,24 +39,34 @@ export function defaultClaimableAtNs(loan: Pick<Loan, "due_ns" | "terms">): bigi
   try { return BigInt(loan.due_ns) + BigInt(loan.terms.grace_sec) * 1_000_000_000n; } catch { return null; }
 }
 
+export function lendingText(config: PledgeConfig | null | undefined): string {
+  if (config === undefined || config === null) return "Pledge config is not present on this contract.";
+  const where = config.network || "this network";
+  return config.lending_enabled
+    ? `Lending is enabled on ${where}.`
+    : `Lending is off on ${where}. No loan can be opened or funded from this site; anything shown here is what the contract holds.`;
+}
+
+/**
+ * controlRead is false when the control view was not read. The panel then says "Not read" and does not claim the key
+ * is unlocked; a loan record is still shown on its own.
+ */
 export function lienState(control: LienControl | null, loan: Loan | null, config: PledgeConfig | null | undefined) {
-  const pendingOps = control ? control.pending_value_ops !== "0" : false;
-  const locked = !!control && (control.pledged || loan !== null || control.listed || control.transfer_pending || pendingOps);
-  const openLoan = loan !== null && loan.state !== "UnlockPending";
-  const lendingEnabled = config === undefined || config === null ? null : config.lending_enabled;
+  const controlRead = control !== null && control !== undefined;
+  const pendingOps = controlRead ? control.pending_value_ops !== "0" : false;
+  const locked = controlRead
+    ? !!(control.pledged || loan !== null || control.listed || control.transfer_pending || pendingOps)
+    : false;
   return {
+    controlRead,
     locked,
-    /** Refusal rows apply while a loan record exists or the key is pledged. */
-    refusalsApply: !!control && (control.pledged || loan !== null),
-    loanOpen: openLoan,
+    /** Refusal rows apply while the key is pledged or a loan record exists. */
+    refusalsApply: (controlRead && control.pledged) || loan !== null,
+    loanOpen: loan !== null && loan.state !== "UnlockPending",
     activeLoan: loan !== null && loan.state === "Active",
     defaultClaimableAtNs: loan && loan.state === "Active" ? defaultClaimableAtNs(loan) : null,
-    lendingEnabled,
-    lendingLine: lendingEnabled === null
-      ? "Pledge config is not present on this contract."
-      : lendingEnabled
-        ? "Lending is enabled on this contract."
-        : "Lending is off on mainnet. No loan can be opened or funded from this site; anything shown here is what the contract holds.",
+    lendingEnabled: config === undefined || config === null ? null : config.lending_enabled,
+    lendingLine: lendingText(config),
   };
 }
 

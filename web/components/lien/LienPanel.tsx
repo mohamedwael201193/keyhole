@@ -13,30 +13,37 @@ export function nearFromYocto(y: string): string {
   return frac ? `${whole}.${frac}` : `${whole}`;
 }
 
-/** Lien facts for one key. Presentational: the caller owns the read (useLien), so /key and /verify share one read. */
+/**
+ * Lien facts for one key. Presentational: the caller owns the read (useLien), so /key and /verify share one read.
+ * The label says "Not read" unless the control view was read; the loan record is shown on its own either way.
+ */
 export function LienPanel({ lien, testid = "lien-panel" }: { lien: UseLien; testid?: string }) {
   if (!lien.tokenId) return null;
   const busy = lien.status === "loading";
   const s = lienState(lien.control, lien.loan, lien.config);
-  const tone = lien.status !== "ready" ? "neutral" : s.locked ? "warn" : "success";
-  const label = busy ? "Reading" : lien.status === "error" ? "Not read" : s.locked ? "Locked" : "Not locked";
+  const label = busy ? "Reading" : lien.status === "error" || !s.controlRead ? "Not read" : s.locked ? "Locked" : "Not locked";
+  const tone = label === "Locked" ? "warn" : label === "Not locked" ? "success" : "neutral";
   const loan = lien.loan;
   return (
     <Card as="section" className="lien" labelledBy="lien-h" testid={testid}>
       <CardHeader title="Lien" id="lien-h" meta={<StatusChip tone={tone} testid="lien-state">{label}</StatusChip>} />
       {lien.status === "error" && <p className="lien-note" role="alert" data-testid="lien-error">{lien.error}</p>}
       {busy && <p className="lien-note">Reading the final chain…</p>}
-      {lien.status === "ready" && lien.control && (
+      {lien.status === "ready" && (
         <>
-          <dl className="lien-facts" data-testid="lien-facts">
-            <dt>Owner</dt><dd className="mono">{lien.owner}</dd>
-            <dt>Owner epoch</dt><dd>{lien.control.owner_epoch}</dd>
-            <dt>Pledged</dt><dd data-testid="lien-pledged">{String(lien.control.pledged)}</dd>
-            <dt>Listed</dt><dd>{String(lien.control.listed)}</dd>
-            <dt>Transfer pending</dt><dd>{String(lien.control.transfer_pending)}</dd>
-            <dt>Value operations pending</dt><dd>{lien.control.pending_value_ops}</dd>
-            <dt>Collateral binding</dt><dd>{lien.binding ? (lien.binding.ready ? "ready" : "not ready") : "none on record"}</dd>
-          </dl>
+          {lien.control ? (
+            <dl className="lien-facts" data-testid="lien-facts">
+              <dt>Owner</dt><dd className="mono">{lien.owner}</dd>
+              <dt>Owner epoch</dt><dd>{lien.control.owner_epoch}</dd>
+              <dt>Pledged</dt><dd data-testid="lien-pledged">{String(lien.control.pledged)}</dd>
+              <dt>Listed</dt><dd>{String(lien.control.listed)}</dd>
+              <dt>Transfer pending</dt><dd>{String(lien.control.transfer_pending)}</dd>
+              <dt>Value operations pending</dt><dd>{lien.control.pending_value_ops}</dd>
+              <dt>Collateral binding</dt><dd>{lien.binding ? (lien.binding.ready ? "ready" : "not ready") : "none on record"}</dd>
+            </dl>
+          ) : (
+            <p className="lien-note" role="status" data-testid="lien-not-read">The control state was not read, so this page does not say whether the key is locked. The loan record below is read separately.</p>
+          )}
           <p className="lien-note" data-testid="lien-lending">{s.lendingLine}</p>
 
           {loan ? (
@@ -68,7 +75,7 @@ export function LienPanel({ lien, testid = "lien-panel" }: { lien: UseLien; test
 
           {s.refusalsApply && (
             <div className="lien-refusals" data-testid="lien-refusals">
-              <h3 className="lien-h3">While this lien is open, these actions are refused</h3>
+              <h3 className="lien-h3">While this lien is open, these refusals are in the source</h3>
               <table className="lien-table">
                 <thead><tr><th>Action</th><th>Refused by</th><th>Code the system returns</th></tr></thead>
                 <tbody>
@@ -81,6 +88,7 @@ export function LienPanel({ lien, testid = "lien-panel" }: { lien: UseLien; test
                   ))}
                 </tbody>
               </table>
+              <p className="lien-note">This lists the paths read in the source. It is not a full audit of every owner-changing path.</p>
             </div>
           )}
 
@@ -90,10 +98,10 @@ export function LienPanel({ lien, testid = "lien-panel" }: { lien: UseLien; test
               <p className="lien-note">
                 Only <span className="mono">{loan.terms.lender}</span> can move this key, and only by claim_default, after{" "}
                 <b>{formatNs(s.defaultClaimableAtNs)}</b> (due + grace). Before that the contract returns &ldquo;default not due&rdquo;.
-                The receiver must be external (&ldquo;distinct external receiver required&rdquo;). These terms are the borrower-signed terms shown above.
+                The receiver must be external (&ldquo;distinct external receiver required&rdquo;). These are the borrower-signed terms shown above.
               </p>
             ) : (
-              <p className="lien-note">No default path exists until a loan is Active. Repayment or cancellation ends the lien instead.</p>
+              <p className="lien-note">No default path exists until a loan is Active.</p>
             )}
             <ul className="lien-rules">
               {DEFAULT_PATH_RULES.map((r) => <li key={r.code}><span className="mono">{r.code}</span> — {r.meaning}</li>)}

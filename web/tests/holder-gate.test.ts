@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import bs58 from "bs58";
-import { CHALLENGE_TTL_MS, ReplaySet, gateMessage, issueChallenge, verifyGate, type GateDeps } from "@/lib/holderGate";
+import { CHALLENGE_TTL_MS, ReplaySet, gateMessage, issueChallenge, macMatches, verifyGate, type GateDeps } from "@/lib/holderGate";
 import { payloadHash, toB64 } from "@/lib/nep413";
 
 const SECRET = "test-secret-not-used-in-production";
@@ -22,17 +22,17 @@ function signIntent(challenge: string, opts: { account?: string; key?: Uint8Arra
   return { account_id: account, public_key: opts.publicKey ?? holderPk, signature: toB64(sig), nonce: toB64(nonce), message, recipient: "keyhole" };
 }
 
-function deps(over: Partial<{ access: unknown; supply: number; tier: number | null; tokens: string[] }> = {}): GateDeps {
+function deps(over: Partial<{ access: unknown; supply: number; tier: number | null; tokens: string[]; accessError: Error }> = {}): GateDeps {
   const access = "access" in over ? over.access : "FullAccess";
   return {
-    viewAccessKey: async () => (access === null ? null : { permission: access }),
+    viewAccessKey: async () => { if (over.accessError) throw over.accessError; return access === null ? null : { permission: access }; },
     nftSupply: async () => over.supply ?? 1,
     holderTier: async () => ("tier" in over ? over.tier! : 2),
     tokensForOwner: async () => over.tokens ?? ["k5f4750858f328940"],
   };
 }
 
-describe("holder gate challenge", () => {
+describe("holder check challenge", () => {
   it("binds the challenge to the account and to an expiry", () => {
     const c = issueChallenge(ACCOUNT, NOW, SECRET, () => "id-1");
     expect(c.expires_ms).toBe(NOW + CHALLENGE_TTL_MS);
@@ -41,13 +41,28 @@ describe("holder gate challenge", () => {
   it.each(["", "A", "Holder.near", "../x", "has space.near"])("refuses to issue for %j", (bad) => {
     expect(() => issueChallenge(bad, NOW, SECRET)).toThrow(/bad account/);
   });
+  it("compares the HMAC in constant time and rejects malformed tags", () => {
+    const { challenge } = issueChallenge(ACCOUNT, NOW, SECRET, () => "ct-1");
+    const [payload, tag] = challenge.split(".");
+    expect(macMatches(SECRET, payload, tag)).toBe(true);
+    expect(macMatches(SECRET, payload, tag.slice(0, -2) + "00")).toBe(false);
+    expect(macMatches(SECRET, payload, tag.slice(0, -2))).toBe(false);
+    expect(macMatches(SECRET, payload, "zz" + tag.slice(2))).toBe(false);
+    expect(macMatches(SECRET, payload, "")).toBe(false);
+  });
 });
 
-describe("holder gate verification", () => {
-  it("grants a live FullAccess holder and returns tier and key ids", async () => {
+describe("holder check verification", () => {
+  it("grants a live FullAccess holder and returns tier, key count and key ids", async () => {
     const { challenge } = issueChallenge(ACCOUNT, NOW, SECRET, () => "grant-1");
-    const r = await verifyGate({ challenge, auth: signIntent(challenge) }, deps(), SECRET, new ReplaySet(), NOW + 1000);
-    expect(r).toEqual({ granted: true, tier: 2, account_id: ACCOUNT, token_ids: ["k5f4750858f328940"] });
+    const r = await verifyGate({ challenge, auth: signIntent(challenge) }, deps({ supply: 1 }), SECRET, new ReplaySet(), NOW + 1000);
+    expect(r).toEqual({ granted: true, tier: 2, account_id: ACCOUNT, key_count: 1, token_ids: ["k5f4750858f328940"] });
+  });
+
+  it("reports how many keys the account holds even when the list is shorter", async () => {
+    const { challenge } = issueChallenge(ACCOUNT, NOW, SECRET, () => "many-1");
+    const r = await verifyGate({ challenge, auth: signIntent(challenge) }, deps({ supply: 12, tokens: ["k1", "k2"] }), SECRET, new ReplaySet(), NOW + 1000);
+    expect(r).toMatchObject({ granted: true, key_count: 12, token_ids: ["k1", "k2"] });
   });
 
   it("refuses a replay of the same signed challenge (single use)", async () => {
@@ -66,9 +81,16 @@ describe("holder gate verification", () => {
 
   it("refuses a signature from a different key than the one named", async () => {
     const { challenge } = issueChallenge(ACCOUNT, NOW, SECRET, () => "wk-1");
-    // The auth names the holder key but was signed by another key.
     const auth = signIntent(challenge, { key: otherSeed, publicKey: holderPk });
     expect(await verifyGate({ challenge, auth }, deps(), SECRET, new ReplaySet(), NOW + 1000)).toEqual({ granted: false, reason: "bad_signature" });
+  });
+
+  it("a forged signature does not spend the challenge, so the real holder can still use it", async () => {
+    const replay = new ReplaySet();
+    const { challenge } = issueChallenge(ACCOUNT, NOW, SECRET, () => "forge-1");
+    const forged = signIntent(challenge, { key: otherSeed, publicKey: holderPk });
+    expect(await verifyGate({ challenge, auth: forged }, deps(), SECRET, replay, NOW + 1000)).toEqual({ granted: false, reason: "bad_signature" });
+    expect(await verifyGate({ challenge, auth: signIntent(challenge) }, deps(), SECRET, replay, NOW + 1000)).toMatchObject({ granted: true });
   });
 
   it("refuses a real signature by a key that is not FullAccess on the account", async () => {
@@ -78,10 +100,15 @@ describe("holder gate verification", () => {
     expect(r).toEqual({ granted: false, reason: "not_full_access" });
   });
 
-  it("refuses a key that is not on the account at all", async () => {
+  it("refuses a key that is not on the account at all (UNKNOWN_ACCESS_KEY is modelled as null)", async () => {
     const { challenge } = issueChallenge(ACCOUNT, NOW, SECRET, () => "nk-1");
     const r = await verifyGate({ challenge, auth: signIntent(challenge) }, deps({ access: null }), SECRET, new ReplaySet(), NOW + 1000);
     expect(r).toEqual({ granted: false, reason: "not_full_access" });
+  });
+
+  it("an RPC failure is thrown, never read as not_full_access", async () => {
+    const { challenge } = issueChallenge(ACCOUNT, NOW, SECRET, () => "rpc-1");
+    await expect(verifyGate({ challenge, auth: signIntent(challenge) }, deps({ accessError: new Error("timeout") }), SECRET, new ReplaySet(), NOW + 1000)).rejects.toThrow("timeout");
   });
 
   it("refuses an account that holds no key", async () => {

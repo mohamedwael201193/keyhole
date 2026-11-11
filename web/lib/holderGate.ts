@@ -1,18 +1,21 @@
 /**
- * Holder gate: proves that the caller holds a key right now, with a fresh wallet signature.
+ * Holder check: proves that the caller holds a key right now, with a fresh wallet signature.
  *
  * Flow (server-issued, single-use challenge):
  *  1. GET  /api/gate?account_id=A  -> { challenge, expires_ms }. The challenge is an HMAC-signed token that names A,
  *     a random id and an expiry (CHALLENGE_TTL_MS). Nothing is stored for issuing.
  *  2. The wallet signs (NEP-413, recipient "keyhole") the intent {op:"holder_gate", account_id, ts_ms, params:{challenge}}.
- *  3. POST /api/gate { challenge, auth } -> verify:
- *       token HMAC and expiry; account matches; the id has not been used (single use, in-process replay set);
+ *  3. POST /api/gate { challenge, auth } -> verify, in this order:
+ *       token HMAC (constant-time) and expiry; account matches; the intent names this challenge;
  *       the NEP-413 signature verifies for the public key the auth names;
+ *       only then the challenge id is consumed (single use, in-process replay set);
  *       that key is a FullAccess key of A (view_access_key, final), the same rule tee/worker main.rs authenticate uses;
  *       nft_supply_for_owner(A) > 0 and holder_tier(A) is a tier.
+ *  RPC failures throw; the route answers 503 and the challenge stays unused unless the signature already passed.
  *
  * Every dependency is injected so the rules are unit-tested without the network (web/tests/holder-gate.test.ts).
  */
+import { timingSafeEqual } from "node:crypto";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { verifyAuth, type SignedAuth } from "./nep413";
@@ -22,6 +25,7 @@ export const CHALLENGE_TTL_MS = 120_000;
 export const GATE_OP = "holder_gate";
 
 export type GateDeps = {
+  /** Returns null only when the key is not on the account. Any other failure must throw. */
   viewAccessKey: (account: string, publicKey: string) => Promise<{ permission: unknown } | null>;
   nftSupply: (account: string) => Promise<number>;
   holderTier: (account: string) => Promise<number | null>;
@@ -29,7 +33,7 @@ export type GateDeps = {
 };
 
 export type GateResult =
-  | { granted: true; tier: number; account_id: string; token_ids: string[] }
+  | { granted: true; tier: number; account_id: string; key_count: number; token_ids: string[] }
   | { granted: false; reason: GateReason };
 
 export type GateReason = "bad_challenge" | "wrong_account" | "expired" | "replayed" | "bad_intent" | "bad_signature" | "not_full_access" | "not_holder";
@@ -42,8 +46,14 @@ const unb64u = (s: string) => Buffer.from(s, "base64url").toString("utf8");
 /** Valid NEAR account ids: named (lowercase, digits, . - _) or implicit (64 hex). */
 export const ACCOUNT_RE = /^(?=.{2,64}$)([a-z0-9]+[-_.])*[a-z0-9]+$|^[0-9a-f]{64}$/;
 
-function mac(secret: string, payload: string): string {
-  return hex(hmac(sha256, enc.encode(secret), enc.encode(payload)));
+function mac(secret: string, payload: string): Buffer {
+  return Buffer.from(hmac(sha256, enc.encode(secret), enc.encode(payload)));
+}
+/** Constant-time comparison of the HMAC tag. */
+export function macMatches(secret: string, payload: string, tag: string): boolean {
+  const want = mac(secret, payload);
+  const got = /^[0-9a-f]+$/.test(tag) ? Buffer.from(tag, "hex") : Buffer.alloc(0);
+  return got.length === want.length && timingSafeEqual(got, want);
 }
 
 /** Issues a challenge for one account. Stateless: the HMAC binds it to the account and expiry. */
@@ -51,7 +61,7 @@ export function issueChallenge(account: string, nowMs: number, secret: string, r
   if (!ACCOUNT_RE.test(account)) throw new Error("bad account");
   const expires = nowMs + CHALLENGE_TTL_MS;
   const payload = b64u(JSON.stringify({ a: account, i: rand(), e: expires }));
-  return { challenge: `${payload}.${mac(secret, payload)}`, expires_ms: expires };
+  return { challenge: `${payload}.${mac(secret, payload).toString("hex")}`, expires_ms: expires };
 }
 
 export function randomHex(): string {
@@ -82,7 +92,7 @@ export async function verifyGate(input: { challenge: unknown; auth: unknown }, d
   const deny = (reason: GateReason): GateResult => ({ granted: false, reason });
   const ch = typeof input.challenge === "string" ? input.challenge : "";
   const [payload, tag] = ch.split(".");
-  if (!payload || !tag || mac(secret, payload) !== tag) return deny("bad_challenge");
+  if (!payload || !tag || !macMatches(secret, payload, tag)) return deny("bad_challenge");
   let c: { a: string; i: string; e: number };
   try { c = JSON.parse(unb64u(payload)); } catch { return deny("bad_challenge"); }
   if (!c || typeof c.a !== "string" || typeof c.i !== "string" || typeof c.e !== "number") return deny("bad_challenge");
@@ -92,7 +102,6 @@ export async function verifyGate(input: { challenge: unknown; auth: unknown }, d
       typeof a.nonce !== "string" || typeof a.message !== "string" || typeof a.recipient !== "string") return deny("bad_intent");
   if (a.account_id !== c.a) return deny("wrong_account");
   if (nowMs > c.e) return deny("expired");
-  if (!replay.take(c.i, c.e, nowMs)) return deny("replayed");
 
   let intent: { op?: unknown; account_id?: unknown; ts_ms?: unknown; params?: { challenge?: unknown } };
   try { intent = JSON.parse(a.message); } catch { return deny("bad_intent"); }
@@ -101,9 +110,11 @@ export async function verifyGate(input: { challenge: unknown; auth: unknown }, d
   if (a.recipient !== NEP413_RECIPIENT) return deny("bad_intent");
   if (a.message !== gateMessage(c.a, ch, intent.ts_ms)) return deny("bad_intent");
 
+  // The signature is checked before the challenge is spent, so a forged request cannot burn a holder's challenge.
   let signed = false;
   try { signed = verifyAuth(a as SignedAuth); } catch { signed = false; }
   if (!signed) return deny("bad_signature");
+  if (!replay.take(c.i, c.e, nowMs)) return deny("replayed");
 
   const ak = await deps.viewAccessKey(c.a, a.public_key);
   if (!ak || ak.permission !== "FullAccess") return deny("not_full_access");
@@ -112,5 +123,5 @@ export async function verifyGate(input: { challenge: unknown; auth: unknown }, d
   if (!(supply > 0)) return deny("not_holder");
   const tier = await deps.holderTier(c.a);
   if (tier === null || tier === undefined) return deny("not_holder");
-  return { granted: true, tier, account_id: c.a, token_ids: await deps.tokensForOwner(c.a) };
+  return { granted: true, tier, account_id: c.a, key_count: supply, token_ids: await deps.tokensForOwner(c.a) };
 }

@@ -76,7 +76,7 @@ export function KeyTimeline({ body, ownerNow, lien, listing }: { body: KeyLogBod
 
       {s.refusalsApply && (
         <div data-testid="timeline-enforcement">
-          <h3 className="lien-h3">While the lien is open, the system refuses</h3>
+          <h3 className="lien-h3">While the lien is open, these refusals are in the source (not a full audit)</h3>
           <ul className="lien-rules">
             {LIEN_REFUSALS.map((r) => (
               <li key={r.action}><b>{r.action}</b> — <span className="mono">{"message" in r ? r.message : r.code}</span> ({r.refused_by.toLowerCase()})</li>

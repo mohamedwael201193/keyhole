@@ -8,7 +8,7 @@ import type { SignedAuth } from "@/lib/nep413";
 type Check =
   | { status: "idle" }
   | { status: "checking" }
-  | { status: "granted"; tier: number; token_ids: string[] }
+  | { status: "granted"; tier: number; token_ids: string[]; key_count: number }
   | { status: "denied"; reason: string }
   | { status: "error"; message: string };
 
@@ -34,8 +34,8 @@ export function HoldersView() {
   /** Sends one signed intent to the gate. Used both for a fresh signature and for a redirect wallet's returned one. */
   async function submit(challenge: string, auth: SignedAuth): Promise<void> {
     const r = await fetch("/api/gate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ challenge, auth }), cache: "no-store" });
-    const j = await r.json().catch(() => null) as { granted?: boolean; tier?: number; token_ids?: string[]; reason?: string } | null;
-    if (j?.granted && typeof j.tier === "number") setCheck({ status: "granted", tier: j.tier, token_ids: j.token_ids ?? [] });
+    const j = await r.json().catch(() => null) as { granted?: boolean; tier?: number; token_ids?: string[]; key_count?: number; reason?: string } | null;
+    if (j?.granted && typeof j.tier === "number") setCheck({ status: "granted", tier: j.tier, token_ids: j.token_ids ?? [], key_count: j.key_count ?? (j.token_ids ?? []).length });
     else if (j && typeof j.reason === "string") setCheck({ status: "denied", reason: j.reason });
     else setCheck({ status: "error", message: "The gate did not answer. Try again." });
   }
@@ -72,9 +72,9 @@ export function HoldersView() {
   return (
     <div className="kp-root holders-page" data-testid="holders-page">
       <PageHeader
-        eyebrow="Holders only"
-        title={<>For <em>holders</em> only.</>}
-        lead="Sign once with the wallet that holds a key. The site checks the chain for that key and shows its tier. Nothing is stored and no money moves."
+        eyebrow="Prove you hold a key"
+        title={<>Prove you hold a <em>key.</em></>}
+        lead="Sign once with the wallet that holds a key. The site checks the chain for that account and shows its tier and key ids. Nothing is stored and no money moves."
         testid="holders-head"
       />
       <Card as="section" labelledBy="holder-check-h" testid="holder-check">
@@ -95,7 +95,8 @@ export function HoldersView() {
         )}
         {check.status === "granted" && (
           <div className="holders-body" data-testid="holders-granted">
-            <p><b>Holder access granted.</b> Tier {check.tier}.</p>
+            <p><b>Check passed.</b> Tier {check.tier}. Keys held: {check.key_count}.</p>
+            {check.key_count > check.token_ids.length && <p className="kg-note" data-testid="holders-truncated">showing {check.token_ids.length} of {check.key_count} keys</p>}
             <ul>
               {check.token_ids.map((id) => (
                 <li key={id}>

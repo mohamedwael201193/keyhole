@@ -8,13 +8,18 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const perIp = createLimiter(30, 60_000);
-/**
- * HMAC key for challenges. Set HOLDER_GATE_SECRET in production so every instance accepts the same challenges.
- * Unset, each instance uses its own random key: a challenge issued by one instance is refused by another, and the user asks again.
- */
-const secret = process.env.HOLDER_GATE_SECRET || `${randomHex()}${randomHex()}`;
-/** Single-use replay set, per process. Across instances a replayed challenge can be accepted once per instance within its 2-minute TTL; without a shared store that gap remains; set HOLDER_GATE_SECRET and add a shared store before relying on single use. */
+const production = () => process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+/** Development only: a random per-process key. Production refuses to run without HOLDER_GATE_SECRET (503). */
+const devSecret = `${randomHex()}${randomHex()}`;
+/** Single-use replay set, per process. Across instances a replayed challenge can be accepted once per instance within its 2-minute TTL; a shared store is needed for strict single use. */
 const replay = new ReplaySet();
+
+/** The HMAC key, or null when production has none configured. */
+function gateSecret(): string | null {
+  const s = process.env.HOLDER_GATE_SECRET;
+  if (s) return s;
+  return production() ? null : devSecret;
+}
 
 async function rpc<T>(body: Record<string, unknown>): Promise<T> {
   const r = await fetch(RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: "gate", ...body }), cache: "no-store", signal: AbortSignal.timeout(10_000) });
@@ -27,11 +32,14 @@ async function contractView<T>(method: string, args: Record<string, unknown>): P
   return JSON.parse(Buffer.from(res.result).toString("utf8")) as T;
 }
 
-/** The same chain facts the enclave reads (tee/worker: view_access_key, holder_tier, nft_supply_for_owner). */
+/**
+ * The same chain facts the enclave reads (tee/worker: view_access_key, holder_tier, nft_supply_for_owner).
+ * Only UNKNOWN_ACCESS_KEY means "not on this account". Any other RPC failure throws, so the route answers 503.
+ */
 const deps: GateDeps = {
   viewAccessKey: async (account, publicKey) => {
     try { return await rpc<{ permission: unknown }>({ method: "query", params: { request_type: "view_access_key", finality: "final", account_id: account, public_key: publicKey } }); }
-    catch { return null; }
+    catch (e) { if ((e as Error).message === "UNKNOWN_ACCESS_KEY") return null; throw e; }
   },
   nftSupply: async (account) => Number(await contractView<string>("nft_supply_for_owner", { account_id: account })),
   holderTier: async (account) => {
@@ -45,11 +53,14 @@ const deps: GateDeps = {
 };
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "cache-control": "no-store" } });
+const unavailable = () => json({ granted: false, reason: "unavailable" }, 503);
 
 /** GET ?account_id=A issues a single-use challenge for that account. */
 export async function GET(req: NextRequest) {
   const rl = perIp(clientIp(req.headers));
   if (!rl.ok) return json({ error: "rate_limited" }, 429);
+  const secret = gateSecret();
+  if (!secret) return json({ error: "unavailable" }, 503);
   const account = req.nextUrl.searchParams.get("account_id") ?? "";
   if (!ACCOUNT_RE.test(account)) return json({ error: "bad_account" }, 400);
   return json(issueChallenge(account, Date.now(), secret));
@@ -59,6 +70,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rl = perIp(clientIp(req.headers));
   if (!rl.ok) return json({ granted: false, reason: "rate_limited" }, 429);
+  const secret = gateSecret();
+  if (!secret) return unavailable();
   const raw = await req.text();
   if (raw.length > 8192) return json({ granted: false, reason: "bad_intent" }, 413);
   let body: { challenge?: unknown; auth?: unknown };
@@ -67,7 +80,7 @@ export async function POST(req: NextRequest) {
   try {
     result = await verifyGate({ challenge: body.challenge, auth: body.auth }, deps, secret, replay, Date.now());
   } catch {
-    return json({ granted: false, reason: "unavailable" }, 503);
+    return unavailable();
   }
   return json(result, result.granted ? 200 : 403);
 }

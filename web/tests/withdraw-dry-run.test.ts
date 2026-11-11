@@ -1,30 +1,43 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { withdrawDryRunDecision } from "@/lib/withdrawDryRun";
+import { withdrawDryRunDecision, exitConfirmText } from "@/lib/withdrawDryRun";
 import { checkBody, ALLOWED_OPS } from "@/lib/gateway";
 import { guardedValueOp } from "@/lib/guardedRequest";
 
-const good = { ok: true, op: "withdraw_dry_run", to: "a.near", amount: "1000", token: "usdc", chain: "near", amount_out: "990000", min_amount_out: "985000", broadcast: false };
+const intent = { account: "a.near", token: "nep141:usdc", amount: "1000", chain: "near" };
+const good = { ok: true, op: "withdraw_dry_run", to: "a.near", amount: "1000", token: "nep141:usdc", chain: "near", amount_out: "990000", min_amount_out: "985000", broadcast: false };
 
 describe("withdraw dry-run decision (exit preflight)", () => {
-  it("allows the signed withdrawal only with positive amount_out and min_amount_out", () => {
-    expect(withdrawDryRunDecision(good)).toEqual({ ok: true, amount_out: "990000", min_amount_out: "985000" });
-    expect(withdrawDryRunDecision({ ...good, amount_out: 990000, min_amount_out: 985000 })).toMatchObject({ ok: true });
+  it("allows the signed withdrawal only when bound to the intent and both route numbers are positive", () => {
+    expect(withdrawDryRunDecision(good, intent)).toEqual({ ok: true, amount_out: "990000", min_amount_out: "985000" });
+    expect(withdrawDryRunDecision({ ...good, amount_out: 990000, min_amount_out: 985000 }, intent)).toMatchObject({ ok: true });
   });
   it.each([
-    ["missing output", undefined],
-    ["worker refused", { ok: false, error: { code: "exit_quote_unavailable" } }],
-    ["other op", { ...good, op: "withdraw" }],
-    ["zero amount_out", { ...good, amount_out: "0" }],
-    ["zero min_amount_out", { ...good, min_amount_out: "0" }],
-    ["missing min_amount_out", { ...good, min_amount_out: undefined }],
-    ["non-numeric", { ...good, amount_out: "1e6" }],
-    ["negative", { ...good, min_amount_out: "-5" }],
-    ["claims broadcast", { ...good, broadcast: true }],
-  ])("refuses when %s", (_, out) => {
-    const d = withdrawDryRunDecision(out);
+    ["missing output", undefined, /Route preview unavailable/],
+    ["worker refused", { ok: false, error: { code: "exit_quote_unavailable" } }, /unavailable/],
+    ["other op", { ...good, op: "withdraw" }, /unavailable/],
+    ["zero amount_out", { ...good, amount_out: "0" }, /amount_out/],
+    ["zero min_amount_out", { ...good, min_amount_out: "0" }, /min_amount_out/],
+    ["missing min_amount_out", { ...good, min_amount_out: undefined }, /min_amount_out/],
+    ["non-numeric", { ...good, amount_out: "1e6" }, /amount_out/],
+    ["negative", { ...good, min_amount_out: "-5" }, /min_amount_out/],
+    ["claims broadcast", { ...good, broadcast: true }, /broadcast/],
+    ["another destination", { ...good, to: "mallory.near" }, /destination/],
+    ["another amount", { ...good, amount: "999999" }, /amount/],
+    ["another token", { ...good, token: "nep141:other" }, /token/],
+    ["another chain", { ...good, chain: "base" }, /chain/],
+  ])("refuses when %s", (_, out, why) => {
+    const d = withdrawDryRunDecision(out, intent);
     expect(d.ok).toBe(false);
-    if (!d.ok) expect(d.reason).toMatch(/No withdrawal was signed/);
+    if (!d.ok) {
+      expect(d.reason).toMatch(why);
+      expect(d.reason).toMatch(/No withdrawal was signed\./);
+    }
+  });
+  it("the confirm text shows both preview numbers", () => {
+    const text = exitConfirmText({ amount_out: "990000", min_amount_out: "985000" }, "1000");
+    expect(text).toContain("amount_out 990000");
+    expect(text).toContain("minimum accepted 985000");
   });
 });
 
@@ -37,20 +50,30 @@ describe("withdraw_dry_run in the gateway", () => {
     const ok = JSON.stringify({ op: "withdraw_dry_run", account_id: "a.near", ts_ms: 1, params: {} });
     expect(checkBody(JSON.stringify({ op: "withdraw_dry_run", auth: { account_id: "a.near", public_key: "ed25519:x", signature: "s", nonce: "n", recipient: "keyhole", message: ok } }))).toMatchObject({ ok: true, op: "withdraw_dry_run" });
   });
+  it("refuses the session scheme for withdraw_dry_run, as it does for withdraw", () => {
+    const message = JSON.stringify({ op: "withdraw_dry_run", account_id: "a.near", ts_ms: 1, params: {} });
+    const sess = { scheme: "session", token: "t", nonce: "n", message, recipient: "keyhole", account_id: "a.near", public_key: "ed25519:x", signature: "s" };
+    expect(checkBody(JSON.stringify({ op: "withdraw_dry_run", auth: sess }))).toMatchObject({ ok: false, status: 403, code: "session_scope" });
+    const wmsg = JSON.stringify({ op: "withdraw", account_id: "a.near", ts_ms: 1, params: {} });
+    expect(checkBody(JSON.stringify({ op: "withdraw", auth: { ...sess, message: wmsg } }))).toMatchObject({ ok: false, code: "session_scope" });
+  });
   it("is treated as a guarded value op, so it binds the current epoch like withdraw", () => {
     expect(guardedValueOp("withdraw_dry_run", {})).toBe(true);
   });
 });
 
 describe("exit preflight wiring", () => {
-  it("signs withdraw only after the preview decision, in LivePledge", () => {
+  it("previews, decides, confirms, and only then signs withdraw, in LivePledge", () => {
     const src = readFileSync(new URL("../app/pledge/LivePledge.tsx", import.meta.url), "utf8");
     const preview = src.indexOf('wallet.sign("withdraw_dry_run"');
     const gate = src.indexOf("if(!preview.ok)throw Error(preview.reason)");
+    const confirm = src.indexOf("window.confirm(exitConfirmText(preview,pending.amount))");
     const signWithdraw = src.indexOf('wallet.sign("withdraw",exitParams)');
     expect(preview).toBeGreaterThan(0);
     expect(gate).toBeGreaterThan(preview);
-    expect(signWithdraw).toBeGreaterThan(gate);
-    expect(src.slice(src.indexOf("const preview="), signWithdraw)).toContain("withdrawDryRunDecision(");
+    expect(confirm).toBeGreaterThan(gate);
+    expect(signWithdraw).toBeGreaterThan(confirm);
+    expect(src.slice(src.indexOf("const preview="), gate)).toContain("withdrawDryRunDecision(");
+    expect(src.slice(src.indexOf("const preview="), gate)).toContain("{account,token:USDC,amount:pending.amount,chain:\"near\"}");
   });
 });
