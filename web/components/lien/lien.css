@@ -1,0 +1,20 @@
+/* Lien panel (v7 card). Layout only; colours come from the v7 tokens. */
+.lien { display: grid; gap: 12px; }
+.vf-lien { display: grid; gap: 12px; margin: 0 0 24px; }
+.vf-lien-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.vf-lien-form label { width: 100%; font-size: 13px; }
+.vf-lien-form .input { flex: 1 1 260px; min-width: 0; }
+.lien-facts { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 6px 16px; margin: 0; }
+.lien-facts dt { color: var(--v7-muted, #6b7280); font-size: 13px; }
+.lien-facts dd { margin: 0; overflow-wrap: anywhere; }
+.lien-note { font-size: 13px; line-height: 1.5; margin: 0; }
+.lien-h3 { font-size: 14px; margin: 8px 0 4px; }
+.lien-loan, .lien-refusals, .lien-default, .lien-cert { display: grid; gap: 8px; }
+.lien-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lien-table th, .lien-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(127, 127, 127, 0.25); vertical-align: top; }
+.lien-src { display: block; color: var(--v7-muted, #6b7280); font-family: inherit; font-size: 11px; margin-top: 2px; }
+.lien-rules { margin: 0; padding-left: 18px; font-size: 13px; }
+@media (max-width: 480px) {
+  .lien-facts { grid-template-columns: 1fr; }
+  .lien-table th:nth-child(2), .lien-table td:nth-child(2) { display: none; }
+}

@@ -11,6 +11,10 @@ import { KeyDetails } from "@/components/keys/KeyDetails";
 import { useKeyListing, useKeyTier } from "@/components/keys/keyData";
 import { useWallet } from "@/lib/wallet";
 import { useKeyChain } from "./useKeyChain";
+import { keyEvmAddress } from "@/lib/chainsig";
+import { LienPanel } from "@/components/lien/LienPanel";
+import { useLien } from "@/components/lien/useLien";
+import { KeyTimeline } from "@/components/keylog/KeyTimeline";
 import { BeforeYouBuy, BuyerProof, ProofPanel } from "./buyer";
 import { SaleCard } from "./sale";
 import "./key.css";
@@ -43,6 +47,10 @@ export function KeyHistoryView() {
   const chain = useKeyChain(active);
   const tier = useKeyTier(active);
   const listing = useKeyListing(active, saleRound);
+  /** Lien facts read from the final chain (views only). Shared by the lien card and the timeline. */
+  const lien = useLien(active || null);
+  /** Derived Chain Signatures address: computed in the browser, labelled as not signing in this build. */
+  const evm = active && legacy === null ? keyEvmAddress(active) : null;
 
   async function load(tid: string) {
     setErr(null); setBody(null); setCk(null); setCallId(null); setLegacy(null);
@@ -106,6 +114,15 @@ export function KeyHistoryView() {
           saleHref="#sale-card"
         />
       )}
+      {active && legacy === null && <LienPanel lien={lien} testid="key-lien" />}
+      {evm && (
+        <Card as="section" className="kevm" labelledBy="evm-h" testid="key-evm">
+          <CardHeader title="Chain address" id="evm-h" />
+          <p className="kg-note" data-testid="key-evm-label">derived address — signing is disabled in this build</p>
+          <p className="mono" data-testid="key-evm-address" style={{ overflowWrap: "anywhere" }}>{evm} <CopyBtn value={evm} label="Copy" /></p>
+          <p className="kg-note">Derived in your browser from the TEE minter and this key id, the same rule NEAR&apos;s v1.signer uses. Read only: no network call and nothing is signed.</p>
+        </Card>
+      )}
       {proof && <ProofPanel raw={proof} id={active} owner={chain.owner} minter={chain.minter} />}
       {active && (
         <div id="sale-card" className="kd-anchor">
@@ -149,6 +166,7 @@ export function KeyHistoryView() {
             </div>
             <p className="kg-note">Paid out counts withdraw events. USD totals are private to each holder; a holder can publish a signed total from the vault (<Link href="/pnl">signed swap log</Link>).</p>
           </Card>
+          <KeyTimeline body={body} ownerNow={chain.owner} lien={lien} listing={listing} />
           <Card as="section" className="klog" labelledBy="log-h" testid="key-log-card">
             <span id="key-log" className="kd-anchor" />
             <CardHeader title="Event log" id="log-h" meta={<StatusChip tone={ok ? "success" : "error"}>{ok ? "Checked" : "Not checked"}</StatusChip>} />

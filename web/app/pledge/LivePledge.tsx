@@ -13,6 +13,7 @@ import {assertStorageConsent,storageConsentMatches,createPledgeReadGate,type Pay
 import {abortable,createSingleFlightRefresh,startPledgePolling} from "@/lib/pledgeRefresh";
 import {browserExitStore,dispatchExitContinuation,retryableExit,PLEDGE_EXIT_USDC,type ExitRecord} from "@/lib/pledgeExit";
 import {copyText} from "@/lib/copyText";
+import {withdrawDryRunDecision} from "@/lib/withdrawDryRun";
 import {accountAccess,actionHeading,assetPresentation,cairoTime,cashoutCopy,currentStep,disbursementCopy,floorCaption,humanSeconds,loanStateLabel,pendingCashoutChrome,policyAction,SWAP_COMPARE_BODY,SWAP_COMPARE_COSTS,SWAP_COMPARE_SUMMARY,terminalLabel,unlockNotice,type AssetBits,type FloorKind} from "@/lib/pledgeCopy";
 import "./live.css";
 
@@ -159,7 +160,11 @@ export function LivePledge({tokenId,role}:{tokenId?:string;role:"borrower"|"lend
   if(prior&&prior.epoch!==inv.owner_epoch)throw Error("Original exit epoch changed; no withdrawal was dispatched.");
   const next:ExitRecord=prior?{...prior,status:"AwaitingSignature"}:{account,token,epoch:inv.owner_epoch,amount,status:"AwaitingSignature",intent:"withdraw"};
   if(prior){if(!await exitStore.replace(prior,next))throw Error("Continue the original exit in its owning tab.");pending=next;}else pending=await exitStore.reserve(next);
-  setExitOp(pending);const auth=await wallet.sign("withdraw",{intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"});await finishExit(auth,pending);
+  setExitOp(pending);const exitParams={intent_id:pending.id,token_id:token,owner_epoch:pending.epoch,token:USDC,amount:pending.amount,to:account,chain:"near"};
+  // Route preview first (moves nothing). The withdrawal is signed only when the preview has a positive amount_out and min_amount_out.
+  const preview=withdrawDryRunDecision((await callWorker("withdraw_dry_run",await wallet.sign("withdraw_dry_run",exitParams))).output);
+  if(!preview.ok)throw Error(preview.reason);
+  const auth=await wallet.sign("withdraw",exitParams);await finishExit(auth,pending);
  }catch(e){if(pending&&(!(e instanceof Error)||!("code" in e)||e.code!=="redirect")){const saved=exitStore.load();if(saved?.id===pending.id&&saved?.status==="AwaitingSignature")await exitStore.replace(saved,{...saved,status:"Retryable"});setExitOp(exitStore.load());}setMessage(errorText(e));}finally{setBusy(false);}}
  async function discardUnsentExit(){
   if(!exitStore||!retryableExit(exitOp)||busy||loading||!exitOp)return;
