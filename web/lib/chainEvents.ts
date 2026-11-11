@@ -9,27 +9,46 @@ export const KEYHOLE_EVENT_VERSION = "1.0.0";
 export const MAX_EVENT_PAGES = 4;
 export const EVENT_PAGE_SIZE = 25;
 
-/** Methods whose function-call args carry `token_id`. */
+/**
+ * Receipt methods that can execute a displayed event.
+ * This is the call-graph closure of every displayed `emit_key_event` in `contracts/keys/src`:
+ * private helpers such as `end_listing` and `settle_principal`, and the async callbacks that run them.
+ * `web/tests/keyhole-events-source.test.ts` parses those sources and fails if this list drifts.
+ * A method whose args carry `token_id` is filtered per key.
+ */
 export const TOKEN_METHODS = [
   "nft_list",
   "nft_unlist",
   "nft_buy",
+  "nft_transfer",
+  "nft_transfer_call",
+  "nft_transfer_payout",
+  "resolve_transfer_call",
+  "restore_expired_transfer",
+  "buy_sale",
   "open_loan",
   "fund_loan",
   "repay_loan",
   "cancel_loan",
   "claim_default",
   "reclaim_unclaimed_principal",
-  "on_loan_policy",
-  "reconcile_loan_policy",
   "retry_loan_policy",
+  "on_policy_action",
+  "reconcile_loan_policy",
+  "on_loan_policy",
+  "register_collateral",
+  "on_collateral_stored",
+  "check_collateral",
+  "on_collateral_checked",
 ] as const;
 
 /**
- * Account or nonce calls. `loan_principal_delivered` is emitted on the `claim_payout` callback
- * or on `reconcile_payout`, not on the earlier `fund_loan` receipt. Discovery is the event, not the args.
+ * Receipts whose args do not carry `token_id`. The event does.
+ * `loan_principal_delivered` is logged on `on_payout` (the `claim_payout` callback) and on `reconcile_payout`.
+ * The callback and the call that schedules it are both queried, so one missing index row does not drop the transaction.
+ * These stay account scans: an argument without `token_id` is not an unreadable token.
  */
-export const ACCOUNT_METHODS = ["claim_payout", "reconcile_payout"] as const;
+export const ACCOUNT_METHODS = ["claim_payout", "on_payout", "reconcile_payout"] as const;
 
 export type IndexedEvent = {
   event: string;
