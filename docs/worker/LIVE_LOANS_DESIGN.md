@@ -1,6 +1,6 @@
 # Live loans: worker V2 evidence design
 
-Read-only design followed by the requested local implementation. No worker publication, secret update or transaction is performed here. Source changes are for review; no worker publication. Contract v2.7 stays byte-identical. Team reviewer, not independent auditor. Credit: devmo.
+Read-only design followed by the requested local implementation. No worker publication, secret update or mainnet transaction is performed here. Source changes are for review; no worker publication. Contract v2.7 stays byte-identical. Team reviewer, not independent auditor. Credit: devmo.
 
 ## Decision and trust boundary
 Current target: `native-A-repay-B-title-exact-near-exit`. A proves collateral

@@ -660,3 +660,35 @@ fn production_rechecks_reviewed_effective_policy_before_unshield_and_spend() {
         .contains(&json!("call")));
     assert_eq!(p["capabilities"]["intents_call"]["allowed"], false);
 }
+
+#[test]
+fn registered_recipient_still_requires_native_gas_before_unshield() {
+    let mut h = Fixture::new();
+    h.obs.as_mut().unwrap().registered = true;
+    h.obs.as_mut().unwrap().native = "0".into();
+    assert!(drive(&mut h, &journal(), "key").is_err());
+    assert!(h.posts.is_empty());
+}
+
+#[test]
+fn malformed_or_changed_verified_hop_is_not_a_recovery_permission() {
+    for change in 0..5 {
+        let mut h = Fixture::new();
+        h.status = Some((Step::Storage, "pending_approval".into()));
+        let j = journal();
+        drive(&mut h, &j, "key").unwrap();
+        let k = format!("{}/exact/unshield/verified", j.key());
+        let mut v: Value = serde_json::from_slice(h.data.get(&k).unwrap()).unwrap();
+        match change {
+            0 => v = Value::Null,
+            1 => v["unknown_state"] = json!(true),
+            2 => v["provider"]["status"] = json!("processing"),
+            3 => v["provider"]["request_id"] = json!("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+            _ => v["observation"]["confidential"] = json!("999"),
+        }
+        h.data.insert(k, serde_json::to_vec(&v).unwrap());
+        let count = h.posts.len();
+        assert!(drive(&mut h, &j, "key").is_err());
+        assert_eq!(h.posts.len(), count);
+    }
+}

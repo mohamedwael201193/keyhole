@@ -249,6 +249,12 @@ pub fn decode_readbacks(wallet_id: &str, r: Readbacks<'_>) -> Result<Observation
         registered,
     })
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VerifiedStep {
+    provider: Value,
+    observation: Observation,
+}
 pub trait Host: ProviderHost {
     /// FINAL public intents mt_balance_of and FT balance/storage; confidential ledger
     /// is authenticated provider data. All identities/assets validated by adapter.
@@ -341,7 +347,7 @@ pub fn drive<H: Host>(h: &mut H, j: &Journal, key: &str) -> Result<Value, Error>
         if o.n("confidential")? < a
             || o.n("storage_min")? == 0
             || o.n("storage_min")? > STORAGE_MAX
-            || (!o.registered && o.n("native")? < NATIVE_MAX)
+            || o.n("native")? < NATIVE_MAX
         {
             return Err(err(
                 "exit_budget",
@@ -371,7 +377,20 @@ pub fn drive<H: Host>(h: &mut H, j: &Journal, key: &str) -> Result<Value, Error>
     for step in [Step::Unshield, Step::Storage, Step::Withdraw] {
         let sk = format!("{root}/{}", step.name());
         let confirmed = format!("{sk}/verified");
-        if read::<_, Value>(h, &confirmed)?.is_some() {
+        if let Some(proof) = read::<_, VerifiedStep>(h, &confirmed)? {
+            let original: String = read(h, &format!("{sk}/provider"))?
+                .ok_or_else(|| err("exit_wal", "verified hop lost original provider identity"))?;
+            if !guarded::uuid(&original) || row(&proof.provider, &original, step)? != "success" {
+                return Err(err(
+                    "exit_wal",
+                    "verified hop has invalid original terminal state",
+                ));
+            }
+            proof.observation.validate()?;
+            credit(&baseline, &proof.observation, a)?;
+            if step == Step::Storage && !proof.observation.registered {
+                return Err(err("exit_wal", "verified storage is not registered"));
+            }
             continue;
         }
         let id_key = format!("{sk}/provider");
@@ -551,7 +570,14 @@ pub fn drive<H: Host>(h: &mut H, j: &Journal, key: &str) -> Result<Value, Error>
                 json!({"status":if done{"success"}else{"needs_review"},"exit_mode":MODE,"value_op_id":j.op_id,"request_id":id,"amount_out":p.amount,"admission_finished":done}),
             );
         }
-        save(h, &confirmed, &json!({"provider":v,"observation":obs}))?;
+        save(
+            h,
+            &confirmed,
+            &VerifiedStep {
+                provider: v,
+                observation: obs,
+            },
+        )?;
     }
     Err(err("exit_wal", "missing terminal exit evidence"))
 }

@@ -1,7 +1,8 @@
 # Exact NEAR USDC exit — source candidate, not live proof
 
-Credit: devmo. No wallet operation, real signing, publication or secret change was
-performed by this implementation. Contract, UUID, sealed namespace, immutable
+Credit: devmo. No provider-wallet operation, real-wallet signing, publication or secret change was
+performed by this implementation. Tests sign only generated disposable local
+sandbox identities. Contract, UUID, sealed namespace, immutable
 minter/attestor and payment-key nonce-2 wrapper are unchanged.
 
 ## Authoritative API sources and exact wire shapes
@@ -91,7 +92,8 @@ an arbitrary call operation. Raw/EVM/Solana/message signing, Intents calls,
 external keys, payment checks and resting orders stay denied. Already enrolled
 old policies are not silently upgraded: exact decrypted readback/auditor review
 must approve the new policy before use. Recipient registration can be pre-existing;
-otherwise fund the wallet's own native reserve and obtain the required approval.
+every exit needs the wallet's own native gas reserve; new registration also needs
+the required guardian approval.
 
 Storage minimum must be positive and at most 0.00125 NEAR. Reserve 0.0025 NEAR per
 exit for storage/gas; actual observed native debit must not exceed it. Include both

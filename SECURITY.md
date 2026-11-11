@@ -848,8 +848,9 @@ confidential artifact transfer-shape checking while some guide prose still says
 otherwise; neither proves the deployment's current measurement. Local fault
 injection and sandbox custody mocks are NOT mainnet confidentiality or loan proof.
 The UUID, minter/attestor, contract bytes, secret/payment-key wrapper are unchanged;
-this implementation performed no real signing/transactions, publication or secret
-changes. All exact-head review, CI, publication, actual enrollment and live
+this implementation performed no mainnet or real-wallet signing/transactions,
+publication or secret changes. Generated test identities and disposable local
+sandbox transactions are the only transaction fixtures. All exact-head review, CI, publication, actual enrollment and live
 original delivery/refund evidence remain separate gates.
 
 Budget is <=0.4 NEAR including actual/unresolved/worst completion plus >=0.04 OFF
