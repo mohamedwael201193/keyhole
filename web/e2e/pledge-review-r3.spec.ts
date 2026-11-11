@@ -152,7 +152,7 @@ test('R5 actual two-tab preflight race: held exit signature excludes delayed loa
  const other=await context.newPage();await other.addInitScript(value=>sessionStorage.setItem('keyhole:pledge-last:v1:keys.near:k1',JSON.stringify(value)),last);for(const tab of [page,other])await tab.clock.install();
  await page.goto(url+'/?no-history');await other.goto(url);
  for(const tab of [page,other]){await expect(tab.getByTestId('loan-state')).not.toContainText('unavailable');await readPrivate(tab);}
- await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.getByRole('checkbox').check();await page.evaluate('h.deferPrepare=true');await page.getByRole('button',{name:'Pledge this account',exact:true}).click();await expect.poll(()=>page.evaluate('typeof h.resolvePrepare')).toBe('function');
+ await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.locator('.pledge-live-consent input').check();await expect(page.getByTestId('forfeit-line')).toHaveText(/receives the whole key/);await page.getByTestId('forfeit-ack').check();await page.evaluate('h.deferPrepare=true');await page.getByRole('button',{name:'Pledge this account',exact:true}).click();await expect.poll(()=>page.evaluate('typeof h.resolvePrepare')).toBe('function');
  await other.evaluate('h.deferSign=true');await other.getByRole('button',{name:'Exit to my wallet',exact:true}).click();await expect.poll(()=>other.evaluate('typeof h.resolveSign')).toBe('function');
  await page.evaluate('h.resolvePrepare()');await expect(page.getByRole('button',{name:'Refresh chain',exact:true})).toBeEnabled();expect(await page.evaluate('h.walletCalls')).toBe(0);await expect(page.getByRole('status')).toContainText('original exit');expect(await other.evaluate('h.workerCalls')).toBe(0);
  await other.reload();await expect(other.getByText(/Original exit AwaitingSignature/)).toBeVisible();await expect(other.getByTestId('settlement')).toBeVisible();expect(await other.evaluate('h.workerCalls')).toBe(0);await other.close();
@@ -160,7 +160,7 @@ test('R5 actual two-tab preflight race: held exit signature excludes delayed loa
 test('R5 inverse two-tab race: reserved loan excludes an ordinary exit while wallet routing is held',async({page,context})=>{
  const other=await context.newPage();await other.addInitScript(value=>sessionStorage.setItem('keyhole:pledge-last:v1:keys.near:k1',JSON.stringify(value)),last);for(const tab of [page,other])await tab.clock.install();await page.goto(url+'/?no-history');await other.goto(url);
  for(const tab of [page,other])await readPrivate(tab);
- await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.getByRole('checkbox').check();await page.evaluate('h.deferRoute=true');await page.getByRole('button',{name:'Pledge this account',exact:true}).click();await expect.poll(()=>page.evaluate('typeof h.resolveRoute')).toBe('function');
+ await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.locator('.pledge-live-consent input').check();await expect(page.getByTestId('forfeit-line')).toHaveText(/receives the whole key/);await page.getByTestId('forfeit-ack').check();await page.evaluate('h.deferRoute=true');await page.getByRole('button',{name:'Pledge this account',exact:true}).click();await expect.poll(()=>page.evaluate('typeof h.resolveRoute')).toBe('function');
  await expect(other.getByRole('button',{name:'Exit to my wallet',exact:true})).toBeDisabled();
  const rejected=await other.evaluate(`h.exits.browserExitStore('alice.near','keys.near','k1').reserve({account:'alice.near',token:'k1',epoch:'1',amount:'100000',status:'AwaitingSignature',intent:'withdraw'}).then(()=>false,()=>true)`);expect(rejected).toBe(true);expect(await other.evaluate('h.workerCalls')).toBe(0);
  // The Web Lock is free during routing; only the durable opening record excludes the exit.
@@ -181,7 +181,7 @@ test('R5 nonterminal reconciliation remains UNKNOWN with original ID across relo
  await page.reload();await expect(page.getByText(/Original exit UNKNOWN/)).toBeVisible();expect(await page.evaluate("h.exits.browserExitStore('alice.near','keys.near','k1').load().value_op_id")).toBe('value-1');expect(await page.evaluate('h.workerCalls')).toBe(0);await expect(page.getByRole('button',{name:'Check original withdrawal',exact:true})).toBeEnabled();
 });
 test('R5 wallet-boundary recheck refuses a legacy exit appearing during asynchronous routing',async({page,context})=>{
- const other=await context.newPage();await page.clock.install();await page.goto(url+'/?no-history');await other.goto(url+'/?bare');await readPrivate(page);await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.getByRole('checkbox').check();await page.evaluate('h.deferRoute=true');await page.getByRole('button',{name:'Pledge this account',exact:true}).click();await expect.poll(()=>page.evaluate('typeof h.resolveRoute')).toBe('function');
+ const other=await context.newPage();await page.clock.install();await page.goto(url+'/?no-history');await other.goto(url+'/?bare');await readPrivate(page);await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.locator('.pledge-live-consent input').check();await expect(page.getByTestId('forfeit-line')).toHaveText(/receives the whole key/);await page.getByTestId('forfeit-ack').check();await page.evaluate('h.deferRoute=true');await page.getByRole('button',{name:'Pledge this account',exact:true}).click();await expect.poll(()=>page.evaluate('typeof h.resolveRoute')).toBe('function');
  // Simulates pre-upgrade persisted state, not a cooperating new-version reservation.
  await other.evaluate(`localStorage.setItem('keyhole:pledge-exit:v1:keys.near:alice.near:k1',JSON.stringify({account:'alice.near',token:'k1',epoch:'1',amount:'100000',status:'Retryable',intent:'withdraw'}))`);await page.evaluate('h.resolveRoute()');await expect(page.getByRole('status')).toContainText('original exit');expect(await page.evaluate('h.walletCalls')).toBe(0);expect(await page.evaluate('h.workerCalls')).toBe(0);await expect(page.getByText(/Original exit Retryable/)).toBeVisible();await other.close();
 });
@@ -204,4 +204,15 @@ test('a route preview left pending by a redirect is discarded unsigned, and the 
  await page.getByLabel('Ordinary USDC self-exit').fill('0.10');await page.getByRole('button',{name:'Exit to my wallet'}).click();
  await expect.poll(()=>page.evaluate('h.workerCalls')).toBe(1);
  expect(await page.evaluate('h.dryRunCalls')).toBe(1);expect(await page.evaluate('h.sent[0].amount')).toBe('100000');
+});
+
+test('the Pledge button stays disabled until the forfeiture checkbox is ticked, and the screen comes first',async({page})=>{
+ await page.goto(url+'/?no-history');await readPrivate(page);
+ await page.getByLabel('Named lender',{exact:true}).fill('lender.near');await page.locator('.pledge-live-consent input').check();
+ const pledge=page.getByRole('button',{name:'Pledge this account',exact:true});
+ await expect(page.getByTestId('forfeit-line')).toHaveText(/receives the whole key and everything in its vault/);
+ await expect(page.getByTestId('borrower-numbers')).toContainText('Total cost');
+ await expect(pledge).toBeDisabled();
+ await page.getByTestId('forfeit-ack').check();
+ await expect(pledge).toBeEnabled();
 });
