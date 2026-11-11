@@ -5,10 +5,10 @@ import test from "node:test";
 
 test("judge/live.mts refuses to load a wallet unless opted in", () => {
   const src = readFileSync(new URL("./live.mts", import.meta.url), "utf8");
-  const guard = src.indexOf("KEYHOLE_LIVE_OPT_IN");
+  const gate = src.indexOf("./live-gate.mjs");
   const load = src.indexOf("loadKey(");
-  assert.ok(guard >= 0 && load > guard);
-  const r = spawnSync(process.execPath, ["--experimental-strip-types", "--disable-warning=ExperimentalWarning", "judge/live.mts"], {
+  assert.ok(gate >= 0 && load > gate);
+  const r = spawnSync(process.execPath, ["judge/live-gate.mjs"], {
     encoding: "utf8",
     timeout: 20_000,
     env: { ...process.env, KEYHOLE_LIVE_OPT_IN: "" },
