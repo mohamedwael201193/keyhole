@@ -67,16 +67,16 @@ function u64n(v: unknown): bigint | null {
  * Loan / owner / epoch combinations one block can actually hold.
  * pledged is true exactly when a loan record exists (lib.rs get_control_state).
  *
- * While a loan exists, assert_token_idle (pledge.rs:423-427) refuses every ordinary transfer, so the
- * current owner epoch stays on the epoch copied at open (pledge.rs:451-453) except for one path.
+ * While a loan exists, assert_token_idle (pledge.rs:504) refuses every ordinary transfer, so the
+ * current owner epoch stays on the epoch copied at open (pledge.rs:534) except for one path.
  *
  * - Freezing, Offered, DisbursementPending, Active: owner is the borrower and control epoch equals
- *   loan.owner_epoch. fund_loan rechecks both (pledge.rs:537-538). resolution is still unset.
- * - UnlockPending / repaid: repay_loan (pledge.rs:561-568) does not transfer. Same owner, same epoch.
- * - UnlockPending / canceled: cancel_loan (pledge.rs:572-577) does not transfer. Same owner, same epoch.
- * - UnlockPending / default_claimed: claim_default (pledge.rs:581-593) calls transfer_key_unlocked
- *   (lib.rs:438-455), which bumps the owner epoch once, then stores the same loan. The loan keeps its
- *   opening epoch. The new owner is not the borrower. Thaw later deletes the loan (pledge.rs:510-513).
+ *   loan.owner_epoch. fund_loan rechecks both (pledge.rs:623). resolution is still unset.
+ * - UnlockPending / repaid: repay_loan (pledge.rs:648) does not transfer. Same owner, same epoch.
+ * - UnlockPending / canceled: cancel_loan (pledge.rs:663) does not transfer. Same owner, same epoch.
+ * - UnlockPending / default_claimed: claim_default (pledge.rs:676-681) calls transfer_key_unlocked
+ *   (lib.rs:448), which bumps the owner epoch once, then stores the same loan. The loan keeps its
+ *   opening epoch. The new owner is not the borrower. The thaw callback later deletes the loan (pledge.rs:595-597).
  * - No loan: the record is gone. Any current owner and epoch are the chain's, and pledged is false.
  */
 function loanBindingHolds(loan: Record<string, unknown>, ownerId: string, controlEpoch: bigint): boolean {

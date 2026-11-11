@@ -35,8 +35,8 @@ describe("refusal table matches the code it cites", () => {
     const at = (rel: string, n: number) => src(rel).split("\n")[n - 1] ?? "";
     expect(at("../../tee/worker/src/guarded.rs", 35)).toMatch(/fn admit\(/);
     expect(at("../../contracts/keys/src/sale.rs", 49)).toMatch(/assert_can_change_owner/);
-    expect(at("../../contracts/keys/src/lib.rs", 511)).toMatch(/assert_can_change_owner/);
-    expect(at("../../contracts/keys/src/lib.rs", 738)).toMatch(/assert_can_change_owner/);
+    expect(at("../../contracts/keys/src/lib.rs", 522)).toMatch(/assert_can_change_owner/);
+    expect(at("../../contracts/keys/src/lib.rs", 751)).toMatch(/assert_can_change_owner/);
   });
 });
 
