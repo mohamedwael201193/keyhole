@@ -31,7 +31,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  const nativeReceipts:FinalWalletReceipt[]=[];
  const submissions:WalletSubmission[]=[],observed:{role:WalletRole;request:Request}[]=[];
  const privateLenderRequests:string[]=[],withdrawalSigns:string[]=[],withdrawalPosts:string[]=[];
- for(const p of [borrower,lender])p.on("request",r=>{if(r.url().includes("/api/pledge-sandbox")&&r.postDataJSON()?.action==="sign"&&r.postDataJSON()?.op==="withdraw")withdrawalSigns.push(r.postData()!);if(r.url().includes("/api/worker")&&r.postDataJSON()?.op==="withdraw")withdrawalPosts.push(r.postData()!);});
+ for(const p of [borrower,lender])p.on("request",r=>{if(r.url().includes("/api/pledge-sandbox")&&r.postDataJSON()?.action==="sign"&&["withdraw","exact_near_exit_v1"].includes(r.postDataJSON()?.op))withdrawalSigns.push(r.postData()!);if(r.url().includes("/api/worker")&&["withdraw","exact_near_exit_v1"].includes(r.postDataJSON()?.op))withdrawalPosts.push(r.postData()!);});
  lender.on("request",r=>{if(r.url().includes("/api/worker")&&r.postData()?.includes('"pledge_inventory"'))privateLenderRequests.push(r.postData()!);});
  // Collect requests synchronously; EVERY response body is awaited below, never swallowed in an async listener.
  for(const [role,page] of [["borrower",borrower],["lender",lender]] as const){page.on("request",r=>{if(r.url().includes("/api/pledge-sandbox")&&r.postDataJSON()?.action==="tx")observed.push({role,request:r});});await page.goto(role==="borrower"?`/pledge?token=${meta.token_id}`:`/pledge/lend/${meta.token_id}`);await page.getByRole("button",{name:`Use ${role} wallet`,exact:true}).click();}

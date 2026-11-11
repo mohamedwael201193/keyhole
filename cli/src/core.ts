@@ -22,7 +22,7 @@ export const DEFAULTS = {
 };
 
 export interface Key { accountId: string; secret: Uint8Array; publicKey: string }
-export interface Auth { account_id: string; public_key: string; signature: string; nonce: string; message: string; recipient: string }
+export interface Auth { scheme?: "nep413"; account_id: string; public_key: string; signature: string; nonce: string; message: string; recipient: string }
 
 /** ed25519:<base58 64-byte or 32-byte secret> -> Key */
 export function keyFromString(accountId: string, privateKey: string): Key {
@@ -63,7 +63,7 @@ export function signRequest(key: Key, op: string, params: Record<string, unknown
   const nonce = randomBytes(32);
   const sig = ed25519.sign(sha256(nep413Bytes(message, nonce, recipient)), key.secret);
   const b64 = (u: Uint8Array) => Buffer.from(u).toString("base64");
-  return { account_id: key.accountId, public_key: key.publicKey, signature: b64(sig), nonce: b64(nonce), message, recipient };
+  return { scheme: "nep413", account_id: key.accountId, public_key: key.publicKey, signature: b64(sig), nonce: b64(nonce), message, recipient };
 }
 
 export interface CallResult { call_id?: string; output: any; attestation_url?: string }

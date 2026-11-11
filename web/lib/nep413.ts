@@ -13,7 +13,7 @@ export interface SignedAuth {
   nonce: string; // base64, 32 bytes
   message: string;
   recipient: string;
-  scheme?: "eip191" | "session";
+  scheme?: "nep413" | "eip191" | "session";
   token?: string;
   address?: string;
   /** NEP-413 callbackUrl that the signature covers (Option<String> in the payload). Only set when the signature verifies with it. */

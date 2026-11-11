@@ -92,7 +92,7 @@ test("gateway: info is real and attested (needs a funded payment key)", async ({
 });
 
 test("gateway: unsigned trades, junk and oversized bodies are refused", async ({ request }) => {
-  for (const op of ["swap", "withdraw"]) {
+  for (const op of ["swap", "withdraw", "exact_near_exit_v1"]) {
     expect((await (await request.post("/api/worker", { data: { op } })).json()).error.code).toBe("no_auth");
     expect((await (await request.post("/api/worker", { data: { op, auth: "junk" } })).json()).error.code).toBe("no_auth");
   }
@@ -265,7 +265,7 @@ for (const kind of ["swap", "withdraw"] as const) {
         : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success", usd_in_micro: 20000 };
       await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
     });
-    const redirect=fixtureRedirect(kind,kind==="withdraw"?{op:kind,amount:"0.01 USDC",to:"holder.keyhole.test"}:{op:kind,give:"0.02 USDC",decimals:24,symbol:"wNEAR"});
+    const redirect=fixtureRedirect(kind==="withdraw"?"exact_near_exit_v1":kind,kind==="withdraw"?{op:kind,amount:"0.01 USDC",to:"holder.keyhole.test"}:{op:kind,give:"0.02 USDC",decimals:24,symbol:"wNEAR"});
     await page.addInitScript(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
     // A swap is started and resumed on /swap; a withdrawal on /vault (its sheet reopens).
     await page.goto((kind==="swap"?"/swap":"/vault")+redirect.hash);
