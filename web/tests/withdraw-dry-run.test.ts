@@ -71,7 +71,7 @@ describe("exit preflight wiring", () => {
     const decided = fn.indexOf("const preview=withdrawDryRunDecision(");
     const gate = fn.indexOf("if(!preview.ok)throw Error(preview.reason)");
     const confirm = fn.indexOf("window.confirm(exitConfirmText(preview,pending.amount))");
-    const signWithdraw = fn.indexOf('wallet.sign("withdraw",exitParams)');
+    const signWithdraw = fn.indexOf('wallet.sign("exact_near_exit_v1",exitParams)');
     expect(decided).toBeGreaterThan(-1);
     expect(gate).toBeGreaterThan(decided);
     expect(confirm).toBeGreaterThan(gate);

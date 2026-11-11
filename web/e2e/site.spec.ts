@@ -261,7 +261,7 @@ for (const kind of ["swap", "withdraw"] as const) {
     await holdAccount(page);
     await page.route("**/api/worker", async (route) => {
       const output = kind === "withdraw"
-        ? { ok: true, op: "withdraw", request_id: "b5ea", status: "success" }
+        ? { ok: true, op: "exact_near_exit_v1", request_id: "b5ea", status: "success" }
         : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success", usd_in_micro: 20000 };
       await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
     });
@@ -289,8 +289,8 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await holdAccount(page);
   await page.route("**/api/worker", async (route) => {
     const body = route.request().postDataJSON() as { op?: string } | null;
-    const output = body?.op === "withdraw"
-      ? { ok: true, op: "withdraw", request_id: "b5ea", status: "success" }
+    const output = body?.op === "exact_near_exit_v1"
+      ? { ok: true, op: "exact_near_exit_v1", request_id: "b5ea", status: "success" }
       : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success" };
     await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
   });
@@ -919,8 +919,8 @@ test("verify: when Intel PCS does not answer, the page says so and counts what d
 });
 
 test("production redirect parsing does not consume an overwritten challenge on an older signature",async({page})=>{
- await holdAccount(page);let withdrawals=0;await page.route("**/api/worker",async route=>{if(route.request().postDataJSON()?.op==="withdraw")withdrawals++;await route.fulfill({json:{output:{ok:true,op:"withdraw",request_id:"binding-proof",status:"success"}}});});
- const ctx={op:"withdraw",amount:"0.01 USDC",to:"holder.keyhole.test"},x=fixtureRedirect("withdraw",ctx,1),y=fixtureRedirect("withdraw",ctx,2);
+ await holdAccount(page);let withdrawals=0;await page.route("**/api/worker",async route=>{if(route.request().postDataJSON()?.op==="exact_near_exit_v1")withdrawals++;await route.fulfill({json:{output:{ok:true,op:"exact_near_exit_v1",request_id:"binding-proof",status:"success"}}});});
+ const ctx={op:"withdraw",amount:"0.01 USDC",to:"holder.keyhole.test"},x=fixtureRedirect("exact_near_exit_v1",ctx,1),y=fixtureRedirect("exact_near_exit_v1",ctx,2);
  await page.addInitScript(saved=>{if(!sessionStorage.getItem("kh_pending_sign"))sessionStorage.setItem("kh_pending_sign",saved);},y.saved);
  await page.goto("/vault"+x.hash);await expect.poll(()=>page.evaluate(()=>location.hash)).toBe("");expect(await page.evaluate(()=>sessionStorage.getItem("kh_pending_sign"))).toBe(y.saved);expect(withdrawals).toBe(0);await expect(page.getByTestId("withdraw-out")).toHaveCount(0);
  await page.goto("/vault?callback=valid"+y.hash);await expect(page.getByTestId("withdraw-out")).toContainText("binding-proof",{timeout:20000});expect(withdrawals).toBe(1);

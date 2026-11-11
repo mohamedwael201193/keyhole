@@ -70,11 +70,13 @@ async function main() {
       return out(await run(key, "swap", { token_in: from, token_out: to, amount_in: String(o.amount), ...extra }));
     case "withdraw": {
       if (!o["exact-near"] || (o.chain && o.chain !== "near") || (o.token && o.token !== USDC)) throw new Error("Use --exact-near for the typed NEAR USDC self-exit; other withdrawal routes are disabled");
-      return out(await guardedRun(key, "withdraw", { ...extra, ...exactWithdrawParams(String(o.to ?? key.accountId), String(o.amount)) }));
+      return out(await guardedRun(key, "exact_near_exit_v1", { ...extra, ...exactWithdrawParams(String(o.to ?? key.accountId), String(o.amount)) }));
     }
     case "reconcile":
       if (typeof o.key !== "string" || typeof o["value-op-id"] !== "string" || !/^[1-9]\d{0,19}:[0-9a-f]{64}$/.test(o["value-op-id"])) throw new Error("reconcile requires --key and --value-op-id from the original call");
-      return out(await run(key, "reconcile_value_op", { token_id: o.key, value_op_id: o["value-op-id"] }));
+      return out(await run(key, "reconcile_value_op", { token_id: o.key, value_op_id: o["value-op-id"],
+        ...(o["continue-step"] ? { exit_continue: {step:o["continue-step"],value_op_id:o["value-op-id"],action_hash:o["value-op-id"].split(":")[1],original_provider_id:o["original-provider-id"]??null,deadline_ms:Date.now()+300_000}} : {}),
+        ...(o["original-tx"] && o["original-signer"] ? {original_delivery_locator:{tx_hash:o["original-tx"],signer_id:o["original-signer"]}} : {}) }));
     case "pnl": {
       const h = await run(key, "history"); const b = await run(key, "balance");
       if (!h.output?.ok) return out(h);

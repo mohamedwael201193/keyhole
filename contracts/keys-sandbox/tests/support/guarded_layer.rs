@@ -77,6 +77,12 @@ impl ProviderHost for Layer<'_>{
 
 // The API ledger is an explicit mock. Admission/finish and title are actual local NEAR receipts.
 impl keyhole_worker::exact_exit::Host for Layer<'_>{
+ fn original_delivery(&mut self,j:&Journal,intent:&str)->std::result::Result<Value,Error>{
+  let hash="11111111111111111111111111111111";
+  let ev=json!({"standard":"dip4","version":"0.4.3","event":"ft_withdraw","data":[{"intent_hash":intent,"account_id":j.wallet_id,"token":keyhole_worker::exact_exit::TOKEN,"receiver_id":j.owner,"amount":j.body["amount"]}]}).to_string();
+  let ft=json!({"standard":"nep141","version":"1.0.0","event":"ft_transfer","data":[{"old_owner_id":"intents.near","new_owner_id":j.owner,"amount":j.body["amount"]}]}).to_string();
+  Ok(json!({"final_execution_status":"FINAL","transaction":{"hash":hash,"signer_id":"relay.near","receiver_id":"intents.near"},"status":{"SuccessValue":""},"transaction_outcome":{"id":hash,"outcome":{"executor_id":"relay.near","receipt_ids":["original"],"status":{"SuccessReceiptId":"original"}}},"receipts_outcome":[{"id":"original","outcome":{"executor_id":"intents.near","receipt_ids":["ft"],"status":{"SuccessValue":""},"logs":[format!("EVENT_JSON:{ev}")]}},{"id":"ft","outcome":{"executor_id":keyhole_worker::exact_exit::TOKEN,"receipt_ids":[],"status":{"SuccessValue":""},"logs":[format!("EVENT_JSON:{ft}")]}}]}))
+ }
  fn now_ms(&mut self)->std::result::Result<u64,Error>{Ok(1000)}
  fn observe(&mut self,_j:&Journal,_key:&str)->std::result::Result<keyhole_worker::exact_exit::Observation,Error>{
   use keyhole_worker::exact_exit::{Observation,NATIVE_MAX,STORAGE_MAX};
@@ -88,7 +94,7 @@ impl keyhole_worker::exact_exit::Host for Layer<'_>{
   self.post_calls+=1;self.bodies.insert(ik.into(),body.clone());let id=format!("00000000-0000-4000-8000-{:012x}",self.rows.len()+1);
   let mut reply=json!({"request_id":id,"status":"success"});
   match step{Step::Unshield=>{self.balance-=100000;self.exact_intents+=100000;},Step::Storage=>{reply["token"]=body["token"].clone();reply["account_id"]=body["account_id"].clone();reply["already_registered"]=json!(self.exact_registered);self.exact_registered=true;},Step::Withdraw=>{self.exact_intents-=100000;self.exact_recipient+=100000;}}
-  let result=if step==Step::Withdraw{json!({"delivered":guarded::ASSET,"intent_hash":"mock-original-intent"})}else{json!({})};
+  let result=if step==Step::Withdraw{json!({"delivered":guarded::ASSET,"intent_hash":"11111111111111111111111111111111"})}else{json!({})};
   self.rows.insert(ik.into(),json!({"request_id":id,"type":step.request_type(),"status":"success","result":result}));Ok((200,reply))
  }
 }

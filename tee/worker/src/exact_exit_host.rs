@@ -1,5 +1,31 @@
+// An optional signed locator is an untrusted search hint, never receipt proof.
+thread_local! {static EXIT_DELIVERY_LOCATOR:std::cell::RefCell<Option<Value>>=const{std::cell::RefCell::new(None)};}
 // Production adapter; no arbitrary calls, keys, signing, destination or token selectors.
 impl exact_exit::Host for Host {
+    fn original_delivery(&mut self,j:&Journal,intent:&str)->Result<Value,Error>{
+        let hint=EXIT_DELIVERY_LOCATOR.with(|p|p.borrow().clone());
+        let (hash,signer)=if let Some(v)=hint {
+            (guarded::text(&v,"tx_hash")?.to_owned(),guarded::text(&v,"signer_id")?.to_owned())
+        }else{
+            // Documented read-only resolver. Intent identifiers are never treated as
+            // transaction hashes. This key is read-only relay auth, not custody auth.
+            let key=cfg("INTENTS_READ_API_KEY","");
+            if key.is_empty(){return Err(err("exit_receipt","original locator or configured read-only relay credential required"));}
+            let body=json!({"jsonrpc":"2.0","id":"keyhole-original","method":"get_status","params":[{"intent_hash":intent}]}).to_string();
+            let resp=wasi_http_client::Client::new().post("https://solver-relay-v2.chaindefuser.com/rpc").header("X-API-Key",key.as_str()).header("Content-Type","application/json").body(body.as_bytes()).connect_timeout(std::time::Duration::from_secs(20)).send().map_err(|_|err("exit_receipt","original intent lookup unavailable"))?;
+            let status=resp.status();
+            let v:Value=serde_json::from_slice(&resp.body().unwrap_or_default()).map_err(|_|err("exit_receipt","invalid relay reply"))?;
+            if status!=200 || v.get("error").is_some() || v["result"]["intent_hash"]!=intent || v["result"]["status"]!="SETTLED" {return Err(err("exit_receipt","original intent not settled"));}
+            (guarded::text(&v["result"]["data"],"hash")?.to_owned(),"intents.near".into())
+        };
+        if bs58::decode(&hash).into_vec().ok().is_none_or(|b|b.len()!=32)||!is_valid_account_id(&signer){return Err(err("exit_receipt","invalid original transaction locator"));}
+        let (raw,e)=rpc::tx_status(&hash,&signer,"FINAL");
+        if !e.is_empty(){return Err(err("exit_receipt","original FINAL receipt unavailable; supply original signer locator"));}
+        let v:Value=serde_json::from_str(&raw).map_err(|_|err("exit_receipt","invalid original receipt"))?;
+        let r=v.get("result").unwrap_or(&v);
+        if r["transaction"]["hash"]!=hash{return Err(err("exit_receipt","RPC returned wrong original transaction"));}
+        exact_receipt::verify(j,intent,&v)?;Ok(v)
+    }
     fn now_ms(&mut self) -> Result<u64, Error> {
         chain_now_ms()
     }

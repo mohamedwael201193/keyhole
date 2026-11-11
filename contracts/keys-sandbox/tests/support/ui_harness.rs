@@ -91,7 +91,7 @@ async fn worker(l:&mut Layer<'_>,input:&Value)->Result<Value>{
   anyhow::ensure!(amount>0&&amount<=1_000_000&&amount<=l.balance,"ordinary exit caps/balance exceeded");
   return Ok(json!({"output":{"ok":true,"op":"withdraw_dry_run","to":params["to"],"amount":amount.to_string(),"token":guarded::ASSET,"chain":"near","amount_out":amount.to_string(),"min_amount_out":(amount*995/1000).to_string(),"broadcast":false,"advisory_only":true,"minimum_bound_to_execution":false,"hint":"MOCK sandbox route: 1:1 less 0.5%, no provider call"},"call_id":"sandbox-provider-mock","status":"success"}));
  }
- anyhow::ensure!(op=="withdraw","unsupported fixture worker op");
+ anyhow::ensure!(op=="exact_near_exit_v1","unsupported fixture worker op");
  keyhole_worker::withdrawal_protection::require_bound_execution(&params,ms).map_err(|e|anyhow::anyhow!(e.message))?;
  guarded::signed_epoch(&params,control.epoch).map_err(|e|anyhow::anyhow!(e.message))?;
  keyhole_worker::ownership_sync::require_elapsed(cooldown,ms).map_err(|e|anyhow::anyhow!(e.message))?;
@@ -106,7 +106,7 @@ async fn worker(l:&mut Layer<'_>,input:&Value)->Result<Value>{
 async fn handle(l:&mut Layer<'_>,path:&str,input:Value,counter:&mut u64)->Result<Value>{
  match path{
   "/metadata"=>Ok(json!({"contract":l.e.c.id(),"rpc":l.e.w.rpc_addr(),"borrower":l.e.alice.id(),"lender":l.e.lender.id(),"token_id":UI_TOKEN,"provider":"MOCK — not a live keystore or WASI attestation","post_calls":l.post_calls,"custody_signatures":l.signatures,"admissions":l.admissions,"private_balance":l.balance.to_string()})),
-  "/sign"=>{let a=native_account(l.e,input["account_id"].as_str().unwrap_or(""))?;let op=input["op"].as_str().unwrap_or("");anyhow::ensure!(["pledge_inventory","withdraw","withdraw_dry_run","reconcile_value_op"].contains(&op),"unsupported signature intent");*counter+=1;sandbox_sign(&a,op,input["params"].clone(),*counter)},
+  "/sign"=>{let a=native_account(l.e,input["account_id"].as_str().unwrap_or(""))?;let op=input["op"].as_str().unwrap_or("");anyhow::ensure!(["pledge_inventory","exact_near_exit_v1","withdraw","withdraw_dry_run","reconcile_value_op"].contains(&op),"unsupported signature intent");*counter+=1;sandbox_sign(&a,op,input["params"].clone(),*counter)},
   "/worker"=>worker(l,&input).await,
   "/advance"=>{let blocks=input["blocks"].as_u64().filter(|n|*n<=10000).ok_or_else(||anyhow::anyhow!("block range"))?;l.e.w.fast_forward(blocks).await?;Ok(json!({"now_ns":ui_final_block(l.e).await?.timestamp().to_string()}))},
   "/policy"=>{let refuse=input["refuse_thaw"].as_bool().ok_or_else(||anyhow::anyhow!("missing policy fixture flag"))?;l.e.mock.call("mock_refuse_thaw").args_json(json!({"refuse":refuse})).transact().await?.into_result()?;Ok(json!({"ok":true}))},

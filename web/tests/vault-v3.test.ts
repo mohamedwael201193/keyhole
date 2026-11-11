@@ -21,7 +21,7 @@ describe("/vault v3 layout", () => {
   });
 
   it("the withdraw sheet uses a fresh signature (useSigned withdraw) and resumes a redirect", () => {
-    expect(v).toContain('useSigned("withdraw")');
+    expect(v).toContain('useSigned("exact_near_exit_v1")');
     expect(v).toContain('if (ctx.op === "withdraw") { setDoneWithdraw({ amount: ctx.amount, to: ctx.to }); setWOpen(true); }');
   });
 

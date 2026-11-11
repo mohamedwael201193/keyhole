@@ -11,10 +11,10 @@ const binding: ExitBinding = {
   account: "alice.near", token: "k1", epoch: "1", intentId: "intent-1", amount: "100000", asset: PLEDGE_EXIT_USDC, chain: "near",
 };
 const exit: ExitSnapshot = {
-  id: "intent-1", account: "alice.near", token: "k1", epoch: "1", amount: "100000", status: "AwaitingSignature", intent: "withdraw",
+  id: "intent-1", account: "alice.near", token: "k1", epoch: "1", amount: "100000", status: "AwaitingSignature", intent: "exact_near_exit_v1",
 };
 
-function auth(op: "withdraw_dry_run" | "withdraw", nonce: string, params: Record<string, unknown> = {}): SignedAuth {
+function auth(op: "withdraw_dry_run" | "exact_near_exit_v1", nonce: string, params: Record<string, unknown> = {}): SignedAuth {
   return {
     account_id: "alice.near", public_key: "ed25519:x", signature: `sig-${nonce}`, nonce, recipient: "keyhole",
     message: JSON.stringify({
@@ -44,7 +44,7 @@ function runPopup(store: StepStore, opts: { confirm: boolean; secondPreview?: bo
     return { dry, withdraws, phase: store.loadIntent(binding.account, binding.intentId)?.phase ?? "dropped" };
   }
   const signing = saveAwaitingWithdraw(store, confirmed);
-  const withdrawAuth = auth("withdraw", "withdraw-nonce");
+  const withdrawAuth = auth("exact_near_exit_v1", "withdraw-nonce");
   if (claimWithdraw(store, signing, withdrawAuth)) withdraws += 1;
   if (claimWithdraw(store, signing, withdrawAuth)) withdraws += 1;
   saveDone(store, signing, withdrawAuth.nonce);
@@ -82,7 +82,7 @@ describe("exit continuation", () => {
     expect(repeat.type).toBe("ignore");
     const confirmed = saveConfirmed(store, store.loadIntent(binding.account, binding.intentId)!, { amount_out: "990000", min_amount_out: "985000" });
     const signing = saveAwaitingWithdraw(store, confirmed);
-    const withdrawAuth = auth("withdraw", "withdraw-nonce");
+    const withdrawAuth = auth("exact_near_exit_v1", "withdraw-nonce");
     expect(planExitReturn({
       activeAccount: "alice.near", activeToken: "k1", callback: { kind: "none" },
       pending: withdrawAuth, step: signing, exit,
@@ -124,7 +124,7 @@ describe("exit continuation", () => {
       store.drop(plan.step);
     }
     expect(store.loadIntent(binding.account, binding.intentId)).toBeNull();
-    expect(claimWithdraw(store, step, auth("withdraw", "withdraw-nonce"))).toBe(false);
+    expect(claimWithdraw(store, step, auth("exact_near_exit_v1", "withdraw-nonce"))).toBe(false);
   });
 
   it("a transactionHashes callback is not a withdrawal signature", () => {
@@ -160,7 +160,7 @@ describe("exit continuation", () => {
   it("a rejected withdraw signature can be released without opening a second preview", () => {
     const store = memoryStepStore();
     const signing = saveAwaitingWithdraw(store, saveConfirmed(store, { ...beginExitStep(binding), previewNonce: "preview-nonce", phase: "preview_inflight" }, { amount_out: "1", min_amount_out: "1" }));
-    const withdrawAuth = auth("withdraw", "withdraw-nonce");
+    const withdrawAuth = auth("exact_near_exit_v1", "withdraw-nonce");
     expect(claimWithdraw(store, signing, withdrawAuth)).toBe(true);
     releaseWithdraw(store, signing);
     expect(store.loadIntent(binding.account, binding.intentId)?.phase).toBe("awaiting_withdraw");

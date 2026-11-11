@@ -55,7 +55,7 @@ correctly bound `duplicate_idempotency_key`, which still requires a fresh GET.
 
 ## Protocol and recovery
 
-Holder signs `exit_mode: exact-near-v1`, canonical USDC, `chain: near`, exact self
+Holder signs the authenticated, versioned operation `exact_near_exit_v1` plus `exit_mode: exact-near-v1`, canonical USDC, `chain: near`, exact self
 recipient, positive decimal `amount == min_amount_out`, current token/owner epoch,
 and a deadline at most five minutes ahead. Only fresh full-access NEP-413 is
 accepted. The amount in every hop is exactly this immutable policy-bound amount.
@@ -69,16 +69,28 @@ For each hop, persist baseline, exact request/path/key, atomic dispatch claim,
 original provider ID, terminal GET and verified readback. Only one POST claimant
 exists. Any lost ID/POST reply is UNKNOWN with NO retransmission, even under the
 same key; known IDs recover by GET only. Reconciliation can start the next,
-previously unsent hop only under the original unexpired signed plan and all gates.
-An expired plan cannot dispatch a later hop. Never create a replacement/top-up.
+previously unsent hop under the original unexpired signed plan and all gates.
+Expiry never stops polling or completion of a hop already dispatched. If the next
+hop is unsent after expiry, the response is `awaiting_continuation` with its exact
+step, original value-op/action hash and previous provider ID. Fresh holder NEP-413
+`reconcile_value_op` consent adds only `exit_continue: {step,value_op_id,action_hash,
+original_provider_id,deadline_ms}` (at most five minutes ahead). It cannot change
+amount/asset/recipient/epoch, clear admission or resend any dispatched hop. Current
+policy/control/budget are rechecked and the original per-hop CAS remains mandatory.
+Never create a replacement/top-up. Browser prompts for this specific original hop;
+CLI uses `reconcile --key ... --value-op-id ... --continue-step ... --original-provider-id ...`.
 
 Before registration require terminal original unshield success, private debit
 **exactly amount**, and public Intents self-credit **exactly amount**. Public
 `mt_balance_of` on `intents.near` must agree with authenticated executor-identified
 OutLayer balance. Before FT withdrawal recheck both balances, amount and FINAL
 recipient registration. After withdrawal require original success/canonical
-`delivered`/intent ID, FINAL recipient `ft_balance_of` increase **exactly amount**,
-Intents decrease **exactly amount**, and unchanged private balance. No mismatch
+`delivered`/intent ID and independently fetched original FINAL FT receipt proof
+binding that intent, custody wallet, canonical token, current holder and exact amount.
+The closed graph must have no failed descendants or refund events; a unique matching
+DIP-4 `ft_withdraw` must cause the unique exact NEP-141 `ft_transfer` child. Recipient
+balance deltas are diagnostic, not causal evidence: spending after delivery cannot
+strand the permit. Private/native budget readbacks remain required. No mismatch
 releases admission or appends successful history. A terminal unshield refund/failure
 can finish failed only with full original private/public balances restored; caps
 are conservatively retained. Other partial failures retain unresolved admission.
@@ -108,12 +120,8 @@ semantics and measured provider enforcement remain provider/solver assumptions.
 A short unshield stops before external payment but may leave public funds/fees;
 postchecks do not roll back the first hop. Local tests cannot prove a future fill.
 
-Delivery evidence is labelled **FINAL balance deltas + original provider ID**, not
-a transaction-receipt proof. Balance reads are sequential, not atomic; unrelated
-recipient activity can make them ambiguous or coincidentally match. The typed
-same-chain operation and provider identity remain trusted. This is not cryptographic
-causal attribution of every incoming unit. Live acceptance should additionally
-capture a genuine original FT receipt when available; never invent a tx hash.
-Missing/malformed provider/RPC/readback data fails closed. Testnet has no Intents
-solvers; sandbox uses real native admission/title receipts with explicit custody
-ledger mocks, not a live confidential shard/keystore proof.
+Original receipt resolution uses the documented [solver relay `get_status`](https://docs.near-intents.org/integration/market-makers/message-bus/rpc): original request `result.intent_hash` → `SETTLED` and `data.hash` → NEAR RPC `tx_status` at `FINAL`. Configure `INTENTS_READ_API_KEY` (relay `X-API-Key`, not custody/payment auth) before initial admission; missing configuration refuses before moving funds. If archival routing needs the relay signer, holder-signed reconciliation may provide `original_delivery_locator: {tx_hash, signer_id}`. This is only an untrusted locator: genuine FINAL RPC/events must independently bind the original intent and all terms. A wrong hint does not persist or poison the journal; retrying a read with the correct hint never resends custody.
+
+Official event definitions: [DIP-4 events](https://docs.near-intents.org/integration/verifier-contract/events), flattened [intent event](https://near.github.io/intents/src/defuse_core/intents/mod.rs.html) and [account event](https://near.github.io/intents/src/defuse_core/accounts.rs.html). No OutLayer transaction field is invented. Pending/unavailable/ambiguous receipts or failed descendants remain UNKNOWN, never success. Equal same-recipient withdrawals batched in one original action are conservatively ambiguous. Testnet has no Intents solvers; sandbox mocks custody/FT receipt data while native admission/title receipts are real local NEAR.
+
+The signed operation is a rollback fence: old workers dispatch only `withdraw`; sending `exact_near_exit_v1` is unknown, and changing only the outer operation to `withdraw` fails the original signed-op equality check. Both CLI and web low-level signers prohibit exact terms under the legacy operation. No capabilities preflight, website maintenance flag or post-execution check substitutes for this authenticated domain.

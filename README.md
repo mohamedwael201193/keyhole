@@ -118,7 +118,7 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 ```
 
-Worker source candidate: `ce0a33a67b985eb7952a30493f6f28926e07e7ae57e953a55a20c63d63a42966` (1,312,726 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
+Worker source candidate: `3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377` (1,331,880 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
 
 Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
@@ -127,7 +127,7 @@ Live governance (`governance_state`, `get_pledge_config`): owner `keyhole-devmo.
 Measured size steps are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [`docs/evidence/live-v2.5/all-live-views.json`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
 
-The downloadable source bundle carries the same generated live and candidate identities as this checkout. Public rollout evidence retains both FINAL receipt trees and transaction hashes; public transaction signatures are represented by SHA256 digests in the sanitized capture. The CLI's historical v2.4 compatibility pin stays tied to its released wasm, while current requests require the current owner epoch. The serial funded acceptance keeps its 13-transaction ledger and 96 screenshots, with bounded browser operations and an overall evidence-capture budget suitable for shared CI runners.
+The downloadable source bundle carries the same generated live and candidate identities as this checkout. Public rollout evidence retains both FINAL receipt trees and transaction hashes; historical sanitized captures use signature digests; the v2.7 proof retains its original public transaction signature. The CLI's historical v2.4 compatibility pin stays tied to its released wasm, while current requests require the current owner epoch. The serial funded acceptance keeps its 13-transaction ledger and 96 screenshots, with bounded browser operations and an overall evidence-capture budget suitable for shared CI runners.
 
 
 ---
@@ -210,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `641 claims: 344 PASS, 0 FAIL, 0 ERROR, 297 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `657 claims: 356 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -259,7 +259,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (641 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 344 PASS, 0 FAIL, 0 ERROR, 297 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (657 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 356 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
@@ -595,7 +595,7 @@ Not used: NEP-366 meta-transactions, NEP-145/148/141, sub-accounts, Intent Conne
 | v2.3 | `700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d` (210,474 bytes) | `8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG` | previous release |
 | **v2.4** | `b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c` (241,621 bytes) | **`DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ`** | superseded by v2.5 (deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn), [evidence](docs/evidence/contract-v2-4/README.md)) |
 
-| **v2.5** | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` (485,855 bytes) | **`3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b`** | recorded v2.5 rollout; superseded by live v2.6 ([deploy](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [Pledge migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)) |
+| **v2.5** | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` (485,855 bytes) | **`3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b`** | recorded v2.5 rollout; superseded by historical v2.6 and live v2.7 ([deploy](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [Pledge migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)) |
 | **v2.6** | `54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a` (487,260 bytes) | **`6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww`** | historical ([deploy](https://nearblocks.io/txns/4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj)) |
 | **v2.7** | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` (519,382 bytes) | **`3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH`** | **live** on `keyhole-devmo.near` ([deploy](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)) |
 
@@ -672,7 +672,7 @@ bash ./judge/1-contract.sh --strict          # committed live bytes == chain; so
 bash ./judge/2-attestations.sh           # every recorded call: attested build and output hash
 ./verify.sh 962d4374-b9ec-411a-9efa-973b36260431
 # --rebuild compiles THIS checkout. It matches executed wasm only on the publishing commit.
-# Current guarded source matches the published worker; previous builds need their own checkout.
+# Current exact-exit source is an unpublished candidate; use the publishing commit to match live bytes.
 # ./verify.sh 962d4374-b9ec-411a-9efa-973b36260431 --rebuild
 ```
 
@@ -813,11 +813,11 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 |---|---|---|
 | Keys contract unit tests | **342** pass | `cd contracts/keys && cargo test --locked` (current local measurement) |
 | Keys contract sandbox tests | **62** pass, 1 opt-in ignored | full local suite: 28 Pledge/CAS candidate cases plus 34 upgrade/sale/runtime cases |
-| TEE worker unit tests | **752** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
-| CLI tests | **79** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/cli-tests.log) |
+| TEE worker unit tests | **758** pass | `cd tee/worker && cargo test --locked` (lib and main test binaries, summed) |
+| CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/cli-tests.log) |
 | Web unit tests (Vitest) | **1976** pass in 112 files | `cd web && npx vitest run`; [measurement context](SECURITY.md#historical-test-environment-qualifications) |
 | Web e2e (Playwright) | **215** pass + 2 passed on retry, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/web-e2e.log) |
-| Claims in `docs/claims.json` | **641**: offline 344 PASS, 0 FAIL, 0 ERROR, 297 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **657**: offline 356 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |

@@ -91,8 +91,14 @@ fn op_reconcile_value(input:&Value)->Result<Value,Error>{
     let j:Journal=serde_json::from_slice(&Store::read(&mut Host,&format!("{key}/record"))?).map_err(|_|err("guard_journal","unknown operation"))?;j.validate()?;
     if j.owner!=c.account||j.token_id!=c.token_id()||j.contract!=keys_contract()||j.op_id!=id{return Err(err("not_owner","wrong journal owner/token/contract"));}
     if Store::read(&mut Host,&format!("{}/terminal",j.key()))?.is_empty(){guard_registry()?;guard_admit(&j)?;}
-    let (wallet_key,_) =guarded_wallet(&j.token_id)?;let out=guard_provider(&j,&wallet_key,true)?;
-    Ok(json!({"ok":out["admission_finished"],"op":"reconcile_value_op","value_op_id":j.op_id,"status":out["status"],"request_id":out["request_id"],"admission_finished":out["admission_finished"]}))
+    let (wallet_key,_) =guarded_wallet(&j.token_id)?;
+    let out=if j.kind=="withdraw" && j.body["exit_mode"]==exact_exit::MODE {
+        if input.pointer("/auth/scheme").and_then(Value::as_str)!=Some("nep413"){return Err(err("session_scope","exact exit recovery requires full-access NEP-413"));}
+        guarded::signed_epoch(&c.req.params,j.epoch)?;
+        EXIT_DELIVERY_LOCATOR.with(|p|*p.borrow_mut()=c.req.params.get("original_delivery_locator").cloned());
+        exact_exit::drive_continued(&mut Host,&j,&wallet_key,c.req.params.get("exit_continue"))?
+    }else{guard_provider(&j,&wallet_key,true)?};
+    Ok(json!({"ok":out["admission_finished"],"op":"reconcile_value_op","value_op_id":j.op_id,"status":out["status"],"continuation":out["continuation"],"request_id":out["request_id"],"admission_finished":out["admission_finished"]}))
 }
 
 fn op_transfer(input:&Value)->Result<Value,Error>{
@@ -109,7 +115,7 @@ fn op_transfer(input:&Value)->Result<Value,Error>{
     let charge=charge_spend(&mut Host,&c.cap(),&lim,None,usd,c.now_ms)?;
     let j=guard_begin(&c,input,"transfer",json!({"to":to,"token":token,"amount":amount}),Some(charge))?;
     let out=guard_provider(&j,&key,false).map_err(|_|err("needs_review",format!("custody outcome unknown; reconcile {}",j.op_id)))?;
-    Ok(json!({"ok":out["status"]=="success","op":"transfer","status":out["status"],"request_id":out["request_id"],"value_op_id":j.op_id,"admission_finished":out["admission_finished"]}))
+    Ok(json!({"ok":out["status"]=="success","op":"transfer","status":out["status"],"continuation":out["continuation"],"request_id":out["request_id"],"value_op_id":j.op_id,"admission_finished":out["admission_finished"]}))
 }
 fn custody_get(key:&str,path:&str)->Result<Value,Error>{
     match http("GET",&format!("{OL}{path}"),Some(key),None){Ok((200,v))=>Ok(v),_=>Err(err("collateral_ineligible","custody observation unavailable"))}

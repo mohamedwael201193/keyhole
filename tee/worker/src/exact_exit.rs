@@ -9,6 +9,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+pub const OP: &str = "exact_near_exit_v1";
 pub const MODE: &str = "exact-near-v1";
 pub const STORAGE_MAX: u128 = 1_250_000_000_000_000_000_000;
 pub const NATIVE_MAX: u128 = 2_500_000_000_000_000_000_000;
@@ -259,6 +260,8 @@ pub trait Host: ProviderHost {
     /// FINAL public intents mt_balance_of and FT balance/storage; confidential ledger
     /// is authenticated provider data. All identities/assets validated by adapter.
     fn observe(&mut self, j: &Journal, key: &str) -> Result<Observation, Error>;
+    /// Fetches genuine FINAL RPC result for the original intent. No supplied success flags.
+    fn original_delivery(&mut self, j: &Journal, intent: &str) -> Result<Value, Error>;
     fn now_ms(&mut self) -> Result<u64, Error>;
     fn post_step(
         &mut self,
@@ -327,6 +330,11 @@ fn credit(before: &Observation, after: &Observation, a: u128) -> Result<(), Erro
 /// Reentrant calls may read and reconcile, but never claim another process's POST.
 /// A crash after a dispatch claim and before its ID is durable stays UNKNOWN.
 pub fn drive<H: Host>(h: &mut H, j: &Journal, key: &str) -> Result<Value, Error> {
+    drive_continued(h,j,key,None)
+}
+/// Continuation is already fresh NEP-413-authenticated by the host; it authorizes
+/// only the immutable operation's named, unsent next hop (never a replacement).
+pub fn drive_continued<H:Host>(h:&mut H,j:&Journal,key:&str,continuation:Option<&Value>)->Result<Value,Error>{
     j.validate()?;
     let p = Plan::journal(j)?;
     let a = p.units()?;
@@ -404,10 +412,18 @@ pub fn drive<H: Host>(h: &mut H, j: &Journal, key: &str) -> Result<Value, Error>
             h.validate_dispatch(j, key)?;
             let now = h.now_ms()?;
             if now >= p.deadline_ms {
-                return Err(err(
-                    "withdraw_quote_expired",
-                    "signed exact exit deadline passed; recovery GETs only",
-                ));
+                let prev=match step {Step::Unshield=>None,Step::Storage=>Some(Step::Unshield),Step::Withdraw=>Some(Step::Storage)};
+                let original:Option<String>=if let Some(prev)=prev {read(h,&format!("{root}/{}/provider",prev.name()))?}else{None};
+                let Some(c)=continuation else {
+                    return Ok(json!({"status":"awaiting_continuation","exit_mode":MODE,"step":step.name(),"value_op_id":j.op_id,"request_id":original,"admission_finished":false,"continuation":{"step":step.name(),"value_op_id":j.op_id,"action_hash":j.action_hash,"original_provider_id":original}}));
+                };
+                let deadline=c["deadline_ms"].as_u64().ok_or_else(||err("exit_continue","deadline required"))?;
+                if c.as_object().is_none_or(|m|m.len()!=5) || c["step"]!=step.name() || c["value_op_id"]!=j.op_id ||
+                   c["action_hash"]!=j.action_hash || c["original_provider_id"]!=json!(original) ||
+                   now>=deadline || deadline-now>300_000 {return Err(err("exit_continue","continuation changed immutable operation/next hop or expired"));}
+                // Persist exact consent before CAS dispatch. One immutable record per
+                // fresh deadline; concurrent holders still contend on original hop CAS.
+                save(h,&format!("{sk}/continuations/{deadline}"),c)?;
             }
             let obs = h.observe(j, key)?;
             obs.validate()?;
@@ -547,8 +563,7 @@ pub fn drive<H: Host>(h: &mut H, j: &Journal, key: &str) -> Result<Value, Error>
                     .pointer("/result/intent_hash")
                     .and_then(Value::as_str)
                     .is_some_and(|s| !s.is_empty())
-                || obs.n("recipient")?.checked_sub(before.n("recipient")?) != Some(a)
-                || before.n("intents")?.checked_sub(obs.n("intents")?) != Some(a)
+
                 || obs.n("confidential")? != before.n("confidential")?
                 || baseline
                     .n("native")?
@@ -557,7 +572,10 @@ pub fn drive<H: Host>(h: &mut H, j: &Journal, key: &str) -> Result<Value, Error>
             {
                 return Err(err("exit_readback","exact canonical FT credit/public debit not established; no success or replacement send"));
             }
-            let facts = json!({"status":"success","result":{"amount_out":p.amount,"delivered":guarded::ASSET,"intent_hash":v["result"]["intent_hash"]},"exit_mode":MODE,"original_request":v,"baseline":baseline,"before_withdraw":before,"final_readback":obs,"evidence_kind":"final_balance_deltas_and_provider_original_id"});
+            let intent=guarded::text(&v["result"],"intent_hash")?;
+            let original=h.original_delivery(j,intent)?;
+            let receipt=crate::exact_receipt::verify(j,intent,&original)?;
+            let facts = json!({"status":"success","result":{"amount_out":p.amount,"delivered":guarded::ASSET,"intent_hash":v["result"]["intent_hash"]},"exit_mode":MODE,"original_request":v,"baseline":baseline,"before_withdraw":before,"final_readback":obs,"evidence_kind":"original_final_ft_receipt","original_delivery":original,"delivery_proof":receipt});
             save(h, &format!("{}/settlement", j.key()), &facts)?;
             let t = Terminal {
                 success: true,

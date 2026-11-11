@@ -6,7 +6,7 @@ type Read = <T>(method: string, args: Record<string, unknown>) => Promise<T>;
 /** Historical v2.4 only. Never derive this exception from the current deployment identity. */
 export const LIVE_V24_CODE_HASH = "DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ";
 export const guardedValueOp = (op: string, params: Record<string, unknown>) =>
-  ["swap", "copy", "withdraw", "withdraw_dry_run", "transfer"].includes(op) || (op === "quote" && params.execute === true);
+  ["swap", "copy", "reconcile_value_op", "exact_near_exit_v1", "withdraw", "withdraw_dry_run", "transfer"].includes(op) || (op === "quote" && params.execute === true);
 export const decimalEpoch = (v: unknown): v is string => typeof v === "string" && /^(0|[1-9]\d*)$/.test(v) && BigInt(v) <= 18446744073709551615n;
 
 export type ContractProfile = "v2.4" | "v2.5";
@@ -56,6 +56,7 @@ export async function prepareGuardedRequest(op: string, account: string, params:
     control = await read("get_control_state", { token_id: token });
   } catch (e) {
     if (!isMethodNotFound(e)) throw e;
+    if (op === "exact_near_exit_v1") throw new Error("exact exit requires epoch-bound contract; no legacy fallback");
     if (await codeHash() !== LIVE_V24_CODE_HASH) throw new Error("unpinned_contract");
     if (session && (session.profile === "v2.5" || decimalEpoch(session.owner_epoch) || session.token_id !== token)) throw new Error("session_epoch: title changed; unlock again");
     return legacyParams(params, token);

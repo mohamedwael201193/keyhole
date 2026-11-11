@@ -58,6 +58,7 @@ export function nep413Bytes(message: string, nonce: Uint8Array, recipient: strin
 }
 
 export function signRequest(key: Key, op: string, params: Record<string, unknown> = {}, recipient = DEFAULTS.recipient, nowMs = Date.now()): Auth {
+  if (op === "withdraw" && params.exit_mode === "exact-near-v1") throw new Error("Exact exit must use exact_near_exit_v1, never legacy withdraw");
   const message = JSON.stringify({ op, account_id: key.accountId, ts_ms: nowMs, params });
   const nonce = randomBytes(32);
   const sig = ed25519.sign(sha256(nep413Bytes(message, nonce, recipient)), key.secret);
@@ -113,7 +114,7 @@ export async function readLiveCodeHash(rpc = DEFAULTS.rpc, contract = DEFAULTS.c
  * Network failures and any other resolver error fail closed. No unsigned gateway injection.
  */
 export async function prepareGuardedRequest(account: string, op: string, params: Record<string, unknown>, read: typeof contractView = contractView, codeHash: () => Promise<string> = () => readLiveCodeHash()): Promise<Record<string, unknown>> {
-  if (!["swap", "copy", "withdraw", "transfer"].includes(op) && !(op === "quote" && params.execute === true)) return params;
+  if (!["swap", "copy", "withdraw", "exact_near_exit_v1", "reconcile_value_op", "transfer"].includes(op) && !(op === "quote" && params.execute === true)) return params;
   let token = params.token_id;
   if (!token) {
     const held = await read<{ token_id: string }[]>("nft_tokens_for_owner", { account_id: account, from_index: "0", limit: 2 });
@@ -128,6 +129,7 @@ export async function prepareGuardedRequest(account: string, op: string, params:
     c = await read("get_control_state", { token_id: token });
   } catch (e) {
     if (!isMethodNotFound(e)) throw e;
+    if (op === "exact_near_exit_v1") throw new Error("exact exit requires epoch-bound contract; no legacy fallback");
     if (await codeHash() !== LIVE_V24_CODE_HASH) throw new Error("unpinned_contract");
     const next: Record<string, unknown> = { ...params, token_id: token };
     delete next.owner_epoch;
@@ -139,6 +141,7 @@ export async function prepareGuardedRequest(account: string, op: string, params:
 }
 
 export async function run(key: Key | null, op: string, params: Record<string, unknown> = {}): Promise<CallResult> {
+  if (op === "withdraw" && params.exit_mode === "exact-near-v1") op = "exact_near_exit_v1";
   return callWorker(key ? { op, auth: signRequest(key, op, await prepareGuardedRequest(key.accountId, op, params)) } : { op });
 }
 
@@ -255,7 +258,7 @@ export class GuardError extends Error {
 export interface GuardTarget { receiver: string; foreign: boolean }
 /** Which receiver a guarded op pays. Null: the op is not guarded. foreign: the receiver is an address on another chain. */
 export function guardTarget(op: string, params: Record<string, unknown>, accountId: string): GuardTarget | null {
-  if (op === "withdraw") return { receiver: String(params.to ?? ""), foreign: params.chain !== "near" };
+  if (op === "withdraw" || op === "exact_near_exit_v1") return { receiver: String(params.to ?? ""), foreign: params.chain !== "near" };
   if (op === "chain_sign") return { receiver: String(params.receiver ?? params.to ?? ""), foreign: params.chain !== "near" };
   if (op === "quote" && params.execute) return { receiver: String(params.recipient ?? accountId), foreign: false };
   if (op === "copy") return { receiver: accountId, foreign: false };

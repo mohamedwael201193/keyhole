@@ -830,48 +830,33 @@ to OutLayer. Detailed source pages:
 precondition, response and trust limit. Append-only per-hop request/baseline,
 atomic dispatch, original UUID, terminal GET and readback precede completion.
 Lost replies/IDs never retransmit; known-ID recovery is GET-only. Unissued later
-hops require the same original unexpired plan; no blind retry/top-up. Malformed,
+hops require the same immutable plan and an unexpired original or freshly signed next-hop continuation; no blind retry/top-up. Malformed,
 wrong asset/amount/recipient/status/error envelopes or inconsistent balances
 never create successful history or release admission. Full observed unshield
 refund terminates failed, conservatively keeping spend charged. Same-chain
 `result.intent_hash` is NOT a transaction hash.
 
 Public Intents balances are independently read from `intents.near`; confidential
-balances remain authenticated private-ledger/provider observations. FINAL
-recipient FT credit and public Intents debit must both equal the exact amount.
-Evidence is labelled **balance deltas plus original provider ID**, not causal
-receipt proof. Sequential reads and unrelated recipient activity can introduce
-ambiguity/coincidental deltas; this does not eliminate provider/RPC trust or prove
-cryptographic attribution of each unit. Live acceptance should capture genuine
-original FT receipts additionally, never synthesize them from an intent ID.
+balances remain authenticated private-ledger/provider observations. The original
+FINAL FT event must credit the exact amount; net recipient balance changes alone
+neither establish delivery nor prevent recovery after legitimate spending.
+Original exact exits now require causal FINAL receipt/event proof, not recipient
+balance deltas. The original provider request's intent ID is resolved by documented
+read-only solver relay `get_status` or a signed untrusted transaction locator, then
+independently fetched by NEAR RPC. Every original descendant must be present and
+successful; a unique original wallet/token/holder/amount DIP-4 withdrawal and its
+unique exact NEP-141 FT child are required. Failed/refunded/missing/ambiguous graphs
+stay UNKNOWN and retain native admission. Recipient spending after genuine delivery
+does not invalidate this historical receipt. Relay availability/auth and archival RPC
+remain operational dependencies; configure `INTENTS_READ_API_KEY` before starting.
+No OutLayer tx hash field, balance-only proof or broad signing permission is invented.
 
-Fresh confinement policy adds `withdraw` and `call`, with **call requiring guardian
-quorum**, not exempt from approvals. Only typed storage is exposed by KEYHOLE;
-there is no arbitrary custody-call operation. Raw/message/EVM/Solana signing,
-Intents calls, payment checks/resting orders and external keys stay denied.
-Old policies are not upgraded silently: actual decrypted exact-policy and auditor
-review must cover this change before funded use. Endpoint prose/schema disagree
-about storage multisig; pending approval is a stop/wait, never an auto-approval.
-
-Unshield reveals wallet/asset/amount publicly. It is a consciously signed new
-path, not an invisible public fallback. A short first-hop credit stops before
-external payment but cannot roll back an already moved first hop/fee. Liquidity,
-refund/net-fill behavior, deployed TEE measurements and provider/coordinator
-semantics remain assumptions. The public provider source has recently added
-confidential artifact transfer-shape checking while some guide prose still says
-otherwise; neither proves the deployment's current measurement. Local fault
-injection and sandbox custody mocks are NOT mainnet confidentiality or loan proof.
-The UUID, minter/attestor, contract bytes, secret/payment-key wrapper are unchanged;
-this implementation performed no mainnet or real-wallet signing/transactions,
-publication or secret changes. Generated test identities and disposable local
-sandbox transactions are the only transaction fixtures. All exact-head review, CI, publication, actual enrollment and live
-original delivery/refund evidence remain separate gates.
-
-Budget is <=0.4 NEAR including actual/unresolved/worst completion plus >=0.04 OFF
-reserve, <=0.999 USDC-equivalent (<=0.90 source+<=0.099 grant compute reserved),
-and <=0.00005 Base ETH including L1 fee. Existing grant credit is not zero cost.
-The previous ~0.43 full-redemption envelope is not a guaranteed ~0.383 budget.
-FINAL refunds only; temporary liquidity, internal capital and retained storage
-must be separately accounted for. The local integer budget/receipt checkers are
-operator gates, not a fabricated cost/delivery attestation. README has no
-weaknesses list; truthful unpublished/source-only labels remain mandatory.
+The signed `exact_near_exit_v1` operation rejects rollback to every worker that only
+understands `withdraw`. Old outer-op substitution cannot change the signed operation.
+The exact three-hop policy remains immutable. An expired deadline gates only an
+unsent hop: dispatched IDs continue GET-only settlement forever. A fresh holder
+NEP-413 continuation can authorize only the named unsent next hop, <=5 minutes ahead,
+with the same action hash/value permit/previous provider ID. Policy/budget/title/epoch
+checks and original CAS are still mandatory. Lost-ID sends remain UNKNOWN, never
+replaced. All native/provider/receipt mocks are explicitly local; source tests do not
+claim publication, reviewer enrollment, funding or a future mainnet exit.

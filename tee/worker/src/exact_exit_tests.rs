@@ -24,6 +24,8 @@ struct Fixture {
     final_delta: Option<i128>,
     bad_result: Option<Value>,
     storage_noop: bool,
+    receipt: Option<Value>,
+    spent_recipient: bool,
     finish_fail: bool,
 }
 impl Fixture {
@@ -99,7 +101,20 @@ impl ProviderHost for Fixture {
         Ok(true)
     }
 }
+fn intent_hash()->String{bs58::encode([4u8;32]).into_string()}
+fn delivery(j:&Journal,amount:&str)->Value{
+    let hash=bs58::encode([3u8;32]).into_string();
+    let mut v=crate::receipts::fixture(&hash,"relay.near","intents.near","");
+    let log=json!({"standard":"dip4","version":"0.4.3","event":"ft_withdraw","data":[{"intent_hash":intent_hash(),"account_id":j.wallet_id,"token":TOKEN,"receiver_id":j.owner,"amount":"100"}]}).to_string();
+    v["receipts_outcome"][0]["outcome"]["logs"]=json!([format!("EVENT_JSON:{log}")]);
+    v["receipts_outcome"][0]["outcome"]["receipt_ids"]=json!(["ft"]);
+    let log=json!({"standard":"nep141","version":"1.0.0","event":"ft_transfer","data":[{"old_owner_id":"intents.near","new_owner_id":j.owner,"amount":amount}]}).to_string();
+    v["receipts_outcome"].as_array_mut().unwrap().push(json!({"id":"ft","outcome":{"executor_id":TOKEN,"receipt_ids":[],"status":{"SuccessValue":""},"logs":[format!("EVENT_JSON:{log}")]}}));v
+}
 impl Host for Fixture {
+    fn original_delivery(&mut self,j:&Journal,_intent:&str)->Result<Value,Error>{
+        Ok(self.receipt.clone().unwrap_or_else(||delivery(j,&self.final_delta.unwrap_or(100).to_string())))
+    }
     fn now_ms(&mut self) -> Result<u64, Error> {
         Ok(self.clock)
     }
@@ -124,7 +139,7 @@ impl Host for Fixture {
         let result = if step == Step::Withdraw {
             self.bad_result
                 .clone()
-                .unwrap_or(json!({"delivered":guarded::ASSET,"intent_hash":"original-intent"}))
+                .unwrap_or(json!({"delivered":guarded::ASSET,"intent_hash":intent_hash()}))
         } else {
             json!({})
         };
@@ -147,7 +162,7 @@ impl Host for Fixture {
                 }
                 Step::Withdraw => {
                     o.intents = "20".into();
-                    o.recipient = (7i128 + self.final_delta.unwrap_or(100)).to_string();
+                    o.recipient = if self.spent_recipient {"0".into()} else {(7i128 + self.final_delta.unwrap_or(100)).to_string()};
                 }
             }
         }
@@ -400,7 +415,7 @@ fn expired_plan_allows_get_but_no_next_post() {
     h.rows.get_mut(&id).unwrap()["status"] = json!("success");
     h.obs.as_mut().unwrap().confidential = "900".into();
     h.obs.as_mut().unwrap().intents = "120".into();
-    assert!(drive(&mut h, &j, "key").is_err());
+    assert_eq!(drive(&mut h, &j, "key").unwrap()["status"],"awaiting_continuation");
     assert_eq!(h.posts.len(), 1);
 }
 #[test]
@@ -691,4 +706,65 @@ fn malformed_or_changed_verified_hop_is_not_a_recovery_permission() {
         assert!(drive(&mut h, &j, "key").is_err());
         assert_eq!(h.posts.len(), count);
     }
+}
+
+#[test]
+fn successful_original_receipt_reconciles_after_recipient_spends(){
+ let mut h=Fixture::new();h.spent_recipient=true;let j=journal();
+ assert_eq!(drive(&mut h,&j,"key").unwrap()["status"],"success");
+ assert_eq!(h.obs.as_ref().unwrap().recipient,"0");assert_eq!(h.finish_calls,1);assert_eq!(h.posts.len(),3);
+}
+#[test]
+fn original_receipt_negative_graphs_and_failed_descendants_never_finish(){
+ let j=journal();let good=delivery(&j,"100");
+ let mut cases=vec![];
+ for (ptr,value) in [
+ ("/final_execution_status",json!("EXECUTED_OPTIMISTIC")),
+ ("/transaction/receiver_id",json!("other.near")),
+ ("/receipts_outcome/1/outcome/executor_id",json!("other.near")),
+ ("/receipts_outcome/1/outcome/status",json!({"Failure":{}})),
+ ("/receipts_outcome/0/outcome/receipt_ids",json!([])),
+ ("/receipts_outcome/0/outcome/logs",json!([])),
+ ("/receipts_outcome/1/outcome/logs",json!([])),
+ ]{let mut v=good.clone();*v.pointer_mut(ptr).unwrap()=value;cases.push(v);}
+ for (field,value) in [("intent_hash",json!(bs58::encode([9u8;32]).into_string())),("account_id",json!("cd".repeat(32))),("receiver_id",json!("other.near")),("token",json!("wrong.near")),("amount",json!("99")),("msg",json!("callback"))]{
+  let mut v=good.clone();let log=v["receipts_outcome"][0]["outcome"]["logs"][0].as_str().unwrap();let mut e:Value=serde_json::from_str(log.strip_prefix("EVENT_JSON:").unwrap()).unwrap();e["data"][0][field]=value;v["receipts_outcome"][0]["outcome"]["logs"]=json!([format!("EVENT_JSON:{e}")]);cases.push(v);
+ }
+ for v in cases {let mut h=Fixture::new();h.receipt=Some(v);assert!(drive(&mut h,&j,"key").is_err());assert_eq!(h.finish_calls,0);assert_eq!(h.posts.len(),3);}
+}
+fn continuation(h:&mut Fixture,j:&Journal,step:&str)->Value {
+ let r=drive(h,j,"key").unwrap();assert_eq!(r["status"],"awaiting_continuation");assert_eq!(r["continuation"]["step"],step);
+ let mut c=r["continuation"].clone();c["deadline_ms"]=json!(h.clock+100);c
+}
+#[test]
+fn slow_unshield_then_slow_guardian_both_finish_with_fresh_unsent_hop_consent(){
+ let j=journal();let mut h=Fixture::new();h.status=Some((Step::Unshield,"processing".into()));
+ drive(&mut h,&j,"key").unwrap();h.clock=400_000;
+ let id=h.rows.keys().next().unwrap().clone();h.rows.get_mut(&id).unwrap()["status"]=json!("success");
+ h.obs.as_mut().unwrap().confidential="900".into();h.obs.as_mut().unwrap().intents="120".into();
+ let c=continuation(&mut h,&j,"storage");h.status=Some((Step::Storage,"pending_approval".into()));
+ assert_eq!(drive_continued(&mut h,&j,"key",Some(&c)).unwrap()["status"],"processing");assert_eq!(h.posts.len(),2);
+ h.clock=800_000;let id=h.rows.iter().find(|(_,r)|r["type"]=="call").unwrap().0.clone();h.rows.get_mut(&id).unwrap()["status"]=json!("success");h.obs.as_mut().unwrap().registered=true;
+ let c=continuation(&mut h,&j,"withdraw");assert_eq!(h.posts.len(),2);
+ assert_eq!(drive_continued(&mut h,&j,"key",Some(&c)).unwrap()["status"],"success");
+ drive(&mut h,&j,"key").unwrap();assert_eq!(h.posts.len(),3);assert_eq!(h.finish_calls,2);
+}
+#[test]
+fn expired_or_changed_continuation_cannot_send_or_release(){
+ let j=journal();let mut h=Fixture::new();h.clock=3000;let good=continuation(&mut h,&j,"unshield");
+ for (f,v) in [("step",json!("withdraw")),("value_op_id",json!("wrong")),("action_hash",json!("b".repeat(64))),("original_provider_id",json!("other")),("deadline_ms",json!(2999)),("amount",json!("200"))]{let mut c=good.clone();c[f]=v;assert!(drive_continued(&mut h,&j,"key",Some(&c)).is_err());assert!(h.posts.is_empty());assert_eq!(h.finish_calls,0);}
+}
+#[test]
+fn missing_receipt_then_original_get_recovery_after_spending_and_expiry(){
+ let j=journal();let mut h=Fixture::new();h.receipt=Some(Value::Null);
+ assert!(drive(&mut h,&j,"key").is_err());assert_eq!(h.posts.len(),3);assert_eq!(h.finish_calls,0);
+ h.clock=900_000;h.obs.as_mut().unwrap().recipient="0".into();h.receipt=None;
+ assert_eq!(drive(&mut h,&j,"key").unwrap()["status"],"success");assert_eq!(h.posts.len(),3);assert_eq!(h.finish_calls,1);
+}
+#[test]
+fn delayed_original_unshield_refund_completes_after_expiry_without_new_hop(){
+ let j=journal();let mut h=Fixture::new();h.status=Some((Step::Unshield,"processing".into()));
+ drive(&mut h,&j,"key").unwrap();h.clock=900_000;
+ h.rows.values_mut().next().unwrap()["status"]=json!("refunded");
+ assert_eq!(drive(&mut h,&j,"key").unwrap()["status"],"failed");assert_eq!(h.posts.len(),1);assert_eq!(h.finish_calls,1);
 }

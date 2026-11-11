@@ -3333,17 +3333,17 @@
   },
   {
    "id": "src-gw-allow",
-   "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, pledge_inventory, info, provenance, record, status, quote, mint, account, balance, history, swap, withdraw, withdraw_dry_run, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
+   "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, pledge_inventory, info, provenance, record, status, quote, mint, account, balance, history, swap, exact_near_exit_v1, withdraw, withdraw_dry_run, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
    "where": "README.md:369",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
     "type": "grep",
     "path": "web/lib/gateway.ts",
-    "pattern": "ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]"
+    "pattern": "ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"exact_near_exit_v1\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]"
    },
    "expected": "exact list",
-   "verify": "grep -nE 'ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]' web/lib/gateway.ts"
+   "verify": "grep -nE 'ALLOWED_OPS = \\[\"reconcile_value_op\",\\ \"loan_certificate\",\\ \"pledge_inventory\",\\ \"info\",\\ \"provenance\",\\ \"record\",\\ \"status\",\\ \"quote\",\\ \"mint\",\\ \"account\",\\ \"balance\",\\ \"history\",\\ \"swap\",\\ \"exact_near_exit_v1\",\\ \"withdraw\",\\ \"withdraw_dry_run\",\\ \"lock\",\\ \"prove\",\\ \"limits\",\\ \"pnl\",\\ \"dashboard\",\\ \"level_up\",\\ \"session\",\\ \"session_revoke\"\\]' web/lib/gateway.ts"
   },
   {
    "id": "src-gw-nocopy",
@@ -3941,6 +3941,27 @@
    },
    "expected": "`eip191_recovers_the_fixed_vector_and_rejects_a_tamper` found in source",
    "verify": "node judge/verify-claims.mjs --only test-eip191_recovers_the_fixed_vector_and_rejects_a_tamper"
+  },
+  {
+   "id": "test-exact_near_exit_v1",
+   "claim": "Named test or symbol `exact_near_exit_v1` exists in the source",
+   "where": "SECURITY.md:854",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "exact_near_exit_v1",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`exact_near_exit_v1` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-exact_near_exit_v1"
   },
   {
    "id": "test-executed_wasm_sha256",
