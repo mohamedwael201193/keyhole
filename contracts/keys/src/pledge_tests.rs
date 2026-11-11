@@ -26,7 +26,8 @@ fn setup() -> Contract {
     ctx("keys.near", 0, NOW);
     let mut c = test_funded_contract();
     ctx("minter.near", N / 10, NOW);
-    c.nft_mint("k1".into(), a("alice.near"), 2, TokenMetadata { title: Some("Key".into()), ..Default::default() });
+    // v2.7: the tier caps the borrow (Gold = 5 NEAR), and every loan fixture here borrows 1 NEAR.
+    c.nft_mint("k1".into(), a("alice.near"), 3, TokenMetadata { title: Some("Key".into()), ..Default::default() });
     // Settle the minter's known successful mint-storage refund before the lending baseline.
     ctx("minter.near",1,NOW);let _=c.claim_payout();let p=c.get_pending_payout(a("minter.near")).unwrap();
     result(PromiseResult::Successful(vec![]),NOW);assert!(c.on_payout(a("minter.near"),p.nonce));

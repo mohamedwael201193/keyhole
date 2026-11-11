@@ -8,6 +8,9 @@
 //! v2.5: owner epoch, replay-safe admission, token transfer-call lock and sealed bilateral loans.
 //! Existing Contract Borsh layout is unchanged; migrate_pledge initializes isolated loan/recovery metadata.
 //! Epochs complement the barrier; they do not recall committed external txs (see SECURITY).
+//! v2.7: code-only upgrade. Callbacks do not panic on state paths; G1 reclaim of unclaimed principal; tier loan caps;
+//! loan/payout/governance events; owner handover (two-step), 24 h timelocked upgrade and a fixed wind-down date.
+//! New storage lives only under raw "Q27" keys and "Q27d"/"Q27o" maps. The Contract struct and every stored Borsh layout are unchanged.
 use near_contract_standards::non_fungible_token::approval::NonFungibleTokenApproval;
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
@@ -43,6 +46,7 @@ macro_rules! json_object {
 
 #[allow(clippy::too_many_arguments)] mod pledge; // Flat provider ABI plus required owner/epoch CAS fields.
 mod sale;
+mod v27;
 pub use sale::{Sale, SaleTerms, SaleCertificate, SaleState};
 pub use pledge::*;
 
@@ -211,7 +215,7 @@ fn emit_key_event(event: &str, data: String) {
 }
 
 #[near(contract_state, contract_metadata(
-    version = "2.6.0",
+    version = "2.7.0",
     link = "https://github.com/mohamedwael201193/keyhole",
     standard(standard = "nep171", version = "1.2.0"),
     standard(standard = "nep177", version = "2.0.0"),
@@ -310,7 +314,7 @@ impl Contract {
     }
 
     fn assert_owner(&self) {
-        require!(env::predecessor_account_id() == self.owner, "only owner");
+        require!(env::predecessor_account_id() == self.current_owner(), "only owner");
     }
     fn assert_minter(&self) {
         require!(env::predecessor_account_id() == self.minter, "only minter");
@@ -339,6 +343,7 @@ impl Contract {
         metadata: TokenMetadata,
     ) -> Token {
         self.assert_minter();
+        v27::assert_not_wound_down();
         require!((1..=MAX_TIER).contains(&tier), "bad tier");
         require!(!token_id.is_empty(), "empty token_id");
         require!(token_id.len() <= 64, "token_id too long");
@@ -356,6 +361,7 @@ impl Contract {
     }
 
     /// Minter only. Signals that the key's public card changed (new attested range).
+    /// No 1-yocto requirement (v2.7): the minter calls with a FunctionCall access key, which cannot attach a deposit.
     pub fn beat(&mut self, token_ids: Vec<TokenId>) -> u64 {
         self.assert_minter();
         require!(!token_ids.is_empty() && token_ids.len() <= MAX_BEAT_BATCH, "bad batch");
@@ -375,6 +381,8 @@ impl Contract {
     /// Takes no deposit: the tiers entry already exists, so storage does not grow. Emits NEP-171 1.2.0
     /// `nft_metadata_update` for the token (same event as `beat`). The tier is read from the holder's key,
     /// so holder_tier and the TEE gate see the new tier at once, and it survives nft_transfer.
+    /// v2.7 note: no 1-yocto requirement. The minter is the TEE worker, which signs with a FunctionCall access key;
+    /// such a key cannot attach a deposit, so 1 yocto would make the earned-tier path unusable. Same reason for beat.
     pub fn nft_set_tier(&mut self, token_id: TokenId, tier: u8) {
         self.assert_minter();
         require!(self.tokens.owner_by_id.get(&token_id).is_some(), "no token");
@@ -460,6 +468,7 @@ impl Contract {
     /// ends. A listing's price can be changed by its seller with exactly 1 yoctoNEAR (the deposit stays).
     #[payable]
     pub fn nft_list(&mut self, token_id: TokenId, price: U128) {
+        v27::assert_not_wound_down();
         let caller = env::predecessor_account_id();
         let owner = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(|| env::panic_str("unknown token"));
         require!(owner == caller, "only the owner can list");
@@ -628,6 +637,7 @@ impl Contract {
 
     /// Finish ONLY after terminal reconciliation, never HTTP timeout/needs_review.
     /// Completion keeps a bounded high-water nonce, not an unbounded tombstone archive.
+    /// v2.7 note: no 1-yocto requirement. Same reason as beat and nft_set_tier: the minter is a FunctionCall key.
     pub fn finish_value_op(&mut self, token_id: TokenId, op_id: String, success: bool) {
         self.assert_minter();
         let key = value_op_key(&token_id, &op_id);
@@ -681,7 +691,7 @@ impl Contract {
     }
 
     pub fn config(&self) -> Config {
-        Config { owner: self.owner.clone(), minter: self.minter.clone(), treasury: self.treasury.clone(), royalty_bps: self.royalty_bps, beats: self.beats.into() }
+        Config { owner: self.current_owner(), minter: self.minter.clone(), treasury: self.treasury.clone(), royalty_bps: self.royalty_bps, beats: self.beats.into() }
     }
 
     // NEP-199 (hand-written)
@@ -786,6 +796,8 @@ impl Contract {
     fn settle_transfer_call(&mut self, token_id: TokenId, epoch: near_sdk::json_types::U64, must_return: bool) -> bool {
         let Some(p) = transfer_calls().get(&token_id) else { return false; };
         if p.epoch != epoch { return false; } // Stale callbacks neither mutate nor claim acceptance.
+        // G2: this settle runs inside a callback. A panic here would revert the whole receipt and keep the token locked
+        // with transfer_calls still set, so every state write below is either infallible or reported as an event.
         let mut kept = true;
         if must_return && self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&p.receiver) {
             self.tokens.internal_transfer_unguarded(&token_id, &p.receiver, &p.previous_owner);
@@ -799,7 +811,9 @@ impl Contract {
             bump_owner_epoch(&token_id); kept = false;
         } else if let Some(old) = p.approvals { refund_approval_credit(&p.previous_owner, &old); }
         transfer_calls().remove(&token_id);
-        set_pending(&p.previous_owner, pending_returns(&p.previous_owner).checked_sub(1).unwrap_or_else(||env::panic_str("missing return reservation")));
+        let reserved = pending_returns(&p.previous_owner);
+        if reserved > 0 { set_pending(&p.previous_owner, reserved - 1); }
+        else { emit_key_event("transfer_reservation_missing", json_object!({"token_id": token_id, "account_id": p.previous_owner})); }
         self.clear_stale_listing(&token_id);
         kept
     }
