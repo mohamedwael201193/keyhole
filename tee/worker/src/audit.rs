@@ -5,6 +5,25 @@ use super::*;
 const FA: &str = r#"{"block_hash":"x","block_height":1,"nonce":5,"permission":"FullAccess"}"#;
 #[test] fn full_access_key_passes() { assert!(is_full_access(FA)); }
 #[test] fn full_access_inside_rpc_result_envelope_passes() { assert!(is_full_access(r#"{"result":{"nonce":1,"permission":"FullAccess"}}"#)); }
+
+// Live minter nonces are > 2^32 (e.g. 221861956000009). The host may wrap them in `result`.
+const LIVE_NONCE: u64 = 221_861_956_000_009;
+#[test] fn access_key_nonce_reads_flat_result() {
+    assert_eq!(access_key_nonce(r#"{"block_hash":"x","block_height":1,"nonce":221861956000009,"permission":"FullAccess"}"#), Some(LIVE_NONCE));
+}
+#[test] fn access_key_nonce_reads_rpc_result_envelope() {
+    assert_eq!(access_key_nonce(r#"{"jsonrpc":"2.0","result":{"nonce":221861956000009,"permission":"FullAccess"},"id":"1"}"#), Some(LIVE_NONCE));
+    assert_eq!(access_key_nonce(r#"{"result":{"nonce":221861956000009,"permission":"FullAccess"}}"#), Some(LIVE_NONCE));
+}
+#[test] fn access_key_nonce_reads_string_nonce() {
+    assert_eq!(access_key_nonce(r#"{"nonce":"221861956000009","permission":"FullAccess"}"#), Some(LIVE_NONCE));
+    assert_eq!(access_key_nonce(r#"{"result":{"nonce":"221861956000009"}}"#), Some(LIVE_NONCE));
+}
+#[test] fn access_key_nonce_rejects_missing_or_malformed() {
+    for raw in ["", "{", r#"{"permission":"FullAccess"}"#, r#"{"nonce":null}"#, r#"{"nonce":-1}"#, r#"{"nonce":"abc"}"#, r#"{"result":{}}"#] {
+        assert_eq!(access_key_nonce(raw), None, "{raw}");
+    }
+}
 #[test] fn fc_key_with_method_named_full_access_fails() {
     assert!(!is_full_access(r#"{"nonce":1,"permission":{"FunctionCall":{"allowance":null,"receiver_id":"x.near","method_names":["FullAccess"]}}}"#));
 }
