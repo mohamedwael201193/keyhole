@@ -1,0 +1,105 @@
+{
+  "at_cairo": "2026-11-11T23:54:00.011521+02:00",
+  "step": "pre-publish",
+  "main": "83ff187312d856b7b80cb555612b4b67f8593bd7",
+  "rebuild_sha256": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+  "candidate": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+  "block": {
+    "hash": "AvPixSY7tVExX1C1XgAtCUXYjLbWm2fPM33wqZZK5DY6",
+    "height": 224122209,
+    "timestamp_nanosec": "1794433877528609617",
+    "gas_price": "100000000",
+    "cairo_time": "2026-11-11T23:51:17.528610+02:00"
+  },
+  "lending_enabled": false,
+  "uuid": "p000000000000004b",
+  "active_worker": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+  "accounts": {
+    "contract": {
+      "account_id": "keyhole-devmo.near",
+      "amount_near": 6.872881570179188,
+      "amount": "6872881570179187962621659",
+      "storage_usage": 525930,
+      "full_access_keys": 2
+    },
+    "test_holder2": {
+      "account_id": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+      "amount_near": 0.1042351193834676,
+      "amount": "104235119383467599999994",
+      "storage_usage": 182,
+      "full_access_keys": 1
+    },
+    "test_holder3": {
+      "account_id": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+      "amount_near": 0.1789254278878954,
+      "amount": "178925427887895399999996",
+      "storage_usage": 182,
+      "full_access_keys": 1
+    },
+    "minter": {
+      "account_id": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+      "amount_near": 0.0408290473618258,
+      "amount": "40829047361825799999999",
+      "storage_usage": 315,
+      "full_access_keys": 1
+    }
+  },
+  "payment_keys_public": {
+    "0": {
+      "http_status": 200,
+      "url": "https://api.outlayer.ai/public/payment-keys/keyhole-devmo.near/0/balance",
+      "public_balance": {
+        "owner": "keyhole-devmo.near",
+        "nonce": 0,
+        "initial_balance": "0",
+        "spent": "0",
+        "reserved": "0",
+        "available": "0",
+        "last_used_at": null,
+        "closed": false
+      }
+    },
+    "1": {
+      "http_status": 200,
+      "url": "https://api.outlayer.ai/public/payment-keys/keyhole-devmo.near/1/balance",
+      "public_balance": {
+        "owner": "keyhole-devmo.near",
+        "nonce": 1,
+        "initial_balance": "1288694",
+        "spent": "787256",
+        "reserved": "0",
+        "available": "501438",
+        "last_used_at": "2026-11-11T12:48:57.813748+00:00",
+        "closed": false
+      }
+    },
+    "2": {
+      "http_status": 200,
+      "url": "https://api.outlayer.ai/public/payment-keys/keyhole-devmo.near/2/balance",
+      "public_balance": {
+        "owner": "keyhole-devmo.near",
+        "nonce": 2,
+        "initial_balance": "20010000",
+        "spent": "1004",
+        "reserved": "0",
+        "available": "20008996",
+        "last_used_at": "2026-11-11T17:07:23.041668+00:00",
+        "closed": false
+      }
+    },
+    "3": {
+      "http_status": 200,
+      "url": "https://api.outlayer.ai/public/payment-keys/keyhole-devmo.near/3/balance",
+      "public_balance": {
+        "owner": "keyhole-devmo.near",
+        "nonce": 3,
+        "initial_balance": "0",
+        "spent": "0",
+        "reserved": "0",
+        "available": "0",
+        "last_used_at": null,
+        "closed": false
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "at_cairo": "2026-11-11T23:58:24.310860+02:00",
+  "lending_enabled": false,
+  "tokens": {
+    "0": {
+      "binding": null,
+      "pending_reg": null,
+      "loan": null,
+      "pledged": false,
+      "owner": "keyhole-devmo.near"
+    },
+    "k0642e7964b2fb515": {
+      "binding": null,
+      "pending_reg": null,
+      "loan": null,
+      "pledged": false,
+      "owner": "476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8"
+    },
+    "k102a806df6867547": {
+      "binding": null,
+      "pending_reg": null,
+      "loan": null,
+      "pledged": false,
+      "owner": "0xf76e6b0920e9332ff4410f6dd53f01722abc71a3"
+    },
+    "k22b07f20ff167d8d": {
+      "binding": null,
+      "pending_reg": null,
+      "loan": null,
+      "pledged": false,
+      "owner": "a838e946d80014f0c9a99911ad9802e7f88e80b87536fce86a46e1c03b3292f4"
+    },
+    "k5f4750858f328940": {
+      "binding": null,
+      "pending_reg": null,
+      "loan": null,
+      "pledged": false,
+      "owner": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447"
+    },
+    "k857b6b68facc0f94": {
+      "binding": null,
+      "pending_reg": null,
+      "loan": null,
+      "pledged": false,
+      "owner": "a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da"
+    }
+  },
+  "any_binding": false,
+  "any_loan": false,
+  "any_pledged": false
+}

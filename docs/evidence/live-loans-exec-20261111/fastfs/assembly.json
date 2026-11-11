@@ -1,0 +1,18 @@
+{
+  "url": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377.wasm",
+  "http": 200,
+  "at_cairo": "2026-11-11T23:54:57.180789+02:00",
+  "sha256": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+  "bytes": 1331880,
+  "headers": {
+    "x-fastdata-parts": "2",
+    "x-fastdata-receipt-id": "8vgo9JBd65CxpHJ8XjemHXMvHH2KjQFfnHSjP8S1VwdR",
+    "x-fastdata-nonce": "1794434041",
+    "x-fastdata-tx-hash": "D1HQ3VzitDUdJqiR9Bzhkyjvz2aBrgNk4y2CgYjyEZYZ",
+    "x-fastdata-block-height": "224122525",
+    "etag": "\"8vgo9JBd65CxpHJ8XjemHXMvHH2KjQFfnHSjP8S1VwdR-1794434041\"",
+    "x-fastdata-block-timestamp": "1794434057059903091"
+  },
+  "exact_sha": true,
+  "exact_bytes": true
+}

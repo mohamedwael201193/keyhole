@@ -1,0 +1,22 @@
+{
+  "wasm_sha256": "3ff0bcad704020e2d3beceb322d7e680e48367afb03cd0c421de6f6c1a783377",
+  "bytes": 1331880,
+  "batch_nonce": 1794434041,
+  "chunks": [
+    {
+      "step": 1,
+      "file": "/workspace/handoff/loans_live/evidence/fastfs/chunk-1.borsh",
+      "payload_sha256": "2388356374f5e7362f044ef29af4693427d4007bcb39c8f8a355ed754cd21f1f",
+      "command": "test ! -e '/workspace/handoff/loans_live/evidence/fastfs/chunk-1.borsh.signed.json' && near contract call-function as-transaction outlayer.near __fastdata_fastfs file-args '/workspace/handoff/loans_live/evidence/fastfs/chunk-1.borsh' prepaid-gas '0.000000000001 Tgas' attached-deposit '0 NEAR' sign-as keyhole-devmo.near network-config mainnet sign-with-keychain save-to-file '/workspace/handoff/loans_live/evidence/fastfs/chunk-1.borsh.signed.json'",
+      "send_command": "near transaction send-signed-transaction file-with-base64-signed-transaction '/workspace/handoff/loans_live/evidence/fastfs/chunk-1.borsh.signed.json' network-config mainnet send"
+    },
+    {
+      "step": 2,
+      "file": "/workspace/handoff/loans_live/evidence/fastfs/chunk-2.borsh",
+      "payload_sha256": "b0abb52239b28d4689a9560054592cc5220df64c043762b5f9a3037f89a2e54b",
+      "command": "test ! -e '/workspace/handoff/loans_live/evidence/fastfs/chunk-2.borsh.signed.json' && near contract call-function as-transaction outlayer.near __fastdata_fastfs file-args '/workspace/handoff/loans_live/evidence/fastfs/chunk-2.borsh' prepaid-gas '0.000000000001 Tgas' attached-deposit '0 NEAR' sign-as keyhole-devmo.near network-config mainnet sign-with-keychain save-to-file '/workspace/handoff/loans_live/evidence/fastfs/chunk-2.borsh.signed.json'",
+      "send_command": "near transaction send-signed-transaction file-with-base64-signed-transaction '/workspace/handoff/loans_live/evidence/fastfs/chunk-2.borsh.signed.json' network-config mainnet send"
+    }
+  ],
+  "note": "Unsigned only. Journal original signed hash before each send. Resume next NEVER-SUBMITTED chunk only after FINAL original/indexing gates. Never rerun the official uploader on UNKNOWN."
+}
