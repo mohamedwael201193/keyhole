@@ -775,14 +775,10 @@ predicate is re-used for reports, finalization and frozen certificate reads.
 Malformed successful RPC text is unavailable, not absence; error wrappers and
 wrong object/array schemas fail closed before admission side effects.
 
-OutLayer's documented WithdrawRequest has no minimum/quote-lock field. Dry-run
-amount_out/min_amount_out is advisory only. This unpublished candidate blocks ALL
-withdraw execution before custody, spend reservations and POSTs, even when a
-holder signs a minimum/deadline. Public FT redemption remains unavailable until a
-documented minimum-bound mechanism is reviewed. The explicitly scoped native A/B
-pilot below does not request that capability or waive this denial. No API parameter was guessed, no
-public fallback substituted and no positive preview promoted into recovery proof.
-The UI also refuses to turn advisory previews into withdrawal authorization.
+Historical pre-exact-exit candidate: OutLayer's WithdrawRequest has no
+minimum/quote-lock field, so direct confidential-withdraw previews never authorized
+execution. That universal stop is superseded ONLY for the explicit three-hop
+`exact-near-v1` candidate below. All other old/unbound withdrawal modes stay denied.
 
 Live contract metadata v2.7 is evidence-promoted, not redeployed. Production
 contract source/release files are unchanged; verifiers select release/v2.7 bytes while keeping
@@ -794,41 +790,67 @@ PAYMENT_KEY alias on submission and polling. Key 1 personal credit is separate.
 Actual grant usage, fees, destination terminal receipts and all budget reserves
 remain execution evidence, never inferred from test fixtures.
 
-## PR208 native A/B scope (no public FT redemption)
+## PR208 exact NEAR USDC exit — source candidate, not live proof
 
-The operator scope is `native-A-repay-B-title-no-public-redemption`: collateral
-USDC ingress into a fresh confined wallet, native NEAR principal delivery and
-repayment/pledge release for A; native default with NFT title/whole-wallet control
-passing to the lender for B. The USDC remains confidential collateral. Title and
-an authenticated current-holder inventory read are NOT public cash recovery,
-liquidation, a minimum-net-delivery guarantee or proof of profit. Old borrower
-private access/authorization must fail after the real epoch increment; new-holder
-cooldown remains enforced. No private transfer, public Intents substitution or
-raw-sign/call authority is added. Both new execution and missing-original-ID
-withdrawal POSTs stay denied; known historical provider-ID reconciliation is
-GET-only and is not retroactively marked minimum-protected.
+Credit: devmo. The documented three-step API is implemented in the shared native-
+tested/WASI driver: unshield to this wallet, independently confirm exact public
+Intents self-credit, register this holder's FT storage, then typed same-chain
+withdrawal. A repaid borrower or the actual default-title holder after cooldown
+is the only allowlisted recipient. The exact amount equals the holder-signed
+minimum and every immutable hop amount. Current title/epoch/permit, pledge,
+listing, seller lock, confinement, registry and spend limits remain checked.
 
-The TEE/OutLayer operator/coordinator, actual policy enforcement, confidential
-ledger/deposit evidence, authenticated RPC/API, future project publisher and
-current governance remain trust assumptions. Fresh provenance and reviewed
-complete known authority inventory are not a universal provider-global alias
-oracle. The keystore currently trusts coordinator-supplied confidential artifacts
-rather than independently parsing all token/amount fields. Local tests and signed
-reports cannot prove hidden authority absence, future guardian availability or
-fresh measured mainnet execution. Independent exact-head review, all hosted jobs,
-actual publication/attestation, fresh ingress/enrollment and terminal original
-receipts are still gates; this change executes none of them.
+Authoritative sources read: [Getting Started](https://app.outlayer.ai/docs/getting-started),
+[Agent Custody](https://app.outlayer.ai/docs/agent-custody) (Withdraw, Confidential
+Intents, Policy Engine/API Reference), and official [OpenAPI](https://api.outlayer.ai/openapi.json).
+Exact request/response schemas and source hash are preserved in
+[the schema snapshot](docs/worker/outlayer-exact-exit-schemas.json). The only POST
+bodies are unshield `{token,amount}`, storage `{token,account_id}`, and withdraw
+`{chain:"near",to,amount,token,async:true}`. No guessed min/quote/deadline fields go
+to OutLayer. Detailed source pages:
+[confidential](https://skills.outlayer.ai/agent-custody/references/confidential.md),
+[storage](https://skills.outlayer.ai/agent-custody/references/wallet-ops.md),
+[withdraw/status/idempotency](https://skills.outlayer.ai/agent-custody/references/intents-withdraw.md).
 
-Any future public redemption needs a typed immutable non-dry 1Click-quote-bound
-confidential same-USDC self-exit: exact source wallet/verifier/asset, max debit,
-current-holder recipient, canonical destination asset/chain, minimum net after
-all fees/registration, deadline, nonce/epoch and quote commitment. The measured
-keystore must parse/rebuild and validate the signing artifact, reject extra
-intents/authority before signing and execute only that quote; no re-quote or
-unbound fallback. Actual FINAL FT destination receipts (including descendants),
-net amount and original identities must independently verify. A quote or
-post-balance refusal cannot undo a bad transfer. No current API supports this
-complete binding and no invented field is sent.
+[Exact-exit protocol/runbook](docs/worker/EXACT_NEAR_EXIT.md) records every
+precondition, response and trust limit. Append-only per-hop request/baseline,
+atomic dispatch, original UUID, terminal GET and readback precede completion.
+Lost replies/IDs never retransmit; known-ID recovery is GET-only. Unissued later
+hops require the same original unexpired plan; no blind retry/top-up. Malformed,
+wrong asset/amount/recipient/status/error envelopes or inconsistent balances
+never create successful history or release admission. Full observed unshield
+refund terminates failed, conservatively keeping spend charged. Same-chain
+`result.intent_hash` is NOT a transaction hash.
+
+Public Intents balances are independently read from `intents.near`; confidential
+balances remain authenticated private-ledger/provider observations. FINAL
+recipient FT credit and public Intents debit must both equal the exact amount.
+Evidence is labelled **balance deltas plus original provider ID**, not causal
+receipt proof. Sequential reads and unrelated recipient activity can introduce
+ambiguity/coincidental deltas; this does not eliminate provider/RPC trust or prove
+cryptographic attribution of each unit. Live acceptance should capture genuine
+original FT receipts additionally, never synthesize them from an intent ID.
+
+Fresh confinement policy adds `withdraw` and `call`, with **call requiring guardian
+quorum**, not exempt from approvals. Only typed storage is exposed by KEYHOLE;
+there is no arbitrary custody-call operation. Raw/message/EVM/Solana signing,
+Intents calls, payment checks/resting orders and external keys stay denied.
+Old policies are not upgraded silently: actual decrypted exact-policy and auditor
+review must cover this change before funded use. Endpoint prose/schema disagree
+about storage multisig; pending approval is a stop/wait, never an auto-approval.
+
+Unshield reveals wallet/asset/amount publicly. It is a consciously signed new
+path, not an invisible public fallback. A short first-hop credit stops before
+external payment but cannot roll back an already moved first hop/fee. Liquidity,
+refund/net-fill behavior, deployed TEE measurements and provider/coordinator
+semantics remain assumptions. The public provider source has recently added
+confidential artifact transfer-shape checking while some guide prose still says
+otherwise; neither proves the deployment's current measurement. Local fault
+injection and sandbox custody mocks are NOT mainnet confidentiality or loan proof.
+The UUID, minter/attestor, contract bytes, secret/payment-key wrapper are unchanged;
+this implementation performed no real signing/transactions, publication or secret
+changes. All exact-head review, CI, publication, actual enrollment and live
+original delivery/refund evidence remain separate gates.
 
 Budget is <=0.4 NEAR including actual/unresolved/worst completion plus >=0.04 OFF
 reserve, <=0.999 USDC-equivalent (<=0.90 source+<=0.099 grant compute reserved),

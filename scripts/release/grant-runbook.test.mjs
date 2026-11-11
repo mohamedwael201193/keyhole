@@ -28,6 +28,6 @@ test('versioned operator runbook cannot select personal key 1 or unbound executi
  const book=readFileSync('docs/worker/LIVE_LOANS_EXEC.md','utf8');
  assert.match(book,/OUTLAYER_PAYMENT_KEY/);assert.match(book,/worker_status/);
  assert.doesNotMatch(book,/keys\s+(show\s+1|topup)|keyhole-devmo.near:1:|\/1\/balance/);
- assert.match(book,/minimum-protected execution is unsupported/);
+ assert.match(book,/exact-near-v1/);assert.match(book,/unshield/);assert.match(book,/no.*replacement|never.*resend/i);
  assert.doesNotMatch(book,/make_input "\$HOLDERKEY" withdraw "/);
 });

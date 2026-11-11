@@ -1,15 +1,23 @@
 # Live loans: worker V2 evidence design
 
-Read-only design followed by the requested local implementation. No worker publication, secret update or transaction is performed here. This implementation is local-only: no push or external publication. Contract v2.7 stays byte-identical. Team reviewer, not independent auditor. Credit: devmo.
+Read-only design followed by the requested local implementation. No worker publication, secret update or transaction is performed here. Source changes are for review; no worker publication. Contract v2.7 stays byte-identical. Team reviewer, not independent auditor. Credit: devmo.
 
 ## Decision and trust boundary
-Scoped native mechanism: `native-A-repay-B-title-no-public-redemption`. A proves
-collateral ingress, 0.01 NEAR principal delivery, 0.0101 repayment and pledge release.
-B proves native default and lender NFT title/control over the same confined wallet.
-**Public FT redemption is unavailable**, not a success requirement of this smaller
-pilot and not implied by title or an inventory read. Both withdrawal safe-stops
-remain unchanged; no slippage exception, raw-signing or public-intents fallback.
-This is a scope decision, not evidence the loans or new worker are live.
+Current target: `native-A-repay-B-title-exact-near-exit`. A proves collateral
+ingress, native principal delivery/repayment and pledge release, then exact USDC
+self-exit. B proves default/title and the actual lender-holder's exact exit after
+the owner-epoch cooldown. This candidate implements `exact-near-v1` as
+`/wallet/v1/confidential/unshield` → read back own Intents credit →
+`/wallet/v1/storage-deposit` → `/wallet/v1/intents/withdraw` (`chain: near`).
+This is not live proof; no withdrawal or loan was executed by this implementation.
+See [exact wire schemas, recovery, costs and trust scope](EXACT_NEAR_EXIT.md).
+Authoritative docs: [Agent Custody](https://app.outlayer.ai/docs/agent-custody),
+[wallet OpenAPI](https://api.outlayer.ai/openapi.json),
+[confidential](https://skills.outlayer.ai/agent-custody/references/confidential.md),
+[storage](https://skills.outlayer.ai/agent-custody/references/wallet-ops.md),
+[withdraw](https://skills.outlayer.ai/agent-custody/references/intents-withdraw.md).
+The historical `native-A-repay-B-title-no-public-redemption` scope is no longer
+full acceptance. Legacy direct confidential withdrawals remain disabled.
 GO for explicitly scoped TEE/provider-backed evidence; STOP for an unconditional claim that no provider-held alias/hidden signing authority exists anywhere. The API has no global alias enumeration. Fresh anonymous registration and never-exported credentials establish creation provenance inside the documented provider/TEE model, not a universal cryptographic negative. Project/contract administration and provider behavior remain trusted. No claim of guaranteed future guardian availability.
 
 Current project keyhole-devmo.near/keyhole must retain UUID p000000000000004b, sealed namespace, existing immutable minter and certificate attestor. Lending stays OFF throughout release/enrollment. Old registered versions and already-dispatched jobs must be retired/drained. No contract deploy, governance staging/cancellation/acceptance/apply or key deletion.
@@ -99,7 +107,7 @@ The live identity is now promoted to v2.7 through a separate read-only evidence 
 - Canonical OUTLAYER_PAYMENT_KEY is securely supplied from nonce 2, the $20 grant. Scoped PAYMENT_KEY aliases authenticate both CLI run and original status polling. Key 1's $0.50 remains separate and untouched. API https://api.outlayer.ai; max 33 jobs, .003 each; no topup.
 - Exact policy readback binds wallet_id to the reviewed manifest/candidate. The closed schema rejects unknown fields, wrong wallet, extra capabilities/keys and changed refunds. Absent/empty refund map explicitly means provider-derived defaults; null is refused. Usage counters may vary but are not authority. The same predicate protects report, finalize and frozen certificate observations.
 - Malformed/empty RPC JSON and error envelopes are rpc_unavailable, never absence. Only a parsed literal null establishes fresh absence; wrong method-specific schemas fail before provider POSTs.
-- Provider WithdrawRequest currently documents no enforceable min/quote lock. A positive preview is advisory, not an executable promise. The candidate now refuses ALL withdrawal execution before custody/spend/POST, including holder-signed minimum/deadline. Public redemption must STOP until a documented bound mechanism is reviewed. Explicitly scoped native A/B pre-funding and lending ON instead require all release, real ingress/enrollment and budget gates above; they do not invoke withdrawal. No invented API parameter, public route substitution or positive preview is recovery proof.
+- Exact exit replaces the old universal stop only for the explicitly signed `exact-near-v1` plan. Its three documented endpoints use no guessed minimum/quote fields. Exact source debit/public self-credit gates precede registration and exact public withdrawal; FINAL FT/Intents balance deltas gate completion. Other routes and missing-ID replay remain denied. See EXACT_NEAR_EXIT.md; actual provider fill and causal receipt attribution are not proved by source tests.
 - Current candidate validation is in docs/evidence/worker-provisioning/v2; historical R1-R4 measurements remain historical. No new live policy installation or loan is asserted. Credit: devmo.
 
 ## Provider addition required for any future public redemption

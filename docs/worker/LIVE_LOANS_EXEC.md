@@ -6,17 +6,26 @@ here authorizes a bot to send. Credit: devmo. Team reviewer is NOT independent.
 Security scope is reviewed worker + documented TEE/provider, not a global alias oracle.
 Do not run the old runbook's pre-install AuthorityAuditV1 flow.
 
-**Scoped decision: `native-A-repay-B-title-no-public-redemption`.** Loan A proves
-collateral ingress, native principal payout, native repayment and pledge release.
-Loan B proves default and lender title/control of the same confined wallet via
-its NFT. **Public FT redemption is unavailable**: minimum-protected execution is unsupported by the documented provider API. This is NOT a slippage exception,
-private-transfer pilot, USDC liquidation or proof of public cash recovery. Keep
-both withdrawal safe-stops unchanged. No exit is part of the success criteria.
+**Current target: `native-A-repay-B-title-exact-near-exit`.** Native A repayment
+and B default title are followed by explicit exact canonical NEAR-USDC self-exits.
+This candidate is not live and no exit was executed here. Historical
+`native-A-repay-B-title-no-public-redemption` evidence proves only the smaller
+mechanism, not the full goal. Legacy direct confidential withdrawal remains denied.
 
-This scope permits operator preparation/funding/ON only AFTER exact-head review,
-all six CI jobs, publication/measurement, real ingress/provider integration,
-policy enrollment and budget gates pass. No live step has happened here. The
-larger public-redemption task remains unavailable, not silently declared done.
+Authoritative [Agent Custody](https://app.outlayer.ai/docs/agent-custody) guide and
+[OpenAPI](https://api.outlayer.ai/openapi.json) define the exact requests:
+`/wallet/v1/confidential/unshield` `{token,amount}`;
+`/wallet/v1/storage-deposit` `{token,account_id:recipient}`;
+`/wallet/v1/intents/withdraw` `{chain:"near",to:recipient,token,amount,async:true}`.
+See [EXACT_NEAR_EXIT.md](EXACT_NEAR_EXIT.md) and its schema snapshot for response
+fields/statuses, independent readbacks, policy review, privacy and recovery.
+References: [confidential](https://skills.outlayer.ai/agent-custody/references/confidential.md),
+[storage](https://skills.outlayer.ai/agent-custody/references/wallet-ops.md),
+[withdraw](https://skills.outlayer.ai/agent-custody/references/intents-withdraw.md).
+
+STOP until exact-head review, all CI, rebuilt candidate measurement/publication,
+fresh exact-policy enrollment and full budget including both exits pass. No command
+here authorizes real signing. No unconditional minimum-net unshield claim is made.
 
 ## 1. Session, fresh public state, unsigned evidence
 ```bash
@@ -479,12 +488,41 @@ Expected NB=2 only absent other opens. No `Default` enum or persistent `default_
 Result: NFT to L, same canonical wallet/binding, owner epoch **old+1**, approvals cleared, B no longer owns this token. Default takes **the entire confidential vault**, including unrelated assets and later deposits; there is no partial seizure/surplus refund. No new M/native repayment to L is invented. L keeps title in exchange for principal. A related-party intentional default is mechanism proof, NOT organic loan demand, independent-party safety or guaranteed lender profit.
 
 
-## 8. No public redemption; prove confined control and preserve collateral
+## 8. Exact canonical USDC self-exit (only after separate execution approval)
 
-There is no A exit or B exit command in this scope. Do not request `withdraw`,
-`transfer`, raw signing, public intents or a replacement wallet. A positive
-`withdraw_dry_run` is advisory only and is NOT recovery proof. Keep all collateral
-in the same confined wallet. No new admission deposit is required for an exit.
+For A use the repaid borrower's actual current NEP-413 identity and 100000 raw
+USDC; retain the independently measured >=500000 raw floor for B. For B use the
+actual lender's acquired title, incremented epoch and elapsed real ten-minute
+cooldown. Reject the old borrower. No loan/pledge/listing/transfer/admission may
+remain. Refresh the existing inventory commands below before each phase.
+
+The signed worker params are exactly:
+```json
+{"exit_mode":"exact-near-v1","chain":"near","to":"CURRENT_HOLDER","token":"nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1","amount":"POLICY_AMOUNT","min_amount_out":"POLICY_AMOUNT","deadline_ms":0,"token_id":"TOKEN","owner_epoch":"CURRENT_EPOCH"}
+```
+Replace all placeholders, including a future integer deadline <=five minutes, from
+fresh authoritative state. These are KEYHOLE signed constraints; only documented
+request fields in the introduction go to each provider endpoint. No raw `/call`,
+`/confidential/withdraw`, key export or replacement wallet. CLI `withdraw
+--exact-near` serializes these exact fields and current epoch; the Pledge UI asks
+for a fresh preview/confirmation with explicit public-reveal/native-storage notice.
+
+Persist the returned `value_op_id` and each original provider ID. On pending or
+UNKNOWN use only `reconcile_value_op` for that immutable value operation. Known-ID
+recovery is GET-only; a later unissued hop may proceed under its original live
+plan. Lost original ID/deadline expiry is STOP, not a new withdrawal/top-up. Never
+report provider success alone as full redemption. Save attested output, original
+request rows and FINAL private/public Intents/recipient balance observations;
+amount/debit/credit must be exactly equal to the signed amount. This candidate
+labels balance-delta evidence honestly, not as an invented FT transaction hash.
+Capture genuine FT delivery receipts additionally when available.
+
+Unfilled/refunded unshield may terminate failed only after original own balances
+are restored. Partial/unverified funds keep admission unresolved. If first-hop
+fees cause a short self-credit, stop before external payment; do not weaken the
+amount policy. Fund the wallet's own native reserve and obtain guardian storage
+approval when needed. Include 0.0025 NEAR maximum storage/gas per exit plus both
+0.01 admission maxima, grant compute and existing OFF reserve in the budget.
 
 After A and again after B, use actual current holder authentication to read:
 ```bash
@@ -512,9 +550,9 @@ NFT owner L, approvals cleared, lower policy locked/thawed with unchanged digest
 Old B must receive an authenticated current-owner refusal with NO private output;
 use one fresh B-signed `pledge_inventory` read only (no value send) if budget allows.
 L's new-owner cooldown remains real and visible; reading inventory does not
-bypass it. No test or read proves an unavailable public FT delivery. L holds title
-and confined wallet control, NOT USDC in a public account. Preserve this distinction
-in the eventual evidence record and video/submission claims.
+bypass it. An inventory read alone proves only title/confined control. Public FT
+delivery requires the separate exact exit and its original terminal/readback
+evidence. Preserve this distinction in video/submission claims.
 
 M admission credits: current contract-owner NEP-413 claim_minter_credit params{};
 ```bash
@@ -565,7 +603,7 @@ completion/OFF reserve. Gross funding transfers/temporary deposits/peak liquidit
 separate columns: do not double-count internal transfers or assume refunds early.
 If .4 means every gross debit before refunds, STOP for that explicit interpretation.
 Source collateral0.90USDC (<=0.90); actual route fees fit that, Base ETH gas separate.
-Compute comes from the $20 grant on owner keyhole-devmo.near nonce 2; key 1 retains the untouched separate $0.50 personal credit, but this plan caps max job reservations at33×.003=$.099. With .90 source collateral, total USDC-equivalent debits <=.999 (collateral remains in the confined wallet; public redemption unavailable), excluding the separately bounded Base ETH gas. Never count existing compute credit as free. No topup. All other txs
+Compute comes from the $20 grant on owner keyhole-devmo.near nonce 2; key 1 retains the untouched separate $0.50 personal credit, but this plan caps max job reservations at33×.003=$.099. With .90 source collateral, total USDC-equivalent debits <=.999 (source collateral is retained until each separately verified exact exit), excluding the separately bounded Base ETH gas. Never count existing compute credit as free. No topup. All other txs
 <=.1 including gas; .1+gas secret update is the specifically approved exception.
 
 Any failed gate before lending: stay OFF and stop. Unknown fresh/create/install stays
@@ -607,7 +645,7 @@ current gas price, actual Q, Base recipient-specific estimate + L1 fee and worst
 remaining completion calls. **No zero/default estimate or fabricated quote.**
 Required schema (all quantities decimal integer STRINGS):
 ```json
-{"scope":"native-A-repay-B-title-no-public-redemption","actual_final_receipts_reviewed":true,"remaining_worst_case_reviewed":true,"refunds_counted_only_when_final":true,"near_final_spent_yocto":"ACTUAL","near_unresolved_max_yocto":"ACTUAL","near_remaining_worst_yocto":"ACTUAL","near_off_reserve_yocto":"AT_LEAST_40000000000000000000000","usdc_source_raw":"900000","compute_reserved_micro_usd":"99000","base_eth_final_wei":"ACTUAL","base_eth_remaining_max_wei":"ACTUAL","receipt_refs":["actual evidence paths / original receipt hashes / quote / estimate"]}
+{"scope":"native-A-repay-B-title-exact-near-exit","exact_exit_native_max_yocto":"5000000000000000000000","exact_exit_admission_max_yocto":"20000000000000000000000","actual_final_receipts_reviewed":true,"remaining_worst_case_reviewed":true,"refunds_counted_only_when_final":true,"near_final_spent_yocto":"ACTUAL","near_unresolved_max_yocto":"ACTUAL","near_remaining_worst_yocto":"ACTUAL","near_off_reserve_yocto":"AT_LEAST_40000000000000000000000","usdc_source_raw":"900000","compute_reserved_micro_usd":"99000","base_eth_final_wei":"ACTUAL","base_eth_remaining_max_wei":"ACTUAL","receipt_refs":["actual evidence paths / original receipt hashes / quote / estimate"]}
 ```
 The deliberate ACTUAL placeholders FAIL the checker until replaced from evidence.
 After each FINAL/UNKNOWN result update the ledger, then run:
@@ -629,13 +667,12 @@ future refund, omitted fee or silently reducing the OFF reserve.
 
 The live identity has been evidence-promoted to v2.7 from the genuine FINAL deployment `6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h`, current pinned-block code/version/config and exact local release bytes. Public evidence is docs/evidence/live-v2.7/promotion.public.json. No deploy/governance transaction is needed or permitted to repair metadata. Production contract source/release files remain unchanged; strict verifiers select existing release/v2.7 bytes while historical deployed/v2.6 evidence is retained. Worker remains unpublished.
 
-## PR208 scoped candidate gate
-All withdrawal execution stays fail-closed before custody/spend/sign/POST/admission.
-Even a holder-signed minimum/deadline cannot make today's provider enforce it.
-Preview reports advisory_only=true and minimum_bound_to_execution=false. The
-native A/B scope above does not depend on that unavailable capability and does
-not claim it completed. No slippage exception or guessed API parameter is approved.
-Future public redemption needs a separately reviewed typed immutable 1Click quote
-bound same-USDC confidential self-exit: recipient, asset, max debit, minimum net,
-deadline, quote commitment and measured keystore artifact validation, with actual
-FINAL FT destination receipts. No raw-sign/call capability broadening.
+## PR208 exact-exit candidate gate
+Only explicit `exact-near-v1` can dispatch the three typed steps. Original legacy
+provider-ID recovery stays GET-only; old unbound journals cannot gain this mode.
+Exact decrypted policy review must include `withdraw` plus approval-gated `call`;
+raw/message signing and `intents_call` stay denied. Existing policies are not
+silently broadened. All new native and USDC costs remain within the original caps.
+Actual unshield fill/refund, provider measurement, storage/approval and public FT
+delivery are future execution evidence, not inferred from local tests. See
+EXACT_NEAR_EXIT.md for honest sequential-balance/causal-attribution limitations.
