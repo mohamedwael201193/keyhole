@@ -45,7 +45,7 @@ impl Contract {
  pub fn get_sale(&self,token_id:TokenId)->Option<Sale>{sales().get(&token_id)}
  #[payable]
  pub fn open_sale(&mut self,token_id:TokenId,terms:SaleTerms)->Promise {
-  enough_gas();require!(enabled(),"protected sales disabled");require!(self.royalty_bps==0,"zero royalty required");
+  enough_gas();crate::v27::assert_not_wound_down();require!(enabled(),"protected sales disabled");require!(self.royalty_bps==0,"zero royalty required");
   self.assert_can_change_owner(&token_id);let mut c=config_required();
   let seller=self.tokens.owner_by_id.get(&token_id).unwrap_or_else(||env::panic_str("unknown token"));
   require!(env::predecessor_account_id()==seller,"only seller");require_payout_account(&seller);require!(listings().get(&token_id).is_none(),"unlist first");
@@ -80,7 +80,9 @@ impl Contract {
   if s.nonce!=nonce || s.policy_sequence!=sequence || !s.policy_busy || s.policy_call_complete{return PromiseOrValue::Value(false);}
   // Terminal action alone is insufficient: keep busy through exact policy verification.
   // Duplicate action callbacks must not enqueue another read or release the command lock.
-  let result=unsafe{near_sdk::sys::promise_result(0,12_345)};require!(result==1||result==2,"missing policy result");
+  // G2: no panic in a callback. An unexpected result leaves the sale busy (unknown), which is the safe state.
+  let result=unsafe{near_sdk::sys::promise_result(0,12_345)};
+  if result!=1&&result!=2{emit_key_event("sale_policy_result_unknown",json_object!({"token_id":token_id,"nonce":nonce}));return PromiseOrValue::Value(false);}
   s.policy_call_complete=true;sales().insert(&token_id,&s);
   PromiseOrValue::Promise(self.read_sale_policy(token_id,s))
  }
@@ -111,7 +113,7 @@ impl Contract {
  }
  #[payable]
  pub fn buy_sale(&mut self,token_id:TokenId,nonce:U64,certificate:SaleCertificate,signature:Base64VecU8)->Promise{
-  enough_gas();require!(enabled(),"protected sales disabled");let mut s=load(&token_id,nonce);let mut c=config_required();
+  enough_gas();crate::v27::assert_not_wound_down();require!(enabled(),"protected sales disabled");let mut s=load(&token_id,nonce);let mut c=config_required();
   require!(s.state==SaleState::Offered&&!s.policy_busy&&!s.sold,"sale not purchasable");
   require!(env::predecessor_account_id()==s.terms.buyer,"only named buyer");self.assert_no_key(&s.terms.buyer);
   require!(self.royalty_bps==s.royalty_bps&&s.royalty_bps==0&&s.seller_net==s.terms.price,"sale royalty changed");

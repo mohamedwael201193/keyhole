@@ -1,0 +1,9 @@
+{
+  "status": "source-candidate-not-deployed",
+  "version": "2.7.0",
+  "release": "v2.7",
+  "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+  "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
+  "bytes": 519382,
+  "recipe": "contracts/keys/build.sh"
+}

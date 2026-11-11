@@ -12,9 +12,9 @@ export const PLEDGED_CONTRACT = "pledged: ownership and value operations locked"
 export const PLEDGED_ENCLAVE = "pledged: all custody value operations are locked";
 
 export const LIEN_REFUSALS = [
-  { action: "transfer", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:736-738 nft_transfer and 747-749 nft_transfer_call (assert_can_change_owner, lib.rs:401-402, then assert_token_idle, pledge.rs:423-427); nft_transfer_payout lib.rs:704-728 via transfer_key lib.rs:433-434" },
-  { action: "list", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:462-467 nft_list (assert_token_idle)" },
-  { action: "buy", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:510-511 nft_buy (assert_can_change_owner)" },
+  { action: "transfer", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:749-751 nft_transfer and 760-762 nft_transfer_call (assert_can_change_owner, lib.rs:411-412, then assert_token_idle, pledge.rs:504); nft_transfer_payout lib.rs:717 via transfer_key lib.rs:443-444" },
+  { action: "list", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:472-478 nft_list (assert_token_idle)" },
+  { action: "buy", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/lib.rs:521-522 nft_buy (assert_can_change_owner)" },
   { action: "sale", refused_by: "contract", code: PLEDGED_CONTRACT, source: "contracts/keys/src/sale.rs:49 open_sale (assert_can_change_owner)" },
   { action: "withdraw", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_withdraw via guard_preflight (tee/worker/src/main.rs:557)" },
   { action: "swap", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap via guard_preflight (tee/worker/src/main.rs:508)" },
@@ -24,13 +24,13 @@ export const LIEN_REFUSALS = [
 
 /**
  * The only way the key moves under a loan that this page reads: the named lender's claim_default, after due + grace.
- * claim_default (contracts/keys/src/pledge.rs:581-593) calls transfer_key_unlocked, which skips assert_token_idle.
+ * claim_default (contracts/keys/src/pledge.rs:676-681) calls transfer_key_unlocked, which skips assert_token_idle.
  */
 export const DEFAULT_PATH_RULES = [
-  { code: "only lender", meaning: "only the lender named in the loan terms can call claim_default", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
-  { code: "loan not active", meaning: "the loan must be Active (funded and delivered)", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
-  { code: "default not due", meaning: "refused until block time is after due + grace", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
-  { code: "distinct external receiver required", meaning: "the receiver cannot be the borrower or the contract", source: "contracts/keys/src/pledge.rs:581-593 claim_default" },
+  { code: "only lender", meaning: "only the lender named in the loan terms can call claim_default", source: "contracts/keys/src/pledge.rs:676-681 claim_default" },
+  { code: "loan not active", meaning: "the loan must be Active (funded and delivered)", source: "contracts/keys/src/pledge.rs:676-681 claim_default" },
+  { code: "default not due", meaning: "refused until block time is after due + grace", source: "contracts/keys/src/pledge.rs:676-681 claim_default" },
+  { code: "distinct external receiver required", meaning: "the receiver cannot be the borrower or the contract", source: "contracts/keys/src/pledge.rs:676-681 claim_default" },
   { code: "default claim period", meaning: "repay_loan is refused after due + grace; the lender can claim from then", source: "contracts/keys/src/pledge.rs repay_loan" },
 ] as const;
 

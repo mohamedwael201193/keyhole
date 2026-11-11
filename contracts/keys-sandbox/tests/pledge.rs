@@ -198,7 +198,8 @@ async fn raw_fund(e:&E)->Result<near_workspaces::result::ExecutionFinalResult>{
 fn injected(r:&near_workspaces::result::ExecutionFinalResult){assert!(format!("{:?}",r.receipt_failures()).contains("injected callback failure"));}
 #[tokio::test]async fn actual_lost_freeze_callback_stays_unknown_and_cannot_dispatch_an_opposite_command()->Result<()> {
  let e=setup().await?;fault_callbacks(&e).await?;let ts=now(&e).await;
- let r=e.alice.call(e.c.id(),"open_loan").args_json(json!({"token_id":"k1","terms":{"lender":e.lender.id(),"principal":N.to_string(),"repayment":(11*N/10).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"1000000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?;injected(&r);
+ // The callback fixture is current v2.7 code. This key is tier 2, so the principal must sit inside the Silver cap (0.5 NEAR).
+ let r=e.alice.call(e.c.id(),"open_loan").args_json(json!({"token_id":"k1","terms":{"lender":e.lender.id(),"principal":(N/2).to_string(),"repayment":(11*(N/2)/10).to_string(),"duration_sec":"120","grace_sec":"30","floor_raw":"1000000","funding_deadline_ns":(ts+600_000_000_000).to_string()}})).deposit(NearToken::from_yoctonear(keyhole_keys::LOAN_STORAGE_DEPOSIT)).max_gas().transact().await?;injected(&r);
  let policy=view(&e.mock,"get_wallet_policy",json!({"wallet_pubkey":format!("ed25519:{}","ab".repeat(32))})).await;assert_eq!(policy["frozen"],true);assert!(policy.get("generation").is_none());
  // Even restoring the normal binary does not invent the missing receipt result.
  e.c.as_account().deploy(&std::fs::read(WASM)?).await?.into_result()?;

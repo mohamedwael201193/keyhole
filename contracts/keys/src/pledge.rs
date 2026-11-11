@@ -19,6 +19,14 @@ pub const CERTIFICATE_DOMAIN: &str = "KEYHOLE_SEALED_LOAN_V3_DELIVERY";
 /// Provisional title only: no economic finality before local resolver acceptance.
 pub const TRANSFER_RESTORE_DELAY_NS:u64=300_000_000_000;
 pub const CERTIFICATE_MAX_AGE_NS: u64 = 60_000_000_000;
+/// G1: after funding, the borrower has this long to start the native cashout. Then the named lender may reclaim the principal.
+/// Release builds keep 24 h. `sandbox-short-delay` is refused by `contracts/keys/build.sh`.
+#[cfg(not(feature = "sandbox-short-delay"))]
+pub const DISBURSEMENT_WINDOW_NS: u64 = 86_400_000_000_000;
+#[cfg(feature = "sandbox-short-delay")]
+pub const DISBURSEMENT_WINDOW_NS: u64 = 30_000_000_000;
+#[cfg(not(feature = "sandbox-short-delay"))]
+const _: () = assert!(DISBURSEMENT_WINDOW_NS == 86_400_000_000_000);
 const SECOND: u64 = 1_000_000_000;
 const MAX_DURATION: u64 = 30 * 86_400;
 const CONFIG_KEY: &[u8] = b"Pg";
@@ -91,6 +99,19 @@ pub struct PrincipalDelivery {
     pub payout_nonce: Option<U64>,
 }
 fn principal_dispatches() -> LookupMap<TokenId, U64> { LookupMap::new(b"Pd".as_slice()) }
+/// v2.7 storage (prefixes "Q27d", "Q27o" and raw "Q27/treasury_outcome"; none overlaps an earlier key).
+/// Disbursement deadline per token, set by fund_loan and removed on activation or reclaim. Absent = not reclaimable.
+fn disbursement_deadlines() -> LookupMap<TokenId, U64> { LookupMap::new(b"Q27d".as_slice()) }
+/// Native payout result recorded by the callback (G2). Present only while the result could not be applied.
+fn payout_outcomes() -> LookupMap<AccountId, NativeOutcome> { LookupMap::new(b"Q27o".as_slice()) }
+const TREASURY_OUTCOME_KEY: &[u8] = b"Q27/treasury_outcome";
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers = [borsh])]
+pub struct NativeOutcome { pub nonce: u64, pub success: bool }
+/// L1: principal cap by tier, in yoctoNEAR. Bronze 0.05 NEAR, Silver 0.5 NEAR, Gold 5 NEAR. Unknown tier = 0 (no loan).
+pub fn tier_loan_cap(tier: u8) -> u128 {
+    match tier { 1 => 5 * 10u128.pow(22), 2 => 5 * 10u128.pow(23), 3 => 5 * 10u128.pow(24), _ => 0 }
+}
 
 
 #[derive(Clone, Debug)]
@@ -253,8 +274,63 @@ pub(crate) fn record_sale_royalty(treasury: &AccountId, amount: u128) -> bool {
     true
 }
 fn require_lending(c: &PledgeConfig) { require!(c.lending_enabled, "lending disabled: confinement rollout required"); }
+
+/// Applies a native payout result to the ledger and to liabilities. Every check runs before the first write:
+/// Err means nothing was written, so the pending marker and any recorded outcome stay for reconcile_payout.
+fn apply_payout_outcome(account: &AccountId, nonce: U64, success: bool) -> Result<(), &'static str> {
+    let mut ledger = credit_ledgers().get(account).ok_or("no payout account")?;
+    let p = ledger.pending.clone().ok_or("no pending payout")?;
+    if p.nonce != nonce { return Err("nonce mismatch"); }
+    let amount = p.amount.0;
+    let config = pledge_config();
+    let next_config = match (&config, success) {
+        (Some(c), true) => {
+            let mut next = c.clone();
+            next.user_liabilities = U128(c.user_liabilities.0.checked_sub(amount).ok_or("liability underflow")?);
+            Some(next)
+        }
+        _ => None,
+    };
+    let next_pre_total = if success && config.is_none() { Some(pre_total().checked_sub(amount).ok_or("liability underflow")?) } else { None };
+    let next_available = if success { ledger.available } else { ledger.available.checked_add(amount).ok_or("credit overflow")? };
+    if let Some(next) = next_config { save_config(&next); }
+    if let Some(total) = next_pre_total { env::storage_write(PRE_CREDIT_TOTAL, &total.to_le_bytes()); }
+    ledger.pending = None;
+    ledger.available = next_available;
+    save_credit(account, &ledger);
+    Ok(())
+}
+
+/// Applies a native treasury-recovery result. Same rule: all checks before the first write.
+fn apply_treasury_outcome(nonce: U64, success: bool) -> Result<(), &'static str> {
+    let mut c = pledge_config().ok_or("pledge config missing")?;
+    let p = c.treasury_pending.clone().ok_or("no pending treasury recovery")?;
+    if p.nonce != nonce { return Err("nonce mismatch"); }
+    let restored = if success { None } else { Some(c.treasury_available.0.checked_add(p.amount.0).ok_or("treasury overflow")?) };
+    c.treasury_pending = None;
+    if let Some(v) = restored { c.treasury_available = U128(v); }
+    save_config(&c);
+    Ok(())
+}
 fn load_loan(token: &TokenId, nonce: U64) -> Loan {
     let l = loans().get(token).unwrap_or_else(||env::panic_str("no loan")); require!(l.nonce == nonce, "loan nonce mismatch"); l
+}
+
+/// Stake for `usage` bytes at the protocol storage price (10^19 yoctoNEAR per byte).
+pub(crate) fn storage_stake(usage: u64) -> u128 {
+    env::storage_byte_cost().as_yoctonear().checked_mul(usage as u128).unwrap_or_else(|| env::panic_str("storage reserve overflow"))
+}
+
+/// Terms shared with `treasury_recoverable`: the 0.1 NEAR operating reserve, one `LIST_STORAGE_DEPOSIT`
+/// per legacy listing, user liabilities, and a pending treasury recovery. Governance adds `treasury_available`
+/// on top of this so a governance write cannot spend the treasury pool either.
+pub(crate) fn non_treasury_obligations(c: &PledgeConfig) -> u128 {
+    let legacy_listings = (index_count() as u128).checked_mul(LIST_STORAGE_DEPOSIT).unwrap_or_else(|| env::panic_str("listing reserve overflow"));
+    let pending = c.treasury_pending.as_ref().map(|p| p.amount.0).unwrap_or(0);
+    OPERATING_RESERVE.checked_add(legacy_listings)
+        .and_then(|v| v.checked_add(c.user_liabilities.0))
+        .and_then(|v| v.checked_add(pending))
+        .unwrap_or_else(|| env::panic_str("reserve overflow"))
 }
 
 #[near]
@@ -339,14 +415,17 @@ impl Contract {
     pub fn set_lending_enabled(&mut self, enabled: bool) {
         assert_one_yocto(); self.assert_owner();
         let mut c = config_required(); c.lending_enabled = enabled; save_config(&c);
+        emit_key_event("lending_toggle", json_object!({"enabled": enabled}));
     }
 
     /// Install a wallet-signed locked policy under this contract's controller identity, once per token/wallet.
     /// Payload/ABI follows OutLayer contract/src/wallet.rs store_wallet_policy:v2. No live call is made by tests.
     #[payable]
+    /// v2.7 note: `version` and `valid_until` stay u64 on purpose. The worker sends them as JSON numbers
+    /// (tee/worker/src/collateral_host.rs), and U64 would be a string and break that call. expected_owner_epoch is already U64.
     pub fn register_collateral(&mut self, token_id: TokenId, wallet_pubkey: String, encrypted_data: String,
         wallet_signature: String, version: u64, valid_until: u64, expected_owner_id: AccountId, expected_owner_epoch: U64) -> Promise {
-        enough_gas(); self.assert_minter(); self.assert_can_change_owner(&token_id);
+        enough_gas(); self.assert_minter(); crate::v27::assert_not_wound_down(); self.assert_can_change_owner(&token_id);
         require_payout_account(&env::predecessor_account_id());
         let mut c = config_required();
         require!(self.tokens.owner_by_id.get(&token_id).as_ref() == Some(&expected_owner_id), "collateral owner CAS mismatch");
@@ -408,7 +487,9 @@ impl Contract {
         // Terminal marker is nonce-scoped; stale callbacks cannot unlock a new install.
         if policy.as_ref().is_some_and(|p| policy_matches(p, &b)) {
             b.ready = true; collateral().insert(&token_id, &b); registrations().remove(&token_id); registration_terminals().remove(&token_id);
-            change_liabilities(&mut c, 0, COLLATERAL_STORAGE_DEPOSIT); save_config(&c); return true;
+            change_liabilities(&mut c, 0, COLLATERAL_STORAGE_DEPOSIT); save_config(&c);
+            emit_key_event("collateral_ready", json_object!({"token_id": token_id, "wallet_pubkey": b.wallet_pubkey}));
+            return true;
         }
         if policy.is_none() && r.store_succeeded == Some(false) {
             // Both original provider receipt and authoritative absence are known. No unknown action can rebind later.
@@ -430,7 +511,7 @@ impl Contract {
     /// Borrower-declared immutable floor/terms; lower custody must be frozen before Offered.
     #[payable]
     pub fn open_loan(&mut self, token_id: TokenId, terms: LoanTerms) -> Promise {
-        enough_gas(); let mut c = config_required(); require_lending(&c);
+        enough_gas(); crate::v27::assert_not_wound_down(); let mut c = config_required(); require_lending(&c);
         self.assert_can_change_owner(&token_id);
         let borrower = self.tokens.owner_by_id.get(&token_id).unwrap_or_else(||env::panic_str("unknown token"));
         require!(env::predecessor_account_id() == borrower, "only borrower");
@@ -440,6 +521,8 @@ impl Contract {
         require!(env::attached_deposit().as_yoctonear() == LOAN_STORAGE_DEPOSIT, "attach exact 0.009 NEAR refundable loan bond");
         require!(terms.lender != borrower && terms.lender != env::current_account_id(), "distinct external lender required");
         require!(terms.principal.0 > 0 && terms.principal.0 <= MAX_LIST_PRICE, "bad principal");
+        // L1: the tier of the key sets the borrow cap (Bronze 0.05, Silver 0.5, Gold 5 NEAR).
+        require!(terms.principal.0 <= self.tiers.get(&token_id).map(tier_loan_cap).unwrap_or(0), "principal above this key's tier cap (Bronze 0.05, Silver 0.5, Gold 5 NEAR)");
         require!(terms.repayment.0 >= terms.principal.0 && terms.repayment.0 <= MAX_LIST_PRICE, "bad repayment");
         require!(terms.floor_raw.0 > 0, "zero floor");
         require!(terms.duration_sec.0 > 0 && terms.duration_sec.0 <= MAX_DURATION && terms.grace_sec.0 <= 7 * 86_400, "bad term duration");
@@ -452,6 +535,8 @@ impl Contract {
             terms, state: LoanState::Freezing, due_ns: U64(0), storage_bond: U128(LOAN_STORAGE_DEPOSIT), policy_sequence: U64(0),
             policy_busy: false, policy_call_complete: false, resolution: None };
         loans().insert(&token_id, &l);
+        // Reserve the G1 deadline key while the bond is measured. fund_loan overwrites the same key.
+        disbursement_deadlines().insert(&token_id, &U64(0));
         let storage_cost=env::storage_usage().saturating_sub(storage_before) as u128*env::storage_byte_cost().as_yoctonear();
         require!(storage_cost<=LOAN_STORAGE_DEPOSIT,"loan bond does not cover storage");
         emit_key_event("loan_open", json_object!({"token_id": token_id, "nonce": l.nonce}));
@@ -509,7 +594,7 @@ impl Contract {
         if l.state == LoanState::Freezing && p.frozen { l.state = LoanState::Offered; }
         if l.state == LoanState::UnlockPending && !p.frozen {
             // Loan bond remains a user liability until a successful pull payout; no treasury attribution.
-            add_credit(&l.borrower, l.storage_bond.0); loans().remove(&token_id);
+            add_credit(&l.borrower, l.storage_bond.0); loans().remove(&token_id); disbursement_deadlines().remove(&token_id);
             emit_key_event("loan_closed", json_object!({"token_id": token_id, "nonce": nonce, "resolution": l.resolution}));
             return true;
         }
@@ -526,7 +611,7 @@ impl Contract {
 
     #[payable]
     pub fn fund_loan(&mut self, token_id: TokenId, nonce: U64, certificate: LoanCertificate, signature: Base64VecU8) -> bool {
-        enough_gas(); let mut c = config_required(); require_lending(&c);
+        enough_gas(); crate::v27::assert_not_wound_down(); let mut c = config_required(); require_lending(&c);
         let mut l = load_loan(&token_id, nonce);
         require!(l.state == LoanState::Offered && !l.policy_busy, "loan not fundable");
         require!(env::predecessor_account_id() == l.terms.lender, "only named lender");
@@ -551,7 +636,12 @@ impl Contract {
         add_credit(&l.borrower,l.terms.principal.0);
         change_liabilities(&mut c,l.terms.principal.0,0);save_config(&c);
         l.state=LoanState::DisbursementPending;l.due_ns=U64(0);
-        loans().insert(&token_id,&l);true
+        // G1: the named lender can take the principal back after this deadline if no cashout has started.
+        let deadline=env::block_timestamp().checked_add(DISBURSEMENT_WINDOW_NS).unwrap_or_else(||env::panic_str("time overflow"));
+        disbursement_deadlines().insert(&token_id,&U64(deadline));
+        loans().insert(&token_id,&l);
+        emit_key_event("loan_fund",json_object!({"token_id":token_id,"nonce":l.nonce,"lender":l.terms.lender,"principal":l.terms.principal,"disbursement_deadline_ns":U64(deadline)}));
+        true
     }
 
     #[payable]
@@ -565,6 +655,7 @@ impl Contract {
         // Repayment is final as funded lender CREDIT, not a fallible push transfer.
         add_credit(&l.terms.lender, l.terms.repayment.0);
         l.state = LoanState::UnlockPending; l.resolution = Some("repaid".into()); loans().insert(&token_id, &l);
+        emit_key_event("loan_repay", json_object!({"token_id": token_id, "nonce": l.nonce, "repayment": l.terms.repayment}));
         self.start_policy_action(token_id, false)
     }
 
@@ -574,9 +665,13 @@ impl Contract {
         require!(!l.policy_busy && (l.state == LoanState::Offered || l.state == LoanState::Freezing), "cannot cancel pending/funded loan");
         require!(env::predecessor_account_id() == l.borrower || env::block_timestamp() > l.terms.funding_deadline_ns.0, "only borrower before expiry");
         l.state = LoanState::UnlockPending; l.resolution = Some("canceled".into()); loans().insert(&token_id, &l);
+        emit_key_event("loan_cancel", json_object!({"token_id": token_id, "nonce": l.nonce}));
         self.start_policy_action(token_id, false)
     }
 
+    /// Executes only the borrower-signed loan terms fixed at open_loan: the lender, the due time and the grace period.
+    /// The caller must be the named lender, after due + grace; receiver_id only chooses where the title goes (external,
+    /// holds no key). Nothing else about the loan can be changed here.
     #[payable]
     pub fn claim_default(&mut self, token_id: TokenId, nonce: U64, receiver_id: AccountId) -> Promise {
         assert_one_yocto(); enough_gas(); let mut l = load_loan(&token_id, nonce);
@@ -590,6 +685,7 @@ impl Contract {
         // Special seizure path has validated exact active loan and receiver BEFORE title or loan mutation.
         self.transfer_key_unlocked(&token_id, &receiver_id, None, Some("loan default"));
         l.state = LoanState::UnlockPending; l.resolution = Some("default_claimed".into()); loans().insert(&token_id, &l);
+        emit_key_event("loan_default", json_object!({"token_id": token_id, "nonce": l.nonce, "receiver_id": receiver_id}));
         self.start_policy_action(token_id, false)
     }
 
@@ -613,6 +709,7 @@ impl Contract {
             principal_dispatches().insert(&delivery.token_id,&p.nonce);
         }
         ledger.available=0;ledger.pending=Some(p.clone());save_credit(&who,&ledger);
+        emit_key_event("payout_claim",json_object!({"account_id":who,"amount":U128(amount),"nonce":nonce}));
         Promise::new(who.clone()).transfer(yocto(amount))
             .then(callback("on_payout", json_object!({"account_id": who, "nonce": p.nonce}), 30))
     }
@@ -620,6 +717,75 @@ impl Contract {
     #[private]
     pub fn on_payout(&mut self, account_id: AccountId, nonce: U64) -> bool {
         private_callback(); callback_failure_fixture(); self.settle_payout(account_id, nonce, promise_succeeded())
+    }
+
+    /// L1: largest principal a key may borrow, by tier. None for an unknown token.
+    pub fn loan_cap(&self, token_id: TokenId) -> Option<U128> { self.tiers.get(&token_id).map(|t| U128(tier_loan_cap(t))) }
+
+    /// G1: the lender takes back principal the borrower never claimed. Allowed only when:
+    /// the named lender calls, the loan is DisbursementPending, the 24 h window after funding has passed, no cashout is
+    /// in flight (dispatch marker) and the borrower's credit still holds at least the principal.
+    /// Race rule: claim_payout and this call cannot both win. A claim sets the dispatch marker and drains the credit, so this
+    /// call refuses. A reclaim moves the credit away and leaves the loan UnlockPending, so claim_payout then pays only the remainder.
+    /// Unlock follows the same custody path as cancel_loan.
+    #[payable]
+    pub fn reclaim_unclaimed_principal(&mut self, token_id: TokenId, nonce: U64) -> Promise {
+        assert_one_yocto(); enough_gas();
+        let mut l = load_loan(&token_id, nonce);
+        require!(env::predecessor_account_id() == l.terms.lender, "only named lender");
+        require!(l.state == LoanState::DisbursementPending && !l.policy_busy, "principal not in disbursement");
+        let deadline = disbursement_deadlines().get(&token_id).unwrap_or_else(|| env::panic_str("no disbursement deadline recorded"));
+        require!(deadline.0 > 0, "disbursement deadline not started");
+        require!(env::block_timestamp() > deadline.0, "disbursement window still open");
+        require!(principal_dispatches().get(&token_id).is_none(), "principal cashout in flight or unresolved");
+        let principal = l.terms.principal.0;
+        let mut ledger = credit_ledgers().get(&l.borrower).unwrap_or_else(|| env::panic_str("borrower payout account missing"));
+        require!(ledger.available >= principal, "principal already claimed");
+        ledger.available = ledger.available.checked_sub(principal).unwrap_or_else(|| env::panic_str("credit underflow"));
+        save_credit(&l.borrower, &ledger);
+        // Liabilities already count this principal; the credit only changes owner, so no liability change here.
+        add_credit(&l.terms.lender, principal);
+        disbursement_deadlines().remove(&token_id);
+        l.state = LoanState::UnlockPending; l.resolution = Some("unclaimed_principal_reclaimed".into()); loans().insert(&token_id, &l);
+        emit_key_event("loan_reclaim", json_object!({"token_id": token_id, "nonce": nonce, "lender": l.terms.lender, "principal": U128(principal)}));
+        self.start_policy_action(token_id, false)
+    }
+
+    /// G2, permissionless. Applies a native payout result that the callback RECORDED but could not apply. The outcome is
+    /// the one the callback observed, never a guess. With no record (for example a callback that never ran), this returns
+    /// false and the marker stays locked for review: the chain cannot recover that result.
+    pub fn reconcile_payout(&mut self, account_id: AccountId) -> bool {
+        let Some(o) = payout_outcomes().get(&account_id) else { return false; };
+        let amount = credit_ledgers().get(&account_id).and_then(|l| l.pending).map(|p| p.amount.0).unwrap_or(0);
+        match apply_payout_outcome(&account_id, U64(o.nonce), o.success) {
+            Ok(()) => {
+                payout_outcomes().remove(&account_id);
+                self.settle_principal(&account_id, U64(o.nonce), o.success, amount);
+                emit_key_event("payout_reconciled", json_object!({"account_id": account_id, "nonce": U64(o.nonce), "success": o.success}));
+                o.success
+            }
+            Err(reason) => {
+                emit_key_event("payout_reconcile_refused", json_object!({"account_id": account_id, "reason": reason}));
+                false
+            }
+        }
+    }
+
+    /// G2, permissionless. Same rule as reconcile_payout for a recorded treasury-recovery result.
+    pub fn reconcile_treasury(&mut self) -> bool {
+        let Some(raw) = env::storage_read(TREASURY_OUTCOME_KEY) else { return false; };
+        let o: NativeOutcome = near_sdk::borsh::from_slice(&raw).unwrap_or_else(|_| env::panic_str("treasury outcome corrupt"));
+        match apply_treasury_outcome(U64(o.nonce), o.success) {
+            Ok(()) => {
+                env::storage_remove(TREASURY_OUTCOME_KEY);
+                emit_key_event("treasury_reconciled", json_object!({"nonce": U64(o.nonce), "success": o.success}));
+                o.success
+            }
+            Err(reason) => {
+                emit_key_event("treasury_reconcile_refused", json_object!({"reason": reason}));
+                false
+            }
+        }
     }
 
     /// Explicit new operational capital. Old balance/user bonds never reclassified; future self-royalties are tracked separately.
@@ -632,10 +798,9 @@ impl Contract {
 
     pub fn treasury_recoverable(&self) -> U128 {
         let c = config_required();
-        let storage = env::storage_byte_cost().as_yoctonear().checked_mul(env::storage_usage() as u128).unwrap_or_else(||env::panic_str("storage reserve overflow"));
-        let legacy_listings = (index_count() as u128).checked_mul(LIST_STORAGE_DEPOSIT).unwrap_or_else(||env::panic_str("listing reserve overflow"));
-        let reserve = storage.checked_add(OPERATING_RESERVE).and_then(|v| v.checked_add(legacy_listings))
-            .and_then(|v| v.checked_add(c.user_liabilities.0)).and_then(|v| v.checked_add(c.treasury_pending.as_ref().map(|p| p.amount.0).unwrap_or(0))).unwrap_or_else(||env::panic_str("reserve overflow"));
+        // Byte stake plus operating reserve, listing bonds, user liabilities and a pending recovery.
+        // treasury_available is the pool this view pays out, so it is not added to the reserve.
+        let reserve = storage_stake(env::storage_usage()).checked_add(non_treasury_obligations(&c)).unwrap_or_else(||env::panic_str("reserve overflow"));
         U128(c.treasury_available.0.min(env::account_balance().as_yoctonear().saturating_sub(reserve)))
     }
 
@@ -650,6 +815,7 @@ impl Contract {
         let p = PendingPayout { nonce: c.next_payout_nonce, amount };
         c.treasury_available = U128(c.treasury_available.0 - amount.0); c.treasury_pending = Some(p.clone()); save_config(&c);
         // Destination cannot be supplied or changed. No upgrade, DeleteAccount, custody signing or NFT operation.
+        emit_key_event("treasury_recover",json_object!({"amount":amount,"nonce":p.nonce}));
         Promise::new(c.recovery_account).transfer(yocto(amount.0))
             .then(callback("on_treasury_recovered", json_object!({"nonce": p.nonce}), 30))
     }
@@ -688,41 +854,62 @@ impl Contract {
         l.policy_call_complete = true; loans().insert(&token_id, &l);
         PromiseOrValue::Promise(self.read_loan_policy(token_id, l))
     }
+    /// G2: runs inside a callback and never panics on a state path. The native result is recorded BEFORE any state write:
+    /// if applying it fails, the pending marker and the record stay for reconcile_payout (same result, no guess).
     fn settle_payout(&mut self,account_id:AccountId,nonce:U64,success:bool)->bool{
-        let Some(mut l)=credit_ledgers().get(&account_id) else{return false;};
-        let Some(p)=l.pending.as_ref() else{return false;};if p.nonce!=nonce{return false;}
-        // A preexisting unrelated payout cannot activate newly funded principal: exact nonce binding.
-        if let Some(delivery)=self.get_principal_delivery(account_id.clone()) {
-            if delivery.payout_nonce==Some(nonce) {
-                if success {
-                    require!(p.amount.0>=delivery.principal.0, "principal cashout amount mismatch");
-                    let mut loan=load_loan(&delivery.token_id,delivery.loan_nonce);
-                    require!(loan.borrower==account_id && loan.state==LoanState::DisbursementPending && loan.due_ns.0==0, "principal loan changed");
-                    let delivered_at=env::block_timestamp();
-                    loan.due_ns=U64(delivered_at.checked_add(loan.terms.duration_sec.0*SECOND).unwrap_or_else(||env::panic_str("due overflow")));
-                    loan.state=LoanState::Active;loans().insert(&delivery.token_id,&loan);
-                    principal_dispatches().remove(&delivery.token_id);
-                    emit_key_event("loan_principal_delivered",json_object!({"token_id":delivery.token_id,"nonce":loan.nonce,"payout_nonce":nonce,"activated_at_ns":U64(delivered_at),"due_ns":loan.due_ns}));
-                } else {
-                    // Definite transfer failure: same exact credit may be claimed again, no clock.
-                    principal_dispatches().remove(&delivery.token_id);
-                }
+        let Some(l)=credit_ledgers().get(&account_id) else{return false;};
+        let Some(p)=l.pending.clone() else{return false;};
+        if p.nonce!=nonce{return false;}
+        payout_outcomes().insert(&account_id,&NativeOutcome{nonce:nonce.0,success});
+        match apply_payout_outcome(&account_id,nonce,success){
+            Ok(())=>{
+                payout_outcomes().remove(&account_id);
+                self.settle_principal(&account_id,nonce,success,p.amount.0);
+                success
+            }
+            Err(reason)=>{
+                emit_key_event("payout_apply_failed",json_object!({"account_id":account_id,"nonce":nonce,"reason":reason}));
+                false
             }
         }
-        let amount=p.amount.0;l.pending=None;
-        if success{
-            if let Some(mut c)=pledge_config(){change_liabilities(&mut c,0,amount);save_config(&c);}
-            else {env::storage_write(PRE_CREDIT_TOTAL,&pre_total().checked_sub(amount).expect("liability underflow").to_le_bytes());}
-        }
-        else{l.available=l.available.checked_add(amount).unwrap_or_else(||env::panic_str("credit overflow"));}
-        save_credit(&account_id,&l);success
     }
+    /// Principal activation for a payout whose nonce matches the dispatch marker. Never panics; invariant breaks are events.
+    /// Success starts the loan clock exactly once. Failure removes the marker, so the same credit may be claimed again.
+    /// A success whose loan state no longer matches keeps the dispatch marker: reclaim stays blocked, so nothing is paid twice.
+    fn settle_principal(&mut self,account_id:&AccountId,nonce:U64,success:bool,amount:u128){
+        let Some(delivery)=self.get_principal_delivery(account_id.clone()) else{return;};
+        if delivery.payout_nonce!=Some(nonce){return;}
+        if !success{
+            principal_dispatches().remove(&delivery.token_id);
+            emit_key_event("principal_cashout_failed",json_object!({"token_id":delivery.token_id,"payout_nonce":nonce}));
+            return;
+        }
+        let Some(mut loan)=loans().get(&delivery.token_id) else{
+            emit_key_event("principal_activation_refused",json_object!({"token_id":delivery.token_id,"reason":"no loan"}));return;};
+        let delivered_at=env::block_timestamp();
+        let due=loan.terms.duration_sec.0.checked_mul(SECOND).and_then(|d|delivered_at.checked_add(d));
+        let valid=loan.nonce==delivery.loan_nonce&&loan.borrower==*account_id&&loan.state==LoanState::DisbursementPending&&loan.due_ns.0==0&&amount>=delivery.principal.0;
+        let Some(due)=due.filter(|_|valid)else{
+            emit_key_event("principal_activation_refused",json_object!({"token_id":delivery.token_id,"nonce":loan.nonce,"reason":"loan state or amount"}));return;};
+        loan.due_ns=U64(due);
+        loan.state=LoanState::Active;loans().insert(&delivery.token_id,&loan);
+        principal_dispatches().remove(&delivery.token_id);
+        disbursement_deadlines().remove(&delivery.token_id);
+        emit_key_event("loan_principal_delivered",json_object!({"token_id":delivery.token_id,"nonce":loan.nonce,"payout_nonce":nonce,"activated_at_ns":U64(delivered_at),"due_ns":loan.due_ns}));
+    }
+    /// G2: never panics. Same record-then-apply rule as settle_payout.
     fn settle_treasury(&mut self, nonce: U64, success: bool) -> bool {
-        let mut c = config_required(); let Some(p) = c.treasury_pending.clone() else { return false; };
+        let Some(c) = pledge_config() else { return false; };
+        let Some(p) = c.treasury_pending.clone() else { return false; };
         if p.nonce != nonce { return false; }
-        c.treasury_pending = None;
-        if !success { c.treasury_available = U128(c.treasury_available.0.checked_add(p.amount.0).unwrap_or_else(||env::panic_str("treasury overflow"))); }
-        save_config(&c); success
+        env::storage_write(TREASURY_OUTCOME_KEY,&near_sdk::borsh::to_vec(&NativeOutcome{nonce:nonce.0,success}).unwrap_or_else(|_|env::panic_str("outcome encoding")));
+        match apply_treasury_outcome(nonce, success) {
+            Ok(()) => { env::storage_remove(TREASURY_OUTCOME_KEY); success }
+            Err(reason) => {
+                emit_key_event("treasury_apply_failed", json_object!({"nonce": nonce, "reason": reason}));
+                false
+            }
+        }
     }
 }
 

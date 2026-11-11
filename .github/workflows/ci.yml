@@ -34,18 +34,23 @@ jobs:
       - name: count passing tests
         run: awk '/^test result:/{s+=$4} END{print "| %s | " s+0 " |"}' "$RUNNER_TEMP/keys-unit.txt" | sed "s/%s/$(basename "$PWD")/" >> "$GITHUB_STEP_SUMMARY"
       - run: cargo clippy --locked --all-targets -- -D warnings -A clippy::manual_range_contains
-      - name: source rebuilds to the committed v2.6 candidate wasm
+      - name: source rebuilds to the committed v2.7 candidate wasm
         run: |
           (cd release && sha256sum -c SHA256SUMS)
           ./build.sh >/dev/null
           node ../../scripts/gen-identity.mjs --contract-candidate --check
           got=$(sha256sum target/near/keyhole_keys.wasm | cut -d' ' -f1)
-          want=$(grep ' v2.6/' release/SHA256SUMS | cut -d' ' -f1)
+          want=$(grep ' v2.7/' release/SHA256SUMS | cut -d' ' -f1)
           echo "built $got"; echo "want  $want"; [ "$got" = "$want" ]
+          # Live v2.6 bytes stay in the release tree. This checks the committed file, not a rebuild of main.
+          live=$(sha256sum release/v2.6/keyhole_keys.wasm | cut -d' ' -f1)
+          [ "$live" = "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a" ]
       - name: build sandbox-only callback failure fixture (never deploy)
         run: |
           ./build.sh --features callback-failure-fixture >/dev/null
           cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm
+      - name: build sandbox-only short-delay fixture (never deploy)
+        run: ./build-sandbox-delay.sh >/dev/null
       - name: source rebuilds the labelled custody mock fixture
         working-directory: contracts/keys-sandbox
         run: |

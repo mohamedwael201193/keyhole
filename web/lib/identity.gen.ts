@@ -39,7 +39,7 @@ export const IDENTITY = {
     "recovery_account": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228"
   },
   "review": {
-    "source_commit": "75c97e5d42b779d48c4a2d224438ffcb06f55156"
+    "source_commit": "9296fe4acfa94cf603fd823518e375e6cd7c9944"
   },
   "worker_candidate": {
     "status": "published-mainnet",
@@ -48,12 +48,12 @@ export const IDENTITY = {
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
-    "status": "deployed-mainnet",
-    "version": "2.6.0",
-    "release": "v2.6",
-    "wasm_sha256": "54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a",
-    "code_hash": "6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww",
-    "bytes": 487260,
+    "status": "source-candidate-not-deployed",
+    "version": "2.7.0",
+    "release": "v2.7",
+    "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+    "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
+    "bytes": 519382,
     "recipe": "contracts/keys/build.sh"
   }
 } as const;

@@ -13,6 +13,7 @@ const V2: &str = "../keys/release/v2.2/keyhole_keys.wasm";
 const V2_3: &str = "../keys/release/v2.3/keyhole_keys.wasm";
 const V2_4: &str = "../keys/release/v2.4/keyhole_keys.wasm";
 const V2_5: &str = "../keys/release/v2.5/keyhole_keys.wasm";
+const V2_6: &str = "../keys/release/v2.6/keyhole_keys.wasm";
 const MAINNET_OWNER: &str = "keyhole-devmo.near";
 
 fn fixture() -> Vec<Value> {
@@ -717,7 +718,8 @@ async fn v2_6_plain_code_upgrade_preserves_six_live_nfts_owners_and_pledge_state
         assert_eq!(before["supply"],"6");
         assert_eq!(!pledge_before.is_null(),initialize_pledge);
         // This is the ENTIRE upgrade: no init, migrate or migrate_pledge call.
-        e.c.as_account().deploy(&std::fs::read("../keys/target/near/keyhole_keys.wasm")?).await?.into_result()?;
+        // Pin the committed v2.6 bytes. target/near is the v2.7 candidate or a sandbox fixture.
+        e.c.as_account().deploy(&std::fs::read(V2_6)?).await?.into_result()?;
         assert_eq!(view(&e.c,"contract_source_metadata",json!({})).await["version"],"2.6.0");
         assert_eq!(view(&e.c,"collateral_registration_protocol",json!({})).await,2);
         assert_eq!(before,snapshot(&e).await,"all stored NFT/owner/tier/holder/config/metadata state survives");

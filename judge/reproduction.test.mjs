@@ -9,7 +9,7 @@ const fence = section.split("```bash\n")[1].split("```")[0];
 test("full reproduction builds the untracked callback fixture before the sandbox", () => {
   const build = fence.indexOf("./build.sh --features callback-failure-fixture");
   const copy = fence.indexOf("cp target/near/keyhole_keys.wasm ../keys-sandbox/tests/fixtures/callback_failure.wasm");
-  const normal = fence.indexOf("&& ./build.sh && cmp target/near/keyhole_keys.wasm release/v2.6/keyhole_keys.wasm", copy);
+  const normal = fence.indexOf("&& ./build.sh && cmp target/near/keyhole_keys.wasm release/v2.7/keyhole_keys.wasm && ./build-sandbox-delay.sh", copy);
   const sandbox = fence.indexOf("cd contracts/keys-sandbox");
   assert.ok(build >= 0 && copy > build && normal > copy && sandbox > normal);
   assert.match(fence, /build-policy-mock\.sh && cargo test --locked -- --test-threads=1/);
@@ -43,6 +43,6 @@ test("live and source candidates stay distinct and presentation has no visible d
   const visible = readme.replace(/\]\([^\n]*?\)/g, "](...)");
   assert.doesNotMatch(visible, /\b20\d{2}-\d{2}-\d{2}\b/);
   assert.doesNotMatch(visible, /health FAIL|result remains the FAIL|mainnet remains v2\.4|v2\.4[^\n]*live now/);
-  assert.match(readme, /Contract source candidate \*\*2\.6\.0\*\*, matches live deployment/);
+  assert.match(readme, /Contract source candidate \*\*2\.7\.0\*\*, staged for deploy, not live/);
   assert.match(readme, /worker-provisioning\/R2\.md/);
 });
