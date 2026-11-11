@@ -70,6 +70,9 @@ export default function JudgePage() {
         title={<>Check it yourself. <em>Trust nothing we say.</em></>}
         line={<>Seven checks, top to bottom. Each one has a button that runs in your browser and a box that says what you should see. If you see something else, the claim fails.</>}
       />
+      <div className="uact">
+        <Button href="/try?start=1" testid="judge-try-free">Try it free — testnet</Button>
+      </div>
       <HealthStrip />
       <TrustLegend />
       <Steps testid="judge-steps">

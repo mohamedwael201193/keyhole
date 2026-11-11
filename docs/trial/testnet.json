@@ -1,0 +1,36 @@
+{
+  "network": "testnet",
+  "account": "keyhole-trial-mwcjsmqw.testnet",
+  "code_hash": "3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH",
+  "wasm_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
+  "wasm_bytes": 519382,
+  "wasm": "contracts/keys/release/v2.7/keyhole_keys.wasm",
+  "version": "2.7.0",
+  "init": "new",
+  "royalty_bps": 500,
+  "owner": "keyhole-trial-mwcjsmqw.testnet",
+  "minter": "keyhole-trial-sponsor-b32ffa7796.testnet",
+  "treasury": "keyhole-trial-mwcjsmqw.testnet",
+  "payout_registered": true,
+  "rpc": [
+    "https://rpc.testnet.near.org",
+    "https://test.rpc.fastnear.com"
+  ],
+  "explorer": "https://testnet.nearblocks.io/address/keyhole-trial-mwcjsmqw.testnet",
+  "transactions": {
+    "create": "938J7HUP5VfusqSNJMEhrquxSE3FjMgzdnM6TPSpo9Dg",
+    "deploy": "B8LE23HckLuPG4vJHou5dVR4mch5DdPic19SGq39amAt",
+    "init": "CynvPi5tpB577ctcA4Bx7h1csXDEzAUPq8x12Uscxcgf",
+    "register_payout": "SNdDbmKuP9zshTk1MgaRJdDtTh7pichCqHr6gqbda65",
+    "set_minter": "4NNGS5LD4NJPPFZVkwDDX8Dv8wDzLZhpMn1J2ur8uvRP",
+    "register_sponsor_payout": "6WSUSAjSVzDG4WJfS3YdT27ybPyYrJEJxsgG72oikuMQ"
+  },
+  "guest_deposit_yocto": "250000000000000000000000",
+  "guest_deposit_source": "web/lib/trialPublic.ts GUEST_DEPOSIT_YOCTO",
+  "guest_accounts": "The server calls testnet.create_account with the visitor public key. The attached deposit is GUEST_DEPOSIT_YOCTO in web/lib/trialPublic.ts, 0.25 testnet NEAR per guest. The secret key is generated in the browser. The sponsor account is keyhole-trial-sponsor-b32ffa7796.testnet and its key is the server env var KEYHOLE_TESTNET_SPONSOR_SECRET.",
+  "recorded_mainnet_trade": {
+    "label": "recorded on mainnet",
+    "call_id": "09d58c09-c1e9-48b6-bebb-485f5ae79539",
+    "evidence": "docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json"
+  }
+}
