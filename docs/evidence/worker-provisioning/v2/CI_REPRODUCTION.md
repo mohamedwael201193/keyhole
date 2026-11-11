@@ -56,7 +56,12 @@ Moving the sandbox to current v2.7 exposed old test principals above their tier
 caps; fixture tier/actual Bronze terms were corrected, not production safeguards.
 One first web run hit a 5-second postinstall-test timeout during concurrent clean
 Rust compilation; its bounded-worker rerun passed without changing timeouts or
-assertions. Superseded diagnostic logs remain under
+assertions. Final-pin diagnostics also caught a newly linked proof increasing offline claims
+to641 (344 PASS/297 SKIP), a missing CLI npm typecheck alias (the actual check is
+`npx tsc --noEmit`), and inherited sandbox environment flags in a normal web
+unit invocation. README counts were corrected, the alias was not invented,
+and those task-local flags were cleared; no assertion or feature gate changed.
+Superseded diagnostic logs remain under
 /workspace/handoff/pr208-native-scope/ and are NOT counted as final passes.
 
 Current counts/output-log hashes are in validation.json. Committed output logs
