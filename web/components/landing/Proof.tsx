@@ -2,7 +2,7 @@
 /**
  * "Proof, not promises": four live numbers, each a link to the place it can be checked. The key count is read on the server
  * (lib/landing.ts, the contract's nft_total_supply); when the server could not read it, SupplyStat polls /api/supply for a short while. The order count is the
- * evidence file (lib/settlements.ts).
+ * public order census (lib/settlements.ts publicOrderCensus): one sealed vault swap plus each listed 1Click order.
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -26,7 +26,7 @@ export function SupplyStat({ initial }: { initial: number | null }) {
 }
 
 export function ProofStrip({ supply, checks, hash, orders }: {
-  supply: number | null; checks: number; hash: string; orders: number;
+  supply: number | null; checks: number; hash: string; orders: { total: number; label: string; detail: string };
 }) {
   const { t } = useI18n();
   return (
@@ -45,8 +45,8 @@ export function ProofStrip({ supply, checks, hash, orders }: {
           <dd><Link href="/verify" className="pf-link" data-testid="checks-stat">{checks}</Link></dd>
         </div>
         <div>
-          <dt>{t("home.stOrders")}</dt>
-          <dd><Link href="/settle" className="pf-link" data-testid="orders-stat">{orders}</Link></dd>
+          <dt>{orders.label}</dt>
+          <dd><Link href="/settle" className="pf-link" data-testid="orders-stat" title={orders.detail}>{orders.total}</Link></dd>
         </div>
       </dl>
       <div className="pf-actions">

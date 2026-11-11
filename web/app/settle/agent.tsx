@@ -11,7 +11,7 @@ const AGENT_ERR: Record<string, string> = {
   unavailable: "The Agent API did not answer. The rest of this page still works; try again later.",
 };
 /** Codes that mean the demo could not be reached or configured. Shown as one plain "unavailable" state with a retry. */
-const DOWN = new Set(["upstream", "config", "unavailable"]);
+const DOWN = new Set(["upstream", "config", "unavailable", "timeout", "indexer"]);
 export const agentErr = (c: string) => AGENT_ERR[c] ?? "The Agent API could not answer that request. Try again in a moment.";
 
 type Q = { limits: Record<string, number>; usage: Record<string, number>; observed_at: string };
@@ -23,6 +23,8 @@ export function AgentPanel() {
   const [net, setNet] = useState<{ network: string; status: { overall: string } } | null>(null);
   const [q, setQ] = useState<Q | null>(null);
   const [pol, setPol] = useState<Pol | null>(null);
+  const [quotaNote, setQuotaNote] = useState<string | null>(null);
+  const [policyNote, setPolicyNote] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [down, setDown] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -30,10 +32,17 @@ export function AgentPanel() {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let live = true;
-    const get = (r: string) => fetch(`/api/agent?r=${r}`).then((x) => x.json()).then((j) => (j.ok ? j.body : Promise.reject(j.error?.code)));
-    setDown(false); setErr(null); setNet(null); setQ(null); setPol(null);
+    const get = (r: string) => fetch(`/api/agent?r=${r}`).then((x) => x.json()).catch(() => ({ ok: false, error: { code: "upstream" } }));
+    setDown(false); setErr(null); setNet(null); setQ(null); setPol(null); setQuotaNote(null); setPolicyNote(null);
     Promise.all([get("network"), get("quotas"), get("policy")])
-      .then(([n, qq, p]) => { if (live) { setNet(n); setQ(qq); setPol(p); } })
+      .then(([n, qq, p]) => {
+        if (!live) return;
+        if (n?.ok) setNet(n.body); else setDown(true);
+        if (qq?.ok && qq.body?.usage && qq.body?.limits) setQ(qq.body);
+        else setQuotaNote("Quotas are not available right now.");
+        if (p?.ok && p.body?.policy) setPol(p.body);
+        else setPolicyNote("The holder-cap policy is not available right now.");
+      })
       .catch(() => { if (live) setDown(true); });
     return () => { live = false; };
   }, [attempt]);
@@ -62,6 +71,8 @@ export function AgentPanel() {
       {err && <p className="note" role="status" data-testid="agent-err">{agentErr(err)}</p>}
       {net && <p className="note" data-testid="agent-net">Network <b>{net.network}</b> · status <b>{net.status.overall}</b></p>}
       {q && <p className="note" data-testid="agent-quotas">Quotas: {q.usage.agents_last_24_hours}/{q.limits.daily_agents} agents today · {q.usage.requests_this_minute}/{q.limits.requests_per_minute} requests this minute</p>}
+      {quotaNote && <p className="note" role="status" data-testid="agent-quotas-down">{quotaNote}</p>}
+      {policyNote && <p className="note" role="status" data-testid="agent-policy-down">{policyNote}</p>}
       {p && (
         <table className="ptab" data-testid="agent-policy" data-match={canon({ limits: p.limits, budget: p.budget, actions: p.actions, destinations: p.destinations }) === canon({ limits: expect.limits, budget: expect.budget, actions: expect.actions, destinations: expect.destinations }) ? "1" : "0"}>
           <tbody>

@@ -36,6 +36,23 @@ export const policyWarnings = (q: any): string[] =>
 export const balanceWarnings = (q: any): string[] =>
   (Array.isArray(q?.warnings) ? q.warnings : []).map((w: any) => String(w?.code ?? "")).filter((c: string) => /balance|insufficient|fund/i.test(c) && !c.startsWith("policy_") && !c.startsWith("budget"));
 
+/** Env names the Agent API bridge needs. Values stay on the server. */
+export function missingAgentEnv(env: { base?: string; key?: string; agent?: string }, read: string): string[] {
+  const missing: string[] = [];
+  if (!env.base) missing.push("AGENT_API_BASE_URL");
+  if (!env.key) missing.push("AGENT_API_KEY");
+  if (read === "policy" && !/^[0-9a-f]{64}$/.test(env.agent ?? "")) missing.push("AGENT_API_AGENT_ID");
+  return missing;
+}
+
+/** A read the upstream refused. HTTP stays 200 so the page can show the state without a failed-request console error. */
+export function agentUnavailable(kind: "upstream" | "timeout" | "config", extra?: { upstream_status?: number; missing?: string[] }) {
+  const error: { code: string; upstream_status?: number; missing?: string[] } = { code: kind };
+  if (extra?.upstream_status !== undefined) error.upstream_status = extra.upstream_status;
+  if (extra?.missing?.length) error.missing = extra.missing;
+  return { ok: false as const, error };
+}
+
 /** Key-order-independent JSON, so a live policy can be compared with the builder's output. */
 export const canon = (v: unknown): string =>
   Array.isArray(v) ? `[${v.map(canon).join(",")}]` : v && typeof v === "object" ? `{${Object.keys(v as object).sort().map((k) => `${JSON.stringify(k)}:${canon((v as any)[k])}`).join(",")}}` : JSON.stringify(v);

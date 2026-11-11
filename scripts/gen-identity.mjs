@@ -32,7 +32,7 @@ const b58 = (hex) => {
 };
 // Promotion is explicit and uses a finalized public receipt/view capture, never a candidate guess.
 if (process.argv.includes("--promote-live")) {
-  if(id.contract.version==="2.6.0")throw Error("historical v2.5 path cannot overwrite v2.6 live identity");
+  if(id.contract.version!=="2.5.0")throw Error("historical v2.5 path cannot overwrite v2.6 or later live identity");
   if (process.argv.includes("--check"))
     throw new Error("--check cannot promote a deployment");
   const evidencePath = process.argv[process.argv.indexOf("--promote-live") + 1];
@@ -171,8 +171,8 @@ if (
       throw Error("minter continuity failed");
     id.worker = promotedWorker(id, proof, e);
   }
-  if (id.contract_candidate?.wasm_sha256 === id.contract.wasm_sha256)
-    id.contract_candidate.status = "deployed-mainnet";
+  if (id.contract_candidate)
+    id.contract_candidate.status = id.contract_candidate.wasm_sha256 === id.contract.wasm_sha256 ? "deployed-mainnet" : "source-candidate-not-deployed";
   if (id.worker_candidate?.wasm_sha256 === id.worker.wasm_sha256)
     id.worker_candidate.status = "published-mainnet";
   writeFileSync(root + "identity.json", JSON.stringify(id, null, 2) + "\n");
@@ -326,7 +326,7 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 \`\`\`
 
-${id.worker_candidate ? `Worker source candidate: \`${id.worker_candidate.wasm_sha256}\` (${id.worker_candidate.bytes.toLocaleString("en-US")} bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Provisioning proof](docs/evidence/worker-provisioning/README.md).\n\n` : ""}${id.contract_candidate ? `Contract source candidate **${id.contract_candidate.version}**, ${id.contract_candidate.wasm_sha256 === k.wasm_sha256 ? "matches live deployment" : "staged for deploy, not live"}: [generated release identity](contracts/keys/release/${id.contract_candidate.release}/identity.json). Its owner/epoch CAS is required before collateral provisioning.\n\n` : ""}Measured size steps are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [\`docs/evidence/live-v2.5/all-live-views.json\`](docs/evidence/live-v2.5/all-live-views.json).
+${id.worker_candidate ? `Worker source candidate: \`${id.worker_candidate.wasm_sha256}\` (${id.worker_candidate.bytes.toLocaleString("en-US")} bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [Provisioning proof](docs/evidence/worker-provisioning/README.md).\n\n` : ""}${id.contract_candidate ? `Contract source candidate **${id.contract_candidate.version}**, ${id.contract_candidate.wasm_sha256 === k.wasm_sha256 ? "matches live deployment" : "staged for deploy, not live"}: [generated release identity](contracts/keys/release/${id.contract_candidate.release}/identity.json). Its owner/epoch CAS is required before collateral provisioning.\n\n` : ""}${id.governance ? `Live governance (\`governance_state\`, \`get_pledge_config\`): owner \`${id.governance.owner}\`; pending owner \`${id.governance.pending_owner}\`; pending_owner_not_before_ns \`${id.governance.pending_owner_not_before_ns}\`; staged_upgrade_sha256 \`${id.governance.staged_upgrade_sha256}\`; staged_upgrade_not_before_ns \`${id.governance.staged_upgrade_not_before_ns}\`; min_upgrade_delay_ns \`${id.governance.min_upgrade_delay_ns}\`; wind_down_ns \`${id.governance.wind_down_ns}\`; wound_down ${id.governance.wound_down}; lending_enabled ${id.governance.lending_enabled}. Access keys: ${id.governance.full_access_keys} FullAccess and ${id.governance.function_call_keys} FunctionCall (\`ed25519:7N1fLo9M…\`, \`ed25519:FNe2aYtz…\`). Stage [tx](https://nearblocks.io/txns/${id.governance.stage_upgrade_tx}) · owner proposal [tx](https://nearblocks.io/txns/${id.governance.propose_owner_tx}). The owner is still the contract account.\n\n` : ""}Measured size steps are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [\`docs/evidence/live-v2.5/all-live-views.json\`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
 `;
 

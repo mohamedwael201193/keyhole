@@ -10,5 +10,22 @@ export const SETTLEMENTS: Settlement[] = [
 /** A recorded example, clearly labelled, so the FAILED path is visible without breaking anything. */
 export const RECORDED_FAILED = { status: "FAILED", label: "Recorded example (not a live order)", note: "Shape of a FAILED order as returned by /v0/status. KEYHOLE shows the refund address and asks the user to check the refund before retrying." };
 
+/**
+ * Public orders shared by the home strip and Activity → Public.
+ * One sealed vault swap (VAULT_TRADE) plus each listed 1Click settlement.
+ * RECORDED_FAILED is a status shape, not an order, and is not included.
+ */
+export function publicOrderCensus() {
+  const vaultSwaps = 1;
+  const oneClick = SETTLEMENTS.length;
+  return {
+    total: vaultSwaps + oneClick,
+    vaultSwaps,
+    oneClick,
+    label: "Public orders",
+    detail: `${vaultSwaps} sealed vault swap and ${oneClick} 1Click orders`,
+  };
+}
+
 /** One vault trade: the key's own sealed account swapped inside the enclave, settled through NEAR Intents (mainnet E2E step 08, build f13efe92). */
 export const VAULT_TRADE = { callId: "09d58c09-c1e9-48b6-bebb-485f5ae79539", account: "keyhole-devmo.near", token: "0", amountIn: "0.005 USDC", amountOut: "0.001077 wNEAR", intentHash: "Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so", build: "f13efe92", file: "docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json" };

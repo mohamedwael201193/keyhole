@@ -102,9 +102,9 @@ What an intact enclave still prevents, and a broken one does not: the worker wil
 
 A user's NEAR full-access key and a MetaMask key never enter the enclave. A TDX failure does not hand those over.
 
-## Contract v2.7 (staged for deploy, not live)
+## Contract v2.7 (live)
 
-v2.7 is source in this checkout. It is not the wasm on `keyhole-devmo.near`. Live code remains v2.6 (`54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a`). The worker does not call the new methods. `beat`, `nft_set_tier` and `finish_value_op` still take no deposit. `register_collateral` still takes `version` and `valid_until` as JSON numbers and `expected_owner_epoch` as a string (`tee/worker/src/collateral.rs`).
+v2.7 is the wasm on `keyhole-devmo.near` (`26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`, deploy tx `6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h`). v2.6 (`54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a`) is the previous code. The worker does not call the new methods. `beat`, `nft_set_tier` and `finish_value_op` still take no deposit. `register_collateral` still takes `version` and `valid_until` as JSON numbers and `expected_owner_epoch` as a string (`tee/worker/src/collateral.rs`).
 
 **Owner handover.** There is no single-step setter. The current owner calls `propose_owner`. Until the named account calls `accept_owner` after `MIN_UPGRADE_DELAY_NS` (24 h in the release wasm), the current owner can still administer the contract and can `cancel_owner_proposal`. A proposal to the current owner is refused, and so is a proposal that names the contract account. Repeating a proposal overwrites one key and restarts the delay. Accepting clears a staged upgrade, so a departing owner cannot leave a loaded deploy. When both timers are started together, the owner applies the staged wasm before the successor accepts; the clear is then a no-op. Proof: `owner_handover_is_two_step_and_only_the_proposed_account_accepts`, `a_bad_owner_proposal_can_be_cancelled_before_it_can_take_effect`, `accepting_ownership_clears_a_staged_upgrade`, `propose_owner_and_accept_owner_reject_the_contract_account`, `parallel_owner_and_upgrade_timers_apply_before_accept` in [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs).
 

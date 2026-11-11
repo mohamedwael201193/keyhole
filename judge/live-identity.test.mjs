@@ -52,6 +52,6 @@ for (const [name, tamper] of [
 
 test("historical promotion cannot downgrade the current v2.6 identity", () => fixture(dir => {
   const before = readFileSync(join(dir, "identity.json"));
-  assert.throws(() => generate(dir, capture()), /historical v2.5 path cannot overwrite v2.6/);
+  assert.throws(() => generate(dir, capture()), /historical v2.5 path cannot overwrite v2.6 or later/);
   assert.deepEqual(readFileSync(join(dir, "identity.json")), before);
 }, false));

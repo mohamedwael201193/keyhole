@@ -8,7 +8,7 @@ import { HeroIntro, HandoverMoment } from "./LandingMotion";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/motion";
 import { useI18n } from "@/lib/i18n";
-import { SETTLEMENTS } from "@/lib/settlements";
+import { publicOrderCensus } from "@/lib/settlements";
 import type { TokenReach } from "@/lib/landing";
 import { ProofStrip } from "./landing/Proof";
 import { Handover } from "./landing/Handover";
@@ -73,7 +73,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
         <div className="lp-wrap">
           <h2 id="proof-h" className="lp-h2">{t("lp.proofH")}</h2>
           <p className="lp-lead">{t("lp.proofLead")}</p>
-          <ProofStrip supply={supply} checks={BROWSER_CHECKS} hash={hash} orders={SETTLEMENTS.length} />
+          <ProofStrip supply={supply} checks={BROWSER_CHECKS} hash={hash} orders={publicOrderCensus()} />
         </div>
       </section>
 

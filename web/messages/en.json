@@ -900,7 +900,7 @@
     "stChecks": "Checks in your browser",
     "stHash": "Worker code hash",
     "stContract": "Contract code hash",
-    "stOrders": "Orders on record",
+    "stOrders": "Public orders",
     "collLead": "Each key has its own art, traits and bit cipher.",
     "supplyLabel": "Keys held by users",
     "verifyBtn": "Verify it yourself",

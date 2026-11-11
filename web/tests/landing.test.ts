@@ -69,6 +69,9 @@ describe("landing sections", () => {
     expect(html).toMatch(/data-testid="checks-stat"[^]*?>37</);
     expect(html).toContain('data-testid="hash-stat"');
     expect(html).toContain('data-testid="orders-stat"');
+    expect(html).toContain("Public orders");
+    expect(html).toContain(">6<");
+    expect(html).toContain("1 sealed vault swap and 5 1Click orders");
     expect(html).toContain('data-testid="verify-cta"');
     expect(html).toContain('data-testid="judge-cta"');
     expect(html).toContain('data-testid="supply"');
