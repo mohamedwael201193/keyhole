@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import tarfile
 
 PATTERN = re.compile(r"wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}|eyJhbGci[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE")
 PROMOTION = "docs/evidence/live-v2.7/promotion.public.json"
@@ -79,6 +80,20 @@ def scan_tree(root):
         path = root / name
         if path.is_symlink() or not path.is_file() or not scan_file(name, path.read_bytes()):
             failed.append(name)
+        if name == "web/public/source/keyhole-src.tar.gz":
+            try:
+                with tarfile.open(path, "r:gz") as archive:
+                    for member in archive:
+                        if member.isdir():
+                            continue
+                        if not member.isfile() or not member.name.startswith("keyhole/"):
+                            failed.append(name + " (invalid archive member)")
+                            continue
+                        inner = member.name.removeprefix("keyhole/")
+                        if not scan_file(inner, archive.extractfile(member).read()):
+                            failed.append(name + " -> " + inner)
+            except (tarfile.TarError, OSError, ValueError):
+                failed.append(name + " (invalid archive)")
     return failed
 
 

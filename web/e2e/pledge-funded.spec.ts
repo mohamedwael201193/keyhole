@@ -131,7 +131,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   evidence.native_receipts=nativeReceipts;expect(evidence.states).toHaveLength(64);expect(evidence.negatives).toHaveLength(5);
   const pngs=readdirSync(shots).filter(x=>x.endsWith(".png"));expect(pngs).toHaveLength(96);
   const sha=(bytes:Buffer)=>createHash("sha256").update(bytes).digest("hex");
-  const committedFiles=["web/app/pledge/LivePledge.tsx","web/lib/pledgeExit.ts","web/lib/pledgeIntentStore.ts","web/lib/pledgeMoney.ts","web/lib/keysTx.ts","web/e2e/pledge-funded.spec.ts","web/e2e/support/pledge-ledger.ts","web/e2e/support/final-receipt.ts","contracts/keys-sandbox/tests/support/ui_harness.rs","contracts/keys-sandbox/tests/support/guarded_layer.rs","tee/worker/src/withdrawal_protection.rs"];
+  const committedFiles=["web/app/pledge/LivePledge.tsx","web/lib/pledgeExit.ts","web/lib/pledgeIntentStore.ts","web/lib/pledgeMoney.ts","web/lib/keysTx.ts","web/e2e/pledge-funded.spec.ts","web/e2e/support/pledge-ledger.ts","web/e2e/support/final-receipt.ts","contracts/keys-sandbox/tests/pledge.rs","contracts/keys-sandbox/tests/support/ui_harness.rs","contracts/keys-sandbox/tests/support/guarded_layer.rs","tee/worker/src/withdrawal_protection.rs"];
   const git=(...args:string[])=>execFileSync("git",args,{cwd:join(process.cwd(),"..")});
   const sources=committedFiles.map(file=>({file,sha256:sha(git("show",`HEAD:${file}`))}));
   // Canonical committed blobs, never re-encoded git-show text or OS-local CRLF bytes.

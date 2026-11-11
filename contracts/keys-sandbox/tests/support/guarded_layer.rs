@@ -157,7 +157,7 @@ async fn guarded_worker_cross_layer_default_failures_and_new_holder_exit()->Resu
 async fn collateral_provisioning_seals_only_final_binding_and_serializes_value_admission()->Result<()> {
  use keyhole_worker::collateral::{self,Prepared,AuthorityAudit};
  let e=setup().await?;
- e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"provisioned","receiver_id":e.bob.id(),"tier":2,"metadata":{"title":"Provisioning fixture","copies":1}}))
+ e.minter.call(e.c.id(),"nft_mint").args_json(json!({"token_id":"provisioned","receiver_id":e.bob.id(),"tier":3,"metadata":{"title":"Provisioning fixture","copies":1}}))
   .deposit(NearToken::from_millinear(100)).max_gas().transact().await?.into_result()?;
  let p=Prepared{token_id:"provisioned".into(),owner:e.bob.id().to_string(),owner_epoch:0,worker_hash:"fe".repeat(32),wallet_pubkey:format!("ed25519:{}","cd".repeat(32)),plaintext_hash:"12".repeat(32),encrypted_data:"sealed-policy-provisioning-mock".into(),wallet_signature:"ab".repeat(64),version:1,valid_until:4_000_000_000};
  e.minter.call(e.c.id(),"begin_value_op").args_json(json!({"token_id":p.token_id,"epoch":"0","op_id":"1:provisioning-race","action_hash":"fixture","owner_id":e.bob.id()}))

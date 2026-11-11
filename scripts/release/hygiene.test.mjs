@@ -46,3 +46,16 @@ test('historical 1Click signatures retain only exact snapshot/pointer exceptions
   proof.injected='w'+'k_'+'a'.repeat(16);assert.notEqual(run(()=>{},file,JSON.stringify(proof)).status,0);
  }
 });
+
+test('source bundle members are scanned too; a credential hidden only in the gzip archive fails',()=>{
+ const root=mkdtempSync(join(tmpdir(),'keyhole-archive-hygiene-'));
+ try {
+  mkdirSync(join(root,'web/public/source'),{recursive:true});
+  execFileSync('python3',['-c',`import tarfile,io,sys
+p=sys.argv[1];b=('w'+'k_'+'a'*16).encode()
+with tarfile.open(p,'w:gz') as t:
+ i=tarfile.TarInfo('keyhole/hidden.json');i.size=len(b);t.addfile(i,io.BytesIO(b))`,join(root,'web/public/source/keyhole-src.tar.gz')]);
+  execFileSync('git',['init','-q'],{cwd:root});execFileSync('git',['add','.'],{cwd:root});
+  const result=spawnSync('python3',[checker,'--root',root],{encoding:'utf8'});assert.notEqual(result.status,0);assert.match(result.stdout,/hidden.json/);
+ } finally {rmSync(root,{recursive:true,force:true});}
+});
