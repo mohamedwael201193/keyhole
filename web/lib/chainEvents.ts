@@ -52,7 +52,7 @@ export const ACCOUNT_METHODS = ["claim_payout", "on_payout", "reconcile_payout"]
 
 export type IndexedEvent = {
   event: string;
-  standard: "keyhole";
+  standard: "keyhole" | "nep171";
   version: "1.0.0";
   tx: string;
   atMs: number | null;
@@ -289,6 +289,9 @@ const TITLES: Record<string, string> = {
   loan_principal_delivered: "Principal delivered",
   loan_closed: "Loan closed",
   collateral_ready: "Collateral ready",
+  nft_mint: "Minted",
+  nft_transfer: "Transferred",
+  nft_burn: "Burned",
 };
 
 export const EVENT_TITLES = TITLES;
@@ -304,6 +307,7 @@ export function describeChainEvent(e: IndexedEvent): { title: string; detail: st
     who(d.seller) ? `seller ${who(d.seller)}` : "",
     who(d.buyer) ? `buyer ${who(d.buyer)}` : "",
     who(d.lender) ? `lender ${who(d.lender)}` : "",
+    who(d.owner_id) ? `holder ${who(d.owner_id)}` : "",
     present(d.nonce) ? `nonce ${d.nonce}` : "",
     typeof d.resolution === "string" && d.resolution ? d.resolution : "",
   ].filter(Boolean);

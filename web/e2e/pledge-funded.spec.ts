@@ -22,7 +22,18 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  // Refused previews must never reach a withdrawal confirm/sign step. Capture any unexpected dialog.
  const confirms:string[]=[];for(const p of [borrower,lender])p.on("dialog",d=>{confirms.push(d.message());void d.accept();});;
  const evidence:{network:string;provider:string;states:unknown[];native_receipts:unknown[];negatives:unknown[]}={network:"local NEAR sandbox",provider:"custody HTTP, registry and WASI host mocked; native contract/wallet/receipts and guarded production pure drivers real",states:[],native_receipts:[],negatives:[]};
- const fixture=async(action:string,params:Record<string,unknown>={})=>{const r=await request.post("/api/pledge-sandbox",{data:{action,...params}});expect(r.ok()).toBeTruthy();const j=await r.json();expect(j.error).toBeFalsy();return j;};
+ const fixture=async(action:string,params:Record<string,unknown>={})=>{
+  let last: Awaited<ReturnType<typeof request.post>> | null = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) await new Promise((resolve) => setTimeout(resolve, 1000));
+    last = await request.post("/api/pledge-sandbox",{data:{action,...params}});
+    if (last.ok()) break;
+  }
+  expect(last?.ok()).toBeTruthy();
+  const j=await last!.json();
+  expect(j.error).toBeFalsy();
+  return j;
+ };
  const meta=await fixture("metadata");
  async function rpc(method:string,params:unknown){const r=await request.post(meta.rpc,{data:{jsonrpc:"2.0",id:"acceptance",method,params}});const j=await r.json();expect(j.error).toBeFalsy();return j.result;}
  async function view(method:string,args:unknown={}){const r=await rpc("query",{request_type:"call_function",finality:"final",account_id:meta.contract,method_name:method,args_base64:Buffer.from(JSON.stringify(args)).toString("base64")});return JSON.parse(Buffer.from(r.result).toString());}

@@ -128,7 +128,11 @@ describe("practice mint", () => {
       return mockFetch({ token: { owner_id: "khcd56ab78ef90.testnet" } })(url, init);
     }) as typeof fetch;
     const r = await mintPracticeKey(IDEM, "198.51.100.8", guest, env, fetchImpl);
-    expect(r).toMatchObject({ ok: true, replayed: true, accountId: "khcd56ab78ef90.testnet" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.status).toBe(409);
+      expect(r.message).toMatch(/already minted and transferred/i);
+    }
     expect(urls.some((url) => url.includes("nearblocks"))).toBe(false);
   });
 

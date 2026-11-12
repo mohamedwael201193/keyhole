@@ -11,7 +11,7 @@ export default function Source() {
   return (
     <div className="page pp pp-source">
       <Purpose
-        eyebrow="Judge source"
+        eyebrow="Source archive"
         title="Source code"
         line="One tarball, cut from one commit with git archive. Check the sha256 before you unpack it."
       />
@@ -37,7 +37,7 @@ export default function Source() {
       <section className="pp-card" aria-labelledby="src-check">
         <h2 id="src-check">Check the download</h2>
         <p>Run <span className="mono">sha256sum -c keyhole-src.tar.gz.sha256</span>. It must print <span className="mono">keyhole-src.tar.gz: OK</span>.</p>
-        <p className="muted">The steps for AI judges are in <a href={`${REPO}/blob/main/JUDGE_AGENT.md`} target="_blank" rel="noreferrer">JUDGE_AGENT.md</a>.</p>
+        <p className="muted">The verification steps are in <a href={`${REPO}/blob/main/JUDGE_AGENT.md`} target="_blank" rel="noreferrer">the verification notes</a>.</p>
       </section>
     </div>
   );

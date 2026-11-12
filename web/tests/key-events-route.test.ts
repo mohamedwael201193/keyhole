@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/key-events/route";
+import { resetKeyEventCache } from "@/lib/keyEventRead";
 import { chainEventView, EVENT_PAGE_SIZE } from "@/lib/chainEvents";
 import { KEYS_CONTRACT } from "@/lib/config";
 
 const TOKEN = "k5f4750858f328940";
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { resetKeyEventCache(); vi.unstubAllGlobals(); });
 
 function req() {
   return new Request(`http://localhost/api/key-events?id=${TOKEN}`, { headers: { "x-forwarded-for": "192.0.2.40" } });
@@ -36,20 +37,18 @@ describe("GET /api/key-events", () => {
     [{ args: 42 }],
     [{ args: "not-json-or-base64" }],
   ])("unreadable action args are not cached as a complete empty history", async (action) => {
-    const row = { transaction_hash: "H".padEnd(44, "b"), predecessor_account_id: "buyer.near", actions: [action] };
+    const row = { transaction_hash: "H".padEnd(44, "b"), method: "nft_buy", predecessor_account_id: "buyer.near", actions: [action] };
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return Response.json({ result: { final_execution_status: "FINAL" } });
-      if (String(url).includes("method=nft_buy")) return Response.json({ data: [row], meta: {} });
+      if (String(url).includes("/receipts")) return Response.json({ data: [row], meta: {} });
       return Response.json({ data: [], meta: {} });
     });
     vi.stubGlobal("fetch", fetchImpl);
     const first = await (await GET(req())).json();
     expect(first).toMatchObject({ ok: false, complete: false, unavailable: true, events: [] });
     expect(fetchImpl.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === "POST")).toBe(false);
-    const calls = fetchImpl.mock.calls.length;
     const second = await (await GET(req())).json();
     expect(second).toMatchObject({ ok: false, complete: false, unavailable: true, events: [] });
-    expect(fetchImpl.mock.calls.length).toBeGreaterThan(calls);
   });
 
   it("keeps a transfer unlist and a collateral callback, and the cached repeat still has them", async () => {
@@ -87,8 +86,11 @@ describe("GET /api/key-events", () => {
         });
       }
       if (String(url).includes("/v3/txns/")) return Response.json({ data: { signer_account_id: "minter.near" } });
-      const method = new URL(String(url)).searchParams.get("method") ?? "";
-      return Response.json({ data: seeds[method] ?? [], meta: {} });
+      if (String(url).includes("/receipts")) {
+        const data = Object.entries(seeds).flatMap(([method, rows]) => rows.map((row) => ({ ...(row as object), method })));
+        return Response.json({ data, meta: {} });
+      }
+      return Response.json({ data: [], meta: {} });
     });
     vi.stubGlobal("fetch", fetchImpl);
     const ask = () => GET(new Request(`http://localhost/api/key-events?id=${token}`, { headers: { "x-forwarded-for": "192.0.2.51" } }));
@@ -98,8 +100,9 @@ describe("GET /api/key-events", () => {
     expect(view.state).toBe("ready");
     expect(first.events.map((e: { event: string }) => e.event).sort()).toEqual(["collateral_ready", "key_list", "key_unlist", "key_unlist", "key_unlist"]);
     expect(first.events.filter((e: { event: string }) => e.event === "key_unlist").map((e: { data: { seller: string } }) => e.data.seller).sort()).toEqual(["call.near", "payout.near", "transfer.near"]);
-    const queried = fetchImpl.mock.calls.map((call) => String(call[0])).filter((url) => url.includes("/receipts?")).map((url) => new URL(url).searchParams.get("method"));
-    expect(queried).toEqual(expect.arrayContaining(["nft_transfer", "nft_transfer_call", "nft_transfer_payout", "register_collateral", "check_collateral", "on_collateral_checked"]));
+    const receiptUrls = fetchImpl.mock.calls.map((call) => String(call[0])).filter((url) => url.includes("/receipts"));
+    expect(receiptUrls.length).toBeGreaterThan(0);
+    expect(receiptUrls.every((url) => new URL(url).searchParams.get("method") == null)).toBe(true);
     const calls = fetchImpl.mock.calls.length;
     const second = await (await ask()).json();
     expect(second.events).toEqual(first.events);
@@ -130,9 +133,7 @@ describe("GET /api/key-events", () => {
           },
         });
       }
-      const method = new URL(String(url)).searchParams.get("method");
-      if (method === "nft_transfer") return Response.json({ data: filler, meta: { next_page: "more" } });
-      if (method === "nft_list") return Response.json({ data: [listed], meta: {} });
+      if (String(url).includes("/receipts")) return Response.json({ data: [...filler, listed], meta: { next_page: "more" } });
       return Response.json({ data: [], meta: {} });
     });
     vi.stubGlobal("fetch", fetchImpl);

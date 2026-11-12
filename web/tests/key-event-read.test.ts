@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EVENT_PAGE_SIZE } from "@/lib/chainEvents";
-import { readKeyHistory } from "@/lib/keyEventRead";
+import { readKeyHistory, resetKeyEventCache } from "@/lib/keyEventRead";
 
 const CONTRACT = "keyhole-devmo.near";
 const TOKEN = "k5f4750858f328940";
@@ -23,14 +23,14 @@ function rpc(outcomes: unknown[], error?: unknown) {
   return { result: { final_execution_status: "FINAL", receipts_outcome: outcomes } };
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { resetKeyEventCache(); vi.unstubAllGlobals(); });
 
 describe("readKeyHistory", () => {
   it("does not cache a story: an archival error is unavailable, and a second call asks again", async () => {
     let calls = 0;
     const fetchImpl = vi.fn(async (url: string) => {
       calls += 1;
-      if (String(url).includes("method=nft_buy")) return Response.json({ data: [receipt("nft_buy", TOKEN)], meta: {} });
+      if (String(url).includes("/receipts?")) return Response.json({ data: [receipt("nft_buy", TOKEN)], meta: {} });
       if (String(url).includes("/receipts?")) return Response.json({ data: [], meta: {} });
       return Response.json(rpc([], { message: "down" }));
     }) as unknown as typeof fetch;
@@ -56,7 +56,7 @@ describe("readKeyHistory", () => {
     const closed = `EVENT_JSON:${JSON.stringify({ standard: "keyhole", version: "1.0.0", event: "loan_closed", data: [{ token_id: TOKEN, nonce: "4", resolution: "repaid" }] })}`;
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return Response.json(rpc([{ outcome: { executor_id: CONTRACT, status: { SuccessValue: "" }, logs: [closed] } }]));
-      if (String(url).includes("method=on_loan_policy")) return Response.json({ data: [receipt("on_loan_policy", TOKEN, "closetx")], meta: {} });
+      if (String(url).includes("/receipts?")) return Response.json({ data: [receipt("on_loan_policy", TOKEN, "closetx")], meta: {} });
       return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
@@ -68,7 +68,7 @@ describe("readKeyHistory", () => {
   it("treats archival HTTP 503 as unavailable", async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       if (init?.method === "POST") return new Response("down", { status: 503 });
-      if (String(url).includes("method=nft_buy")) return Response.json({ data: [receipt("nft_buy", TOKEN)], meta: {} });
+      if (String(url).includes("/receipts?")) return Response.json({ data: [receipt("nft_buy", TOKEN)], meta: {} });
       return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
@@ -88,9 +88,8 @@ describe("readKeyHistory", () => {
         const executor = hash.startsWith("H") ? CONTRACT : CONTRACT;
         return Response.json(rpc([{ outcome: { executor_id: executor, status: { SuccessValue: "" }, logs } }]));
       }
-      if (u.includes("method=nft_buy") && !u.includes("next=")) return Response.json({ data: filler, meta: { next_page: "page2" } });
-      if (u.includes("method=nft_buy") && u.includes("next=page2")) return Response.json({ data: [receipt("nft_buy", TOKEN, TX)], meta: {} });
-      if (u.includes("method=claim_payout")) return Response.json({ data: [{ transaction_hash: "claimtx", predecessor_account_id: "borrower.near", included_in_block_timestamp: "1794182936741174679", actions: [{ args: "{}" }] }], meta: {} });
+      if (u.includes("/receipts?") && !u.includes("next=")) return Response.json({ data: filler, meta: { next_page: "page2" } });
+      if (u.includes("/receipts?") && u.includes("next=page2")) return Response.json({ data: [receipt("nft_buy", TOKEN, TX), { transaction_hash: "claimtx", method: "claim_payout", predecessor_account_id: "borrower.near", included_in_block_timestamp: "1794182936741174679", actions: [{ method: "claim_payout", args: "{}" }] }], meta: {} });
       return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
@@ -101,7 +100,7 @@ describe("readKeyHistory", () => {
 
   it("does not treat unreadable action args as a complete empty history", async () => {
     const hash = "H".padEnd(44, "a");
-    const row = (actions: unknown[]) => ({ transaction_hash: hash, predecessor_account_id: "buyer.near", actions });
+    const row = (actions: unknown[]) => ({ transaction_hash: hash, method: "nft_buy", predecessor_account_id: "buyer.near", actions });
     const bodies = [
       { data: [row([{}])], meta: {} },
       { data: [row([{ args: 42 }])], meta: {} },
@@ -112,7 +111,7 @@ describe("readKeyHistory", () => {
       let posts = 0;
       const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
         if (init?.method === "POST") { posts += 1; return Response.json({ result: {} }); }
-        if (String(url).includes("method=nft_buy")) return Response.json(body);
+        if (String(url).includes("/receipts?")) return Response.json(body);
         return Response.json({ data: [], meta: {} });
       }) as unknown as typeof fetch;
       const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
@@ -126,7 +125,7 @@ describe("readKeyHistory", () => {
   it("keeps a readable other key as a complete empty history", async () => {
     const other = Buffer.from(JSON.stringify({ token_id: "kother" })).toString("base64");
     const fetchImpl = vi.fn(async (url: string) => {
-      if (String(url).includes("method=nft_buy")) {
+      if (String(url).includes("/receipts?")) {
         return Response.json({ data: [{ transaction_hash: TX, predecessor_account_id: "buyer.near", included_in_block_timestamp: "1794182936741174679", actions: [{ args: other }] }], meta: {} });
       }
       return Response.json({ data: [], meta: {} });
@@ -159,7 +158,7 @@ describe("readKeyHistory", () => {
       const u = String(url);
       if (init?.method === "POST") return Response.json(rpc([{ outcome: { executor_id: CONTRACT, status: { SuccessValue: "" }, logs: [sale] } }]));
       if (u.includes("/v3/txns/")) { txnGets += 1; return Response.json({ data: fixture.txn }); }
-      if (u.includes("method=nft_transfer")) return Response.json({ data: [fixture.receipt], meta: {} });
+      if (u.includes("/receipts?")) return Response.json({ data: [fixture.receipt], meta: {} });
       return Response.json({ data: [], meta: {} });
     }) as unknown as typeof fetch;
     const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
@@ -170,5 +169,24 @@ describe("readKeyHistory", () => {
     const again = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
     expect(again.events.map((e) => e.event)).toEqual(["key_sale"]);
     expect(txnGets).toBe(1);
+  });
+
+  it("retries one 429 and does not ask NearBlocks once per method", async () => {
+    let receipts = 0;
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = String(url);
+      if (u.includes("method=")) throw new Error("per-method query");
+      if (init?.method === "POST") return Response.json(rpc([{ outcome: { executor_id: CONTRACT, status: { SuccessValue: "" }, logs: [sale] } }]));
+      if (u.includes("/receipts")) {
+        receipts += 1;
+        if (receipts === 1) return new Response("slow", { status: 429, headers: { "retry-after": "0" } });
+        return Response.json({ data: [receipt("nft_buy", TOKEN)], meta: {} });
+      }
+      return Response.json({ data: [], meta: {} });
+    }) as unknown as typeof fetch;
+    const read = await readKeyHistory({ tokenId: TOKEN, contractId: CONTRACT, fetch: fetchImpl });
+    expect(receipts).toBe(2);
+    expect(read.unavailable).toBe(false);
+    expect(read.events.map((e) => e.event)).toEqual(["key_sale"]);
   });
 });

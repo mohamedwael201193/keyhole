@@ -405,8 +405,8 @@ export async function mintPracticeKey(idempotencyKey: string, ip: string | null,
       existing = await withRpc((url) => viewCall<{ owner_id?: string } | null>(url, TRIAL_CONTRACT, "nft_token", { token_id: tokenId }, fetchImpl), fetchImpl);
     } catch { return REFUSE; }
     if (existing && typeof existing === "object") {
-      const owner = typeof existing.owner_id === "string" ? existing.owner_id : receiverId;
-      return { ok: true, tokenId, tier: PRACTICE_TIER, accountId: owner, txHash: "", replayed: true };
+      if (existing.owner_id === receiverId) return { ok: true, tokenId, tier: PRACTICE_TIER, accountId: receiverId, txHash: "", replayed: true };
+      return { ok: false, status: 409, error: "bad_request", message: "This key was already minted and transferred." };
     }
     const guest = await guestGate(receiverId, fetchImpl);
     if (guest === "missing") return { ok: false, status: 400, error: "bad_request", message: "Create the guest before minting a practice key." };
