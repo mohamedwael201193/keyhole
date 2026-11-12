@@ -15,7 +15,7 @@ const HELP = `keyhole: private trading account behind a NEAR NFT key (TEE-attest
   keyhole balance                                confidential balances
   keyhole swap --amount 10000 [--from .. --to ..] confidential swap within your caps
   keyhole history | pnl                          your private trade log / summary
-  keyhole withdraw --exact-near --to you.near --amount <USDC base units>
+  keyhole withdraw --to you.near --token USDC --amount <USDC base units>   (USDC to a NEAR account; --exact-near is accepted and ignored)
   keyhole payout [--register --accept-storage-yocto <exact cost> | --claim]\n  keyhole reconcile --key <token_id> --value-op-id <original operation ID>
   keyhole pledge status <token_id>               read-only lien status (views only, no signature)
   keyhole verify <call_id> [--wasm path]         check attestation vs FastFS (and your build)
@@ -69,7 +69,10 @@ async function main() {
     case "swap":
       return out(await run(key, "swap", { token_in: from, token_out: to, amount_in: String(o.amount), ...extra }));
     case "withdraw": {
-      if (!o["exact-near"] || (o.chain && o.chain !== "near") || (o.token && o.token !== USDC)) throw new Error("Use --exact-near for the typed NEAR USDC self-exit; other withdrawal routes are disabled");
+      const usdcBare = USDC.slice("nep141:".length);
+      const tokenOk = o.token === undefined || o.token === true ? true : [USDC, usdcBare, "USDC", "usdc"].includes(String(o.token));
+      if ((o.chain && o.chain !== "near") || !tokenOk) throw new Error("withdraw supports USDC to a NEAR account only: keyhole withdraw --to you.near --token USDC --amount <base units>");
+      if (typeof o.amount !== "string") throw new Error("withdraw requires --amount <USDC base units>");
       return out(await guardedRun(key, "exact_near_exit_v1", { ...extra, ...exactWithdrawParams(String(o.to ?? key.accountId), String(o.amount)) }));
     }
     case "reconcile":

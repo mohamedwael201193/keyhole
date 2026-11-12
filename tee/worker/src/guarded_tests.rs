@@ -59,10 +59,11 @@ struct ProviderFixture {
     store:Memory, admitted:bool, post_calls:usize, executions:usize,
     lose_post:bool, lose_get:bool, ack_finish:bool, finish_calls:usize,
     fail_history:bool,last_success:bool,row:Value, reserved:BTreeMap<String,Value>, paths:Vec<String>,
+    seq:Vec<Value>, pauses:usize, fetches:usize,
 }
 impl Default for ProviderFixture {
     fn default()->Self{Self{store:Memory::default(),admitted:true,post_calls:0,executions:0,lose_post:false,lose_get:false,ack_finish:true,finish_calls:0,
-        fail_history:false,last_success:false,row:json!({"request_id":ID,"type":"confidential","status":"success"}),reserved:BTreeMap::new(),paths:Vec::new()}}
+        fail_history:false,last_success:false,row:json!({"request_id":ID,"type":"confidential","status":"success"}),reserved:BTreeMap::new(),paths:Vec::new(),seq:Vec::new(),pauses:0,fetches:0}}
 }
 impl Store for ProviderFixture {
     fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{if self.fail_history&&k.starts_with("p2/"){return Err(err("storage","injected history write failure"));}self.store.set_if_absent(k,v)}
@@ -85,8 +86,12 @@ impl ProviderHost for ProviderFixture {
         else{Ok((200,json!({"request_id":ID,"status":"processing"})))}
     }
     fn fetch(&mut self,_key:&str,id:&str)->Result<(u16,Value),Error>{
-        assert_eq!(id,ID);if self.lose_get{return Err(err("upstream","GET unavailable"));}Ok((200,self.row.clone()))
+        assert_eq!(id,ID);if self.lose_get{return Err(err("upstream","GET unavailable"));}
+        self.fetches+=1;
+        if !self.seq.is_empty(){return Ok((200,self.seq.remove(0)));}
+        Ok((200,self.row.clone()))
     }
+    fn pause(&mut self){self.pauses+=1;}
     fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{finalize_and_settle(self,j,t,|b|{*b=[4;32];Ok(())})}
 }
 impl AdmissionHost for ProviderFixture {
@@ -498,4 +503,41 @@ fn guard_begin_requires_the_pointer_before_admission() {
     let a=host.find("guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id)?;").expect("pointer_put must propagate its error");
     let b=host.find("guard_admit(&j)?;").expect("admission");
     assert!(a<b,"the pointer must be written before begin_value_op can be sent");
+}
+
+#[test]
+fn pending_deposit_row_is_re_read_and_finishes_the_operation_in_the_original_call() {
+    let mut host=ProviderFixture::default();let j=journal();j.create(&mut host).unwrap();
+    host.seq=vec![
+        json!({"request_id":ID,"type":"confidential_swap","status":"pending_deposit"}),
+        json!({"request_id":ID,"type":"confidential_swap","status":"processing"}),
+        json!({"request_id":ID,"type":"confidential_swap","status":"success"}),
+    ];
+    let out=drive_provider(&mut host,&j,"key",false).unwrap();
+    assert_eq!(out["status"],"success");assert_eq!(out["admission_finished"],true);
+    assert_eq!(host.pauses,2);assert_eq!(host.fetches,3);assert!(!host.admitted);
+    assert_eq!(host.post_calls,1,"polling never posts again");
+}
+#[test]
+fn pending_row_that_never_settles_stays_pending_after_bounded_polls_and_reconciles_later() {
+    let mut host=ProviderFixture::default();let j=journal();j.create(&mut host).unwrap();
+    host.row=json!({"request_id":ID,"type":"confidential_swap","status":"pending_deposit"});
+    let out=drive_provider(&mut host,&j,"key",false).unwrap();
+    assert_eq!(out["status"],"pending_deposit");assert_eq!(out["admission_finished"],false);
+    assert_eq!(host.pauses as u32,SETTLE_POLLS);assert!(host.admitted);assert_eq!(host.finish_calls,0);
+    // the row settles; reconcile finishes it from the recorded request id with no second POST
+    host.row=json!({"request_id":ID,"type":"confidential_swap","status":"success"});
+    let again=drive_provider(&mut host,&j,"key",true).unwrap();
+    assert_eq!(again["admission_finished"],true);assert_eq!(host.post_calls,1);assert!(!host.admitted);
+}
+#[test]
+fn polling_does_not_apply_to_terminal_or_mismatched_rows() {
+    let mut host=ProviderFixture::default();let j=journal();j.create(&mut host).unwrap();
+    host.row=json!({"request_id":ID,"type":"confidential_swap","status":"success"});
+    assert_eq!(drive_provider(&mut host,&j,"key",false).unwrap()["admission_finished"],true);
+    assert_eq!(host.pauses,0);
+    let mut bad=ProviderFixture::default();let j2=journal();j2.create(&mut bad).unwrap();
+    bad.row=json!({"request_id":ID,"type":"withdraw","status":"pending_deposit"});
+    assert!(drive_provider(&mut bad,&j2,"key",false).is_err());
+    assert_eq!(bad.pauses,0);
 }

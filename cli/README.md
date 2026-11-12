@@ -35,7 +35,7 @@ The key must be a **full-access** key of the account (the TEE checks it on-chain
 | `balance` | confidential balances |
 | `swap --amount N [--from ID --to ID]` | confidential swap within caps |
 | `history`, `pnl` | your private log, plain-language summary |
-| `withdraw --chain near --to you.near --token ID --amount N` | move funds out |
+| `withdraw --to you.near --token USDC --amount N` | move USDC (base units) out to a NEAR account: confidential unshield, then recipient storage registration, then the Intents withdraw; fresh full-access signature; `--exact-near` is accepted and ignored |
 | `verify <call_id> [--wasm file]` | attestation vs FastFS (and your build) |
 
 Amounts are in base units (USDC: 6 decimals, so `10000` = 0.01 USDC).

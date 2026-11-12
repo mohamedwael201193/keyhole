@@ -101,6 +101,16 @@ impl Step {
             Self::Withdraw => "/wallet/v1/intents/withdraw",
         }
     }
+    /// Provider row types accepted for this hop. The unshield hop also accepts the
+    /// confidential_unshield spelling by analogy with the confidential_swap type observed
+    /// live for swaps (NOT yet observed for unshield); any other type refuses and is named.
+    pub fn request_types(self) -> &'static [&'static str] {
+        match self {
+            Self::Unshield => &["confidential", "confidential_unshield"],
+            Self::Storage => &["call"],
+            Self::Withdraw => &["withdraw"],
+        }
+    }
     pub fn request_type(self) -> &'static str {
         match self {
             Self::Unshield => "confidential",
@@ -292,14 +302,26 @@ fn review(j: &Journal, step: Step, id: Option<&str>, status: &str) -> Value {
     json!({"status":status,"exit_mode":MODE,"step":step.name(),"value_op_id":j.op_id,"request_id":id,"admission_finished":false})
 }
 fn row(v: &Value, id: &str, step: Step) -> Result<&'static str, Error> {
-    if v.get("error").is_some()
-        || v["request_id"] != id
-        || v["type"] != step.request_type()
-        || v.get("approval_id").is_some_and(|a| !a.is_null()) && v["status"] == "success"
-    {
+    let id_ok = v["request_id"] == id;
+    let type_ok = v["type"]
+        .as_str()
+        .is_some_and(|t| step.request_types().contains(&t));
+    let has_error = v.get("error").is_some_and(|e| !e.is_null());
+    let approval_ok = !(v.get("approval_id").is_some_and(|a| !a.is_null()) && v["status"] == "success");
+    if has_error || !id_ok || !type_ok || !approval_ok {
+        let ty: String = v["type"]
+            .as_str()
+            .unwrap_or("missing")
+            .chars()
+            .filter(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '_')
+            .take(32)
+            .collect();
         return Err(err(
             "exit_provider",
-            "original request identity/type/error mismatch",
+            format!(
+                "original request identity/type/error mismatch: step={} id_match={id_ok} type={ty} type_ok={type_ok} error_present={has_error}",
+                step.name()
+            ),
         ));
     }
     let s = guarded::text(v, "status")?;
@@ -474,7 +496,7 @@ pub fn drive_continued<H:Host>(h:&mut H,j:&Journal,key:&str,continuation:Option<
             if !step.valid_status(guarded::text(&v, "status")?) {
                 return Err(err("exit_provider", "malformed submit status"));
             }
-            if v["error"] == "duplicate_idempotency_key" && v["type"] != step.request_type() {
+            if v["error"] == "duplicate_idempotency_key" && !v["type"].as_str().is_some_and(|t| step.request_types().contains(&t)) {
                 return Err(err("exit_provider", "duplicate refers to wrong operation"));
             }
             if step == Step::Storage

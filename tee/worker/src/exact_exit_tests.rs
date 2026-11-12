@@ -768,3 +768,44 @@ fn delayed_original_unshield_refund_completes_after_expiry_without_new_hop(){
  h.rows.values_mut().next().unwrap()["status"]=json!("refunded");
  assert_eq!(drive(&mut h,&j,"key").unwrap()["status"],"failed");assert_eq!(h.posts.len(),1);assert_eq!(h.finish_calls,1);
 }
+
+#[test]
+fn hop_rows_accept_documented_types_and_name_the_failed_predicate() {
+    let id = "12345678-1234-1234-1234-123456789abc";
+    for (step, ok, bad) in [
+        (Step::Unshield, ["confidential", "confidential_unshield"], "withdraw"),
+        (Step::Storage, ["call", "call"], "confidential"),
+        (Step::Withdraw, ["withdraw", "withdraw"], "confidential_unshield"),
+    ] {
+        for ty in ok {
+            let v = json!({"request_id":id,"type":ty,"status":"success"});
+            assert_eq!(row(&v, id, step).unwrap(), "success");
+        }
+        let v = json!({"request_id":id,"type":bad,"status":"success"});
+        let e = row(&v, id, step).unwrap_err();
+        assert_eq!(e.code, "exit_provider");
+        assert!(e.message.contains("type_ok=false") && e.message.contains(&format!("type={bad}")), "{}", e.message);
+    }
+    // identity and error stay strict; a JSON null error member is not an error
+    let other = "87654321-4321-4321-4321-123456789abc";
+    let v = json!({"request_id":other,"type":"withdraw","status":"success"});
+    assert!(row(&v, id, Step::Withdraw).unwrap_err().message.contains("id_match=false"));
+    let v = json!({"request_id":id,"type":"withdraw","status":"success","error":"x"});
+    assert!(row(&v, id, Step::Withdraw).unwrap_err().message.contains("error_present=true"));
+    let v = json!({"request_id":id,"type":"withdraw","status":"success","error":null});
+    assert_eq!(row(&v, id, Step::Withdraw).unwrap(), "success");
+    // unshield-only spelling never opens the other hops
+    assert!(!Step::Storage.request_types().contains(&"confidential_unshield"));
+    assert!(!Step::Withdraw.request_types().contains(&"confidential_unshield"));
+}
+#[test]
+fn exact_exit_policy_gate_is_enrolled_only_with_exit_not_enrolled_for_collateral() {
+    let host = include_str!("exact_exit_host.rs");
+    let f = host.split("fn exact_exit_policy(").nth(1).unwrap().split("let proof = evidence::load_proof").next().unwrap();
+    assert!(f.contains("\"confinement_v1\"") && f.contains("exit_not_enrolled"));
+    assert!(f.contains("control.pledged") && f.contains("get_loan") && f.contains("get_collateral_binding"));
+    // the standard exit keeps its guards: policy check still precedes the spend reservation
+    let main = include_str!("main.rs").split("fn op_withdraw(").nth(1).unwrap().split("fn load_prov(").next().unwrap();
+    assert!(main.find("exact_exit_policy(").unwrap() < main.find("charge_spend(").unwrap());
+    assert!(main.contains("assert_withdraw_to(") && main.contains("assert_not_listed(") && main.contains("guard_begin("));
+}
