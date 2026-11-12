@@ -1,6 +1,12 @@
 import { OUTLAYER_OWNER } from "./config";
 import { nearView } from "./rpc";
 
+/*
+ * Source of truth: OutLayer docs, "TEE Attestation" > "What the Signature Proves": the attestation binds the
+ * wasm_hash (SHA256 of the exact bytes that ran) and trust follows that hash, so a log verifies only when the
+ * enclave's executed_wasm_sha256 equals the project's active_version on outlayer.near (get_project, a public
+ * NEAR RPC call_function view). identity.json is the offline fallback and is never silently preferred over a live read.
+ */
 /** OutLayer registry contract and the KEYHOLE project it lists. Not env-overridable. */
 export const OUTLAYER_REGISTRY = "outlayer.near";
 export const OUTLAYER_PROJECT_ID = "keyhole-devmo.near/keyhole";
