@@ -1,4 +1,5 @@
 use super::*;
+use serde_json::json;
 use ed25519_dalek::{Signer, SigningKey};
 use std::collections::BTreeMap;
 #[derive(Default)]
@@ -463,4 +464,62 @@ fn observed_wallet_and_every_authority_field_are_exact() {
     assert!(!effective_policy_matches(&with_refund,&good,&p,"keys.near"));
     good.as_object_mut().unwrap().remove("wallet_id");
     assert!(!effective_policy_matches(&expected,&good,&p,"keys.near"));
+}
+
+
+#[test]
+fn wallet_pubkey_hex_and_base58_are_the_same_key() {
+    let raw: [u8; 32] = [
+        0xe1, 0x56, 0x87, 0x46, 0xa7, 0x0e, 0x6f, 0x41, 0x84, 0x07, 0x5a, 0xaf, 0xba, 0xd2, 0x69,
+        0x44, 0xf8, 0xe0, 0xae, 0x1e, 0xd2, 0xd2, 0x65, 0x0e, 0x60, 0x28, 0xaa, 0x2a, 0x95, 0xec,
+        0x34, 0x89,
+    ];
+    let hex: String = raw.iter().map(|b| format!("{b:02x}")).collect();
+    let b58 = bs58::encode(raw).into_string();
+    assert_eq!(wallet_pubkey_bytes(&format!("ed25519:{hex}")), Some(raw));
+    assert_eq!(wallet_pubkey_bytes(&hex), Some(raw));
+    assert_eq!(wallet_pubkey_bytes(&hex.to_uppercase()), Some(raw));
+    assert_eq!(wallet_pubkey_bytes(&format!("ed25519:{b58}")), Some(raw));
+    assert_eq!(wallet_pubkey_bytes(&b58), Some(raw));
+    assert!(same_wallet_pubkey(&json!(format!("ed25519:{b58}")), &hex));
+    assert!(same_wallet_pubkey(&json!(format!("ed25519:{hex}")), &hex));
+    assert!(same_wallet_pubkey(&json!(b58), &hex));
+    assert!(!same_wallet_pubkey(
+        &json!(format!("ed25519:{b58}")),
+        &"aa".repeat(32)
+    ));
+    assert!(!same_wallet_pubkey(&json!("not-a-key"), &hex));
+}
+
+#[test]
+fn public_encrypt_failure_redacts_secrets_and_names_http_status() {
+    let body = json!({
+        "error": "bad_request",
+        "message": "locked without quorum",
+        "encrypted_base64": "SECRET_CIPHERTEXT",
+        "api_key": "wk_secret",
+        "signature_hex": "deadbeef",
+        "wallet_pubkey": "ed25519:abc",
+        "policy_hash": "ab".repeat(32),
+        "details": {"api_key": "nested-secret", "reason": "x"}
+    });
+    let s = public_encrypt_failure(400, &body);
+    assert!(s.contains("http 400"), "{s}");
+    assert!(s.contains("bad_request"), "{s}");
+    assert!(s.contains("locked without quorum"), "{s}");
+    assert!(s.contains("ed25519:abc"), "{s}");
+    assert!(!s.contains("SECRET_CIPHERTEXT"), "{s}");
+    assert!(!s.contains("wk_secret"), "{s}");
+    assert!(!s.contains("deadbeef"), "{s}");
+    assert!(!s.contains("nested-secret"), "{s}");
+    assert!(s.contains("[redacted]"), "{s}");
+}
+
+#[test]
+fn hollow_claim_is_cleared_and_stored_ciphertext_is_reused() {
+    assert!(hollow_encrypt_claim(true, false));
+    assert!(!hollow_encrypt_claim(true, true));
+    assert!(!hollow_encrypt_claim(false, false));
+    assert!(reuse_encrypt_result(true));
+    assert!(!reuse_encrypt_result(false));
 }

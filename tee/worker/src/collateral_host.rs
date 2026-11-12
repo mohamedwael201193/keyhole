@@ -153,52 +153,98 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
     }
     certificate_inventory(&key)?;
     provision_unchanged(&c, &control)?;
-    // Claim before any policy signature. A lost POST is deliberately not retried.
-    if !Host.set_if_absent(&format!("{k}/claimed"), c.operation_id.as_bytes())? {
-        return Err(err(
-            "collateral_unknown",
-            "preparation already dispatched; never repeat POST",
-        ));
-    }
-    if let Err(e) = provision_unchanged(&c, &control) {
-        // No external POST exists yet. Do not trap an already-admitted journal.
-        if Store::read(&mut Host, &format!("{k}/claimed"))? == c.operation_id.as_bytes() {
+    // If a prior prepare already stored the ciphertext, reuse it and never
+    // POST encrypt-policy again. A claimed marker with no ciphertext (live
+    // call c797d97c: exact `ed25519:`+hex compare failed after a possible
+    // 200) is hollow — clear it so one encrypt POST can run and be stored.
+    // Already-journaled guardian / expected_policy are kept (put_once of a
+    // new guardian nonce would conflict).
+    let stored = Store::read(&mut Host, &format!("{k}/encrypted"))?;
+    let encrypted = if collateral::reuse_encrypt_result(!stored.is_empty()) {
+        serde_json::from_slice(&stored).map_err(|_| err("storage", "encrypted policy corrupt"))?
+    } else {
+        if collateral::hollow_encrypt_claim(
+            !Store::read(&mut Host, &format!("{k}/claimed"))?.is_empty(),
+            false,
+        ) {
             Host.remove(&format!("{k}/claimed"))?;
         }
-        return Err(e);
-    }
-    guarded::put_once(
-        &mut Host,
-        &format!("{k}/guardian"),
-        guardian.to_string().as_bytes(),
-    )?;
-    guarded::put_once(
-        &mut Host,
-        &format!("{k}/expected_policy"),
-        policy.to_string().as_bytes(),
-    )?;
-    let (st, encrypted) = http(
-        "POST",
-        &format!("{OL}/wallet/v1/encrypt-policy"),
-        Some(&key),
-        Some(&policy),
-    )?;
-    if st != 200 || encrypted["wallet_pubkey"] != format!("ed25519:{id}") {
-        return Err(err(
-            "collateral_unknown",
-            "policy encryption unavailable; wallet remains held",
-        ));
-    }
+        if !Host.set_if_absent(&format!("{k}/claimed"), c.operation_id.as_bytes())? {
+            return Err(err(
+                "collateral_unknown",
+                "preparation already dispatched; never repeat POST",
+            ));
+        }
+        if let Err(e) = provision_unchanged(&c, &control) {
+            if Store::read(&mut Host, &format!("{k}/claimed"))? == c.operation_id.as_bytes() {
+                Host.remove(&format!("{k}/claimed"))?;
+            }
+            return Err(e);
+        }
+        if Store::read(&mut Host, &format!("{k}/guardian"))?.is_empty() {
+            guarded::put_once(
+                &mut Host,
+                &format!("{k}/guardian"),
+                guardian.to_string().as_bytes(),
+            )?;
+        }
+        if Store::read(&mut Host, &format!("{k}/expected_policy"))?.is_empty() {
+            guarded::put_once(
+                &mut Host,
+                &format!("{k}/expected_policy"),
+                policy.to_string().as_bytes(),
+            )?;
+        } else {
+            let expected: Value = serde_json::from_slice(&Store::read(
+                &mut Host,
+                &format!("{k}/expected_policy"),
+            )?)
+            .map_err(|_| err("evidence", "candidate missing"))?;
+            if expected != policy {
+                return Err(err(
+                    "evidence",
+                    "expected policy changed after a prior prepare",
+                ));
+            }
+        }
+        let (st, encrypted) = http(
+            "POST",
+            &format!("{OL}/wallet/v1/encrypt-policy"),
+            Some(&key),
+            Some(&policy),
+        )?;
+        let ciphertext_ok = guarded::text(&encrypted, "encrypted_base64")
+            .ok()
+            .is_some_and(|c| !c.is_empty() && c.len() <= 4096);
+        let hash_ok = guarded::text(&encrypted, "policy_hash")
+            .ok()
+            .is_some_and(guarded::lower_hash);
+        if st != 200
+            || !collateral::same_wallet_pubkey(&encrypted["wallet_pubkey"], &id)
+            || !ciphertext_ok
+            || !hash_ok
+        {
+            // Result was not kept. Release this claim so prepare can continue.
+            if Store::read(&mut Host, &format!("{k}/claimed"))? == c.operation_id.as_bytes() {
+                Host.remove(&format!("{k}/claimed"))?;
+            }
+            return Err(err(
+                "collateral_unknown",
+                collateral::public_encrypt_failure(st, &encrypted),
+            ));
+        }
+        guarded::put_once(
+            &mut Host,
+            &format!("{k}/encrypted"),
+            encrypted.to_string().as_bytes(),
+        )?;
+        encrypted
+    };
     let ciphertext = guarded::text(&encrypted, "encrypted_base64")?.to_owned();
     let plaintext_hash = guarded::text(&encrypted, "policy_hash")?.to_owned();
     if ciphertext.is_empty() || ciphertext.len() > 4096 || !guarded::lower_hash(&plaintext_hash) {
         return Err(err("collateral_unknown", "invalid encryption response"));
     }
-    guarded::put_once(
-        &mut Host,
-        &format!("{k}/encrypted"),
-        encrypted.to_string().as_bytes(),
-    )?;
     provision_unchanged(&c, &control)?;
     let (st, signed) = http(
         "POST",
@@ -212,7 +258,7 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
         || signed.get("status").is_some()
         || signed["locked"] != true
         || signed["policy_hash"] != plaintext_hash
-        || signed["public_key_hex"] != id
+        || !collateral::same_wallet_pubkey(&signed["public_key_hex"], &id)
     {
         return Err(err(
             "collateral_unknown",
