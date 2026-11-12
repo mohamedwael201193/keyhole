@@ -797,6 +797,9 @@ pub fn effective_with_freeze(
 /// Official OutLayer RequestType: the deposit family (intents/deposit, storage-deposit,
 /// cross-chain deposit) and this worker's exact-exit storage hop all gate as `call`.
 /// Same-chain exact-exit withdraw is `withdraw` (distinct from `cross_chain_withdraw`).
+/// A confidential cross-chain deposit (`POST /wallet/v1/confidential/deposit/cross-chain`,
+/// legacy `/confidential/deposit-intent`) appears in request history as
+/// `confidential_deposit_intent` (live funding_status `5751278c` on `961318d`).
 /// Settled rows of those documented types may carry a consumed intent `signature` or
 /// `signature_hex` (already submitted with the request). Those are drained. Leftover
 /// unused authorities — `wallet_signature`, `signed_transaction`, `signed_tx`,
@@ -855,7 +858,8 @@ pub fn authority_inventory(pages: &[Value]) -> Result<(), Error> {
                         | "swap"
                         | "cross_chain_withdraw"
                         | "call"
-                        | "withdraw",
+                        | "withdraw"
+                        | "confidential_deposit_intent",
                 )
             ) {
                 return Err(err(
