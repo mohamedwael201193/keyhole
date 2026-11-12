@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { canonical } from "../lib/verify";
 import identity from "../../identity.json";
-const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/judge", "/ask"];
+const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/verify/path", "/ask"];
 const shots = process.env.SHOTS_DIR;
 
 for (const p of PAGES) {
@@ -16,13 +16,18 @@ for (const p of PAGES) {
     await expect(page.locator("h1").first()).toBeVisible();
     await expect(page.getByRole("link", { name: "KEYHOLE" }).first()).toBeVisible();
     // Site pages show it in the footer; app pages keep it in the sidebar, which on phones lives in the menu sheet.
-    const app = /^\/(vault|mint|gallery|dashboard|swap|keys|settle|key|pnl|verify|attack)/.test(p);
+    const app = /^\/(vault|mint|gallery|dashboard|swap|keys|settle|key|pnl|verify|attack)/.test(p) && p !== "/verify/path";
     if (app && (page.viewportSize()?.width ?? 1000) <= 860) await expect(page.getByRole("link", { name: /Built on NEAR/, includeHidden: true }).first()).toBeAttached();
     else await expect(page.getByRole("link", { name: /Built on NEAR/ }).first()).toBeVisible();
     if (shots) { await page.waitForTimeout(p === "/" ? 8000 : 800); await page.screenshot({ path: `${shots}/${info.project.name}${p === "/" ? "/home" : p}.png`, fullPage: p !== "/" }); }
     expect(errors).toEqual([]);
   });
 }
+
+test("/judge redirects to the verification path", async ({ page }) => {
+  await page.goto("/judge");
+  await expect(page).toHaveURL(/\/verify\/path$/);
+});
 
 test("hero shows live supply from mainnet and official logos", async ({ page }) => {
   await page.goto("/");

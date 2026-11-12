@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Card, CardHeader, StatusChip, Icon } from "@/components/v7";
 import { Button } from "@/components/ui";
 import { ATTACK_CASES, attackBuildLabel, checkAttestedRefusal, checkNearTx, type AttackCase, type LiveRow } from "@/lib/liveChecks";
+import { attackSummary } from "@/lib/attackSummary";
 
 type CaseState = { row: LiveRow | null; busy: boolean };
 
@@ -48,14 +49,9 @@ export function AttackBoard() {
 
   useEffect(() => { void runAll(); }, []);
 
-  // Refusals and the allowed transfer are counted apart: a successful transfer is not a refusal.
-  const refusalCases = ATTACK_CASES.filter((c) => c.kind === "attestation");
-  const transferCases = ATTACK_CASES.filter((c) => c.kind === "tx");
-  const passed = (cases: AttackCase[]) => cases.filter((c) => states[c.id]?.row?.ok === true).length;
-  const refusalPass = passed(refusalCases);
-  const transferPass = passed(transferCases);
-  const allPass = refusalPass === refusalCases.length && transferPass === transferCases.length;
-  const summary = `${refusalPass}/${refusalCases.length} refusals confirmed, ${transferPass}/${transferCases.length} allowed transfer confirmed`;
+  const rows: Record<string, LiveRow | null> = {};
+  for (const [id, st] of Object.entries(states)) rows[id] = st.row;
+  const { allPass, text: summary } = attackSummary(ATTACK_CASES, rows);
 
   return (
     <div className="atk" data-testid="attack-board">

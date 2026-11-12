@@ -53,10 +53,13 @@ function Calls({ rows, testid }: { rows: Call[]; testid?: string }) {
   );
 }
 
+/** Visible name only (for example 1-contract.sh). The full path and arguments stay in the title attribute and the link. */
+const scriptName = (path: string) => path.split(" ")[0].replace(/^\.\//, "").split("/").pop() ?? path;
+
 function Script({ path, children }: { path: string; children: React.ReactNode }) {
   return (
     <details className="jscript">
-      <summary>Prefer a terminal? Verification script: <code>{path}</code></summary>
+      <summary>Prefer a terminal? Verification script: <code title={path}>{scriptName(path)}</code></summary>
       <p>{children} <a href={`${REPO}/${path.replace(/^\.\//, "").split(" ")[0]}`} target="_blank" rel="noreferrer">Read the script ↗</a></p>
     </details>
   );

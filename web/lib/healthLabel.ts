@@ -1,4 +1,4 @@
-/** One line for the health strip on /judge and /vault, from /api/health. Passive results do not claim the enclave is online. */
+/** One line for the health strip on /verify/path and /vault, from /api/health. Passive results do not claim the enclave is online. */
 export interface HealthView { at: number; online: boolean | null; reason: string | null; mode?: "passive" | "active"; fresh?: boolean }
 export function healthLabel(h: HealthView | null | "error"): { state: "ok" | "down" | "wait"; text: string } {
   if (h === null) return { state: "wait", text: "Reading the passive health check…" };
