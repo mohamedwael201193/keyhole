@@ -90,7 +90,7 @@ This is an internal reproducible review of the repository, not an independent au
 
 This block is generated from [`identity.json`](identity.json) by `node scripts/gen-identity.mjs`. Do not edit it by hand.
 
-The live worker is `62398a8a` (1,085,333 bytes).
+The live worker is `114dff5a` (1,349,199 bytes).
 
 | Piece | Live value | Proof |
 |---|---|---|
@@ -101,9 +101,9 @@ The live worker is `62398a8a` (1,085,333 bytes).
 | Contract code hash | `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH` | deploy tx [`6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h) |
 | Contract wasm sha256 | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` | [`contracts/keys/release/v2.7/keyhole_keys.wasm`](contracts/keys/release/v2.7/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
-| Worker wasm sha256 | `62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
-| Worker publish tx | `3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P` | [nearblocks](https://nearblocks.io/txns/3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P) |
-| Live `info` call | `962d4374-b9ec-411a-9efa-973b36260431` | [attestation](https://api.outlayer.ai/attestations/by-call/962d4374-b9ec-411a-9efa-973b36260431) · [verify](https://keyhole-seven.vercel.app/verify?call=962d4374-b9ec-411a-9efa-973b36260431) |
+| Worker wasm sha256 | `114dff5afb2b0df038a456594cc91a810da6907e1e8710bf98283fb4d02606d6` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
+| Worker publish tx | `9VNRDazNv6dXJjkaybQ4bm1SiTrPvb11p3zycyTj8Hc2` | [nearblocks](https://nearblocks.io/txns/9VNRDazNv6dXJjkaybQ4bm1SiTrPvb11p3zycyTj8Hc2) |
+| Live `info` call | `42f2c909-27db-4562-9a24-a0399c0f9a1d` | [attestation](https://api.outlayer.ai/attestations/by-call/42f2c909-27db-4562-9a24-a0399c0f9a1d) · [verify](https://keyhole-seven.vercel.app/verify?call=42f2c909-27db-4562-9a24-a0399c0f9a1d) |
 
 The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.7/identity.json`](contracts/keys/release/v2.7/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
@@ -632,7 +632,9 @@ The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` 
 
 | Build | Role | `add_version` tx | Live `info` call |
 |---|---|---|---|
-| `62398a8a` (1,085,333 bytes) | current guarded singleton | [`3emr8M4R…`](https://nearblocks.io/txns/3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P) | [`962d4374`](https://api.outlayer.ai/attestations/by-call/962d4374-b9ec-411a-9efa-973b36260431) |
+| `114dff5a` (1,349,199 bytes) | current; published from main `50f7a5c` (#222) | [`9VNRDazN…`](https://nearblocks.io/txns/9VNRDazNv6dXJjkaybQ4bm1SiTrPvb11p3zycyTj8Hc2) | [`42f2c909`](https://api.outlayer.ai/attestations/by-call/42f2c909-27db-4562-9a24-a0399c0f9a1d) |
+| `34bf835c` (1,340,205 bytes) | previous; live until `114dff5a`; no recorded `info` call | [`y9je7NLY…`](https://nearblocks.io/txns/y9je7NLYr7LnFLNjefkoa6XMSvFBJxmn7CV6SYa3aK5) | none recorded |
+| `62398a8a` (1,085,333 bytes) | previous guarded singleton | [`3emr8M4R…`](https://nearblocks.io/txns/3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P) | [`962d4374`](https://api.outlayer.ai/attestations/by-call/962d4374-b9ec-411a-9efa-973b36260431) |
 | `d337e822` (765,658 bytes) | previous; accepted for historical proofs only | [`BWQxEoSg…`](https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5) | [`dc3668db`](https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d) |
 | `cc8d2fa8` (755,751 bytes) | previous | [`Epaz3aMA…`](https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6) | [`0847b924`](https://api.outlayer.ai/attestations/by-call/0847b924-df76-4cee-ab5a-a96c789d2983) |
 | `a985fd87` (745,180 bytes) | previous | [`A1o8882h…`](https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG) | [`246e4a7a`](https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751) |

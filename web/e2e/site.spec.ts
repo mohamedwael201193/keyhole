@@ -85,7 +85,7 @@ test("verify: the default page checks the published guarded v2.6 info call", asy
   const published = await page.request.get(`/evidence/${identity.worker.info_call}.json`);
   expect(published.status()).toBe(200);
   const ev = await published.json();
-  const att = JSON.parse(readFileSync("tests/fixtures/att_962d4374.json", "utf8"));
+  const att = JSON.parse(readFileSync(`tests/fixtures/att_${identity.worker.info_call.slice(0, 8)}.json`, "utf8"));
   expect(ev.call_id).toBe(identity.worker.info_call);
   expect(createHash("sha256").update(canonical(ev.output)).digest("hex")).toBe(att.output_hash);
   await page.goto("/verify");

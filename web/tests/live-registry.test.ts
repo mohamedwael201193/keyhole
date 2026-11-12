@@ -12,9 +12,10 @@ import {
   isWorkerHash,
   parseLiveRegistry,
 } from "@/lib/liveRegistry";
-import { PREVIOUS_WASM_SHA256, PUBLISHED_WASM_SHA256, buildIndex, currentIndex, localChecks, logVerifies, publishedBuild, staticChecks } from "@/lib/verify";
+import { PUBLISHED_WASM_SHA256, buildIndex, currentIndex, localChecks, logVerifies, publishedBuild, staticChecks } from "@/lib/verify";
 
 const LIVE = "34bf835cea7c9977bbd3270851eb27290dd35db4a0afa4652161664f57fc7d01";
+const PREVIOUS_WASM_SHA256 = "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41"; // an older published build
 const STALE = PUBLISHED_WASM_SHA256;
 const quote = "x".repeat(200);
 const att = (hash: string, registered = hash, q = quote) => ({

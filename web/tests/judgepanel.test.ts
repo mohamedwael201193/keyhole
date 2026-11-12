@@ -14,7 +14,8 @@ const ev = (id: string) => JSON.parse(readFileSync(`${__dirname}/../public/evide
 const sha = (o: unknown) => createHash("sha256").update(canonical(o)).digest("hex");
 // Public attestation pins: legacy proofs retained; current v2.6 fetched 2026-11-11.
 const ATTESTED = {
-  [PUBLISHED_INFO_CALL]: "e7fb60372ffdda802b9d5326864fb2b9a8decefe9bad670c72566b9ae3c864f3",
+  [PUBLISHED_INFO_CALL]: "515b44fa7318864651938dd36e6e0ccf09d9a0012585ae6b91e414e0ef6a257e",
+  "962d4374-b9ec-411a-9efa-973b36260431": "e7fb60372ffdda802b9d5326864fb2b9a8decefe9bad670c72566b9ae3c864f3",
   "dc3668db-674f-4865-a2ce-272f70c41b0d": "f1279fd09eafe0f9fe264ba32064a211e70100501eadf9bd3c05435e3ba161e8",
   "5650a6b7-b7de-410c-b206-e189171bad15": "d81005b5926c748bbd6ee8c7b5110bbb0dfff12696f7bfb905d4198f35036d91",
   "ecb0d1d6-90e3-4522-852a-578ca50fdeb6": "9a9a2712656ffa2bd4c4aae870fd42d2c80dd01a822b85f920480f7edc94af00",
@@ -24,7 +25,7 @@ const ATTESTED = {
 
 describe("flagship outputs are published, so the sixth check is a real hash match", () => {
   it("current default proof is pinned to the measured project and current build", () => {
-    const a = JSON.parse(readFileSync(`${__dirname}/fixtures/att_962d4374.json`, "utf8"));
+    const a = JSON.parse(readFileSync(`${__dirname}/fixtures/att_${PUBLISHED_INFO_CALL.slice(0, 8)}.json`, "utf8"));
     expect(a.call_id).toBe(PUBLISHED_INFO_CALL);
     expect(a.project_id).toBe(IDENTITY.worker.project);
     expect(a.wasm_hash).toBe(IDENTITY.worker.wasm_sha256);
@@ -36,9 +37,9 @@ describe("flagship outputs are published, so the sixth check is a real hash matc
     it(`${id.slice(0, 8)}: published output hashes to the attested output_hash`, () => expect(sha(ev(id).output)).toBe(h));
     it(`${id.slice(0, 8)}: one changed field no longer matches`, () => { const o = structuredClone(ev(id).output); o.ok = !o.ok; expect(sha(o)).not.toBe(h); });
   }
-  it("the current guarded v2.6 info output names all 35 ops, including custody reconciliation and read-only exit preview", () => {
+  it("the current guarded v2.6 info output names all 43 ops, including custody reconciliation and read-only exit preview", () => {
     const o = ev(PUBLISHED_INFO_CALL).output;
-    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(35);
+    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(43);
     for (const op of ["chain_address", "chain_sign", "add_beat_key", "del_beat_key", "session", "session_revoke", "level_up", "withdraw_dry_run", "reconcile_value_op", "prepare_collateral", "pledge_inventory"]) expect(o.ops).toContain(op);
   });
   it("the chain_sign output returns the key's EVM address and is listed on /verify", () => {

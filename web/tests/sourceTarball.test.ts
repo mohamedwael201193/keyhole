@@ -70,7 +70,7 @@ it("ships the same live identities, immutable source pin and registered default 
   expect(identity.worker).toEqual(IDENTITY.worker);
   expect(identity.contract).toEqual(IDENTITY.contract);
   const evidence = JSON.parse(packed(`web/public/evidence/${IDENTITY.worker.info_call}.json`).toString());
-  const att = JSON.parse(packed("web/tests/fixtures/att_962d4374.json").toString());
+  const att = JSON.parse(packed(`web/tests/fixtures/att_${IDENTITY.worker.info_call.slice(0, 8)}.json`).toString());
   expect(evidence.call_id).toBe(IDENTITY.worker.info_call);
   expect(createHash("sha256").update(canonical(evidence.output)).digest("hex")).toBe(att.output_hash);
   expect(packed("web/lib/evidenceIds.ts").toString()).toContain(IDENTITY.worker.info_call);

@@ -14,6 +14,7 @@ const promotionFlags = [
   "--promote-v26",
   "--promote-v27",
   "--promote-worker-v26",
+  "--promote-worker",
 ].filter((f) => process.argv.includes(f));
 if (
   promotionFlags.length > 1 ||
@@ -195,6 +196,17 @@ if (process.argv.includes("--review-source")) {
   if (!/^[a-f0-9]{40}$/.test(source ?? ""))
     throw new Error("--review-source requires an immutable full commit");
   id.review.source_commit = source;
+  writeFileSync(root + "identity.json", JSON.stringify(id, null, 2) + "\n");
+}
+// Promote a worker republished under the same OutLayer project UUID, from public facts (see scripts/release/promote-worker-live.mjs).
+// usage: --promote-worker <wasm sha256> --info-call <uuid> --tx <add_version tx> --bytes <n> [--also-previous <sha256>]...
+if (process.argv.includes("--promote-worker")) {
+  if (process.argv.includes("--check")) throw new Error("--check cannot promote a worker");
+  const arg = (f) => { const i = process.argv.indexOf(f); return i < 0 ? undefined : process.argv[i + 1]; };
+  const prev = process.argv.flatMap((v, i) => (v === "--also-previous" ? [process.argv[i + 1]] : []));
+  const { promoteWorkerLive } = await import("./release/promote-worker-live.mjs");
+  id.worker = promoteWorkerLive(id, { hash: arg("--promote-worker"), infoCall: arg("--info-call"), tx: arg("--tx"), bytes: Number(arg("--bytes")), previous: prev });
+  id.worker_candidate = { status: "published-mainnet", wasm_sha256: id.worker.wasm_sha256, bytes: id.worker.bytes, recipe: "tee/worker/build.sh" };
   writeFileSync(root + "identity.json", JSON.stringify(id, null, 2) + "\n");
 }
 // Candidate generation never promotes an unpublished worker to the live identity.
