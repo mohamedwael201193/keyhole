@@ -7,6 +7,7 @@ import { useKeyStore } from "@/lib/keyStore";
 import { useLogCheck } from "@/lib/useLogCheck";
 import { assetRows, totalOf, type PriceBook } from "@/lib/amount";
 import { minutesLeft } from "@/lib/session";
+import { useValueLock } from "@/lib/valueLock";
 import { levelUpOf, progressOf, type HistEntry } from "@/lib/dashboard";
 
 type RawBalances = Parameters<typeof assetRows>[0];
@@ -33,6 +34,7 @@ export function DashboardView() {
   const { run: runDash, reset: resetDash } = dash;
   const { run: runLevel, reset: resetLevel } = levelUp;
   const { refresh: refreshKeys } = store;
+  const valueLock = useValueLock();
   const [unlocking, setUnlocking] = useState(false);
   const [unlockErr, setUnlockErr] = useState<string | null>(null);
 
@@ -60,7 +62,7 @@ export function DashboardView() {
     if (!hasBalances) return;
     let cancel = false;
     fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => {
-      if (!cancel && j?.prices) setPrices(j.prices);
+      if (!cancel && j?.prices) setPrices((prev) => ({ ...prev, ...j.prices }));
     }).catch(() => {});
     return () => { cancel = true; };
   }, [hasBalances]);
@@ -152,6 +154,7 @@ export function DashboardView() {
       balance={balanceView}
       activity={activityView}
       tier={tierView}
+      valueLocked={valueLock.locked}
       signIn={{
         socialEnabled,
         onGoogle: () => connectSocial("google"),

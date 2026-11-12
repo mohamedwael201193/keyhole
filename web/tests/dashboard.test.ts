@@ -90,7 +90,7 @@ describe("Overview: signed out", () => {
     expect(m).toContain("Open your <em>key</em>");
     expect(m).toContain('data-testid="dash-connect"');
     for (const id of ["choose-social", "choose-email", "choose-near", "signin-meteor", "choose-other"]) expect(m, id).toContain(`data-testid="${id}"`);
-    expect(tagOf(m, "dash-explore")).toContain('href="/judge"');
+    expect(tagOf(m, "dash-explore")).toContain('href="/demo"');
     expect(m).not.toContain('data-testid="key-hero"');
     expect(m).not.toContain('data-testid="stat-balance"');
     expect(m).not.toContain("Sign to unseal");
@@ -137,7 +137,7 @@ describe("Overview: signed in, no key", () => {
   it("the hero is Mint: one primary action to /mint, and a sample artwork labelled as one", () => {
     expect(m).toContain('data-testid="mint-banner"');
     expect(m).toContain("Mint your key");
-    expect(tagOf(m, "dash-mint")).toContain('href="/mint"');
+    expect(tagOf(m, "dash-mint")).toContain('href="/dashboard#mint"');
     expect(m).toContain("Free. One signature. The enclave pays storage.");
     expect(m).toContain("Only Bronze is mintable today");
     expect(m).toContain('alt="Sample Bronze key artwork"');
@@ -145,7 +145,7 @@ describe("Overview: signed in, no key", () => {
 
   it("the checklist names the key as the first open step, with its action", () => {
     expect(from(m, "setup-checklist")).toContain('data-testid="setup-key-action"');
-    expect(tagOf(m, "setup-key-action")).toContain('href="/mint"');
+    expect(tagOf(m, "setup-key-action")).toContain('href="/dashboard#mint"');
     expect(m).toContain('data-testid="setup-sign"');
     expect(m).not.toContain('data-testid="setup-complete"');
   });
@@ -156,11 +156,15 @@ describe("Overview: signed in, no key", () => {
     expect(m).not.toContain('data-testid="dash-unlock"');
   });
 
-  it("still shows the proof card with the enclave status, the build and the contract", () => {
+  it("shows a compact proof card for the holder's own calls: no build hash or contract (those are on /developers), and no verify link without a call", () => {
     expect(m).toContain('data-testid="ov-proof"');
-    expect(m).toContain("Intel TDX");
-    expect(m).toContain("keyhole-devmo.near");
-    expect(tagOf(m, "ov-verify")).toContain('href="/verify"');
+    expect(m).toContain("Proof of your calls");
+    const grid = m.split("v7-proof-grid")[1].split("</dl>")[0];
+    expect(grid).not.toContain("Intel TDX");
+    expect(grid).not.toContain("keyhole-devmo.near");
+    expect(grid).not.toContain("Worker build");
+    expect(tagOf(m, "ov-verify")).toContain("disabled");
+    expect(tagOf(m, "ov-verify")).not.toContain("href=");
   });
 });
 
@@ -183,9 +187,9 @@ describe("Overview: signed in with a key, vault locked", () => {
   });
 
   it("the hero offers Swap, Deposit and Withdraw, with Swap secondary while locked", () => {
-    expect(tagOf(m, "dash-swap")).toContain('href="/swap"');
-    expect(tagOf(m, "dash-deposit")).toContain('href="/vault"');
-    expect(tagOf(m, "dash-withdraw")).toContain('href="/vault"');
+    expect(tagOf(m, "dash-swap")).toContain('href="/dashboard#swap"');
+    expect(tagOf(m, "dash-deposit")).toContain('href="/dashboard#vault"');
+    expect(tagOf(m, "dash-withdraw")).toContain('href="/dashboard#vault"');
   });
 
   it("the assets and activity cards carry one muted unlock line each, and no sign-to button", () => {
@@ -228,7 +232,7 @@ describe("Overview: signed in with a key, session live", () => {
     expect(m).toContain('data-testid="stat-balance">$12.34<');
     expect(m).not.toContain('data-testid="dash-unlock"');
     expect(m).toContain("Read with your session. No popup.");
-    expect(tagOf(m, "dash-swap")).toContain('href="/swap"');
+    expect(tagOf(m, "dash-swap")).toContain('href="/dashboard#swap"');
     expect(m).toContain('data-testid="dash-asset-list"');
     expect(m).toContain(`data-token="${ASSETS.usdc.symbol}"`);
     expect(m).toContain('data-testid="dash-balance-refresh"');
@@ -271,7 +275,7 @@ describe("Overview: recent activity from the signed history", () => {
     expect(feed).toContain("Success");
     expect(feed).toContain("Refunded");
     expect(feed).toContain("Withdraw");
-    expect(m).toContain('href="/verify?call=abcdef1234567890"');
+    expect(m).toContain('href="/dashboard#proof/abcdef1234567890"');
     expect(m).toContain("abcdef12");
   });
 
@@ -304,7 +308,7 @@ describe("Overview: setup checklist from real state", () => {
   it("an empty funded-not-yet vault leaves Fund open and points to the vault", () => {
     const m = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, read: true, rows: [], total: { kind: "empty" } } });
     expect(m).toContain('data-testid="setup-fund" data-done="0"');
-    expect(tagOf(m, "setup-fund-action")).toContain('href="/vault"');
+    expect(tagOf(m, "setup-fund-action")).toContain('href="/dashboard#vault"');
   });
 
   it("a funded vault marks Fund done", () => {

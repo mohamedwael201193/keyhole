@@ -194,7 +194,7 @@ describe("the Mine source renders honestly in each state", () => {
 
   it("no key: a link to mint one, with no figures", () => {
     const m = gate({ state: "no-key" });
-    expect(m).toContain('href="/mint"');
+    expect(m).toContain('href="/dashboard#mint"');
     expect(m).not.toContain("Unlock to see");
   });
 
@@ -235,7 +235,7 @@ describe("the Mine source renders honestly in each state", () => {
   it("the history details panel shows the entry, the verify link and the raw toggle", () => {
     const m = renderToStaticMarkup(createElement(OrderDetails, { row: mine()[0], onRetry: () => {} }));
     expect(m).toContain('data-testid="mine-details"');
-    expect(m).toContain(`href="/verify?call=${CALL}"`);
+    expect(m).toContain(`href="/dashboard#proof/${CALL}"`);
     expect(m).toContain('data-testid="mine-verify"');
     expect(m).toContain('data-testid="act-raw-toggle"');
     expect(m).toContain("hidden");

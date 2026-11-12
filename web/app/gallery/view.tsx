@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui";
 import { EmptyState, FilterChips, Icon, PageHeader, Skeleton, type FilterItem } from "@/components/v7";
 import { KeyTile, KeyTileSkeleton } from "@/components/keys/KeyTile";
@@ -11,7 +10,8 @@ import { SaleListState } from "./sale";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
 import { KEY_LIST_LIMIT, useKeyStore } from "@/lib/keyStore";
-import type { Token } from "@/lib/near";
+import { nftTier, nftTokens, type Token } from "@/lib/near";
+import { dashHref } from "@/lib/dashboardSections";
 import "@/components/keys/keys.css";
 
 /**
@@ -25,13 +25,12 @@ export type KeysFilter = "all" | "mine" | "sale";
 type Row = { id: string; token: Token | undefined; tier: number | null | undefined };
 type ReadyRow = { id: string; token: Token; tier: number | null };
 
-export function GalleryView({ initial, serverTokens, serverTiers }: {
+export function GalleryView({ initial, serverTokens: serverTokensProp, serverTiers: serverTiersProp }: {
   initial: KeysFilter;
   serverTokens?: Token[];
   serverTiers?: (number | null)[];
 }) {
   const { t } = useI18n();
-  const router = useRouter();
   const { accountId, connect } = useWallet();
   const store = useKeyStore();
   const total = useKeyTotal();
@@ -39,6 +38,20 @@ export function GalleryView({ initial, serverTokens, serverTiers }: {
   const [filter, setFilter] = useState<KeysFilter>(initial);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
+  // Inside the dashboard there is no server page: "All keys" reads the first page of keys here, in the browser (public views, no signature).
+  const [clientAll, setClientAll] = useState<{ tokens: Token[]; tiers: (number | null)[] } | "error" | null>(null);
+  const needClientAll = filter === "all" && !serverTokensProp;
+  useEffect(() => {
+    if (!needClientAll || clientAll) return;
+    let live = true;
+    nftTokens().then(async (tokens) => {
+      const tiers = await Promise.all(tokens.map((tk) => nftTier(tk.token_id).catch(() => null)));
+      if (live) setClientAll({ tokens, tiers });
+    }).catch(() => { if (live) setClientAll("error"); });
+    return () => { live = false; };
+  }, [needClientAll, clientAll]);
+  const serverTokens = serverTokensProp ?? (clientAll && clientAll !== "error" ? clientAll.tokens : undefined);
+  const serverTiers = serverTiersProp ?? (clientAll && clientAll !== "error" ? clientAll.tiers : undefined);
 
   // Tiers and tokens are read only for the list on screen.
   const mineTiers = useTiersFor(filter === "mine" ? store.keys.slice(1).map((tk) => tk.token_id) : []);
@@ -78,8 +91,7 @@ export function GalleryView({ initial, serverTokens, serverTiers }: {
   ];
 
   function onFilter(next: KeysFilter) {
-    // The first page of all keys is read on /gallery. From /keys, All opens that page.
-    if (next === "all" && !serverTokens) { router.push("/gallery"); return; }
+    if (next === "all" && clientAll === "error") setClientAll(null);
     setFilter(next);
     setPicked(null);
     setQuery("");
@@ -103,11 +115,18 @@ export function GalleryView({ initial, serverTokens, serverTiers }: {
     } else if (store.keys.length === 0) {
       stateBlock = (
         <EmptyState title="No key in this wallet yet" body="A key is the account. Minting is free and takes one signature. Only Bronze is mintable today." testid="gallery-mine-empty"
-          action={<Button href="/mint" testid="gallery-mine-mint">Mint a key</Button>} />
+          action={<Button href={dashHref("/mint")} testid="gallery-mine-mint">Mint a key</Button>} />
       );
     }
   } else if (filter === "all") {
-    if (serverTokens && serverTokens.length === 0) {
+    if (!serverTokens && clientAll === "error") {
+      stateBlock = (
+        <EmptyState title="NEAR mainnet did not answer" body="The list of keys could not be read just now." testid="gallery-all-error"
+          action={<Button variant="secondary" onClick={() => setClientAll(null)} testid="gallery-all-retry">Try again</Button>} />
+      );
+    } else if (!serverTokens) {
+      stateBlock = <div data-testid="gallery-all-loading" aria-live="polite"><p className="kg-note">Reading the keys minted on NEAR mainnet…</p><Skeleton lines={2} /></div>;
+    } else if (serverTokens.length === 0) {
       stateBlock = <EmptyState title="No keys yet" body={t("gallery.empty")} testid="gallery-empty" />;
     }
   } else {
@@ -156,7 +175,7 @@ export function GalleryView({ initial, serverTokens, serverTiers }: {
             data-testid="gallery-search"
           />
         </label>
-        <Button href="/mint" icon={<Icon name="plus" size={18} />} testid="keys-mint">Mint a key</Button>
+        <Button href={dashHref("/mint")} icon={<Icon name="plus" size={18} />} testid="keys-mint">Mint a key</Button>
       </div>
 
       {stateBlock}

@@ -22,7 +22,9 @@ import { useLogVerified, useLogVerifiedState } from "@/lib/useLogVerified";
 import { swapStep, SWAP_LABEL } from "@/lib/swapFlow";
 import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/tokens";
 import { minutesLeft } from "@/lib/session";
+import { LOCK_NOTE, useValueLock } from "@/lib/valueLock";
 import "./swap.css";
+import { dashHref } from "@/lib/dashboardSections";
 
 type Quote = { amountInFormatted?: string; amountOutFormatted?: string; amountInUsd?: string; amountOutUsd?: string; minAmountOut?: string; timeEstimate?: number };
 type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; status?: string };
@@ -101,6 +103,8 @@ export function SwapView() {
   const [done, setDone] = useState<Done | null>(null);
   const [prices, setPrices] = useState<PriceBook>({});
   const [dry, setDry] = useState<Quote | null>(null);
+  /** The trade the shown dry quote was asked for. A dry quote for another amount or pair is never shown. */
+  const [dryKey, setDryKey] = useState("");
   /** When the shown dry quote came back from 1Click, so the rate row can say how old it is. */
   const [dryAt, setDryAt] = useState<number | null>(null);
   const [dryAgeS, setDryAgeS] = useState(0);
@@ -111,6 +115,8 @@ export function SwapView() {
   /** The last real stage the signed swap was in. When it fails, this is the step that stopped. */
   const [lastStage, setLastStage] = useState<Stage>("idle");
   const quoteKey = useRef("");
+  /** The trade the latest quote was asked for (state, so the screen can tell "a price is on its way" from "it answered"). */
+  const [requestedKey, setRequestedKey] = useState("");
 
   const fromId = from.assetId;
   const toId = to.assetId;
@@ -143,7 +149,7 @@ export function SwapView() {
   const q = quote.res?.output;
   const qq: Quote | null = quoteFresh && q?.ok ? ((q.quote as Quote | undefined) ?? null) : null;
   // Until a session is live (signed out, or signed in and locked) the screen shows the dry 1Click price.
-  const dq: Quote | null = sessionLive ? null : dry;
+  const dq: Quote | null = sessionLive ? null : dryKey === tradeKey ? dry : null;
   const estimate = qq?.amountOutFormatted ?? dq?.amountOutFormatted ?? null;
   const inFormatted = qq?.amountInFormatted ?? dq?.amountInFormatted ?? amount;
   const rate = estimate && Number(inFormatted) > 0 ? Number(estimate) / Number(inFormatted) : null;
@@ -166,7 +172,7 @@ export function SwapView() {
   // The public price book for the USD lines. The page works without it.
   useEffect(() => {
     let cancel = false;
-    fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices(j.prices); }).catch(() => {});
+    fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices((prev) => ({ ...prev, ...j.prices })); }).catch(() => {});
     return () => { cancel = true; };
   }, []);
 
@@ -179,23 +185,26 @@ export function SwapView() {
       try {
         const j = await (await fetch("/api/oneclick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: fromId, dest: toId, amount: units }) })).json();
         if (cancel) return;
-        if (j.ok) { setDry(j.quote); setDryAt(Date.now()); setDryAgeS(0); } else { setDry(null); setDryAt(null); setDryMsg(humanDry(j.error?.code)); }
+        if (j.ok) { setDry(j.quote); setDryKey(tradeKey); setDryAt(Date.now()); setDryAgeS(0); } else { setDry(null); setDryAt(null); setDryMsg(humanDry(j.error?.code)); }
       } catch { if (!cancel) { setDry(null); setDryAt(null); setDryMsg("Could not reach 1Click. Check your connection and try again."); } }
       finally { setDryBusy(false); }
     }, 500);
     return () => { cancel = true; clearTimeout(id); };
-  }, [sessionLive, samePair, units, fromId, toId]);
+  }, [sessionLive, samePair, units, fromId, toId, tradeKey]);
 
-  // With a live session a quote costs no popup, so it is re-run (debounced) when the trade changes.
+  // With a live session a quote costs no popup, so it is re-run (debounced) when the trade changes. Only one quote is in flight at a
+  // time: a new one starts when the last has answered, so an answer can never be matched to a trade it was not asked for.
   const runQuote = quote.run;
+  const quoteBusy = quote.busy;
   useEffect(() => {
-    if (!sessionLive || !units || !accountId || samePair || quoteKey.current === tradeKey) return;
+    if (!sessionLive || !units || !accountId || samePair || quoteBusy || quoteKey.current === tradeKey) return;
     const id = setTimeout(() => {
       quoteKey.current = tradeKey;
+      setRequestedKey(tradeKey);
       void runQuote(quoteParams(accountId, fromId, toId, units), { quiet: true });
     }, 500);
     return () => clearTimeout(id);
-  }, [sessionLive, units, accountId, fromId, toId, samePair, tradeKey, runQuote]);
+  }, [sessionLive, units, accountId, fromId, toId, samePair, tradeKey, runQuote, quoteBusy]);
 
   useEffect(() => {
     if (!quote.res) return;
@@ -248,6 +257,9 @@ export function SwapView() {
     void runHistory({}, { quiet: true });
   }, [sessionLive, accountId, heldId, session, readBalance, runHistory]);
 
+  // Between a change of amount or pair and the new price, the old price is hidden and the swap cannot be sent.
+  const repricing = !!units && !samePair && !quoteFresh && (sessionLive ? quote.busy || requestedKey !== tradeKey : dryKey !== tradeKey);
+  const lock = useValueLock();
   const step = swapStep({
     signedIn: !!accountId, lookingUp, keyMiss, hasKey: !!held, sessionLive,
     amountOk: !!units && !overBalance, overBalance, samePair, quoteFresh, quoting: quote.busy, swapping: swap.busy, swapDone,
@@ -255,13 +267,14 @@ export function SwapView() {
   const cta = SWAP_LABEL[step];
 
   function review() {
-    if (!units || !accountId || samePair) return;
+    if (!units || !accountId || samePair || lock.locked || quote.busy) return;
     quoteKey.current = tradeKey;
+    setRequestedKey(tradeKey);
     swap.reset();
     void quote.run(quoteParams(accountId, fromId, toId, units));
   }
   function confirm() {
-    if (!units || !quoted || quoted.key !== tradeKey || !accountId) return;
+    if (!units || !quoted || quoted.key !== tradeKey || !accountId || lock.locked || quote.busy) return;
     const ctx: OpResume = { op: "swap", give: `${amount} ${from.symbol}`, decimals: to.decimals, symbol: to.symbol };
     sessionStorage.setItem(OP_CTX, JSON.stringify(ctx));
     setDone({ give: ctx.give, decimals: ctx.decimals, symbol: ctx.symbol });
@@ -279,7 +292,7 @@ export function SwapView() {
     if (!r.ok) setUnlockErr(r.code);
   }
   function again() {
-    swap.reset(); quote.reset(); quoteKey.current = ""; setQuoted(null); setQuotedAt(null); setDone(null);
+    swap.reset(); quote.reset(); quoteKey.current = ""; setRequestedKey(""); setQuoted(null); setQuotedAt(null); setDone(null);
   }
   function onCta() {
     if (step === "connect") void connect();
@@ -314,7 +327,8 @@ export function SwapView() {
     return `${raw ?? ""} ${tok ? shortTokenId(tok) : ""}`.trim();
   };
   // With a live session the swap runs without a wallet popup, so the last step says "Swap now". "Confirm and sign" stays for a wallet signature.
-  const ctaLabel = step === "short" ? `Not enough ${from.symbol}` : step === "confirm" && sessionLive ? "Swap now" : cta.label;
+  const gated = lock.locked && (step === "review" || step === "confirm" || step === "quoting");
+  const ctaLabel = gated ? "Locked until the earlier operation is checked" : step === "short" ? `Not enough ${from.symbol}` : step === "confirm" && sessionLive ? "Swap now" : cta.label;
   const busyLabel = step === "pending" ? swap.label || "Swapping" : step === "quoting" ? quote.label || "Getting your price" : unlocking ? "Waiting for your wallet" : ctaLabel;
   const runTitle = done ? `Swapping ${done.give} for ${done.symbol}` : "Swapping";
 
@@ -327,7 +341,7 @@ export function SwapView() {
     lookingUp ? <p className="sw-note">Checking your key…</p> : (
       <div className="sw-empty">
         <p className="sw-note">Your swaps appear here once you hold a key.</p>
-        <Button href="/mint" variant="secondary" size="sm">Get your key</Button>
+        <Button href={dashHref("/mint")} variant="secondary" size="sm">Get your key</Button>
       </div>
     )
   ) : (
@@ -388,6 +402,8 @@ export function SwapView() {
               stoppedAt={stoppedAt}
               code={swap.res.error.code}
               retryAfter={swap.res.error.retry_after}
+              message={swap.res.error.message}
+              knownOpId={lock.rows[0]?.value_op_id ?? null}
               onRetry={retry}
               onBack={again}
             />
@@ -469,7 +485,7 @@ export function SwapView() {
               <section className="sw-panel" aria-labelledby="sw-recv-label">
                 <div className="sw-panel-top">
                   <span id="sw-recv-label" className="sw-label">You receive</span>
-                  {dryBusy && !estimate && !sessionLive ? <span className="sw-busy" role="status">Checking price…</span> : !sessionLive && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
+                  {repricing && sessionLive ? <span className="sw-busy" role="status" data-testid="swap-repricing">Updating price…</span> : dryBusy && !estimate && !sessionLive ? <span className="sw-busy" role="status">Checking price…</span> : !sessionLive && <Badge tone="info" testid="price-only">Price only, nothing moves</Badge>}
                 </div>
                 <div className="sw-panel-main">
                   <output className={`sw-amt${estimate ? "" : " is-empty"}${quote.busy ? " is-busy" : ""}`} aria-labelledby="sw-recv-label" data-testid="swap-receive">
@@ -504,11 +520,11 @@ export function SwapView() {
               </details>
 
               {step === "get_key" ? (
-                <Button href="/mint" block size="lg" className="sw-cta" testid="swap-cta">{cta.label}</Button>
+                <Button href={dashHref("/mint")} block size="lg" className="sw-cta" testid="swap-cta">{cta.label}</Button>
               ) : (
                 <Button
                   block size="lg" className="sw-cta" testid="swap-cta"
-                  disabled={!cta.enabled || unlocking}
+                  disabled={!cta.enabled || unlocking || gated || (step === "confirm" && repricing)}
                   loading={step === "quoting" || step === "pending" || unlocking}
                   loadingLabel={busyLabel}
                   onClick={onCta}
@@ -516,7 +532,8 @@ export function SwapView() {
                   {busyLabel}
                 </Button>
               )}
-              {step === "confirm" && sessionLive && <p className="sw-note sw-center" data-testid="swap-session-note">Runs through your unlocked session. No wallet popup.</p>}
+              {gated && <p className="sw-note sw-center" role="status" data-testid="swap-locked">{LOCK_NOTE}</p>}
+              {step === "confirm" && sessionLive && !gated && <p className="sw-note sw-center" data-testid="swap-session-note">Runs through your unlocked session. No wallet popup.</p>}
               <p className="sw-funds">Your funds stay in your key&apos;s vault on NEAR mainnet. A swap moves only the amount you enter, within the key&apos;s per-trade cap.</p>
 
               {!accountId && <p className="sw-note sw-center">Connect a wallet to swap. Checking a price needs no wallet and moves nothing.</p>}
@@ -540,7 +557,7 @@ export function SwapView() {
             <CardHeader
               id="sw-recent-h"
               title="Your recent swaps"
-              action={<Link className="v7-card-link" href="/settle" data-testid="swap-view-all">View all <Icon name="arrow-up-right" size={14} /></Link>}
+              action={<Link className="v7-card-link" href={dashHref("/settle")} data-testid="swap-view-all">View all <Icon name="arrow-up-right" size={14} /></Link>}
             />
             {recentBody}
           </Card>
@@ -560,7 +577,7 @@ export function SwapView() {
             </li>
           ))}
         </ul>
-        <p className="sw-note"><Link href="/settle">See every order and where its funds are</Link></p>
+        <p className="sw-note"><Link href={dashHref("/settle")}>See every order and where its funds are</Link></p>
       </details>
     </div>
   );

@@ -18,6 +18,9 @@ import { KEYS_CONTRACT } from "@/lib/config";
 import { useLiveWorkerHash } from "@/lib/useLiveWorkerHash";
 import { keyIdentity, serialOf } from "@/lib/traits";
 import type { KeyStatus } from "@/lib/keyStore";
+import { dashHref } from "@/lib/dashboardSections";
+import { LOCK_NOTE } from "@/lib/valueLock";
+import { TeeProgress } from "@/components/TeeProgress";
 
 /**
  * The Overview body (/dashboard). Presentational: every value arrives as a prop from app/dashboard/view.tsx, which owns
@@ -109,6 +112,8 @@ export type OverviewProps = {
   activity: ActivityView;
   /** Earned-tier progress and the level up. Optional: the card is shown only for a held key with this view. */
   tier?: TierView;
+  /** An earlier money operation has no final answer yet: Withdraw is disabled (the worker refuses a new one too). */
+  valueLocked?: boolean;
   /** The sign-in handlers for the signed-out card (the same rows as the sign-in sheet). */
   signIn: SignInOptionsProps;
 };
@@ -130,6 +135,7 @@ const FEED_TONE: Record<string, "success" | "warn" | "error" | "info" | "neutral
 };
 
 export function Overview(p: OverviewProps) {
+  const lock = { locked: !!p.valueLocked };
   if (!p.accountId) {
     return p.restoring ? <Restoring /> : <SignedOut signIn={p.signIn} />;
   }
@@ -148,7 +154,11 @@ export function Overview(p: OverviewProps) {
     ((balance.total.kind === "usd" || balance.total.kind === "partial") && balance.total.micro > 0)
   );
   const settled = activity.read && activity.logOk === true && activity.entries ? settledOrders(activity.entries) : null;
-  const swapped = settled != null && settled > 0;
+  // "First swap" and the tier progress read the same thing: the swaps the key's record counts (the enclave's own count from the
+  // signed dashboard read), or a verified activity log that lists a settled order. They cannot disagree about whether a swap happened.
+  const recorded = p.tier?.progress ? p.tier.progress.swaps : null;
+  const swapped = (settled != null && settled > 0) || (recorded != null && recorded > 0);
+  const swappedFrom: "log" | "record" | null = settled != null && settled > 0 ? "log" : recorded != null && recorded > 0 ? "record" : null;
   const unlocked = unlock.live || balance.read || activity.read;
   const recent = activity.entries ? [...activity.entries].reverse().slice(0, RECENT) : [];
   const unpriced = balance.total?.kind === "partial" ? balance.total.unpriced : [];
@@ -163,7 +173,7 @@ export function Overview(p: OverviewProps) {
     heroSub = `Balances stay sealed until you sign a read. ${unlock.via === "privy" ? "Signed in-page. No popup." : "One signature. 30 minutes."}`;
   } else if (balance.read) {
     heroValue = totalText(balance.total) ?? "Sealed";
-    heroSub = `${rowCount === 0 ? "No assets yet" : rowCount === 1 ? "1 asset" : `${rowCount} assets`}. Read with your session. No popup.`;
+    heroSub = `${rowCount === 0 ? "No assets yet" : rowCount === 1 ? "1 asset" : `${rowCount} assets`}. Read with your session. No popup.${unpriced.length ? ` Not priced yet, so not in the total: ${unpriced.join(" · ")}.` : ""}`;
   } else if (balance.error) {
     heroValue = "Unavailable";
     heroSub = "The vault read did not complete. Try again from Assets below.";
@@ -177,8 +187,10 @@ export function Overview(p: OverviewProps) {
           Unlock
         </Button>
       )}
-      <Button href="/vault" variant={unlock.live ? "banner" : "secondary"} className={unlock.live ? undefined : "v7-on-vault"} testid="dash-deposit">Deposit</Button>
-      <Button href="/vault" variant="secondary" className="v7-on-vault" testid="dash-withdraw">Withdraw</Button>
+      <Button href={dashHref("/vault")} variant={unlock.live ? "banner" : "secondary"} className={unlock.live ? undefined : "v7-on-vault"} testid="dash-deposit">Deposit</Button>
+      {lock.locked
+        ? <Button variant="secondary" className="v7-on-vault" disabled title={LOCK_NOTE} testid="dash-withdraw">Withdraw</Button>
+        : <Button href={dashHref("/vault")} variant="secondary" className="v7-on-vault" testid="dash-withdraw">Withdraw</Button>}
     </>
   ) : undefined;
 
@@ -190,6 +202,7 @@ export function Overview(p: OverviewProps) {
         lead={p.accountId ? <>Signed in as <span className="v7-mono" data-testid="dash-account">{shortAccount(p.accountId, 6)}</span></> : undefined}
       />
 
+      {lock.locked && <p className="ov-banner-err" role="status" data-testid="dash-locked">{LOCK_NOTE}</p>}
       <VaultHero
         value={<span data-testid="stat-balance">{heroValue}</span>}
         sealed={heroValue === "Sealed"}
@@ -215,7 +228,7 @@ export function Overview(p: OverviewProps) {
           <LookupCard failed={failed} onRetry={keys.onRetry} />
         )}
 
-        <SetupChecklist held={held} looking={looking} unlock={unlock} unlocked={unlocked} funded={funded} swapped={swapped} balanceBusy={balance.busy} />
+        <SetupChecklist held={held} looking={looking} unlock={unlock} unlocked={unlocked} funded={funded} swapped={swapped} swappedFrom={swappedFrom} balanceBusy={balance.busy} />
 
         <div className="ov-mid">
           {(held || noKey) && (
@@ -292,7 +305,7 @@ function MintCard() {
       <p className="ov-sentence">Your key is the account. Free. One signature. The enclave pays storage.</p>
       <p className="ov-caps">Only Bronze is mintable today: $1 a trade, $5 a day.</p>
       <div className="ov-key-action">
-        <Button href="/mint" variant="primary" testid="dash-mint">Mint your key</Button>
+        <Button href={dashHref("/mint")} variant="primary" testid="dash-mint">Mint your key</Button>
       </div>
       <p className="ov-muted">The artwork is a sample. Your key&apos;s own art is chosen when it is minted.</p>
     </Card>
@@ -319,12 +332,12 @@ function LookupCard({ failed, onRetry }: { failed: boolean; onRetry: () => void 
 /** The four quick actions. Mint shows only when there is no key ("One key per account"); otherwise the activity page. */
 function QuickActions({ held }: { held: boolean }) {
   const tiles: { id: string; label: string; href: string; icon: IconName; testid: string }[] = [
-    { id: "swap", label: "Swap", href: "/swap", icon: "swap", testid: "dash-swap" },
+    { id: "swap", label: "Swap", href: dashHref("/swap"), icon: "swap", testid: "dash-swap" },
     held
-      ? { id: "activity", label: "Activity", href: "/settle", icon: "activity", testid: "ov-tile-activity" }
-      : { id: "mint", label: "Mint key", href: "/mint", icon: "mint", testid: "ov-tile-mint" },
-    { id: "vault", label: "Open vault", href: "/vault", icon: "vault", testid: "ov-tile-vault" },
-    { id: "keys", label: "View keys", href: "/keys", icon: "key", testid: "ov-tile-keys" },
+      ? { id: "activity", label: "Activity", href: dashHref("/settle"), icon: "activity", testid: "ov-tile-activity" }
+      : { id: "mint", label: "Mint key", href: dashHref("/mint"), icon: "mint", testid: "ov-tile-mint" },
+    { id: "vault", label: "Open vault", href: dashHref("/vault"), icon: "vault", testid: "ov-tile-vault" },
+    { id: "keys", label: "View keys", href: dashHref("/keys"), icon: "key", testid: "ov-tile-keys" },
   ];
   return (
     <Card as="section" labelledBy="ov-quick-h" className="ov-quick">
@@ -356,7 +369,7 @@ function AssetsCard({ unlock, balance, unpriced }: { unlock: UnlockView; balance
               {balance.busy ? balance.busyLabel : "Refresh"}
             </button>
           ) : (
-            <Link href="/vault" className="v7-card-link" aria-label="Open your vault" data-testid="dash-open-vault">
+            <Link href={dashHref("/vault")} className="v7-card-link" aria-label="Open your vault" data-testid="dash-open-vault">
               <Icon name="arrow-right" size={18} />
             </Link>
           )
@@ -370,7 +383,7 @@ function AssetsCard({ unlock, balance, unpriced }: { unlock: UnlockView; balance
             <ErrorBox code={balance.error.code} retryAfter={balance.error.retry_after} />
             <Button variant="secondary" size="sm" onClick={balance.onRead} testid="dash-balance-retry">Try again</Button>
           </div>
-        ) : <p className="ov-muted">{balance.busy ? balance.busyLabel : "Reading your vault…"}</p>
+        ) : <><p className="ov-muted">{balance.busy ? balance.busyLabel : "Reading your vault…"}</p><TeeProgress active={balance.busy} label="Reading your vault" testid="dash-balance-progress" /></>
       ) : null}
       {unlock.live && balance.read && balance.rows && balance.rows.length === 0 && <p className="ov-muted" data-testid="dash-assets-empty">No assets in this vault yet.</p>}
       {unlock.live && balance.rows && balance.rows.length > 0 && (
@@ -437,7 +450,7 @@ function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockVie
         icon="activity"
         meta={<span data-testid="stat-settled">Settled orders <b>{settled ?? "—"}</b></span>}
         action={
-          <Link href="/settle" className="v7-card-link" aria-label="View all activity" data-testid="dash-view-activity">
+          <Link href={dashHref("/settle")} className="v7-card-link" aria-label="View all activity" data-testid="dash-view-activity">
             <Icon name="arrow-right" size={18} />
           </Link>
         }
@@ -446,7 +459,7 @@ function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockVie
       {unlock.live && !activity.read && (
         activity.error
           ? <ErrorBox code={activity.error.code} retryAfter={activity.error.retry_after} />
-          : <p className="ov-muted">{activity.busy ? activity.busyLabel : "Reading this key’s log…"}</p>
+          : <><p className="ov-muted">{activity.busy ? activity.busyLabel : "Reading this key’s log…"}</p><TeeProgress active={activity.busy} label="Reading this key's log" testid="dash-activity-progress" /></>
       )}
       {activity.read && activity.logOk === null && <p className="ov-muted">Checking the log…</p>}
       {activity.read && activity.logOk === false && <p className="ov-muted" data-testid="dash-log-hidden">The log did not verify, so no entries are shown and none are counted.</p>}
@@ -471,7 +484,7 @@ function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockVie
       {activity.read && activity.error && <ErrorBox code={activity.error.code} retryAfter={activity.error.retry_after} />}
       {activity.callId && (
         <p className="ov-meta ov-verify">
-          <Link href={`/verify?call=${encodeURIComponent(activity.callId)}`} data-testid="dash-verify-read">Verify this read</Link>
+          <Link href={dashHref(`/verify?call=${encodeURIComponent(activity.callId)}`)} data-testid="dash-verify-read">Verify this read</Link>
           <span>{` · call ${activity.callId.slice(0, 8)}`}</span>
         </p>
       )}
@@ -565,15 +578,15 @@ function TierCard({ tier, unlock }: { tier: TierView; unlock: UnlockView }) {
  * The shared SetupProgress draws it; this only computes the items.
  */
 function SetupChecklist(p: {
-  held: boolean; looking: boolean; unlock: UnlockView; unlocked: boolean; funded: boolean; swapped: boolean; balanceBusy: boolean;
+  held: boolean; looking: boolean; unlock: UnlockView; unlocked: boolean; funded: boolean; swapped: boolean; swappedFrom: "log" | "record" | null; balanceBusy: boolean;
 }) {
-  const { held, looking, unlock, unlocked, funded, swapped } = p;
+  const { held, looking, unlock, unlocked, funded, swapped, swappedFrom } = p;
   const items: SetupItem[] = [
     { id: "sign", title: "Sign in", done: true, note: "Signed in." },
     {
       id: "key", title: "Get your key", done: held,
       note: held ? "Held on NEAR mainnet." : looking ? "Checking NEAR mainnet…" : "Free. One signature.",
-      action: !held && !looking ? <Button href="/mint" variant="secondary" size="sm" testid="setup-key-action">Mint a key</Button> : undefined,
+      action: !held && !looking ? <Button href={dashHref("/mint")} variant="secondary" size="sm" testid="setup-key-action">Mint a key</Button> : undefined,
     },
     {
       id: "unlock", title: "Unlock session", done: unlocked,
@@ -585,12 +598,12 @@ function SetupChecklist(p: {
     {
       id: "fund", title: "Fund the vault", done: funded,
       note: funded ? "Balance read from the vault." : !held ? "Needs a key first." : !unlocked ? "Checked once you unlock." : p.balanceBusy ? "Reading your vault…" : "A deposit is a transfer you approve in your wallet.",
-      action: held && !funded ? <Button href="/vault" variant="secondary" size="sm" testid="setup-fund-action">Deposit</Button> : undefined,
+      action: held && !funded ? <Button href={dashHref("/vault")} variant="secondary" size="sm" testid="setup-fund-action">Deposit</Button> : undefined,
     },
     {
       id: "swap", title: "First swap", done: swapped,
-      note: swapped ? "Swap done. Read from your signed activity." : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
-      action: held && !swapped ? <Button href="/swap" variant="secondary" size="sm" testid="setup-swap-action">Swap</Button> : undefined,
+      note: swapped ? (swappedFrom === "log" ? "Swap done. Read from your signed activity." : "Swap done. Counted in your key's record (settled swaps and copies, the same count as Tier progress).") : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
+      action: held && !swapped ? <Button href={dashHref("/swap")} variant="secondary" size="sm" testid="setup-swap-action">Swap</Button> : undefined,
     },
   ];
   return (
@@ -608,12 +621,14 @@ function ProofCard({ callId, logOk }: { callId: string | null; logOk: boolean | 
   return (
     <ProofPanel
       headingId="ov-proof-h"
+      title="Proof of your calls"
       enclave={online === null ? "checking" : online ? "live" : "down"}
       workerBuild={build}
       contract={KEYS_CONTRACT}
       attestation={logOk === true ? "verified" : logOk === false ? "not-verified" : "unread"}
       lastCall={callId}
-      verifyHref={callId ? `/verify?call=${encodeURIComponent(callId)}` : "/verify"}
+      compact
+      verifyHref={callId ? dashHref(`/verify?call=${encodeURIComponent(callId)}`) : dashHref("/verify")}
       verifyTestId="ov-verify"
       testid="ov-proof"
     />
@@ -668,7 +683,7 @@ function SignedOut({ signIn }: { signIn: SignInOptionsProps }) {
         <Card as="section" labelledBy="ov-signin-h" testid="dash-connect" className="ov-signin">
           <h2 id="ov-signin-h" className="v7-card-h">Sign in</h2>
           <SignInOptions {...signIn} />
-          <Link className="ov-link" href="/judge" data-testid="dash-explore">Explore without a wallet</Link>
+          <Link className="ov-link" href="/demo" data-testid="dash-explore">Explore without a wallet</Link>
         </Card>
         <Card as="section" tone="flush" labelledBy="ov-sample-h" className="ov-key ov-sample ov-key--foil">
           <figure className="ov-art">

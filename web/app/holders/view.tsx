@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useWallet } from "@/lib/wallet";
 import { PageHeader, Card, CardHeader, StatusChip } from "@/components/v7";
 import type { SignedAuth } from "@/lib/nep413";
+import { tierName } from "@/lib/near";
 import { holderResume, settleHolderCheck, type HolderView } from "@/lib/holderCheck";
 
 const REASON: Record<string, string> = {
@@ -118,7 +119,7 @@ export function HoldersView() {
         )}
         {visible.status === "granted" && (
           <div className="holders-body" data-testid="holders-granted" role="status">
-            <p><b>Check passed.</b> Tier {visible.tier}. Keys held: {visible.key_count}.</p>
+            <p><b>Check passed.</b> Finish: {tierName(visible.tier)}. Keys held: {visible.key_count}.</p>
             {visible.key_count > visible.token_ids.length && <p className="kg-note" data-testid="holders-truncated">showing {visible.token_ids.length} of {visible.key_count} keys</p>}
             <ul>
               {visible.token_ids.map((id) => (

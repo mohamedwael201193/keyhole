@@ -30,7 +30,7 @@ describe("two-sided Pledge + integrated recovery invariants", () => {
   });
   it("keeps recovery + ordinary onboarding and exactly one claim owner per route", () => {
     const shell = source("../components/app/AppShell.tsx"), credit = source("../components/PayoutCredit.tsx"), panel = source("../components/PayoutPanel.tsx");
-    expect(shell).toContain("<ValueRecovery />"); expect(shell).toContain("<PayoutCredit"); expect(shell).toContain('pathname === "/vault" && <PayoutPanel />');
+    expect(shell).toContain("<ValueRecovery vaultOpen={vaultOpen} />"); expect(shell).toContain("<PayoutCredit"); expect(shell).toContain("{vaultOpen && <PayoutPanel />}"); expect(shell).toContain('pathname === "/vault" || (pathname === "/dashboard"');
     expect(credit).toContain('pathname==="/vault"'); expect(credit).toContain('pathname?.startsWith("/pledge")');
     for (const guard of ["dispatchMoneyBatch", "expectedSigner: accountId", "finalMoneyReceipt", "clearVerifiedMoneyOperation", "verifyPayoutReceipt"]) expect(panel).toContain(guard);
     expect(panel).toContain("!!operation"); expect(panel).toContain("value.pending");

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { canonical } from "../lib/verify";
 import identity from "../../identity.json";
-const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/verify/path", "/ask"];
+const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/verify/path", "/ask", "/dashboard", "/developers"];
 const shots = process.env.SHOTS_DIR;
 
 /** The live OutLayer registry row, served through /api/registry. */
@@ -38,7 +38,7 @@ for (const p of PAGES) {
     await expect(page.locator("h1").first()).toBeVisible();
     await expect(page.getByRole("link", { name: "KEYHOLE" }).first()).toBeVisible();
     // Site pages show it in the footer; app pages keep it in the sidebar, which on phones lives in the menu sheet.
-    const app = /^\/(vault|mint|gallery|dashboard|swap|keys|settle|key|pnl|verify|attack)/.test(p) && p !== "/verify/path";
+    const app = /^\/(vault|mint|gallery|dashboard|swap|keys|settle|key|pnl)/.test(p);
     if (app && (page.viewportSize()?.width ?? 1000) <= 860) await expect(page.getByRole("link", { name: /Built on NEAR/, includeHidden: true }).first()).toBeAttached();
     else await expect(page.getByRole("link", { name: /Built on NEAR/ }).first()).toBeVisible();
     if (shots) { await page.waitForTimeout(p === "/" ? 8000 : 800); await page.screenshot({ path: `${shots}/${info.project.name}${p === "/" ? "/home" : p}.png`, fullPage: p !== "/" }); }
@@ -891,7 +891,7 @@ test("judge: who sees what, and the Chain Signatures step verifies a published o
   await expect(page.getByTestId("ck-output").locator(".ok")).toHaveText("✓", { timeout: 30_000 });
 });
 
-test("settle: a malformed agent 200 leaves Activity up", async ({ page }) => {
+test("developers: a malformed agent 200 leaves the page up", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.route("**/api/agent**", (route) => {
@@ -900,15 +900,15 @@ test("settle: a malformed agent 200 leaves Activity up", async ({ page }) => {
     const body = r === "policy" ? { policy: {} } : {};
     return route.fulfill({ status: 200, json: { ok: true, r, body } });
   });
-  await page.goto("/settle");
-  await expect(page.getByTestId("activity-page")).toBeVisible();
-  await expect(page.getByTestId("act-stat-total")).toBeVisible();
+  await page.goto("/developers");
+  await expect(page.getByTestId("developers-page")).toBeVisible();
+  await expect(page.getByTestId("dev-tools")).toBeVisible();
   await expect(page.getByTestId("agent-policy-down")).toBeVisible();
   await expect(page.getByTestId("agent-quotas-down")).toBeVisible();
   expect(errors).toEqual([]);
 });
 
-test("settle: a shaped invalid agent 200 does not render NaN", async ({ page }) => {
+test("developers: a shaped invalid agent 200 does not render NaN", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   const usdc = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
@@ -920,10 +920,11 @@ test("settle: a shaped invalid agent 200 does not render NaN", async ({ page }) 
     }
     return route.fulfill({ status: 200, json: { ok: true, body: { limits: { daily_agents: -1, requests_per_minute: -1 }, usage: { agents_last_24_hours: -2, requests_this_minute: -3 } } } });
   });
-  await page.goto("/settle");
-  await expect(page.getByTestId("activity-page")).toBeVisible();
+  await page.goto("/developers");
+  await expect(page.getByTestId("developers-page")).toBeVisible();
   await expect(page.getByTestId("agent-policy-down")).toBeVisible();
   await expect(page.getByTestId("agent-quotas-down")).toBeVisible();
+  await expect(page.getByTestId("agent-net")).toHaveCount(0);
   await expect(page.getByText("NaN")).toHaveCount(0);
   await expect(page.getByText(usdc)).toHaveCount(0);
   expect(errors).toEqual([]);

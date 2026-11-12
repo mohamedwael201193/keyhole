@@ -37,14 +37,21 @@ export function PriceCheck() {
   const d = assetById(dest);
   const units = o ? toUnits(amount, o.decimals) : null;
 
+  // A result or an error belongs to the inputs it was asked for: any change to them clears it, so a cleared field shows only its own hint.
+  const seq = useRef(0);
+  const clearOut = () => { seq.current += 1; setDry(null); setMsg(null); };
+  const amountHint = amount.trim() !== "" && !units ? "Enter an amount above zero." : amount.trim() === "" ? "Enter an amount above zero." : null;
+
   async function run() {
     setDry(null); setMsg(null);
-    if (!units || origin === dest) { setMsg("Pick two different assets and a positive amount."); return; }
+    if (!units || origin === dest) { setMsg(!units ? "Enter an amount above zero." : "Pick two different assets."); return; }
+    const mine = ++seq.current;
     setBusy(true);
     try {
       const j = await (await fetch("/api/oneclick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin, dest, amount: units }) })).json();
+      if (mine !== seq.current) return; // the inputs changed while this price was on its way: it is not for what is on screen
       if (j.ok) setDry(j.quote); else setMsg(human(j.error?.code, j.error?.message));
-    } catch { setMsg("Could not reach 1Click. Check your connection and try again."); } finally {
+    } catch { if (mine === seq.current) setMsg("Could not reach 1Click. Check your connection and try again."); } finally {
       setBusy(false);
       requestAnimationFrame(() => outRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
     }
@@ -56,13 +63,13 @@ export function PriceCheck() {
       <CardHeader title="Check a price" id="act-dry-h" action={<Badge tone="info" testid="dry-badge">Price only · nothing moves</Badge>} />
       <p className="act-note">A live price from 1Click solvers. Nothing is signed and nothing executes.</p>
       <form className="act-dry-form" onSubmit={(e) => { e.preventDefault(); void run(); }}>
-        <TokenSelect label="From" options={OPTIONS} value={origin} onChange={setOrigin} testid="oc-from" />
-        <AmountInput label="Amount" value={amount} onChange={setAmount} symbol={sym(o)} error={units ? null : "Enter an amount above zero."} testid="oc-amount" />
-        <TokenSelect label="To" options={OPTIONS} value={dest} onChange={setDest} testid="oc-to" />
+        <TokenSelect label="From" options={OPTIONS} value={origin} onChange={(v) => { setOrigin(v); clearOut(); }} testid="oc-from" />
+        <AmountInput label="Amount" value={amount} onChange={(v) => { setAmount(v); clearOut(); }} symbol={sym(o)} error={units ? null : amountHint} testid="oc-amount" />
+        <TokenSelect label="To" options={OPTIONS} value={dest} onChange={(v) => { setDest(v); clearOut(); }} testid="oc-to" />
         <Button type="submit" loading={busy} loadingLabel="Asking solvers" testid="dry-btn">Get price</Button>
       </form>
       <div ref={outRef} aria-live="polite" className="act-out">
-        {msg && <p className="act-note act-alert" role="alert" data-testid="dry-msg">{msg}</p>}
+        {msg && units && <p className="act-note act-alert" role="alert" data-testid="dry-msg">{msg}</p>}
         {dry && (
           <article className="act-quote" data-testid="dry-out" aria-label="Price quote">
             <Badge tone="info" testid="dry-tag">Price quote · dry run · nothing moves</Badge>

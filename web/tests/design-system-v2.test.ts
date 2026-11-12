@@ -193,9 +193,9 @@ describe("TxResult", () => {
     expect(m).toContain('data-testid="mint-tx-status"');
   });
 
-  it("attested call id links to /verify", () => {
+  it("attested call id links to the call's proof in the dashboard", () => {
     const m = html(createElement(TxResult, { state: "confirmed", callId: "c0ffee12" }));
-    expect(m).toContain('href="/verify?call=c0ffee12"');
+    expect(m).toContain('href="/dashboard#proof/c0ffee12"');
     expect(m).toContain("Attested call");
     expect(m).not.toContain("nearblocks.io");
   });

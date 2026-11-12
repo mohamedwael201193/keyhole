@@ -1,0 +1,22 @@
+/* /developers: public page, one root class. Presentation only. */
+.pp-dev .dev-jump { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font-size: 15px; }
+.pp-dev .dev-jump a { color: var(--teal); text-decoration: none; border-bottom: 1px solid currentColor; }
+.pp-dev .dev-tools { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 14px; }
+.pp-dev .dev-tools li { margin: 0; padding: 16px 18px; border: 1px solid #1A2A2C1A; border-radius: 14px; background: #fff8; display: flex; flex-direction: column; gap: 6px; }
+.pp-dev .dev-tools li + li { margin-top: 0; }
+.pp-dev .dev-tools a { color: var(--ink); text-decoration: none; }
+.pp-dev .dev-tools span { font-size: 15px; line-height: 1.5; color: var(--mu); }
+.pp-dev .dev-facts { display: grid; gap: 10px; margin: 14px 0; }
+.pp-dev .dev-facts > div { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 12px; }
+.pp-dev .dev-facts dt { color: var(--mu); font-size: 14px; }
+.pp-dev .dev-facts dd { margin: 0; overflow-wrap: anywhere; }
+.pp-dev .dev-table { width: 100%; border-collapse: collapse; font-size: 15px; margin-bottom: 14px; }
+.pp-dev .dev-table th, .pp-dev .dev-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #1A2A2C18; vertical-align: top; }
+.pp-dev .dev-table th { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--mu); }
+.pp-dev .dev-h2-plain { margin-bottom: 8px; }
+.pp-dev .muted { color: var(--mu); font-size: 15px; }
+.pp-dev .term { overflow-x: auto; }
+@media (max-width: 640px) { .pp-dev .dev-facts > div { grid-template-columns: 1fr; gap: 2px; } }
+.pp-dev .dev-table { display: block; overflow-x: auto; }
+.pp-dev pre, .pp-dev code { max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap; }
+.pp-dev .pp-card { min-width: 0; padding-inline: clamp(16px, 5vw, 30px); }

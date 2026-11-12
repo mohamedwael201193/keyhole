@@ -18,6 +18,7 @@ import { saveMintTx } from "@/lib/mintTx";
 import { Button } from "@/components/ui";
 import { MintStepper, PreviewCarousel, TierOption, type MintStep, type PreviewSlide } from "@/components/keys/MintParts";
 import "@/components/keys/keys.css";
+import { dashHref } from "@/lib/dashboardSections";
 
 /** Remember the mint tx so /start and /vault can link it. */
 function MintTxSave({ hash }: { hash: string }) { const { accountId } = useWallet(); useEffect(() => { saveMintTx(accountId, hash); }, [accountId, hash]); return null; }
@@ -120,8 +121,8 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                 >
                   {typeof o.tx === "string" && <MintTxSave hash={o.tx} />}
                   <div className="km-next">
-                    <Button href="/vault" size="lg" testid="mint-open-vault">{t("mint.openVault")}</Button>
-                    <Button href="/swap" variant="secondary" size="lg" testid="mint-swap">{t("mint.swap")}</Button>
+                    <Button href={dashHref("/vault")} size="lg" testid="mint-open-vault">{t("mint.openVault")}</Button>
+                    <Button href={dashHref("/swap")} variant="secondary" size="lg" testid="mint-swap">{t("mint.swap")}</Button>
                   </div>
                 </TxResult>
               </div>

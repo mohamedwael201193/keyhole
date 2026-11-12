@@ -54,6 +54,9 @@ export function swapOutcome(status: string | null | undefined): SwapOutcome {
   if (s === "pending" || s === "processing" || s === "submitted") {
     return { tone: "warn", chip: "In progress", headline: "Swap on its way", where: "Solvers are still filling the swap. Read your history later to see the final status.", icon: "swap" };
   }
+  if (s === "unknown") {
+    return { tone: "warn", chip: "No final answer", headline: "Swap not confirmed", where: "UNKNOWN is not failure and not success. Do not swap again: check the original operation in Account operation recovery (one wallet signature). New swaps stay locked until it has a final answer.", icon: "info" };
+  }
   if (s === "refunded") return { tone: "warn", chip: "Refunded", headline: "Swap refunded", where: "The swap did not happen; the deposit went back to the refund address.", icon: "swap" };
   if (s === "failed" || s === "error") {
     return { tone: "error", chip: "Failed", headline: "Swap failed", where: "1Click refunds the deposit to the refund address. Check the refund before you try again.", icon: "x" };

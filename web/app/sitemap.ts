@@ -5,7 +5,7 @@ import { siteUrl } from "@/lib/site";
 const PATHS = [
   "/", "/verify", "/holders", "/key", "/keys", "/mint", "/gallery", "/verify/path", "/attack",
   "/ask", "/atlas", "/identity", "/pnl", "/settle", "/vault", "/swap", "/dashboard",
-  "/demo", "/start", "/source", "/pledge",
+  "/demo", "/start", "/source", "/pledge", "/developers",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

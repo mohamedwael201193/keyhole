@@ -24,6 +24,10 @@ import { keyState, shortAccount, shortKeyId } from "@/lib/near";
 import { acct, KEYS_CONTRACT } from "@/lib/config";
 import { useLiveWorkerHash } from "@/lib/useLiveWorkerHash";
 import { minutesLeft } from "@/lib/session";
+import { LOCK_NOTE, useValueLock } from "@/lib/valueLock";
+import { isNotSent } from "@/lib/opResult";
+import { OpNotSent } from "@/components/OpNotSent";
+import { TeeProgress } from "@/components/TeeProgress";
 import { DepositQr } from "@/components/DepositQr";
 import { FundFromChain } from "@/components/FundFromChain";
 import { FundOrderCard } from "@/components/FundOrderCard";
@@ -40,6 +44,7 @@ import { AmountInput, Button, Busy, Sheet, Tabs, TokenSelect, type TokenOption }
 import { TxStatus } from "@/components/ui/tx-status";
 import { Card, CardHeader, CopyButton, EmptyState, Icon, ListRow, PageHeader, ProofPanel, SetupProgress, Skeleton, StatusChip, TierChip, VaultHero, type IconName, type SetupItem } from "@/components/v7";
 import "./vault.css";
+import { dashHref } from "@/lib/dashboardSections";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type DepTab = "direct" | "chain";
@@ -90,7 +95,7 @@ function CallLine({ r }: { r: WorkerResult }) {
     <p className="vlt-callline">
       <span>Call: {r.call_id.slice(0, 8)}</span>
       {r.attestation_url && <a className="v7-pill-link" href={r.attestation_url} target="_blank" rel="noreferrer"><span>Attestation</span><Icon name="external" size={14} /></a>}
-      <Link className="v7-pill-link" href={`/verify?call=${encodeURIComponent(r.call_id)}`}><span>Verify</span></Link>
+      <Link className="v7-pill-link" href={dashHref(`/verify?call=${encodeURIComponent(r.call_id)}`)}><span>Verify</span></Link>
       {r.time_ms != null && <span>TEE time: {r.time_ms} ms</span>}
     </p>
   );
@@ -144,6 +149,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const logVerified = useLogVerified(history.res);
   const logState = useLogVerifiedState(history.res);
   const liveBuild = useLiveWorkerHash();
+  // New value operations (withdraw here) are locked while an earlier one has no final answer. The worker refuses them too.
+  const lock = useValueLock();
 
   const [panel, setPanel] = useState<Panel | null>(null);
   const [limTx, setLimTx] = useState("");
@@ -257,7 +264,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   useEffect(() => {
     if (!balances) return;
     let cancel = false;
-    fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices(j.prices); }).catch(() => {});
+    fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices((prev) => ({ ...prev, ...j.prices })); }).catch(() => {});
     return () => { cancel = true; };
   }, [balances]);
   // After a payout the balance is read again, with the session only.
@@ -276,7 +283,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     if (!r.ok) setUnlockErr(r.code);
   }
   function doWithdraw() {
-    if (!wUnits || !accountId || !wDest.ok) return;
+    if (!wUnits || !accountId || !wDest.ok || lock.locked) return;
     const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(wAddr.trim()) };
     sessionStorage.setItem(OP_CTX, JSON.stringify(ctx));
     setDoneWithdraw(ctx);
@@ -368,7 +375,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const heroActions = (
     <>
       <Button variant="banner" testid="open-deposit" onClick={() => setDepOpen(true)}>Deposit</Button>
-      <Button variant="secondary" className="v7-on-vault" testid="open-withdraw" onClick={() => setWOpen(true)}>Withdraw</Button>
+      <Button variant="secondary" className="v7-on-vault" testid="open-withdraw" disabled={lock.locked} title={lock.locked ? LOCK_NOTE : undefined} onClick={() => setWOpen(true)}>Withdraw</Button>
     </>
   );
   const heroSub = (
@@ -392,11 +399,12 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     { id: "swap", title: "First swap", done: swapped, note: swapped ? "Read from your signed activity." : "Checked from your activity once you unlock." },
   ];
 
+  // Health is read passively (no paid probe), so before the first read it is neither live nor down. "Not probed" read as a fault to holders.
   const enclaveChip = online === true
     ? <StatusChip tone="success">Enclave live</StatusChip>
     : online === false
       ? <StatusChip tone="error">Not reachable</StatusChip>
-      : <StatusChip tone="neutral" testid="enclave-checking">Not probed</StatusChip>;
+      : <StatusChip tone="neutral" testid="enclave-checking">Checked when you read</StatusChip>;
 
   const proofAttestation = lastRes ? (lastVerified === true ? "verified" : lastVerified === false ? "not-verified" : "unread") : "unread";
 
@@ -445,7 +453,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           body={t("vault.holderOnlyBody")}
           action={(
             <div className="vlt-actions">
-              <Button href="/mint" testid="vault-mint">{t("vault.mintFirst")}</Button>
+              <Button href={dashHref("/mint")} testid="vault-mint">{t("vault.mintFirst")}</Button>
               <Button variant="ghost" href="/start" testid="vault-start">Start setup</Button>
             </div>
           )}
@@ -471,6 +479,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           {coolUntil ? <p className="vlt-notice" data-testid="lock-cooldown">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
           {unlockErr && <ErrorBox code={unlockErr} />}
           {balance.res?.error && <ErrorBox code={balance.res.error.code} retryAfter={balance.res.error.retry_after} />}
+          <TeeProgress active={balance.busy} label="Reading your balance inside the enclave" testid="balance-progress" />
           {balance.res && <CallLine r={balance.res} />}
         </div>
 
@@ -498,19 +507,21 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               )}
               <div className="vlt-foot">
                 <p className="vlt-sub">Trade USDC and wNEAR from this vault on the Swap page. The price check there needs no wallet.</p>
-                <div className="vlt-actions"><Button href="/swap" variant="secondary" size="sm" testid="vault-swap-link">Open swap</Button></div>
+                <div className="vlt-actions"><Button href={dashHref("/swap")} variant="secondary" size="sm" testid="vault-swap-link">Open swap</Button></div>
               </div>
             </Card>
 
             <div className="vlt-proof-wrap" style={{ order: 3 }}>
               <ProofPanel
                 headingId="vlt-proof-h"
+                title="Proof of your calls"
                 enclave={online === null ? "checking" : online ? "live" : "down"}
                 workerBuild={liveBuild}
                 contract={KEYS_CONTRACT}
                 attestation={proofAttestation}
                 lastCall={lastCall}
-                verifyHref={lastCall ? `/verify?call=${encodeURIComponent(lastCall)}` : "/verify"}
+                compact
+                verifyHref={lastCall ? dashHref(`/verify?call=${encodeURIComponent(lastCall)}`) : dashHref("/verify")}
                 verifyTestId="vault-verify"
                 testid="vault-proof"
               />
@@ -521,7 +532,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 title="Recent vault activity"
                 id="vlt-activity-h"
                 icon="activity"
-                action={<Link href="/settle" className="v7-card-link" data-testid="vault-activity-all">View all <Icon name="arrow-up-right" size={16} /></Link>}
+                action={<Link href={dashHref("/settle")} className="v7-card-link" data-testid="vault-activity-all">View all <Icon name="arrow-up-right" size={16} /></Link>}
               />
               {!history.res && <p className="vlt-sub">{live ? "Read your recent trades and withdrawals with your session." : "Unlock to read your recent trades and withdrawals."}</p>}
               {history.res?.output?.ok && logVerified === null && <p className="vlt-sub">{t("vault.checking")}</p>}
@@ -616,7 +627,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   </details>
                 </>
               ) : (
-                <p className="vlt-sub">{t("vault.nokey")} <Link href="/mint">{t("vault.mintFirst")}</Link></p>
+                <p className="vlt-sub">{t("vault.nokey")} <Link href={dashHref("/mint")}>{t("vault.mintFirst")}</Link></p>
               )}
             </Card>
 
@@ -649,8 +660,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   testid="settings-withdraw"
                   iconName="arrow-up"
                   title="Withdraw to your NEAR account"
-                  sub="Only the current key holder receives withdrawals. Your wallet signs each one."
-                  onClick={() => setWOpen(true)}
+                  sub={lock.locked ? "Locked until the earlier operation is checked (see Account operation recovery)." : "Only the current key holder receives withdrawals. Your wallet signs each one."}
+                  onClick={() => { if (!lock.locked) setWOpen(true); }}
                 />
                 <SettingRow
                   testid="settings-fund-chain"
@@ -776,9 +787,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             <p className="vlt-sub" id="w-dest-note">Your signed-in NEAR account. The worker verifies you still hold the key.</p>
           </div>
           {coolUntil ? <p className="note-box" data-testid="cooldown-note">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
-          <Button block testid="withdraw-btn" loading={withdraw.busy} loadingLabel={withdraw.label} disabled={!wUnits || !wDest.ok || withdraw.busy} onClick={doWithdraw}>
-            {withdraw.busy ? withdraw.label : t("vault.withdrawBtn")}
+          {lock.locked && <p className="note-box" role="status" data-testid="withdraw-locked">{LOCK_NOTE}</p>}
+          <Button block testid="withdraw-btn" loading={withdraw.busy} loadingLabel={withdraw.label} disabled={!wUnits || !wDest.ok || withdraw.busy || lock.locked} onClick={doWithdraw}>
+            {withdraw.busy ? withdraw.label : lock.locked ? "Locked until the earlier operation is checked" : t("vault.withdrawBtn")}
           </Button>
+          <TeeProgress active={withdraw.busy} label="Withdrawing inside the enclave" expectedMs={12000} testid="withdraw-progress" />
           {withdraw.busy && <TxStatus state="pending" title="Waiting for the payout" testid="withdraw-pending" />}
           {withdraw.res?.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw && (
             <div className="vlt-stack" data-testid="withdraw-out">
@@ -791,7 +804,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               </TxStatus>
             </div>
           )}
-          {withdraw.res?.error && <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />}
+          {withdraw.res?.error && (isNotSent(withdraw.res.error.code)
+            ? <OpNotSent code={withdraw.res.error.code} message={withdraw.res.error.message} noun="withdrawal" knownOpId={lock.rows[0]?.value_op_id ?? null} testid="withdraw-not-sent" />
+            : <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />)}
           {withdraw.res && !(withdraw.res.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw) && <Attested r={withdraw.res} />}
         </div>
       </Sheet>

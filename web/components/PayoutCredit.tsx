@@ -5,10 +5,10 @@ import {useWallet} from "@/lib/wallet";
 import {createPledgeClient,buildClaimPayout,payoutStorageConsent,type PendingPayout} from "@/lib/pledgeClient";
 import {browserMoneyStore,dispatchMoneyBatch,finalMoneyReceipt,nextFinalBlockHeight,updateMoneyOperation,clearVerifiedMoneyOperation,type MoneyOperation} from "@/lib/pledgeMoney";
 /** Shared across borrower, lender and sale routes: a credit is not wallet delivery. */
-export function PayoutCredit() {
+export function PayoutCredit({embeddedHere=false}:{embeddedHere?:boolean}={}) {
  const wallet=useWallet(),account=wallet.accountId,pathname=usePathname();
  // Vault owns ordinary onboarding + a claim panel backed by this same money store.
- const embedded=pathname?.startsWith("/pledge")||pathname==="/vault";
+ const embedded=pathname?.startsWith("/pledge")||pathname==="/vault"||embeddedHere;
  const client=useMemo(()=>createPledgeClient({live:true}),[]);
  const [credit,setCredit]=useState("0"),[pending,setPending]=useState<PendingPayout|null>(null),[operation,setOperation]=useState<MoneyOperation|null>(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[supported,setSupported]=useState(false);
  const store=useMemo(()=>account&&typeof window!=="undefined"?browserMoneyStore(account,client.contractId):null,[account,client.contractId]);
