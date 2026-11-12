@@ -583,6 +583,42 @@ fn leftover_error_names_type_and_key_not_value() {
     assert!(!msg.contains("UNSENT_VALUE"), "{msg}");
 }
 #[test]
+fn settled_confidential_deposit_intent_history_accepts() {
+    authority_inventory(&[row(
+        "confidential_deposit_intent",
+        json!({
+            "intent_id": "5284646c-ebad-4862-88cb-cdc456822d06",
+            "deposit_address": "0x186a755Ef1C9a91d472a1bE23B4e7964ed533EdB",
+            "amount": "900000"
+        }),
+    )])
+    .unwrap();
+}
+#[test]
+fn settled_confidential_deposit_intent_signature_is_drained() {
+    authority_inventory(&[row(
+        "confidential_deposit_intent",
+        json!({
+            "intent_id": "5284646c-ebad-4862-88cb-cdc456822d06",
+            "signature": "consumed-intent-signature",
+            "signature_hex": "consumed"
+        }),
+    )])
+    .unwrap();
+}
+#[test]
+fn confidential_deposit_intent_signed_transaction_is_not_drained() {
+    let e = authority_inventory(&[row(
+        "confidential_deposit_intent",
+        json!({"signed_transaction":"UNSENT_VALUE"}),
+    )])
+    .unwrap_err();
+    let msg = format!("{e:?}");
+    assert!(msg.contains("type=confidential_deposit_intent"), "{msg}");
+    assert!(msg.contains("leftover=signed_transaction"), "{msg}");
+    assert!(!msg.contains("UNSENT_VALUE"), "{msg}");
+}
+#[test]
 fn policy_update_is_still_not_drained() {
     assert!(authority_inventory(&[row("policy_update", json!({}))]).is_err());
 }
