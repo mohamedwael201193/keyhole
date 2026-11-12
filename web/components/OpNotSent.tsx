@@ -13,7 +13,7 @@ export function OpNotSent({ code, message, noun, knownOpId, testid = "op-not-sen
     <InCardFailure testid={testid} reason={<><b id={`${testid}-h`}>{v.headline}.</b> No funds moved.</>}>
       <p className="ic-note" data-testid={`${testid}-next`}><b>Next step.</b> {v.nextStep}</p>
       <Details testid={`${testid}-details`}>
-        <p className="ic-note" data-testid={`${testid}-status`}>Not admitted · no final answer. {v.detail}</p>
+        <p className="ic-note" data-testid={`${testid}-status`}>Not sent yet, and no final answer. {v.detail}</p>
         <p className="ic-note">This attempt produced no transaction.</p>
         {v.opId && (
           <p className="ic-note" data-testid={`${testid}-opid`}>

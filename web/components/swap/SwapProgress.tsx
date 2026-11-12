@@ -43,7 +43,7 @@ export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownO
   return (
     <InCardFailure reason={reason} action={{ label: "Try again", onClick: onRetry, testid: "swap-retry" }}>
       <button type="button" className="ic-textbtn" onClick={onBack} data-testid="swap-back">Back to swap</button>
-      <details className="kh-details" data-testid="trade-failed-details"><summary>Details</summary><p>Stopped at: {stoppedAt}. Reference: <code>{code}</code></p></details>
+      <details className="kh-details" data-testid="trade-failed-details"><summary>Details</summary><p>It stopped at the step &quot;{stoppedAt}&quot;. Error code: <code>{code}</code></p></details>
     </InCardFailure>
   );
 }

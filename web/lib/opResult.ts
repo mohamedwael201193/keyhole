@@ -35,3 +35,14 @@ export function notSentView(code: string, message: string | null | undefined, no
   const nextStep = "Confirm the earlier operation first (one wallet signature). Nothing is resent, and new operations wait until it is confirmed.";
   return { headline: `${noun[0].toUpperCase()}${noun.slice(1)} not sent`, detail, nextStep, opId };
 }
+
+const TERMINAL_OK = /^(success|succeeded|completed|settled)$/i;
+/**
+ * How a finished withdrawal is worded. "Settled" and a transaction link need BOTH a terminal success status and a transaction hash.
+ * Anything else is "Sent · confirming…" with no link, so an account page is never presented as the transaction.
+ */
+export function withdrawResultView(out: { status?: unknown; tx_hash?: unknown } | null | undefined): { settled: boolean; title: string; hash: string | null } {
+  const hash = typeof out?.tx_hash === "string" && out.tx_hash.length > 0 ? out.tx_hash : null;
+  const ok = typeof out?.status === "string" && TERMINAL_OK.test(out.status.trim());
+  return ok && hash ? { settled: true, title: "Settled", hash } : { settled: false, title: "Sent · confirming…", hash: null };
+}

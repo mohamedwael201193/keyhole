@@ -202,7 +202,6 @@ export function Overview(p: OverviewProps) {
         lead={p.accountId ? <>Signed in as <span className="v7-mono" data-testid="dash-account">{shortAccount(p.accountId, 6)}</span></> : undefined}
       />
 
-      {lock.locked && <p className="ov-banner-err" role="status" data-testid="dash-locked">{LOCK_NOTE}</p>}
       <VaultHero
         value={<span data-testid="stat-balance">{heroValue}</span>}
         sealed={heroValue === "Sealed"}
@@ -210,6 +209,7 @@ export function Overview(p: OverviewProps) {
         actions={heroActions}
         testid="ov-vault"
       />
+      {lock.locked && <ValueRecovery testid="dash-recovery" />}
       {held && !unlock.live && unlock.error && <div className="ov-banner-err"><ErrorBox code={unlock.error} /></div>}
 
       <div className="ov-cols">
