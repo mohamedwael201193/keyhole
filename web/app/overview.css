@@ -354,3 +354,17 @@
   .app-main .ov-key--foil .ov-art { max-width: 180px; }
   .app-main .ov-key--foil .ov-art .ov-foil.foil-card { aspect-ratio: 1 / 1.4; }
 }
+
+/* Determinate progress for a read inside the enclave (components/TeeProgress.tsx). */
+.tee-progress { display: grid; gap: 6px; margin-top: 10px; }
+.tee-progress-track { height: 6px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; }
+.tee-progress-track > span { display: block; height: 100%; border-radius: inherit; background: var(--teal); transition: width .25s linear; }
+.tee-progress small { opacity: .75; }
+
+/* The dashboard workspace: sections are existing views, shown one at a time. */
+.ws { min-width: 0; }
+.op-notsent { margin-top: 12px; }
+.op-notsent .note { margin: 8px 0; }
+.mp-calls { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.mp-paste { display: grid; gap: 8px; max-width: 520px; }
+.mp .mp-dev { margin-top: 18px; }

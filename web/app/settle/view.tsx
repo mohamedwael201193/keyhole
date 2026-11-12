@@ -19,7 +19,6 @@ import {
   buildOrders, countsOf, defaultSourceOf, filterOrders, historyRows, mineStateOf, pageSlice, RANGES, timeOf,
   type ChipTone, type FilterId, type MineState, type RangeId,
 } from "@/components/activity/orders";
-import { AgentPanel } from "./agent";
 import { PriceCheck } from "./price";
 import "./settle.css";
 
@@ -131,11 +130,13 @@ export function SettleView() {
 
   // A status count is hidden while any order's live status is still loading: a partial count would read as final.
   const reading = counts.loading > 0;
+  // While "Mine" cannot be read (locked, log not verified, ...) no count is shown at all: a zero would read as confirmed empty.
+  const hide = mineGated;
   const chips: FilterItem<FilterId>[] = [
-    { id: "all", label: "All activity", count: counts.total },
-    { id: "settled", label: "Settled", count: reading ? undefined : counts.settled },
-    { id: "refunded", label: "Refunded", count: reading ? undefined : counts.refunded },
-    { id: "failed", label: "Failed", count: reading ? undefined : counts.failed },
+    { id: "all", label: "All activity", count: hide ? undefined : counts.total },
+    { id: "settled", label: "Settled", count: hide || reading ? undefined : counts.settled },
+    { id: "refunded", label: "Refunded", count: hide || reading ? undefined : counts.refunded },
+    { id: "failed", label: "Failed", count: hide || reading ? undefined : counts.failed },
   ];
 
   const pickSource = (s: Source) => { setPick(s); setSelected(null); setPage(1); };
@@ -149,7 +150,9 @@ export function SettleView() {
       <PageHeader
         eyebrow="Activity"
         title={<>Real quotes. <em>Real settlements.</em></>}
-        lead="Each order below was run by KEYHOLE on NEAR mainnet. Its status is read live from 1Click, and its proof is one click away."
+        lead={source === "mine"
+          ? "Your swaps, withdrawals and deposits, read from your key's signed history. Nothing is shown until the log verifies."
+          : "Public orders run by KEYHOLE on NEAR mainnet, not yours. Each status is read live from 1Click, and its proof is one click away."}
         testid="act-head"
       />
 
@@ -218,11 +221,8 @@ export function SettleView() {
       )}
 
       <section className="act-extra">
-        <RecordedFailed />
+        {source === "public" && <RecordedFailed />}
         <PriceCheck />
-        <div className="settle act-agent">
-          <AgentPanel />
-        </div>
         <Legend />
       </section>
     </div>

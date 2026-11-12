@@ -3,6 +3,7 @@ import { useState } from "react";
 import { TokenMark } from "@/components/TokenMark";
 import { Button, Proof } from "@/components/ui";
 import { Card, CardHeader, CopyButton, Icon, Skeleton, StatusChip } from "@/components/v7";
+import { dashHref } from "@/lib/dashboardSections";
 import {
   chipOf, explorerHrefOf, markOf, proofHrefOf, proofRowsOf, rawJsonOf, shortHash, subOf, whereOf, summaryOf, timeOf, timelineOf,
   type StepState, type Timeline, type TimelineLink, type OrderRow,
@@ -44,7 +45,7 @@ export function OrderDetails({ row, onRetry }: { row: OrderRow; onRetry: (addres
       <div className="act-det-order">
         <span className={`act-det-ico tone-${mark.tone}`} aria-hidden="true"><Icon name={mark.icon} size={20} /></span>
         <div className="act-det-titles">
-          <p className="act-det-title">{row.title}</p>
+          <p className="act-det-title">{row.title} <span className="act-tag" data-testid="not-yours">{vault ? "Public example · not your trade" : "Public order · not yours"}</span></p>
           <p className="act-det-id">{vault ? "Call ID" : "Deposit address"} <code title={row.id}>{shortHash(row.id, 10, 6)}</code></p>
         </div>
         <span data-status={row.status ?? "UNREAD"}>
@@ -202,7 +203,7 @@ function HistoryDetails({ row }: { row: OrderRow }) {
       </dl>
 
       <div className="act-actions">
-        <Button variant="primary" href={`/verify?call=${callId}`} testid="mine-verify" icon={<Icon name="shield" size={16} />}>Verify the call</Button>
+        <Button variant="primary" href={dashHref(`/verify?call=${callId}`)} testid="mine-verify" icon={<Icon name="shield" size={16} />}>Verify the call</Button>
         <Button variant="secondary" aria-expanded={raw} aria-controls="act-raw" onClick={() => setRaw((v) => !v)} testid="act-raw-toggle" icon={<Icon name="more" size={16} />}>
           {raw ? "Hide raw data" : "Raw data"}
         </Button>

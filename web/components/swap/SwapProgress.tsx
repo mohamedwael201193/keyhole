@@ -2,6 +2,8 @@
 import { ErrorBox } from "@/components/Result";
 import { Button } from "@/components/ui";
 import { Icon, ProgressSteps, type ProgressStep } from "@/components/v7";
+import { OpNotSent } from "@/components/OpNotSent";
+import { isNotSent } from "@/lib/opResult";
 
 /**
  * The live panel while a signed swap runs. The steps come from the real stage (components/swap/progress.ts), and `line` is the
@@ -26,15 +28,21 @@ export function SwapRunning({ title, line, steps }: { title: string; line: strin
  * The swap did not complete. Shows the steps (the one that stopped is in error), the real message from the enclave (ErrorBox
  * maps the code to words), and two real actions: Retry runs the same swap again, and Back returns to the form.
  */
-export function SwapFailed({ steps, stoppedAt, code, retryAfter, onRetry, onBack }: {
+export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownOpId, onRetry, onBack }: {
   steps: ProgressStep[];
   /** The plain name of the step that stopped, for example "Confirm in your wallet". */
   stoppedAt: string;
   code: string;
   retryAfter?: number;
+  /** The worker's message, which names the original operation id for an unconfirmed swap. */
+  message?: string;
+  /** The newest unfinished operation id kept in this browser. */
+  knownOpId?: string | null;
   onRetry: () => void;
   onBack: () => void;
 }) {
+  // A swap that was not admitted is never retried from here: the original is checked first.
+  const notSent = isNotSent(code);
   return (
     <section className="sw-phase" data-testid="trade-failed" aria-labelledby="sw-fail-h">
       <div className="sw-phase-head">
@@ -45,9 +53,9 @@ export function SwapFailed({ steps, stoppedAt, code, retryAfter, onRetry, onBack
         </div>
       </div>
       <ProgressSteps steps={steps} label="Swap progress" testid="trade-steps" />
-      <ErrorBox code={code} retryAfter={retryAfter} />
+      {notSent ? <OpNotSent code={code} message={message} noun="swap" knownOpId={knownOpId} testid="swap-not-sent" /> : <ErrorBox code={code} retryAfter={retryAfter} />}
       <div className="sw-actions">
-        <Button variant="primary" onClick={onRetry} testid="swap-retry">Retry</Button>
+        {!notSent && <Button variant="primary" onClick={onRetry} testid="swap-retry">Retry</Button>}
         <Button variant="secondary" onClick={onBack} testid="swap-back">Back to swap</Button>
       </div>
     </section>

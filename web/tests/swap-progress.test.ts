@@ -110,7 +110,7 @@ describe("/swap phases and their real sources (source contract)", () => {
 
   it("the recent swaps read only from the verified signed history, and show a real link to Activity", () => {
     expect(view).toContain("useLogVerified(history.res)");
-    expect(view).toContain('href="/settle"');
+    expect(view).toContain('href={dashHref("/settle")}');
     expect(view).toContain("const mine = hist ? [...hist].reverse().filter((e) => e.kind === \"swap\").slice(0, 5) : [];");
   });
 

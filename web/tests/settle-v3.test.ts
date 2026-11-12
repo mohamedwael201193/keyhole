@@ -36,18 +36,21 @@ describe("/settle (Activity): public settlements on the v7 system", () => {
   it("filters are All, Settled, Refunded and Failed, with counts from the rows", () => {
     for (const label of ["All activity", "Settled", "Refunded", "Failed"]) expect(v, label).toContain(`label: "${label}"`);
     // Counts come from the rows, and a status count waits until no order is still loading (the intent of the old check).
-    expect(v).toContain("count: reading ? undefined : counts.settled");
-    expect(v).toContain("count: counts.total");
+    expect(v).toContain("count: hide || reading ? undefined : counts.settled");
+    expect(v).toContain("count: hide ? undefined : counts.total");
+    // While Mine cannot be read, no count is shown at all (a zero would read as confirmed empty).
+    expect(v).toContain("const hide = mineGated;");
   });
 
   it("the swap entry in the sidebar goes to /swap, and Activity goes to /settle", () => {
     const shell = src("../components/app/AppShell.tsx");
-    expect(shell).toContain('{ id: "swap", label: "Swap", href: "/swap", icon: "swap", match: ["/swap"] }');
-    expect(shell).toContain('{ id: "activity", label: "Activity", href: "/settle", icon: "activity", match: ["/settle"] }');
+    expect(shell).toContain('{ id: "swap", label: "Swap", href: sectionHref("swap"), icon: "swap", section: "swap", match: ["/swap"] }');
+    expect(shell).toContain('{ id: "activity", label: "Activity", href: sectionHref("activity"), icon: "activity", section: "activity", match: ["/settle"] }');
   });
 
-  it("the settle page keeps the agent panel and the recorded-failed example", () => {
-    expect(v).toContain("<AgentPanel />");
+  it("the Agent API demo is developer material: it left Activity for /developers, the recorded-failed example stays", () => {
+    expect(v).not.toContain("<AgentPanel />");
+    expect(src("../app/developers/view.tsx")).toContain("<AgentPanel />");
     expect(v).toContain("RECORDED_FAILED");
   });
 });

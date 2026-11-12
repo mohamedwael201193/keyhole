@@ -41,7 +41,7 @@ describe("/vault v3 layout", () => {
   });
 
   it("trading is a link to /swap, not a form on the vault", () => {
-    expect(v).toContain('href="/swap"');
+    expect(v).toContain('href={dashHref("/swap")}');
     expect(v).toContain('testid="vault-swap-link"');
     expect(v).not.toContain('useSigned("quote")');
     expect(v).not.toContain('useSigned("swap")');
@@ -62,8 +62,8 @@ describe("/vault v3 layout", () => {
 });
 
 describe("/swap is the trade screen", () => {
-  it("the sidebar Swap goes to /swap", () => {
-    expect(src("../components/app/AppShell.tsx")).toContain('href: "/swap"');
+  it("the sidebar Swap opens the Swap section of the dashboard", () => {
+    expect(src("../components/app/AppShell.tsx")).toContain('id: "swap", label: "Swap", href: sectionHref("swap")');
   });
 });
 

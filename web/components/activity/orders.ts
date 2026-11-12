@@ -378,8 +378,8 @@ export function summaryOf(row: OrderRow): {
       from: from && { ...from, amount: VAULT_TRADE.amountIn.split(" ")[0] ?? null },
       to,
       received: VAULT_TRADE.amountOut,
-      updatedLabel: "Executed at",
-      updated: "Not recorded here",
+      updatedLabel: "Time",
+      updated: "Not part of this public example record",
     };
   }
   const live = liveOf(row);

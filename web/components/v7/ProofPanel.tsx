@@ -27,11 +27,13 @@ export type ProofPanelProps = {
   verifyHref: string;
   verifyTestId?: string;
   testid?: string;
+  /** Holder view: only the attestation status and the last call. Hardware, build and contract are on /developers. */
+  compact?: boolean;
 };
 
 export function ProofPanel({
   title = "Enclave & proof", headingId = "proof-h", enclave, hardware = "Intel TDX", workerBuild, contract, attestation, lastCall,
-  verifyHref, verifyTestId, testid,
+  verifyHref, verifyTestId, testid, compact = false,
 }: ProofPanelProps) {
   const enc = enclave === "live"
     ? { tone: "success" as const, text: "Live" }
@@ -46,18 +48,20 @@ export function ProofPanel({
         id={headingId}
         title={title}
         icon="shield"
-        action={<Button href={verifyHref} variant="secondary" size="sm" testid={verifyTestId}>Verify the last call</Button>}
+        action={lastCall
+          ? <Button href={verifyHref} variant="secondary" size="sm" testid={verifyTestId}>Verify the last call</Button>
+          : <Button variant="secondary" size="sm" disabled title="No call to verify yet. Unlock and read your vault first." testid={verifyTestId}>Verify the last call</Button>}
       />
       <dl className="v7-proof-grid">
-        <div>
+        {!compact && <div>
           <dt>Enclave</dt>
           <dd><StatusChip tone={enc.tone}>{enc.text}</StatusChip></dd>
-        </div>
-        <div>
+        </div>}
+        {!compact && <div>
           <dt>Hardware</dt>
           <dd>{hardware}</dd>
-        </div>
-        <div>
+        </div>}
+        {!compact && <div>
           <dt>Worker build</dt>
           <dd>
             {workerBuild ? (
@@ -67,11 +71,11 @@ export function ProofPanel({
               </>
             ) : <span className="v7-muted">Not published</span>}
           </dd>
-        </div>
-        <div>
+        </div>}
+        {!compact && <div>
           <dt>Contract</dt>
           <dd>{contract ? <TxLinkPill account={contract} testid="proof-contract" /> : <span className="v7-muted">Not set</span>}</dd>
-        </div>
+        </div>}
         <div>
           <dt>TEE attestation</dt>
           <dd><StatusChip tone={att.tone} icon={att.icon}>{att.text}</StatusChip></dd>

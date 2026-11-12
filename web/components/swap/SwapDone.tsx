@@ -5,6 +5,7 @@ import { Button } from "@/components/ui";
 import { Icon, StatusChip } from "@/components/v7";
 import { intentTx } from "@/lib/config";
 import type { SwapOutcome } from "./progress";
+import { dashHref } from "@/lib/dashboardSections";
 
 /**
  * The finished swap: the real summary line (tradeSummary), the status chip from the enclave's status word, the facts it returned,
@@ -53,7 +54,7 @@ export function SwapDone({ outcome, summary, status, requestId, intentHash, call
             </a>
           )}
           {callId && (
-            <Link className="v7-pill-link" href={`/verify?call=${encodeURIComponent(callId)}`} data-testid="swap-verify-link">
+            <Link className="v7-pill-link" href={dashHref(`/verify?call=${encodeURIComponent(callId)}`)} data-testid="swap-verify-link">
               <span>Verify the call</span>
               <Icon name="arrow-right" size={14} />
             </Link>
@@ -62,7 +63,7 @@ export function SwapDone({ outcome, summary, status, requestId, intentHash, call
       )}
       <div className="sw-actions">
         <Button variant="primary" onClick={onAgain} testid="swap-again">Swap again</Button>
-        <Button variant="secondary" href="/settle" testid="swap-activity">View in Activity</Button>
+        <Button variant="secondary" href={dashHref("/settle")} testid="swap-activity">View in Activity</Button>
       </div>
     </section>
   );
