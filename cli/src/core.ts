@@ -84,13 +84,15 @@ export async function callWorker(input: { op: string; auth?: Auth }): Promise<Ca
   if (!pk) throw new Error("set KEYHOLE_GATEWAY (hosted) or OUTLAYER_PAYMENT_KEY (your own OutLayer payment key)");
   const r = await fetch(`${DEFAULTS.outlayer}/call/${DEFAULTS.project}`, {
     method: "POST", headers: { "X-Payment-Key": pk, "content-type": "application/json" },
-    body: JSON.stringify({ input, async: false, secrets_ref: { profile: "default", account_id: DEFAULTS.project.split("/")[0] } }),
+    body: JSON.stringify({ input, async: false, secrets_ref: { profile: "default", account_id: DEFAULTS.project.split("/")[0] }, ...(LONG_OPS.has(String(input.op)) ? { resource_limits: { max_execution_seconds: 120 } } : {}) }),
   });
   const j: any = await r.json();
   if (!r.ok) throw new Error(`OutLayer ${r.status}: ${JSON.stringify(j).slice(0, 300)}`);
   return { call_id: j.call_id, output: j.output, attestation_url: j.attestation_url };
 }
 
+/** Value moves wait on FINAL chain sends; OutLayer's wall-clock default is 60 s (max 180, docs: https-api resource_limits). */
+const LONG_OPS = new Set(["swap", "exact_near_exit_v1", "reconcile_value_op", "quote", "withdraw"]);
 export async function contractView<T>(method: string, args: Record<string, unknown>): Promise<T> {
   const r = await fetch(DEFAULTS.rpc, { method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(10000),
     body: JSON.stringify({ jsonrpc: "2.0", id: "keyhole", method: "query", params: { request_type: "call_function", finality: "final", account_id: DEFAULTS.contract, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") } }) });

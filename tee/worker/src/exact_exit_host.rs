@@ -2,6 +2,9 @@
 thread_local! {static EXIT_DELIVERY_LOCATOR:std::cell::RefCell<Option<Value>>=const{std::cell::RefCell::new(None)};}
 // Production adapter; no arbitrary calls, keys, signing, destination or token selectors.
 impl exact_exit::Host for Host {
+    fn time_left_ms(&mut self) -> u64 {
+        budget::left_ms()
+    }
     fn original_delivery(&mut self,j:&Journal,intent:&str)->Result<Value,Error>{
         let hint=EXIT_DELIVERY_LOCATOR.with(|p|p.borrow().clone());
         let (hash,signer)=if let Some(v)=hint {

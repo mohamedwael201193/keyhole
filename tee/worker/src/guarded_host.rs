@@ -25,17 +25,33 @@ fn guard_preflight(c:&Ctx)->Result<Control,Error>{
     if view(&keys_contract(),"get_pledge_config",json!({}))?.is_null(){return Err(err("guard_state","pledge migration required; no legacy compatibility"));}
     if !owns(&c.token_id(),&c.account)?{return Err(err("not_owner","ownership changed"));}Ok(control)
 }
+thread_local!{static BEGIN_ATTEMPTED:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
+/// The hold is given back and the journal marked abandoned when nothing was (or could have been) sent.
+fn abandon_unbegun(j:&Journal,held:&Option<Charge>){
+    let _=guarded::put_once(&mut Host,&format!("{}/abandoned",j.key()),b"1");
+    if let Some(ch)=held{ch.release(&mut Host);}
+}
 fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->Result<Journal,Error>{
-    let control=guard_preflight(c)?;let (_,wallet_id)=guarded_wallet(&c.token_id())?;
+    let held=charge.clone();
+    // Before the journal exists a failure means nothing was begun: just give the hold back.
+    let early=(||->Result<(Control,String),Error>{
+        if !budget::begin_ok(){return Err(err("time_budget","not enough time left to begin safely; nothing was reserved or sent, retry"));}
+        let control=guard_preflight(c)?;let (_,wallet_id)=guarded_wallet(&c.token_id())?;Ok((control,wallet_id))
+    })();
+    let (control,wallet_id)=match early{Ok(v)=>v,Err(e)=>{if let Some(ch)=&held{ch.release(&mut Host);}return Err(e);}};
     let action_hash=sha256_hex(&json!({"revision":guarded::REVISION,"contract":keys_contract(),"owner":c.account,"token_id":c.token_id(),"kind":kind,"body":body,
         "signed_message":input.pointer("/auth/message"),"signed_nonce":input.pointer("/auth/nonce")}).to_string());
-    let nonce=control.nonce.checked_add(1).ok_or_else(||err("guard_state","nonce exhausted"))?;
+    let nonce=match control.nonce.checked_add(1){Some(n)=>n,None=>{if let Some(ch)=&held{ch.release(&mut Host);}return Err(err("guard_state","nonce exhausted"));}};
     let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,event:Some(guarded::JournalEvent{ts_ms:c.now_ms,usd:charge.as_ref().map(|ch|ch.usd_micro()).unwrap_or(0),source:c.req.params.get("source").cloned().unwrap_or(Value::Null)}),auth_scheme:input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413").to_owned(),charge};
-    j.create(&mut Host)?;
+    if let Err(e)=j.create(&mut Host){if let Some(ch)=&held{ch.release(&mut Host);}return Err(e);}
     let root=tkey(&j.token_id,"value_recovery");
     // Fail closed: no begin_value_op may be sent unless status can find the operation again.
-    guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id)?;
-    guard_admit(&j)?;
+    if let Err(e)=guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id){abandon_unbegun(&j,&held);return Err(e);}
+    BEGIN_ATTEMPTED.with(|f|f.set(false));
+    if let Err(e)=guard_admit(&j){
+        if !BEGIN_ATTEMPTED.with(|f|f.get())||guarded::begin_never_sent(e.code){abandon_unbegun(&j,&held);}
+        return Err(e);
+    }
     // This nonce is now owned by the confirmed permit: drop pointers of attempts that never began.
     let _=guarded::pointer_remove_except(&mut Host,&root,j.nonce,Some(&j.op_id));
     Ok(j)
@@ -44,6 +60,7 @@ impl guarded::AdmissionHost for Host {
     fn value_op(&mut self,j:&Journal)->Result<Value,Error>{view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))}
     fn control(&mut self,token:&str)->Result<Control,Error>{guard_control(token)}
     fn begin(&mut self,j:&Journal)->Result<(),Error>{
+        BEGIN_ATTEMPTED.with(|f|f.set(true));
         provision_idle(&j.token_id)?;let (mid,msk)=guarded_minter()?;let args=j.admission_args().to_string();
         send(&mid,&msk,&j.contract,&[Action::FunctionCall{method:"begin_value_op",args:args.as_bytes(),gas:35_000_000_000_000,deposit:guarded::ADMISSION_DEPOSIT}]).map(|_|())
     }

@@ -60,9 +60,9 @@ export const IDENTITY = {
     "source_commit": "29a1850d40971d6e0af09ad18691aeef69626392"
   },
   "worker_candidate": {
-    "status": "published-mainnet",
-    "wasm_sha256": "ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8",
-    "bytes": 1353458,
+    "status": "source-candidate-not-published",
+    "wasm_sha256": "059b41dad1cf39599473e48a0f71baa072087e99ebaae5df60dc5d330b864a32",
+    "bytes": 1364420,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {

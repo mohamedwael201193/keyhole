@@ -217,8 +217,16 @@ pub trait AdmissionHost:Store {
     fn begin(&mut self,j:&Journal)->Result<(),Error>;
     fn complete(&mut self,j:&Journal,t:&Terminal)->Result<(),Error>;
 }
+/// Error codes that prove begin_value_op was refused before anything was sent. The spend hold is
+/// given back for these (and for a begin never attempted); native_unknown and admission_unknown
+/// may mean a send landed, so they keep the hold.
+pub fn begin_never_sent(code:&str)->bool{matches!(code,"native_busy"|"guard_state"|"rpc"|"collateral_unknown"|"time_budget"|"legacy_versions"|"value_op_pending"|"not_owner")}
 pub fn confirm_admission<H:AdmissionHost>(host:&mut H,j:&Journal)->Result<(),Error>{
     j.validate()?;
+    // A journal abandoned before any begin (its hold was released) can never be begun later.
+    if !host.read(&format!("{}/abandoned",j.key()))?.is_empty(){
+        return Err(err("guard_journal","operation was abandoned before any begin; send a new request"));
+    }
     if let Ok(v)=host.value_op(j){if j.validate_permit(&v).is_ok(){return Ok(());}}
     // A lost send reply is neither rejection nor finality. Require the exact finalized record.
     let begun=host.begin(j);

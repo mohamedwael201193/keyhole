@@ -500,8 +500,8 @@ fn pointer_put_fails_closed_on_write_error_and_slot_exhaustion() {
 #[test]
 fn guard_begin_requires_the_pointer_before_admission() {
     let host=include_str!("guarded_host.rs");
-    let a=host.find("guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id)?;").expect("pointer_put must propagate its error");
-    let b=host.find("guard_admit(&j)?;").expect("admission");
+    let a=host.find("if let Err(e)=guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id){abandon_unbegun(&j,&held);return Err(e);}").expect("pointer_put must propagate its error");
+    let b=host.find("if let Err(e)=guard_admit(&j)").expect("admission");
     assert!(a<b,"the pointer must be written before begin_value_op can be sent");
 }
 
@@ -540,4 +540,63 @@ fn polling_does_not_apply_to_terminal_or_mismatched_rows() {
     bad.row=json!({"request_id":ID,"type":"withdraw","status":"pending_deposit"});
     assert!(drive_provider(&mut bad,&j2,"key",false).is_err());
     assert_eq!(bad.pauses,0);
+}
+
+#[test]
+fn spend_hold_is_released_only_when_no_begin_could_have_landed() {
+    for code in ["native_busy","guard_state","rpc","collateral_unknown","time_budget","legacy_versions","value_op_pending","not_owner"] {
+        assert!(begin_never_sent(code),"{code}");
+    }
+    // a send may have landed, or the outcome is unknown: the hold stays
+    for code in ["native_unknown","admission_unknown","storage","upstream","replay","needs_review","guard_journal"] {
+        assert!(!begin_never_sent(code),"{code}");
+    }
+}
+#[test]
+fn abandoned_journal_can_never_be_begun_later() {
+    struct H(Memory);
+    impl Store for H{
+        fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{self.0.set_if_absent(k,v)}
+        fn incr(&mut self,k:&str,d:i64)->Result<i64,Error>{self.0.incr(k,d)}
+        fn read(&mut self,k:&str)->Result<Vec<u8>,Error>{self.0.read(k)}
+        fn remove(&mut self,k:&str)->Result<(),Error>{self.0.remove(k)}
+        fn list_prefix(&mut self,p:&str)->Result<Vec<String>,Error>{self.0.list_prefix(p)}
+    }
+    impl AdmissionHost for H{
+        fn value_op(&mut self,_:&Journal)->Result<Value,Error>{Ok(Value::Null)}
+        fn control(&mut self,_:&str)->Result<Control,Error>{unreachable!()}
+        fn begin(&mut self,_:&Journal)->Result<(),Error>{panic!("an abandoned journal must never send begin_value_op")}
+        fn complete(&mut self,_:&Journal,_:&Terminal)->Result<(),Error>{unreachable!()}
+    }
+    let mut h=H(Memory::default());let j=journal();
+    put_once(&mut h,&format!("{}/abandoned",j.key()),b"1").unwrap();
+    let e=confirm_admission(&mut h,&j).unwrap_err();
+    assert_eq!(e.code,"guard_journal");
+}
+#[test]
+fn time_budget_gates_reservation_and_begin_and_pause_the_exit() {
+    use crate::budget;
+    budget::set_elapsed_for_test(Some(0));
+    assert!(budget::pre_charge_ok()&&budget::begin_ok());
+    budget::set_elapsed_for_test(Some(budget::PRE_CHARGE_MAX_MS));
+    assert!(budget::pre_charge_ok());
+    budget::set_elapsed_for_test(Some(budget::PRE_CHARGE_MAX_MS+1));
+    assert!(!budget::pre_charge_ok(),"no reservation late in the call");
+    budget::set_elapsed_for_test(Some(budget::TOTAL_MS-budget::BEGIN_MIN_LEFT_MS));
+    assert!(budget::begin_ok());
+    budget::set_elapsed_for_test(Some(budget::TOTAL_MS-budget::BEGIN_MIN_LEFT_MS+1));
+    assert!(!budget::begin_ok(),"no begin without room for a FINAL send");
+    budget::set_elapsed_for_test(Some(u64::MAX));
+    assert_eq!(budget::left_ms(),0);
+    budget::set_elapsed_for_test(None);
+    // sources: the reservation is gated before charge_spend on every value path, begin is gated in guard_begin
+    let main=include_str!("main.rs");
+    for marker in ["let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;","let charge=charge_spend(&mut Host,&c.cap(),&lim,c.session.as_ref().map(|(id,g)|(id.as_str(),g)),usd,c.now_ms)?;"] {
+        for (at,_) in main.match_indices(marker) {
+            let before=&main[at.saturating_sub(400)..at];
+            assert!(before.contains("budget::pre_charge_ok"),"charge_spend must be preceded by the time gate");
+        }
+    }
+    assert!(include_str!("guarded_host.rs").contains("budget::begin_ok()"));
+    assert!(include_str!("main.rs").contains("budget::start();"));
 }
