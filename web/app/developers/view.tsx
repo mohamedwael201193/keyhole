@@ -4,7 +4,8 @@ import { Purpose } from "@/components/ui";
 import { HealthStrip } from "@/components/HealthStrip";
 import { TxLink } from "@/components/TxLink";
 import { AgentPanel } from "@/components/developers/AgentPanel";
-import { KEYS_CONTRACT, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
+import { KEYS_CONTRACT, WORKER_PUBLISH_TX, tx } from "@/lib/config";
+import { useLiveWorkerHash } from "@/lib/useLiveWorkerHash";
 import "../public-pages.css";
 import "./developers.css";
 
@@ -13,7 +14,7 @@ const REPO = "https://github.com/mohamedwael201193/keyhole";
 /** Where each check lives. The holder's own calls are in the dashboard (My proof); these are the public tools. */
 const TOOLS: { href: string; title: string; body: string; id: string }[] = [
   { id: "evidence", href: "/verify", title: "Evidence pack and call verifier", body: "Re-check KEYHOLE on mainnet with no wallet: public RPC and attestation reads, a 37-check call verifier, tamper tests, and the lien lookup." },
-  { id: "path", href: "/judge", title: "Verification path", body: "Seven checks from the contract to the enclave, each with the command or the page that runs it." },
+  { id: "path", href: "/verify/path", title: "Verification path", body: "Seven checks from the contract to the enclave, each with the command or the page that runs it." },
   { id: "attack", href: "/attack", title: "Attack board", body: "Attempts to move a key's value without the holder, with the refusal the enclave returned for each." },
   { id: "source", href: "/source", title: "Source archive", body: "One tarball cut from one commit, with its sha256, so the code you read is the code that was published." },
   { id: "atlas", href: "/atlas", title: "Atlas", body: "Every chain with a record, with the transaction, dry run or settled order behind it." },
@@ -32,7 +33,7 @@ const ENDPOINTS: [string, string, string][] = [
 ];
 
 export function DevelopersView() {
-  const build = WORKER_WASM_SHA256[0] ?? "";
+  const build = useLiveWorkerHash();
   return (
     <div className="page pp pp-dev" data-testid="developers-page">
       <Purpose
@@ -60,8 +61,8 @@ export function DevelopersView() {
         <HealthStrip />
         <dl className="dev-facts" data-testid="dev-facts">
           <div><dt>Hardware</dt><dd>Intel TDX, attested through OutLayer</dd></div>
-          <div><dt>Repository identity pin (worker build)</dt><dd><code data-testid="dev-build">{build}</code></dd></div>
-          <div><dt>Publish transaction</dt><dd><TxLink hash={WORKER_PUBLISH_TX}>{WORKER_PUBLISH_TX.slice(0, 12)}…</TxLink></dd></div>
+          <div><dt>Live worker build (OutLayer registry)</dt><dd>{build ? <code data-testid="dev-build">{build}</code> : <span data-testid="dev-build">unavailable</span>}</dd></div>
+          <div><dt>Publish transaction (repository pin)</dt><dd><TxLink hash={WORKER_PUBLISH_TX}>{WORKER_PUBLISH_TX.slice(0, 12)}…</TxLink></dd></div>
           <div><dt>Keys contract</dt><dd><TxLink account={KEYS_CONTRACT}>{KEYS_CONTRACT}</TxLink></dd></div>
         </dl>
         <p className="muted">Each call carries a TDX quote that names the worker build it ran. The hash above is the identity pin recorded in this repository; it is not read from the live registry here, so it can lag a newer publish. Re-check any call with the verifier above or with <code>./verify.sh &lt;call_id&gt;</code>.</p>
