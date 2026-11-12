@@ -60,7 +60,7 @@ export function MyProof({ callId }: { callId: string | null }) {
           )}
           <form className="mp-paste" onSubmit={(e) => { e.preventDefault(); if (draftOk) location.hash = `#proof/${encodeURIComponent(draft.trim())}`; }}>
             <label htmlFor="mp-id" className="v7-muted">Have a call id from earlier? Paste it.</label>
-            <input id="mp-id" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck={false} placeholder="eb1170ca-5481-44ab-952b-2da48b58d0ff" data-testid="mp-input" />
+            <input id="mp-id" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck={false} placeholder="Paste a call id" data-testid="mp-input" />
             <Button type="submit" variant="secondary" size="sm" disabled={!draftOk} testid="mp-go">Verify this call</Button>
           </form>
         </Card>
