@@ -15,7 +15,7 @@ export const SITE_LINKS = [
   { href: "/verify", label: "Proof", match: "/verify" },
   { href: "/holders", label: "Holders", match: "/holders" },
   { href: "/attack", label: "Attack", match: "/attack" },
-  { href: "/judge", label: "Verification path", match: "/judge" },
+  { href: "/verify/path", label: "Verification path", match: "/verify/path" },
 ] as const;
 
 export const LAUNCH_APP = { href: "/dashboard", label: "Launch app" } as const;
