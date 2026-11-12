@@ -1,10 +1,10 @@
 "use client";
 /**
- * GSAP motion for the landing, the only place GSAP runs on the public site. Each piece renders its final state on the server
- * and without JavaScript; the animation only starts after hydration. Everything is off under prefers-reduced-motion and when the
- * page is opened with ?static (the same switch as HomeMotion). matchMedia reverts every ScrollTrigger on unmount.
+ * GSAP motion for the landing, the only place GSAP runs on the public site. The page renders its final state on the server and
+ * without JavaScript; the pin is set up after hydration. Off under prefers-reduced-motion, html.no-motion and ?static (the same
+ * switch as HomeMotion). matchMedia reverts every ScrollTrigger and inline style on unmount.
  */
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -23,39 +23,13 @@ function motionOff() {
 }
 
 /**
- * Hero text reveal on load: each headline line rises out of its mask, then the lead and the actions follow.
- * Only the marked nodes move (.lp-line, .lp-reveal); the hero key and orbit are not touched.
- */
-export function HeroIntro({ children, className }: { children: ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    register();
-    const mm = gsap.matchMedia();
-    mm.add(MOTION_OK, () => {
-      if (motionOff()) return;
-      const lines = root.querySelectorAll(".lp-line");
-      const rest = root.querySelectorAll(".lp-reveal");
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-      tl.from(lines, { yPercent: 110, duration: 1.1, stagger: 0.14 })
-        .from(rest, { y: 18, opacity: 0, duration: 0.9, stagger: 0.09 }, "-=0.7");
-      return () => { tl.kill(); };
-    });
-    return () => mm.revert();
-  }, []);
-  return <div ref={ref} className={className}>{children}</div>;
-}
-
-/**
- * The handover, the one dealt moment. On desktop the section is pinned for one viewport of scroll and its three steps are
- * reached in turn: the step the scroll is on is lit, the others rest dimmed (`data-on` on each `[data-step]`). Phones, tablets
- * and reduced motion get the plain stack with every step at full strength; nothing is pinned there.
+ * The keyhole moment, the one pinned section. On desktop it is pinned for two viewports of scroll. The real key ([data-key])
+ * starts upright above the keyhole and turns 90 degrees as it seats in the lock. Three steps ([data-step]) are reached in turn:
+ * the step the scroll is on is lit, the others rest dimmed (`data-on`). Phones, tablets and reduced motion get the final frame.
  *
- * The pin is set up in a layout effect so it is undone before React removes the section from the DOM (a pin wraps the
- * section in a spacer). Undoing it in a passive effect would leave the section inside the spacer when the page unmounts.
+ * The pin is set up in a layout effect so it is undone before React removes the section (a pin wraps the section in a spacer).
  */
-export function HandoverMoment({ children, className, id, labelledBy }: { children: ReactNode; className?: string; id?: string; labelledBy?: string }) {
+export function KeyholeMoment({ children, className, id, labelledBy }: { children: ReactNode; className?: string; id?: string; labelledBy?: string }) {
   const ref = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const root = ref.current;
@@ -64,26 +38,35 @@ export function HandoverMoment({ children, className, id, labelledBy }: { childr
     const mm = gsap.matchMedia();
     mm.add(`${DESKTOP} and ${MOTION_OK}`, () => {
       if (motionOff()) return;
+      const key = root.querySelector<HTMLElement>("[data-key]");
       const steps = Array.from(root.querySelectorAll<HTMLElement>("[data-step]"));
-      const light = (p: number) => {
-        const active = Math.min(steps.length - 1, Math.floor(p * steps.length));
-        steps.forEach((el, i) => { el.dataset.on = i <= active ? "true" : "false"; });
-      };
+      if (!key) return;
+      const from = { yPercent: -150, rotation: 0, opacity: 0 };
+      const to = { yPercent: 0, rotation: 90, opacity: 1 };
+      gsap.set(key, from);
       root.dataset.pinned = "true";
+      const light = (p: number) => {
+        steps.forEach((el, i) => { el.dataset.on = p >= i / steps.length - 0.001 ? "true" : "false"; });
+      };
       light(0);
+      const tl = gsap.timeline({ defaults: { ease: "power2.inOut" } });
+      tl.fromTo(key, from, to);
       const st = ScrollTrigger.create({
         trigger: root,
         start: "top top",
-        end: () => `+=${window.innerHeight}`,
+        end: () => `+=${window.innerHeight * 2}`,
         pin: true,
         scrub: 0.6,
         invalidateOnRefresh: true,
+        animation: tl,
         onUpdate: (self) => light(self.progress),
       });
       // Fonts change the layout after first paint; re-measure so the pin length matches the screen.
       void document.fonts?.ready.then(() => ScrollTrigger.refresh());
       return () => {
         st.kill(true);
+        tl.kill();
+        gsap.set(key, { clearProps: "transform,opacity" });
         delete root.dataset.pinned;
         steps.forEach((el) => { delete el.dataset.on; });
       };

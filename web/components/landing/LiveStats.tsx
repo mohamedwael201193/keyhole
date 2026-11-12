@@ -63,9 +63,8 @@ export function LiveStats() {
         : `NEAR mainnet · ${KEYS_CONTRACT} · unavailable`;
 
   return (
-    <section className="lp-sec lp-live" id="live" aria-labelledby="live-h" data-testid="mainnet-stats">
-      <div className="lp-wrap">
-        <p className="lp-live-badge" id="live-h" data-testid="mainnet-badge">
+    <div className="lp-live" data-testid="mainnet-stats">
+        <p className="lp-live-badge" data-testid="mainnet-badge">
           <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">{badge}</a>
         </p>
         <dl className="lp-live-stats">
@@ -92,7 +91,6 @@ export function LiveStats() {
             </dd>
           </div>
         </dl>
-      </div>
-    </section>
+    </div>
   );
 }
