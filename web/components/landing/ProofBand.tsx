@@ -20,7 +20,7 @@ export function ProofBand({ supply, hash, reach }: { supply: number | null; hash
       <div className="lp-bg" aria-hidden="true">
         <img src="/landing/stone-texture.webp" alt="" width={1376} height={768} loading="lazy" decoding="async" />
       </div>
-      <div className="lp-wrap lp-proof-grid">
+      <div className="wrap lp-wrap lp-proof-grid">
         <div className="lp-proof-copy">
           <p className="lp-eyebrow">{t("landing2.proof.eyebrow")}</p>
           <h2 id="proof-h" className="lp-h2">{t("landing2.proof.h2")}</h2>

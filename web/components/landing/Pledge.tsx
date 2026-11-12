@@ -18,7 +18,7 @@ export function Pledge() {
       <div className="lp-bg" aria-hidden="true">
         <img src="/landing/foil-texture.webp" alt="" width={1376} height={768} loading="lazy" decoding="async" />
       </div>
-      <div className="lp-wrap">
+      <div className="wrap lp-wrap">
         <p className="lp-eyebrow">{t("landing2.pledge.eyebrow")}</p>
         <h2 id="pledge-h" className="lp-h2">{t("landing2.pledge.h2")}</h2>
         <p className="lp-badge" data-testid="lending-badge">{t("landing2.pledge.badge")}</p>

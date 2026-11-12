@@ -18,7 +18,7 @@ const html = render(null);
 
 describe("landing sections", () => {
   it("keeps the order of DESIGN_SPEC: hero, problem, how it works, the lock-out, pledge, live proof, builders, close", () => {
-    const ids = ['id="top"', 'id="problem"', 'id="handover"', 'id="lockout"', 'id="pledge"', 'id="proof"', 'id="builders"', 'id="cta"'];
+    const ids = ['id="top"', 'id="private"', 'id="handover"', 'id="lockout"', 'id="pledge"', 'id="proof"', 'id="builders"', 'id="cta"'];
     const at = ids.map((id) => html.indexOf(id));
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);

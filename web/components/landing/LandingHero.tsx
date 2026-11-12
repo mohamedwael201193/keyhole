@@ -37,7 +37,7 @@ export function LandingHero() {
         <source src="/landing/hero-loop.mp4" type="video/mp4" />
       </video>
       <div className="lp-hero-shade" aria-hidden="true" />
-      <div className="lp-wrap lp-hero-grid">
+      <div className="wrap lp-wrap lp-hero-grid">
         <div className="lp-hero-copy">
           <p className="lp-eyebrow"><span className="lp-dot" aria-hidden="true" />{t("landing2.hero.eyebrow")}</p>
           <h1 id="hero-h" className="lp-h1">{t("landing2.hero.h1")}</h1>

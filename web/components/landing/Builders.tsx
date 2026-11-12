@@ -9,7 +9,7 @@ export function Builders() {
   const { t } = useI18n();
   return (
     <section className="lp-sec lp-builders" id="builders" aria-labelledby="builders-h">
-      <div className="lp-wrap">
+      <div className="wrap lp-wrap">
         <p className="lp-eyebrow">{t("landing2.builders.eyebrow")}</p>
         <h2 id="builders-h" className="lp-h2">{t("landing2.builders.h2")}</h2>
         <div className="lp-code-grid">

@@ -21,7 +21,8 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
     <div className="lp">
       <HomeMotion />
       <LandingHero />
-      <Problem />
+      {/* /#private is linked from the swap page (components/swap/SwapAbout.tsx): the problem section explains the private account. */}
+      <div id="private"><Problem /></div>
       <KeyholeSteps />
       <Lockout />
       <Pledge />

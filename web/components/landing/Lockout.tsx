@@ -32,7 +32,7 @@ export function Lockout() {
 
   return (
     <section className="lp-sec lp-lock" id="lockout" aria-labelledby="lockout-h" ref={ref}>
-      <div className="lp-wrap">
+      <div className="wrap lp-wrap">
         <p className="lp-eyebrow">{t("landing2.lock.eyebrow")}</p>
         <h2 id="lockout-h" className="lp-h2">{t("landing2.lock.h2")}</h2>
         <div className="lp-panels">

@@ -1093,5 +1093,88 @@
     "ctaH": "Hold the key. Sell the account.",
     "getKey": "Get your key",
     "readProof": "Read the proof"
+  },
+  "landing2": {
+    "hero": {
+      "eyebrow": "Live on NEAR mainnet",
+      "h1": "An NFT that is the key to a private trading account.",
+      "lead": "Hold the key and you run the account. Sell the key and the account goes with it.",
+      "mint": "Mint a key",
+      "verify": "Verify it yourself",
+      "trial": "Try it free — testnet",
+      "contract": "Contract",
+      "keyAlt": "KEYHOLE Bronze key, the real key art"
+    },
+    "problem": {
+      "eyebrow": "The problem",
+      "h2": "A trading account can't change hands.",
+      "body": "The password, the keys and the history stay with whoever made it. A buyer has to trust that nothing was kept.",
+      "imgAlt": "A crumpled sheet of paper beside an open old ledger"
+    },
+    "lock": {
+      "eyebrow": "The lock-out",
+      "h2": "The old holder is refused.",
+      "prevLabel": "Previous holder",
+      "prevCode": "not_owner",
+      "stamp": "Refused",
+      "newLabel": "New holder",
+      "newState": "Account open",
+      "proven": "Proven on NEAR mainnet.",
+      "tx": "Transfer transaction",
+      "attack": "Try to steal a key",
+      "altLeft": "A closed stone door with a brass lock and no key",
+      "altRight": "A stone door ajar with warm light spilling through"
+    },
+    "how": {
+      "eyebrow": "How it works",
+      "h2": "Three moves for one key.",
+      "s1t": "Mint",
+      "s1d": "One signature mints the key. A private account opens inside a TEE.",
+      "s2t": "Use",
+      "s2d": "Private swaps through NEAR Intents, with your limits, a freeze and a signed log.",
+      "s3t": "Transfer",
+      "s3d": "Send or sell the key. Control moves with it.",
+      "keyAlt": "The Bronze key, seated in the keyhole",
+      "mintAlt": "A key being forged in copper light",
+      "useAlt": "A sealed vault chamber with golden light moving through it"
+    },
+    "pledge": {
+      "eyebrow": "Pledge",
+      "h2": "Borrow against the key.",
+      "badge": "Not open for lending yet",
+      "p1t": "Pledged",
+      "p1d": "Transfer, sale and swaps are locked.",
+      "p2t": "Repaid",
+      "p2d": "The lock is released.",
+      "p3t": "Default",
+      "p3d": "The lender receives the key and everything in its vault, under the terms the borrower signed.",
+      "keyAlt": "The Bronze key at the start of the line"
+    },
+    "proof": {
+      "eyebrow": "Live proof",
+      "h2": "Check it yourself.",
+      "tokens": "Tokens on 1Click",
+      "chains": "Chains",
+      "build": "Worker code hash",
+      "buildTag": "build",
+      "liveTag": "live",
+      "verify": "Verify a call",
+      "contract": "Contract on NearBlocks",
+      "source": "Source on GitHub"
+    },
+    "builders": {
+      "eyebrow": "For builders",
+      "h2": "Read the same state from code.",
+      "cliLabel": "CLI, read-only",
+      "mcpLabel": "MCP tool, read-only, signs nothing",
+      "github": "GitHub",
+      "security": "SECURITY.md",
+      "verifyDoc": "VERIFY.md"
+    },
+    "close": {
+      "h2": "Sell the key. The private account goes with it.",
+      "mint": "Mint a key",
+      "verify": "Verify it yourself"
+    }
   }
 }

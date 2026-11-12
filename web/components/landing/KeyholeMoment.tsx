@@ -2,7 +2,7 @@
 /**
  * How it works: the keyhole moment (the pinned section, components/LandingMotion.tsx). The real Bronze key (k03) seats in the
  * keyhole of the macro plate as the scroll moves; three foil cards light one after another. The plate is 16:9 and covers the
- * section; the keyhole sits at 37.5% across and 47% down the plate (keyhole-macro.webp), so the key lines up at any width.
+ * section; the keyhole sits at 51% across and 40% down the plate (keyhole-macro.webp), so the key lines up at any width.
  */
 import { useI18n } from "@/lib/i18n";
 import { FoilCard } from "@/components/FoilCard";
@@ -25,10 +25,10 @@ export function KeyholeSteps() {
         </picture>
         <div className="lp-moment-anchor">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img data-key className="lp-moment-key" src="/heirloom/keys/k03.webp" alt={t("landing2.how.keyAlt")} width={433} height={1077} loading="lazy" decoding="async" />
+          <img data-key className="lp-moment-key" src="/heirloom/keys/k03.webp" alt={t("landing2.how.keyAlt")} width={433} height={1077} loading="eager" decoding="async" />
         </div>
       </div>
-      <div className="lp-wrap lp-moment-wrap">
+      <div className="wrap lp-wrap lp-moment-wrap">
         <div className="lp-moment-copy">
           <p className="lp-eyebrow">{t("landing2.how.eyebrow")}</p>
           <h2 id="how-h" className="lp-h2">{t("landing2.how.h2")}</h2>

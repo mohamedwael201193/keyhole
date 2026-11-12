@@ -6,7 +6,7 @@ export function Problem() {
   const { t } = useI18n();
   return (
     <section className="lp-sec lp-problem" id="problem" aria-labelledby="problem-h">
-      <div className="lp-wrap lp-split">
+      <div className="wrap lp-wrap lp-split">
         <div className="lp-square">
           <picture>
             <source srcSet="/landing/problem-paper.avif" type="image/avif" />

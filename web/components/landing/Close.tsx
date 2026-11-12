@@ -11,7 +11,7 @@ export function Close() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/landing/footer-arch.webp" alt="" width={1376} height={590} loading="lazy" decoding="async" />
       </div>
-      <div className="lp-wrap lp-end-copy">
+      <div className="wrap lp-wrap lp-end-copy">
         <h2 id="cta-h" className="lp-h2">{t("landing2.close.h2")}</h2>
         <div className="lp-cta lp-cta--center">
           <Link href="/mint" className="lp-btn lp-btn--brass" data-testid="cta-get-key">{t("landing2.close.mint")}</Link>
