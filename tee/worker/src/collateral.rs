@@ -424,3 +424,103 @@ pub fn assert_provision_idle(st: &mut dyn Store, token: &str, epoch: u64) -> Res
     }
     Ok(())
 }
+
+
+/// 32-byte ed25519 public key from the official wallet-pubkey forms.
+/// OpenAPI documents NEAR keys as `ed25519:<base58>`; Agent ID / implicit
+/// accounts use 64 lowercase hex (`ed25519:` optional). Sign-policy uses
+/// `public_key_hex`. A live prepare (c797d97c) compared only `ed25519:` plus
+/// the implicit-account hex, so a documented base58 200 failed.
+pub fn wallet_pubkey_bytes(s: &str) -> Option<[u8; 32]> {
+    let rest = s
+        .trim()
+        .strip_prefix("ed25519:")
+        .unwrap_or(s.trim());
+    if rest.len() == 64 && rest.bytes().all(|b| b.is_ascii_hexdigit()) {
+        let mut out = [0u8; 32];
+        for i in 0..32 {
+            out[i] = u8::from_str_radix(&rest[2 * i..2 * i + 2], 16).ok()?;
+        }
+        return Some(out);
+    }
+    bs58::decode(rest)
+        .into_vec()
+        .ok()
+        .and_then(|v| v.try_into().ok())
+}
+
+/// True when `observed` is the same 32-byte key as implicit-account hex `id`.
+pub fn same_wallet_pubkey(observed: &Value, id: &str) -> bool {
+    let Some(obs) = observed.as_str().and_then(wallet_pubkey_bytes) else {
+        return false;
+    };
+    let Some(exp) = wallet_pubkey_bytes(id)
+        .or_else(|| wallet_pubkey_bytes(&format!("ed25519:{id}")))
+    else {
+        return false;
+    };
+    obs == exp
+}
+
+const REDACT_KEYS: &[&str] = &[
+    "api_key",
+    "encrypted_base64",
+    "encrypted_data",
+    "ciphertext",
+    "signature",
+    "signature_hex",
+    "signature_base64",
+    "private_key",
+    "secret",
+    "seed",
+    "check_key",
+    "authorization",
+    "bearer",
+    "handoff_url",
+    "raw",
+    "access_token",
+    "payment_key",
+    "private_key_seed_b64",
+    "password",
+];
+
+/// Upstream JSON with secrets and ciphertext removed. Status and public
+/// fields (`error`, `message`, `wallet_pubkey`, `policy_hash`) stay.
+pub fn public_upstream_body(v: &Value) -> Value {
+    match v {
+        Value::Object(map) => {
+            let mut out = serde_json::Map::new();
+            for (k, val) in map {
+                if REDACT_KEYS
+                    .iter()
+                    .any(|s| k.eq_ignore_ascii_case(s))
+                {
+                    out.insert(k.clone(), Value::String("[redacted]".into()));
+                } else {
+                    out.insert(k.clone(), public_upstream_body(val));
+                }
+            }
+            Value::Object(out)
+        }
+        Value::Array(a) => Value::Array(a.iter().map(public_upstream_body).collect()),
+        other => other.clone(),
+    }
+}
+
+pub fn public_encrypt_failure(st: u16, body: &Value) -> String {
+    format!(
+        "policy encryption unavailable; wallet remains held (http {st}; {})",
+        public_upstream_body(body)
+    )
+}
+
+/// A `/claimed` marker with no stored ciphertext is hollow: the encrypt POST
+/// was not kept (the c797d97c path). Clear it so prepare can POST once.
+/// When a ciphertext is already stored, reuse it and never POST again.
+pub fn hollow_encrypt_claim(claimed: bool, encrypted_stored: bool) -> bool {
+    claimed && !encrypted_stored
+}
+
+pub fn reuse_encrypt_result(encrypted_stored: bool) -> bool {
+    encrypted_stored
+}

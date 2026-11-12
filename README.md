@@ -40,9 +40,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin f35056a93c4be4564f698d6ed5ad53fbe86b957c
+git fetch --depth 1 origin 63157aebd4f389e5df87acf87ef6d65934fb4fba
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "f35056a93c4be4564f698d6ed5ad53fbe86b957c"
+test "$(git rev-parse HEAD)" = "63157aebd4f389e5df87acf87ef6d65934fb4fba"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -56,9 +56,9 @@ No git? Download all three files from that same immutable source commit and run 
 <!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/f35056a93c4be4564f698d6ed5ad53fbe86b957c/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/f35056a93c4be4564f698d6ed5ad53fbe86b957c/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/f35056a93c4be4564f698d6ed5ad53fbe86b957c/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/63157aebd4f389e5df87acf87ef6d65934fb4fba/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/63157aebd4f389e5df87acf87ef6d65934fb4fba/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/63157aebd4f389e5df87acf87ef6d65934fb4fba/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -118,7 +118,7 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 ```
 
-Worker source candidate: `80174d0c1c6a0c9dcfd6eba3d61a761996bc5ae55c22204a9067cb525b9ad411` (1,333,243 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/r3/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
+Worker source candidate: `aac99f00e94c8c575ff207e64b4cb1507885515ea9a220af531e660f63b3fe89` (1,340,031 bytes), generated from the reproducible artifact. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/r3/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
 
 Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
@@ -659,9 +659,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin f35056a93c4be4564f698d6ed5ad53fbe86b957c
+git fetch --depth 1 origin 63157aebd4f389e5df87acf87ef6d65934fb4fba
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "f35056a93c4be4564f698d6ed5ad53fbe86b957c"
+test "$(git rev-parse HEAD)" = "63157aebd4f389e5df87acf87ef6d65934fb4fba"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
