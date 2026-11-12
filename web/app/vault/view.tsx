@@ -15,7 +15,7 @@ import { useSigned } from "@/lib/useSigned";
 import { encodeShare } from "@/lib/pnl";
 import { useHealth } from "@/lib/useHealth";
 import { heldFrom, useKeyStore } from "@/lib/keyStore";
-import { useLogVerified } from "@/lib/useLogVerified";
+import { useLogVerified, useLogVerifiedState } from "@/lib/useLogVerified";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { fundParams, withdrawParams } from "@/lib/trade";
 import { defaultDestination, validDestination } from "@/lib/destination";
@@ -142,6 +142,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const pnl = useSigned("pnl");
   const dash = useSigned("dashboard");
   const logVerified = useLogVerified(history.res);
+  const logState = useLogVerifiedState(history.res);
   const liveBuild = useLiveWorkerHash();
 
   const [panel, setPanel] = useState<Panel | null>(null);
@@ -524,7 +525,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               />
               {!history.res && <p className="vlt-sub">{live ? "Read your recent trades and withdrawals with your session." : "Unlock to read your recent trades and withdrawals."}</p>}
               {history.res?.output?.ok && logVerified === null && <p className="vlt-sub">{t("vault.checking")}</p>}
-              {logVerified === false && <p className="vlt-sub" data-testid="vault-log-hidden">{t("vault.hiddenLog")}</p>}
+              {logVerified === false && <p className="vlt-sub" data-testid="vault-log-hidden">{logState === "previous" ? t("vault.logPrevious") : logState === "quote_unverified" ? t("vault.logQuoteUnverified") : t("vault.hiddenLog")}</p>}
               {logVerified === true && <StatusChip tone="success" testid="vault-verified">{t("vault.verified")}</StatusChip>}
               {logVerified === true && entries && entries.length === 0 && <p className="vlt-sub">{t("vault.empty")}</p>}
               {logVerified === true && entries && entries.length > 0 && (

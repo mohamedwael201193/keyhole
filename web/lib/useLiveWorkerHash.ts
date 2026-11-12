@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { fetchLiveRegistry } from "./liveRegistry";
+import { fetchLiveRegistryClient } from "./liveRegistry";
 
 /**
  * The wasm sha256 currently active on the OutLayer registry.
@@ -10,7 +10,7 @@ export function useLiveWorkerHash(): string | null {
   const [hash, setHash] = useState<string | null>(null);
   useEffect(() => {
     let cancel = false;
-    fetchLiveRegistry()
+    fetchLiveRegistryClient()
       .then((r) => { if (!cancel) setHash(r.active_version); })
       .catch(() => { if (!cancel) setHash(null); });
     return () => { cancel = true; };

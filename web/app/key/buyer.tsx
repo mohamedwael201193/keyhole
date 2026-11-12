@@ -3,8 +3,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { attestation } from "@/lib/config";
-import { fetchLiveRegistry } from "@/lib/liveRegistry";
-import { CALL_ID, buildIndex } from "@/lib/verify";
+import { fetchLiveRegistryClient } from "@/lib/liveRegistry";
+import { CALL_ID, currentIndex } from "@/lib/verify";
 import { cooldownFor, latestTransfer, lockFor, type Cooldown, type SellerLock } from "@/lib/buyerCheck";
 import { ageLabel, encodeKeyProof, verifyKeyProof } from "@/lib/keyProof";
 import { short, type KeyLogBody } from "@/lib/keylog";
@@ -58,7 +58,7 @@ function lockText(l: SellerLock, owner: string | null | undefined): string {
   return unknownText(owner);
 }
 
-type Build = { status: "idle" | "loading" | "ok" | "error"; hash: string | null; index: number };
+type Build = { status: "idle" | "loading" | "ok" | "error"; hash: string | null; index: number; liveKnown?: boolean };
 
 /**
  * Buyer facts for one key, read now: the holder on chain, the latest transfer, the withdraw cooldown, the seller lock
@@ -73,12 +73,12 @@ export function BeforeYouBuy({ id, body, callId, owner }: { id: string; body: Ke
     setBuild({ status: "loading", hash: null, index: -1 });
     Promise.all([
       fetch(attestation(callId)).then((r) => (r.ok ? (r.json() as Promise<{ executed_wasm_sha256?: string }>) : Promise.reject(new Error("attestation")))),
-      fetchLiveRegistry().catch(() => null),
+      fetchLiveRegistryClient().catch(() => null),
     ])
       .then(([a, reg]) => {
         if (!live) return;
         const h = (a.executed_wasm_sha256 || "").toLowerCase();
-        setBuild({ status: "ok", hash: h || null, index: buildIndex(h, reg?.active_version ?? null) });
+        setBuild({ status: "ok", hash: h || null, index: currentIndex(h, reg?.active_version ?? null), liveKnown: !!reg });
       })
       .catch(() => { if (live) setBuild({ status: "error", hash: null, index: -1 }); });
     return () => { live = false; };
@@ -95,8 +95,9 @@ export function BeforeYouBuy({ id, body, callId, owner }: { id: string; body: Ke
   else if (build.status === "error") buildLine = "The attestation could not be fetched right now.";
   else if (build.status === "ok" && build.hash) {
     const h = build.hash.slice(0, 12);
-    buildLine = build.index === 0 ? `Current published build ${h}…`
-      : build.index > 0 ? `A superseded published build ${h}…`
+    buildLine = build.liveKnown === false ? `Build ${h}… (the live registry could not be read, so current or previous is unknown)`
+      : build.index === 0 ? `Current published build ${h}…`
+      : build.index > 0 ? `Previous published build ${h}… (genuine, not the current worker)`
       : `Build ${h}… is not in the published list.`;
   } else buildLine = "No build in the attestation.";
 

@@ -36,7 +36,7 @@
     "cta2": "Verify the enclave",
     "s1": "Keys held by users",
     "s2": "Checks run in your browser",
-    "s3": "Worker code hash",
+    "s3": "Repo-pinned worker hash",
     "vault": "Vault open",
     "vaultSub": "Per-trade cap enforced in TEE",
     "live": "live from mainnet"
@@ -56,7 +56,7 @@
     "sub": "Every claim on this page links to a mainnet transaction or a TEE attestation.",
     "contract": "Keys contract",
     "minter": "TEE minter",
-    "wasm": "Worker wasm sha256",
+    "wasm": "Repo-pinned worker wasm sha256",
     "supply": "Keys minted",
     "beats": "Heartbeats",
     "royalty": "Royalty"
@@ -159,7 +159,9 @@
     "withdrawBtn": "Sign & withdraw",
     "activity": "Recent confidential activity",
     "verified": "Verified",
-    "hiddenLog": "The log stays hidden until the attestation names the published worker.",
+    "hiddenLog": "The log stays hidden until the attestation names the worker active on the OutLayer registry now.",
+    "logPrevious": "Previous build: this call ran a genuine earlier published worker, not the current one. The log stays hidden.",
+    "logQuoteUnverified": "Registry match, but the Intel quote could not be verified in this browser, so the log stays hidden.",
     "assets": "Assets · {n}",
     "unpriced": "+ {amounts} unpriced",
     "myLimits": "Your limits",

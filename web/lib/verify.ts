@@ -18,7 +18,8 @@ export interface OutputCheck { source: "evidence" | "pasted"; hash: string; matc
 /** True when the attestation names the expected published build.
  *  Pass the live OutLayer registry hash as `expected`. When omitted, identity.json is used (docs and historical tests). */
 export function publishedBuild(hash: string | undefined | null, expected?: string | null) {
-  const want = (expected ?? PUBLISHED_WASM_SHA256).toLowerCase();
+  // `undefined` = the identity.json pin (docs, historical tests). `null` = a live read that failed: never fall back.
+  const want = (expected === undefined ? PUBLISHED_WASM_SHA256 : expected ?? "").toLowerCase();
   return (hash || "").toLowerCase() === want && /^[0-9a-f]{64}$/.test(want);
 }
 
@@ -49,12 +50,21 @@ export async function fastfsCheck(a: Attestation): Promise<Pick<Checks, "fastfs"
 }
 
 
-/** Index of the build in the published list: 0 = current, >0 = superseded, -1 = unknown.
- *  When `live` is a 64-hex registry hash, it is current and the identity.json list follows as superseded. */
-export function buildIndex(hash: string | undefined | null, live?: string | null) {
+/** Index of the build in the identity.json list only: 0 = repo pin, >0 = superseded, -1 = unknown. Not a live verdict. */
+export function buildIndex(hash: string | undefined | null) {
+  return WORKER_WASM_SHA256.indexOf((hash || "").toLowerCase());
+}
+
+/**
+ * Index of a build relative to the LIVE OutLayer registry hash: 0 = the live worker, >0 = an older published build
+ * (identity.json history), -1 = unknown. When the live read failed (`live` null/invalid) the answer is always -1:
+ * a failed read never falls back to the identity.json pin.
+ */
+export function currentIndex(hash: string | undefined | null, live: string | null | undefined) {
+  if (!live || !/^[0-9a-f]{64}$/i.test(live)) return -1;
   const h = (hash || "").toLowerCase();
-  const current = live && /^[0-9a-f]{64}$/i.test(live) ? [live.toLowerCase()] : [];
-  return [...new Set([...current, ...WORKER_WASM_SHA256])].indexOf(h);
+  const l = live.toLowerCase();
+  return [...new Set([l, ...WORKER_WASM_SHA256])].indexOf(h);
 }
 
 /** Quote bytes from the attestation (base64 or hex). */
@@ -146,7 +156,7 @@ export function tamperAttestation(a: Attestation, kind: Tamper): Attestation {
   }
 }
 /** Every check that needs no network, given the FastFS hash already fetched for the original call. */
-export async function localChecks(a: Attestation, fastfsHash: string | undefined): Promise<Checks> {
+export async function localChecks(a: Attestation, fastfsHash: string | undefined, liveHash: string | null): Promise<Checks> {
   const binding = await bindingCheck(a);
-  return { ...staticChecks(a), published: buildIndex(a.executed_wasm_sha256) >= 0, fastfs: !!fastfsHash && fastfsHash === a.executed_wasm_sha256.toLowerCase(), fastfsHash, binding };
+  return { ...staticChecks(a, liveHash), published: currentIndex(a.executed_wasm_sha256, liveHash) >= 0, fastfs: !!fastfsHash && fastfsHash === a.executed_wasm_sha256.toLowerCase(), fastfsHash, binding };
 }

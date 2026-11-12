@@ -18,7 +18,7 @@ import { tx } from "@/lib/config";
 import { assetByToken, formatAmount, formatUsdMicro, fromBaseUnits, priceToMicro, shortTokenId, tradeSummary, valueMicro, type PriceBook, type RawBalance, type TokenPrice } from "@/lib/amount";
 import { SETTLEMENTS } from "@/lib/settlements";
 import { heldFrom, useKeyStore } from "@/lib/keyStore";
-import { useLogVerified } from "@/lib/useLogVerified";
+import { useLogVerified, useLogVerifiedState } from "@/lib/useLogVerified";
 import { swapStep, SWAP_LABEL } from "@/lib/swapFlow";
 import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/tokens";
 import { minutesLeft } from "@/lib/session";
@@ -83,6 +83,7 @@ export function SwapView() {
   const balance = useSigned("balance");
   const history = useSigned("history");
   const historyOk = useLogVerified(history.res);
+  const historyState = useLogVerifiedState(history.res);
   const list = useTokenList();
 
   // The picker's tokens: the full list once it loads, the vault's two assets until then or when it fails.
@@ -342,7 +343,7 @@ export function SwapView() {
       ))}
       {!hist && <p className="sw-note">Read your history with your session to see your own swaps. Nothing is read until you do.</p>}
       {hist && historyOk === null && <p className="sw-note">Checking the log…</p>}
-      {hist && historyOk === false && <p className="sw-note" data-testid="swap-log-hidden">Not shown: the log did not verify.</p>}
+      {hist && historyOk === false && <p className="sw-note" data-testid="swap-log-hidden">{historyState === "previous" ? "Not shown: this log came from a previous worker build (genuine, not the current worker)." : historyState === "quote_unverified" ? "Registry match, but the quote could not be verified in this browser, so the log is not shown." : "Not shown: the log did not verify."}</p>}
       {hist && historyOk === true && mine.length === 0 && <p className="sw-note">No swaps in your history yet.</p>}
       {hist && historyOk === true && mine.length > 0 && (
         <div className="sw-rows" data-testid="swap-mine">

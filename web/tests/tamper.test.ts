@@ -9,7 +9,7 @@ const a = JSON.parse(readFileSync(`${__dirname}/fixtures/att_f4768da8.json`, "ut
 const FASTFS = a.executed_wasm_sha256;
 const NOW = Date.parse("2026-11-02T12:00:00Z");
 async function run(x: Attestation) {
-  const ck = await localChecks(x, FASTFS);
+  const ck = await localChecks(x, FASTFS, FASTFS);
   const d = verifyQuote(b64(x.tdx_quote), { expectReportData: ck.binding?.expected, now: NOW });
   return { registered: ck.registered, published: ck.published, fastfs: ck.fastfs, binding: ck.binding?.match ?? false, dcap: d.ok,
     failed: d.checks.filter((c) => !c.pass).map((c) => c.id) };
