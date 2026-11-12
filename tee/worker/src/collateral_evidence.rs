@@ -793,6 +793,13 @@ pub fn effective_with_freeze(
     collateral::effective_policy_matches(expected, &normalized, p, contract)
 }
 /// Inspect even terminal results. Unknown authority-producing request types are not "drained".
+///
+/// Official OutLayer RequestType: the deposit family (intents/deposit, storage-deposit,
+/// cross-chain deposit) and this worker's exact-exit storage hop all gate as `call`.
+/// Same-chain exact-exit withdraw is `withdraw` (distinct from `cross_chain_withdraw`).
+/// Those documented types are drained only when the result holds no reusable signing
+/// material. `policy_update`, `raw_sign`, `limit_order`, and leftover signatures stay
+/// undrained.
 pub fn authority_inventory(pages: &[Value]) -> Result<(), Error> {
     guarded::settled_inventory(pages)?;
     fn reusable(v: &Value) -> bool {
@@ -821,7 +828,14 @@ pub fn authority_inventory(pages: &[Value]) -> Result<(), Error> {
         {
             if !matches!(
                 row["type"].as_str(),
-                Some("confidential" | "deposit" | "swap" | "cross_chain_withdraw")
+                Some(
+                    "confidential"
+                        | "deposit"
+                        | "swap"
+                        | "cross_chain_withdraw"
+                        | "call"
+                        | "withdraw",
+                )
             ) || reusable(&row["result"])
             {
                 return Err(err("evidence", "unreviewed or reusable prior authority"));
