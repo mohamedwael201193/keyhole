@@ -32,8 +32,12 @@ fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->
     let nonce=control.nonce.checked_add(1).ok_or_else(||err("guard_state","nonce exhausted"))?;
     let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,event:Some(guarded::JournalEvent{ts_ms:c.now_ms,usd:charge.as_ref().map(|ch|ch.usd_micro()).unwrap_or(0),source:c.req.params.get("source").cloned().unwrap_or(Value::Null)}),auth_scheme:input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413").to_owned(),charge};
     j.create(&mut Host)?;
-    let _=Host.set_if_absent(&format!("{}/current/{}/{}",tkey(&j.token_id,"value_recovery"),j.nonce,j.action_hash),j.op_id.as_bytes())?;
-    guard_admit(&j)?;Ok(j)
+    let root=tkey(&j.token_id,"value_recovery");
+    let _=guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id);
+    guard_admit(&j)?;
+    // This nonce is now owned by the confirmed permit: drop pointers of attempts that never began.
+    let _=guarded::pointer_remove_except(&mut Host,&root,j.nonce,Some(&j.op_id));
+    Ok(j)
 }
 impl guarded::AdmissionHost for Host {
     fn value_op(&mut self,j:&Journal)->Result<Value,Error>{view(&j.contract,"get_value_op",json!({"token_id":j.token_id,"op_id":j.op_id}))}
@@ -183,17 +187,15 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
 
 fn pending_value_identity(c:&Ctx)->Result<Value,Error>{
     let Some(token)=&c.token else{return Ok(Value::Null);};let control=guard_control(token)?;
-    for nonce in [control.nonce,control.nonce.saturating_add(1)] {
-      let rows=Host.list_prefix(&format!("{}/current/{}/",tkey(token,"value_recovery"),nonce))?;
-      if rows.len()>64{return Err(err("guard_journal","too many interrupted attempts; use original value_op_id"));}
-      for row in rows {
-        let raw=Store::read(&mut Host,&row)?;
-        if raw.is_empty(){continue;}let id=String::from_utf8(raw).map_err(|_|err("guard_journal","invalid recovery identity"))?;
+    // Exact pointer keys plus the on-chain pending count; no key listing on this or any hot path.
+    let root=tkey(token,"value_recovery");
+    for id in guarded::pending_candidates(&mut Host,&root,control.pending,control.nonce)?{
         let key=guarded::journal_key(&keys_contract(),token,&id);
-        let j:Journal=serde_json::from_slice(&Store::read(&mut Host,&format!("{key}/record"))?).map_err(|_|err("guard_journal","invalid recovery journal"))?;
+        let raw=Store::read(&mut Host,&format!("{key}/record"))?;
+        if raw.is_empty(){continue;}
+        let j:Journal=serde_json::from_slice(&raw).map_err(|_|err("guard_journal","invalid recovery journal"))?;
         let permit=view(&keys_contract(),"get_value_op",json!({"token_id":token,"op_id":id}))?;
         if j.owner==c.account&&j.epoch==control.epoch&&permit["op_id"]==id&&permit["action_hash"]==j.action_hash&&Store::read(&mut Host,&format!("{key}/finish_ack"))?.is_empty(){return Ok(json!({"token_id":token,"value_op_id":id,"status":"UNKNOWN"}));}
-      }
     }Ok(Value::Null)
 }
 

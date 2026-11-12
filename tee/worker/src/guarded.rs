@@ -119,10 +119,78 @@ pub fn posted_request_id(status:u16,v:&Value)->Option<&str>{
     }
     v.get("request_id").and_then(Value::as_str).filter(|id|uuid(id))
 }
+/// Kind-less form (confidential rows only); kept for callers without a journal.
+pub fn reconcile_status(v:&Value,id:&str)->Result<Option<Terminal>,Error>{reconcile_status_for(v,id,"")}
+/// Exact-key recovery pointers (no listing anywhere). Up to POINTER_SLOTS attempts per nonce.
+/// Reader and writer only ever `get`/`set_if_absent`/`remove` fixed keys.
+pub const POINTER_SLOTS:u64=8;
+pub fn pointer_key(root:&str,nonce:u64,slot:u64)->String{format!("{root}/by_nonce/{nonce}/{slot}")}
+/// Record `op_id` under the first free slot for `nonce`. Best effort: with every slot taken the
+/// attempt is simply not pointed at; the original value_op_id (returned to the caller) still works.
+pub fn pointer_put(st:&mut dyn Store,root:&str,nonce:u64,op_id:&str)->Result<(),Error>{
+    for slot in 0..POINTER_SLOTS{
+        let k=pointer_key(root,nonce,slot);
+        if st.set_if_absent(&k,op_id.as_bytes())?{return Ok(());}
+        if st.read(&k)?==op_id.as_bytes(){return Ok(());}
+    }
+    Ok(())
+}
+pub fn pointer_ids(st:&mut dyn Store,root:&str,nonce:u64)->Result<Vec<String>,Error>{
+    let mut out=Vec::new();
+    for slot in 0..POINTER_SLOTS{
+        let raw=st.read(&pointer_key(root,nonce,slot))?;
+        if raw.is_empty(){continue;}
+        out.push(String::from_utf8(raw).map_err(|_|err("guard_journal","invalid recovery identity"))?);
+    }
+    Ok(out)
+}
+/// Remove every slot of `nonce` whose value is not `keep` (`None` keeps nothing).
+pub fn pointer_remove_except(st:&mut dyn Store,root:&str,nonce:u64,keep:Option<&str>)->Result<(),Error>{
+    for slot in 0..POINTER_SLOTS{
+        let k=pointer_key(root,nonce,slot);
+        let raw=st.read(&k)?;
+        if raw.is_empty()||Some(raw.as_slice())==keep.map(str::as_bytes){continue;}
+        st.remove(&k)?;
+    }
+    Ok(())
+}
+/// Candidate pending operation ids for status. `pending` is the on-chain pending count: zero
+/// means there is nothing to find and storage is not touched. A positive count with no pointer
+/// (legacy rows, full slots) is an error naming the recovery route; nothing is scanned.
+pub fn pending_candidates(st:&mut dyn Store,root:&str,pending:u64,nonce:u64)->Result<Vec<String>,Error>{
+    if pending==0{return Ok(vec![]);}
+    let mut ids=pointer_ids(st,root,nonce)?;
+    ids.extend(pointer_ids(st,root,nonce.saturating_add(1))?);
+    if ids.is_empty(){
+        return Err(err("guard_journal","pending value operation has no recovery pointer; reconcile with the original value_op_id"));
+    }
+    Ok(ids)
+}
+/// Request row types the provider documents for each journaled op kind. OutLayer OpenAPI
+/// (RequestType): `confidential` covers every confidential-shard op (shield / unshield /
+/// withdraw / transfer / swap); `swap` is its own listed type. A swap or copy journal accepts
+/// either of those two; every other kind accepts only `confidential`. Never any other type.
+pub fn allowed_request_types(kind:&str)->&'static [&'static str]{
+    match kind{"swap"|"copy"=>&["confidential","swap"],_=>&["confidential"]}
+}
+fn clean_type(v:&Value)->String{
+    match v.get("type").and_then(Value::as_str){
+        Some(t)=>t.chars().filter(|c|c.is_ascii_lowercase()||c.is_ascii_digit()||*c=='_').take(32).collect(),
+        None=>"missing".into(),
+    }
+}
+/// A top-level `error` that is absent or JSON null is not an error; anything else is.
+fn error_present(v:&Value)->bool{v.get("error").is_some_and(|e|!e.is_null())}
 /// ONLY a fresh GET /requests/{id} with matching id/type is settlement evidence.
 /// Generic failure, partial result or HTTP status is NOT evidence of no spend.
-pub fn reconcile_status(v:&Value,id:&str)->Result<Option<Terminal>,Error>{
-    if !uuid(id)||text(v,"request_id")?!=id||text(v,"type")?!="confidential"||v.get("error").is_some(){return Err(err("needs_review","provider request binding changed"));}
+/// `kind` is the journaled op kind; the error names the failed predicate, never row content.
+pub fn reconcile_status_for(v:&Value,id:&str,kind:&str)->Result<Option<Terminal>,Error>{
+    let id_ok=uuid(id)&&text(v,"request_id").is_ok_and(|r|r==id);
+    let type_ok=v.get("type").and_then(Value::as_str).is_some_and(|t|allowed_request_types(kind).contains(&t));
+    let has_error=error_present(v);
+    if !id_ok||!type_ok||has_error{
+        return Err(err("needs_review",format!("provider request binding changed: id_match={id_ok} type={} type_ok={type_ok} error_present={has_error} kind={}",clean_type(v),kind.chars().filter(|c|c.is_ascii_lowercase()||*c=='_').take(16).collect::<String>())));
+    }
     // Inconsistent approval-bearing rows cannot establish terminal custody settlement.
     if v.get("approval_id").is_some_and(|a|!a.is_null()) {return Ok(None);}
     let terminal=match text(v,"status")?{
@@ -165,6 +233,8 @@ pub fn settle_admission<H:AdmissionHost>(host:&mut H,j:&Journal,t:&Terminal)->Re
     let done=control.nonce>j.nonce||(last["op_id"]==j.op_id&&last["state"].as_u64()==Some(if t.success{2}else{3}));
     if !done{return Ok(false);}
     put_once(host,&format!("{}/finish_ack",j.key()),b"1")?;
+    // Best effort: the pointer only helps status find an unfinished operation.
+    let _=pointer_remove_except(host,&crate::tkey(&j.token_id,"value_recovery"),j.nonce,None);
     // Crash after the marker may overcharge, never refund the same reservation twice.
     if t.refund_charge&&put_once(host,&format!("{}/refund_once",j.key()),b"1")?{if let Some(ch)=&j.charge{ch.release(host);}}
     Ok(true)
@@ -201,7 +271,7 @@ pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:
     }else{String::from_utf8(raw).map_err(|_|err("guard_journal","bad request id"))?};
     if !uuid(&id){return Err(err("guard_journal","invalid provider id"));}
     let mut value=match host.fetch(key,&id){Ok((200,v))=>v,_=>return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"request_id":id,"admission_finished":false}))};
-    let done=if let Some(t)=reconcile_status(&value,&id)?{
+    let done=if let Some(t)=reconcile_status_for(&value,&id,&j.kind)?{
         // Preserve the exact first terminal result before admission release. A late reconciler
         // must rebuild history from this fact, never from a new request or a changing provider row.
         let facts=serde_json::to_vec(&value).map_err(|_|err("guard_journal","encode settlement"))?;

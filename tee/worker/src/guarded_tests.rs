@@ -332,3 +332,120 @@ fn begin_host(e:Option<Error>)->BeginHost{BeginHost{store:Memory::default(),begi
  let mut h=Lost(begin_host(None));
  confirm_admission(&mut h,&journal()).unwrap();assert_eq!(h.0.begins,1);
 }
+
+// ---- request-row binding per journaled kind ----
+#[test]
+fn swap_row_of_documented_type_finishes_and_other_types_do_not() {
+    for ty in ["confidential","swap"] {
+        for status in ["success","completed"] {
+            let row=json!({"request_id":ID,"type":ty,"status":status});
+            let t=reconcile_status_for(&row,ID,"swap").unwrap().unwrap();
+            assert!(t.success&&!t.refund_charge);
+        }
+        let row=json!({"request_id":ID,"type":ty,"status":"refunded"});
+        assert!(!reconcile_status_for(&row,ID,"swap").unwrap().unwrap().success);
+    }
+    for ty in ["withdraw","call","transfer","limit_order","cross_chain_withdraw","deposit","","SWAP"] {
+        let row=json!({"request_id":ID,"type":ty,"status":"success"});
+        let e=reconcile_status_for(&row,ID,"swap").unwrap_err();
+        assert_eq!(e.code,"needs_review");
+        assert!(e.message.contains("type_ok=false"),"{}",e.message);
+    }
+    let row=json!({"request_id":ID,"status":"success"});
+    assert!(reconcile_status_for(&row,ID,"swap").unwrap_err().message.contains("type=missing"));
+}
+#[test]
+fn non_swap_kinds_accept_only_confidential() {
+    for kind in ["withdraw","transfer","quote",""] {
+        let ok=json!({"request_id":ID,"type":"confidential","status":"success"});
+        assert!(reconcile_status_for(&ok,ID,kind).unwrap().is_some());
+        let bad=json!({"request_id":ID,"type":"swap","status":"success"});
+        assert!(reconcile_status_for(&bad,ID,kind).is_err());
+    }
+    assert_eq!(allowed_request_types("swap"),&["confidential","swap"]);
+    assert_eq!(allowed_request_types("withdraw"),&["confidential"]);
+}
+#[test]
+fn id_mismatch_and_error_field_stay_needs_review_and_name_the_predicate() {
+    let other="87654321-4321-4321-4321-123456789abc";
+    let row=json!({"request_id":other,"type":"swap","status":"success"});
+    let e=reconcile_status_for(&row,ID,"swap").unwrap_err();
+    assert_eq!(e.code,"needs_review");
+    assert!(e.message.contains("id_match=false"),"{}",e.message);
+    let row=json!({"type":"swap","status":"success"});
+    assert!(reconcile_status_for(&row,ID,"swap").unwrap_err().message.contains("id_match=false"));
+    for err_v in [json!("boom"),json!({"code":"x"}),json!(true)] {
+        let row=json!({"request_id":ID,"type":"swap","status":"success","error":err_v});
+        let e=reconcile_status_for(&row,ID,"swap").unwrap_err();
+        assert!(e.message.contains("error_present=true"),"{}",e.message);
+        assert!(!e.message.contains("boom"));
+    }
+    // a JSON null error member is not an error
+    let row=json!({"request_id":ID,"type":"swap","status":"success","error":null});
+    assert!(reconcile_status_for(&row,ID,"swap").unwrap().is_some());
+    // the message never carries row content beyond a sanitised type name
+    let row=json!({"request_id":ID,"type":"x y\"z/SECRET","status":"success","result":{"k":"secret-value"}});
+    let m=reconcile_status_for(&row,ID,"swap").unwrap_err().message;
+    assert!(!m.contains("secret-value")&&!m.contains("SECRET")&&m.contains("type=xyz"),"{m}");
+}
+// ---- exact-key recovery pointers, no listing ----
+struct NoList(Memory,usize);
+impl Store for NoList{
+ fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{self.0.set_if_absent(k,v)}
+ fn incr(&mut self,k:&str,d:i64)->Result<i64,Error>{self.0.incr(k,d)}
+ fn read(&mut self,k:&str)->Result<Vec<u8>,Error>{self.1+=1;self.0.read(k)}
+ fn remove(&mut self,k:&str)->Result<(),Error>{self.0.remove(k)}
+ fn list_prefix(&mut self,_:&str)->Result<Vec<String>,Error>{panic!("pending/status path must never list keys")}
+}
+#[test]
+fn pointers_are_exact_keys_and_zero_pending_touches_no_storage() {
+    let mut st=NoList(Memory::default(),0);
+    assert!(pending_candidates(&mut st,"r",0,5).unwrap().is_empty());
+    assert_eq!(st.1,0,"chain count 0 must not read storage at all");
+    pointer_put(&mut st,"r",5,"5:a").unwrap();
+    pointer_put(&mut st,"r",5,"5:a").unwrap();
+    pointer_put(&mut st,"r",5,"5:b").unwrap();
+    assert_eq!(pointer_ids(&mut st,"r",5).unwrap(),vec!["5:a".to_string(),"5:b".to_string()]);
+    pointer_put(&mut st,"r",6,"6:c").unwrap();
+    let ids=pending_candidates(&mut st,"r",1,5).unwrap();
+    assert_eq!(ids,vec!["5:a".to_string(),"5:b".to_string(),"6:c".to_string()]);
+}
+#[test]
+fn pending_without_a_pointer_is_the_recovery_error_not_a_scan() {
+    let mut st=NoList(Memory::default(),0);
+    // a legacy-style row exists, but only under the old listing layout: never found, never listed
+    st.0.0.insert("r/current/5/hash".into(),b"5:a".to_vec());
+    let e=pending_candidates(&mut st,"r",1,5).unwrap_err();
+    assert_eq!(e.code,"guard_journal");
+    assert!(e.message.contains("reconcile with the original value_op_id"));
+    assert!(pending_candidates(&mut st,"r",0,5).unwrap().is_empty());
+}
+#[test]
+fn pointers_are_pruned_on_begin_and_cleared_on_finish_and_slots_are_bounded() {
+    let mut st=NoList(Memory::default(),0);
+    for n in 0..POINTER_SLOTS+3 {pointer_put(&mut st,"r",7,&format!("7:{n}")).unwrap();}
+    assert_eq!(pointer_ids(&mut st,"r",7).unwrap().len() as u64,POINTER_SLOTS);
+    pointer_remove_except(&mut st,"r",7,Some("7:3")).unwrap();
+    assert_eq!(pointer_ids(&mut st,"r",7).unwrap(),vec!["7:3".to_string()]);
+    pointer_remove_except(&mut st,"r",7,None).unwrap();
+    assert!(pointer_ids(&mut st,"r",7).unwrap().is_empty());
+    assert!(st.0.0.is_empty(),"no stale keys left behind");
+}
+#[test]
+fn settling_an_operation_clears_its_pointer() {
+    let mut st=Memory::default();let j=journal();
+    let root=crate::tkey(&j.token_id,"value_recovery");
+    pointer_put(&mut st,&root,j.nonce,&j.op_id).unwrap();
+    let key=pointer_key(&root,j.nonce,0);
+    assert_eq!(st.read(&key).unwrap(),j.op_id.as_bytes());
+    pointer_remove_except(&mut st,&root,j.nonce,None).unwrap();
+    assert!(st.read(&key).unwrap().is_empty());
+}
+#[test]
+fn no_hot_path_lists_keys() {
+    let host=include_str!("guarded_host.rs");
+    assert!(!host.contains("list_prefix")&&!host.contains("list_keys"),"guarded host must not list keys");
+    assert!(host.contains("pending_candidates"));
+    let guarded=include_str!("guarded.rs");
+    assert!(!guarded.contains("list_prefix"));
+}
