@@ -43,9 +43,9 @@ test("ordinary payout consent and original custody recovery survive reload witho
   await expect(register).toBeDisabled(); await page.getByRole('checkbox').check(); await register.click();
   await expect.poll(()=>page.evaluate(()=>(window as any).__calls?.length)).toBe(1);
   expect(await page.evaluate(()=>(window as any).__calls[0])).toMatchObject({method:'register_payout_account',deposit:'3200000000000000000000'});
-  await page.getByRole('button',{name:'Check original operation'}).click();await expect(page.getByTestId('value-recovery')).toContainText('Still pending or UNKNOWN');
+  await page.getByRole('button',{name:'Confirm',exact:true}).click();await expect(page.getByTestId('value-recovery')).toContainText('Still confirming');
   await page.reload();await expect(page.getByTestId('value-recovery')).toContainText(id);
-  await page.getByRole('button',{name:'Check original operation'}).click();await expect(page.getByTestId('value-recovery')).toContainText('Final provider settlement: success');
+  await page.getByRole('button',{name:'Confirm',exact:true}).click();await expect(page.getByTestId('value-recovery')).toContainText('Confirmed');
   if(process.env.KEYHOLE_INTEGRATION_SCREENSHOTS)await page.screenshot({path:join(process.env.KEYHOLE_INTEGRATION_SCREENSHOTS,`recovery-final-${info.project.name}.png`),fullPage:true});
   expect(reconciles).toBe(2);expect(await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('kh_value_recovery_v1:')).length)).toBe(0);
 });

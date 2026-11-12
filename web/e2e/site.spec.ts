@@ -298,14 +298,14 @@ for (const kind of ["swap", "withdraw"] as const) {
     await page.goto((kind==="swap"?"/swap":"/vault")+redirect.hash);
     if (kind === "swap") {
       await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
-      await expect(page.getByTestId("trade-out")).toContainText("success");
-      // The redesigned swap result labels its pill "Intents explorer" (sentence case).
-      await expect(page.getByRole("link", { name: /intents explorer/i })).toHaveAttribute("href", "https://explorer.near-intents.org/transactions/4qAnExample");
+      await expect(page.getByTestId("trade-out")).toContainText("Settled");
+      // The swap result links its transaction on the intents explorer.
+      await expect(page.getByRole("link", { name: /view transaction/i })).toHaveAttribute("href", "https://explorer.near-intents.org/transactions/4qAnExample");
       await expect(page.getByTestId("error")).toHaveCount(0);
     } else {
       await expect(page.getByTestId("withdraw-out")).toContainText("Withdrawn 0.01 USDC to holder.keyhole.test", { timeout: 20_000 });
       await expect(page.getByTestId("withdraw-out")).toContainText("b5ea");
-      await expect(page.getByTestId("withdraw-out")).toContainText("success");
+      await expect(page.getByTestId("withdraw-out")).toContainText("Settled");
       await expect(page.getByTestId("error")).toHaveCount(0);
     }
   });
@@ -335,7 +335,7 @@ test("a decline is gone after a later trade success", async ({ page }) => {
   await page.evaluate(saved=>sessionStorage.setItem("kh_pending_sign",saved),redirect.saved);
   await page.goto("/swap?back=1"+redirect.hash);
   await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
-  await expect(page.getByTestId("trade-out")).toContainText("success");
+  await expect(page.getByTestId("trade-out")).toContainText("Settled");
   await expect(page.getByTestId("error")).toHaveCount(0);
 });
 

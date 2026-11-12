@@ -1,32 +1,21 @@
 "use client";
-import { ErrorBox } from "@/components/Result";
-import { Button } from "@/components/ui";
-import { Icon, ProgressSteps, type ProgressStep } from "@/components/v7";
+import { errorText } from "@/lib/i18n";
+import type { ProgressStep } from "@/components/v7";
 import { OpNotSent } from "@/components/OpNotSent";
+import { InCardFailure, InCardProgress } from "@/components/InCard";
 import { isNotSent } from "@/lib/opResult";
 
 /**
- * The live panel while a signed swap runs. The steps come from the real stage (components/swap/progress.ts), and `line` is the
- * real busy line from useSigned (the stage in plain words, with the seconds it has taken). Replaces the form inside the card.
+ * The live panel while a signed swap runs, inside the swap card. The steps come from the real stage (components/swap/progress.ts);
+ * `line` is the real busy line from useSigned. Replaces the form inside the card.
  */
 export function SwapRunning({ title, line, steps }: { title: string; line: string; steps: ProgressStep[] }) {
-  return (
-    <section className="sw-phase" data-testid="trade-pending" aria-labelledby="sw-run-h">
-      <div className="sw-phase-head">
-        <span className="sw-phase-spin" aria-hidden="true"><span className="v7-spin" /></span>
-        <div className="sw-phase-text">
-          <h3 id="sw-run-h" className="sw-phase-title">{title}</h3>
-          <p className="sw-phase-line" role="status" data-testid="trade-pending-line">{line}</p>
-        </div>
-      </div>
-      <ProgressSteps steps={steps} label="Swap progress" testid="trade-steps" />
-    </section>
-  );
+  return <InCardProgress title={title.endsWith("…") ? title : `${title}…`} line={line} steps={steps} testid="trade-pending" />;
 }
 
 /**
- * The swap did not complete. Shows the steps (the one that stopped is in error), the real message from the enclave (ErrorBox
- * maps the code to words), and two real actions: Retry runs the same swap again, and Back returns to the form.
+ * The swap did not complete: one plain line with the reason and one button for the next step. A swap that was not admitted is never
+ * retried from here (the earlier operation is confirmed first), so it offers only the way back. Technical detail is in Details.
  */
 export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownOpId, onRetry, onBack }: {
   steps: ProgressStep[];
@@ -41,23 +30,20 @@ export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownO
   onRetry: () => void;
   onBack: () => void;
 }) {
-  // A swap that was not admitted is never retried from here: the original is checked first.
   const notSent = isNotSent(code);
+  if (notSent) {
+    return (
+      <div data-testid="trade-failed">
+        <OpNotSent code={code} message={message} noun="swap" knownOpId={knownOpId} testid="swap-not-sent" />
+        <p className="ic-actions"><button type="button" className="kh-btn kh-btn--secondary kh-btn--sm" onClick={onBack} data-testid="swap-back">Back to swap</button></p>
+      </div>
+    );
+  }
+  const [reason] = errorText(code, { s: retryAfter ?? 0 });
   return (
-    <section className="sw-phase" data-testid="trade-failed" aria-labelledby="sw-fail-h">
-      <div className="sw-phase-head">
-        <span className="sw-phase-ico danger" aria-hidden="true"><Icon name="x" size={20} /></span>
-        <div className="sw-phase-text">
-          <h3 id="sw-fail-h" className="sw-phase-title">Swap not completed</h3>
-          <p className="sw-phase-line">Stopped at: {stoppedAt}.</p>
-        </div>
-      </div>
-      <ProgressSteps steps={steps} label="Swap progress" testid="trade-steps" />
-      {notSent ? <OpNotSent code={code} message={message} noun="swap" knownOpId={knownOpId} testid="swap-not-sent" /> : <ErrorBox code={code} retryAfter={retryAfter} />}
-      <div className="sw-actions">
-        {!notSent && <Button variant="primary" onClick={onRetry} testid="swap-retry">Retry</Button>}
-        <Button variant="secondary" onClick={onBack} testid="swap-back">Back to swap</Button>
-      </div>
-    </section>
+    <InCardFailure reason={reason} action={{ label: "Try again", onClick: onRetry, testid: "swap-retry" }}>
+      <button type="button" className="ic-textbtn" onClick={onBack} data-testid="swap-back">Back to swap</button>
+      <details className="kh-details" data-testid="trade-failed-details"><summary>Details</summary><p>Stopped at: {stoppedAt}. Reference: <code>{code}</code></p></details>
+    </InCardFailure>
   );
 }

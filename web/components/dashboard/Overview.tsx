@@ -19,6 +19,7 @@ import { keyIdentity, serialOf } from "@/lib/traits";
 import type { KeyStatus } from "@/lib/keyStore";
 import { dashHref } from "@/lib/dashboardSections";
 import { LOCK_NOTE } from "@/lib/valueLock";
+import { ValueRecovery } from "@/components/ValueRecovery";
 import { TeeProgress } from "@/components/TeeProgress";
 
 /**

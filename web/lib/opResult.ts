@@ -32,6 +32,6 @@ export function notSentView(code: string, message: string | null | undefined, no
     : code === "value_op_pending"
       ? `An earlier operation on this key is still pending, so this ${noun} was not started.`
       : `This ${noun} was not started, because an earlier one has no final answer yet.`;
-  const nextStep = "Check the original operation in Account operation recovery (one wallet signature). An earlier UNKNOWN operation clears only after the worker's reconcile confirms it; until then swaps, withdrawals and transfers stay locked. Do not try again before that.";
+  const nextStep = "Confirm the earlier operation first (one wallet signature). Nothing is resent, and new operations wait until it is confirmed.";
   return { headline: `${noun[0].toUpperCase()}${noun.slice(1)} not sent`, detail, nextStep, opId };
 }

@@ -59,9 +59,9 @@ describe("not-sent states", () => {
     expect(v.opId).toBe(ID);
     expect(v.headline).toBe("Swap not sent");
     expect(v.detail).toContain("This attempt produced no transaction.");
-    expect(v.nextStep).toContain("clears only after the worker's reconcile confirms it");
-    expect(v.nextStep).toContain("Check the original operation");
-    expect(v.nextStep).toContain("Do not try again");
+    expect(v.nextStep).toContain("Nothing is resent");
+    expect(v.nextStep).toContain("Confirm the earlier operation");
+    expect(v.nextStep).toContain("Nothing is resent");
     expect(notSentView("admission_unknown", "no confirmed matching pending admission; do not dispatch", "withdrawal", ID).opId).toBe(ID);
     expect(opIdFrom("nothing here")).toBeNull();
   });

@@ -22,7 +22,8 @@ import { useLogVerified, useLogVerifiedState } from "@/lib/useLogVerified";
 import { swapStep, SWAP_LABEL } from "@/lib/swapFlow";
 import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/tokens";
 import { minutesLeft } from "@/lib/session";
-import { LOCK_NOTE, useValueLock } from "@/lib/valueLock";
+import { LOCK_LABEL, useValueLock } from "@/lib/valueLock";
+import { ValueRecovery } from "@/components/ValueRecovery";
 import "./swap.css";
 import { dashHref } from "@/lib/dashboardSections";
 
@@ -328,8 +329,8 @@ export function SwapView() {
   };
   // With a live session the swap runs without a wallet popup, so the last step says "Swap now". "Confirm and sign" stays for a wallet signature.
   const gated = lock.locked && (step === "review" || step === "confirm" || step === "quoting");
-  const ctaLabel = gated ? "Locked until the earlier operation is checked" : step === "short" ? `Not enough ${from.symbol}` : step === "confirm" && sessionLive ? "Swap now" : cta.label;
-  const busyLabel = step === "pending" ? swap.label || "Swapping" : step === "quoting" ? quote.label || "Getting your price" : unlocking ? "Waiting for your wallet" : ctaLabel;
+  const ctaLabel = gated ? LOCK_LABEL : step === "short" ? `Not enough ${from.symbol}` : step === "confirm" && sessionLive ? "Swap now" : cta.label;
+  const busyLabel = gated ? LOCK_LABEL : step === "pending" ? swap.label || "Swapping" : step === "quoting" ? quote.label || "Getting your price" : unlocking ? "Waiting for your wallet" : ctaLabel;
   const runTitle = done ? `Swapping ${done.give} for ${done.symbol}` : "Swapping";
 
   const recentBody = !accountId ? (
@@ -525,14 +526,14 @@ export function SwapView() {
                 <Button
                   block size="lg" className="sw-cta" testid="swap-cta"
                   disabled={!cta.enabled || unlocking || gated || (step === "confirm" && repricing)}
-                  loading={step === "quoting" || step === "pending" || unlocking}
+                  loading={step === "quoting" || step === "pending" || unlocking || gated}
                   loadingLabel={busyLabel}
                   onClick={onCta}
                 >
                   {busyLabel}
                 </Button>
               )}
-              {gated && <p className="sw-note sw-center" role="status" data-testid="swap-locked">{LOCK_NOTE}</p>}
+              {lock.locked && <ValueRecovery testid="swap-recovery" />}
               {step === "confirm" && sessionLive && !gated && <p className="sw-note sw-center" data-testid="swap-session-note">Runs through your unlocked session. No wallet popup.</p>}
               <p className="sw-funds">Your funds stay in your key&apos;s vault on NEAR mainnet. A swap moves only the amount you enter, within the key&apos;s per-trade cap.</p>
 
