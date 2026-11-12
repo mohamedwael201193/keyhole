@@ -14,7 +14,8 @@ const ev = (id: string) => JSON.parse(readFileSync(`${__dirname}/../public/evide
 const sha = (o: unknown) => createHash("sha256").update(canonical(o)).digest("hex");
 // Public attestation pins: legacy proofs retained; current v2.6 fetched 2026-11-11.
 const ATTESTED = {
-  [PUBLISHED_INFO_CALL]: "515b44fa7318864651938dd36e6e0ccf09d9a0012585ae6b91e414e0ef6a257e",
+  [PUBLISHED_INFO_CALL]: "b097b6ad0f3f7fa28564f3eb396afe2969ef16049b3c95449940d65ad6b4b8e4",
+  "42f2c909-27db-4562-9a24-a0399c0f9a1d": "515b44fa7318864651938dd36e6e0ccf09d9a0012585ae6b91e414e0ef6a257e",
   "962d4374-b9ec-411a-9efa-973b36260431": "e7fb60372ffdda802b9d5326864fb2b9a8decefe9bad670c72566b9ae3c864f3",
   "dc3668db-674f-4865-a2ce-272f70c41b0d": "f1279fd09eafe0f9fe264ba32064a211e70100501eadf9bd3c05435e3ba161e8",
   "5650a6b7-b7de-410c-b206-e189171bad15": "d81005b5926c748bbd6ee8c7b5110bbb0dfff12696f7bfb905d4198f35036d91",
