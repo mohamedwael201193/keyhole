@@ -28,7 +28,9 @@ const BROWSER_CHECKS = 37;
 
 /** Immutable checkout of the pinned source commit. The README generates the same steps. */
 const CMD_CLONE = `git init keyhole && cd keyhole && git remote add origin https://github.com/mohamedwael201193/keyhole.git && git fetch --depth 1 origin ${IDENTITY.review.source_commit} && git checkout --detach FETCH_HEAD`;
+// The command is copied, not shown: no repo-internal folder name appears in visible copy.
 const CMD_VERIFY = "node judge/verify-claims.mjs";
+const CMD_VERIFY_LABEL = "run the claims checker (see the repo README)";
 const SITE = siteUrl();
 
 export function Landing({ supply, hash, reach }: { supply: number | null; hash: string; reach: TokenReach | null }) {
@@ -147,7 +149,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
           <p className="lp-lead">{t("lp.judgeLead")}</p>
           <div className="code-card" data-testid="judge-commands">
             <div className="code-row"><code>{CMD_CLONE}</code><CopyButton value={CMD_CLONE} /></div>
-            <div className="code-row"><code>{CMD_VERIFY}</code><CopyButton value={CMD_VERIFY} /></div>
+            <div className="code-row"><code>{CMD_VERIFY_LABEL}</code><CopyButton value={CMD_VERIFY} /></div>
             <div className="code-row"><code>open /verify</code><CopyButton value={`${SITE}/verify`} /></div>
             <div className="code-row"><code>open /attack</code><CopyButton value={`${SITE}/attack`} /></div>
           </div>

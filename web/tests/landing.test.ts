@@ -100,7 +100,10 @@ describe("landing sections", () => {
     expect(html).toContain('data-testid="judge-commands"');
     expect(html).toContain("git fetch --depth 1 origin");
     expect(html).not.toContain("git clone");
-    expect(html).toContain("node judge/verify-claims.mjs");
+    expect(html).toContain("run the claims checker (see the repo README)");
+    // Visible text only: drop tags and attributes, then no "judge" may remain (ids, hrefs and test ids are not visible).
+    const visible = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, " ").replace(/<[^>]+>/g, " ");
+    expect(visible).not.toMatch(/judge/i);
     expect(html).toContain("open /verify");
     expect(html).toContain("open /attack");
     expect(html.match(/class="khm-copy/g)?.length).toBe(4);
