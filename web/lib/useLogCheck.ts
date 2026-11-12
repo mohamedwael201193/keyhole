@@ -1,11 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { attestation } from "./config";
-import { publishedBuild, staticChecks, type Attestation } from "./verify";
+import { fetchLiveRegistry } from "./liveRegistry";
+import { logVerifies, type Attestation } from "./verify";
 
 /**
- * Whether an attested call ran a build we publish: the same two checks the vault runs before it lists a key's entries.
- * Returns null while the attestation is being read, true or false after. Pass null when there is no call to check.
+ * Whether an attested call ran the build currently active on the OutLayer registry:
+ * the same two checks the vault runs before it lists a key's entries.
+ * Returns null while the attestation and registry are being read, true or false after.
+ * Pass null when there is no call to check. Fails closed if either read fails.
  */
 export function useLogCheck(callId: string | null): boolean | null {
   const [ok, setOk] = useState<boolean | null>(null);
@@ -13,12 +16,13 @@ export function useLogCheck(callId: string | null): boolean | null {
     setOk(null);
     if (!callId) return;
     let cancel = false;
-    fetch(attestation(callId))
-      .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-      .then((a: Attestation) => {
+    Promise.all([
+      fetch(attestation(callId)).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); }),
+      fetchLiveRegistry(),
+    ])
+      .then(([a, reg]: [Attestation, { active_version: string }]) => {
         if (cancel) return;
-        const st = staticChecks(a);
-        setOk(!!(st.quote && st.registered && publishedBuild(a.executed_wasm_sha256)));
+        setOk(logVerifies(a, reg.active_version));
       })
       .catch(() => { if (!cancel) setOk(false); });
     return () => { cancel = true; };

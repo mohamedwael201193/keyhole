@@ -21,7 +21,8 @@ import { fundParams, withdrawParams } from "@/lib/trade";
 import { defaultDestination, validDestination } from "@/lib/destination";
 import { chainName } from "@/lib/tokens";
 import { keyState, shortAccount, shortKeyId } from "@/lib/near";
-import { acct, KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { acct, KEYS_CONTRACT } from "@/lib/config";
+import { useLiveWorkerHash } from "@/lib/useLiveWorkerHash";
 import { minutesLeft } from "@/lib/session";
 import { DepositQr } from "@/components/DepositQr";
 import { FundFromChain } from "@/components/FundFromChain";
@@ -141,6 +142,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const pnl = useSigned("pnl");
   const dash = useSigned("dashboard");
   const logVerified = useLogVerified(history.res);
+  const liveBuild = useLiveWorkerHash();
 
   const [panel, setPanel] = useState<Panel | null>(null);
   const [limTx, setLimTx] = useState("");
@@ -503,7 +505,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
               <ProofPanel
                 headingId="vlt-proof-h"
                 enclave={online === null ? "checking" : online ? "live" : "down"}
-                workerBuild={WORKER_WASM_SHA256[0] || null}
+                workerBuild={liveBuild}
                 contract={KEYS_CONTRACT}
                 attestation={proofAttestation}
                 lastCall={lastCall}

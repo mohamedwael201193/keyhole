@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ASSETS, toBaseUnits, type AssetKey } from "@/lib/assets";
 import { attestation } from "@/lib/config";
+import { fetchLiveRegistry } from "@/lib/liveRegistry";
 import { CALL_ID, buildIndex } from "@/lib/verify";
 import { cooldownFor, latestTransfer, lockFor, type Cooldown, type SellerLock } from "@/lib/buyerCheck";
 import { ageLabel, encodeKeyProof, verifyKeyProof } from "@/lib/keyProof";
@@ -70,12 +71,14 @@ export function BeforeYouBuy({ id, body, callId, owner }: { id: string; body: Ke
     if (!callId || !CALL_ID.test(callId)) { setBuild({ status: "idle", hash: null, index: -1 }); return; }
     let live = true;
     setBuild({ status: "loading", hash: null, index: -1 });
-    fetch(attestation(callId))
-      .then((r) => (r.ok ? (r.json() as Promise<{ executed_wasm_sha256?: string }>) : Promise.reject(new Error("attestation"))))
-      .then((a) => {
+    Promise.all([
+      fetch(attestation(callId)).then((r) => (r.ok ? (r.json() as Promise<{ executed_wasm_sha256?: string }>) : Promise.reject(new Error("attestation")))),
+      fetchLiveRegistry().catch(() => null),
+    ])
+      .then(([a, reg]) => {
         if (!live) return;
         const h = (a.executed_wasm_sha256 || "").toLowerCase();
-        setBuild({ status: "ok", hash: h || null, index: buildIndex(h) });
+        setBuild({ status: "ok", hash: h || null, index: buildIndex(h, reg?.active_version ?? null) });
       })
       .catch(() => { if (live) setBuild({ status: "error", hash: null, index: -1 }); });
     return () => { live = false; };

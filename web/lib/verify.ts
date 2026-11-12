@@ -15,19 +15,28 @@ export interface Checks { quote: boolean; registered: boolean; published: boolea
 export interface Binding { expected: string; inQuote: string; match: boolean }
 export interface OutputCheck { source: "evidence" | "pasted"; hash: string; match: boolean; verdict: string }
 
-/** True when the attestation names the published worker build. */
-export function publishedBuild(hash: string | undefined | null) {
-  return (hash || "").toLowerCase() === PUBLISHED_WASM_SHA256;
+/** True when the attestation names the expected published build.
+ *  Pass the live OutLayer registry hash as `expected`. When omitted, identity.json is used (docs and historical tests). */
+export function publishedBuild(hash: string | undefined | null, expected?: string | null) {
+  const want = (expected ?? PUBLISHED_WASM_SHA256).toLowerCase();
+  return (hash || "").toLowerCase() === want && /^[0-9a-f]{64}$/.test(want);
 }
 
-/** TDX quote present, registered == executed, executed == the published build. */
-export function staticChecks(a: Pick<Attestation, "executed_wasm_sha256" | "wasm_hash" | "tdx_quote">): Omit<Checks, "fastfs"> {
+/** TDX quote present, registered == executed, executed == the expected published build. */
+export function staticChecks(a: Pick<Attestation, "executed_wasm_sha256" | "wasm_hash" | "tdx_quote">, expected?: string | null): Omit<Checks, "fastfs"> {
   const e = (a.executed_wasm_sha256 || "").toLowerCase();
   return {
     quote: (a.tdx_quote || "").length > 100,
     registered: e.length === 64 && e === (a.wasm_hash || "").toLowerCase(),
-    published: publishedBuild(e),
+    published: publishedBuild(e, expected),
   };
+}
+
+/** The dashboard's activity and TEE checks: quote, registered == executed, executed == the live registry hash. Fail closed. */
+export function logVerifies(a: Pick<Attestation, "executed_wasm_sha256" | "wasm_hash" | "tdx_quote">, expected: string | null | undefined): boolean {
+  if (!expected || !/^[0-9a-f]{64}$/i.test(expected)) return false;
+  const st = staticChecks(a, expected);
+  return !!(st.quote && st.registered && st.published);
 }
 export async function fastfsCheck(a: Attestation): Promise<Pick<Checks, "fastfs" | "fastfsHash" | "bytes">> {
   try {
@@ -40,9 +49,12 @@ export async function fastfsCheck(a: Attestation): Promise<Pick<Checks, "fastfs"
 }
 
 
-/** Index of the build in the published list: 0 = current, >0 = superseded, -1 = unknown. */
-export function buildIndex(hash: string | undefined | null) {
-  return WORKER_WASM_SHA256.indexOf((hash || "").toLowerCase());
+/** Index of the build in the published list: 0 = current, >0 = superseded, -1 = unknown.
+ *  When `live` is a 64-hex registry hash, it is current and the identity.json list follows as superseded. */
+export function buildIndex(hash: string | undefined | null, live?: string | null) {
+  const h = (hash || "").toLowerCase();
+  const current = live && /^[0-9a-f]{64}$/i.test(live) ? [live.toLowerCase()] : [];
+  return [...new Set([...current, ...WORKER_WASM_SHA256])].indexOf(h);
 }
 
 /** Quote bytes from the attestation (base64 or hex). */
