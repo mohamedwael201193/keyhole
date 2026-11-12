@@ -47,13 +47,30 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
  // Collect requests synchronously; EVERY response body is awaited below, never swallowed in an async listener.
  for(const [role,page] of [["borrower",borrower],["lender",lender]] as const){page.on("request",r=>{if(r.url().includes("/api/pledge-sandbox")&&r.postDataJSON()?.action==="tx")observed.push({role,request:r});});await page.goto(role==="borrower"?`/pledge?token=${meta.token_id}`:`/pledge/lend/${meta.token_id}`);await page.getByRole("button",{name:`Use ${role} wallet`,exact:true}).click();}
  const action=(method:string,args:Record<string,unknown>={},deposit="0",gas="200000000000000"):KeysCall=>({method,args,deposit,gas});
+ // Dispatch is gated by a 10s page-side read lease (pledgeSafety), shorter than the 30s "fresh"
+ // inventory label. A concurrent "Refresh chain" (capture() clicks it on both pages) or a slow
+ // preflight in open() can revoke that lease after the button is enabled; send() then throws
+ // "Chain state is stale or loading. Refresh before dispatch." and never POSTs /api/pledge-sandbox.
+ // CI 43133637949 died here on the second begin() ("Prepare another loan") after a real click.
  async function submit(p:Page,want:KeysCall|((actual:KeysCall)=>Promise<KeysCall>),click:()=>Promise<unknown>,registration=true){
   const role=p===borrower?"borrower":"lender",account=role==="borrower"?meta.borrower:meta.lender;
   const registered=await view("payout_account_registered",{account_id:account});
   const fee=registration&&!registered?await view("payout_storage_cost"):null;
   progress(`${role}: awaiting explicit wallet submission`);
-  const response=p.waitForResponse(r=>r.url().includes("/api/pledge-sandbox")&&r.request().postDataJSON()?.action==="tx",{timeout:45000});
-  const [,r]=await Promise.all([click(),response]);expect(r.ok()).toBeTruthy();const payload=r.request().postDataJSON(),j=await r.json();expect(j.error).toBeFalsy();expect(j.transaction?.hash).toBeTruthy();
+  const isTx=(resp:{url:()=>string;request:()=>{postDataJSON:()=>{action?:string}|null}})=>resp.url().includes("/api/pledge-sandbox")&&resp.request().postDataJSON()?.action==="tx";
+  const stale=/Refresh before dispatch|stale or loading|observation window expired/i;
+  let r:Awaited<ReturnType<Page["waitForResponse"]>>|null=null;
+  for(let attempt=0;attempt<2;attempt++){
+   if(attempt){progress(`${role}: read lease stale, refreshing inventory and retrying`);await readInventory(p);}
+   const pending=p.waitForResponse(isTx,{timeout:20000});
+   try{const [,got]=await Promise.all([click(),pending]);r=got;break;}
+   catch(e){
+    const status=(await p.getByRole("status").textContent().catch(()=>""))||"";
+    if(attempt===0&&stale.test(status)){progress(`${role}: ${status.trim()}`);continue;}
+    throw e;
+   }
+  }
+  expect(r).toBeTruthy();expect(r!.ok()).toBeTruthy();const payload=r!.request().postDataJSON(),j=await r!.json();expect(j.error).toBeFalsy();expect(j.transaction?.hash).toBeTruthy();
   const sent=payload.actions.map((a:{params:{methodName:string;args:Record<string,unknown>;gas:string;deposit:string}})=>action(a.params.methodName,a.params.args,a.params.deposit,a.params.gas));
   const call=typeof want==="function"?await want(sent.at(-1)!):want;
   const calls=fee?[action("register_payout_account",{account_id:account},fee,"20000000000000"),call]:[call];
@@ -103,7 +120,10 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   await expect(p.getByRole("status")).toContainText("Unsent exit intent discarded. No withdrawal was sent");
  }
  async function begin(label:string){
-  await readInventory(borrower);await borrower.getByLabel("Named lender",{exact:true}).fill(meta.lender);await borrower.getByLabel("Term seconds",{exact:true}).fill("120");await borrower.getByLabel("Grace seconds",{exact:true}).fill("30");await borrower.locator(".pledge-live-consent input").check();await expect(borrower.getByTestId("forfeit-line")).toHaveText(/receives the whole key/);await expect(borrower.getByTestId("borrower-numbers")).toContainText("Total cost");await borrower.getByTestId("forfeit-ack").check();
+  await borrower.getByLabel("Named lender",{exact:true}).fill(meta.lender);await borrower.getByLabel("Term seconds",{exact:true}).fill("120");await borrower.getByLabel("Grace seconds",{exact:true}).fill("30");await borrower.locator(".pledge-live-consent input").check();await expect(borrower.getByTestId("forfeit-line")).toHaveText(/receives the whole key/);await expect(borrower.getByTestId("borrower-numbers")).toContainText("Total cost");await borrower.getByTestId("forfeit-ack").check();
+  // Re-read inventory immediately before Pledge so the 10s dispatch lease starts after form fill,
+  // not before it — capture()'s "Refresh chain" can otherwise leave the lease revoked.
+  await readInventory(borrower);
   const open=borrower.getByRole("button",{name:"Pledge this account",exact:true});await expect(open).toBeEnabled({timeout:20000});const before=await finalNs();await submit(borrower,async sent=>{
    const deadline=(sent.args as {terms:{funding_deadline_ns:string}}).terms.funding_deadline_ns;
    expect(BigInt(deadline)).toBeGreaterThanOrEqual(before+600_000_000_000n);expect(BigInt(deadline)).toBeLessThanOrEqual(await finalNs()+600_000_000_000n);
