@@ -83,22 +83,22 @@ describe("/swap phases and their real sources (source contract)", () => {
     expect(view).toContain("swapSteps({ stage: lastStage, viaWallet, failedAt: lastStage, minOut: minOutText })");
     expect(view).toContain('useEffect(() => { if (swap.stage !== "idle") setLastStage(swap.stage); }, [swap.stage]);');
     expect(view).toContain('const viaWallet = swap.via === "signature";');
-    expect(prog).toContain('data-testid="trade-pending"');
-    expect(prog).toContain('testid="trade-steps"');
+    expect(prog).toContain('testid="trade-pending"');
+    expect(src("../components/InCard.tsx")).toContain('stepsTestid = "trade-steps"');
   });
 
   it("Retry runs the same trade when its quote is fresh, and asks for a new price otherwise", () => {
     expect(view).toContain("if (quoteFresh) confirm(); else review();");
-    expect(prog).toContain('testid="swap-retry"');
-    expect(prog).toContain('testid="swap-back"');
-    expect(prog).toContain("<ErrorBox code={code} retryAfter={retryAfter} />");
+    expect(prog).toContain('testid: "swap-retry"');
+    expect(prog).toContain('data-testid="swap-back"');
+    expect(prog).toContain("errorText(code");
   });
 
   it("the success state keeps the trade line, the status word and the call link the e2e flows read", () => {
-    expect(done).toContain("{summary}");
+    expect(done).toContain("summary || outcome.headline");
     expect(done).toContain("{status ?? \"not shown\"}");
     expect(done).toContain("intentTx(intentHash)");
-    expect(done).toContain("Intents explorer");
+    expect(done).toContain("View transaction");
     expect(done).toContain("`/verify?call=${encodeURIComponent(callId)}`");
     expect(view).toContain("const summary = done && out ? tradeSummary(done.give, String(out.amount_out ?? \"0\"), done.decimals, done.symbol) : \"\";");
   });

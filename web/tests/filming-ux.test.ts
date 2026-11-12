@@ -74,8 +74,8 @@ describe("a result is never a dead UNKNOWN", () => {
   it("a swap status of UNKNOWN says what to do", () => {
     const o = swapOutcome("UNKNOWN");
     expect(o.headline).toBe("Swap not confirmed");
-    expect(o.where).toContain("Do not swap again");
-    expect(o.where).toContain("Account operation recovery");
+    expect(o.where).toContain("Confirm the earlier transaction");
+    expect(o.where).not.toMatch(/UNKNOWN|Account operation recovery/);
   });
 });
 
@@ -85,9 +85,9 @@ describe("issue 3: the wallet pop-up is explained before it opens", () => {
     const line = worker.split("\n").find((l) => l.includes("pub const SESSION_OPS"))!;
     expect(line).not.toContain("reconcile_value_op");
     const v = src("../components/ValueRecovery.tsx");
-    expect(v).toContain('data-testid="recovery-why"');
-    expect(v).toContain("asks your wallet for one signature, even when this session is unlocked");
-    expect(v).toContain("Operation id (not a transaction hash)");
+    // The signature is still required, so the button is one quiet "Confirm" and the reason sits in Details.
+    expect(v).toContain(">Confirm</Button>");
+    expect(v).toContain("Confirming asks your wallet for one signature");
   });
 });
 
@@ -115,7 +115,8 @@ describe("issue 5: value actions follow the lock", () => {
     const vault = src("../app/vault/view.tsx");
     expect(vault).toContain("disabled={lock.locked}");
     expect(vault).toContain("|| lock.locked}");
-    expect(vault).toContain('data-testid="withdraw-locked"');
+    expect(vault).toContain('testid="withdraw-recovery"');
+    expect(vault).toContain("LOCK_LABEL");
     expect(vault).toContain("if (!wUnits || !accountId || !wDest.ok || lock.locked) return;");
     const swap = src("../app/swap/view.tsx");
     expect(swap).toContain("gated");

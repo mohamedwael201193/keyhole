@@ -9,7 +9,7 @@ import { Cipher } from "@/components/Cipher";
 import { KeyArt } from "@/components/Art";
 import { FoilCard } from "@/components/FoilCard";
 import { TokenMark } from "@/components/TokenMark";
-import { useI18n } from "@/lib/i18n";
+import { errorText, useI18n } from "@/lib/i18n";
 import { useWallet, OP_CTX, type OpResume } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
 import { encodeShare } from "@/lib/pnl";
@@ -21,9 +21,12 @@ import { fundParams, withdrawParams } from "@/lib/trade";
 import { defaultDestination, validDestination } from "@/lib/destination";
 import { chainName } from "@/lib/tokens";
 import { keyState, shortAccount, shortKeyId } from "@/lib/near";
-import { acct, KEYS_CONTRACT } from "@/lib/config";
+import { acct, tx, KEYS_CONTRACT } from "@/lib/config";
 import { minutesLeft } from "@/lib/session";
-import { LOCK_NOTE, useValueLock } from "@/lib/valueLock";
+import { LOCK_LABEL, LOCK_NOTE, useValueLock } from "@/lib/valueLock";
+import { ValueRecovery } from "@/components/ValueRecovery";
+import { withdrawResultView } from "@/lib/opResult";
+import { Details, InCardFailure, InCardProgress, InCardSuccess } from "@/components/InCard";
 import { isNotSent } from "@/lib/opResult";
 import { OpNotSent } from "@/components/OpNotSent";
 import { TeeProgress } from "@/components/TeeProgress";
@@ -40,7 +43,6 @@ import { KeyLog } from "@/components/KeyLog";
 import { entryDetail, kindLabel, settledOrders, type HistEntry } from "@/lib/dashboard";
 import type { WorkerResult } from "@/lib/worker";
 import { AmountInput, Button, Busy, Sheet, Tabs, TokenSelect, type TokenOption } from "@/components/ui";
-import { TxStatus } from "@/components/ui/tx-status";
 import { Card, CardHeader, CopyButton, EmptyState, Icon, ListRow, PageHeader, ProofPanel, SetupProgress, Skeleton, StatusChip, TierChip, VaultHero, type IconName, type SetupItem } from "@/components/v7";
 import "./vault.css";
 import { dashHref } from "@/lib/dashboardSections";
@@ -657,7 +659,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   testid="settings-withdraw"
                   iconName="arrow-up"
                   title="Withdraw to your NEAR account"
-                  sub={lock.locked ? "Locked until the earlier operation is checked (see Account operation recovery)." : "Only the current key holder receives withdrawals. Your wallet signs each one."}
+                  sub={lock.locked ? "Confirming an earlier transaction. New ones wait until it's confirmed." : "Only the current key holder receives withdrawals. Your wallet signs each one."}
                   onClick={() => { if (!lock.locked) setWOpen(true); }}
                 />
                 <SettingRow
@@ -765,8 +767,10 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         </div>
       </Sheet>
 
-      <Sheet open={wOpen} onClose={() => setWOpen(false)} title="Withdraw" testid="withdraw-sheet">
-        <p className="vlt-sub">{t("vault.withdrawLead", { account: accountId ?? "" })}</p>
+      <Sheet open={wOpen} onClose={() => { setWOpen(false); if (!withdraw.busy) withdraw.reset(); }} title="Withdraw" testid="withdraw-sheet">
+        {!withdraw.busy && !withdraw.res && (
+<>
+<p className="vlt-sub">{t("vault.withdrawLead", { account: accountId ?? "" })}</p>
         <div className="vlt-stack">
           <div className="vlt-field">
             <span className="vlt-label">{t("vault.asset")}</span>
@@ -784,28 +788,32 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             <p className="vlt-sub" id="w-dest-note">Your signed-in NEAR account. The worker verifies you still hold the key.</p>
           </div>
           {coolUntil ? <p className="note-box" data-testid="cooldown-note">{t("vault.cooldown", { time: hhmm(coolUntil) })}</p> : null}
-          {lock.locked && <p className="note-box" role="status" data-testid="withdraw-locked">{LOCK_NOTE}</p>}
-          <Button block testid="withdraw-btn" loading={withdraw.busy} loadingLabel={withdraw.label} disabled={!wUnits || !wDest.ok || withdraw.busy || lock.locked} onClick={doWithdraw}>
-            {withdraw.busy ? withdraw.label : lock.locked ? "Locked until the earlier operation is checked" : t("vault.withdrawBtn")}
+          {lock.locked && <ValueRecovery testid="withdraw-recovery" />}
+          <Button block testid="withdraw-btn" loading={withdraw.busy || lock.locked} loadingLabel={lock.locked ? LOCK_LABEL : withdraw.label} disabled={!wUnits || !wDest.ok || withdraw.busy || lock.locked} onClick={doWithdraw}>
+            {lock.locked ? LOCK_LABEL : t("vault.withdrawBtn")}
           </Button>
-          <TeeProgress active={withdraw.busy} label="Withdrawing inside the enclave" expectedMs={12000} testid="withdraw-progress" />
-          {withdraw.busy && <TxStatus state="pending" title="Waiting for the payout" testid="withdraw-pending" />}
-          {withdraw.res?.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw && (
-            <div className="vlt-stack" data-testid="withdraw-out">
-              <TxStatus state="confirmed" title={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} hash={withdraw.res.output.tx_hash ? String(withdraw.res.output.tx_hash) : undefined} callId={withdraw.res.call_id ?? undefined}>
-                <p className="vlt-sub">{String(withdraw.res.output.status ?? "")}</p>
-                {withdraw.res.output.request_id && <p className="mono vlt-small">{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
-                <p className="mono vlt-small" data-testid="withdraw-receipt">{t("vault.to")}: {String(withdraw.res.output.to ?? doneWithdraw.to)} · {t("vault.amount")}: {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? <> · {t("vault.fee")}: {String(withdraw.res.output.fee)}</> : null}</p>
-                {!withdraw.res.output.tx_hash && <p className="vlt-sub" data-testid="withdraw-settling">Settling: the payout transaction is sent by the custody wallet and shows on your account&apos;s explorer page within about a minute. <a href={acct(accountId || "")} target="_blank" rel="noreferrer">Open explorer ↗</a></p>}
-                {isImplicitAccount(accountId || "") && <p className="vlt-sub">{t("vault.storageNote")}</p>}
-              </TxStatus>
-            </div>
-          )}
-          {withdraw.res?.error && (isNotSent(withdraw.res.error.code)
-            ? <OpNotSent code={withdraw.res.error.code} message={withdraw.res.error.message} noun="withdrawal" knownOpId={lock.rows[0]?.value_op_id ?? null} testid="withdraw-not-sent" />
-            : <ErrorBox code={withdraw.res.error.code} retryAfter={withdraw.res.error.retry_after} vars={{ cap: capFrom(withdraw.res.error.message) }} />)}
-          {withdraw.res && !(withdraw.res.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw) && <Attested r={withdraw.res} />}
         </div>
+</>
+)}
+        {withdraw.busy && <InCardProgress title="Withdrawing…" line={withdraw.label || "Sending your payout"} fraction={withdraw.stage === "settling" ? 0.75 : 0.4} testid="withdraw-pending" />}
+        {!withdraw.busy && withdraw.res?.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw && (
+          <InCardSuccess testid="withdraw-out" amount={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} title={withdrawResultView(withdraw.res.output).title}
+            link={withdrawResultView(withdraw.res.output).hash ? { href: tx(withdrawResultView(withdraw.res.output).hash!), label: `View ${withdrawResultView(withdraw.res.output).hash!.slice(0, 8)}… on NearBlocks` } : null}
+            actions={<><Button size="sm" onClick={() => { withdraw.reset(); }} testid="withdraw-again">Withdraw again</Button><Button size="sm" variant="secondary" href={dashHref("/settle")}>View in Activity</Button></>}>
+            <Details>
+              <p className="vlt-sub" data-testid="withdraw-receipt">To {String(withdraw.res.output.to ?? doneWithdraw.to)} · amount {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? ` · fee ${String(withdraw.res.output.fee)}` : ""}</p>
+              {!withdrawResultView(withdraw.res.output).settled && <p className="vlt-sub" data-testid="withdraw-settling">The payout is on its way. It shows on <a href={acct(accountId || "")} target="_blank" rel="noreferrer">your account page</a> within about a minute.</p>}
+              {isImplicitAccount(accountId || "") && <p className="vlt-sub">{t("vault.storageNote")}</p>}
+              {withdraw.res.output.request_id && <p className="mono vlt-small">{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
+              <Attested r={withdraw.res} />
+            </Details>
+          </InCardSuccess>
+        )}
+        {!withdraw.busy && withdraw.res?.error && (isNotSent(withdraw.res.error.code)
+          ? <OpNotSent code={withdraw.res.error.code} message={withdraw.res.error.message} noun="withdrawal" knownOpId={lock.rows[0]?.value_op_id ?? null} testid="withdraw-not-sent" />
+          : <InCardFailure testid="withdraw-failed" reason={errorText(withdraw.res.error.code, { s: withdraw.res.error.retry_after ?? 0, cap: capFrom(withdraw.res.error.message) })[0]} action={{ label: "Back to withdraw", onClick: () => withdraw.reset(), testid: "withdraw-back" }}>
+              <Details><p className="vlt-sub">Reference: <code>{withdraw.res.error.code}</code></p></Details>
+            </InCardFailure>)}
       </Sheet>
     </div>
   );

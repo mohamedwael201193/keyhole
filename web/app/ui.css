@@ -326,3 +326,29 @@
 /* Key history and PnL (V3-D polish, no logic change). */
 .key-error { color: var(--danger); margin-top: var(--space-3); font-size: var(--text-small); }
 .pnl-raw { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* In-card results and the quiet recovery line (components/InCard.tsx, components/ValueRecovery.tsx) */
+.kh-quiet { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; font-size: 14px; color: var(--mu, #6b6459); }
+.kh-quiet-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kh-quiet-spin { width: 14px; height: 14px; border-width: 2px; }
+.kh-quiet-note { font-size: 13px; }
+.kh-details { margin-top: 8px; font-size: 13px; color: var(--mu, #6b6459); }
+.kh-details > summary { cursor: pointer; width: fit-content; }
+.kh-details p { margin: 6px 0 0; overflow-wrap: anywhere; }
+.ic { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; }
+.ic-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 18px; font-weight: 600; }
+.ic-title .spin { width: 18px; height: 18px; }
+.ic-sub { margin: 0; font-size: 14px; color: var(--mu, #6b6459); }
+.ic-bar { height: 6px; border-radius: 999px; background: color-mix(in srgb, currentColor 12%, transparent); overflow: hidden; }
+.ic-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--teal, #1f6f5c); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.ic-head { display: flex; align-items: center; gap: 14px; }
+.ic-amount { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.ic-word { color: var(--teal, #1f6f5c); font-weight: 600; }
+.ic-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; gap: 4px; }
+.ic-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.ic-note { margin: 0; font-size: 14px; color: var(--mu, #6b6459); }
+.ic-line { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-size: 15px; }
+.ic-x { display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: color-mix(in srgb, #b3261e 14%, transparent); color: #b3261e; }
+.ic-bad > .kh-btn { align-self: flex-start; }
+.ic-textbtn { align-self: flex-start; background: none; border: 0; padding: 0; font: inherit; font-size: 14px; color: var(--mu, #6b6459); text-decoration: underline; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .ic-bar > i { transition: none; } }

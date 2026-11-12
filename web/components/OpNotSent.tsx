@@ -1,27 +1,26 @@
 "use client";
 import { CopyBtn } from "@/components/ui";
+import { InCardFailure, Details } from "@/components/InCard";
 import { notSentView } from "@/lib/opResult";
 
 /**
- * The honest card for a value operation that was not admitted or has no final answer: what happened, that no transaction hash
- * exists, the operation id (a journal id, not a hash) with a copy button, and the one next step. Never a bare UNKNOWN.
+ * The card for a value operation that was not admitted or has no final answer: one plain line (nothing was sent, no funds moved),
+ * the one next step, and the reference with a copy button in a collapsed Details. Never a bare UNKNOWN.
  */
 export function OpNotSent({ code, message, noun, knownOpId, testid = "op-not-sent" }: { code: string; message?: string | null; noun: string; knownOpId?: string | null; testid?: string }) {
   const v = notSentView(code, message, noun, knownOpId);
   return (
-    <section className="kh-tx op-notsent" data-state="not-sent" data-testid={testid} role="alert" aria-labelledby={`${testid}-h`}>
-      <div className="kh-tx-head"><b id={`${testid}-h`}>{v.headline}</b></div>
-      <p className="note">{v.detail}</p>
-      <div className="kh-tx-row"><span>Status</span><span data-testid={`${testid}-status`}>Not admitted · no final answer</span></div>
-      <div className="kh-tx-row"><span>Transaction</span><span>This attempt produced no transaction.</span></div>
-      {v.opId && (
-        <div className="kh-tx-row" data-testid={`${testid}-opid`}>
-          <span>Operation id</span>
-          <code style={{ overflowWrap: "anywhere" }}>{v.opId}</code>
-          <CopyBtn value={v.opId} label="Copy operation id" />
-        </div>
-      )}
-      <p className="note" data-testid={`${testid}-next`}><b>Next step.</b> {v.nextStep}</p>
-    </section>
+    <InCardFailure testid={testid} reason={<><b id={`${testid}-h`}>{v.headline}.</b> No funds moved.</>}>
+      <p className="ic-note" data-testid={`${testid}-next`}><b>Next step.</b> {v.nextStep}</p>
+      <Details testid={`${testid}-details`}>
+        <p className="ic-note" data-testid={`${testid}-status`}>Not sent yet, and no final answer. {v.detail}</p>
+        <p className="ic-note">This attempt produced no transaction.</p>
+        {v.opId && (
+          <p className="ic-note" data-testid={`${testid}-opid`}>
+            Reference <code style={{ overflowWrap: "anywhere" }}>{v.opId}</code> <CopyBtn value={v.opId} label="Copy reference" />
+          </p>
+        )}
+      </Details>
+    </InCardFailure>
   );
 }
