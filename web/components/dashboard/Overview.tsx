@@ -15,7 +15,6 @@ import { chainName, fallbackTokens, useTokenList, type Token as ListToken } from
 import { shortAccount, shortKeyId, tierName, type Token } from "@/lib/near";
 import { keyCountText, kindLabel, meterPct, settledOrders, type HistEntry, type TierProgressRead } from "@/lib/dashboard";
 import { KEYS_CONTRACT } from "@/lib/config";
-import { useLiveWorkerHash } from "@/lib/useLiveWorkerHash";
 import { keyIdentity, serialOf } from "@/lib/traits";
 import type { KeyStatus } from "@/lib/keyStore";
 import { dashHref } from "@/lib/dashboardSections";
@@ -616,14 +615,11 @@ function SetupChecklist(p: {
 /** Enclave status, the worker build, the contract and the way to check the last call. Every value is read, none is typed in. */
 function ProofCard({ callId, logOk }: { callId: string | null; logOk: boolean | null }) {
   const online = useHealth();
-  // Live OutLayer registry active_version — not the identity.json pin, which lags republishes.
-  const build = useLiveWorkerHash();
   return (
     <ProofPanel
       headingId="ov-proof-h"
       title="Proof of your calls"
       enclave={online === null ? "checking" : online ? "live" : "down"}
-      workerBuild={build}
       contract={KEYS_CONTRACT}
       attestation={logOk === true ? "verified" : logOk === false ? "not-verified" : "unread"}
       lastCall={callId}

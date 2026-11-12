@@ -22,7 +22,6 @@ import { defaultDestination, validDestination } from "@/lib/destination";
 import { chainName } from "@/lib/tokens";
 import { keyState, shortAccount, shortKeyId } from "@/lib/near";
 import { acct, KEYS_CONTRACT } from "@/lib/config";
-import { useLiveWorkerHash } from "@/lib/useLiveWorkerHash";
 import { minutesLeft } from "@/lib/session";
 import { LOCK_NOTE, useValueLock } from "@/lib/valueLock";
 import { isNotSent } from "@/lib/opResult";
@@ -148,7 +147,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const dash = useSigned("dashboard");
   const logVerified = useLogVerified(history.res);
   const logState = useLogVerifiedState(history.res);
-  const liveBuild = useLiveWorkerHash();
   // New value operations (withdraw here) are locked while an earlier one has no final answer. The worker refuses them too.
   const lock = useValueLock();
 
@@ -516,7 +514,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 headingId="vlt-proof-h"
                 title="Proof of your calls"
                 enclave={online === null ? "checking" : online ? "live" : "down"}
-                workerBuild={liveBuild}
                 contract={KEYS_CONTRACT}
                 attestation={proofAttestation}
                 lastCall={lastCall}

@@ -457,6 +457,7 @@ test("worker identity rotation preserves every prior build and remains idempoten
   assert.equal(next.previous_wasm_sha256, old);
   assert.ok(next.historical_wasm_sha256.includes(older));
   for (const hash of original.worker.historical_wasm_sha256) {
+    if (hash === WORKER) continue; // the v2.6 worker is the promoted current build in this scenario
     assert.ok([next.previous_wasm_sha256,...next.historical_wasm_sha256].includes(hash));
   }
   assert.deepEqual(promotedWorker({...predecessor,worker:next},proof,e),next);

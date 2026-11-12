@@ -73,7 +73,7 @@ export function EvidenceTable() {
           </div>
         ))}
       </div>
-      <p className="ev-note">Claims checker: run <code>node judge/verify-claims.mjs</code> in the repo (661 claims; last recorded offline run 0 FAIL). This page re-checks the subset that a browser can read without cloning. The count is the current docs/claims.json length and changes when claims are regenerated.</p>
+      <p className="ev-note">Claims checker: run the claims checker script from the repository root (667 claims; last recorded offline run 0 FAIL). This page re-checks the subset that a browser can read without cloning. The count is the current docs/claims.json length and changes when claims are regenerated.</p>
     </Card>
   );
 }

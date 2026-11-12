@@ -2,12 +2,16 @@
   "_doc": "Single source of truth for live identities. Generate deployment updates with node scripts/gen-identity.mjs --promote-live <public-capture.json>. Refresh generated files with the same script.",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
-    "bytes": 1085333,
-    "add_version_tx": "3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P",
-    "info_call": "962d4374-b9ec-411a-9efa-973b36260431",
-    "previous_wasm_sha256": "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
+    "wasm_sha256": "37628ea5a7ab479411d125b0b7393f04f800214257825451cde2f52adbd183f4",
+    "bytes": 1350050,
+    "add_version_tx": "B6GReQmb817bqkPrWKoniKRZziWHYK4PZvH1A1u54MqJ",
+    "info_call": "116641a2-0744-45a0-9698-4b23dab365fc",
+    "previous_wasm_sha256": "de9e3005614bbd140f86ca4dd345efc945187dbf09de320ed5483840dcc076b5",
     "historical_wasm_sha256": [
+      "114dff5afb2b0df038a456594cc91a810da6907e1e8710bf98283fb4d02606d6",
+      "34bf835cea7c9977bbd3270851eb27290dd35db4a0afa4652161664f57fc7d01",
+      "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
+      "d337e822544d31da644728ba794f444f7f3ef6c54a6ee7442ab22d07e049ae41",
       "cc8d2fa8e2e4cc3b05705c5b98ac7eaab0ad119fae1745458a3b733d6270ec4c",
       "a985fd87866c4a586603d30f0f73bdff1506e381c5b8a748973302d028b9e4f8",
       "94c355ffa318ec0e6cafc5268afb6968c91cad5c99ebd343e14f9b85f2bca9ed",
@@ -51,10 +55,10 @@
     ]
   },
   "review": {
-    "source_commit": "324296811f2a01cd7100ebbac2c49413d6d64398"
+    "source_commit": "b458f5c0e59499509644277092c60d537b516808"
   },
   "worker_candidate": {
-    "status": "source-candidate-not-published",
+    "status": "published-mainnet",
     "wasm_sha256": "37628ea5a7ab479411d125b0b7393f04f800214257825451cde2f52adbd183f4",
     "bytes": 1350050,
     "recipe": "tee/worker/build.sh"

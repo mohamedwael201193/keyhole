@@ -61,11 +61,11 @@ export function DevelopersView() {
         <HealthStrip />
         <dl className="dev-facts" data-testid="dev-facts">
           <div><dt>Hardware</dt><dd>Intel TDX, attested through OutLayer</dd></div>
-          <div><dt>Live worker build (OutLayer registry)</dt><dd>{build ? <code data-testid="dev-build">{build}</code> : <span data-testid="dev-build">unavailable</span>}</dd></div>
+          <div><dt>Live worker build (OutLayer registry)</dt><dd>{build.status === "ok" ? <code data-testid="dev-build">{build.hash}</code> : <span data-testid="dev-build">{build.status === "loading" ? "Reading the registry…" : "unavailable"}</span>}</dd></div>
           <div><dt>Publish transaction (repository pin)</dt><dd><TxLink hash={WORKER_PUBLISH_TX}>{WORKER_PUBLISH_TX.slice(0, 12)}…</TxLink></dd></div>
           <div><dt>Keys contract</dt><dd><TxLink account={KEYS_CONTRACT}>{KEYS_CONTRACT}</TxLink></dd></div>
         </dl>
-        <p className="muted">Each call carries a TDX quote that names the worker build it ran. The hash above is the identity pin recorded in this repository; it is not read from the live registry here, so it can lag a newer publish. Re-check any call with the verifier above or with <code>./verify.sh &lt;call_id&gt;</code>.</p>
+        <p className="muted">Each call carries a TDX quote that names the worker build it ran. The hash above is read from the OutLayer registry when the page loads, so a newer publish shows up without a site update. Re-check any call with the verifier above or with <code>./verify.sh &lt;call_id&gt;</code>.</p>
       </section>
 
       <section className="pp-card settle" id="agent" aria-labelledby="dev-agent-h">
