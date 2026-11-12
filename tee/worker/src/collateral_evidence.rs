@@ -797,37 +797,58 @@ pub fn effective_with_freeze(
 /// Official OutLayer RequestType: the deposit family (intents/deposit, storage-deposit,
 /// cross-chain deposit) and this worker's exact-exit storage hop all gate as `call`.
 /// Same-chain exact-exit withdraw is `withdraw` (distinct from `cross_chain_withdraw`).
-/// Those documented types are drained only when the result holds no reusable signing
-/// material. `policy_update`, `raw_sign`, `limit_order`, and leftover signatures stay
-/// undrained.
+/// Settled rows of those documented types may carry a consumed intent `signature` or
+/// `signature_hex` (already submitted with the request). Those are drained. Leftover
+/// unused authorities — `wallet_signature`, `signed_transaction`, `signed_tx`,
+/// `private_key`, `api_key`, `handoff_url` — and unknown types (`policy_update`,
+/// `raw_sign`, `limit_order`) stay undrained. Error text names the type and leftover
+/// key paths only, never values.
 pub fn authority_inventory(pages: &[Value]) -> Result<(), Error> {
     guarded::settled_inventory(pages)?;
-    fn reusable(v: &Value) -> bool {
-        match v {
-            Value::Object(o) => o.iter().any(|(k, v)| {
-                matches!(
-                    k.as_str(),
-                    "signature"
-                        | "signature_hex"
-                        | "wallet_signature"
-                        | "signed_transaction"
-                        | "signed_tx"
-                        | "private_key"
-                        | "api_key"
-                        | "handoff_url"
-                ) || reusable(v)
-            }),
-            Value::Array(a) => a.iter().any(reusable),
-            _ => false,
+    fn leftover_keys(v: &Value) -> Vec<String> {
+        fn walk(v: &Value, path: &str, out: &mut Vec<String>) {
+            match v {
+                Value::Object(o) => {
+                    for (k, child) in o {
+                        let p = if path.is_empty() {
+                            k.clone()
+                        } else {
+                            format!("{path}.{k}")
+                        };
+                        if matches!(
+                            k.as_str(),
+                            "wallet_signature"
+                                | "signed_transaction"
+                                | "signed_tx"
+                                | "private_key"
+                                | "api_key"
+                                | "handoff_url"
+                        ) {
+                            out.push(p.clone());
+                        }
+                        walk(child, &p, out);
+                    }
+                }
+                Value::Array(a) => {
+                    for (i, child) in a.iter().enumerate() {
+                        walk(child, &format!("{path}[{i}]"), out);
+                    }
+                }
+                _ => {}
+            }
         }
+        let mut out = Vec::new();
+        walk(v, "", &mut out);
+        out
     }
     for page in pages {
         for row in page["requests"]
             .as_array()
             .ok_or_else(|| err("evidence", "unknown inventory"))?
         {
+            let kind = row["type"].as_str();
             if !matches!(
-                row["type"].as_str(),
+                kind,
                 Some(
                     "confidential"
                         | "deposit"
@@ -836,9 +857,25 @@ pub fn authority_inventory(pages: &[Value]) -> Result<(), Error> {
                         | "call"
                         | "withdraw",
                 )
-            ) || reusable(&row["result"])
-            {
-                return Err(err("evidence", "unreviewed or reusable prior authority"));
+            ) {
+                return Err(err(
+                    "evidence",
+                    format!(
+                        "unreviewed or reusable prior authority (type={})",
+                        kind.unwrap_or("missing")
+                    ),
+                ));
+            }
+            let leftover = leftover_keys(&row["result"]);
+            if !leftover.is_empty() {
+                return Err(err(
+                    "evidence",
+                    format!(
+                        "unreviewed or reusable prior authority (type={}, leftover={})",
+                        kind.unwrap_or("missing"),
+                        leftover.join(",")
+                    ),
+                ));
             }
         }
     }
