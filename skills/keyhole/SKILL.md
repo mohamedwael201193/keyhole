@@ -33,7 +33,7 @@ keyhole account [--chain base --amount 1000000] your confidential id (+ optional
 keyhole balance                                confidential balances
 keyhole swap --amount 10000 [--from .. --to ..] confidential swap within your caps
 keyhole history | pnl                          your private trade log / summary
-keyhole withdraw --exact-near --to you.near --amount <USDC base units>
+keyhole withdraw --to you.near --token USDC --amount <USDC base units>   (USDC to a NEAR account; --exact-near is accepted and ignored)
 keyhole payout [--register --accept-storage-yocto <exact cost> | --claim]
 keyhole reconcile --key <token_id> --value-op-id <original operation ID>
 keyhole pledge status <token_id>               read-only lien status (views only, no signature)

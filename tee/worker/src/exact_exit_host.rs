@@ -101,6 +101,22 @@ fn exact_exit_observation(
 // Fail before unshield/spend when the installed policy is still the old template.
 // An on-chain lock/readback alone is not proof of the separately reviewed policy.
 fn exact_exit_policy(token: &str, key: &str, wallet_id: &str) -> Result<(), Error> {
+    // Collateral flows keep the reviewed-confinement gate. A plain holder vault (no confinement
+    // marker, no pledge, no loan, no collateral binding) takes the standard self-exit: the
+    // three journaled hops, FINAL readbacks and the holder-only recipient still apply, and the
+    // provider's own wallet policy still decides what the wallet may do.
+    if Store::read(&mut Host, &tkey(token, "confinement_v1"))?.is_empty() {
+        let control = guard_control(token)?;
+        let loan = view(&keys_contract(), "get_loan", json!({"token_id":token}))?;
+        let binding = view(&keys_contract(), "get_collateral_binding", json!({"token_id":token}))?;
+        if control.pledged || !loan.is_null() || !binding.is_null() {
+            return Err(err(
+                "exit_not_enrolled",
+                "vault has a loan or collateral binding but no reviewed confinement; exact exit unavailable",
+            ));
+        }
+        return Ok(());
+    }
     let proof = evidence::load_proof(&mut Host, token)?;
     let config = view(&keys_contract(), "get_pledge_config", json!({}))?;
     evidence::verify_proof(

@@ -82,6 +82,7 @@ impl guarded::ProviderHost for Host {
         http_idempotent("POST",&format!("{OL}/wallet/v1/confidential/{path}"),Some(key),Some(&j.body),Some(&j.op_id))
     }
     fn fetch(&mut self,key:&str,id:&str)->Result<(u16,Value),Error>{http("GET",&format!("{OL}/wallet/v1/requests/{id}"),Some(key),None)}
+    fn pause(&mut self){std::thread::sleep(std::time::Duration::from_secs(2));}
     fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>{guard_finish(j,t)}
 }
 fn guard_provider(j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{

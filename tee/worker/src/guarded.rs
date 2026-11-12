@@ -124,6 +124,10 @@ pub fn reconcile_status(v:&Value,id:&str)->Result<Option<Terminal>,Error>{reconc
 /// Exact-key recovery pointers (no listing anywhere). Up to POINTER_SLOTS attempts per nonce.
 /// Reader and writer only ever `get`/`set_if_absent`/`remove` fixed keys.
 pub const POINTER_SLOTS:u64=8;
+/// Extra reads (2 s apart, so at most 4 s) of a pending_deposit/processing row before returning it
+/// unfinished. Kept small: callers send no max_execution_seconds (OutLayer default 60 s) and the
+/// web gateway aborts at 55 s; a swap call measured about 24 s without polling.
+pub const SETTLE_POLLS:u32=2;
 pub fn pointer_key(root:&str,nonce:u64,slot:u64)->String{format!("{root}/by_nonce/{nonce}/{slot}")}
 /// Record `op_id` under the first free slot for `nonce`. FAILS CLOSED: a storage error or every
 /// slot taken is an error, and the caller must not begin the operation without a pointer.
@@ -248,6 +252,8 @@ pub trait ProviderHost: Store {
     fn validate_dispatch(&mut self,j:&Journal,key:&str)->Result<(),Error>;
     fn post(&mut self,j:&Journal,key:&str,path:&str)->Result<(u16,Value),Error>;
     fn fetch(&mut self,key:&str,id:&str)->Result<(u16,Value),Error>;
+    /// Short wait between re-reads of a non-terminal provider row. Default: none (native tests).
+    fn pause(&mut self){}
     fn finish(&mut self,j:&Journal,t:&Terminal)->Result<bool,Error>;
 }
 pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:bool)->Result<Value,Error>{
@@ -273,6 +279,15 @@ pub fn drive_provider<H:ProviderHost>(host:&mut H,j:&Journal,key:&str,reconcile:
     }else{String::from_utf8(raw).map_err(|_|err("guard_journal","bad request id"))?};
     if !uuid(&id){return Err(err("guard_journal","invalid provider id"));}
     let mut value=match host.fetch(key,&id){Ok((200,v))=>v,_=>return Ok(json!({"status":"needs_review","value_op_id":j.op_id,"request_id":id,"admission_finished":false}))};
+    // A row that is only pending_deposit/processing usually settles within seconds. Re-read a bounded
+    // number of times so the original call can finish the operation instead of leaving it pending
+    // (which locks the token until a reconcile). Read-only: never a second POST.
+    let mut polls=0;
+    while polls<SETTLE_POLLS&&matches!(value["status"].as_str(),Some("pending_deposit"|"processing"))
+        &&reconcile_status_for(&value,&id,&j.kind).is_ok_and(|t|t.is_none()){
+        host.pause();polls+=1;
+        match host.fetch(key,&id){Ok((200,v))=>value=v,_=>break}
+    }
     let done=if let Some(t)=reconcile_status_for(&value,&id,&j.kind)?{
         // Preserve the exact first terminal result before admission release. A late reconciler
         // must rebuild history from this fact, never from a new request or a changing provider row.
