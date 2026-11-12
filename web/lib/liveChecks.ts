@@ -129,9 +129,9 @@ export async function checkNftSupply(): Promise<LiveRow> {
   }
 }
 
-/** Published worker info attestation matches identity wasm. */
+/** The recorded info attestation matches the identity.json worker pin (not the live registry). */
 export async function checkWorkerAttestation(callId = PUBLISHED_INFO_CALL): Promise<LiveRow> {
-  const how = `GET ${OUTLAYER_API}/attestations/by-call/<call_id> · compare executed_wasm_sha256 to identity.json`;
+  const how = `GET ${OUTLAYER_API}/attestations/by-call/<call_id> · compare executed_wasm_sha256 to the identity.json pin (the repo's recorded info call, not the live registry)`;
   try {
     const r = await fetch(attestation(callId), { signal: AbortSignal.timeout(20_000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -140,16 +140,16 @@ export async function checkWorkerAttestation(callId = PUBLISHED_INFO_CALL): Prom
     const ok = h === WORKER_WASM_SHA256[0] && !!j.tdx_quote;
     return {
       id: "worker-attestation",
-      claim: `Published worker ${WORKER_WASM_SHA256[0].slice(0, 8)} attested (info call)`,
+      claim: `Repo-pinned worker ${WORKER_WASM_SHA256[0].slice(0, 8)} attested (recorded info call; see the live registry on /verify)`,
       how,
       ok,
       detail: ok
         ? `Call ${callId.slice(0, 8)}… executed_wasm ${h.slice(0, 8)}… has a TDX quote.`
-        : `Call returned wasm ${h.slice(0, 8) || "(none)"}… (want ${WORKER_WASM_SHA256[0].slice(0, 8)}…).`,
+        : `Call returned wasm ${h.slice(0, 8) || "(none)"}… (repo pin ${WORKER_WASM_SHA256[0].slice(0, 8)}…).`,
       href: `/verify?call=${encodeURIComponent(callId)}`,
     };
   } catch (e) {
-    return { id: "worker-attestation", claim: "Published worker attested", how, ok: false, detail: `Attestation fetch failed: ${e instanceof Error ? e.message : "error"}` };
+    return { id: "worker-attestation", claim: "Repo-pinned worker attested", how, ok: false, detail: `Attestation fetch failed: ${e instanceof Error ? e.message : "error"}` };
   }
 }
 
@@ -202,7 +202,7 @@ export async function checkAttestedRefusal(callId: string, expectKeyword: string
       ok,
       detail: ok
         ? `Live attestation (wasm ${(j.executed_wasm_sha256 || "").slice(0, 8)}…). Evidence error.code=${code}. Open /verify to re-check the quote.`
-        : `Mismatch: quote=${hasQuote}, known_build=${known}, evidence.code=${code || "(none)"} (want ${expectKeyword}).`,
+        : `Mismatch: quote=${hasQuote}, repo_list_build=${known}, evidence.code=${code || "(none)"} (want ${expectKeyword}).`,
       href: `/verify?call=${encodeURIComponent(callId)}`,
     };
   } catch (e) {

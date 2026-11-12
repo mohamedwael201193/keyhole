@@ -4,11 +4,12 @@ import { attestChecks, verdict } from "@/lib/verifyScore";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Scene } from "@/components/Art";
 import { useI18n } from "@/lib/i18n";
-import { attestation, WORKER_PUBLISH_TX, WORKER_WASM_SHA256, tx } from "@/lib/config";
+import { attestation, WORKER_PUBLISH_TX, tx } from "@/lib/config";
 import { CALLS, PUBLISHED_INFO_CALL } from "@/lib/evidence";
 import { fetchCollateral, pckInfo, quoteParts, verifyCollateral, type Pcs, type PcsInput } from "@/lib/pcs";
 import { b64, verifyQuote, type Dcap } from "@/lib/dcap";
-import { bindingCheck, buildIndex, localChecks, tamperAttestation, TAMPERS, type Tamper, CALL_ID, evidenceOutput, fastfsCheck, fastfsUrl, outputCheck, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
+import { fetchLiveRegistryClient } from "@/lib/liveRegistry";
+import { bindingCheck, currentIndex, localChecks, tamperAttestation, TAMPERS, type Tamper, CALL_ID, evidenceOutput, fastfsCheck, fastfsUrl, outputCheck, PUBLISHED_WASM_SHA256, staticChecks, type Attestation, type Checks } from "@/lib/verify";
 import { CopyBtn, Spinner } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import "@/app/public-pages.css";
@@ -35,12 +36,13 @@ export function CallVerifier({ initial }: { initial: string | null }) {
   const [pasteErr, setPasteErr] = useState(false);
   const [orig, setOrig] = useState<{ a: Attestation; ck: Checks; dcap: Dcap | null } | null>(null);
   const [tampered, setTampered] = useState<Tamper | null>(null);
+  const [liveHash, setLiveHash] = useState<string | null>(null);
   const tamper = async (k: Tamper | null) => {
     if (!orig) return;
     setTampered(k);
     if (!k) { setA(orig.a); setCk(orig.ck); setDcap(orig.dcap); return; }
     const x = tamperAttestation(orig.a, k);
-    const c = await localChecks(x, orig.ck.fastfsHash);
+    const c = await localChecks(x, orig.ck.fastfsHash, liveHash);
     setA(x); setCk({ ...c, output: orig.ck.output });
     try { setDcap(verifyQuote(b64(x.tdx_quote), { expectReportData: c.binding?.expected })); } catch { setDcap(null); }
   };
@@ -50,12 +52,17 @@ export function CallVerifier({ initial }: { initial: string | null }) {
     if (!CALL_ID.test(cid.trim())) { setErr("bad_params"); return; }
     setBusy(true); setDcap(null); setBind(null);
     try {
-      const r = await fetch(attestation(cid.trim()));
+      const [r, live] = await Promise.all([
+        fetch(attestation(cid.trim())),
+        fetchLiveRegistryClient().catch(() => null),
+      ]);
       if (!r.ok) throw new Error();
       const j = (await r.json()) as Attestation;
+      const liveH = live?.active_version ?? null;
+      setLiveHash(liveH);
       setA(j);
-      const st0 = staticChecks(j);
-      const st = { ...st0, published: buildIndex(j.executed_wasm_sha256) >= 0 };
+      const st0 = staticChecks(j, liveH);
+      const st = { ...st0, published: currentIndex(j.executed_wasm_sha256, liveH) >= 0 };
       setCk({ ...st, fastfs: null });
       const [f, binding, ev] = await Promise.all([fastfsCheck(j), bindingCheck(j), evidenceOutput(j.call_id)]);
       const output = ev ? await outputCheck(j, ev, "evidence") : null;
@@ -76,9 +83,10 @@ export function CallVerifier({ initial }: { initial: string | null }) {
     if (!a || !coll || coll === "err") return null;
     try { return verifyCollateral(b64(a.tdx_quote), coll); } catch { return null; }
   }, [a, coll]);
-  const vd = ck ? verdict(ck, a ? buildIndex(a.executed_wasm_sha256) : -1, dcap?.ok === true, pcs?.ok === true) : "no";
+  const vd = ck ? verdict(ck, a ? currentIndex(a.executed_wasm_sha256, liveHash) : -1, dcap?.ok === true, pcs?.ok === true) : "no";
   const ok = vd !== "no";
-  const bi = a ? buildIndex(a.executed_wasm_sha256) : -1;
+  const bi = a ? currentIndex(a.executed_wasm_sha256, liveHash) : -1;
+  const curShort = liveHash ? liveHash.slice(0, 8) : "unknown (registry unreadable)";
   const checkPasted = async () => {
     if (!a || !ck) return;
     setPasteErr(false);
@@ -88,7 +96,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
       setCk({ ...ck, output: await outputCheck(a, out, "pasted") });
     } catch { setPasteErr(true); }
   };
-  const known = !!a && WORKER_WASM_SHA256.includes(a.executed_wasm_sha256.toLowerCase());
+  const known = !!a && currentIndex(a.executed_wasm_sha256, liveHash) >= 0;
   const mark = (pass: boolean | null) => pass == null ? "…" : pass ? "✓" : "✕";
   const dot = (pass: boolean | null) => pass == null ? "wait" : pass ? "" : "bad";
   const six = ck ? attestChecks(ck) : null;
@@ -119,7 +127,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
         <li data-testid="verdict-quote" data-ok={dcap ? String(dcap.ok && !!ck?.quote) : "wait"}><span className={`ok ${dcap ? (dcap.ok && ck?.quote ? "" : "bad") : "wait"}`}>{dcap ? (dcap.ok && ck?.quote ? "✓" : "✕") : "·"}</span><b>Quote validity</b><small>TDX quote + 19 Intel DCAP checks</small></li>
         <li data-testid="verdict-binding" data-ok={ck?.binding ? String(ck.binding.match) : "wait"}><span className={`ok ${ck?.binding ? (ck.binding.match ? "" : "bad") : "wait"}`}>{ck?.binding ? (ck.binding.match ? "✓" : "✕") : "·"}</span><b>Output binding</b><small>report_data binds request hash / account / token</small></li>
         <li data-testid="verdict-econ" data-ok={ck?.output ? String(ck.output.match) : (ck && ck.fastfs !== null ? "opt" : "wait")}><span className={`ok ${ck?.output ? (ck.output.match ? "" : "bad") : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? (ck.output.match ? "✓" : "✕") : ck && ck.fastfs !== null ? "○" : "·"}</span><b>Economic semantics</b><small>{ck?.output ? `Recorded outcome: ${ck.output.verdict}` : "Evidence / pasted output vs attestation"}</small></li>
-        <li data-testid="verdict-build" data-ok={ck ? String(ck.published && bi === 0) : "wait"}><span className={`ok ${ck ? (ck.published && bi === 0 ? "" : bi > 0 ? "opt" : "bad") : "wait"}`}>{ck ? (ck.published && bi === 0 ? "✓" : bi > 0 ? "prev" : "✕") : "·"}</span><b>Current-build identity</b><small>{a ? `executed ${a.executed_wasm_sha256.slice(0, 8)}… · current ${PUBLISHED_WASM_SHA256.slice(0, 8)}…` : "Wasm vs identity.json"}</small></li>
+        <li data-testid="verdict-build" data-ok={ck ? String(ck.published && bi === 0) : "wait"}><span className={`ok ${ck ? (ck.published && bi === 0 ? "" : bi > 0 ? "opt" : "bad") : "wait"}`}>{ck ? (ck.published && bi === 0 ? "✓" : bi > 0 ? "prev" : "✕") : "·"}</span><b>Current-build identity</b><small>{a ? `executed ${a.executed_wasm_sha256.slice(0, 8)}… · current ${curShort}…` : "Wasm vs the live registry"}</small></li>
       </ul>
       <div className="vg">
         <div className="seal"><Scene name="enclave" alt={t("land.enclAlt")} width={1152} height={864} /></div>
@@ -134,8 +142,8 @@ export function CallVerifier({ initial }: { initial: string | null }) {
             <h3 id="pp-g1">Enclave attestation <small>6 checks</small></h3>
           <div className="ck"><span className={`ok ${ck ? dot(ck.quote) : "wait"}`}>{ck ? mark(ck.quote) : "·"}</span><div><b>{t("verify.quote")}</b> <Trust src={["outlayer", "browser"]} /><small>{t("verify.quoteD")}{a ? ` · ${a.tdx_quote.length}` : ""}</small></div><span className="att">{ck?.quote ? t("verify.badgeAtt") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ck ? dot(ck.registered && ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs === null ? null : ck.registered && ck.fastfs === true) : "·"}</span><div><b>{t("verify.hash")}</b> <Trust src={["browser"]} /><small>{a?.executed_wasm_sha256 || t("verify.hashD")}</small></div><span className="att">{ck?.registered && ck.fastfs ? t("verify.badgeMatch") : "—"}</span></div>
-          <div className="ck"><span className={`ok ${ck ? dot(ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs) : "·"}</span><div><b>{t("verify.pub")}</b> <Trust src={["chain", "browser"]} /><small>{known && bi === 0 ? <a href={tx(WORKER_PUBLISH_TX)}>{t("verify.tx", { tx: WORKER_PUBLISH_TX })}</a> : a ? <a href={fastfsUrl(a.project_id, a.executed_wasm_sha256)} target="_blank" rel="noreferrer">published wasm file on FastFS ↗</a> : t("verify.pubD")}</small></div><span className="att">{ck?.fastfs ? t("verify.badgeFound") : "—"}</span></div>
-          <div className="ck"><span className={`ok ${ck ? dot(ck.published) : "wait"}`}>{ck ? mark(ck.published) : "·"}</span><div><b>{t("verify.build")}</b> <Trust src={["us"]} /><small data-testid="build-note">{bi > 0 ? t("verify.buildPrev", { hash: a!.executed_wasm_sha256.slice(0, 8), cur: PUBLISHED_WASM_SHA256.slice(0, 8) }) : t("verify.buildD", { hash: PUBLISHED_WASM_SHA256.slice(0, 8) })}</small></div><span className="att">{ck?.published ? (bi > 0 ? t("verify.badgePrev") : t("verify.badgeBuild")) : "—"}</span></div>
+          <div className="ck"><span className={`ok ${ck ? dot(ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs) : "·"}</span><div><b>{t("verify.pub")}</b> <Trust src={["chain", "browser"]} /><small>{known && a!.executed_wasm_sha256.toLowerCase() === PUBLISHED_WASM_SHA256 ? <a href={tx(WORKER_PUBLISH_TX)}>{t("verify.tx", { tx: WORKER_PUBLISH_TX })}</a> : a ? <a href={fastfsUrl(a.project_id, a.executed_wasm_sha256)} target="_blank" rel="noreferrer">published wasm file on FastFS ↗</a> : t("verify.pubD")}</small></div><span className="att">{ck?.fastfs ? t("verify.badgeFound") : "—"}</span></div>
+          <div className="ck"><span className={`ok ${ck ? dot(ck.published) : "wait"}`}>{ck ? mark(ck.published) : "·"}</span><div><b>{t("verify.build")}</b> <Trust src={["us"]} /><small data-testid="build-note">{bi > 0 ? t("verify.buildPrev", { hash: a!.executed_wasm_sha256.slice(0, 8), cur: curShort }) : t("verify.buildD", { hash: curShort })}</small></div><span className="att">{ck?.published ? (bi > 0 ? t("verify.badgePrev") : t("verify.badgeBuild")) : "—"}</span></div>
           <div className="ck" data-testid="ck-binding"><span className={`ok ${ck ? (ck.fastfs === null && !ck.binding ? "wait" : dot(ck.binding?.match ?? false)) : "wait"}`}>{ck ? (ck.binding ? mark(ck.binding.match) : ck.fastfs === null ? "…" : "✕") : "·"}</span><div><b>{t("verify.bind")}</b> <Trust src={["browser"]} /><small>{ck?.binding ? t("verify.bindD", { rd: ck.binding.inQuote.slice(0, 16) }) : t("verify.bindWait")}</small></div><span className="att">{ck?.binding?.match ? t("verify.badgeBound") : "—"}</span></div>
           <div className="ck" data-testid="ck-output"><span className={`ok ${ck?.output ? dot(ck.output.match) : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? mark(ck.output.match) : ck && ck.fastfs !== null ? "○" : "·"}</span><div><b>{t("verify.out")}</b> <Trust src={["us", "browser"]} /><small>{ck?.output ? t(ck.output.match ? "verify.outOk" : "verify.outBad", { verdict: ck.output.verdict, src: t(ck.output.source === "evidence" ? "verify.srcEvidence" : "verify.srcPasted") }) : t("verify.outNone")}</small></div><span className="att" data-testid="output-verdict">{ck?.output?.match ? ck.output.verdict : "—"}</span></div>
           </section>

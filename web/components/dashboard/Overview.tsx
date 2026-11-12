@@ -14,7 +14,8 @@ import { assetByToken, formatUsdMicro, fromBaseUnits, type AssetRow, type Total 
 import { chainName, fallbackTokens, useTokenList, type Token as ListToken } from "@/lib/tokens";
 import { shortAccount, shortKeyId, tierName, type Token } from "@/lib/near";
 import { keyCountText, kindLabel, meterPct, settledOrders, type HistEntry, type TierProgressRead } from "@/lib/dashboard";
-import { KEYS_CONTRACT, WORKER_WASM_SHA256 } from "@/lib/config";
+import { KEYS_CONTRACT } from "@/lib/config";
+import { useLiveWorkerHash } from "@/lib/useLiveWorkerHash";
 import { keyIdentity, serialOf } from "@/lib/traits";
 import type { KeyStatus } from "@/lib/keyStore";
 
@@ -602,13 +603,13 @@ function SetupChecklist(p: {
 /** Enclave status, the worker build, the contract and the way to check the last call. Every value is read, none is typed in. */
 function ProofCard({ callId, logOk }: { callId: string | null; logOk: boolean | null }) {
   const online = useHealth();
-  // The first entry is the published build; superseded builds follow it in the list (lib/config.ts).
-  const build = WORKER_WASM_SHA256[0] ?? "";
+  // Live OutLayer registry active_version — not the identity.json pin, which lags republishes.
+  const build = useLiveWorkerHash();
   return (
     <ProofPanel
       headingId="ov-proof-h"
       enclave={online === null ? "checking" : online ? "live" : "down"}
-      workerBuild={build || null}
+      workerBuild={build}
       contract={KEYS_CONTRACT}
       attestation={logOk === true ? "verified" : logOk === false ? "not-verified" : "unread"}
       lastCall={callId}

@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
-import { attestation, CONTRACT_CODE_HASH, KEYS_CONTRACT, RPC_URL, WORKER_WASM_SHA256 } from "@/lib/config";
+import { attestation, CONTRACT_CODE_HASH, KEYS_CONTRACT, RPC_URL } from "@/lib/config";
+import { fetchLiveRegistryClient } from "@/lib/liveRegistry";
+import { currentIndex } from "@/lib/verify";
 import { Badge } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 
@@ -19,14 +21,20 @@ function Runner({ label, run, testid }: { label: string; run: () => Promise<{ ok
   );
 }
 
-/** Step 1 in the browser: read the attestation and compare the hash of the code that ran with the current build. */
+/** Step 1 in the browser: read the attestation and compare the hash of the code that ran with the live registry build. */
 export function CheckBuild({ callId }: { callId: string }) {
   return <Runner testid="run-build" label="Check it here" run={async () => {
     const a = await (await fetch(attestation(callId))).json() as { executed_wasm_sha256?: string };
     const h = String(a.executed_wasm_sha256 || "").toLowerCase();
-    return h === WORKER_WASM_SHA256[0]
-      ? { ok: true, text: `Intel's report says the code that ran has fingerprint ${h.slice(0, 8)}…, the current published build.` }
-      : { ok: false, text: `The code that ran has fingerprint ${h.slice(0, 8) || "(none)"}, not the current build ${WORKER_WASM_SHA256[0].slice(0, 8)}.` };
+    // Compare with the live OutLayer registry (docs: Projects, active_version), not the repo pin, which can lag a republish.
+    const live = await fetchLiveRegistryClient().then((r) => r.active_version).catch(() => null);
+    const i = currentIndex(h, live);
+    if (!live) return { ok: false, text: `The code that ran has fingerprint ${h.slice(0, 8) || "(none)"}. The live registry could not be read, so current or previous is unknown.` };
+    return i === 0
+      ? { ok: true, text: `Intel's report says the code that ran has fingerprint ${h.slice(0, 8)}…, the build active on the OutLayer registry now.` }
+      : i > 0
+        ? { ok: true, text: `Previous build: the code that ran has fingerprint ${h.slice(0, 8)}…, a genuine earlier published build, not the current worker ${live.slice(0, 8)}….` }
+        : { ok: false, text: `The code that ran has fingerprint ${h.slice(0, 8) || "(none)"}, which is not a published build (live worker ${live.slice(0, 8)}…).` };
   }} />;
 }
 

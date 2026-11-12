@@ -7,6 +7,28 @@ import identity from "../../identity.json";
 const PAGES = ["/", "/atlas", "/vault", "/mint", "/gallery", "/verify", "/verify/path", "/ask"];
 const shots = process.env.SHOTS_DIR;
 
+/** The live OutLayer registry row, served through /api/registry. */
+const registryRow = (active_version: string) => ({ ok: true, project_id: "keyhole-devmo.near/keyhole", uuid: "p000000000000004b", owner: "keyhole-devmo.near", active_version });
+// Hermetic by default: the registry reads the identity pin, so these specs do not depend on which worker is live on mainnet today.
+// Specs below override it to prove a different live worker and an unreadable registry.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/registry", (r) => r.fulfill({ json: registryRow(identity.worker.wasm_sha256) }));
+});
+
+test("verify: when the live worker differs from the repo pin, the pinned call is a previous build, not current", async ({ page }) => {
+  await page.route("**/api/registry", (r) => r.fulfill({ json: registryRow("34bf835cea7c9977bbd3270851eb27290dd35db4a0afa4652161664f57fc7d01") }));
+  await page.goto("/verify");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "previous", { timeout: 30_000 });
+});
+
+test("verify: an unreadable registry never verifies a call (fails closed)", async ({ page }) => {
+  await page.route("**/api/registry", (r) => r.fulfill({ status: 503, json: { ok: false, error: { code: "registry" } }, headers: { "cache-control": "no-store" } }));
+  await page.goto("/verify");
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "false", { timeout: 30_000 });
+  await page.waitForTimeout(1500);
+  await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "false");
+});
+
 for (const p of PAGES) {
   test(`renders ${p} without console errors`, async ({ page }, info) => {
     const errors: string[] = [];

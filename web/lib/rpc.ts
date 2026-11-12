@@ -12,7 +12,7 @@ export function isHolderRead(method: string, args: Record<string, unknown>): boo
 }
 
 /** `shared` reuses a public read for 60 s (fetch cache and in-memory map); `timeoutMs` bounds each RPC attempt. `blockId` pins the read to one block instead of `finality: final`. */
-export interface ViewOpts { shared?: boolean; timeoutMs?: number; blockId?: string }
+export interface ViewOpts { shared?: boolean; timeoutMs?: number; blockId?: string; /** Ask the configured primary RPC only; never the public fallback. For reads that gate a "verified" claim. */ primaryOnly?: boolean }
 
 export type ViewMeta<T> = { value: T; blockHash: string };
 
@@ -40,7 +40,7 @@ async function callOne<T>(url: string, method: string, args: Record<string, unkn
 export async function nearViewMeta<T>(method: string, args: Record<string, unknown> = {}, contract = KEYS_CONTRACT, opts: ViewOpts = {}): Promise<ViewMeta<T>> {
   const share = opts.shared ?? !isHolderRead(method, args);
   const timeoutMs = opts.timeoutMs ?? 8_000;
-  const key = JSON.stringify([contract, method, args, opts.blockId ?? ""]);
+  const key = JSON.stringify([contract, method, args, opts.blockId ?? "", opts.primaryOnly ? 1 : 0]);
   if (share) {
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < TTL) return hit.value as ViewMeta<T>;
@@ -49,6 +49,12 @@ export async function nearViewMeta<T>(method: string, args: Record<string, unkno
   }
   const run = (async () => {
     let last: unknown;
+    if (opts.primaryOnly) {
+      // Reads that gate a "verified" claim: the configured primary RPC only, never the public fallback.
+      const value = await callOne<T>(RPC_URL, method, args, contract, share, timeoutMs, opts.blockId);
+      if (share) cache.set(key, { at: Date.now(), value });
+      return value;
+    }
     for (const url of NEAR_RPCS) {
       try {
         const value = await callOne<T>(url, method, args, contract, share, timeoutMs, opts.blockId);

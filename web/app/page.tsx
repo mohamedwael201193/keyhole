@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Landing } from "@/components/Landing";
 import { loadLanding, loadTokenReach } from "@/lib/landing";
-import { WORKER_WASM_SHA256 } from "@/lib/config";
+import { fetchLiveRegistry } from "@/lib/liveRegistry";
 
 /** The home page title and description (the other routes keep the layout's). The description is one sentence of the hero copy. */
 export const metadata: Metadata = {
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function Home() {
-  const [{ supply }, reach] = await Promise.all([loadLanding(), loadTokenReach()]);
-  return <Landing supply={supply} hash={WORKER_WASM_SHA256[0].slice(0, 8)} reach={reach} />;
+  const [{ supply }, reach, live] = await Promise.all([loadLanding(), loadTokenReach(), fetchLiveRegistry().catch(() => null)]);
+  // Live OutLayer registry active_version (revalidated with the page); "unavailable" when it cannot be read, never the repo pin.
+  return <Landing supply={supply} hash={live ? live.active_version.slice(0, 8) : "unavailable"} reach={reach} />;
 }
