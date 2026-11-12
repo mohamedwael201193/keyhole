@@ -55,8 +55,8 @@
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "4178346e071f4d0d54808b17fe006c9fc397044f57066c087f19f4e2b128a89b",
-    "bytes": 1333188,
+    "wasm_sha256": "80174d0c1c6a0c9dcfd6eba3d61a761996bc5ae55c22204a9067cb525b9ad411",
+    "bytes": 1333243,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {

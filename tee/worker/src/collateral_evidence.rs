@@ -278,6 +278,16 @@ pub fn guardian_params(
         "candidate_policy_sha256":digest(p)?,"threshold":1}),
     )
 }
+/// True when `permission` is the JSON string "FullAccess", on a flattened
+/// `view_access_key` body or inside a JSON-RPC `{ "result": { … } }` envelope.
+/// Same shapes as `is_full_access` / the #212 nonce envelope fix. A live
+/// prepare (call 04cfc127 on 4178346e) failed the flattened-only check.
+fn full_access_permission(access: &Value) -> bool {
+    let p = access
+        .get("permission")
+        .or_else(|| access.pointer("/result/permission"));
+    matches!(p, Some(Value::String(s)) if s == "FullAccess")
+}
 pub fn guardian(
     auth: &Auth,
     expected: &Value,
@@ -291,7 +301,7 @@ pub fn guardian(
         || policy["approval"]["approvers"].as_array().map(Vec::len) != Some(1)
         || policy["approval"]["approvers"][0]["id"] != auth.account_id
         || policy["approval"]["approvers"][0]["role"] != "admin"
-        || access["permission"] != "FullAccess"
+        || !full_access_permission(access)
     {
         return Err(err(
             "guardian",

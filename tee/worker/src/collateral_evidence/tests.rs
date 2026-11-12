@@ -638,6 +638,49 @@ fn digest_is_order_independent_for_object_keys() {
     );
 }
 #[test]
+fn guardian_accepts_full_access_inside_rpc_result_envelope() {
+    let p = fixture();
+    let r: EffectiveReport = serde_json::from_str(&p.report.message).unwrap();
+    let a: Auth = serde_json::from_value(r.guardian_auth).unwrap();
+    let expected = guardian_params(
+        &p.expected_policy,
+        &p.prepared.token_id,
+        &p.prepared.wallet_pubkey,
+        "keys.near",
+        "borrow.near",
+        7,
+        &p.prepared.worker_hash,
+    )
+    .unwrap();
+    guardian(
+        &a,
+        &expected,
+        &p.expected_policy,
+        &json!({"permission":"FullAccess"}),
+        "keyhole",
+        1_000_000,
+    )
+    .unwrap();
+    guardian(
+        &a,
+        &expected,
+        &p.expected_policy,
+        &json!({"jsonrpc":"2.0","id":"1","result":{"nonce":1,"permission":"FullAccess","block_height":1}}),
+        "keyhole",
+        1_000_000,
+    )
+    .unwrap();
+    assert!(guardian(
+        &a,
+        &expected,
+        &p.expected_policy,
+        &json!({"jsonrpc":"2.0","result":{"permission":{"FunctionCall":{}}}}),
+        "keyhole",
+        1_000_000,
+    )
+    .is_err());
+}
+#[test]
 fn guardian_requires_full_access() {
     let p = fixture();
     let r: EffectiveReport = serde_json::from_str(&p.report.message).unwrap();
