@@ -506,12 +506,12 @@ fn terminal_policy_signature_is_not_drained() {
     .is_err());
 }
 #[test]
-fn nested_signature_artifact_is_not_drained() {
-    assert!(authority_inventory(&[row(
+fn nested_consumed_intent_signature_is_drained() {
+    authority_inventory(&[row(
         "confidential",
         json!({"nested":[{"signature":"artifact"}]})
     )])
-    .is_err());
+    .unwrap();
 }
 #[test]
 fn unknown_terminal_type_is_not_drained() {
@@ -546,12 +546,41 @@ fn exact_exit_withdraw_and_storage_call_history_accepts() {
     .unwrap();
 }
 #[test]
-fn call_signature_artifact_is_not_drained() {
-    assert!(authority_inventory(&[row("call", json!({"signature":"artifact"}))]).is_err());
+fn settled_call_intent_signature_is_drained() {
+    authority_inventory(&[row(
+        "call",
+        json!({
+            "intent_id": "5284646c-ebad-4862-88cb-cdc456822d06",
+            "deposit_address": "0x186a755Ef1C9a91d472a1bE23B4e7964ed533EdB",
+            "amount": "900000",
+            "signature": "consumed-intent-signature"
+        }),
+    )])
+    .unwrap();
 }
 #[test]
-fn withdraw_signature_artifact_is_not_drained() {
-    assert!(authority_inventory(&[row("withdraw", json!({"signature_hex":"artifact"}))]).is_err());
+fn settled_withdraw_signature_hex_is_drained() {
+    authority_inventory(&[row("withdraw", json!({"intent_hash":"settled","signature_hex":"consumed"}))]).unwrap();
+}
+#[test]
+fn call_signed_transaction_is_not_drained() {
+    assert!(authority_inventory(&[row("call", json!({"signed_transaction":"unsent"}))]).is_err());
+}
+#[test]
+fn call_private_key_is_not_drained() {
+    assert!(authority_inventory(&[row("call", json!({"private_key":"secret"}))]).is_err());
+}
+#[test]
+fn call_wallet_signature_is_not_drained() {
+    assert!(authority_inventory(&[row("call", json!({"wallet_signature":"unconsumed"}))]).is_err());
+}
+#[test]
+fn leftover_error_names_type_and_key_not_value() {
+    let e = authority_inventory(&[row("call", json!({"signed_tx":"UNSENT_VALUE"}))]).unwrap_err();
+    let msg = format!("{e:?}");
+    assert!(msg.contains("type=call"), "{msg}");
+    assert!(msg.contains("leftover=signed_tx"), "{msg}");
+    assert!(!msg.contains("UNSENT_VALUE"), "{msg}");
 }
 #[test]
 fn policy_update_is_still_not_drained() {
