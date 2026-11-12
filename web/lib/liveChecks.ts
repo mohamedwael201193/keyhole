@@ -267,7 +267,7 @@ export const ATTACK_CASES: AttackCase[] = [
   {
     id: "over-cap",
     title: "Drain past the per-trade cap",
-    attempt: "Withdraw $2.00 against a $0.002 Bronze holder cap.",
+    attempt: "Withdraw $2.00 while the holder's own per-trade cap was $0.002 (a custom cap set on Nov 1; the Bronze tier default is $1).",
     expected: "Enclave refuses over_cap_per_tx.",
     kind: "attestation",
     callId: "afaaf3e1-32ff-42d8-88da-412a0bb61e11",

@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/v7";
 import { AttackBoard } from "@/components/judge/AttackBoard";
 import "../verify/verify.css";
 
-/** Judge attack desk: re-check real refusals. No wallet. No value moves. */
+/** Attack desk: re-check real refusals. No wallet. No value moves. */
 export function AttackView() {
   const run = () => {
     document.getElementById("attack-board")?.scrollIntoView({ behavior: "smooth", block: "start" });

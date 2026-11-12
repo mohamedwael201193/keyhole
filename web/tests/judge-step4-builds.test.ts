@@ -14,7 +14,7 @@ const STEP4_IDS = [
 const KNOWN_STEP4_WASM = "a985fd87"; // prefix of executed_wasm for these calls
 
 describe("judge Step 4 build labels", () => {
-  const src = readFileSync(new URL("../app/judge/page.tsx", import.meta.url), "utf8");
+  const src = readFileSync(new URL("../app/verify/path/page.tsx", import.meta.url), "utf8");
   const step4 = src.slice(src.indexOf("testid=\"judge-step-4\""), src.indexOf("testid=\"judge-step-5\""));
 
   it("does not hardcode current:true on STEP4_NOW calls", () => {

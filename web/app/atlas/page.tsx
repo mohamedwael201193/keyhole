@@ -9,6 +9,13 @@ import "../public-pages.css";
 
 type Tone = "ok" | "info" | "wait";
 
+/** The link label names the explorer the href opens: Base → Basescan (basescan.org), SOL → Solscan (solscan.io). */
+function settleExplorer(chain: string, t: (key: string) => string): string {
+  if (chain === "base") return t("atlas.openBase");
+  if (chain === "sol") return t("atlas.openSol");
+  return t("atlas.open");
+}
+
 /** A chain gets a mark only when it has a record: a mainnet tx, an attested dry run or a settled order. Planned chains show no mark. */
 export default function Atlas() {
   const { t } = useI18n();
@@ -38,7 +45,7 @@ export default function Atlas() {
                 <div className="pp-mark-act">
                   {a.kind === "tx" && <TxLink hash={a.ref!}>{t("atlas.open")} ↗</TxLink>}
                   {a.kind === "call" && <a className="ulink" href={attestation(a.ref!)} target="_blank" rel="noreferrer">{t("atlas.att")} ↗</a>}
-                  {a.kind === "settle" && a.href && <a className="ulink" href={a.href} target="_blank" rel="noreferrer">{t("atlas.open")} ↗</a>}
+                  {a.kind === "settle" && a.href && <a className="ulink" href={a.href} target="_blank" rel="noreferrer">{settleExplorer(a.chain, t)} ↗</a>}
                 </div>
               )}
             </li>

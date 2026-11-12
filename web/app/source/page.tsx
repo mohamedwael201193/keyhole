@@ -6,7 +6,7 @@ import "../public-pages.css";
 
 const REPO = "https://github.com/mohamedwael201193/keyhole";
 
-/** Judge source download. The tarball, checksum and manifest are static files in public/source, cut by scripts/make-source-tarball.sh. */
+/** Source download. The tarball, checksum and manifest are static files in public/source, cut by scripts/make-source-tarball.sh. */
 export default function Source() {
   return (
     <div className="page pp pp-source">
@@ -37,7 +37,7 @@ export default function Source() {
       <section className="pp-card" aria-labelledby="src-check">
         <h2 id="src-check">Check the download</h2>
         <p>Run <span className="mono">sha256sum -c keyhole-src.tar.gz.sha256</span>. It must print <span className="mono">keyhole-src.tar.gz: OK</span>.</p>
-        <p className="muted">The verification steps are in <a href={`${REPO}/blob/main/JUDGE_AGENT.md`} target="_blank" rel="noreferrer">the verification notes</a>.</p>
+        <p className="muted">The verification steps are in <a href={`${REPO}/blob/main/VERIFY.md`} target="_blank" rel="noreferrer">the verification notes</a>.</p>
       </section>
     </div>
   );

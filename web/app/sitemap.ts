@@ -3,7 +3,7 @@ import { siteUrl } from "@/lib/site";
 
 /** Public static routes only. Wallet query links and per-token lend pages stay out. */
 const PATHS = [
-  "/", "/verify", "/holders", "/key", "/keys", "/mint", "/gallery", "/judge", "/attack",
+  "/", "/verify", "/holders", "/key", "/keys", "/mint", "/gallery", "/verify/path", "/attack",
   "/ask", "/atlas", "/identity", "/pnl", "/settle", "/vault", "/swap", "/dashboard",
   "/demo", "/start", "/source", "/pledge",
 ];

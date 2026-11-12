@@ -42,7 +42,7 @@ describe("current-build pointers", () => {
   });
 
   it("README, TRACK_COVERAGE and /judge link a previous-build call only on a line that says previous", () => {
-    for (const f of ["README.md", "TRACK_COVERAGE.md", "web/app/judge/page.tsx"]) {
+    for (const f of ["README.md", "TRACK_COVERAGE.md", "web/app/verify/path/page.tsx"]) {
       readFileSync(`${root}/${f}`, "utf8").split("\n").forEach((line, i) => {
         for (const c of prevCalls) if (line.includes(c.id)) expect(`${f}:${i + 1} ${/previous/i.test(line)}`).toBe(`${f}:${i + 1} true`);
       });
@@ -62,7 +62,7 @@ describe("current-build pointers", () => {
   });
 
   it("/judge takes the worker call, add_version tx and contract hashes from identity.json, not hand-edited text", () => {
-    const src = readFileSync(`${root}/web/app/judge/page.tsx`, "utf8");
+    const src = readFileSync(`${root}/web/app/verify/path/page.tsx`, "utf8");
     const id = JSON.parse(readFileSync(`${root}/identity.json`, "utf8"));
     expect(src).toMatch(/\/verify\?call=\$\{IDENTITY\.worker\.info_call\}/);
     expect(src).toContain("hash={IDENTITY.worker.add_version_tx}");

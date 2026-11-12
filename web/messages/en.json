@@ -70,6 +70,8 @@
     "planned": "No trail yet",
     "planned_d": "Routing supported. No trail yet.",
     "open": "Open on NearBlocks",
+    "openBase": "Open on Basescan",
+    "openSol": "Open on Solscan",
     "att": "Attestation",
     "eyebrow": "On-chain atlas"
   },

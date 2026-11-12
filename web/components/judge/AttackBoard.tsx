@@ -48,13 +48,19 @@ export function AttackBoard() {
 
   useEffect(() => { void runAll(); }, []);
 
-  const pass = Object.values(states).filter((s) => s.row?.ok === true).length;
-  const total = ATTACK_CASES.length;
+  // Refusals and the allowed transfer are counted apart: a successful transfer is not a refusal.
+  const refusalCases = ATTACK_CASES.filter((c) => c.kind === "attestation");
+  const transferCases = ATTACK_CASES.filter((c) => c.kind === "tx");
+  const passed = (cases: AttackCase[]) => cases.filter((c) => states[c.id]?.row?.ok === true).length;
+  const refusalPass = passed(refusalCases);
+  const transferPass = passed(transferCases);
+  const allPass = refusalPass === refusalCases.length && transferPass === transferCases.length;
+  const summary = `${refusalPass}/${refusalCases.length} refusals confirmed, ${transferPass}/${transferCases.length} allowed transfer confirmed`;
 
   return (
     <div className="atk" data-testid="attack-board">
       <div className="atk-summary v7-card">
-        <StatusChip tone={pass === total && !running ? "success" : "warn"}>{running ? "Running…" : `${pass}/${total} refusals confirmed`}</StatusChip>
+        <StatusChip tone={allPass && !running ? "success" : "warn"}>{running ? "Running…" : summary}</StatusChip>
         <Button variant="secondary" size="sm" loading={running} loadingLabel="Re-checking" onClick={() => void runAll()} testid="attack-rerun">Re-check all</Button>
       </div>
 

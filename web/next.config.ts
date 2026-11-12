@@ -26,6 +26,8 @@ const config: NextConfig = {
     return [
       { source: "/ar", destination: "/", permanent: true },
       { source: "/ar/:path*", destination: "/:path*", permanent: true },
+      // The verification path moved from /judge. /verify itself stays the proof desk (?call= links point there).
+      { source: "/judge", destination: "/verify/path", permanent: true },
     ];
   },
   async headers() {
