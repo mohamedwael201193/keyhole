@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import type { TokenReach } from "@/lib/landing";
 import { TokenMark } from "@/components/TokenMark";
 import { LiveStats } from "./LiveStats";
+import { Icon } from "./icons";
 
 const SHOWN = [
   { symbol: "NEAR", chain: null },
@@ -36,7 +37,7 @@ export function ProofBand({ supply, reach }: { supply: number | null; reach: Tok
               ))}
               {more != null && (
                 <li className="lp-tok lp-tok--more" data-testid="reach-more">
-                  <span className="lp-tok-chip lp-tok-chip--n" aria-hidden="true">+</span>
+                  <span className="lp-tok-chip lp-tok-chip--n" aria-hidden="true"><Icon name="layers" size={22} /></span>
                   <span className="lp-tok-sym" data-testid="reach-tokens">{t("landing2.v2.tokens.more", { n: more })}</span>
                 </li>
               )}

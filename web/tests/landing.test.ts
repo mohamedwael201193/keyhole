@@ -113,6 +113,10 @@ describe("landing sections (DESIGN_PLAN_V2)", () => {
   it("the token count: with a live count it prints +N more (the count minus the six shown), without one it hides it", () => {
     const counted = render({ tokens: 216, chains: 39, marks: [] });
     expect(counted).toMatch(/data-testid="reach-tokens">\+210 more</);
+    const visible = counted.replace(/<[^>]+>/g, "|").split("|").map((s) => s.trim()).filter(Boolean);
+    expect(visible.filter((s) => /^\+\d+ more$/.test(s))).toEqual(["+210 more"]);
+    expect(visible.some((s) => /^\+\+/.test(s))).toBe(false);
+    expect(counted).not.toMatch(/lp-tok-chip--n[^>]*>\+</);
     expect(html).not.toContain('data-testid="reach-tokens"');
   });
 
