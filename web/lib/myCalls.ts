@@ -3,7 +3,7 @@
  * amounts, no tokens, no signatures), in sessionStorage, so it is gone when the tab closes. The "My proof" section lists them so a
  * holder can re-check any of their own calls without leaving the dashboard.
  */
-export type MyCall = { call_id: string; op: string; ts_ms: number };
+export type MyCall = { call_id: string; op: string; ts_ms: number; account?: string };
 const KEY = "kh_my_calls_v1";
 const MAX = 30;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,6 +16,9 @@ export const OP_WORDS: Record<string, string> = {
 };
 export const opWord = (op: string) => OP_WORDS[op] ?? op.replace(/_/g, " ");
 
+/** The calls of one account: a call recorded for another account is never listed. */
+export const callsOf = (calls: MyCall[], account: string | null): MyCall[] => (account ? calls.filter((c) => c.account === account) : []);
+
 export function readMyCalls(store: Pick<Storage, "getItem"> = sessionStorage): MyCall[] {
   try {
     const v = JSON.parse(store.getItem(KEY) || "[]");
@@ -23,8 +26,8 @@ export function readMyCalls(store: Pick<Storage, "getItem"> = sessionStorage): M
   } catch { return []; }
 }
 
-export function rememberCall(op: string, callId: unknown, now = Date.now(), store: Pick<Storage, "getItem" | "setItem"> = sessionStorage) {
+export function rememberCall(op: string, callId: unknown, now = Date.now(), store: Pick<Storage, "getItem" | "setItem"> = sessionStorage, account?: string) {
   if (typeof callId !== "string" || !UUID.test(callId)) return;
   const rest = readMyCalls(store).filter((c) => c.call_id !== callId);
-  store.setItem(KEY, JSON.stringify([{ call_id: callId, op, ts_ms: now }, ...rest].slice(0, MAX)));
+  store.setItem(KEY, JSON.stringify([{ call_id: callId, op, ts_ms: now, ...(account ? { account } : {}) }, ...rest].slice(0, MAX)));
 }

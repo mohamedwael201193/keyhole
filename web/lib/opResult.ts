@@ -28,10 +28,10 @@ export type NotSentView = {
 export function notSentView(code: string, message: string | null | undefined, noun: string, known?: string | null): NotSentView {
   const opId = opIdFrom(message) ?? known ?? null;
   const detail = code === "admission_unknown"
-    ? `The enclave could not confirm this ${noun} on chain, so it did not dispatch it. No transaction hash exists because none was produced.`
+    ? `The enclave could not confirm this ${noun} on chain, so it did not dispatch it. This attempt produced no transaction.`
     : code === "value_op_pending"
       ? `An earlier operation on this key is still pending, so this ${noun} was not started.`
       : `This ${noun} was not started, because an earlier one has no final answer yet.`;
-  const nextStep = "Check the original operation in Account operation recovery (one wallet signature). Until it gives a final answer, swaps, withdrawals and transfers stay locked. Do not try again before that.";
+  const nextStep = "Check the original operation in Account operation recovery (one wallet signature). An earlier UNKNOWN operation clears only after the worker's reconcile confirms it; until then swaps, withdrawals and transfers stay locked. Do not try again before that.";
   return { headline: `${noun[0].toUpperCase()}${noun.slice(1)} not sent`, detail, nextStep, opId };
 }

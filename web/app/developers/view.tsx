@@ -60,11 +60,11 @@ export function DevelopersView() {
         <HealthStrip />
         <dl className="dev-facts" data-testid="dev-facts">
           <div><dt>Hardware</dt><dd>Intel TDX, attested through OutLayer</dd></div>
-          <div><dt>Published worker build</dt><dd><code data-testid="dev-build">{build}</code></dd></div>
+          <div><dt>Repository identity pin (worker build)</dt><dd><code data-testid="dev-build">{build}</code></dd></div>
           <div><dt>Publish transaction</dt><dd><TxLink hash={WORKER_PUBLISH_TX}>{WORKER_PUBLISH_TX.slice(0, 12)}…</TxLink></dd></div>
           <div><dt>Keys contract</dt><dd><TxLink account={KEYS_CONTRACT}>{KEYS_CONTRACT}</TxLink></dd></div>
         </dl>
-        <p className="muted">Each call carries a TDX quote that names the worker build it ran. A call passes the build check when that build is the published one; calls made on earlier builds are labelled as previous builds. Re-check any call with the verifier above or with <code>./verify.sh &lt;call_id&gt;</code>.</p>
+        <p className="muted">Each call carries a TDX quote that names the worker build it ran. The hash above is the identity pin recorded in this repository; it is not read from the live registry here, so it can lag a newer publish. Re-check any call with the verifier above or with <code>./verify.sh &lt;call_id&gt;</code>.</p>
       </section>
 
       <section className="pp-card settle" id="agent" aria-labelledby="dev-agent-h">

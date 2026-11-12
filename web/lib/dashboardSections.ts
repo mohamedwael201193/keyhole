@@ -30,7 +30,8 @@ export function parseSectionHash(hash: string | null | undefined): ParsedHash {
   if (!raw) return { section: "overview", arg: null };
   const slash = raw.indexOf("/");
   const id = (slash === -1 ? raw : raw.slice(0, slash)).toLowerCase();
-  const arg = slash === -1 ? null : decodeURIComponent(raw.slice(slash + 1)) || null;
+  let arg: string | null = null;
+  if (slash !== -1) { try { arg = decodeURIComponent(raw.slice(slash + 1)) || null; } catch { arg = null; } }
   // "#activity" has always been an anchor on the overview; it is now its own section.
   return ALL.includes(id) ? { section: id as AnySectionId, arg } : { section: "overview", arg: null };
 }

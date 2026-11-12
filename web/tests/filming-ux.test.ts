@@ -59,7 +59,7 @@ describe("a result is never a dead UNKNOWN", () => {
   it("not-sent card: status, no hash, operation id, next step", () => {
     const m = renderToStaticMarkup(createElement(OpNotSent, { code: "admission_unknown", message: `admission not confirmed; reconcile operation ${ID}`, noun: "swap" }));
     expect(m).toContain("Swap not sent");
-    expect(m).toContain("None was produced");
+    expect(m).toContain("This attempt produced no transaction.");
     expect(m).toContain(ID);
     expect(m).toContain("Next step");
   });

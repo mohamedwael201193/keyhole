@@ -5,7 +5,7 @@ import { Card, CardHeader, CopyButton, EmptyState, PageHeader, StatusChip } from
 import { Button } from "@/components/ui";
 import { CallVerifier } from "@/components/judge/CallVerifier";
 import { useWallet } from "@/lib/wallet";
-import { MY_CALLS_EVENT, opWord, readMyCalls, type MyCall } from "@/lib/myCalls";
+import { MY_CALLS_EVENT, callsOf, opWord, readMyCalls, type MyCall } from "@/lib/myCalls";
 import { CALL_ID } from "@/lib/verify";
 import { sectionHref } from "@/lib/dashboardSections";
 
@@ -16,9 +16,10 @@ import { sectionHref } from "@/lib/dashboardSections";
  */
 export function MyProof({ callId }: { callId: string | null }) {
   const { accountId } = useWallet();
-  const [calls, setCalls] = useState<MyCall[]>([]);
+  const [all, setAll] = useState<MyCall[]>([]);
+  const calls: MyCall[] = callsOf(all, accountId);
   useEffect(() => {
-    const read = () => setCalls(readMyCalls());
+    const read = () => setAll(readMyCalls());
     read();
     addEventListener(MY_CALLS_EVENT, read);
     addEventListener("storage", read);

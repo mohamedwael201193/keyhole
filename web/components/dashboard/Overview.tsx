@@ -602,7 +602,7 @@ function SetupChecklist(p: {
     },
     {
       id: "swap", title: "First swap", done: swapped,
-      note: swapped ? (swappedFrom === "log" ? "Swap done. Read from your signed activity." : "Swap done. Counted in your key's record (the same count as Tier progress).") : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
+      note: swapped ? (swappedFrom === "log" ? "Swap done. Read from your signed activity." : "Swap done. Counted in your key's record (settled swaps and copies, the same count as Tier progress).") : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
       action: held && !swapped ? <Button href={dashHref("/swap")} variant="secondary" size="sm" testid="setup-swap-action">Swap</Button> : undefined,
     },
   ];

@@ -13,7 +13,7 @@ export function OpNotSent({ code, message, noun, knownOpId, testid = "op-not-sen
       <div className="kh-tx-head"><b id={`${testid}-h`}>{v.headline}</b></div>
       <p className="note">{v.detail}</p>
       <div className="kh-tx-row"><span>Status</span><span data-testid={`${testid}-status`}>Not admitted · no final answer</span></div>
-      <div className="kh-tx-row"><span>Transaction</span><span>None was produced</span></div>
+      <div className="kh-tx-row"><span>Transaction</span><span>This attempt produced no transaction.</span></div>
       {v.opId && (
         <div className="kh-tx-row" data-testid={`${testid}-opid`}>
           <span>Operation id</span>

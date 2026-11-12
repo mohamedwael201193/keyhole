@@ -52,7 +52,7 @@ export function IdentityView({ tokens, tiers }: { tokens: Token[]; tiers: (numbe
                 </div>
               </FoilCard>
               {/* Only Bronze is minted today (worker main.rs tier 1). Other finishes are design previews, not attested keys. */}
-              {k.finish === "Bronze" ? <p className="att" data-testid="mintable-badge">Design specimen · Bronze is mintable today; a minted key is attested in Intel TDX</p> : <p className="att" data-testid="preview-badge">Preview, not minted</p>}
+              {k.finish === "Bronze" ? <p className="att" data-testid="mintable-badge">Design specimen · mintable today</p> : <p className="att" data-testid="preview-badge">Preview, not minted</p>}
               <p className="mono" style={{ fontSize: 13, color: "var(--mu)" }}>{KEYS_CONTRACT}</p>
               <dl>
                 <dt>{t("field.head")}</dt><dd>{traitLabel(t, k.head)}</dd>

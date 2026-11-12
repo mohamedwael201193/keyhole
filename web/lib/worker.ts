@@ -12,7 +12,8 @@ export async function callWorker(op: Op, auth?: SignedAuth): Promise<WorkerResul
   if (typeof window !== "undefined" && auth?.scheme === "session" && ["session_epoch", "session_expired", "session_revoked", "not_owner"].includes(j.output?.error?.code ?? j.error?.code)) {
     try { clearSession(); window.dispatchEvent(new Event("keyhole-session-invalid")); } catch { /* blocked storage does not weaken server auth */ }
   }
-  if (typeof window !== "undefined" && j.call_id && !j.error) { try { rememberCall(op, j.call_id); window.dispatchEvent(new Event(MY_CALLS_EVENT)); } catch { /* storage unavailable; the list is a convenience */ } }
+  if (typeof window !== "undefined" && j.call_id && !j.error) { try { let acct: string | undefined; try { acct = JSON.parse(auth?.message ?? "{}").account_id; } catch { acct = undefined; }
+      rememberCall(op, j.call_id, Date.now(), sessionStorage, typeof acct === "string" ? acct : undefined); window.dispatchEvent(new Event(MY_CALLS_EVENT)); } catch { /* storage unavailable; the list is a convenience */ } }
   if (j.error) return { call_id: null, status: null, output: null, attestation_url: null, time_ms: null, error: j.error };
   const out = j.output as Record<string, any> | null;
   if (out && out.ok === false) return { ...j, error: out.error };

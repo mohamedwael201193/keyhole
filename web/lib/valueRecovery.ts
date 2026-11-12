@@ -12,6 +12,19 @@ export function rememberRecovery(auth: { message: string } | undefined, out: Rec
   if (out.admission_finished === true && ["success", "completed", "failed", "refunded"].includes(r.status)) store.removeItem(key(r));
   else store.setItem(key(r), JSON.stringify(r));
 }
+/**
+ * The signed status read is the authority on what is pending. When it reports no pending value operation for a key, the local rows
+ * for that key (only an id, never an auth envelope) are dropped so a stale row cannot lock the account for good. Returns how many.
+ */
+export function forgetResolved(account: string, tokenId: string | null, status: { pending_value_op?: unknown } | null | undefined, store: Storage = localStorage): number {
+  if (!status || status.pending_value_op) return 0;
+  let n = 0;
+  for (const r of recoveries(account, store)) {
+    if (tokenId && r.token_id !== tokenId) continue;
+    store.removeItem(key(r)); n++;
+  }
+  return n;
+}
 export function recoveries(account: string, store: Storage = localStorage): Recovery[] {
   const rows: Recovery[] = [];
   for (let i = 0; i < store.length; i++) { const k = store.key(i); if (!k?.startsWith(prefix)) continue;
