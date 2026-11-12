@@ -70,6 +70,8 @@ describe("landing sections (DESIGN_PLAN_V2)", () => {
     expect(html).toContain("not_owner");
     expect(html).toContain("New holder");
     expect(html).toContain("Access granted");
+    expect(html).toContain("Holds the key");
+    expect(html).toContain("Waiting");
     expect(html).toMatch(/data-testid="lock-verify"[^>]*href="\/verify"|href="\/verify"[^>]*data-testid="lock-verify"/);
     expect(html).toContain("https://nearblocks.io/txns/BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp");
     expect(html).toContain("/landing/arch-teal.webp");
@@ -121,6 +123,11 @@ describe("landing sections (DESIGN_PLAN_V2)", () => {
     expect(html).toContain("https://github.com/mohamedwael201193/keyhole/blob/main/VERIFY.md");
     expect(html).toMatch(/data-testid="hash-stat"[^>]*>f4768da8</);
     expect(html).toContain('data-testid="orders-stat"');
+  });
+
+  it("the closing card shows the three real keys on the arch", () => {
+    const close = html.slice(html.indexOf('id="cta"'));
+    for (const n of ["k03", "k04", "k02"]) expect(close).toContain(`/heirloom/keys/${n}.webp`);
   });
 
   it("the closing card: launch the app or mint a key", () => {

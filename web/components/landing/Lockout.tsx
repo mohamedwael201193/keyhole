@@ -1,7 +1,7 @@
 "use client";
 /**
  * The lock-out moment, dealt moment 2 and the payoff. A deep-emerald band on the arch art. Two glass cards: the previous holder is
- * refused (the real code `not_owner`), the new holder has access. While the section is in view a 6 s loop runs: the real Bronze
+ * refused (the real code `not_owner`), the new holder has access. While the section is in view a 6 s loop runs (each card always shows its name and a status pill: Holds the key, then Refused; Waiting, then Access granted): the real Bronze
  * key (k03) travels the arrow to the new holder; when it lands, the left card dims red with a 2 px shake and the right card glows
  * green; both hold, then it resets. A pause control stops it. Reduced motion and ?static: the final state, no loop, no key.
  */
@@ -44,7 +44,10 @@ export function Lockout() {
               <span className="lp-tint" aria-hidden="true" />
               <Icon name="user" size={40} className="lp-holder-ico" />
               <h3>{t("landing2.v2.lock.prev")}</h3>
-              <p className="lp-pill lp-pill--red"><Icon name="x" size={16} />{t("landing2.v2.lock.refused")}</p>
+              <div className="lp-states">
+                <p className="lp-pill lp-pill--hold lp-st-a"><Icon name="key" size={16} />{t("landing2.v2.lock.holds")}</p>
+                <p className="lp-pill lp-pill--red lp-st-b"><Icon name="x" size={16} />{t("landing2.v2.lock.refused")}</p>
+              </div>
               <code className="lp-code">{t("landing2.v2.lock.code")}</code>
             </article>
             <div className="lp-lock-arrow" aria-hidden="true">
@@ -56,7 +59,11 @@ export function Lockout() {
               <span className="lp-tint" aria-hidden="true" />
               <Icon name="user" size={40} className="lp-holder-ico" />
               <h3>{t("landing2.v2.lock.next")}</h3>
-              <p className="lp-pill lp-pill--green"><Icon name="check" size={16} />{t("landing2.v2.lock.granted")}</p>
+              <div className="lp-states">
+                <p className="lp-pill lp-pill--hold lp-st-a">{t("landing2.v2.lock.waiting")}</p>
+                <p className="lp-pill lp-pill--green lp-st-b"><Icon name="check" size={16} />{t("landing2.v2.lock.granted")}</p>
+              </div>
+              <span className="lp-code lp-code--ghost" aria-hidden="true">&nbsp;</span>
             </article>
           </div>
           <LoopControl className="lp-lock-ctl" paused={loop.paused} onToggle={loop.toggle} pauseLabel={t("landing2.v2.lock.pause")} playLabel={t("landing2.v2.lock.play")} />

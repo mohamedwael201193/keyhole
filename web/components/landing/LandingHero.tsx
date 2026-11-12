@@ -12,28 +12,7 @@ import { useI18n } from "@/lib/i18n";
 import { Icon, type IconName } from "./icons";
 import { GoldWaves } from "./GoldWaves";
 import { LoopControl } from "./LoopControl";
-
-/** hero-arch.webp is the source picture (1199 x 1312) cropped to x 320..1199, y 0..590. Source pixel numbers below. */
-const CROP = { x: 320, y: 0, w: 879, h: 590 } as const;
-
-type HeroKey = { n: number; tier: "Bronze" | "Silver" | "Gold"; alt: string; cx: number; base: number; w: number; ar: number; plaqueY: number; plaqueW: number };
-
-/**
- * cx and base are the generated key's stem centre and the foot of its finial on the pedestal, measured in the source picture. The real key is a
- * little larger than the one it replaces (w is its width in source pixels; the height follows its own aspect ratio).
- */
-const KEYS: HeroKey[] = [
-  { n: 3, tier: "Bronze", alt: "landing2.v2.hero.keyBronze", cx: 660, base: 418, w: 136, ar: 433 / 1077, plaqueY: 446, plaqueW: 124 },
-  { n: 4, tier: "Silver", alt: "landing2.v2.hero.keySilver", cx: 817.5, base: 390, w: 130, ar: 406 / 1084, plaqueY: 432, plaqueW: 132 },
-  { n: 2, tier: "Gold", alt: "landing2.v2.hero.keyGold", cx: 972, base: 418, w: 132, ar: 409 / 1094, plaqueY: 446, plaqueW: 124 },
-];
-
-const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
-
-function keyBox(k: HeroKey) {
-  const h = k.w / k.ar;
-  return { left: pct(k.cx - k.w / 2 - CROP.x, CROP.w), top: pct(k.base - h - CROP.y, CROP.h), width: pct(k.w, CROP.w), height: pct(h, CROP.h) };
-}
+import { ARCH_KEYS as KEYS, CROP, keyBox, pct } from "./archGeometry";
 
 const STRIP: { icon: IconName; t: string; d: string; href: string }[] = [
   { icon: "shield", t: "landing2.v2.strip.tee", d: "landing2.v2.strip.teeSub", href: "#private" },

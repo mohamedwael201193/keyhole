@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { Icon } from "./icons";
+import { ARCH_KEYS, CROP, keyBox } from "./archGeometry";
 
 export function Close() {
   const { t } = useI18n();
@@ -12,7 +13,11 @@ export function Close() {
         <div className="lp-card lp-end-card">
           <div className="lp-end-art" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/landing/hero-arch.webp" alt="" width={879} height={590} loading="lazy" decoding="async" />
+            <img src="/landing/hero-arch.webp" alt="" width={CROP.w} height={CROP.h} loading="lazy" decoding="async" />
+            {ARCH_KEYS.map((k) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={k.n} className="lp-akey" style={keyBox(k)} src={`/heirloom/keys/k0${k.n}.webp`} alt="" width={433} height={1077} loading="lazy" decoding="async" />
+            ))}
           </div>
           <div className="lp-end-copy">
             <h2 id="cta-h" className="lp-h2 lp-h2--sm">{t("landing2.v2.close.h2")}</h2>

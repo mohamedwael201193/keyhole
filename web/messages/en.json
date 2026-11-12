@@ -1232,6 +1232,8 @@
         "tx": "Open on NearBlocks",
         "prev": "Previous holder",
         "refused": "Refused",
+        "holds": "Holds the key",
+        "waiting": "Waiting",
         "code": "not_owner",
         "next": "New holder",
         "granted": "Access granted",
