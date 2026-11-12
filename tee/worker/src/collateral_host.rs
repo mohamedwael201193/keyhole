@@ -220,7 +220,11 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
             .ok()
             .is_some_and(guarded::lower_hash);
         if st != 200
-            || !collateral::same_wallet_pubkey(&encrypted["wallet_pubkey"], &id)
+            || !(collateral::same_wallet_pubkey(&encrypted["wallet_pubkey"], &id)
+                || collateral::wallet_pubkey_is_wallet_id(
+                    &encrypted["wallet_pubkey"],
+                    wallet_id,
+                ))
             || !ciphertext_ok
             || !hash_ok
         {

@@ -462,6 +462,19 @@ pub fn same_wallet_pubkey(observed: &Value, id: &str) -> bool {
     obs == exp
 }
 
+/// Live prepare eb62bc50 (aac99f00) got encrypt-policy HTTP 200 with
+/// `wallet_pubkey` set to the wallet_id UUID
+/// (`66684254-fe09-4176-8927-8b3e6f10d774`), not a 32-byte ed25519 key.
+/// OpenAPI leaves the string encoding unspecified. Accept that form for
+/// encrypt-policy only; sign-policy still requires `public_key_hex` as a key.
+pub fn wallet_pubkey_is_wallet_id(observed: &Value, wallet_id: &str) -> bool {
+    let Some(obs) = observed.as_str().map(str::trim) else {
+        return false;
+    };
+    let wid = wallet_id.trim();
+    !wid.is_empty() && obs.eq_ignore_ascii_case(wid)
+}
+
 const REDACT_KEYS: &[&str] = &[
     "api_key",
     "encrypted_base64",
