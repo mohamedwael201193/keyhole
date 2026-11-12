@@ -167,7 +167,7 @@ describe("public top bar and footer", () => {
     expect(nav).toContain('href: "/#handover"');
     expect(nav).toContain('href: "/verify"');
     expect(nav).toContain('href: "/attack"');
-    expect(nav).toContain('href: "/judge"');
+    expect(nav).toContain('href: "/verify/path"');
     expect(nav).toContain('"/dashboard"');
     expect(nav).toContain('testid="open-app"');
     expect(nav).not.toContain("<AccountControl");
@@ -178,7 +178,7 @@ describe("public top bar and footer", () => {
   it("the footer has three groups (Product, Proof, Learn), the contract line and the NEAR credit", () => {
     const m = renderToStaticMarkup(withI18n(createElement(Footer)));
     for (const g of ["Product", "Proof", "Learn"]) expect(m).toContain(`aria-label="${g}"`);
-    for (const href of ["/dashboard", "/mint", "/swap", "/vault", "/verify", "/holders", "/attack", "/judge", "/atlas", "/source", "/ask", "/identity", "/demo"]) expect(m).toContain(`href="${href}"`);
+    for (const href of ["/dashboard", "/mint", "/swap", "/vault", "/verify", "/holders", "/attack", "/verify/path", "/atlas", "/source", "/ask", "/identity", "/demo"]) expect(m).toContain(`href="${href}"`);
     expect(m).toContain("NEAR mainnet");
     expect(m).toContain("Built on NEAR");
   });

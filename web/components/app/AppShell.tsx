@@ -27,6 +27,8 @@ export const APP_ROUTES = ["/dashboard", "/swap", "/keys", "/gallery", "/key", "
 
 export function isAppRoute(path: string | null | undefined): boolean {
   if (!path) return false;
+  // The verification path is a public page (no wallet, no sidebar). It sits under /verify, so it is excluded before the prefix loop.
+  if (path === "/verify/path" || path.startsWith("/verify/path/")) return false;
   return APP_ROUTES.some((r) => path === r || path.startsWith(r + "/"));
 }
 

@@ -7,7 +7,7 @@ import { TxLink } from "@/components/TxLink";
 import { HealthStrip } from "@/components/HealthStrip";
 import { Trust, TrustLegend } from "@/components/Trust";
 import { CheckBuild, CheckContract } from "./live";
-import "../public-pages.css";
+import "../../public-pages.css";
 
 export const metadata = { title: "Verification path · KEYHOLE" };
 
@@ -53,22 +53,25 @@ function Calls({ rows, testid }: { rows: Call[]; testid?: string }) {
   );
 }
 
+/** Visible name only (for example 1-contract.sh). The full path and arguments stay in the title attribute and the link. */
+const scriptName = (path: string) => path.split(" ")[0].replace(/^\.\//, "").split("/").pop() ?? path;
+
 function Script({ path, children }: { path: string; children: React.ReactNode }) {
   return (
     <details className="jscript">
-      <summary>Prefer a terminal? <code>{path}</code></summary>
+      <summary>Prefer a terminal? Verification script: <code title={path}>{scriptName(path)}</code></summary>
       <p>{children} <a href={`${REPO}/${path.replace(/^\.\//, "").split(" ")[0]}`} target="_blank" rel="noreferrer">Read the script ↗</a></p>
     </details>
   );
 }
 
-export default function JudgePage() {
+export default function VerificationPathPage() {
   return (
     <div className="page pp pp-judge" data-testid="judge-page">
       <Purpose
         eyebrow="Verification path · no wallet"
         title={<>Check it yourself. <em>Trust nothing we say.</em></>}
-        line={<>Seven checks, top to bottom. Each one has a button that runs in your browser and a box that says what you should see. If you see something else, the claim fails.</>}
+        line={<>Seven steps, top to bottom. Steps 1 and 2 run a quick check in your browser. Steps 3 to 6 open each recorded call on /verify or name a verification script. Step 7 is optional. If you see something else, the claim fails.</>}
       />
       <div className="uact">
         <Button href="/try?start=1" testid="judge-try-free">Try it free — testnet</Button>

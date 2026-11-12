@@ -181,7 +181,7 @@ for d in DOCS:
             add(f"path-{p}", f"Linked repo path {p} exists", f"{d}:{i}", "file", p, {"type":"path","path":p}, "path exists")
 # ---------------- live site ----------------
 # The homepage no longer displays heartbeats. Do not fabricate a site-vs-chain claim for an absent stat.
-for p in ["/","/judge","/verify","/settle","/gallery","/mint","/vault","/ask","/atlas","/identity","/pnl","/key?id=k5f4750858f328940"]:
+for p in ["/","/verify/path","/verify","/settle","/gallery","/mint","/vault","/ask","/atlas","/identity","/pnl","/key?id=k5f4750858f328940"]:
     add(f"site-{p}", f"Live page {p} serves", where(RD, "| `"+p.split('?')[0]+"` |") if p not in ("/key?id=k5f4750858f328940",) else where(TC,"k5f4750858f328940"), "live site", SITE+p,
         {"type":"http","url":SITE+p,"status":200}, "HTTP 200")
 add("site-health","GET /api/health is passive and does not assert the enclave online",where(RD,"GET `/api/health`"),"file","web/lib/health.ts",{"type":"grep","path":"web/lib/health.ts","pattern":'mode: "passive"'},'passive health names mode passive and does not start compute')

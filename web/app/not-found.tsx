@@ -16,7 +16,7 @@ export default function NotFound() {
         <p className="pp-nf-lead">The link may be old or mistyped.</p>
         <div className="uact">
           <Link className="kh-btn kh-btn--primary" href="/">Home</Link>
-          <Link className="kh-btn kh-btn--secondary" href="/judge">Verification path</Link>
+          <Link className="kh-btn kh-btn--secondary" href="/verify/path">Verification path</Link>
           <Link className="kh-btn kh-btn--ghost" href="/verify">Verify a call</Link>
         </div>
       </div>

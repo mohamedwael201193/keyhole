@@ -15,10 +15,22 @@ export const SITE_LINKS = [
   { href: "/verify", label: "Proof", match: "/verify" },
   { href: "/holders", label: "Holders", match: "/holders" },
   { href: "/attack", label: "Attack", match: "/attack" },
-  { href: "/judge", label: "Verification path", match: "/judge" },
+  { href: "/verify/path", label: "Verification path", match: "/verify/path" },
 ] as const;
 
 export const LAUNCH_APP = { href: "/dashboard", label: "Launch app" } as const;
+
+/** The one item that is current for a path: the longest matching prefix, so Proof is not current on /verify/path. */
+export function activeMatch(path: string | null | undefined, links: readonly { match: string }[] = SITE_LINKS): string | null {
+  if (!path) return null;
+  let best: string | null = null;
+  for (const l of links) {
+    const m = l.match;
+    const hit = m === "/" ? path === "/" : path === m || path.startsWith(m + "/");
+    if (hit && (best === null || m.length > best.length)) best = m;
+  }
+  return best;
+}
 
 export function Nav() {
   const { t } = useI18n();
@@ -42,7 +54,7 @@ export function Nav() {
     return () => { removeEventListener("scroll", tick); removeEventListener("resize", tick); };
   }, [path]);
   useEffect(() => { setOpen(false); }, [path]);
-  const current = (match: string) => (match === "/" ? path === "/" : path === match || path.startsWith(match + "/"));
+  const active = activeMatch(path);
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only">{t("nav.skip")}</a>
@@ -50,7 +62,7 @@ export function Nav() {
         <Link href="/" className="brand" aria-label="KEYHOLE home"><KeyholeLogo className="h-9" tone={dark ? "light" : "ink"} /></Link>
         <div className="links">
           {SITE_LINKS.map((l) => (
-            <Link key={l.href} href={l.href} aria-current={current(l.match) ? "page" : undefined} className={current(l.match) ? "on" : ""}>{l.label}</Link>
+            <Link key={l.href} href={l.href} aria-current={l.match === active ? "page" : undefined} className={l.match === active ? "on" : ""}>{l.label}</Link>
           ))}
         </div>
         <div className="nav-tools">
@@ -63,7 +75,7 @@ export function Nav() {
       {open && (
         <ul id="mnav" className="mnav">
           {[...SITE_LINKS, LAUNCH_APP].map((l) => (
-            <li key={l.href}><Link onClick={() => setOpen(false)} href={l.href} aria-current={"match" in l && current(l.match) ? "page" : undefined}>{l.label}</Link></li>
+            <li key={l.href}><Link onClick={() => setOpen(false)} href={l.href} aria-current={"match" in l && l.match === active ? "page" : undefined}>{l.label}</Link></li>
           ))}
         </ul>
       )}

@@ -1,4 +1,4 @@
-/** Where a check's trust comes from. Shown next to every check on /verify and every step on /judge. */
+/** Where a check's trust comes from. Shown next to every check on /verify and every step on /verify/path. */
 export type TrustSrc = "browser" | "chain" | "outlayer" | "intel" | "us";
 export const TRUST_LABEL: Record<TrustSrc, string> = {
   browser: "computed in your browser",

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Card, CardHeader, StatusChip, Icon } from "@/components/v7";
 import { Button } from "@/components/ui";
 import { ATTACK_CASES, attackBuildLabel, checkAttestedRefusal, checkNearTx, type AttackCase, type LiveRow } from "@/lib/liveChecks";
+import { attackSummary } from "@/lib/attackSummary";
 
 type CaseState = { row: LiveRow | null; busy: boolean };
 
@@ -48,13 +49,14 @@ export function AttackBoard() {
 
   useEffect(() => { void runAll(); }, []);
 
-  const pass = Object.values(states).filter((s) => s.row?.ok === true).length;
-  const total = ATTACK_CASES.length;
+  const rows: Record<string, LiveRow | null> = {};
+  for (const [id, st] of Object.entries(states)) rows[id] = st.row;
+  const { allPass, text: summary } = attackSummary(ATTACK_CASES, rows);
 
   return (
     <div className="atk" data-testid="attack-board">
       <div className="atk-summary v7-card">
-        <StatusChip tone={pass === total && !running ? "success" : "warn"}>{running ? "Running…" : `${pass}/${total} refusals confirmed`}</StatusChip>
+        <StatusChip tone={allPass && !running ? "success" : "warn"}>{running ? "Running…" : summary}</StatusChip>
         <Button variant="secondary" size="sm" loading={running} loadingLabel="Re-checking" onClick={() => void runAll()} testid="attack-rerun">Re-check all</Button>
       </div>
 

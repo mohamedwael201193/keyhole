@@ -5,6 +5,7 @@ import { ATLAS, CALLS } from "@/lib/evidence";
 import { attestation } from "@/lib/config";
 import { TxLink } from "@/components/TxLink";
 import { TokenIcon } from "@/components/TokenIcon";
+import { explorerLabelKey } from "@/lib/atlasLabels";
 import "../public-pages.css";
 
 type Tone = "ok" | "info" | "wait";
@@ -38,7 +39,7 @@ export default function Atlas() {
                 <div className="pp-mark-act">
                   {a.kind === "tx" && <TxLink hash={a.ref!}>{t("atlas.open")} ↗</TxLink>}
                   {a.kind === "call" && <a className="ulink" href={attestation(a.ref!)} target="_blank" rel="noreferrer">{t("atlas.att")} ↗</a>}
-                  {a.kind === "settle" && a.href && <a className="ulink" href={a.href} target="_blank" rel="noreferrer">{t("atlas.open")} ↗</a>}
+                  {a.kind === "settle" && a.href && <a className="ulink" href={a.href} target="_blank" rel="noreferrer">{t(explorerLabelKey(a.chain))} ↗</a>}
                 </div>
               )}
             </li>

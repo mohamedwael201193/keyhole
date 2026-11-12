@@ -26,7 +26,7 @@ describe("app routes", () => {
   });
 
   it("public pages keep the public top bar", () => {
-    for (const p of ["/", "/start", "/judge", "/demo", "/ask", "/atlas", "/identity", "/source", "/galleryx", "/vaults", "/swapx", null, undefined]) {
+    for (const p of ["/", "/start", "/verify/path", "/judge", "/demo", "/ask", "/atlas", "/identity", "/source", "/galleryx", "/vaults", "/swapx", null, undefined]) {
       expect(isAppRoute(p), String(p)).toBe(false);
     }
   });
@@ -221,7 +221,7 @@ describe("SiteFrame picks the chrome per route", () => {
   });
 
   it("public routes keep the public nav, footer and main", () => {
-    const m = render("/judge");
+    const m = render("/verify/path");
     expect(m).not.toContain('data-testid="app-shell"');
     expect(m).toContain('data-chrome="public"');
     expect(m).toContain('data-chrome="footer"');
