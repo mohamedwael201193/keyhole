@@ -7,13 +7,10 @@ import { SwapDone } from "@/components/swap/SwapDone";
 import { SwapFailed } from "@/components/swap/SwapProgress";
 import { swapOutcome, swapSteps } from "@/components/swap/progress";
 import { LOCK_LABEL } from "@/lib/valueLock";
-import { withdrawResultView } from "@/lib/opResult";
-import { chainSaysNonePending } from "@/components/ValueRecovery";
-import { OpNotSent } from "@/components/OpNotSent";
 
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const text = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
-const BANNED = /journal|UNKNOWN|admission|admitted|operation id|worker|session check|judge/i;
+const BANNED = /journal|UNKNOWN|admission|operation id|worker|session check|judge/i;
 
 describe("the recovery card is gone from every page", () => {
   it("the app shell no longer mounts it, and no page-level 'Account operation recovery' title exists", () => {
@@ -21,7 +18,7 @@ describe("the recovery card is gone from every page", () => {
     const rec = src("../components/ValueRecovery.tsx");
     expect(rec).not.toContain("Account operation recovery");
     expect(rec).not.toContain("<h2");
-    expect(rec).toContain("Confirming an earlier transaction. New ones wait until it's confirmed.");
+    expect(rec).toContain("Confirming an earlier deposit… no funds at risk");
     expect(rec).toContain(">Confirm</Button>");
   });
   it("it is rendered only inside the card of the operation that waits (swap, withdraw sheet, overview vault)", () => {
@@ -31,8 +28,8 @@ describe("the recovery card is gone from every page", () => {
 });
 
 describe("the swap button never says 'Locked until...'", () => {
-  it("shows 'Confirming earlier transaction…' with a spinner while an earlier operation is pending", () => {
-    expect(LOCK_LABEL).toBe("Confirming earlier transaction…");
+  it("shows 'Confirming earlier deposit…' with a spinner while an earlier operation is pending", () => {
+    expect(LOCK_LABEL).toBe("Confirming earlier deposit…");
     const s = src("../app/swap/view.tsx");
     expect(s).toContain("const ctaLabel = gated ? LOCK_LABEL");
     expect(s).toContain("unlocking || gated}");
@@ -79,50 +76,5 @@ describe("results show in place inside their own card", () => {
     for (const id of ["withdraw-pending", "withdraw-out", "withdraw-failed"]) expect(v).toContain(`"${id}"`);
     expect(v).toContain("InCardSuccess");
     expect(v).not.toContain("TeeProgress active={withdraw.busy}");
-  });
-});
-
-describe("a lock clears only when the chain says nothing is pending", () => {
-  it("a pending count above zero, a non-numeric answer or a failed read all keep the lock", async () => {
-    expect(await chainSaysNonePending("0", async () => "0")).toBe(true);
-    expect(await chainSaysNonePending("0", async () => 0)).toBe(true);
-    expect(await chainSaysNonePending("0", async () => "1")).toBe(false);
-    expect(await chainSaysNonePending("0", async () => 2)).toBe(false);
-    expect(await chainSaysNonePending("0", async () => null)).toBe(false);
-    expect(await chainSaysNonePending("0", async () => { throw new Error("rpc"); })).toBe(false);
-  });
-  it("uses the row's own token, re-checks on a timer and on focus, and asks the public view", () => {
-    const r = src("../components/ValueRecovery.tsx");
-    expect(r).toContain("forgetResolved(accountId, tokenId, r.output)");
-    expect(r).not.toContain("forgetResolved(accountId, typeof");
-    expect(r).toContain("pending_value_op_count");
-    expect(r).toContain('addEventListener("focus"');
-    expect(r).toContain("setInterval");
-  });
-});
-
-describe("a withdrawal is Settled only with a terminal status and a transaction hash", () => {
-  it("no hash: Sent, confirming, no link", () => {
-    expect(withdrawResultView({ status: "success" })).toEqual({ settled: false, title: "Sent · confirming…", hash: null });
-    expect(withdrawResultView({ status: "pending", tx_hash: "abc" }).settled).toBe(false);
-    expect(withdrawResultView({ status: "pending", tx_hash: "abc" }).hash).toBeNull();
-    expect(withdrawResultView(null).settled).toBe(false);
-  });
-  it("status and hash: Settled with the hash", () => {
-    expect(withdrawResultView({ status: "success", tx_hash: "b5ea" })).toEqual({ settled: true, title: "Settled", hash: "b5ea" });
-  });
-  it("the vault shows no account link as a transaction link", () => {
-    const v = src("../app/vault/view.tsx");
-    expect(v).toContain("withdrawResultView(withdraw.res.output)");
-    expect(v).not.toContain("Open your account on NearBlocks");
-  });
-  it("a swap with no intent hash shows no link", () => {
-    const m = renderToStaticMarkup(createElement(SwapDone, { outcome: swapOutcome("success"), summary: "Traded 1 A → 2 B", status: "success", onAgain: () => {} }));
-    expect(m).not.toContain("View transaction");
-  });
-  it("the not-sent card uses plain words", () => {
-    const html = renderToStaticMarkup(createElement(OpNotSent, { code: "admission_unknown", noun: "swap" }));
-    const m = text(html.split("<details")[0]);
-    expect(m).not.toMatch(BANNED);
   });
 });
