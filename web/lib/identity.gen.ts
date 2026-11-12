@@ -52,7 +52,7 @@ export const IDENTITY = {
     ]
   },
   "review": {
-    "source_commit": "411e826679076adf6d838171ba0be20a6e5fb42c"
+    "source_commit": "535b0c6d27ed64f5de5370bcd4145316bcdc605b"
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
