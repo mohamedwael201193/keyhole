@@ -522,6 +522,42 @@ fn valid_confidential_history_accepts() {
     authority_inventory(&[row("confidential", json!({"intent_hash":"settled"}))]).unwrap();
 }
 #[test]
+fn official_deposit_family_call_history_accepts() {
+    authority_inventory(&[row(
+        "call",
+        json!({
+            "intent_id": "5284646c-ebad-4862-88cb-cdc456822d06",
+            "deposit_address": "0x186a755Ef1C9a91d472a1bE23B4e7964ed533EdB",
+            "amount": "900000"
+        }),
+    )])
+    .unwrap();
+}
+#[test]
+fn exact_exit_withdraw_and_storage_call_history_accepts() {
+    authority_inventory(&[json!({
+        "total": 3,
+        "requests": [
+            {"request_id":"11111111-1111-4111-8111-111111111111","type":"call","status":"success","result":{"intent_id":"dep"}},
+            {"request_id":"11111111-1111-4111-8111-111111111112","type":"confidential","status":"success","result":{"amount":"100000"}},
+            {"request_id":"11111111-1111-4111-8111-111111111113","type":"withdraw","status":"success","result":{"intent_hash":"settled"}}
+        ]
+    })])
+    .unwrap();
+}
+#[test]
+fn call_signature_artifact_is_not_drained() {
+    assert!(authority_inventory(&[row("call", json!({"signature":"artifact"}))]).is_err());
+}
+#[test]
+fn withdraw_signature_artifact_is_not_drained() {
+    assert!(authority_inventory(&[row("withdraw", json!({"signature_hex":"artifact"}))]).is_err());
+}
+#[test]
+fn policy_update_is_still_not_drained() {
+    assert!(authority_inventory(&[row("policy_update", json!({}))]).is_err());
+}
+#[test]
 fn incomplete_inventory_is_not_drained() {
     assert!(authority_inventory(&[json!({"total":1,"requests":[]})]).is_err());
 }
