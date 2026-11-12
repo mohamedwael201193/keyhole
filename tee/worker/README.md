@@ -67,7 +67,7 @@ Every failure is `{"ok": false, "error": {"code", "message"}}`. Codes: `no_auth,
 
 ```
 cargo test        # unit tests: NEP-413, replay, caps, rate limits, tx encoding
-./build.sh        # reproducible build (pinned toolchain, path remapping); prints the sha256. The published worker hash is `identity.json` `worker.wasm_sha256` (62398a8a…). Historical `d337e822` is a previous build.
+./build.sh        # reproducible build (pinned toolchain, path remapping); prints the sha256 (the hash from the pinned CI build: ubuntu-latest, rustc 1.99.1; local builds on other hosts may differ). The published worker hash is `identity.json` `worker.wasm_sha256` (62398a8a…). Historical `d337e822` is a previous build.
 ```
 
 Config (OutLayer project env/secrets): `KEYS_CONTRACT` (default `keyhole-devmo.near`), `NEP413_RECIPIENT` (default `keyhole`), `ONECLICK_JWT` (secret).

@@ -147,9 +147,17 @@ pub fn confirm_admission<H:AdmissionHost>(host:&mut H,j:&Journal)->Result<(),Err
     j.validate()?;
     if let Ok(v)=host.value_op(j){if j.validate_permit(&v).is_ok(){return Ok(());}}
     // A lost send reply is neither rejection nor finality. Require the exact finalized record.
-    let _=host.begin(j);
-    j.validate_permit(&host.value_op(j)?).map_err(|_|err("admission_unknown",format!("admission not confirmed; reconcile operation {}",j.op_id)))
+    let begun=host.begin(j);
+    let permit=host.value_op(j);
+    if let Ok(v)=&permit{if j.validate_permit(v).is_ok(){return Ok(());}}
+    // Fail closed either way, but name the real blocker. A refused/unsent begin (a pending
+    // native-journal ticket, an RPC outage, a minter mismatch) must not read as an unknown
+    // on-chain outcome: only the native_* codes mean "reconcile the minter send, never resend".
+    if let Err(e)=begun{if begin_blocker_visible(e.code){return Err(e);}}
+    permit?;
+    Err(err("admission_unknown",format!("admission not confirmed; reconcile operation {}",j.op_id)))
 }
+fn begin_blocker_visible(code:&str)->bool{matches!(code,"native_busy"|"native_unknown"|"collateral_unknown"|"guard_state"|"rpc")}
 pub fn settle_admission<H:AdmissionHost>(host:&mut H,j:&Journal,t:&Terminal)->Result<bool,Error>{
     put_once(host,&format!("{}/terminal",j.key()),&serde_json::to_vec(t).map_err(|_|err("guard_journal","encode terminal"))?)?;
     let _=host.complete(j,t);

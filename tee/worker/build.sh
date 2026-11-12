@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproducible build of the KEYHOLE worker. Same toolchain + Cargo.lock + path remapping => same sha256 anywhere.
+# Reproducible build of the KEYHOLE worker. Same toolchain + Cargo.lock + path remapping => same sha256 in CI (pinned ubuntu-latest runner); other hosts may differ.
 set -euo pipefail
 cd "$(dirname "$0")"
 CH="${CARGO_HOME:-$HOME/.cargo}"

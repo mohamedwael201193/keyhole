@@ -3588,7 +3588,7 @@
   {
    "id": "test-a_bad_owner_proposal_can_be_cancelled_before_it_can_take_effect",
    "claim": "Named test or symbol `a_bad_owner_proposal_can_be_cancelled_before_it_can_take_effect` exists in the source",
-   "where": "SECURITY.md:122",
+   "where": "SECURITY.md:123",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3630,7 +3630,7 @@
   {
    "id": "test-accepting_ownership_clears_a_staged_upgrade",
    "claim": "Named test or symbol `accepting_ownership_clears_a_staged_upgrade` exists in the source",
-   "where": "SECURITY.md:122",
+   "where": "SECURITY.md:123",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3693,7 +3693,7 @@
   {
    "id": "test-all_aliases_reviewed",
    "claim": "Named test or symbol `all_aliases_reviewed` exists in the source",
-   "where": "SECURITY.md:700",
+   "where": "SECURITY.md:701",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3777,7 +3777,7 @@
   {
    "id": "test-cancel_owner_proposal",
    "claim": "Named test or symbol `cancel_owner_proposal` exists in the source",
-   "where": "SECURITY.md:130",
+   "where": "SECURITY.md:131",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3840,7 +3840,7 @@
   {
    "id": "test-create_collateral_wallet",
    "claim": "Named test or symbol `create_collateral_wallet` exists in the source",
-   "where": "SECURITY.md:725",
+   "where": "SECURITY.md:726",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3861,7 +3861,7 @@
   {
    "id": "test-del_beat_key",
    "claim": "Named test or symbol `del_beat_key` exists in the source",
-   "where": "SECURITY.md:80",
+   "where": "SECURITY.md:81",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3882,7 +3882,7 @@
   {
    "id": "test-derive_min_out",
    "claim": "Named test or symbol `derive_min_out` exists in the source",
-   "where": "SECURITY.md:188",
+   "where": "SECURITY.md:189",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3901,9 +3901,30 @@
    "verify": "node judge/verify-claims.mjs --only test-derive_min_out"
   },
   {
+   "id": "test-does_not_exist",
+   "claim": "Named test or symbol `does_not_exist` exists in the source",
+   "where": "SECURITY.md:80",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "does_not_exist",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`does_not_exist` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-does_not_exist"
+  },
+  {
    "id": "test-effective_policy_reviewed",
    "claim": "Named test or symbol `effective_policy_reviewed` exists in the source",
-   "where": "SECURITY.md:734",
+   "where": "SECURITY.md:735",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -3945,7 +3966,7 @@
   {
    "id": "test-exact_near_exit_v1",
    "claim": "Named test or symbol `exact_near_exit_v1` exists in the source",
-   "where": "SECURITY.md:854",
+   "where": "SECURITY.md:855",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4029,7 +4050,7 @@
   {
    "id": "test-get_control_state",
    "claim": "Named test or symbol `get_control_state` exists in the source",
-   "where": "SECURITY.md:631",
+   "where": "SECURITY.md:632",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4071,7 +4092,7 @@
   {
    "id": "test-get_payout_credit",
    "claim": "Named test or symbol `get_payout_credit` exists in the source",
-   "where": "SECURITY.md:361",
+   "where": "SECURITY.md:362",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4134,7 +4155,7 @@
   {
    "id": "test-governance_storage_cannot_consume_user_liabilities",
    "claim": "Named test or symbol `governance_storage_cannot_consume_user_liabilities` exists in the source",
-   "where": "SECURITY.md:130",
+   "where": "SECURITY.md:131",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4470,7 +4491,7 @@
   {
    "id": "test-is_full_access",
    "claim": "Named test or symbol `is_full_access` exists in the source",
-   "where": "SECURITY.md:205",
+   "where": "SECURITY.md:206",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4491,7 +4512,7 @@
   {
    "id": "test-judge_governance_budget_omits_legacy_listing_reserve",
    "claim": "Named test or symbol `judge_governance_budget_omits_legacy_listing_reserve` exists in the source",
-   "where": "SECURITY.md:130",
+   "where": "SECURITY.md:131",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4512,7 +4533,7 @@
   {
    "id": "test-judge_wind_down_storage_budget_underestimates_actual_write",
    "claim": "Named test or symbol `judge_wind_down_storage_budget_underestimates_actual_write` exists in the source",
-   "where": "SECURITY.md:130",
+   "where": "SECURITY.md:131",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4575,7 +4596,7 @@
   {
    "id": "test-loan_bond_covers_the_deadline_key_and_closing_frees_it",
    "claim": "Named test or symbol `loan_bond_covers_the_deadline_key_and_closing_frees_it` exists in the source",
-   "where": "SECURITY.md:125",
+   "where": "SECURITY.md:126",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4596,7 +4617,7 @@
   {
    "id": "test-loan_principal_delivered",
    "claim": "Named test or symbol `loan_principal_delivered` exists in the source",
-   "where": "SECURITY.md:115",
+   "where": "SECURITY.md:116",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4617,7 +4638,7 @@
   {
    "id": "test-min_amount_out",
    "claim": "Named test or symbol `min_amount_out` exists in the source",
-   "where": "SECURITY.md:188",
+   "where": "SECURITY.md:189",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4680,7 +4701,7 @@
   {
    "id": "test-nft_on_transfer",
    "claim": "Named test or symbol `nft_on_transfer` exists in the source",
-   "where": "SECURITY.md:105",
+   "where": "SECURITY.md:106",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4701,7 +4722,7 @@
   {
    "id": "test-nft_resolve_transfer",
    "claim": "Named test or symbol `nft_resolve_transfer` exists in the source",
-   "where": "SECURITY.md:105",
+   "where": "SECURITY.md:106",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4743,7 +4764,7 @@
   {
    "id": "test-nft_settlement_epoch",
    "claim": "Named test or symbol `nft_settlement_epoch` exists in the source",
-   "where": "SECURITY.md:219",
+   "where": "SECURITY.md:220",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4953,7 +4974,7 @@
   {
    "id": "test-parallel_owner_and_upgrade_timers_apply_before_accept",
    "claim": "Named test or symbol `parallel_owner_and_upgrade_timers_apply_before_accept` exists in the source",
-   "where": "SECURITY.md:122",
+   "where": "SECURITY.md:123",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5016,7 +5037,7 @@
   {
    "id": "test-payout_account_registered",
    "claim": "Named test or symbol `payout_account_registered` exists in the source",
-   "where": "SECURITY.md:466",
+   "where": "SECURITY.md:467",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5037,7 +5058,7 @@
   {
    "id": "test-payout_storage_cost",
    "claim": "Named test or symbol `payout_storage_cost` exists in the source",
-   "where": "SECURITY.md:466",
+   "where": "SECURITY.md:467",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5058,7 +5079,7 @@
   {
    "id": "test-pending_owner_not_before_ns",
    "claim": "Named test or symbol `pending_owner_not_before_ns` exists in the source",
-   "where": "SECURITY.md:283",
+   "where": "SECURITY.md:284",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5079,7 +5100,7 @@
   {
    "id": "test-pending_return_count",
    "claim": "Named test or symbol `pending_return_count` exists in the source",
-   "where": "SECURITY.md:105",
+   "where": "SECURITY.md:106",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5100,7 +5121,7 @@
   {
    "id": "test-propose_owner_and_accept_owner_reject_the_contract_account",
    "claim": "Named test or symbol `propose_owner_and_accept_owner_reject_the_contract_account` exists in the source",
-   "where": "SECURITY.md:122",
+   "where": "SECURITY.md:123",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5203,6 +5224,27 @@
    "verify": "node judge/verify-claims.mjs --only test-reclaim_unclaimed_principal"
   },
   {
+   "id": "test-reconcile_minter_send",
+   "claim": "Named test or symbol `reconcile_minter_send` exists in the source",
+   "where": "SECURITY.md:80",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "reconcile_minter_send",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`reconcile_minter_send` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-reconcile_minter_send"
+  },
+  {
    "id": "test-reconcile_value_op",
    "claim": "Named test or symbol `reconcile_value_op` exists in the source",
    "where": "README.md:371",
@@ -5226,7 +5268,7 @@
   {
    "id": "test-reconcile_without_a_recorded_result_never_clears_a_marker",
    "claim": "Named test or symbol `reconcile_without_a_recorded_result_never_clears_a_marker` exists in the source",
-   "where": "SECURITY.md:126",
+   "where": "SECURITY.md:127",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5247,7 +5289,7 @@
   {
    "id": "test-release_delay_is_24h_and_the_release_script_refuses_the_sandbox_feature",
    "claim": "Named test or symbol `release_delay_is_24h_and_the_release_script_refuses_the_sandbox_feature` exists in the source",
-   "where": "SECURITY.md:119",
+   "where": "SECURITY.md:120",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5268,7 +5310,7 @@
   {
    "id": "test-resolve_transfer_call",
    "claim": "Named test or symbol `resolve_transfer_call` exists in the source",
-   "where": "SECURITY.md:631",
+   "where": "SECURITY.md:632",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5434,9 +5476,30 @@
    "verify": "node judge/verify-claims.mjs --only test-tier_loan_cap"
   },
   {
+   "id": "test-transaction_validity_period",
+   "claim": "Named test or symbol `transaction_validity_period` exists in the source",
+   "where": "SECURITY.md:80",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "transaction_validity_period",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`transaction_validity_period` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-transaction_validity_period"
+  },
+  {
    "id": "test-transfer_call_race_is_closed_on_v2_2",
    "claim": "Named test or symbol `transfer_call_race_is_closed_on_v2_2` exists in the source",
-   "where": "SECURITY.md:105",
+   "where": "SECURITY.md:106",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5520,7 +5583,7 @@
   {
    "id": "test-treasury_apply_failure_is_recorded_and_reconciled_when_fixed",
    "claim": "Named test or symbol `treasury_apply_failure_is_recorded_and_reconciled_when_fixed` exists in the source",
-   "where": "SECURITY.md:128",
+   "where": "SECURITY.md:129",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5541,7 +5604,7 @@
   {
    "id": "test-upgrade_stage_cancel_timelock_and_hash_checks",
    "claim": "Named test or symbol `upgrade_stage_cancel_timelock_and_hash_checks` exists in the source",
-   "where": "SECURITY.md:123",
+   "where": "SECURITY.md:124",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5583,7 +5646,7 @@
   {
    "id": "test-withdraw_dry_run",
    "claim": "Named test or symbol `withdraw_dry_run` exists in the source",
-   "where": "SECURITY.md:609",
+   "where": "SECURITY.md:610",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5625,7 +5688,7 @@
   {
    "id": "test-wound_down_refuses_funding_and_a_protected_purchase",
    "claim": "Named test or symbol `wound_down_refuses_funding_and_a_protected_purchase` exists in the source",
-   "where": "SECURITY.md:129",
+   "where": "SECURITY.md:130",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -8543,7 +8606,7 @@
   {
    "id": "path-docs/evidence/publish-a985fd87/README.md",
    "claim": "Linked repo path docs/evidence/publish-a985fd87/README.md exists",
-   "where": "SECURITY.md:190",
+   "where": "SECURITY.md:191",
    "evidence_type": "file",
    "evidence": "docs/evidence/publish-a985fd87/README.md",
    "check": {
@@ -8556,7 +8619,7 @@
   {
    "id": "path-docs/evidence/publish-ebeb6a34/README.md",
    "claim": "Linked repo path docs/evidence/publish-ebeb6a34/README.md exists",
-   "where": "SECURITY.md:190",
+   "where": "SECURITY.md:191",
    "evidence_type": "file",
    "evidence": "docs/evidence/publish-ebeb6a34/README.md",
    "check": {
@@ -8569,7 +8632,7 @@
   {
    "id": "path-README.md",
    "claim": "Linked repo path README.md exists",
-   "where": "SECURITY.md:227",
+   "where": "SECURITY.md:228",
    "evidence_type": "file",
    "evidence": "README.md",
    "check": {
@@ -8582,7 +8645,7 @@
   {
    "id": "path-docs/evidence/integration-stack/validation.json",
    "claim": "Linked repo path docs/evidence/integration-stack/validation.json exists",
-   "where": "SECURITY.md:430",
+   "where": "SECURITY.md:431",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/validation.json",
    "check": {
@@ -8595,7 +8658,7 @@
   {
    "id": "path-web/next.config.ts",
    "claim": "Linked repo path web/next.config.ts exists",
-   "where": "SECURITY.md:538",
+   "where": "SECURITY.md:539",
    "evidence_type": "file",
    "evidence": "web/next.config.ts",
    "check": {
@@ -8608,7 +8671,7 @@
   {
    "id": "path-skills/keyhole/SKILL.md",
    "claim": "Linked repo path skills/keyhole/SKILL.md exists",
-   "where": "SECURITY.md:603",
+   "where": "SECURITY.md:604",
    "evidence_type": "file",
    "evidence": "skills/keyhole/SKILL.md",
    "check": {
@@ -8621,7 +8684,7 @@
   {
    "id": "path-web/tests/sourceTarball.test.ts",
    "claim": "Linked repo path web/tests/sourceTarball.test.ts exists",
-   "where": "SECURITY.md:603",
+   "where": "SECURITY.md:604",
    "evidence_type": "file",
    "evidence": "web/tests/sourceTarball.test.ts",
    "check": {
@@ -8634,7 +8697,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/TOOLING.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/TOOLING.md exists",
-   "where": "SECURITY.md:643",
+   "where": "SECURITY.md:644",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/TOOLING.md",
    "check": {
@@ -8647,7 +8710,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/RUNBOOK_DELTA.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/RUNBOOK_DELTA.md exists",
-   "where": "SECURITY.md:647",
+   "where": "SECURITY.md:648",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/RUNBOOK_DELTA.md",
    "check": {
@@ -8660,7 +8723,7 @@
   {
    "id": "path-scripts/release/lifecycle.mjs",
    "claim": "Linked repo path scripts/release/lifecycle.mjs exists",
-   "where": "SECURITY.md:672",
+   "where": "SECURITY.md:673",
    "evidence_type": "file",
    "evidence": "scripts/release/lifecycle.mjs",
    "check": {
@@ -8673,7 +8736,7 @@
   {
    "id": "path-scripts/release/lifecycle.test.mjs",
    "claim": "Linked repo path scripts/release/lifecycle.test.mjs exists",
-   "where": "SECURITY.md:672",
+   "where": "SECURITY.md:673",
    "evidence_type": "file",
    "evidence": "scripts/release/lifecycle.test.mjs",
    "check": {
@@ -8686,7 +8749,7 @@
   {
    "id": "path-docs/worker/outlayer-exact-exit-schemas.json",
    "claim": "Linked repo path docs/worker/outlayer-exact-exit-schemas.json exists",
-   "where": "SECURITY.md:821",
+   "where": "SECURITY.md:822",
    "evidence_type": "file",
    "evidence": "docs/worker/outlayer-exact-exit-schemas.json",
    "check": {
@@ -8699,7 +8762,7 @@
   {
    "id": "path-docs/worker/EXACT_NEAR_EXIT.md",
    "claim": "Linked repo path docs/worker/EXACT_NEAR_EXIT.md exists",
-   "where": "SECURITY.md:829",
+   "where": "SECURITY.md:830",
    "evidence_type": "file",
    "evidence": "docs/worker/EXACT_NEAR_EXIT.md",
    "check": {

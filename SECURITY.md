@@ -60,7 +60,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - [x] Worker: amounts parsed as integers; USD caps checked before any external call; spend rolled back on failure.
 - [x] Worker source: withdraw destination is the verified current holder's own NEAR account on NEAR; the signed request must match it exactly. Caps, cooldown after transfer and listing freeze still apply. See the candidate boundary below.
 - [x] Secrets: none in the repo (CI `hygiene` job scans); site keys are server-only Vercel env vars.
-- [x] Reproducible build: pinned toolchain, path remapping, hash checked in CI against FastFS.
+- [x] Reproducible build: pinned toolchain, path remapping, hash checked in CI against FastFS. The candidate hash is the one the pinned CI build (ubuntu-latest, rustc 1.99.1, `tee/worker/build.sh`) produces; local builds on other hosts may differ.
 - [x] Attestation: report_data recomputed from the attested fields; DCAP chain to the pinned Intel root.
 - [x] Intel collateral checked in the browser: PCK and Root CA CRLs, TCB Info, TDX module and QE identity, signatures to the pinned Intel root ([`web/lib/pcs.ts`](web/lib/pcs.ts)).
 - [ ] No third-party audit yet.
@@ -77,6 +77,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - **Tier on a second key.** Limits follow the holder's best tier, so a holder of a Gold and a Bronze key trades both accounts at Gold caps. Only Bronze is minted today ([review R5](docs/evidence/red-review/README.md)).
 - **Swap at the moment of sale.** A swap the old holder signed can still run if the transfer is not final when the enclave re-reads ownership. The value stays in the account the buyer now holds; withdraws wait out the cooldown ([review R6](docs/evidence/red-review/README.md)).
 
+- **Native minter send recovery.** Once a native minter send has been dispatched, its journal claim is never cleared by a timeout or an error string. `reconcile_minter_send` clears it as `does_not_exist` only when the RPC returns the structured `UNKNOWN_TRANSACTION` error, the validity window has expired (final height >= referenced-block height + `transaction_validity_period` + 2), and the signer key's final nonce is below the planned transaction nonce; any missing read fails closed and keeps the claim. A success body that merely contains the text is never "unknown". New plans store the reference block height (a send is refused before signing without one). Legacy journals without it clear only if the reference block is retrievable and expired; an unretrievable or unknown reference block never clears, and a missed retention window needs a manual reviewed recovery. The provisioning `<k>/submitted` flag is not reset by a clear. Tests: `tee/worker/src/native_send.rs`.
 - **Beat key.** The function-call key on the TEE minter can call only `beat` on the keys contract, with no deposit, until its 0.05 NEAR gas allowance is spent. If it leaked, the worst case is extra `nft_metadata_update` events for existing tokens; no mint, transfer, minter change or fund movement is possible. The owner removes it with `del_beat_key`.
 
 ## Independent review

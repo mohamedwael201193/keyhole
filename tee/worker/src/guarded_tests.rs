@@ -283,3 +283,52 @@ fn original_withdrawal_unknown_poll_is_get_only_and_keeps_admission_locked() {
         assert_eq!((h.post_calls,h.executions,h.finish_calls),(0,0,0));assert!(h.admitted);
     }
 }
+
+// A refused begin must surface its real blocker (native journal ticket) instead of a generic
+// admission_unknown, while still failing closed and never reporting success.
+struct BeginHost{store:Memory,begin:Option<Error>,landed:bool,begins:usize}
+impl Store for BeginHost{
+ fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{self.store.set_if_absent(k,v)}
+ fn incr(&mut self,k:&str,d:i64)->Result<i64,Error>{self.store.incr(k,d)}
+ fn read(&mut self,k:&str)->Result<Vec<u8>,Error>{self.store.read(k)}
+ fn remove(&mut self,k:&str)->Result<(),Error>{self.store.remove(k)}
+ fn list_prefix(&mut self,p:&str)->Result<Vec<String>,Error>{self.store.list_prefix(p)}
+}
+impl AdmissionHost for BeginHost{
+ fn value_op(&mut self,j:&Journal)->Result<Value,Error>{
+  if self.landed{Ok(json!({"op_id":j.op_id,"action_hash":j.action_hash,"epoch":j.epoch.to_string(),"nonce":j.nonce.to_string(),"state":0}))}else{Ok(Value::Null)}}
+ fn control(&mut self,_:&str)->Result<Control,Error>{unreachable!()}
+ fn begin(&mut self,_:&Journal)->Result<(),Error>{self.begins+=1;match self.begin.take(){Some(e)=>Err(e),None=>{self.landed=true;Ok(())}}}
+ fn complete(&mut self,_:&Journal,_:&Terminal)->Result<(),Error>{unreachable!()}
+}
+fn begin_host(e:Option<Error>)->BeginHost{BeginHost{store:Memory::default(),begin:e,landed:false,begins:0}}
+#[test]fn refused_begin_names_native_blocker_and_still_fails_closed(){
+ for code in ["native_unknown","native_busy"]{
+  let mut h=begin_host(Some(err(code,"another minter send must be reconciled")));
+  let e=confirm_admission(&mut h,&journal()).unwrap_err();
+  assert_eq!(e.code,code);assert_eq!(h.begins,1);
+ }
+}
+#[test]fn refused_begin_with_other_codes_and_no_permit_stays_admission_unknown(){
+ let mut h=begin_host(Some(err("tx_failed","begin rejected")));
+ assert_eq!(confirm_admission(&mut h,&journal()).unwrap_err().code,"admission_unknown");
+}
+#[test]fn lost_begin_reply_is_confirmed_by_the_chain_record_not_the_send_error(){
+ // Send reported native_unknown but the permit finalized: admission is confirmed, never double-begun.
+ struct Lost(BeginHost);
+ impl Store for Lost{
+  fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{self.0.set_if_absent(k,v)}
+  fn incr(&mut self,k:&str,d:i64)->Result<i64,Error>{self.0.incr(k,d)}
+  fn read(&mut self,k:&str)->Result<Vec<u8>,Error>{self.0.read(k)}
+  fn remove(&mut self,k:&str)->Result<(),Error>{self.0.remove(k)}
+  fn list_prefix(&mut self,p:&str)->Result<Vec<String>,Error>{self.0.list_prefix(p)}
+ }
+ impl AdmissionHost for Lost{
+  fn value_op(&mut self,j:&Journal)->Result<Value,Error>{self.0.value_op(j)}
+  fn control(&mut self,_:&str)->Result<Control,Error>{unreachable!()}
+  fn begin(&mut self,_:&Journal)->Result<(),Error>{self.0.begins+=1;self.0.landed=true;Err(err("native_unknown","response lost"))}
+  fn complete(&mut self,_:&Journal,_:&Terminal)->Result<(),Error>{unreachable!()}
+ }
+ let mut h=Lost(begin_host(None));
+ confirm_admission(&mut h,&journal()).unwrap();assert_eq!(h.0.begins,1);
+}

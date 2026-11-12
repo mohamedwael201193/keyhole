@@ -49,7 +49,7 @@ impl native_send::Rpc for NativeRpc {
         // Same flattened-or-envelope shapes `is_full_access` already accepts (auth succeeded).
         access_key_nonce(&v).ok_or_else(|| err("rpc", "missing native nonce"))
     }
-    fn block(&mut self) -> Result<[u8; 32], Error> {
+    fn block(&mut self) -> Result<([u8; 32], Option<u64>), Error> {
         let (v, e) = rpc::block("final");
         if !e.is_empty() {
             return Err(err("rpc", "final block unavailable"));
@@ -58,7 +58,8 @@ impl native_send::Rpc for NativeRpc {
             return Err(err("rpc", "invalid final block"));
         }
         // Same flattened-or-envelope shapes `chain_now_ms` already accepts.
-        final_block_hash(&v).ok_or_else(|| err("rpc", "invalid block hash"))
+        let h = final_block_hash(&v).ok_or_else(|| err("rpc", "invalid block hash"))?;
+        Ok((h, native_send::block_height(&v)))
     }
     fn broadcast(&mut self, signed: &str) -> Result<Value, Error> {
         let (v, e) = rpc::send_tx(signed, "FINAL");
@@ -72,11 +73,66 @@ impl native_send::Rpc for NativeRpc {
             .map_err(|_| err("native_unknown", "invalid original send response"))
     }
     fn status(&mut self, hash: &str, signer: &str) -> Result<Value, Error> {
-        let (v, e) = rpc::tx_status(hash, signer, "FINAL");
+        // NONE returns the official cause without waiting. FINAL timeouts were
+        // previously collapsed into "not yet FINAL" and hid UNKNOWN_TRANSACTION.
+        let (v, e) = rpc::tx_status(hash, signer, "NONE");
+        if native_send::rpc_reports_unknown(&v, &e) {
+            return Err(err("unknown_transaction", "UNKNOWN_TRANSACTION"));
+        }
         if !e.is_empty() {
             return Err(err("native_unknown", "original send not yet FINAL"));
         }
-        serde_json::from_str(&v).map_err(|_| err("native_unknown", "original status unavailable"))
+        let body: Value = serde_json::from_str(&v)
+            .map_err(|_| err("native_unknown", "original status unavailable"))?;
+        if body.pointer("/final_execution_status").and_then(|x| x.as_str()) == Some("FINAL")
+            || body.pointer("/result/final_execution_status").and_then(|x| x.as_str()) == Some("FINAL")
+        {
+            return Ok(body);
+        }
+        let (v2, e2) = rpc::tx_status(hash, signer, "FINAL");
+        if native_send::rpc_reports_unknown(&v2, &e2) {
+            return Err(err("unknown_transaction", "UNKNOWN_TRANSACTION"));
+        }
+        if !e2.is_empty() {
+            return Err(err("native_unknown", "original send not yet FINAL"));
+        }
+        serde_json::from_str(&v2).map_err(|_| err("native_unknown", "original status unavailable"))
+    }
+    fn validity_context(&mut self, plan: &native_send::Plan) -> (Option<u64>, Option<u64>, Option<u64>) {
+        // A stored height needs no lookup (the caller prefers it); only legacy plans look it up.
+        let ref_h = if plan.reference_height.is_some() {
+            None
+        } else {
+            native_send::plan_block_hash(plan)
+        }
+        .and_then(|h| {
+            let (raw, e) = rpc::block(&bs58::encode(h).into_string());
+            if e.is_empty() {
+                native_send::block_height(&raw)
+            } else {
+                None
+            }
+        });
+        let final_h = {
+            let (raw, e) = rpc::block("final");
+            if e.is_empty() {
+                native_send::block_height(&raw)
+            } else {
+                None
+            }
+        };
+        let period = {
+            let (raw, e) = rpc::raw(
+                "EXPERIMENTAL_protocol_config",
+                r#"{"finality":"final"}"#,
+            );
+            if e.is_empty() {
+                native_send::transaction_validity_period(&raw)
+            } else {
+                None
+            }
+        };
+        (ref_h, final_h, period)
     }
 }
 fn send_full(
@@ -120,7 +176,17 @@ fn op_reconcile_minter_send(input: &Value) -> Result<Value, Error> {
         native_send::abort_unsent(&mut Host, &t)?;
         return Ok(json!({"ok":true,"status":"proven_never_submitted"}));
     }
-    let (p, _, success) =
+    let (p, v, success) =
         native_send::reconcile(&mut Host, &mut NativeRpc { provision: None }, &t)?;
+    if v.get("does_not_exist") == Some(&Value::Bool(true)) {
+        return Ok(json!({
+            "ok": true,
+            "tx_hash": p.hash,
+            "status": "does_not_exist",
+            "reference_block_height": v.get("reference_block_height"),
+            "final_height": v.get("final_height"),
+            "transaction_validity_period": v.get("transaction_validity_period"),
+        }));
+    }
     Ok(json!({"ok":true,"tx_hash":p.hash,"status":if success{"success"}else{"failed"}}))
 }
