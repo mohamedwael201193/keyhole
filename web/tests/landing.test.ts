@@ -17,103 +17,94 @@ const render = (reach: { tokens: number; chains: number; marks: never[] } | null
 const html = render(null);
 
 describe("landing sections", () => {
-  it("keeps the order: hero, proof, the handover, buyer check, trade, private, judges, the closing band", () => {
-    const ids = ['id="top"', 'id="live"', 'id="proof"', 'id="handover"', 'id="check"', 'id="trade"', 'id="private"', 'id="judge"', 'id="cta"'];
+  it("keeps the order of DESIGN_SPEC: hero, problem, how it works, the lock-out, pledge, live proof, builders, close", () => {
+    const ids = ['id="top"', 'id="problem"', 'id="handover"', 'id="lockout"', 'id="pledge"', 'id="proof"', 'id="builders"', 'id="cta"'];
     const at = ids.map((id) => html.indexOf(id));
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
-    const heads = ["proof-h", "handover-h", "check-h", "trade-h", "private-h", "judge-h", "cta-h"].map((id) => html.indexOf(`id="${id}"`));
+  });
+
+  it("the one-screen headings are present, in the same order", () => {
+    const heads = ["hero-h", "problem-h", "how-h", "lockout-h", "pledge-h", "proof-h", "builders-h", "cta-h"].map((id) => html.indexOf(`id="${id}"`));
     expect(heads.every((i) => i > 0)).toBe(true);
     expect([...heads].sort((a, b) => a - b)).toEqual(heads);
   });
 
-  it("the cut sections are gone: the key collection, the three outcome cards, the old diagram and the attestation card", () => {
-    expect(html).not.toContain('id="keys"');
-    expect(html).not.toContain('id="outcomes"');
-    expect(html).not.toContain('class="lp-grid"');
-    expect(html).not.toContain("lp-track");
-    expect(html).not.toContain("kh-tilt");
-    expect(html).not.toContain('class="how-node');
-    expect(html).not.toContain('class="attc"');
-    expect(html).not.toContain("lp-more");
-  });
-
-  it("the hero's primary action launches the app and the secondary scrolls to the handover", () => {
-    expect(html).toMatch(/data-testid="start-cta"[^>]*href="\/dashboard"|href="\/dashboard"[^>]*data-testid="start-cta"/);
-    expect(html).toMatch(/data-testid="handover-cta"[^>]*href="#handover"|href="#handover"[^>]*data-testid="handover-cta"/);
-    expect(html).toContain("Watch a real handover");
-    expect(html).toContain("Sell a trading account");
+  it("the hero: the headline, the one-line lead, the contract fact and the two actions, with the trial as a text link", () => {
+    expect(html).toContain("An NFT that is the key to a private trading account.");
+    expect(html).toContain("Hold the key and you run the account. Sell the key and the account goes with it.");
+    expect(html).toContain("Live on NEAR mainnet");
+    expect(html).toMatch(/data-testid="start-cta"[^>]*href="\/mint"|href="\/mint"[^>]*data-testid="start-cta"/);
+    expect(html).toMatch(/data-testid="verify-cta"[^>]*href="\/verify"|href="\/verify"[^>]*data-testid="verify-cta"/);
     expect(html).toMatch(/data-testid="try-free-cta"[^>]*href="\/try\?start=1"|href="\/try\?start=1"[^>]*data-testid="try-free-cta"/);
     expect(html).toContain("Try it free — testnet");
-    expect(html).toContain('data-testid="mainnet-stats"');
     expect(html).toContain("keyhole-devmo.near");
+    expect(html).toContain("/heirloom/keys/k03.webp");
   });
 
-  it("the handover: three real steps with their ids and proofs, on the server so the page works without JavaScript", () => {
-    expect(html.match(/class="hand-step"/g)?.length).toBe(3);
-    expect(html).toContain('href="/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae"');
-    expect(html).toContain("https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD");
-    expect(html).toContain('href="/verify?call=e805f050-d416-4a04-9b12-270adbe02068"');
+  it("the hero video has the poster 01, the webm and mp4 sources, and preloads only its metadata", () => {
+    expect(html).toMatch(/<video[^>]*preload="metadata"/);
+    expect(html).toMatch(/<video[^>]*poster="\/landing\/hero-vault\.webp"/);
+    expect(html).toContain("/landing/hero-vault.webp");
+    expect(html).toContain("/landing/hero-loop.webm");
+    expect(html).toContain("/landing/hero-loop.mp4");
+  });
+
+  it("the lock-out: the previous holder is refused with not_owner, the new holder's account is open, and the transfer is linked", () => {
+    expect(html).toContain("Previous holder");
     expect(html).toContain("not_owner");
-    expect(html).toContain("team test wallets");
+    expect(html).toContain("New holder");
+    expect(html).toContain("Account open");
+    expect(html).toContain("https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD");
+    expect(html).toMatch(/href="\/attack"/);
   });
 
-  it("the buyer check is an example from /key, with the six checks the verdict reads", () => {
-    expect(html).toContain("Example from /key");
-    expect(html).toContain("Signature valid");
-    expect(html).toContain("Signer is the contract&#x27;s minter");
-    expect(html).toContain("Proof is for this key");
-    expect(html).toContain("Holder read from chain");
-    expect(html).toContain("Log head");
-    expect(html).toContain('href="/keys"');
+  it("how it works: three foil steps with their copy, and the real key in the keyhole", () => {
+    expect(html.match(/class="lp-step"/g)?.length).toBe(3);
+    expect(html).toContain("One signature mints the key. A private account opens inside a TEE.");
+    expect(html).toContain("Private swaps through NEAR Intents, with your limits, a freeze and a signed log.");
+    expect(html).toContain("Send or sell the key. Control moves with it.");
+    expect(html).toContain("/landing/keyhole-macro.webp");
   });
 
-  it("proof: the 37 browser checks, the worker hash, the order count and the holder count are final values in the server markup", () => {
-    expect(html).toContain('data-testid="checks-stat"');
-    expect(html).toMatch(/data-testid="checks-stat"[^]*?>37</);
-    expect(html).toContain('data-testid="hash-stat"');
-    expect(html).toContain('data-testid="orders-stat"');
-    expect(html).toContain("Public orders");
-    expect(html).toContain(">6<");
-    expect(html).toContain("1 sealed vault swap and 5 1Click orders");
-    expect(html).toContain('data-testid="verify-cta"');
-    expect(html).toContain('data-testid="judge-cta"');
+  it("pledge: contract-enforced states only, badged as not open for lending, with no rates or numbers", () => {
+    expect(html).toContain("Not open for lending yet");
+    expect(html).toContain("Transfer, sale and swaps are locked.");
+    expect(html).toContain("The lock is released.");
+    expect(html).toContain("The lender receives the key and everything in its vault, under the terms the borrower signed.");
+  });
+
+  it("live proof: the supply and the token reach are live, the worker hash is labelled build, and the mainnet panel is kept", () => {
     expect(html).toContain('data-testid="supply"');
+    expect(html).toContain("Keys held by users");
+    expect(html).toContain('data-testid="mainnet-stats"');
+    expect(html).toContain("Worker code hash");
+    expect(html).toContain("build");
   });
 
-  it("trade anything: with a count, it says the count and shows the marks; without one, no number is printed", () => {
+  it("trade reach: with a count it prints the count, without one it prints a dash and no number", () => {
     const counted = render({ tokens: 216, chains: 39, marks: [] });
-    expect(counted).toContain("216 tokens on 39 chains");
-    expect(counted).toContain('href="/swap"');
-    expect(html).toContain("across tokens on many chains");
-    expect(html).not.toMatch(/\d+ tokens on \d+ chains/);
+    expect(counted).toMatch(/data-testid="reach-tokens">216</);
+    expect(counted).toMatch(/data-testid="reach-chains">39</);
+    expect(html).toMatch(/data-testid="reach-tokens">—</);
   });
 
-  it("private by design: the two columns, the line about the keys, and the links to the proof", () => {
-    expect(html).toContain('data-testid="sees-enclave"');
-    expect(html).toContain('data-testid="sees-public"');
-    expect(html).toContain("Keys to the money never leave the enclave.");
-    expect(html).toMatch(/href="\/ask"/);
+  it("for builders: the read-only CLI command, the read-only MCP tool and the repo links", () => {
+    expect(html).toContain("pledge status k5f4750858f328940");
+    expect(html).toContain("pledge_status");
+    expect(html).toContain("https://github.com/mohamedwael201193/keyhole/blob/main/SECURITY.md");
+    expect(html).toContain("https://github.com/mohamedwael201193/keyhole/blob/main/VERIFY.md");
   });
 
-  it("for judges: commands in a code card, each with a copy button", () => {
-    expect(html).toContain('data-testid="judge-commands"');
-    expect(html).toContain("git fetch --depth 1 origin");
-    expect(html).not.toContain("git clone");
-    expect(html).toContain("run the claims checker (see the repo README)");
-    // Visible text only: drop tags and attributes, then no "judge" may remain (ids, hrefs and test ids are not visible).
-    const visible = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, " ").replace(/<[^>]+>/g, " ");
+  it("the closing band: mint a key and verify it yourself", () => {
+    expect(html).toMatch(/data-testid="cta-get-key"[^>]*href="\/mint"|href="\/mint"[^>]*data-testid="cta-get-key"/);
+    expect(html).toMatch(/data-testid="cta-proof"[^>]*href="\/verify"|href="\/verify"[^>]*data-testid="cta-proof"/);
+    expect(html).toContain("Sell the key. The private account goes with it.");
+  });
+
+  it("the page never says judge in visible copy (the rule for this landing)", () => {
+    const visible = html.replace(/<[^>]+>/g, " ");
     expect(visible).not.toMatch(/judge/i);
-    expect(html).toContain("open /verify");
-    expect(html).toContain("open /attack");
-    expect(html.match(/class="khm-copy/g)?.length).toBe(4);
-  });
-
-  it("the closing band: get your key and read the proof", () => {
-    expect(html).toMatch(/data-testid="cta-get-key"[^>]*href="\/dashboard"|href="\/dashboard"[^>]*data-testid="cta-get-key"/);
-    expect(html).toMatch(/data-testid="cta-proof"[^>]*href="\/judge"|href="\/judge"[^>]*data-testid="cta-proof"/);
-    expect(html).toContain("Get your key");
-    expect(html).toContain("Read the proof");
   });
 });
 
@@ -145,6 +136,10 @@ describe("landing images", () => {
   it("the enclave chest is not on the landing; the verifier page keeps it", () => {
     expect(images.filter((s) => s.includes("/heirloom/enclave")).length).toBe(0);
   });
+
+  it("uses no generated picture that is not in the USE list (11 and 12 are not used)", () => {
+    expect(images.some((s) => s.includes("step-transfer") || s.includes("pledge-lock"))).toBe(false);
+  });
 });
 
 describe("removed noise", () => {
@@ -154,7 +149,7 @@ describe("removed noise", () => {
     expect(() => readFileSync(new URL("../components/MetaMaskNote.tsx", import.meta.url))).toThrow();
   });
 
-  it("the motion module is client-only and guards every effect with reduced motion and ?static", () => {
+  it("the motion module is client-only and guards the pin with reduced motion and ?static", () => {
     const m = src("../components/LandingMotion.tsx");
     expect(m).toContain('"use client"');
     expect(m).toContain("(prefers-reduced-motion: no-preference)");
