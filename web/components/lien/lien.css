@@ -12,7 +12,7 @@
 .lien-loan, .lien-refusals, .lien-default, .lien-cert { display: grid; gap: 8px; }
 .lien-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .lien-table th, .lien-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(127, 127, 127, 0.25); vertical-align: top; }
-.lien-src { display: block; color: var(--v7-muted, #6b7280); font-family: inherit; font-size: 11px; margin-top: 2px; }
+.lien-src { display: block; color: var(--v7-muted, #6b7280); font-family: inherit; font-size: var(--ds-small); margin-top: 2px; }
 .lien-rules { margin: 0; padding-left: 18px; font-size: 13px; }
 @media (max-width: 480px) {
   .lien-facts { grid-template-columns: 1fr; }

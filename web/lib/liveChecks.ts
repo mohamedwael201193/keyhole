@@ -2,6 +2,7 @@
  * Read-only live checks for the judge Evidence and Attack pages.
  * Browser-side only: NEAR RPC, Nearblocks, OutLayer attestations. No signing, no value moves.
  */
+import { nearAccount, nearTx } from "./explorer";
 import { CONTRACT_CODE_HASH, KEYS_CONTRACT, OUTLAYER_API, RPC_URL, WORKER_WASM_SHA256, attestation } from "./config";
 import { IDENTITY } from "./identity.gen";
 import { PUBLISHED_INFO_CALL } from "./evidence";
@@ -81,7 +82,7 @@ export async function checkContractCodeHash(): Promise<LiveRow> {
       detail: ok
         ? `Live code_hash ${ch.slice(0, 12)}… equals identity.contract.code_hash.`
         : `Live ${ch.slice(0, 12) || "(none)"}… ≠ identity ${CONTRACT_CODE_HASH.slice(0, 12)}….`,
-      href: `https://nearblocks.io/address/${KEYS_CONTRACT}`,
+      href: nearAccount(KEYS_CONTRACT),
     };
   } catch (e) {
     return { id: "contract-code", claim: `Contract ${KEYS_CONTRACT} code hash matches identity.json`, how, ok: false, detail: `RPC failed: ${e instanceof Error ? e.message : "error"}` };
@@ -102,7 +103,7 @@ export async function checkOperatorKeys(): Promise<LiveRow> {
       how,
       ok,
       detail: `Live: ${full} FullAccess, ${fc} FunctionCall (total ${list.keys.length}).`,
-      href: `https://nearblocks.io/address/${KEYS_CONTRACT}`,
+      href: nearAccount(KEYS_CONTRACT),
     };
   } catch (e) {
     return { id: "operator-keys", claim: `${KEYS_CONTRACT} has exactly two FullAccess keys`, how, ok: false, detail: `RPC failed: ${e instanceof Error ? e.message : "error"}` };
@@ -122,7 +123,7 @@ export async function checkNftSupply(): Promise<LiveRow> {
       how,
       ok,
       detail: ok ? `Live supply = ${supply}.` : `Unexpected supply ${supply}.`,
-      href: `https://nearblocks.io/address/${KEYS_CONTRACT}`,
+      href: nearAccount(KEYS_CONTRACT),
     };
   } catch (e) {
     return { id: "nft-supply", claim: "NEP-171 keys exist on mainnet", how, ok: false, detail: `RPC failed: ${e instanceof Error ? e.message : "error"}` };
@@ -171,7 +172,7 @@ export async function checkNearTx(hash: string, claim: string, expectSuccess: bo
       how,
       ok,
       detail: `Indexed status=${success ? "success" : "failure"}; signer ${t.signer_account_id ?? "?"} → ${t.receiver_account_id ?? "?"}.`,
-      href: `https://nearblocks.io/txns/${hash}`,
+      href: nearTx(hash),
     };
   } catch (e) {
     return { id: `tx-${hash.slice(0, 8)}`, claim, how, ok: false, detail: `Nearblocks failed: ${e instanceof Error ? e.message : "error"}` };

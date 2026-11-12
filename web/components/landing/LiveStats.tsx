@@ -3,6 +3,7 @@
  * Live mainnet counts. A refresh that hangs is aborted. A reply from an older request is ignored.
  * Numbers older than STATS_MAX_AGE_MS are labelled Stale, not Live.
  */
+import { nearTx } from "@/lib/explorer";
 import { useEffect, useRef, useState } from "react";
 import { KEYS_CONTRACT, acct } from "@/lib/config";
 import { STATS_FETCH_TIMEOUT_MS, staleLabel, statsPhase, takeLatest } from "@/lib/liveStatsClient";
@@ -85,7 +86,7 @@ export function LiveStats() {
             <dt>Latest key event</dt>
             <dd data-testid="stat-event">
               {phase === "loading" ? "…" : event?.ok && event.value ? (
-                <a href={`https://nearblocks.io/txns/${event.value.hash}`} target="_blank" rel="noreferrer">
+                <a href={nearTx(event.value.hash)} target="_blank" rel="noreferrer">
                   {event.value.method}
                 </a>
               ) : "unavailable"}

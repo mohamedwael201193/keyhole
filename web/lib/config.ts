@@ -1,5 +1,6 @@
 /** Public configuration. Production remains pinned to mainnet; sandbox requires an explicit isolated fixture build. */
 import { IDENTITY } from "./identity.gen";
+import { nearTx, nearAccount } from "./explorer";
 export const PLEDGE_SANDBOX=process.env.NEXT_PUBLIC_PLEDGE_SANDBOX==="1";
 const sandboxRpc=process.env.NEXT_PUBLIC_PLEDGE_SANDBOX_RPC??"";
 if(PLEDGE_SANDBOX){const u=new URL(sandboxRpc);if(u.protocol!=="http:"||u.hostname!=="127.0.0.1"||!u.port||Number(u.port)<1024||Number(u.port)>65535||u.pathname!=="/"||u.search||u.hash||u.username||u.password)throw Error("Invalid isolated sandbox RPC");}
@@ -23,8 +24,8 @@ export const CONTRACT_CODE_HASH: string = IDENTITY.contract.code_hash;
 export const CONTRACT_WASM_SHA256: string = IDENTITY.contract.wasm_sha256;
 export const TEE_MINTER = "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443";
 export const NEARBLOCKS = "https://nearblocks.io";
-export const tx = (h: string) => `${NEARBLOCKS}/txns/${h}`;
-export const acct = (a: string) => `${NEARBLOCKS}/address/${a}`;
+export const tx = nearTx;
+export const acct = nearAccount;
 /** Public transaction page. The path is /transactions/<id>; an intent hash uses that same path. */
 export const INTENTS_EXPLORER = "https://explorer.near-intents.org";
 export const intentTx = (hash: string) => `${INTENTS_EXPLORER}/transactions/${hash}`;

@@ -3,6 +3,7 @@
  * /attack — "Try to steal a key". Re-fetches real attested refusals and mainnet txs.
  * Every card labels live check vs recorded mainnet evidence. No wallet, no value moves.
  */
+import { nearTx } from "@/lib/explorer";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, StatusChip, Icon } from "@/components/v7";
@@ -109,7 +110,7 @@ export function AttackBoard() {
                   </Link>
                 )}
                 {c.txHash && (
-                  <a className="v7-card-link" href={`https://nearblocks.io/txns/${c.txHash}`} target="_blank" rel="noreferrer" data-testid={`attack-tx-${c.id}`}>
+                  <a className="v7-card-link" href={nearTx(c.txHash)} target="_blank" rel="noreferrer" data-testid={`attack-tx-${c.id}`}>
                     Open tx <Icon name="external" size={14} />
                   </a>
                 )}

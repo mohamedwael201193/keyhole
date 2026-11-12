@@ -1,4 +1,5 @@
 "use client";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FORFEIT_ACK, FORFEIT_LINE, borrowerNumbers, swapComparisonLine } from "@/lib/pledgeDisclosure";
 
 /**
@@ -33,10 +34,7 @@ export function BorrowerScreen({ principal, repayment, durationText, graceText, 
       ) : (
         <p className="pledge-live-muted" data-testid="forfeit-invalid">Enter a borrow and a repayment amount to see the cost and the due time.</p>
       )}
-      <label className="pledge-live-forfeit-ack">
-        <input type="checkbox" checked={ack} onChange={(e) => onAck(e.target.checked)} data-testid="forfeit-ack" />
-        <span>{FORFEIT_ACK}</span>
-      </label>
+      <Checkbox className="pledge-live-forfeit-ack" checked={ack} onChange={onAck} label={FORFEIT_ACK} testid="forfeit-ack" />
     </section>
   );
 }

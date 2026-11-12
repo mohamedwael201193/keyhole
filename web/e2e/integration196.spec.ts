@@ -32,14 +32,14 @@ test("ordinary payout consent and original custody recovery survive reload witho
   await page.route('**/api/worker',async route=>{const j=route.request().postDataJSON();expect(j.op).toBe('reconcile_value_op');const signed=JSON.parse(j.auth.message);expect(signed.params).toEqual({token_id:'k1234',value_op_id:id});reconciles++;await route.fulfill({json:{call_id:'local-test',output:{ok:reconciles>1,value_op_id:id,status:reconciles>1?'success':'processing',admission_finished:reconciles>1}}});});
   await page.goto(url);
   const register=page.getByRole('button',{name:'Register my payout slot'});await expect(register).toBeDisabled();
-  await expect(page.getByTestId('payout-panel')).toContainText('0.0032 NEAR permanent payout storage');
+  await expect(page.getByTestId('payout-panel')).toContainText('One-time setup: 0.0032 NEAR opens your payout slot');
   if(process.env.KEYHOLE_INTEGRATION_SCREENSHOTS){await mkdir(process.env.KEYHOLE_INTEGRATION_SCREENSHOTS,{recursive:true});await page.screenshot({path:join(process.env.KEYHOLE_INTEGRATION_SCREENSHOTS,`payout-consent-${info.project.name}.png`),fullPage:true});}
   await page.getByRole('checkbox').check(); await expect(register).toBeEnabled();
   payoutCost="3300000000000000000000"; await page.getByRole('button',{name:'Refresh payout state'}).click();
-  await expect(page.getByTestId('payout-panel')).toContainText('0.0033 NEAR permanent payout storage');
+  await expect(page.getByTestId('payout-panel')).toContainText('One-time setup: 0.0033 NEAR opens your payout slot');
   await expect(register).toBeDisabled(); await expect(page.getByRole('checkbox')).not.toBeChecked();
   payoutCost="3200000000000000000000"; await page.getByRole('button',{name:'Refresh payout state'}).click();
-  await expect(page.getByTestId('payout-panel')).toContainText('0.0032 NEAR permanent payout storage');
+  await expect(page.getByTestId('payout-panel')).toContainText('One-time setup: 0.0032 NEAR opens your payout slot');
   await expect(register).toBeDisabled(); await page.getByRole('checkbox').check(); await register.click();
   await expect.poll(()=>page.evaluate(()=>(window as any).__calls?.length)).toBe(1);
   expect(await page.evaluate(()=>(window as any).__calls[0])).toMatchObject({method:'register_payout_account',deposit:'3200000000000000000000'});
@@ -73,17 +73,17 @@ test("Vault cashout keeps UNKNOWN across reload and binds FINAL receipt before d
   await page.goto(url);
   const claim = page.getByRole('button',{name:'Claim native NEAR'});
   await expect(claim).toBeEnabled(); await claim.click(); await expect(claim).toBeDisabled();
-  await expect(page.getByTestId('payout-panel')).toContainText('pending / UNKNOWN');
+  await expect(page.getByTestId('payout-panel')).toContainText('not confirmed yet');
   expect(await page.evaluate(()=>(window as any).__claimCalls)).toBe(1);
   await page.reload(); await expect(claim).toBeDisabled();
-  await expect(page.getByTestId('payout-panel')).not.toContainText('Native payout delivered');
+  await expect(page.getByTestId('payout-panel')).not.toContainText('Payout delivered');
   // FINAL alone cannot clear a chain-pending payout; a foreign signer cannot clear it either.
   final=true; await page.getByRole('button',{name:'Refresh payout state'}).click(); await expect(claim).toBeDisabled();
   chainPending=false; wrongSigner=true; await page.getByRole('button',{name:'Refresh payout state'}).click();
-  await expect(page.getByTestId('payout-panel')).toContainText('pending / UNKNOWN');
+  await expect(page.getByTestId('payout-panel')).toContainText('not confirmed yet');
   expect(await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('keyhole:pledge-money:v1:')).length)).toBe(1);
   wrongSigner=false; await page.getByRole('button',{name:'Refresh payout state'}).click();
-  await expect(page.getByTestId('payout-panel')).toContainText('Native payout delivered · FINAL receipt and callback verified.');
+  await expect(page.getByTestId('payout-panel')).toContainText('Payout delivered. The network confirmed it.');
   expect(await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('keyhole:pledge-money:v1:')).length)).toBe(0);
   expect(await page.evaluate(()=>(window as any).__claimCalls??0)).toBe(0); // no replacement dispatch after reload
 });

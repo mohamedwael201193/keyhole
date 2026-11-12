@@ -38,7 +38,7 @@
 
 /* ---------- Eyebrow, page title, lead ---------- */
 .v7-eyebrow {
-  margin: 0 0 14px; font: 500 12px/1 var(--font-mono); letter-spacing: .28em; text-transform: uppercase; color: var(--rust);
+  margin: 0 0 14px; font: 500 var(--ds-small)/1 var(--font-mono); letter-spacing: .28em; text-transform: uppercase; color: var(--rust);
 }
 .v7-page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4) var(--space-6); margin: 0 0 var(--space-6); min-width: 0; }
 .v7-page-head-text { min-width: 0; max-width: 100%; }
@@ -115,7 +115,7 @@
 .v7-chip--info i { background: var(--info); }
 .v7-tier {
   display: inline-flex; align-items: center; min-height: 26px; padding: 0 12px; border-radius: var(--radius-pill);
-  font: 600 12px/1 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--primary-ink); background: var(--neutral-ink); white-space: nowrap;
+  font: 600 var(--ds-small)/1 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--primary-ink); background: var(--neutral-ink); white-space: nowrap;
 }
 .v7-tier--bronze { background: var(--tier-bronze); }
 .v7-tier--silver { background: var(--tier-silver); }
@@ -221,7 +221,7 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
 .v7-filter:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .v7-filter-count {
   display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 7px; border-radius: var(--radius-pill);
-  background: var(--sunken); color: var(--ink-2); font: 600 12px/1 var(--font-ui); font-variant-numeric: tabular-nums;
+  background: var(--sunken); color: var(--ink-2); font: 600 var(--ds-small)/1 var(--font-ui); font-variant-numeric: tabular-nums;
 }
 .v7-filter.on .v7-filter-count { background: rgba(251, 247, 240, .2); color: var(--primary-ink); }
 .v7-seg { display: inline-flex; gap: 2px; padding: 4px; border-radius: var(--radius-pill); background: var(--sunken); border: 1px solid var(--line); max-width: 100%; }
@@ -332,7 +332,7 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
   .v7-hero-chip { position: static; align-self: flex-start; margin-bottom: var(--space-3); }
   .v7-proof-grid > div { grid-template-columns: minmax(84px, 110px) minmax(0, 1fr); }
   .v7-setup--horizontal .v7-stepper { grid-template-columns: repeat(var(--steps, 5), minmax(0, 1fr)); gap: 0; }
-  .v7-step-label { font-size: 12px; }
+  .v7-step-label { font-size: var(--ds-small); }
   .v7-step-dot { width: 28px; height: 28px; }
   .v7-step::before { top: 13px; }
 }
@@ -344,25 +344,25 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
   .v7-page-head { margin-bottom: var(--space-5); }
   .v7-setup--horizontal .v7-stepper { display: flex; flex-wrap: wrap; gap: var(--space-3); }
   .v7-setup--horizontal .v7-step { flex: 1 1 56px; }
-  .v7-step-label { font-size: 12px; }
+  .v7-step-label { font-size: var(--ds-small); }
 }
 
 /* ---------- Dashboard density (all app pages; matches Overview ~80–90% zoom) ----------
    Scope: .app-main only. Public landing (/) is outside .app-main and stays untouched.
    Page roots keep their own layout; shared v7 chrome is tightened once here. */
 .app-main .v7-page-head { margin: 0 0 var(--space-3); gap: var(--space-2) var(--space-4); }
-.app-main .v7-page-title { font-size: 36px; line-height: 1.05; }
-.app-main .v7-page-lead { margin-top: 8px; font-size: 14px; line-height: 1.45; max-width: 56ch; }
+.app-main .v7-page-title { font-size: var(--ds-title); line-height: 1.05; }
+.app-main .v7-page-lead { margin-top: 8px; font-size: var(--ds-lead); line-height: 1.45; max-width: 56ch; }
 .app-main .v7-eyebrow { margin-bottom: 8px; }
 .app-main .v7-card { padding: var(--space-4); }
 .app-main .v7-card-head { margin-bottom: var(--space-3); }
-.app-main .v7-card-h { font-size: 20px; }
+.app-main .v7-card-h { font-size: var(--ds-section); }
 .app-main .v7-hero { min-height: 132px; padding: var(--space-4) var(--space-5); }
-.app-main .v7-hero-value { font-size: 40px; gap: 10px; margin-top: 0; }
+.app-main .v7-hero-value { font-size: var(--ds-figure); gap: 10px; margin-top: 0; }
 .app-main .v7-hero-label { font-size: 13px; }
 .app-main .v7-hero-sub { font-size: 13px; margin-top: 2px; }
 .app-main .v7-hero-actions { margin-top: var(--space-3); gap: var(--space-2); }
-.app-main .v7-hero-chip { top: var(--space-3); right: var(--space-3); min-height: 28px; padding: 0 12px; font-size: 12px; }
+.app-main .v7-hero-chip { top: var(--space-3); right: var(--space-3); min-height: 28px; padding: 0 12px; font-size: var(--ds-small); }
 .app-main .v7-row { padding: 10px 0; gap: 12px; }
 .app-main .v7-row-icon { width: 34px; height: 34px; }
 .app-main .v7-row-title, .app-main .v7-row-value { font-size: 14px; }
@@ -382,9 +382,9 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
 .app-main .sw-page,
 .app-main .plg { gap: var(--space-3); }
 @media (max-width: 899px) {
-  .app-main .v7-page-title { font-size: 32px; }
+  .app-main .v7-page-title { font-size: var(--ds-title-md); }
   .app-main .v7-hero { padding: var(--space-4); min-height: 0; }
-  .app-main .v7-hero-value { font-size: 34px; }
+  .app-main .v7-hero-value { font-size: var(--ds-figure-sm); }
   .app-main .page.sw-page,
   .app-main .vlt,
   .app-main .kp-root,
@@ -392,7 +392,7 @@ a.v7-row:focus-visible, button.v7-row:focus-visible { outline: 2px solid var(--f
   .app-main .plg { padding: var(--space-4) var(--space-3) var(--space-5); }
 }
 @media (max-width: 419px) {
-  .app-main .v7-page-title { font-size: 28px; }
+  .app-main .v7-page-title { font-size: var(--ds-title-sm); }
 }
 @media (min-width: 1000px) and (max-height: 820px) {
   .app-main .v7-hero { min-height: 112px; padding: var(--space-3) var(--space-4); }

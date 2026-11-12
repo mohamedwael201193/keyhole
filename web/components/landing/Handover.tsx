@@ -4,12 +4,13 @@
  * transfer, and the refused call after it. The ids are the ones in README.md (section "Current build"). On desktop the parent
  * (components/LandingMotion.tsx, HandoverMoment) marks each card as reached while the section is pinned.
  */
+import { nearTx } from "@/lib/explorer";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
 const STEPS = [
   { title: "lp.step1T", body: "lp.step1D", chip: "lp.chipAllowed", tone: "ok", id: "440c2378", href: "/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae", open: "lp.openProof" },
-  { title: "lp.step2T", body: "lp.step2D", chip: "lp.chipMoved", tone: "info", id: "G35r5pmC", href: "https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD", open: "lp.openNear" },
+  { title: "lp.step2T", body: "lp.step2D", chip: "lp.chipMoved", tone: "info", id: "G35r5pmC", href: nearTx("G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD"), open: "lp.openNear" },
   { title: "lp.step3T", body: "lp.step3D", chip: "lp.chipRefused", tone: "bad", id: "e805f050", href: "/verify?call=e805f050-d416-4a04-9b12-270adbe02068", open: "lp.openProof" },
 ] as const;
 

@@ -10,6 +10,7 @@ import "./app-shell.css";
 import "./app-pages.css";
 import "../components/v7/v7.css";
 import "./overview.css";
+import "./system.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
