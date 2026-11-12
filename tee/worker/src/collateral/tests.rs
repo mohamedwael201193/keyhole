@@ -489,6 +489,13 @@ fn wallet_pubkey_hex_and_base58_are_the_same_key() {
         &"aa".repeat(32)
     ));
     assert!(!same_wallet_pubkey(&json!("not-a-key"), &hex));
+    // Live 200 body used the wallet UUID, which is not a 32-byte key.
+    let uuid = "66684254-fe09-4176-8927-8b3e6f10d774";
+    assert!(!same_wallet_pubkey(&json!(uuid), &hex));
+    assert!(wallet_pubkey_is_wallet_id(&json!(uuid), uuid));
+    assert!(wallet_pubkey_is_wallet_id(&json!(uuid.to_uppercase()), uuid));
+    assert!(!wallet_pubkey_is_wallet_id(&json!("other-id"), uuid));
+    assert!(!wallet_pubkey_is_wallet_id(&json!(uuid), ""));
 }
 
 #[test]
