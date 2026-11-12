@@ -336,7 +336,7 @@ fn begin_host(e:Option<Error>)->BeginHost{BeginHost{store:Memory::default(),begi
 // ---- request-row binding per journaled kind ----
 #[test]
 fn swap_row_of_documented_type_finishes_and_other_types_do_not() {
-    for ty in ["confidential","swap"] {
+    for ty in ["confidential","swap","confidential_swap"] {
         for status in ["success","completed"] {
             let row=json!({"request_id":ID,"type":ty,"status":status});
             let t=reconcile_status_for(&row,ID,"swap").unwrap().unwrap();
@@ -361,8 +361,12 @@ fn non_swap_kinds_accept_only_confidential() {
         assert!(reconcile_status_for(&ok,ID,kind).unwrap().is_some());
         let bad=json!({"request_id":ID,"type":"swap","status":"success"});
         assert!(reconcile_status_for(&bad,ID,kind).is_err());
+        let cs=json!({"request_id":ID,"type":"confidential_swap","status":"success"});
+        let e=reconcile_status_for(&cs,ID,kind).unwrap_err();
+        assert!(e.message.contains("type=confidential_swap")&&e.message.contains("type_ok=false"),"{}",e.message);
     }
-    assert_eq!(allowed_request_types("swap"),&["confidential","swap"]);
+    assert_eq!(allowed_request_types("swap"),&["confidential","swap","confidential_swap"]);
+    assert_eq!(allowed_request_types("copy"),allowed_request_types("swap"));
     assert_eq!(allowed_request_types("withdraw"),&["confidential"]);
 }
 #[test]
@@ -423,7 +427,7 @@ fn pending_without_a_pointer_is_the_recovery_error_not_a_scan() {
 #[test]
 fn pointers_are_pruned_on_begin_and_cleared_on_finish_and_slots_are_bounded() {
     let mut st=NoList(Memory::default(),0);
-    for n in 0..POINTER_SLOTS+3 {pointer_put(&mut st,"r",7,&format!("7:{n}")).unwrap();}
+    for n in 0..POINTER_SLOTS+3 {let _=pointer_put(&mut st,"r",7,&format!("7:{n}"));}
     assert_eq!(pointer_ids(&mut st,"r",7).unwrap().len() as u64,POINTER_SLOTS);
     pointer_remove_except(&mut st,"r",7,Some("7:3")).unwrap();
     assert_eq!(pointer_ids(&mut st,"r",7).unwrap(),vec!["7:3".to_string()]);
@@ -448,4 +452,50 @@ fn no_hot_path_lists_keys() {
     assert!(host.contains("pending_candidates"));
     let guarded=include_str!("guarded.rs");
     assert!(!guarded.contains("list_prefix"));
+}
+
+#[test]
+fn confidential_swap_row_observed_live_finishes_a_swap_only() {
+    let row=json!({"request_id":ID,"type":"confidential_swap","status":"success"});
+    let t=reconcile_status_for(&row,ID,"swap").unwrap().unwrap();
+    assert!(t.success&&!t.refund_charge&&t.provider_id==ID);
+    assert!(reconcile_status_for(&row,ID,"copy").unwrap().unwrap().success);
+    // everything else stays strict even with the new type
+    let wrong_id=json!({"request_id":"87654321-4321-4321-4321-123456789abc","type":"confidential_swap","status":"success"});
+    assert!(reconcile_status_for(&wrong_id,ID,"swap").is_err());
+    let err_row=json!({"request_id":ID,"type":"confidential_swap","status":"success","error":"x"});
+    assert!(reconcile_status_for(&err_row,ID,"swap").is_err());
+    for st in ["processing","pending_deposit","failed","needs_review"] {
+        let pending=json!({"request_id":ID,"type":"confidential_swap","status":st});
+        assert!(reconcile_status_for(&pending,ID,"swap").unwrap().is_none());
+    }
+    let unknown=json!({"request_id":ID,"type":"confidential_withdraw","status":"success"});
+    assert!(reconcile_status_for(&unknown,ID,"swap").unwrap_err().message.contains("type=confidential_withdraw"));
+}
+struct FailingWrites;
+impl Store for FailingWrites{
+ fn set_if_absent(&mut self,_:&str,_:&[u8])->Result<bool,Error>{Err(err("storage","write failed"))}
+ fn incr(&mut self,_:&str,_:i64)->Result<i64,Error>{Ok(0)}
+ fn read(&mut self,_:&str)->Result<Vec<u8>,Error>{Ok(vec![])}
+ fn remove(&mut self,_:&str)->Result<(),Error>{Ok(())}
+ fn list_prefix(&mut self,_:&str)->Result<Vec<String>,Error>{Ok(vec![])}
+}
+#[test]
+fn pointer_put_fails_closed_on_write_error_and_slot_exhaustion() {
+    assert_eq!(pointer_put(&mut FailingWrites,"r",1,"1:a").unwrap_err().code,"storage");
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&format!("3:{n}")).unwrap();}
+    let e=pointer_put(&mut st,"r",3,"3:new").unwrap_err();
+    assert_eq!(e.code,"guard_state");
+    assert!(e.message.contains("no value operation started"));
+    // an existing attempt is idempotent even when full; another nonce is unaffected
+    pointer_put(&mut st,"r",3,"3:0").unwrap();
+    pointer_put(&mut st,"r",4,"4:x").unwrap();
+}
+#[test]
+fn guard_begin_requires_the_pointer_before_admission() {
+    let host=include_str!("guarded_host.rs");
+    let a=host.find("guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id)?;").expect("pointer_put must propagate its error");
+    let b=host.find("guard_admit(&j)?;").expect("admission");
+    assert!(a<b,"the pointer must be written before begin_value_op can be sent");
 }

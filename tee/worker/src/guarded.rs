@@ -125,15 +125,15 @@ pub fn reconcile_status(v:&Value,id:&str)->Result<Option<Terminal>,Error>{reconc
 /// Reader and writer only ever `get`/`set_if_absent`/`remove` fixed keys.
 pub const POINTER_SLOTS:u64=8;
 pub fn pointer_key(root:&str,nonce:u64,slot:u64)->String{format!("{root}/by_nonce/{nonce}/{slot}")}
-/// Record `op_id` under the first free slot for `nonce`. Best effort: with every slot taken the
-/// attempt is simply not pointed at; the original value_op_id (returned to the caller) still works.
+/// Record `op_id` under the first free slot for `nonce`. FAILS CLOSED: a storage error or every
+/// slot taken is an error, and the caller must not begin the operation without a pointer.
 pub fn pointer_put(st:&mut dyn Store,root:&str,nonce:u64,op_id:&str)->Result<(),Error>{
     for slot in 0..POINTER_SLOTS{
         let k=pointer_key(root,nonce,slot);
         if st.set_if_absent(&k,op_id.as_bytes())?{return Ok(());}
         if st.read(&k)?==op_id.as_bytes(){return Ok(());}
     }
-    Ok(())
+    Err(err("guard_state","recovery pointer slots exhausted; no value operation started"))
 }
 pub fn pointer_ids(st:&mut dyn Store,root:&str,nonce:u64)->Result<Vec<String>,Error>{
     let mut out=Vec::new();
@@ -169,9 +169,11 @@ pub fn pending_candidates(st:&mut dyn Store,root:&str,pending:u64,nonce:u64)->Re
 /// Request row types the provider documents for each journaled op kind. OutLayer OpenAPI
 /// (RequestType): `confidential` covers every confidential-shard op (shield / unshield /
 /// withdraw / transfer / swap); `swap` is its own listed type. A swap or copy journal accepts
-/// either of those two; every other kind accepts only `confidential`. Never any other type.
+/// either of those, or `confidential_swap` (observed live, absent from the OpenAPI enum: the
+/// guarded swap row of call c01d32b9-61c8-4a1b-9762-e7ddc151fe57 reported type=confidential_swap);
+/// every other kind accepts only `confidential` until another type is observed. Never any other.
 pub fn allowed_request_types(kind:&str)->&'static [&'static str]{
-    match kind{"swap"|"copy"=>&["confidential","swap"],_=>&["confidential"]}
+    match kind{"swap"|"copy"=>&["confidential","swap","confidential_swap"],_=>&["confidential"]}
 }
 fn clean_type(v:&Value)->String{
     match v.get("type").and_then(Value::as_str){

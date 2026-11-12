@@ -33,7 +33,8 @@ fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->
     let j=Journal{contract:keys_contract(),token_id:c.token_id(),owner:c.account.clone(),epoch:control.epoch,nonce,op_id:format!("{nonce}:{action_hash}"),action_hash,kind:kind.into(),body,wallet_id,event:Some(guarded::JournalEvent{ts_ms:c.now_ms,usd:charge.as_ref().map(|ch|ch.usd_micro()).unwrap_or(0),source:c.req.params.get("source").cloned().unwrap_or(Value::Null)}),auth_scheme:input.pointer("/auth/scheme").and_then(Value::as_str).unwrap_or("nep413").to_owned(),charge};
     j.create(&mut Host)?;
     let root=tkey(&j.token_id,"value_recovery");
-    let _=guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id);
+    // Fail closed: no begin_value_op may be sent unless status can find the operation again.
+    guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id)?;
     guard_admit(&j)?;
     // This nonce is now owned by the confirmed permit: drop pointers of attempts that never began.
     let _=guarded::pointer_remove_except(&mut Host,&root,j.nonce,Some(&j.op_id));

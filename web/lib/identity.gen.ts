@@ -56,8 +56,8 @@ export const IDENTITY = {
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
-    "wasm_sha256": "de9e3005614bbd140f86ca4dd345efc945187dbf09de320ed5483840dcc076b5",
-    "bytes": 1349861,
+    "wasm_sha256": "37628ea5a7ab479411d125b0b7393f04f800214257825451cde2f52adbd183f4",
+    "bytes": 1350050,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
