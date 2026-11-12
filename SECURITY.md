@@ -12,7 +12,7 @@ Report a problem privately to the repository owner. Please do not open a public 
 | The TEE minter key (`015a0259…`) | generated and kept inside the enclave | the worker code with hash in `tee/worker/DEPLOYED_SHA256` |
 | The key NFT | `keyhole-devmo.near` contract (NEP-171) | its owner |
 | Holder policy (caps, cooldown, lock) | TEE storage, bound to token **and** owner | the holder who set it |
-| Site secrets (OutLayer payment key, 1Click key, NEAR AI key) | Vercel sensitive env vars | server routes only; never sent to the browser |
+| Site secrets (OutLayer payment key, 1Click key, NEAR AI key, testnet trial sponsor key) | Vercel sensitive env vars | server routes only; never sent to the browser |
 
 ## Trust assumptions
 
@@ -860,3 +860,9 @@ with the same action hash/value permit/previous provider ID. Policy/budget/title
 checks and original CAS are still mandatory. Lost-ID sends remain UNKNOWN, never
 replaced. All native/provider/receipt mocks are explicitly local; source tests do not
 claim publication, reviewer enrollment, funding or a future mainnet exit.
+
+## Testnet free trial
+
+`/try` walks the keys contract on NEAR testnet. The deployed account, code hash and wasm sha256 are in [`docs/trial/testnet.json`](docs/trial/testnet.json). That hash is the v2.7 candidate in [`contracts/keys/release/v2.7/identity.json`](contracts/keys/release/v2.7/identity.json). The trial does not call `new`, `migrate` or `migrate_pledge` on mainnet, and its RPC allowlist rejects mainnet hosts ([`web/lib/trialPublic.ts`](web/lib/trialPublic.ts)).
+
+Guest creation is a sponsored `create_account` on the testnet top-level account. The visitor’s secret is generated in the browser and stored in `localStorage`. The server receives the public key and an idempotency key only. The same key always names the same guest, and a retry does not attach a second deposit. The sponsor secret is `KEYHOLE_TESTNET_SPONSOR_SECRET`. The account must be `keyhole-trial-sponsor-b32ffa7796.testnet`, and `config.minter` on the trial contract must equal it or the route returns 503. A caller-supplied `x-forwarded-for` is not a client address; off Vercel the route refuses. Ceilings are the sponsor’s on-chain balance and the nonce of its own access key minus the pinned base in [`docs/trial/testnet.json`](docs/trial/testnet.json), plus the NearBlocks v3 history of every signed `create_account` and `nft_mint`, success or failure. Per-address limits need both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. With both unset, the site-wide on-chain ceiling applies and a gap in that history fails closed. Setting only one of them returns 503 and names both variables. A mint does not increment the lifetime create counter. Reserve and the matching send run on one signer queue. The signer probes an RPC before it broadcasts, and an on-chain failure is not sent to a second RPC. A signed transaction counts against the hourly, daily, and lifetime ceilings even when the contract rejects it. If the practice token already exists, the route returns that token and does not sign. A 429 carries `Retry-After` and points at `/verify` and the CLI. A guest key in `localStorage` can spend that guest’s testnet balance; the attached amount is `GUEST_DEPOSIT_YOCTO` (0.05 testnet NEAR). A practice mint is signed by the sponsor, which is the minter, and only to the guest account derived from that guest’s idempotency key. That account must already exist with exactly one full-access key and no practice key. The enclave trade on that page is the recorded mainnet call `09d58c09-c1e9-48b6-bebb-485f5ae79539`, not a new trade.

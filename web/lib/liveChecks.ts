@@ -155,14 +155,14 @@ export async function checkWorkerAttestation(callId = PUBLISHED_INFO_CALL): Prom
 
 /** One evidence NEAR tx via Nearblocks (read-only). */
 export async function checkNearTx(hash: string, claim: string, expectSuccess: boolean): Promise<LiveRow> {
-  const how = "GET https://api.nearblocks.io/v1/txns/<hash> (Nearblocks index of mainnet)";
-  const api = `https://api.nearblocks.io/v1/txns/${hash}`;
+  const how = "GET https://api.nearblocks.io/v3/txns/<hash> (Nearblocks index of mainnet)";
+  const api = `https://api.nearblocks.io/v3/txns/${hash}`;
   try {
     const r = await fetch(api, { signal: AbortSignal.timeout(15_000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j = (await r.json()) as { txns?: { outcomes?: { status?: boolean }; receiver_account_id?: string; signer_account_id?: string }[] };
-    const t = j.txns?.[0];
-    if (!t) throw new Error("tx not indexed");
+    const j = (await r.json()) as { data?: { outcomes?: { status?: boolean }; receiver_account_id?: string; signer_account_id?: string } };
+    const t = j.data;
+    if (!t || typeof t !== "object" || Array.isArray(t)) throw new Error("tx not indexed");
     const success = t.outcomes?.status === true;
     const ok = expectSuccess ? success : success === false;
     return {

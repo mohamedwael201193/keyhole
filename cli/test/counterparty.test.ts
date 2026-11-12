@@ -113,14 +113,14 @@ function world(w: World, calls: string[] = []): typeof fetch {
     }
     if (url.startsWith("https://api.nearblocks.io/")) {
       if (url.includes("/txns")) {
-        const agentCall = url.includes("per_page=100");
+        const agentCall = url.includes("limit=100");
         const src = agentCall ? w.agentTxns : w.txns;
         if (src === "down" || src === undefined) throw new Error("429");
-        return json({ txns: src.map((t, i) => ({ id: String(i), predecessor_account_id: t.pred, receiver_account_id: t.recv, block_timestamp: String((NOW - t.daysAgo * DAY_MS) * 1e6) })) });
+        return json({ data: src.map((t, i) => ({ id: String(i), signer_account_id: t.pred, receiver_account_id: t.recv, block_timestamp: String((NOW - t.daysAgo * DAY_MS) * 1e6), outcomes: { status: true } })) });
       }
       if (w.ageDays === "down") throw new Error("ECONNRESET");
-      if (w.ageDays === "none" || w.ageDays === undefined) return json({ account: [] });
-      return json({ account: [{ created: { block_timestamp: String((NOW - w.ageDays * DAY_MS) * 1e6) } }] });
+      if (w.ageDays === "none" || w.ageDays === undefined) return json({ data: {} });
+      return json({ data: { created: { block_timestamp: String((NOW - w.ageDays * DAY_MS) * 1e6) } } });
     }
     throw new Error("unexpected url " + url);
   }) as typeof fetch;

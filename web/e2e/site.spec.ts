@@ -687,9 +687,9 @@ test("judge path links every evidence call to /verify and is reachable from the 
   // Desktop: a top-bar link. Phones: the same link in the burger list.
   if ((page.viewportSize()?.width ?? 1000) <= 860) {
     await page.getByRole("button", { name: "Menu" }).click();
-    await page.locator("#mnav").getByRole("link", { name: "For judges" }).click();
+    await page.locator("#mnav").getByRole("link", { name: "Verification path" }).click();
   } else {
-    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "For judges" }).click();
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Verification path" }).click();
   }
   await expect(page.getByTestId("judge-page")).toBeVisible();
   const links = page.locator('a[href^="/verify?call="]');

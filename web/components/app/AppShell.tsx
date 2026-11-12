@@ -63,7 +63,7 @@ export const APP_NAV: AppNavGroup[] = [
     ],
   },
   {
-    title: "Judges",
+    title: "Verification",
     items: [
       { id: "proof", label: "Proof", href: "/verify", icon: "shield", match: ["/verify"] },
       { id: "attack", label: "Attack", href: "/attack", icon: "alert", match: ["/attack"] },

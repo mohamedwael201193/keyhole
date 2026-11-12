@@ -18,7 +18,7 @@ const html = render(null);
 
 describe("landing sections", () => {
   it("keeps the order: hero, proof, the handover, buyer check, trade, private, judges, the closing band", () => {
-    const ids = ['id="top"', 'id="proof"', 'id="handover"', 'id="check"', 'id="trade"', 'id="private"', 'id="judge"', 'id="cta"'];
+    const ids = ['id="top"', 'id="live"', 'id="proof"', 'id="handover"', 'id="check"', 'id="trade"', 'id="private"', 'id="judge"', 'id="cta"'];
     const at = ids.map((id) => html.indexOf(id));
     expect(at.every((i) => i > 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
@@ -43,6 +43,10 @@ describe("landing sections", () => {
     expect(html).toMatch(/data-testid="handover-cta"[^>]*href="#handover"|href="#handover"[^>]*data-testid="handover-cta"/);
     expect(html).toContain("Watch a real handover");
     expect(html).toContain("Sell a trading account");
+    expect(html).toMatch(/data-testid="try-free-cta"[^>]*href="\/try\?start=1"|href="\/try\?start=1"[^>]*data-testid="try-free-cta"/);
+    expect(html).toContain("Try it free — testnet");
+    expect(html).toContain('data-testid="mainnet-stats"');
+    expect(html).toContain("keyhole-devmo.near");
   });
 
   it("the handover: three real steps with their ids and proofs, on the server so the page works without JavaScript", () => {
@@ -159,7 +163,7 @@ describe("removed noise", () => {
 
 describe("public top bar and footer", () => {
   const nav = src("../components/Nav.tsx");
-  it("the top bar holds How it works, Proof, For judges and Launch app, and no wallet control", () => {
+  it("the top bar holds How it works, Proof, Verification path and Launch app, and no wallet control", () => {
     expect(nav).toContain('href: "/#handover"');
     expect(nav).toContain('href: "/verify"');
     expect(nav).toContain('href: "/attack"');

@@ -13,6 +13,7 @@ import { siteUrl } from "@/lib/site";
 import { IDENTITY } from "@/lib/identity.gen";
 import type { TokenReach } from "@/lib/landing";
 import { ProofStrip } from "./landing/Proof";
+import { LiveStats } from "./landing/LiveStats";
 import { Handover } from "./landing/Handover";
 import { BuyerCheck } from "./landing/BuyerCheck";
 import { Reach } from "./landing/Reach";
@@ -47,6 +48,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
           <p className="lead lp-reveal">{t("land.lead")}</p>
           <div className="lp-cta lp-reveal">
             <Button href="/dashboard" size="lg" testid="start-cta">{t("home.launch")}</Button>
+            <Button href="/try?start=1" size="lg" variant="secondary" testid="try-free-cta">Try it free — testnet</Button>
             <Button href="#handover" size="lg" variant="secondary" testid="handover-cta">{t("lp.watchHandover")}</Button>
           </div>
         </HeroIntro>
@@ -69,6 +71,8 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
           </div>
         </div>
       </section>
+
+      <LiveStats />
 
       {/* 2. Proof, not promises: four live numbers, each a link to where it is checked. */}
       <section className="lp-sec" id="proof" aria-labelledby="proof-h">
@@ -136,7 +140,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
         </div>
       </section>
 
-      {/* 7. For judges: three commands, each with a copy button. */}
+      {/* 7. Verification path: three commands, each with a copy button. */}
       <section className="lp-sec" id="judge" aria-labelledby="judge-h">
         <div className="lp-wrap">
           <h2 id="judge-h" className="lp-h2">{t("lp.judgeH")}</h2>

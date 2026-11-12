@@ -119,7 +119,7 @@ export function StartView() {
     <main className="page start" data-testid="start">
       <header className="sg-head">
         <h1>{`Set up in ${steps.length - 1} short steps`}</h1>
-        <p className="sg-lead">A private trading account inside a sealed enclave. Sign in with Google, an email code or a wallet. Your progress is kept if you leave.</p>
+        <p className="sg-lead">A private trading account inside a sealed enclave. Sign in with Google, an email code or a wallet. Your progress is kept if you leave. No wallet and no sign-up: <Link href="/try?start=1" data-testid="start-try-free">Try it free — testnet</Link>.</p>
       </header>
       {accountId && <p className="acct-ready" data-testid="account-ready"><span className="note">Signed in{via === "privy" ? " with Google / email" : ""} as</span> <b className="addr" title={accountId}>{accountId.length > 24 ? `${accountId.slice(0, 10)}…${accountId.slice(-8)}` : accountId}</b> <CopyButton value={accountId} />{acct && <span className="note" data-testid="account-balance"> · {acct.exists ? `${formatNear(acct.yocto)} NEAR` : "not on chain yet"}</span>}</p>}
       {mintTx && step !== "mint" && <p className="note acct-ready" data-testid="start-mint-tx">Key minted · <TxLink hash={mintTx} /></p>}

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 
 /**
- * Public top bar. Logo (home), How it works, Proof, Holders, Attack, For judges, and Launch app.
+ * Public top bar. Logo (home), How it works, Proof, Holders, Attack, Verification path, and Launch app.
  * Wallets live in the app. Phones get the same items in a menu list (#mnav). The footer is components/Footer.tsx.
  */
 export const SITE_LINKS = [
@@ -15,7 +15,7 @@ export const SITE_LINKS = [
   { href: "/verify", label: "Proof", match: "/verify" },
   { href: "/holders", label: "Holders", match: "/holders" },
   { href: "/attack", label: "Attack", match: "/attack" },
-  { href: "/judge", label: "For judges", match: "/judge" },
+  { href: "/judge", label: "Verification path", match: "/judge" },
 ] as const;
 
 export const LAUNCH_APP = { href: "/dashboard", label: "Launch app" } as const;

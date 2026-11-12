@@ -186,9 +186,9 @@ export async function checkCounterparty(receiver: string, opt: CheckOptions): Pr
   const needCode = s.is_contract === true && !s.allowlisted;
   const [codeRes, ageRes, txRes, priorRes] = await Promise.all([
     needCode ? codeWindows(f, id, s.code_hash_now, t) : Promise.resolve(null),
-    nearblocks(f, `/v1/account/${id}`, opt.nearblocksKey, t),
-    nearblocks(f, `/v1/account/${id}/txns?per_page=25`, opt.nearblocksKey, t),
-    agent ? nearblocks(f, `/v1/account/${agent}/txns?per_page=100`, opt.nearblocksKey, t) : Promise.resolve(undefined),
+    nearblocks(f, `/v3/accounts/${id}`, opt.nearblocksKey, t),
+    nearblocks(f, `/v3/accounts/${id}/txns?limit=25`, opt.nearblocksKey, t),
+    agent ? nearblocks(f, `/v3/accounts/${agent}/txns?limit=100`, opt.nearblocksKey, t) : Promise.resolve(undefined),
   ]);
   if (needCode) {
     sources.code = "NEAR RPC block height from block times, view_account at that block (archival)";
@@ -197,22 +197,22 @@ export async function checkCounterparty(receiver: string, opt: CheckOptions): Pr
     else s.unavailable.push("code_history");
   }
 
-  sources.account_age = "Nearblocks /v1/account/{id} created.block_timestamp";
-  const createdNs = str(obj(list(obj(ageRes).account)[0]?.created).block_timestamp);
+  sources.account_age = "Nearblocks /v3/accounts/{id} data.created.block_timestamp";
+  const createdNs = str(obj(obj(obj(ageRes).data).created).block_timestamp);
   if (createdNs && Number(createdNs) > 0) s.account_age_days = Math.max(0, (now - Number(createdNs) / 1e6) / DAY_MS);
   else s.unavailable.push("account_age");
 
-  sources.activity = "Nearblocks /v1/account/{id}/txns (newest 25)";
-  const txs = list(obj(txRes).txns);
+  sources.activity = "Nearblocks /v3/accounts/{id}/txns (newest 25, successful)";
+  const txs = list(obj(txRes).data).filter((x) => obj(x.outcomes).status === true);
   if (txRes !== null) s.txns_30d = txs.filter((x) => Number(str(x.block_timestamp) ?? 0) / 1e6 >= now - 30 * DAY_MS).length;
   else s.unavailable.push("activity");
 
   if (agent) {
-    sources.prior_interactions = "Nearblocks /v1/account/{agent}/txns (newest 100), filtered to the receiver";
+    sources.prior_interactions = "Nearblocks /v3/accounts/{agent}/txns (newest 100, successful), filtered to the receiver";
     if (priorRes === undefined || priorRes === null) s.unavailable.push("prior_interactions");
     else {
-      s.prior_interactions = list(obj(priorRes).txns).filter((x) =>
-        (x.predecessor_account_id === agent && x.receiver_account_id === id) || (x.predecessor_account_id === id && x.receiver_account_id === agent)).length;
+      s.prior_interactions = list(obj(priorRes).data).filter((x) => obj(x.outcomes).status === true && (
+        (x.signer_account_id === agent && x.receiver_account_id === id) || (x.signer_account_id === id && x.receiver_account_id === agent))).length;
     }
   }
   return done();

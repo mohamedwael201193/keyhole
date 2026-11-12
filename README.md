@@ -40,9 +40,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 4f5a91ba8fdb7adc82ab8301db708ad00cf26dd9
+git fetch --depth 1 origin 0825f9dc9e3cd2713fd4629dddf5a7c6bd83d529
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "4f5a91ba8fdb7adc82ab8301db708ad00cf26dd9"
+test "$(git rev-parse HEAD)" = "0825f9dc9e3cd2713fd4629dddf5a7c6bd83d529"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -56,9 +56,9 @@ No git? Download all three files from that same immutable source commit and run 
 <!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/4f5a91ba8fdb7adc82ab8301db708ad00cf26dd9/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/4f5a91ba8fdb7adc82ab8301db708ad00cf26dd9/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/4f5a91ba8fdb7adc82ab8301db708ad00cf26dd9/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/0825f9dc9e3cd2713fd4629dddf5a7c6bd83d529/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/0825f9dc9e3cd2713fd4629dddf5a7c6bd83d529/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/0825f9dc9e3cd2713fd4629dddf5a7c6bd83d529/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -210,10 +210,10 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `659 claims: 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `661 claims: 360 PASS, 0 FAIL, 0 ERROR, 301 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
-4. **Open the judge path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
+4. **Open the verification path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
 5. **Open a key's history.** Do: open [keyhole-seven.vercel.app/key?id=k5f4750858f328940](https://keyhole-seven.vercel.app/key?id=k5f4750858f328940). See: the holders with from and to dates, deposits, withdrawals and its recorded transfer. The page shows "19 events chain, head matches, head signed, signer is the TEE minter. Confirmed", re-checked in your browser.
 6. **Check that the contract on chain is the repo's wasm.** Do: `bash ./judge/1-contract.sh` (needs `bash`, `curl`, `jq`, `sha256sum` and `python3`). See: `on-chain code_hash 3cZsaySY…KGZH`, then `OK   contract code matches the committed wasm`, then `OK   minter is an implicit account`.
 7. **Verify one call from the terminal.** Do: `cd cli && npm ci && npx tsx src/cli.ts verify 962d4374-b9ec-411a-9efa-973b36260431`. See: `"ok": true` and three `OK` lines: TDX quote present; registered wasm_hash equals executed_wasm_sha256; FastFS bytes equal the attested hash. No key is needed. Previously checked with `./verify.sh` (the same checks, plus FastFS) on `dc3668db`.
@@ -225,6 +225,7 @@ Each step has a command or a link. The words after **See** are what you should g
 13. **Check a holder.** Do: open `/holders` on this build ([`web/app/holders/page.tsx`](web/app/holders/page.tsx); the public URL is [keyhole-seven.vercel.app/holders](https://keyhole-seven.vercel.app/holders) once this branch is deployed). Connect the wallet that holds a key and press **Check my key with a wallet signature**. See: that account's tier and key ids, or the not-a-holder line. A switch of account clears the previous result ([`web/app/holders/view.tsx`](web/app/holders/view.tsx), [`web/tests/holder-check.test.ts`](web/tests/holder-check.test.ts)). Production `GET /api/gate` returns 503 until the server env var `HOLDER_GATE_SECRET` is set ([`web/app/api/gate/route.ts`](web/app/api/gate/route.ts), [`web/tests/holder-gate.test.ts`](web/tests/holder-gate.test.ts)). The value is not in this repo. This step does not record a captured grant.
 14. **Exit dry run.** Do: on a build with `NEXT_PUBLIC_PLEDGE_LIVE` set to `1`, open the borrower pledge screen, read private inventory, and press **Exit to my wallet**. The public site leaves that flag unset, so [keyhole-seven.vercel.app/pledge](https://keyhole-seven.vercel.app/pledge) stays on the preview in step 10. See, when the flag is on: a confirm that names `amount_out` and the minimum before any withdrawal signature. Cancelling signs nothing. A redirect wallet (MyNearWallet, Meteor web) returns to the same preview and does not start a second withdrawal. Proof: [`web/lib/withdrawDryRun.ts`](web/lib/withdrawDryRun.ts), [`web/lib/exitContinuation.ts`](web/lib/exitContinuation.ts), [`web/app/pledge/LivePledge.tsx`](web/app/pledge/LivePledge.tsx), [`web/tests/withdraw-dry-run.test.ts`](web/tests/withdraw-dry-run.test.ts), [`web/tests/exit-continuation.test.ts`](web/tests/exit-continuation.test.ts). No withdrawal is claimed here.
 15. **Read pledge status from the chain.** Do: `cd cli && npx tsx src/cli.ts pledge status k5f4750858f328940`. See: `not locked (owner …)` with the owner from `nft_token`, and the lending line from `get_pledge_config` (lending off while the contract says so). The same read is the MCP tool `pledge_status`. Proof: [`cli/src/pledge.ts`](cli/src/pledge.ts), [`cli/src/cli.ts`](cli/src/cli.ts), [`cli/src/mcp.ts`](cli/src/mcp.ts), [`cli/test/pledge.test.ts`](cli/test/pledge.test.ts). Views only. Nothing is signed.
+16. **Try the key on testnet, no wallet and no sign-up.** Do: open [keyhole-seven.vercel.app/try](https://keyhole-seven.vercel.app/try) (also linked from the home hero, [/start](https://keyhole-seven.vercel.app/start) and [/judge](https://keyhole-seven.vercel.app/judge)). See: the banner **Testnet · free · not real money** and a Mainnet toggle. One click creates a guest testnet account; the key stays in the browser. A practice key is minted on the testnet deployment of this repo’s v2.7 keys contract, recorded in [`docs/trial/testnet.json`](docs/trial/testnet.json) (code hash matches [`contracts/keys/release/v2.7/identity.json`](contracts/keys/release/v2.7/identity.json)). Transferring it to a second guest moves the owner, and the old holder’s next transfer is refused by the contract. The trade step does not send a trade. It shows the recorded mainnet swap, labelled **recorded on mainnet**, at [/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) ([evidence](docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json)). Guest creation is a sponsored `create_account` on the testnet top-level account ([account creation](https://docs.near.org/tools/near-api), [faucet](https://docs.near.org/getting-started/faucet)). Each guest is funded with 0.05 testnet NEAR, the `GUEST_DEPOSIT_YOCTO` constant in [`web/lib/trialPublic.ts`](web/lib/trialPublic.ts). The sponsor key is the server env var `KEYHOLE_TESTNET_SPONSOR_SECRET` and is not in the repo.
 
 ### Try it with a wallet
 
@@ -259,11 +260,12 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (659 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (661 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 360 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
+| Free trial on [/try](https://keyhole-seven.vercel.app/try) | **Real testnet** for the key (mint, tier, transfer, refusal). Each guest receives 0.05 testnet NEAR (`GUEST_DEPOSIT_YOCTO`). The vault trade on that page is a **recorded mainnet** swap, labelled recorded on mainnet | [`docs/trial/testnet.json`](docs/trial/testnet.json) · [verify the recorded swap](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) |
 | Local `attack-demo.mts` guard script | **Sandbox / stub signer** | [`docs/evidence/attack-demo/`](docs/evidence/attack-demo/2026-11-07.log) · never called a live signer |
-| Pledge dashboard (`/pledge`) — sealed-floor borrow UI | **Preview / in review** (feature flag `NEXT_PUBLIC_PLEDGE_LIVE` OFF in production; CTA disabled: "Pledge launches after audit"; no fake live balances) | [/pledge](https://keyhole-seven.vercel.app/pledge) · typed client vs PR #184 methods · unit + e2e mocks |
+| Pledge dashboard (`/pledge`) — sealed-floor borrow UI | **Flag off** (`NEXT_PUBLIC_PLEDGE_LIVE` unset in production; CTA **Pledge launches after audit**; banner is `Preview — in review · not live`) | [/pledge](https://keyhole-seven.vercel.app/pledge) · [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) · unit + e2e mocks |
 | Independent market demand / unrelated-party volume | **Not claimed** | Demo sizes stay tiny; no invented PnL |
 
 
@@ -543,12 +545,12 @@ Four tracks are entered. Rows identify the implemented scope and its concrete pr
 
 ---
 
-### Pledge (preview / in review)
+### Pledge
 
 KEYHOLE's next holder surface after Swap (sidebar **Pledge**): **borrow NEAR without publishing your full balance**. The lender sees one certified USDC minimum while reviewing the offer — not the full vault balance. The **entire account is collateral**: while pledged it cannot trade, withdraw, or transfer; miss repayment and the lender can claim the entire account. Repayment unlocks; default is an on-chain claim path (grace/recipient checks), not a browser timer.
 
 - **UI shipped now** at [`/pledge`](web/app/pledge): sketch-v5 widget (Certified USDC minimum → lock connector → You borrow NEAR), real USDC/NEAR icons as **locked chips** (v1 allowlist only — no fake multi-asset picker), visible whole-account warning, tier exit-caps line, ambient motion with `prefers-reduced-motion`, morph to Active loan chrome (preview control / `?preview=active`), floating key art unclipped, dashboard density like PR #185 so the page fits **1440×900** and **1280×800** without scrolling.
-- **Not live lending.** `NEXT_PUBLIC_PLEDGE_LIVE` defaults off. The page is a clearly labelled **preview / in review**: CTA disabled with **Pledge launches after audit**; preview shows clearly labelled **Example** terms (0.50 USDC / 0.01 NEAR / 0.0101 repay) matching sketch v5; live mode uses `get_loan` only — never invents balances as live. Lender preview never requests the holder balance.
+- **Lending writes are off.** `NEXT_PUBLIC_PLEDGE_LIVE` defaults off. The page banner is the constant `Preview — in review · not live`, and the CTA stays **Pledge launches after audit**. Example terms stay labelled **Example** (0.50 USDC / 0.01 NEAR / 0.0101 repay). When the flag is on, the page uses `get_loan` only and does not invent balances. The lender page does not request the holder balance.
 - **Contract surface ready.** Typed client [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts) codes against the oracle-free PR #184 ABI plus the loan-limits/lender-projection source candidate method names (`migrate_pledge`, `set_lending_enabled`, `register_collateral`, `open_loan`, `fund_loan`, `repay_loan`, `cancel_loan`, `claim_default`, `claim_payout`, `fund_treasury`, `recover_treasury`, plus views `get_pledge_config` / `get_loan` / `get_collateral_binding`). Live wiring waits for the reviewed green contract + worker and the audit gate — then the same client turns on behind the flag.
 - **Proof.** Unit tests mock the client and the preview markup; Playwright e2e covers nav, disabled CTA, density (no scroll at desktop sizes), and screenshots under `shots_pledge/`. Offline claims include the Pledge preview statements (`src-pledge-*`).
 
@@ -657,9 +659,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 4f5a91ba8fdb7adc82ab8301db708ad00cf26dd9
+git fetch --depth 1 origin 0825f9dc9e3cd2713fd4629dddf5a7c6bd83d529
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "4f5a91ba8fdb7adc82ab8301db708ad00cf26dd9"
+test "$(git rev-parse HEAD)" = "0825f9dc9e3cd2713fd4629dddf5a7c6bd83d529"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -817,7 +819,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 | CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
 | Web unit tests (Vitest) | **2032** pass in 124 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
 | Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
-| Claims in `docs/claims.json` | **659**: offline 358 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **661**: offline 360 PASS, 0 FAIL, 0 ERROR, 301 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |
@@ -925,7 +927,7 @@ verify.sh             one-call verifier (attestation, FastFS, optional rebuild)
 | `/` | The home page: a key with chain marks, three moves, tiers, a gallery and a proof list | `nft_total_supply`, `config` (cached 60 s; [`web/app/page.tsx`](web/app/page.tsx)) |
 | `/atlas` | Chain marks and their trails | NearBlocks, OutLayer attestations |
 | `/vault` | After connect: key card and signed limits, then **1 · Fund**, **2 · Trade**, **3 · Withdraw** | worker `status`, `account`, `quote`, `swap`, `withdraw`, `balance`, `history`; `nft_tokens_for_owner` |
-| `/pledge` | **Preview / in review**: sealed-floor borrow widget (sketch v5). Feature flag OFF in production; CTA "Pledge launches after audit"; typed client for PR #184 (`open_loan`, `fund_loan`, `repay_loan`, …). No fake live data | `web/app/pledge`, `web/lib/pledgeClient.ts`; unit + e2e mocks |
+| `/pledge` | Sealed-floor borrow widget. `NEXT_PUBLIC_PLEDGE_LIVE` is off in production, so the CTA stays "Pledge launches after audit" and the banner is the preview label. Typed client (`open_loan`, `fund_loan`, `repay_loan`, …) | [`web/app/pledge`](web/app/pledge), [`web/lib/pledgeClient.ts`](web/lib/pledgeClient.ts); unit + e2e mocks |
 | `/mint` | Bronze mint in one signature, with the cap table for each tier | worker `mint` |
 | `/gallery` | Every key on the contract, with its state | `nft_tokens`, `nft_tier` |
 | `/verify` | 37 checks computed in your browser | OutLayer, FastFS, Intel PCS |

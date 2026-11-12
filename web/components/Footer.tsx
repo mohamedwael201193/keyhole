@@ -11,8 +11,8 @@ import { MusicToggle } from "./MusicToggle";
  */
 export const FOOTER_GROUPS = [
   { title: "Product", links: [["/dashboard", "Launch app"], ["/mint", "Mint"], ["/swap", "Swap"], ["/vault", "Vault"]] },
-  { title: "Proof", links: [["/verify", "Verify"], ["/holders", "Holders"], ["/attack", "Attack"], ["/judge", "Judge path"], ["/atlas", "Atlas"], ["/source", "Source"]] },
-  { title: "Learn", links: [["/ask", "Ask"], ["/identity", "Identity"], ["/demo", "Demo"]] },
+  { title: "Proof", links: [["/verify", "Verify"], ["/holders", "Holders"], ["/attack", "Attack"], ["/judge", "Verification path"], ["/atlas", "Atlas"], ["/source", "Source"]] },
+  { title: "Learn", links: [["/try", "Try free"], ["/ask", "Ask"], ["/identity", "Identity"], ["/demo", "Demo"]] },
 ] as const;
 
 export function Footer() {
