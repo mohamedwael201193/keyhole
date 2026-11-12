@@ -377,7 +377,7 @@ mod host {
         let tid = token_id_for(&c.account);
         // An account that minted and then moved its key would reuse this id: refuse before the quota is touched.
         let existing = view(&keys_contract(), "nft_token", json!({"token_id": tid}))?;
-        assert_mint_id_free(existing.get("owner_id").and_then(|o| o.as_str()))?;
+        assert_mint_id_free(rpc_view::nft_token_owner(&existing))?;
         let day = c.now_ms / 86_400_000;
         bump_within(&mut Host, &format!("g/mints/{}", day), 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into())?;
         let (media, media_hash) = bronze_media(&keys_contract(), &tid);

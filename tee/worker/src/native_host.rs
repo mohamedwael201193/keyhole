@@ -43,23 +43,22 @@ impl native_send::Rpc for NativeRpc {
         if !e.is_empty() {
             return Err(err("rpc", "native access key unavailable"));
         }
-        let v: Value =
-            serde_json::from_str(&v).map_err(|_| err("rpc", "invalid native access key"))?;
-        v["nonce"]
-            .as_u64()
-            .ok_or_else(|| err("rpc", "missing native nonce"))
+        if serde_json::from_str::<Value>(&v).is_err() {
+            return Err(err("rpc", "invalid native access key"));
+        }
+        // Same flattened-or-envelope shapes `is_full_access` already accepts (auth succeeded).
+        access_key_nonce(&v).ok_or_else(|| err("rpc", "missing native nonce"))
     }
     fn block(&mut self) -> Result<[u8; 32], Error> {
         let (v, e) = rpc::block("final");
         if !e.is_empty() {
             return Err(err("rpc", "final block unavailable"));
         }
-        let v: Value = serde_json::from_str(&v).map_err(|_| err("rpc", "invalid final block"))?;
-        bs58::decode(guarded::text(&v["header"], "hash")?)
-            .into_vec()
-            .ok()
-            .and_then(|b| b.try_into().ok())
-            .ok_or_else(|| err("rpc", "invalid block hash"))
+        if serde_json::from_str::<Value>(&v).is_err() {
+            return Err(err("rpc", "invalid final block"));
+        }
+        // Same flattened-or-envelope shapes `chain_now_ms` already accepts.
+        final_block_hash(&v).ok_or_else(|| err("rpc", "invalid block hash"))
     }
     fn broadcast(&mut self, signed: &str) -> Result<Value, Error> {
         let (v, e) = rpc::send_tx(signed, "FINAL");

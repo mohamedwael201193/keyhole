@@ -1175,6 +1175,29 @@ pub fn is_full_access(raw: &str) -> bool {
     matches!(p, Some(serde_json::Value::String(s)) if s == "FullAccess")
 }
 
+/// Nonce from a `view_access_key` body. Accepts the flattened result *or* a JSON-RPC
+/// `{ "result": { "nonce": … } }` envelope — the same shapes `is_full_access` already allows.
+/// Numeric strings are accepted; `as_u64` alone misses both the envelope and string forms.
+pub fn access_key_nonce(raw: &str) -> Option<u64> {
+    let v: serde_json::Value = serde_json::from_str(raw).ok()?;
+    let n = v.get("nonce").or_else(|| v.pointer("/result/nonce"))?;
+    match n {
+        serde_json::Value::Number(num) => num.as_u64(),
+        serde_json::Value::String(s) if !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) => s.parse().ok(),
+        _ => None,
+    }
+}
+
+/// Hash from a `block` body. Accepts flattened `{ "header": { "hash": … } }`
+/// or a JSON-RPC `{ "result": { "header": { "hash": … } } }` envelope — the same
+/// shapes `chain_now_ms` already allows for the timestamp. The pre-#208 send path
+/// used both pointers; dropping the envelope would fail after the nonce is read.
+pub fn final_block_hash(raw: &str) -> Option<[u8; 32]> {
+    let v: serde_json::Value = serde_json::from_str(raw).ok()?;
+    let h = v.pointer("/header/hash").or_else(|| v.pointer("/result/header/hash"))?.as_str()?;
+    bs58::decode(h).into_vec().ok().and_then(|b| b.try_into().ok())
+}
+
 /// Which key a request operates: the one named in the signed params, or the only one held.
 /// Holding several keys without naming one is refused, so a buyer never runs the wrong account.
 pub fn pick_token(named: Option<&str>, owned: u64) -> Result<(), Error> {
