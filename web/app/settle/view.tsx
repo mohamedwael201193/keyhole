@@ -20,6 +20,7 @@ import {
   type ChipTone, type FilterId, type MineState, type RangeId,
 } from "@/components/activity/orders";
 import { PriceCheck } from "./price";
+import { isOneOf, isString, useSessionState } from "@/lib/useSessionState";
 import "./settle.css";
 
 /**
@@ -35,6 +36,12 @@ const FILTER_EMPTY: Record<Exclude<FilterId, "all">, { title: string; body: stri
 
 /** The two sources the page lists: the holder's own signed trades ("Mine") and the public 1Click orders ("Public"). */
 type Source = "mine" | "public";
+
+/** Module-level validators for the session-backed filters (stable hook dependencies). */
+const isSource = isOneOf(["mine", "public"] as const);
+const isSourceOrNull = (v: unknown): v is Source | null => v === null || isSource(v);
+const isFilterId = isOneOf(["all", "settled", "refunded", "failed"] as const);
+const isRangeId = isOneOf(["all", "1d", "7d", "30d"] as const);
 
 /** What the stat tiles say while "Mine" cannot be read yet. Shown instead of figures, so a locked source never reads as zero. */
 const MINE_NOT_READY: Record<Exclude<MineState, "ready">, string> = {
@@ -71,7 +78,9 @@ export function SettleView() {
     : readFailed ? (history.res?.error ? errorText(history.res.error.code).join(" ") : "The enclave did not answer. Try again in a moment.")
     : null;
   const mineRows = useMemo(() => (mineState === "ready" ? historyRows(entries, callId) : []), [mineState, entries, callId]);
-  const [pick, setPick] = useState<Source | null>(null);
+  // The source choice and the filters survive leaving the section: the workspace
+  // unmounts the section that is not open, so local state alone would reset on every switch.
+  const [pick, setPick] = useSessionState<Source | null>("kh.activity.source", null, isSourceOrNull);
   const source: Source = pick ?? defaultSourceOf(mineRows.length);
   const publicRows = useMemo(() => buildOrders(reads), [reads]);
   const rows = useMemo(() => (source === "mine" ? mineRows : publicRows), [source, mineRows, publicRows]);
@@ -102,9 +111,9 @@ export function SettleView() {
     void runHistory({});
   }, [live, tokenId, accountId, session, runHistory]);
 
-  const [filter, setFilter] = useState<FilterId>("all");
-  const [range, setRange] = useState<RangeId>("all");
-  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useSessionState<FilterId>("kh.activity.filter", "all", isFilterId);
+  const [range, setRange] = useSessionState<RangeId>("kh.activity.range", "all", isRangeId);
+  const [query, setQuery] = useSessionState("kh.activity.query", "", isString);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());

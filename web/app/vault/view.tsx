@@ -27,6 +27,7 @@ import { LOCK_LABEL, LOCK_NOTE, useValueLock } from "@/lib/valueLock";
 import { ValueRecovery } from "@/components/ValueRecovery";
 import { withdrawResultView } from "@/lib/opResult";
 import { Details, InCardFailure, InCardProgress, InCardSuccess } from "@/components/InCard";
+import { isAmountString, isOneOf, useSessionState } from "@/lib/useSessionState";
 import { isNotSent } from "@/lib/opResult";
 import { OpNotSent } from "@/components/OpNotSent";
 import { TeeProgress } from "@/components/TeeProgress";
@@ -54,6 +55,9 @@ type Panel = "limits" | "session";
 
 const ASSET_KEYS = Object.keys(ASSETS) as AssetKey[];
 const keyOfId = (id: string): AssetKey => ASSET_KEYS.find((k) => ASSETS[k].id === id) ?? "usdc";
+/** Module-level validators for the session-backed form state (stable hook dependencies). */
+const isAssetKey = isOneOf(ASSET_KEYS);
+const isDepTab = isOneOf(["direct", "chain"] as const);
 /** The vault holds and withdraws the two assets the trade supports. */
 const TOKEN_OPTIONS: TokenOption[] = ASSET_KEYS.map((k) => ({ id: ASSETS[k].id, symbol: ASSETS[k].symbol, name: ASSETS[k].name, assetId: ASSETS[k].id, chain: "near" }));
 
@@ -157,12 +161,12 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const [limDay, setLimDay] = useState("");
   const [depOpen, setDepOpen] = useState(false);
   const [wOpen, setWOpen] = useState(false);
-  const [fundAsset, setFundAsset] = useState<AssetKey>("usdc");
-  const [fundAmt, setFundAmt] = useState("1");
-  const [depTab, setDepTab] = useState<DepTab>("direct");
+  const [fundAsset, setFundAsset] = useSessionState<AssetKey>("kh.vault.fundAsset", "usdc", isAssetKey);
+  const [fundAmt, setFundAmt] = useSessionState("kh.vault.fundAmt", "1", isAmountString);
+  const [depTab, setDepTab] = useSessionState<DepTab>("kh.vault.depTab", "direct", isDepTab);
   const [fundedFor, setFundedFor] = useState<string | null>(null);
-  const [wAsset, setWAsset] = useState<AssetKey>("usdc");
-  const [wAmt, setWAmt] = useState("0.05");
+  const [wAsset, setWAsset] = useSessionState<AssetKey>("kh.vault.wAsset", "usdc", isAssetKey);
+  const [wAmt, setWAmt] = useSessionState("kh.vault.wAmt", "0.05", isAmountString);
   const [doneWithdraw, setDoneWithdraw] = useState<DoneWithdraw | null>(null);
   const [prices, setPrices] = useState(initialPrices);
   const [mintTx, setMintTx] = useState<string | null>(null);

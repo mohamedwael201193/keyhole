@@ -12,6 +12,7 @@ import { useWallet } from "@/lib/wallet";
 import { KEY_LIST_LIMIT, useKeyStore } from "@/lib/keyStore";
 import { nftTier, nftTokens, type Token } from "@/lib/near";
 import { dashHref } from "@/lib/dashboardSections";
+import { isNullableString, isOneOf, isString, useSessionState } from "@/lib/useSessionState";
 import "@/components/keys/keys.css";
 
 /**
@@ -21,6 +22,9 @@ import "@/components/keys/keys.css";
  * starts on My keys and reads nothing for All until the account asks for it (then it links to /gallery).
  */
 export type KeysFilter = "all" | "mine" | "sale";
+
+/** Module-level validator for the session-backed filter (stable hook dependency). */
+const isKeysFilter = isOneOf(["all", "mine", "sale"] as const);
 
 type Row = { id: string; token: Token | undefined; tier: number | null | undefined };
 type ReadyRow = { id: string; token: Token; tier: number | null };
@@ -35,9 +39,13 @@ export function GalleryView({ initial, serverTokens: serverTokensProp, serverTie
   const store = useKeyStore();
   const total = useKeyTotal();
   const sales = useListings();
-  const [filter, setFilter] = useState<KeysFilter>(initial);
-  const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<string | null>(null);
+  // The filter, search and selected key survive leaving the section: the workspace
+  // unmounts the section that is not open, so local state alone would reset on every
+  // switch. The key is per initial view, so the public gallery ("all") and the
+  // dashboard's "My keys" ("mine") keep separate saved filters.
+  const [filter, setFilter] = useSessionState(`kh.gallery.${initial}.filter`, initial, isKeysFilter);
+  const [query, setQuery] = useSessionState(`kh.gallery.${initial}.query`, "", isString);
+  const [picked, setPicked] = useSessionState(`kh.gallery.${initial}.picked`, null, isNullableString);
   // Inside the dashboard there is no server page: "All keys" reads the first page of keys here, in the browser (public views, no signature).
   const [clientAll, setClientAll] = useState<{ tokens: Token[]; tiers: (number | null)[] } | "error" | null>(null);
   const needClientAll = filter === "all" && !serverTokensProp;

@@ -140,7 +140,7 @@ export function TrialView({ autostart }: { autostart: boolean }) {
         <p>{TRIAL_BANNER}</p>
         <div className="net-toggle" role="group" aria-label="Network">
           <Link href="/try" aria-current="page" data-testid="net-testnet">Testnet</Link>
-          <Link href="/" data-testid="net-mainnet">Mainnet</Link>
+          <Link href="/dashboard" data-testid="net-mainnet">Mainnet</Link>
         </div>
       </div>
       <h1>Try the key, free on testnet.</h1>

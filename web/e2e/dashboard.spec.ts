@@ -58,6 +58,49 @@ test.describe("dashboard sections", () => {
     await expect(page.getByTestId("my-proof")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("verify-btn")).toHaveCount(0);
   });
+
+  test("the back button returns to the previous section, forward goes back", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop", "sidebar");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/dashboard#swap");
+    await expect(page.getByTestId("swap-page")).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId("app-nav-vault").click();
+    await expect(page.getByTestId("vault-page")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("workspace")).toHaveAttribute("data-section", "vault");
+    await page.goBack();
+    await expect(page.getByTestId("workspace")).toHaveAttribute("data-section", "swap");
+    await expect(page.getByTestId("swap-page")).toBeVisible();
+    expect(new URL(page.url()).hash).toBe("#swap");
+    await page.goForward();
+    await expect(page.getByTestId("workspace")).toHaveAttribute("data-section", "vault");
+    expect(new URL(page.url()).hash).toBe("#vault");
+  });
+
+  test("the swap amount and the activity range survive leaving the section", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop", "sidebar");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/dashboard#swap");
+    await expect(page.getByTestId("swap-page")).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId("swap-amount-input").fill("0.42");
+    await expect(page.getByTestId("swap-amount-input")).toHaveValue("0.42");
+    await page.getByTestId("app-nav-activity").click();
+    await expect(page.getByTestId("activity-page")).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId("act-range").selectOption("7d");
+    await expect(page.getByTestId("act-range")).toHaveValue("7d");
+    await page.getByTestId("app-nav-swap").click();
+    await expect(page.getByTestId("swap-page")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("swap-amount-input")).toHaveValue("0.42");
+    await page.getByTestId("app-nav-activity").click();
+    await expect(page.getByTestId("activity-page")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("act-range")).toHaveValue("7d");
+  });
+});
+
+test("the /try mainnet toggle opens the dashboard, not the landing page", async ({ page }) => {
+  await page.goto("/try");
+  await page.getByTestId("net-mainnet").click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByTestId("workspace")).toBeVisible({ timeout: 20_000 });
 });
 
 test("a price check clears its error when the amount is cleared", async ({ page }) => {

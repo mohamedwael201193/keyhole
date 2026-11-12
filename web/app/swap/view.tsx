@@ -24,6 +24,7 @@ import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/token
 import { minutesLeft } from "@/lib/session";
 import { LOCK_LABEL, useValueLock } from "@/lib/valueLock";
 import { ValueRecovery } from "@/components/ValueRecovery";
+import { isAmountString, isString, useSessionState } from "@/lib/useSessionState";
 import "./swap.css";
 import { dashHref } from "@/lib/dashboardSections";
 
@@ -94,10 +95,16 @@ export function SwapView() {
   const findToken = (id: string): Token | null => tokens.find((t) => t.assetId === id) ?? FALLBACK.find((t) => t.assetId === id) ?? null;
   const chainCount = useMemo(() => new Set(list.tokens.map((t) => t.blockchain)).size, [list.tokens]);
 
-  const [from, setFrom] = useState<Token>(FALLBACK[0]);
-  const [to, setTo] = useState<Token>(FALLBACK[1]);
+  // The pair and the amount survive leaving the section: the workspace unmounts
+  // the section that is not open, so local state alone would reset on every switch.
+  // Only the pair and the typed amount are stored; quotes and results never are.
+  // `from`/`to` resolve from the saved ids once the token list loads.
+  const [fromId, setFromId] = useSessionState("kh.swap.from", FALLBACK[0].assetId, isString);
+  const [toId, setToId] = useSessionState("kh.swap.to", FALLBACK[1].assetId, isString);
+  const from = findToken(fromId) ?? FALLBACK[0];
+  const to = findToken(toId) ?? FALLBACK[1];
   const [turns, setTurns] = useState(0);
-  const [amount, setAmount] = useState("0.05");
+  const [amount, setAmount] = useSessionState("kh.swap.amount", "0.05", isAmountString);
   const [quoted, setQuoted] = useState<{ key: string; minOut?: string } | null>(null);
   const [quotedAt, setQuotedAt] = useState<number | null>(null);
   const [ageS, setAgeS] = useState(0);
@@ -119,8 +126,6 @@ export function SwapView() {
   /** The trade the latest quote was asked for (state, so the screen can tell "a price is on its way" from "it answered"). */
   const [requestedKey, setRequestedKey] = useState("");
 
-  const fromId = from.assetId;
-  const toId = to.assetId;
   const units = toBaseUnits(amount, from.decimals);
   const tradeKey = `${fromId}:${toId}:${units ?? ""}`;
   const samePair = fromId === toId;
@@ -302,9 +307,9 @@ export function SwapView() {
     else if (step === "confirm") confirm();
     else if (step === "done") again();
   }
-  function flip() { setTurns((n) => n + 1); setFrom(to); setTo(from); }
-  function pickFrom(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === toId) setTo(from); setFrom(t); }
-  function pickTo(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === fromId) setFrom(to); setTo(t); }
+  function flip() { setTurns((n) => n + 1); setFromId(toId); setToId(fromId); }
+  function pickFrom(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === toId) setToId(fromId); setFromId(t.assetId); }
+  function pickTo(id: string) { const t = findToken(id); if (!t) return; if (t.assetId === fromId) setFromId(toId); setToId(t.assetId); }
 
   // Each option carries its balance once the holder has read it (only when it is not zero).
   const options = useMemo<TokenOption[]>(() => tokens.map((t) => {
