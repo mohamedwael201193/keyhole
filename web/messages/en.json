@@ -1176,6 +1176,124 @@
       "h2": "Sell the key. The private account goes with it.",
       "mint": "Mint a key",
       "verify": "Verify it yourself"
+    },
+    "v2": {
+      "navPill": "NEAR Mainnet",
+      "hero": {
+        "eyebrow": "On-chain private accounts",
+        "h1a": "Sell a trading account",
+        "h1b": "like an NFT.",
+        "body": "Your key is an NFT on NEAR. Behind it sits a private trading account inside a sealed enclave (TEE). Sell, transfer or pledge the key, and control moves with it — on-chain, with proof.",
+        "launch": "Launch app",
+        "watch": "Watch a real handover",
+        "trial": "Try it free — testnet",
+        "artAlt": "An ivy-covered stone arch with three keys on stone pedestals: Bronze, Silver and Gold",
+        "keyBronze": "KEYHOLE Bronze key",
+        "keySilver": "KEYHOLE Silver key",
+        "keyGold": "KEYHOLE Gold key",
+        "pause": "Pause motion",
+        "play": "Play motion"
+      },
+      "strip": {
+        "label": "What the key gives you",
+        "tee": "TEE secured",
+        "teeSub": "Private account",
+        "intents": "NEAR Intents",
+        "intentsSub": "Private swaps",
+        "transfer": "Transferable",
+        "transferSub": "Control moves",
+        "pledge": "Pledge",
+        "pledgeSub": "Locks while pledged"
+      },
+      "problem": {
+        "eyebrow": "The problem",
+        "h2": "Private accounts can't be handed over.",
+        "body": "Keys, secrets and history stay with the old owner. There is no safe way to transfer control of a private account.",
+        "imgAlt": "A golden keyhole set in an emerald door, ivy on the left"
+      },
+      "how": {
+        "eyebrow": "How it works",
+        "h2": "From mint to handover, in three steps.",
+        "s1t": "Mint the key",
+        "s1d": "Get a KEYHOLE NFT. A private enclave account is created for you.",
+        "s2t": "Use the account",
+        "s2d": "Trade privately, set limits, freeze when needed, and keep a signed log.",
+        "s3t": "Transfer the key",
+        "s3d": "Sell or transfer the NFT. Control moves to the new holder; the old holder is refused on the next request.",
+        "cardAlt": "The KEYHOLE Bronze key card",
+        "holderA": "Previous holder",
+        "holderB": "New holder"
+      },
+      "lock": {
+        "eyebrow": "The lock-out moment",
+        "h2": "Control moves on-chain.",
+        "body": "After the key is transferred, the old holder is refused and the new holder can use the account right away.",
+        "proof": "View verification proof",
+        "tx": "Open on NearBlocks",
+        "prev": "Previous holder",
+        "refused": "Refused",
+        "code": "not_owner",
+        "next": "New holder",
+        "granted": "Access granted",
+        "pause": "Pause animation",
+        "play": "Play animation",
+        "keyAlt": "The Bronze key moving from the previous holder to the new holder"
+      },
+      "pledge": {
+        "eyebrow": "Pledge",
+        "h2": "Use your key as collateral.",
+        "body": "Pledge the key to borrow. While pledged, transfer, sale and swaps are locked. Repay to unlock; on default the lender receives the key and everything in its vault, under the terms the borrower signed.",
+        "badge": "Not open for lending yet",
+        "cta": "How pledge works",
+        "n1": "Pledge",
+        "d1": "Lock the key",
+        "n2": "Locked",
+        "d2": "Transfer, sale and swaps are off",
+        "n3": "Repay",
+        "d3": "Unlock the key",
+        "n4": "Default",
+        "d4": "Lender receives the key",
+        "pause": "Pause animation",
+        "play": "Play animation"
+      },
+      "keys": {
+        "eyebrow": "The keys",
+        "h2": "Every key is one of one.",
+        "mint": "Mint a key",
+        "mintable": "Mintable",
+        "preview": "Preview",
+        "daily": "a day",
+        "region": "The four KEYHOLE key finishes"
+      },
+      "tokens": {
+        "eyebrow": "Supported tokens",
+        "more": "+{n} more",
+        "list": "Tokens on 1Click"
+      },
+      "live": {
+        "eyebrow": "Live on mainnet",
+        "holders": "Holders",
+        "verifyTitle": "Verify it yourself",
+        "verify": "Verify",
+        "stale": "Stale",
+        "reading": "Reading NEAR mainnet",
+        "unavailable": "Unavailable"
+      },
+      "builders": {
+        "eyebrow": "For builders",
+        "h2": "Read the same state from code.",
+        "cli": "CLI, read-only",
+        "mcp": "MCP tool, read-only",
+        "build": "Worker code hash",
+        "buildTag": "build",
+        "recordTag": "on record"
+      },
+      "close": {
+        "h2": "Sell the key. The private account goes with it.",
+        "launch": "Launch app",
+        "mint": "Mint a key",
+        "artAlt": "An ivy-covered stone arch"
+      }
     }
   }
 }
