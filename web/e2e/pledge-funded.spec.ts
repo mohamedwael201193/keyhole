@@ -119,6 +119,21 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
   await p.getByRole("button",{name:"Discard unsent withdrawal",exact:true}).click();
   await expect(p.getByRole("status")).toContainText("Unsent exit intent discarded. No withdrawal was sent");
  }
+ // Payout-storage consent is a controlled checkbox disabled while loading||busy.
+ // startPledgePolling refreshes every 4s after the last read completes, and
+ // capture() clicks Refresh chain. If that refresh starts after Playwright's
+ // actionability check, locator.check() clicks a now-disabled input — a no-op,
+ // reported as "Clicking the checkbox did not change its state" (CI 43148529668,
+ // second begin() after repay; fee already "0"). Wait for the status line to
+ // go idle, then check the consent input specifically. Not a retry of a failed click.
+ async function ackPayoutStorage(p:Page){
+  await expect(p.getByRole("status")).not.toContainText("Confirm / loading",{timeout:20000});
+  const box=p.locator("label.pledge-live-consent input");
+  await expect(box).toBeEnabled();
+  await box.check();
+  await expect(box).toBeChecked();
+ }
+
  async function begin(label:string){
   await borrower.getByLabel("Named lender",{exact:true}).fill(meta.lender);await borrower.getByLabel("Term seconds",{exact:true}).fill("120");await borrower.getByLabel("Grace seconds",{exact:true}).fill("30");await borrower.locator(".pledge-live-consent input").check();await expect(borrower.getByTestId("forfeit-line")).toHaveText(/receives the whole key/);await expect(borrower.getByTestId("borrower-numbers")).toContainText("Total cost");await borrower.getByTestId("forfeit-ack").check();
   // Re-read inventory immediately before Pledge so the 10s dispatch lease starts after form fill,
@@ -129,7 +144,7 @@ test("funded Pledge: real UI repay AND default endings with both holders and vie
    expect(BigInt(deadline)).toBeGreaterThanOrEqual(before+600_000_000_000n);expect(BigInt(deadline)).toBeLessThanOrEqual(await finalNs()+600_000_000_000n);
    return action("open_loan",{token_id:meta.token_id,terms:{lender:meta.lender,principal:"10000000000000000000000",repayment:"10100000000000000000000",duration_sec:"120",grace_sec:"30",floor_raw:"500000",funding_deadline_ns:deadline}},(await view("get_loan_limits")).storage_bond);
   },()=>open.click());await state("Offer open");await capture(`${label}_offered_declared`);
-  expect(privateLenderRequests).toEqual([]);const certificateResponse=lender.waitForResponse(r=>r.url().includes("/api/worker")&&r.request().postDataJSON()?.op==="loan_certificate",{timeout:30000});await lender.getByRole("button",{name:"Verify sealed certificate",exact:true}).click();const certResponse=await certificateResponse;const certResult=await certResponse.json();expect(certResponse.ok(),JSON.stringify(certResult.error??null)).toBe(true);expect(certResult.error).toBeFalsy();const cert=certResult.output as CertificateEnvelope;await expect(lender.getByText("Verified minimum · sealed signature verified",{exact:true})).toBeVisible({timeout:20000});await lender.getByRole("checkbox").check();await capture(`${label}_certificate_verified`);
+  expect(privateLenderRequests).toEqual([]);const certificateResponse=lender.waitForResponse(r=>r.url().includes("/api/worker")&&r.request().postDataJSON()?.op==="loan_certificate",{timeout:30000});await lender.getByRole("button",{name:"Verify sealed certificate",exact:true}).click();const certResponse=await certificateResponse;const certResult=await certResponse.json();expect(certResponse.ok(),JSON.stringify(certResult.error??null)).toBe(true);expect(certResult.error).toBeFalsy();const cert=certResult.output as CertificateEnvelope;await expect(lender.getByText("Verified minimum · sealed signature verified",{exact:true})).toBeVisible({timeout:20000});await ackPayoutStorage(lender);await capture(`${label}_certificate_verified`);
   const fund=lender.getByRole("button",{name:"Fund 0.01 NEAR",exact:true});await expect(fund).toBeEnabled();const offered=await loan();await submit(lender,action("fund_loan",{token_id:meta.token_id,nonce:offered.nonce,certificate:cert.certificate,signature:cert.signature},offered.terms.principal),()=>fund.click());await state("Funds ready to claim");expect((await loan()).due_ns).toBe("0");await capture(`${label}_funded_no_debt`);
   const balanceBefore=await balance(meta.borrower);await claim(borrower,"Claim 0.01 NEAR");await state("Loan active");expect(BigInt((await loan()).due_ns)).toBeGreaterThan(0n);expect(await balance(meta.borrower)-balanceBefore).toBeGreaterThan(5_000_000_000_000_000_000_000n);await capture(`${label}_native_delivered_active`);
  }
