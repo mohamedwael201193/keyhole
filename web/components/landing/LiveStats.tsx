@@ -1,20 +1,26 @@
 "use client";
 /**
- * Live mainnet counts. A refresh that hangs is aborted. A reply from an older request is ignored.
- * Numbers older than STATS_MAX_AGE_MS are labelled Stale, not Live.
+ * Live on mainnet. Keys held by users is the server-read supply (it polls /api/supply when that read failed); Holders is the
+ * /api/mainnet-stats panel's own field. A refresh that hangs is aborted and a reply from an older request is ignored. A number
+ * older than STATS_MAX_AGE_MS is labelled Stale, not Live. The third tile is the link to /verify. No number is fixed in this file.
  */
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT, acct } from "@/lib/config";
 import { STATS_FETCH_TIMEOUT_MS, staleLabel, statsPhase, takeLatest } from "@/lib/liveStatsClient";
 import type { MainnetStats } from "@/lib/mainnetStats";
+import { Icon } from "./icons";
+import { SupplyStat } from "./Proof";
 
 function num(stat: { ok: boolean; value: number | null } | undefined, phase: string): string {
   if (phase === "loading") return "…";
-  if (phase === "unavailable" || !stat?.ok || stat.value == null) return "unavailable";
+  if (phase === "unavailable" || !stat?.ok || stat.value == null) return "—";
   return String(stat.value);
 }
 
-export function LiveStats() {
+export function LiveStats({ supply }: { supply: number | null }) {
+  const { t } = useI18n();
   const [stats, setStats] = useState<MainnetStats | null>(null);
   const [receivedAt, setReceivedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,44 +59,33 @@ export function LiveStats() {
   }, []);
 
   const { phase, ageMs } = statsPhase({ stats, receivedAt, now, loading });
-  const event = phase === "unavailable" ? undefined : stats?.latestEvent;
-  const badge = phase === "loading"
-    ? `Reading NEAR mainnet · ${KEYS_CONTRACT}`
-    : phase === "live"
-      ? `Live on NEAR mainnet · ${KEYS_CONTRACT}`
-      : phase === "stale"
-        ? `Stale · ${staleLabel(ageMs ?? 0)} · ${KEYS_CONTRACT}`
-        : `NEAR mainnet · ${KEYS_CONTRACT} · unavailable`;
+  const tag = phase === "stale" ? `${t("landing2.v2.live.stale")} · ${staleLabel(ageMs ?? 0)}` : phase === "loading" ? t("landing2.v2.live.reading") : phase === "unavailable" ? t("landing2.v2.live.unavailable") : null;
 
   return (
-    <div className="lp-live" data-testid="mainnet-stats">
-        <p className="lp-live-badge" data-testid="mainnet-badge">
-          <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noreferrer">{badge}</a>
-        </p>
-        <dl className="lp-live-stats">
-          <div>
-            <dt>Keys minted</dt>
-            <dd data-testid="stat-keys">{num(stats?.totalKeys, phase)}</dd>
-          </div>
-          <div>
-            <dt>Holders</dt>
-            <dd data-testid="stat-holders">{num(stats?.holders, phase)}</dd>
-          </div>
-          <div>
-            <dt>Active liens</dt>
-            <dd data-testid="stat-liens">{num(stats?.activeLiens, phase)}</dd>
-          </div>
-          <div>
-            <dt>Latest key event</dt>
-            <dd data-testid="stat-event">
-              {phase === "loading" ? "…" : event?.ok && event.value ? (
-                <a href={`https://nearblocks.io/txns/${event.value.hash}`} target="_blank" rel="noreferrer">
-                  {event.value.method}
-                </a>
-              ) : "unavailable"}
-            </dd>
-          </div>
-        </dl>
+    <div className="lp-live" data-testid="mainnet-stats" data-phase={phase}>
+      <p className="lp-eyebrow lp-eyebrow--light lp-live-head">
+        <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noopener noreferrer" data-testid="mainnet-badge">
+          <i className={`lp-pulse${phase === "live" ? "" : " is-off"}`} aria-hidden="true" />{t("landing2.v2.live.eyebrow")}
+        </a>
+        {tag && <span className="lp-live-tag">{tag}</span>}
+      </p>
+      <dl className="lp-stats">
+        <div className="lp-stat">
+          <Icon name="key" size={28} className="lp-stat-ico" />
+          <dd data-testid="keys-stat"><Link href="/keys" className="lp-stat-link"><SupplyStat initial={supply} /></Link></dd>
+          <dt>{t("home.supplyLabel")}</dt>
+        </div>
+        <div className="lp-stat">
+          <Icon name="layers" size={28} className="lp-stat-ico" />
+          <dd data-testid="stat-holders">{num(stats?.holders, phase)}</dd>
+          <dt>{t("landing2.v2.live.holders")}</dt>
+        </div>
+        <div className="lp-stat">
+          <Icon name="shield" size={28} className="lp-stat-ico" />
+          <dd><Link href="/verify" className="lp-stat-link lp-stat-verify" data-testid="verify-cta">{t("landing2.v2.live.verify")}<Icon name="arrow" size={18} /></Link></dd>
+          <dt>{t("landing2.v2.live.verifyTitle")}</dt>
+        </div>
+      </dl>
     </div>
   );
 }

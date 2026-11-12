@@ -1,60 +1,66 @@
 "use client";
 /**
- * The lock-out, the second dealt moment. Two tall panels: the previous holder is refused (the real code `not_owner`), the new
- * holder's account is open. The REFUSED stamp lands once when the section first reaches the viewport (scale 1.15 to 1, 300 ms,
- * then still). Under reduced motion or ?static the stamp is simply there. Labels are on the panels, not under them.
+ * The lock-out moment, dealt moment 2 and the payoff. A deep-emerald band on the arch art. Two glass cards: the previous holder is
+ * refused (the real code `not_owner`), the new holder has access. While the section is in view a 6 s loop runs: the real Bronze
+ * key (k03) travels the arrow to the new holder; when it lands, the left card dims red with a 2 px shake and the right card glows
+ * green; both hold, then it resets. A pause control stops it. Reduced motion and ?static: the final state, no loop, no key.
  */
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { tx } from "@/lib/config";
+import { useLoop } from "../LandingMotion";
+import { GoldWaves } from "./GoldWaves";
+import { Icon } from "./icons";
+import { LoopControl } from "./LoopControl";
 
-/** The transfer that moved the key (the sale tx cited in README.md, section "Current build"). */
-const TRANSFER_TX = "G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD";
+/** The in-contract sale: the buyer buys, then the old owner is refused `not_owner` (README.md, "Current build" and the sale evidence). */
+const SALE_TX = "BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp";
 
 export function Lockout() {
   const { t } = useI18n();
   const ref = useRef<HTMLElement>(null);
-  const [stamp, setStamp] = useState<"rest" | "armed" | "on">("rest");
-
-  useEffect(() => {
-    const el = ref.current;
-    const still = new URLSearchParams(location.search).has("static") || document.documentElement.classList.contains("no-motion") || matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!el) return;
-    if (still || !("IntersectionObserver" in window)) { setStamp("on"); return; }
-    setStamp("armed");
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) { setStamp("on"); io.disconnect(); }
-    }, { threshold: 0.35 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
+  const loop = useLoop(ref);
   return (
     <section className="lp-sec lp-lock" id="lockout" aria-labelledby="lockout-h" ref={ref}>
-      <div className="wrap lp-wrap">
-        <p className="lp-eyebrow">{t("landing2.lock.eyebrow")}</p>
-        <h2 id="lockout-h" className="lp-h2">{t("landing2.lock.h2")}</h2>
-        <div className="lp-panels">
-          <figure className="lp-panel" data-testid="lock-left">
+      <div className="lp-wrap">
+        <div className="lp-band lp-lock-band">
+          <div className="lp-lock-bg" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/landing/lockout-left.webp" alt={t("landing2.lock.altLeft")} width={896} height={1200} loading="lazy" decoding="async" />
-            <span className="lp-tag lp-tag--top">{t("landing2.lock.prevLabel")}</span>
-            <span className="lp-stamp" data-state={stamp} aria-hidden="true">{t("landing2.lock.stamp")}</span>
-            <code className="lp-code">{t("landing2.lock.prevCode")}</code>
-          </figure>
-          <figure className="lp-panel" data-testid="lock-right">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/landing/lockout-right.webp" alt={t("landing2.lock.altRight")} width={896} height={1200} loading="lazy" decoding="async" />
-            <span className="lp-tag lp-tag--top lp-tag--brass">{t("landing2.lock.newLabel")}</span>
-            <span className="lp-open">{t("landing2.lock.newState")}</span>
-          </figure>
+            <img src="/landing/arch-teal.webp" alt="" width={2000} height={667} loading="lazy" decoding="async" />
+          </div>
+          <GoldWaves variant="lock" />
+          <div className="lp-lock-copy">
+            <p className="lp-eyebrow lp-eyebrow--light">{t("landing2.v2.lock.eyebrow")}</p>
+            <h2 id="lockout-h" className="lp-h2 lp-h2--light">{t("landing2.v2.lock.h2")}</h2>
+            <p className="lp-body lp-body--light">{t("landing2.v2.lock.body")}</p>
+            <div className="lp-cta lp-cta--tight">
+              <Link href="/verify" className="lp-btn lp-btn--outline" data-testid="lock-verify">{t("landing2.v2.lock.proof")}<Icon name="out" size={17} /></Link>
+              <a href={tx(SALE_TX)} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn--outline" data-testid="lock-tx">{t("landing2.v2.lock.tx")}<Icon name="out" size={17} /></a>
+            </div>
+          </div>
+          <div className="lp-lock-stage" data-loop={loop.running ? "on" : "off"}>
+            <article className="lp-holder lp-holder--prev" data-testid="lock-left">
+              <span className="lp-tint" aria-hidden="true" />
+              <Icon name="user" size={40} className="lp-holder-ico" />
+              <h3>{t("landing2.v2.lock.prev")}</h3>
+              <p className="lp-pill lp-pill--red"><Icon name="x" size={16} />{t("landing2.v2.lock.refused")}</p>
+              <code className="lp-code">{t("landing2.v2.lock.code")}</code>
+            </article>
+            <div className="lp-lock-arrow" aria-hidden="true">
+              <svg viewBox="0 0 64 24" focusable="false"><path d="M2 12h56M46 3l12 9-12 9" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="lp-lock-key" src="/heirloom/keys/k03.webp" alt="" width={433} height={1077} loading="lazy" decoding="async" />
+            </div>
+            <article className="lp-holder lp-holder--next" data-testid="lock-right">
+              <span className="lp-tint" aria-hidden="true" />
+              <Icon name="user" size={40} className="lp-holder-ico" />
+              <h3>{t("landing2.v2.lock.next")}</h3>
+              <p className="lp-pill lp-pill--green"><Icon name="check" size={16} />{t("landing2.v2.lock.granted")}</p>
+            </article>
+          </div>
+          <LoopControl className="lp-lock-ctl" paused={loop.paused} onToggle={loop.toggle} pauseLabel={t("landing2.v2.lock.pause")} playLabel={t("landing2.v2.lock.play")} />
         </div>
-        <p className="lp-proven">
-          <span>{t("landing2.lock.proven")}</span>
-          <a href={tx(TRANSFER_TX)} target="_blank" rel="noopener noreferrer" className="lp-link">{t("landing2.lock.tx")} ↗</a>
-          <Link href="/attack" className="lp-link">{t("landing2.lock.attack")}</Link>
-        </p>
       </div>
     </section>
   );

@@ -1,77 +1,58 @@
 "use client";
 /**
- * GSAP motion for the landing, the only place GSAP runs on the public site. The page renders its final state on the server and
- * without JavaScript; the pin is set up after hydration. Off under prefers-reduced-motion, html.no-motion and ?static (the same
- * switch as HomeMotion). matchMedia reverts every ScrollTrigger and inline style on unmount.
+ * Motion helpers for the landing. There is no scroll pin and no animation library here: every effect is a CSS keyframe, switched on
+ * by a data attribute these hooks set. The server and a browser without script render the final, readable state. Everything is off
+ * under prefers-reduced-motion, html.no-motion and ?static (the same switch as HomeMotion).
  */
-import { useLayoutEffect, useRef, type ReactNode } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useEffect, useState, type RefObject } from "react";
 
-const MOTION_OK = "(prefers-reduced-motion: no-preference)";
-const DESKTOP = "(min-width: 861px)";
-
-let registered = false;
-function register() {
-  if (registered) return;
-  gsap.registerPlugin(ScrollTrigger);
-  registered = true;
+/** True when decorative motion must not run: reduced motion, `?static`, or html.no-motion. Client only. */
+export function motionOff(): boolean {
+  return (
+    new URLSearchParams(location.search).has("static") ||
+    document.documentElement.classList.contains("no-motion") ||
+    matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
-function motionOff() {
-  return new URLSearchParams(location.search).has("static") || document.documentElement.classList.contains("no-motion");
+export type Dealt = "rest" | "armed" | "on";
+
+/**
+ * A dealt moment that plays once. "rest" is the final state (server, no script, reduced motion). With motion allowed it goes to
+ * "armed" (the first frame, drawn hidden) and to "on" (the keyframes run) the first time the section is 35% in view.
+ */
+export function useDealt(ref: RefObject<HTMLElement | null>, threshold = 0.35): Dealt {
+  const [state, setState] = useState<Dealt>("rest");
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (motionOff() || !("IntersectionObserver" in window)) return;
+    setState("armed");
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { setState("on"); io.disconnect(); }
+    }, { threshold });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, threshold]);
+  return state;
 }
 
 /**
- * The keyhole moment, the one pinned section. On desktop it is pinned for two viewports of scroll. The real key ([data-key])
- * starts upright above the keyhole and turns 90 degrees as it seats in the lock. Three steps ([data-step]) are reached in turn:
- * the step the scroll is on is lit, the others rest dimmed (`data-on`). Phones, tablets and reduced motion get the final frame.
- *
- * The pin is set up in a layout effect so it is undone before React removes the section (a pin wraps the section in a spacer).
+ * A loop that runs only while its section is in view, motion is allowed and the visitor has not paused it.
+ * `running` is false on the server and under reduced motion, so the page rests in its final state.
  */
-export function KeyholeMoment({ children, className, id, labelledBy }: { children: ReactNode; className?: string; id?: string; labelledBy?: string }) {
-  const ref = useRef<HTMLElement>(null);
-  useLayoutEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    register();
-    const mm = gsap.matchMedia();
-    mm.add(`${DESKTOP} and ${MOTION_OK}`, () => {
-      if (motionOff()) return;
-      const key = root.querySelector<HTMLElement>("[data-key]");
-      const steps = Array.from(root.querySelectorAll<HTMLElement>("[data-step]"));
-      if (!key) return;
-      const from = { yPercent: -150, rotation: 0, opacity: 0 };
-      const to = { yPercent: 0, rotation: 90, opacity: 1 };
-      gsap.set(key, from);
-      root.dataset.pinned = "true";
-      const light = (p: number) => {
-        steps.forEach((el, i) => { el.dataset.on = p >= i / steps.length - 0.001 ? "true" : "false"; });
-      };
-      light(0);
-      const tl = gsap.timeline({ defaults: { ease: "power2.inOut" } });
-      tl.fromTo(key, from, to);
-      const st = ScrollTrigger.create({
-        trigger: root,
-        start: "top top",
-        end: () => `+=${window.innerHeight * 2}`,
-        pin: true,
-        scrub: 0.6,
-        invalidateOnRefresh: true,
-        animation: tl,
-        onUpdate: (self) => light(self.progress),
-      });
-      // Fonts change the layout after first paint; re-measure so the pin length matches the screen.
-      void document.fonts?.ready.then(() => ScrollTrigger.refresh());
-      return () => {
-        st.kill(true);
-        tl.kill();
-        gsap.set(key, { clearProps: "transform,opacity" });
-        delete root.dataset.pinned;
-        steps.forEach((el) => { delete el.dataset.on; });
-      };
-    });
-    return () => mm.revert();
-  }, []);
-  return <section ref={ref} id={id} className={className} aria-labelledby={labelledBy}>{children}</section>;
+export function useLoop(ref: RefObject<HTMLElement | null>): { running: boolean; paused: boolean; toggle: () => void } {
+  const [inView, setInView] = useState(false);
+  const [allowed, setAllowed] = useState(false);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (motionOff() || !("IntersectionObserver" in window)) return;
+    setAllowed(true);
+    const io = new IntersectionObserver((entries) => setInView(entries.some((e) => e.isIntersecting)), { threshold: 0.25 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref]);
+  return { running: allowed && inView && !paused, paused, toggle: () => setPaused((p) => !p) };
 }

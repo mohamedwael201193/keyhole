@@ -1,61 +1,48 @@
 "use client";
 /**
- * Live proof: one screen on the stone texture. Left: live numbers only (keys held by people from loadLanding, the 1Click token and
- * chain count from loadTokenReach) and the worker hash, which is a build constant and says so. Right: the real mainnet panel
- * (LiveStats, /api/mainnet-stats), in an app frame.
+ * Supported tokens and live on mainnet: one dark emerald band, two halves. Left, six real token marks (TokenMark, the same marks the
+ * swap uses) and "+N more", where N is the live 1Click token count minus the six shown; when that read failed the count is hidden.
+ * Right, the live mainnet numbers (LiveStats). Nothing here is a fixed number.
  */
-import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
-import { KEYS_CONTRACT, acct } from "@/lib/config";
 import type { TokenReach } from "@/lib/landing";
-import type { publicOrderCensus } from "@/lib/settlements";
-import { SupplyStat } from "./Proof";
+import { TokenMark } from "@/components/TokenMark";
 import { LiveStats } from "./LiveStats";
 
-const SOURCE = "https://github.com/mohamedwael201193/keyhole";
+const SHOWN = [
+  { symbol: "NEAR", chain: null },
+  { symbol: "USDC", chain: null },
+  { symbol: "USDT", chain: null },
+  { symbol: "BTC", chain: null },
+  { symbol: "ETH", chain: null },
+  { symbol: "SOL", chain: null },
+] as const;
 
-export function ProofBand({ supply, hash, reach, orders }: { supply: number | null; hash: string; reach: TokenReach | null; orders: ReturnType<typeof publicOrderCensus> }) {
+export function ProofBand({ supply, reach }: { supply: number | null; reach: TokenReach | null }) {
   const { t } = useI18n();
+  const more = reach && reach.tokens > SHOWN.length ? reach.tokens - SHOWN.length : null;
   return (
-    <section className="lp-sec lp-proof" id="proof" aria-labelledby="proof-h">
-      <div className="lp-bg" aria-hidden="true">
-        <img src="/landing/stone-texture.webp" alt="" width={1376} height={768} loading="lazy" decoding="async" />
-      </div>
-      <div className="wrap lp-wrap lp-proof-grid">
-        <div className="lp-proof-copy">
-          <p className="lp-eyebrow">{t("landing2.proof.eyebrow")}</p>
-          <h2 id="proof-h" className="lp-h2">{t("landing2.proof.h2")}</h2>
-          <dl className="lp-figs">
-            <div>
-              <dt>{t("home.supplyLabel")} <span className="lp-live-tag"><i aria-hidden="true" />{t("landing2.proof.liveTag")}</span></dt>
-              <dd><Link href="/keys" className="lp-fig-link" data-testid="keys-stat"><SupplyStat initial={supply} /></Link></dd>
-            </div>
-            <div>
-              <dt>{t("landing2.proof.tokens")} <span className="lp-live-tag"><i aria-hidden="true" />{t("landing2.proof.liveTag")}</span></dt>
-              <dd data-testid="reach-tokens">{reach ? reach.tokens : "—"}</dd>
-            </div>
-            <div>
-              <dt>{t("landing2.proof.chains")} <span className="lp-live-tag"><i aria-hidden="true" />{t("landing2.proof.liveTag")}</span></dt>
-              <dd data-testid="reach-chains">{reach ? reach.chains : "—"}</dd>
-            </div>
-            <div>
-              <dt>{orders.label} <span className="lp-build-tag">{t("landing2.proof.recordTag")}</span></dt>
-              <dd data-testid="orders-stat" title={orders.detail}>{orders.total}</dd>
-            </div>
-            <div>
-              <dt>{t("landing2.proof.build")} <span className="lp-build-tag">{t("landing2.proof.buildTag")}</span></dt>
-              <dd className="mono" data-testid="hash-stat">{hash}</dd>
-            </div>
-          </dl>
-          <p className="lp-cta lp-cta--tight">
-            <Link href="/verify" className="lp-link">{t("landing2.proof.verify")}</Link>
-            <a href={acct(KEYS_CONTRACT)} target="_blank" rel="noopener noreferrer" className="lp-link">{t("landing2.proof.contract")} ↗</a>
-            <a href={SOURCE} target="_blank" rel="noopener noreferrer" className="lp-link">{t("landing2.proof.source")} ↗</a>
-          </p>
-        </div>
-        <div className="lp-app" aria-label={t("landing2.proof.h2")}>
-          <div className="lp-app-bar" aria-hidden="true"><i /><i /><i /></div>
-          <LiveStats />
+    <section className="lp-sec lp-proof" id="proof" aria-label={t("landing2.v2.tokens.eyebrow")}>
+      <div className="lp-wrap">
+        <div className="lp-band lp-proof-band">
+          <div className="lp-tokens">
+            <p className="lp-eyebrow lp-eyebrow--light">{t("landing2.v2.tokens.eyebrow")}</p>
+            <ul className="lp-tok-row">
+              {SHOWN.map((s) => (
+                <li key={s.symbol} className="lp-tok">
+                  <span className="lp-tok-chip"><TokenMark symbol={s.symbol} size={40} /></span>
+                  <span className="lp-tok-sym">{s.symbol}</span>
+                </li>
+              ))}
+              {more != null && (
+                <li className="lp-tok lp-tok--more" data-testid="reach-more">
+                  <span className="lp-tok-chip lp-tok-chip--n" aria-hidden="true">+</span>
+                  <span className="lp-tok-sym" data-testid="reach-tokens">{t("landing2.v2.tokens.more", { n: more })}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+          <LiveStats supply={supply} />
         </div>
       </div>
     </section>
