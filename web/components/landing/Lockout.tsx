@@ -15,6 +15,8 @@ import { Icon } from "./icons";
 import { LoopControl } from "./LoopControl";
 
 /** The in-contract sale: the buyer buys, then the old owner is refused `not_owner` (README.md, "Current build" and the sale evidence). */
+/** The attested call where the previous holder is refused `not_owner` (web/public/evidence, listed on /judge). */
+const REFUSED_CALL = "e805f050-d416-4a04-9b12-270adbe02068";
 const SALE_TX = "BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp";
 
 export function Lockout() {
@@ -35,7 +37,7 @@ export function Lockout() {
             <h2 id="lockout-h" className="lp-h2 lp-h2--light">{t("landing2.v2.lock.h2")}</h2>
             <p className="lp-body lp-body--light">{t("landing2.v2.lock.body")}</p>
             <div className="lp-cta lp-cta--tight">
-              <Link href="/verify" className="lp-btn lp-btn--outline" data-testid="lock-verify">{t("landing2.v2.lock.proof")}<Icon name="out" size={17} /></Link>
+              <Link href={`/verify?call=${REFUSED_CALL}`} className="lp-btn lp-btn--outline" data-testid="lock-verify">{t("landing2.v2.lock.proof")}<Icon name="out" size={17} /></Link>
               <a href={tx(SALE_TX)} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn--outline" data-testid="lock-tx">{t("landing2.v2.lock.tx")}<Icon name="out" size={17} /></a>
             </div>
           </div>

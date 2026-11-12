@@ -72,7 +72,7 @@ describe("landing sections (DESIGN_PLAN_V2)", () => {
     expect(html).toContain("Access granted");
     expect(html).toContain("Holds the key");
     expect(html).toContain("Waiting");
-    expect(html).toMatch(/data-testid="lock-verify"[^>]*href="\/verify"|href="\/verify"[^>]*data-testid="lock-verify"/);
+    expect(html).toMatch(/data-testid="lock-verify"[^>]*href="\/verify\?call=e805f050-d416-4a04-9b12-270adbe02068"|href="\/verify\?call=e805f050-d416-4a04-9b12-270adbe02068"[^>]*data-testid="lock-verify"/);
     expect(html).toContain("https://nearblocks.io/txns/BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp");
     expect(html).toContain("/landing/arch-teal.webp");
   });
