@@ -282,13 +282,16 @@ test("connected account opens a menu instead of disconnecting", async ({ page, c
   expect(box!.x + box!.width).toBeLessThanOrEqual(vp.width + 1);
 });
 
+/** A 44-character base58 NEAR transaction hash. */
+const WITHDRAW_TX = "B5eaQ7vYk3mZ9xTn2WcRdLpUfHs8JgAe4NoXiVbC6yKt";
+
 for (const kind of ["swap", "withdraw"] as const) {
   test(`a redirect return restores the ${kind} card`, async ({ page }) => {
     test.setTimeout(60_000);
     await holdAccount(page);
     await page.route("**/api/worker", async (route) => {
       const output = kind === "withdraw"
-        ? { ok: true, op: "exact_near_exit_v1", request_id: "b5ea", status: "success" }
+        ? { ok: true, op: "exact_near_exit_v1", request_id: "b5ea", status: "success", tx_hash: WITHDRAW_TX }
         : { ok: true, op: "swap", amount_out: "4484263051703687050358", intent_hash: "4qAnExample", request_id: "fb7e", status: "success", usd_in_micro: 20000 };
       await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
     });
@@ -304,12 +307,30 @@ for (const kind of ["swap", "withdraw"] as const) {
       await expect(page.getByTestId("error")).toHaveCount(0);
     } else {
       await expect(page.getByTestId("withdraw-out")).toContainText("Withdrawn 0.01 USDC to holder.keyhole.test", { timeout: 20_000 });
-      await expect(page.getByTestId("withdraw-out")).toContainText("b5ea");
+      await expect(page.getByTestId("withdraw-out")).toContainText("B5eaQ7vY");
+      await expect(page.getByTestId("withdraw-out").getByTestId("tx-link")).toHaveAttribute("href", `https://nearblocks.io/txns/${WITHDRAW_TX}`);
       await expect(page.getByTestId("withdraw-out")).toContainText("Settled");
       await expect(page.getByTestId("error")).toHaveCount(0);
     }
   });
 }
+
+test("a withdrawal without a transaction hash says Sent, confirming, with no transaction link", async ({ page }) => {
+  test.setTimeout(60_000);
+  await holdAccount(page);
+  await page.route("**/api/worker", async (route) => {
+    const output = { ok: true, op: "exact_near_exit_v1", request_id: "b5ea", status: "success" };
+    await route.fulfill({ json: { call_id: "c1", status: "ok", output, attestation_url: null, time_ms: 12 } });
+  });
+  const redirect = fixtureRedirect("exact_near_exit_v1", { op: "withdraw", amount: "0.01 USDC", to: "holder.keyhole.test" });
+  await page.addInitScript((saved) => sessionStorage.setItem("kh_pending_sign", saved), redirect.saved);
+  await page.goto("/vault" + redirect.hash);
+  const out = page.getByTestId("withdraw-out");
+  await expect(out).toContainText("Withdrawn 0.01 USDC to holder.keyhole.test", { timeout: 20_000 });
+  await expect(out).toContainText("Sent · confirming…");
+  await expect(out).not.toContainText("Settled");
+  await expect(out.getByTestId("tx-link")).toHaveCount(0);
+});
 
 test("a decline is gone after a later trade success", async ({ page }) => {
   test.setTimeout(60_000);

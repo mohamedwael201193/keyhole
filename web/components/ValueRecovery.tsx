@@ -11,7 +11,7 @@ import { Button } from "@/components/ui";
 const RECHECK_MS = 30_000;
 
 /** True only when the contract's public view says no value operation is pending for this key. A failed read is false, so the lock stays. */
-export async function chainSaysNonePending(tokenId: string, read: (t: string) => Promise<unknown> = (t) => nearView<unknown>("pending_value_op_count", { token_id: t })): Promise<boolean> {
+export async function chainSaysNonePending(tokenId: string, read: (t: string) => Promise<unknown> = (t) => nearView<unknown>("pending_value_op_count", { token_id: t }, undefined, { shared: false })): Promise<boolean> {
   try { return String(await read(tokenId)) === "0"; } catch { return false; }
 }
 
