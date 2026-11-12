@@ -21,33 +21,36 @@ const withI18n = (el: ReturnType<typeof createElement>) => createElement(I18nPro
 
 describe("app routes", () => {
   it("the holder routes render inside the shell, URLs unchanged; /swap and /keys are app routes in v3", () => {
-    expect([...APP_ROUTES].sort()).toEqual(["/attack", "/dashboard", "/gallery", "/key", "/keys", "/mint", "/pledge", "/pnl", "/settle", "/swap", "/vault", "/verify"]);
-    for (const p of ["/dashboard", "/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/key/extra", "/verify", "/attack", "/pledge"]) expect(isAppRoute(p), p).toBe(true);
+    expect([...APP_ROUTES].sort()).toEqual(["/dashboard", "/gallery", "/key", "/keys", "/mint", "/pledge", "/pnl", "/settle", "/swap", "/vault"]);
+    for (const p of ["/dashboard", "/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/key/extra", "/pledge"]) expect(isAppRoute(p), p).toBe(true);
   });
 
   it("public pages keep the public top bar", () => {
-    for (const p of ["/", "/start", "/verify/path", "/judge", "/demo", "/ask", "/atlas", "/identity", "/source", "/galleryx", "/vaults", "/swapx", null, undefined]) {
+    // /developers, /verify and /attack are developer and verification material: public pages, away from the holder dashboard.
+    for (const p of ["/", "/start", "/verify/path", "/judge", "/demo", "/ask", "/atlas", "/identity", "/source", "/developers", "/verify", "/attack", "/galleryx", "/vaults", "/swapx", null, undefined]) {
       expect(isAppRoute(p), String(p)).toBe(false);
     }
   });
 });
 
 describe("sidebar items", () => {
-  it("lists Overview, Swap, Vault, Keys and Activity, in that order", () => {
+  it("lists the sections of the dashboard, in that order, each opening /dashboard#section", () => {
     const ws = APP_NAV.find((g) => g.title === "Workspace")!;
     expect(ws.items.map((i) => [i.label, i.href])).toEqual([
       ["Overview", "/dashboard"],
-      ["Swap", "/swap"],
-      ["Vault", "/vault"],
-      ["Keys", "/keys"],
-      ["Pledge", "/pledge"],
-      ["Activity", "/settle"],
+      ["Swap", "/dashboard#swap"],
+      ["Vault", "/dashboard#vault"],
+      ["Keys", "/dashboard#keys"],
+      ["Pledge", "/dashboard#pledge"],
+      ["Activity", "/dashboard#activity"],
+      ["My proof", "/dashboard#proof"],
     ]);
   });
 
-  it("every link points at a real route", () => {
-    const known = ["/dashboard", "/swap", "/vault", "/keys", "/pledge", "/settle", "/verify", "/attack"];
-    for (const i of APP_NAV.flatMap((g) => g.items)) expect(known).toContain(i.href.split("#")[0].split("?")[0]);
+  it("everything a holder does stays inside /dashboard: no sidebar item leaves it, and the developer pages are not in the list", () => {
+    for (const i of APP_NAV.flatMap((g) => g.items)) expect(i.href.split("#")[0]).toBe("/dashboard");
+    expect(APP_NAV.map((g) => g.title)).toEqual(["Workspace"]);
+    expect(src("../components/app/AppShell.tsx")).toContain('href="/developers"');
   });
 });
 
@@ -56,8 +59,19 @@ describe("active state", () => {
     expect(isItemActive(item("overview"), "/dashboard", "")).toBe(true);
     expect(isItemActive(item("overview"), "/settle", "")).toBe(false);
     expect(isItemActive(item("activity"), "/settle", "")).toBe(true);
-    expect(isItemActive(item("activity"), "/dashboard", "#activity")).toBe(false);
     expect(isItemActive(item("activity"), "/dashboard", "")).toBe(false);
+  });
+
+  it("on /dashboard the hash picks the section, and Mint keeps Keys lit", () => {
+    expect(isItemActive(item("activity"), "/dashboard", "#activity")).toBe(true);
+    expect(isItemActive(item("overview"), "/dashboard", "#activity")).toBe(false);
+    expect(isItemActive(item("swap"), "/dashboard", "#swap")).toBe(true);
+    expect(isItemActive(item("proof"), "/dashboard", "#proof/abc")).toBe(true);
+    expect(isItemActive(item("keys"), "/dashboard", "#mint")).toBe(true);
+    // A wallet's own answer in the hash is not a section: the overview stays open.
+    expect(isItemActive(item("overview"), "/dashboard", "#signature=x&accountId=y")).toBe(true);
+    const on = APP_NAV.flatMap((g) => g.items).filter((i) => isItemActive(i, "/dashboard", "#vault"));
+    expect(on.map((i) => i.id)).toEqual(["vault"]);
   });
 
   it("Keys is active on /keys, /gallery, a key page and /mint (mint lives inside keys)", () => {
@@ -97,6 +111,9 @@ describe("active state", () => {
 describe("page titles", () => {
   it("the top bar names the page; unknown routes fall back to the product name", () => {
     expect(pageTitle("/dashboard")).toBe("Overview");
+    expect(pageTitle("/dashboard", "#swap")).toBe("Swap");
+    expect(pageTitle("/dashboard", "#mint")).toBe("Keys");
+    expect(pageTitle("/dashboard", "#proof/x")).toBe("My proof");
     expect(pageTitle("/swap")).toBe("Swap");
     expect(pageTitle("/pledge")).toBe("Pledge");
     expect(pageTitle("/keys")).toBe("Keys");
@@ -114,7 +131,7 @@ describe("AppNav markup", () => {
   it("marks the current page with aria-current on exactly one link", () => {
     const m = html("/vault");
     expect(m.match(/aria-current="page"/g)?.length).toBe(1);
-    const tag = m.split("<a ").find((seg) => seg.includes('href="/vault"'))!;
+    const tag = m.split("<a ").find((seg) => seg.includes('href="/dashboard#vault"'))!;
     expect(tag).toContain('aria-current="page"');
   });
 
@@ -128,7 +145,7 @@ describe("AppNav markup", () => {
     const m = html("/settle");
     const act = m.split("<a ").find((seg) => seg.includes('data-testid="app-nav-activity"'))!;
     expect(act).toContain('aria-current="page"');
-    expect(act).toContain('href="/settle"');
+    expect(act).toContain('href="/dashboard#activity"');
     const sw = m.split("<a ").find((seg) => seg.includes('data-testid="app-nav-swap"'))!;
     expect(sw).not.toContain('aria-current="page"');
   });
@@ -142,7 +159,7 @@ describe("Mint a key in the sidebar", () => {
     expect(html()).not.toContain('data-testid="app-nav-mint"');
     const m = html(true);
     expect(m).toContain('data-testid="app-nav-mint"');
-    expect(m).toContain('href="/mint"');
+    expect(m).toContain('href="/dashboard#mint"');
     expect(m.indexOf('data-testid="app-nav-keys"')).toBeLessThan(m.indexOf('data-testid="app-nav-mint"'));
     expect(m.indexOf('data-testid="app-nav-mint"')).toBeLessThan(m.indexOf('data-testid="app-nav-activity"'));
   });
@@ -180,13 +197,13 @@ describe("AppShell", () => {
     expect(m).not.toContain('data-testid="nav-more"');
   });
 
-  it("the sidebar has a visible way back to the site, a proof link and the legal line", () => {
+  it("the sidebar has a visible way back to the site, a developers link and the legal line", () => {
     route.path = "/keys";
     const m = renderToStaticMarkup(withI18n(createElement(AppShell, null, "x")));
     expect(m).toContain('data-testid="app-back"');
     expect(m).toContain("← Back to site");
-    expect(m).toContain('data-testid="app-proof"');
-    expect(m).toContain('href="/verify"');
+    expect(m).toContain('data-testid="app-developers"');
+    expect(m).toContain('href="/developers"');
     expect(m).toContain("Built on NEAR");
     expect(m.match(/data-testid="connect"/g)?.length).toBe(1);
   });

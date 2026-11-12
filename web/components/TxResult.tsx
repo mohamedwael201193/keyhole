@@ -5,6 +5,7 @@ import { Badge, CopyBtn } from "@/components/ui";
 import { SuccessCheck } from "@/components/motion";
 import { intentTx } from "@/lib/config";
 import { TxLink } from "./TxLink";
+import { dashHref } from "@/lib/dashboardSections";
 
 /**
  * Result of one transaction or attested call: pending, confirmed or failed.
@@ -66,7 +67,7 @@ export function TxResult({ state, hash, intentHash, callId, title, reason, child
         <div className="kh-tx-row" data-testid="tx-call-row">
           <span>Attested call</span>
           <code>{callId}</code>
-          <Link className="kh-tx-verify" href={`/verify?call=${encodeURIComponent(callId)}`} data-testid="tx-verify">Verify</Link>
+          <Link className="kh-tx-verify" href={dashHref(`/verify?call=${encodeURIComponent(callId)}`)} data-testid="tx-verify">Verify</Link>
         </div>
       )}
 

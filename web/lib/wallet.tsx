@@ -17,6 +17,7 @@ import dynamic from "next/dynamic";
 import { Buffer } from "buffer";
 import { PRIVY_FLAG, privyEnabled, privyResume, stripPrivyOauth, hasPrivyOauth, type PrivyNear } from "./privy";
 import { SignInModal, SIGN_NOTE, popupBlockedHint, walletErrorText } from "@/components/SignInModal";
+import { walletCallbackUrl } from "./dashboardSections";
 
 const PrivyBridge = dynamic(() => import("./privyBridge"), { ssr: false });
 
@@ -415,7 +416,7 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
     const nonce = toB64(nonceBytes);
     let ctx: OpResume | null = null;
     try { ctx = JSON.parse(sessionStorage.getItem(OP_CTX) || "null") as OpResume | null; } catch { ctx = null; }
-    const callbackUrl = location.href.split("#")[0];
+    const callbackUrl = walletCallbackUrl(location.href);
     sessionStorage.setItem(PENDING, JSON.stringify({ message, nonce, ctx, callbackUrl }));
     let res;
     try {
@@ -511,7 +512,7 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
     const acc = st.accounts.find((a) => a.active)?.accountId;
     if (!acc) return { kind: "none" };
     const w = await ref.current!.selector.wallet();
-    return { kind: "ws", accountId: acc, walletId: st.selectedWalletId ?? "", wallet: w as unknown as TxWallet, callbackUrl: location.href.split("#")[0],assertCurrent:()=>{const current=ref.current!.selector.store.getState();if(current.accounts.find(a=>a.active)?.accountId!==acc||current.selectedWalletId!==st.selectedWalletId||owner.current!=="ws"||currentAccount.current!==accountId)throw Error("Signer changed after consent; nothing was sent.");} };
+    return { kind: "ws", accountId: acc, walletId: st.selectedWalletId ?? "", wallet: w as unknown as TxWallet, callbackUrl: walletCallbackUrl(location.href),assertCurrent:()=>{const current=ref.current!.selector.store.getState();if(current.accounts.find(a=>a.active)?.accountId!==acc||current.selectedWalletId!==st.selectedWalletId||owner.current!=="ws"||currentAccount.current!==accountId)throw Error("Signer changed after consent; nothing was sent.");} };
   }, [accountId, ensure]);
   const sendTx = useCallback(async (call: KeysCall): Promise<SendResult> => {
     if (accountId && /^(nft_(list|buy|approve|revoke|revoke_all|transfer|transfer_call|transfer_payout))$/.test(call.method)) {

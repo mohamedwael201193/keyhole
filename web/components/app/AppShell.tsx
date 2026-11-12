@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { navSectionOf, parseSectionHash, sectionHref, SECTION_LABEL, type SectionId } from "@/lib/dashboardSections";
+import { useHash } from "@/lib/useHash";
 import { KeyholeLogo } from "@/components/KeyholeLogo";
 import { AccountControl } from "@/components/AccountControl";
 import { TxLink } from "@/components/TxLink";
@@ -19,11 +21,13 @@ import { SessionPill } from "./SessionPill";
  * The app shell for the holder routes. One top bar across the full width (logo, page title, network pill, account), then a
  * sidebar and the page on desktop. On phones the sidebar is a menu sheet and five tabs sit at the bottom (Overview, Swap,
  * Vault, Keys, More). There is no site footer in the app: the legal line lives at the foot of the sidebar.
- * The URLs do not change; components/SiteFrame.tsx picks this shell for these routes and the public bar for every other route.
+ * Everything a holder does is a section of /dashboard (#swap, #vault, #keys, #pledge, #activity, #proof); the sidebar and the tabs
+ * link there. The old routes (/swap, /vault, /settle ...) still render the same views in this shell. Developer and verification
+ * material (/developers, /verify, /attack) is public and uses the site bar. components/SiteFrame.tsx picks the shell.
  */
 
 /** Routes that render inside the shell (exact path or a sub-path). */
-export const APP_ROUTES = ["/dashboard", "/swap", "/keys", "/gallery", "/key", "/settle", "/vault", "/mint", "/pnl", "/verify", "/attack", "/pledge"] as const;
+export const APP_ROUTES = ["/dashboard", "/swap", "/keys", "/gallery", "/key", "/settle", "/vault", "/mint", "/pnl", "/pledge"] as const;
 
 export function isAppRoute(path: string | null | undefined): boolean {
   if (!path) return false;
@@ -39,36 +43,29 @@ export type AppNavItem = {
   label: string;
   href: string;
   icon: AppIcon;
-  /** Path prefixes that light this item up. */
+  /** The dashboard section this item opens (/dashboard#section). */
+  section: SectionId;
+  /** Old route prefixes that light this item up (the same view, rendered on its own route). */
   match: readonly string[];
-  /** Only active when the URL hash is this (for example #activity on /dashboard). */
-  hash?: string;
-  /** Not active when the URL hash is this (Overview yields to Activity). */
-  notHash?: string;
 };
 export type AppNavGroup = { title: string; items: AppNavItem[] };
 
 /**
- * Overview, Swap, Vault, Keys, Pledge and Activity. Mint lives inside Keys (it is reached from the keys page), so Keys stays lit
- * on /mint. The bottom tabs are the first four of these (Pledge is reached from More on phones).
+ * Overview, Swap, Vault, Keys, Pledge, Activity and My proof: the sections of /dashboard. Mint lives inside Keys, so Keys stays
+ * lit on #mint. The bottom tabs are the first four of these (the rest are reached from More on phones). The developer pages
+ * are not in this list on purpose: they are linked from the foot of the sidebar (components/app/AppShell.tsx).
  */
 export const APP_NAV: AppNavGroup[] = [
   {
     title: "Workspace",
     items: [
-      { id: "overview", label: "Overview", href: "/dashboard", icon: "home", match: ["/dashboard"] },
-      { id: "swap", label: "Swap", href: "/swap", icon: "swap", match: ["/swap"] },
-      { id: "vault", label: "Vault", href: "/vault", icon: "vault", match: ["/vault", "/pnl"] },
-      { id: "keys", label: "Keys", href: "/keys", icon: "key", match: ["/keys", "/gallery", "/key", "/mint"] },
-      { id: "pledge", label: "Pledge", href: "/pledge", icon: "pledge", match: ["/pledge"] },
-      { id: "activity", label: "Activity", href: "/settle", icon: "activity", match: ["/settle"] },
-    ],
-  },
-  {
-    title: "Verification",
-    items: [
-      { id: "proof", label: "Proof", href: "/verify", icon: "shield", match: ["/verify"] },
-      { id: "attack", label: "Attack", href: "/attack", icon: "alert", match: ["/attack"] },
+      { id: "overview", label: "Overview", href: sectionHref("overview"), icon: "home", section: "overview", match: ["/dashboard"] },
+      { id: "swap", label: "Swap", href: sectionHref("swap"), icon: "swap", section: "swap", match: ["/swap"] },
+      { id: "vault", label: "Vault", href: sectionHref("vault"), icon: "vault", section: "vault", match: ["/vault", "/pnl"] },
+      { id: "keys", label: "Keys", href: sectionHref("keys"), icon: "key", section: "keys", match: ["/keys", "/gallery", "/key", "/mint"] },
+      { id: "pledge", label: "Pledge", href: sectionHref("pledge"), icon: "pledge", section: "pledge", match: ["/pledge"] },
+      { id: "activity", label: "Activity", href: sectionHref("activity"), icon: "activity", section: "activity", match: ["/settle"] },
+      { id: "proof", label: "My proof", href: sectionHref("proof"), icon: "shield", section: "proof", match: [] },
     ],
   },
 ];
@@ -78,19 +75,19 @@ const TAB_IDS = ["overview", "swap", "vault", "keys"] as const;
 /** Whether a nav item is the current page. Pure, so the active state is unit-tested. */
 export function isItemActive(item: AppNavItem, pathname: string | null | undefined, hash: string): boolean {
   if (!pathname) return false;
-  if (!item.match.some((m) => pathname === m || pathname.startsWith(m + "/"))) return false;
-  if (item.hash) return hash === item.hash;
-  if (item.notHash && hash === item.notHash) return false;
-  return true;
+  // On /dashboard the hash picks the section; on an old route the route does.
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return navSectionOf(parseSectionHash(hash).section) === item.section;
+  return item.match.some((m) => pathname === m || pathname.startsWith(m + "/"));
 }
 
 /** The title shown in the top bar for a route. Pure. */
 const TITLES: [string, string][] = [
   ["/dashboard", "Overview"], ["/swap", "Swap"], ["/settle", "Activity"], ["/vault", "Vault"], ["/pnl", "Swap log"],
-  ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"], ["/pledge", "Pledge"], ["/verify", "Proof"], ["/attack", "Attack"],
+  ["/keys", "Keys"], ["/gallery", "Keys"], ["/key", "Key"], ["/mint", "Mint"], ["/pledge", "Pledge"],
 ];
-export function pageTitle(path: string | null | undefined): string {
+export function pageTitle(path: string | null | undefined, hash = ""): string {
   if (!path) return "KEYHOLE";
+  if (path === "/dashboard") return SECTION_LABEL[navSectionOf(parseSectionHash(hash).section)];
   const hit = TITLES.find(([p]) => path === p || path.startsWith(p + "/"));
   return hit ? hit[1] : "KEYHOLE";
 }
@@ -139,7 +136,7 @@ export function AppNav({ pathname, hash, mint = false, onNavigate }: { pathname:
                   </li>
                   {mint && item.id === "keys" && (
                     <li>
-                      <Link href="/mint" className="app-link app-link-cta" data-testid="app-nav-mint" onClick={() => onNavigate?.("/mint")}>
+                      <Link href={sectionHref("mint")} className="app-link app-link-cta" data-testid="app-nav-mint" onClick={() => onNavigate?.(sectionHref("mint"))}>
                         <AppNavIcon name="key" />
                         <span>Mint a key</span>
                       </Link>
@@ -192,21 +189,14 @@ function AppShellFrame({ children }: { children: ReactNode }) {
   const keys = useKeyStore();
   // Mint shows in the sidebar only when the key store has read this account and found no key.
   const mint = !!accountId && keys.status === "ready" && keys.keys.length === 0;
-  const [hash, setHash] = useState("");
+  const hash = useHash();
   const [open, setOpen] = useState(false);
   const network = networkPillLabel(PLEDGE_SANDBOX);
   const networkDetail = networkPillDetail(PLEDGE_SANDBOX);
 
-  // The hash is not part of usePathname(), and a client link to the same page does not fire hashchange. Read it on
-  // route change, on back and forward, and when a shell link is pressed (onNavigate below).
-  useEffect(() => {
-    const read = () => setHash(location.hash);
-    read();
-    addEventListener("hashchange", read);
-    addEventListener("popstate", read);
-    return () => { removeEventListener("hashchange", read); removeEventListener("popstate", read); };
-  }, [pathname]);
-  useEffect(() => { setOpen(false); }, [pathname]);
+  // The hash comes from useHash (lib/useHash.ts): it follows client links, back and forward, so the open section is always current.
+  useEffect(() => { setOpen(false); }, [pathname, hash]);
+  const vaultOpen = pathname === "/vault" || (pathname === "/dashboard" && parseSectionHash(hash).section === "vault");
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
@@ -221,7 +211,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
         <Link href="/" className="brand app-brand" aria-label="KEYHOLE home">
           <KeyholeLogo className="h-9" tone="ink" />
         </Link>
-        <p className="app-title" data-testid="app-title">{pageTitle(pathname)}</p>
+        <p className="app-title" data-testid="app-title">{pageTitle(pathname, hash)}</p>
         <div className="app-top-end">
           <span className="app-net" data-testid="network-pill" title={networkDetail}><i aria-hidden="true" />{network}</span>
           <SessionPill />
@@ -230,11 +220,11 @@ function AppShellFrame({ children }: { children: ReactNode }) {
       </header>
       <div className="app-body">
         <aside id="app-side" className={`app-side${open ? " open" : ""}`} aria-label="App">
-          <AppNav pathname={pathname} hash={hash} mint={mint} onNavigate={(href) => { setHash(hashOf(href)); setOpen(false); }} />
+          <AppNav pathname={pathname} hash={hash} mint={mint} onNavigate={() => setOpen(false)} />
           <div className="app-foot">
             <p className="app-net-line" title={networkDetail}><i aria-hidden="true" />{network}</p>
             <Link href="/" className="app-back" data-testid="app-back">← Back to site</Link>
-            <Link href="/verify" className="app-proof" data-testid="app-proof">Proof</Link>
+            <Link href="/developers" className="app-proof" data-testid="app-developers">Developers and verification</Link>
             <p className="app-legal">
               <a href="https://near.org" target="_blank" rel="noreferrer">Built on NEAR</a>
               <span aria-hidden="true"> · </span>
@@ -242,7 +232,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
             </p>
           </div>
         </aside>
-        <main id="main" className="app-main" tabIndex={-1}><ValueRecovery /><PayoutCredit key={accountId??"signed-out"} />{children}{pathname === "/vault" && <PayoutPanel />}</main>
+        <main id="main" className="app-main" tabIndex={-1}><ValueRecovery vaultOpen={vaultOpen} /><PayoutCredit key={accountId??"signed-out"} embeddedHere={vaultOpen || (pathname === "/dashboard" && parseSectionHash(hash).section === "pledge")} />{children}{vaultOpen && <PayoutPanel />}</main>
       </div>
       <AppTabs pathname={pathname} hash={hash} moreOpen={open} onMore={() => setOpen((v) => !v)} />
     </div>

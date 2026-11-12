@@ -15,6 +15,7 @@ import { NO_PREMIUM_NOTE, tierMeans } from "@/lib/keyCopy";
 import { formatTradePrice } from "@/lib/price";
 import { Card, CopyButton, Icon, IconButton, StatusChip, TierChip, TxLinkPill } from "@/components/v7";
 import type { SaleRead } from "./keyData";
+import { dashHref } from "@/lib/dashboardSections";
 
 /**
  * KEY DETAILS: the selected key, large. Used by /keys and /gallery (the selected card) and by /key (the page's key). Every
@@ -95,7 +96,7 @@ export function KeyDetails({ tokenId, owner, tier, viewer, sale, proofHref, sale
         <p className="kd-note" data-testid="key-no-premium">{NO_PREMIUM_NOTE}</p>
 
         <div className="kd-actions">
-          {isOwner && <Button href="/vault" icon={<Icon name="vault" size={18} />} testid="kd-open-vault">Open in vault</Button>}
+          {isOwner && <Button href={dashHref("/vault")} icon={<Icon name="vault" size={18} />} testid="kd-open-vault">Open in vault</Button>}
           <Button href={proofHref} variant="secondary" icon={<Icon name="shield" size={18} />} testid="kd-proof">View proof</Button>
           {isOwner && (
             <Button href={saleHref} variant="secondary" icon={<Icon name="tag" size={18} />} testid="kd-sale-link">

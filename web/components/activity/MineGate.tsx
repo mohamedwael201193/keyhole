@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui";
 import { Icon, Skeleton } from "@/components/v7";
 import type { MineState } from "./orders";
+import { dashHref } from "@/lib/dashboardSections";
 
 /**
  * The small inline card that stands where "Your vault" rows would be, for every state that is not ready. Each action is real:
@@ -45,7 +46,7 @@ export function MineGate(p: MineGateProps) {
       return frame(
         "No key on this account yet",
         "Your own trades belong to a key. Mint one to start this vault's history.",
-        <Button variant="primary" href="/mint" testid="mine-mint">Mint a key</Button>,
+        <Button variant="primary" href={dashHref("/mint")} testid="mine-mint">Mint a key</Button>,
       );
     case "locked":
       return frame(
