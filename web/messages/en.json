@@ -1158,6 +1158,7 @@
       "build": "Worker code hash",
       "buildTag": "build",
       "liveTag": "live",
+    "recordTag": "on record",
       "verify": "Verify a call",
       "contract": "Contract on NearBlocks",
       "source": "Source on GitHub"

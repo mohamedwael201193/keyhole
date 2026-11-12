@@ -8,12 +8,13 @@ import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { KEYS_CONTRACT, acct } from "@/lib/config";
 import type { TokenReach } from "@/lib/landing";
+import type { publicOrderCensus } from "@/lib/settlements";
 import { SupplyStat } from "./Proof";
 import { LiveStats } from "./LiveStats";
 
 const SOURCE = "https://github.com/mohamedwael201193/keyhole";
 
-export function ProofBand({ supply, hash, reach }: { supply: number | null; hash: string; reach: TokenReach | null }) {
+export function ProofBand({ supply, hash, reach, orders }: { supply: number | null; hash: string; reach: TokenReach | null; orders: ReturnType<typeof publicOrderCensus> }) {
   const { t } = useI18n();
   return (
     <section className="lp-sec lp-proof" id="proof" aria-labelledby="proof-h">
@@ -36,6 +37,10 @@ export function ProofBand({ supply, hash, reach }: { supply: number | null; hash
             <div>
               <dt>{t("landing2.proof.chains")} <span className="lp-live-tag"><i aria-hidden="true" />{t("landing2.proof.liveTag")}</span></dt>
               <dd data-testid="reach-chains">{reach ? reach.chains : "—"}</dd>
+            </div>
+            <div>
+              <dt>{orders.label} <span className="lp-build-tag">{t("landing2.proof.recordTag")}</span></dt>
+              <dd data-testid="orders-stat" title={orders.detail}>{orders.total}</dd>
             </div>
             <div>
               <dt>{t("landing2.proof.build")} <span className="lp-build-tag">{t("landing2.proof.buildTag")}</span></dt>

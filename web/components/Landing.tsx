@@ -15,6 +15,7 @@ import { ProofBand } from "./landing/ProofBand";
 import { Builders } from "./landing/Builders";
 import { Close } from "./landing/Close";
 import type { TokenReach } from "@/lib/landing";
+import { publicOrderCensus } from "@/lib/settlements";
 
 export function Landing({ supply, hash, reach }: { supply: number | null; hash: string; reach: TokenReach | null }) {
   return (
@@ -26,7 +27,7 @@ export function Landing({ supply, hash, reach }: { supply: number | null; hash: 
       <KeyholeSteps />
       <Lockout />
       <Pledge />
-      <ProofBand supply={supply} hash={hash} reach={reach} />
+      <ProofBand supply={supply} hash={hash} reach={reach} orders={publicOrderCensus()} />
       <Builders />
       <Close />
     </div>
