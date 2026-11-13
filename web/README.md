@@ -1,6 +1,6 @@
 # KEYHOLE web
 
-Live: **https://keyhole-seven.vercel.app** (NEAR mainnet only)
+Live: **https://www.getkeyhole.xyz** (NEAR mainnet only)
 
 ![Home](screenshots/desktop-home.webp)
 
@@ -36,7 +36,7 @@ Live: **https://keyhole-seven.vercel.app** (NEAR mainnet only)
    - your caps.
 4. Every result shows its call id, an attestation link and a **verify** link.
 
-The CLI can use this site as its gateway: `KEYHOLE_GATEWAY=https://keyhole-seven.vercel.app/api/keyhole keyhole status`.
+The CLI can use this site as its gateway: `KEYHOLE_GATEWAY=https://www.getkeyhole.xyz/api/keyhole keyhole status`.
 
 ## Verify without trusting this site
 
@@ -103,7 +103,7 @@ The rule lives in [`lib/near.ts`](lib/near.ts) and is unit-tested.
 npm ci
 OUTLAYER_PAYMENT_KEY=... npm run dev     # the key is only needed for /api/keyhole
 npm run lint && npm run typecheck && npm test && npm run build
-npx playwright install chromium && BASE_URL=https://keyhole-seven.vercel.app npm run e2e
+npx playwright install chromium && BASE_URL=https://www.getkeyhole.xyz npm run e2e
 ```
 
 Signed calls through the gateway are made with the browser's own signing code: `KEYFILE=key.json BASE=... npx tsx scripts/signed-call.mts status '{}'`

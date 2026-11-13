@@ -52,7 +52,7 @@ Do not deploy it in this change.
 
 **New mints, no contract upgrade.** `TokenMetadata` already has `media` and `media_hash`. A worker change can set, for the picture `keyIdentity` already picks:
 
-- `media`: `https://keyhole-seven.vercel.app/heirloom/keys/kNN.webp` (absolute, so `base_uri` is unnecessary)
+- `media`: `https://www.getkeyhole.xyz/heirloom/keys/kNN.webp` (absolute, so `base_uri` is unnecessary)
 - `media_hash`: sha256 of that file, base64, as NEP-177 asks
 
 Example, picture 8, the Quatrefoil file: sha256 `c24a6b280e49514b4f46bc46d049266939df1c5816d59bf8ebdc2564de1ec898`.

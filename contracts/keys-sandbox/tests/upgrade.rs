@@ -647,7 +647,7 @@ async fn candidate_unregistered_minter_sale_unlist_buy_and_approval_refunds_cash
     let buyer=root.create_subaccount("slot-buyer").initial_balance(NearToken::from_near(5)).transact().await?.into_result()?;
     let market=root.create_subaccount("slot-market").initial_balance(NearToken::from_near(5)).transact().await?.into_result()?;
     // Match the hosted worker: 17-byte id, full artwork metadata, 0.012 NEAR / 20 Tgas mint and 70 Tgas cashout.
-    let mint=json!({"token_id":"k0123456789abcdef","receiver_id":seller.id(),"tier":1,"metadata":{"title":"KEYHOLE Key · Bronze","description":"Viewing key to a confidential account. Holder-only, attested in a TEE.","copies":1,"media":"https://keyhole-seven.vercel.app/heirloom/keys/k01.webp","media_hash":"9HSWMftzPmAPsHnX52j2CxUHKywOQxlTq0q+eaI5bYQ="}});
+    let mint=json!({"token_id":"k0123456789abcdef","receiver_id":seller.id(),"tier":1,"metadata":{"title":"KEYHOLE Key · Bronze","description":"Viewing key to a confidential account. Holder-only, attested in a TEE.","copies":1,"media":"https://www.getkeyhole.xyz/heirloom/keys/k01.webp","media_hash":"9HSWMftzPmAPsHnX52j2CxUHKywOQxlTq0q+eaI5bYQ="}});
     let refused=root.call(c.id(),"nft_mint").args_json(mint.clone()).deposit(NearToken::from_millinear(12)).gas(near_workspaces::types::Gas::from_tgas(20)).transact().await?;
     assert!(format!("{:?}",refused.into_result().unwrap_err()).contains("register payout account"));
     let cost=view(&c,"payout_storage_cost",json!({})).await.as_str().unwrap().parse::<u128>()?;
