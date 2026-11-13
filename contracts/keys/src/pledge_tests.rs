@@ -578,7 +578,7 @@ fn prepaid_loan_terminal_slot(default: bool) {
 #[test] fn open_loan_refuses_when_lending_disabled() {
     let mut c=setup();
     // The toggle goes through the real owner path, not a direct config write.
-    ctx("owner.near",1,NOW); let _=c.set_lending_enabled(false);
+    ctx("owner.near",1,NOW); c.set_lending_enabled(false);
     assert!(!config_required().lending_enabled);
     ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
     assert!(c.get_loan("k1".into()).is_none());
@@ -633,7 +633,7 @@ fn prepaid_loan_terminal_slot(default: bool) {
     assert!(config_required().lending_enabled);
     // Only the owner can flip the lending switch — the only owner function
     // the loans flow needs, and it must be OFF before the lock.
-    ctx("evil.near",1,NOW); rejected(||{let _=c.set_lending_enabled(false);});
+    ctx("evil.near",1,NOW); rejected(||{c.set_lending_enabled(false);});
     assert!(config_required().lending_enabled);
 }
 #[test] fn repay_loan_refuses_wrong_amount() {
