@@ -9,7 +9,7 @@ A WASI (wasm32-wasip2) program that runs inside an OutLayer Intel TDX enclave. E
 | `info` | none | version, keys contract, NEP-413 recipient, TEE minter account, limits per tier |
 | `status` | NEP-413 | your tier, limits and today's spend |
 | `quote` | NEP-413 + key | private (confidential) swap quote via NEAR Intents 1Click, checked against your caps first. `execute: true` returns a real deposit address and counts toward your daily cap |
-| `mint` | NEP-413 | mints one Bronze key to your account (one per account, global daily quota). Metadata includes `media` (the key art URL on keyhole-seven.vercel.app) and `media_hash` (base64 sha256 of that file) |
+| `mint` | NEP-413 | mints one Bronze key to your account (one per account, global daily quota). Metadata includes `media` (the key art URL on www.getkeyhole.xyz) and `media_hash` (base64 sha256 of that file) |
 | `account` | NEP-413 + key | your own confidential account (an OutLayer custody wallet created inside the TEE for you; its API key never leaves the enclave). Optional `{chain, token, amount}` returns a cross-chain deposit address |
 | `balance` | NEP-413 + key | confidential balances |
 | `swap` / `copy` | NEP-413 + key | confidential swap `{token_in, token_out, amount_in, min_amount_out?}` within caps, logged privately. `min_amount_out` absent: the floor is 1% below a fresh quote (next build). `0` is `bad_params` |

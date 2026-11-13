@@ -5,7 +5,7 @@ import re, json, os, sys, inspect
 R = sys.argv[1] if len(sys.argv) > 1 else "."; os.chdir(R)
 DOCS = ["README.md", "TRACK_COVERAGE.md", "SECURITY.md"]
 C = []; seen = set()
-SITE = "https://keyhole-seven.vercel.app"
+SITE = "https://www.getkeyhole.xyz"
 def add(id, claim, where, etype, evidence, check, expected, verify=None):
     if id in seen: return
     seen.add(id)
