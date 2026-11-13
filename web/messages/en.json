@@ -410,6 +410,10 @@
       "The native operation outcome is unknown.",
       "Recover the original signed hash and FINAL receipts. Do not resend."
     ],
+    "native_blocked": [
+      "The operation was refused before anything was sent.",
+      "Reconcile the original operation before starting another one. Do not resend."
+    ],
     "rpc_unavailable": [
       "The chain view is unavailable or malformed.",
       "Wait for a valid FINAL response. An unavailable response does not prove absence."

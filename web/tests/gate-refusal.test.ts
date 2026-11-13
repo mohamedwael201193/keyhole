@@ -8,6 +8,12 @@ const REFUSAL =
 /** A send whose outcome is really unknown: no window claim, and no reference height. */
 const UNKNOWN =
   "original send not yet FINAL; tx_hash=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA; reference_block_height=unknown";
+/**
+ * The same refusal on a worker with the cap-leak fix: the gate remaps ONLY native_unknown from its own
+ * reconcile() call to native_blocked, and carries the original message verbatim after "cause: ".
+ */
+const BLOCKED =
+  "minter journal blocked by unresolved send; nothing was sent for this request; reconcile the minter send, never resend; cause: " + REFUSAL;
 
 describe("isGateRefusal", () => {
   it("recognises the refusal-before-send by its message, not by the code alone", () => {
@@ -17,6 +23,12 @@ describe("isGateRefusal", () => {
     expect(isGateRefusal("native_unknown", "still within validity window")).toBe(false);
     expect(isGateRefusal("admission_unknown", REFUSAL)).toBe(false);
     expect(isGateRefusal(null, REFUSAL)).toBe(false);
+  });
+  it("recognises the same refusal under the remapped native_blocked code", () => {
+    expect(isGateRefusal("native_blocked", BLOCKED)).toBe(true);
+    expect(isGateRefusal("native_blocked", UNKNOWN)).toBe(false);
+    expect(isGateRefusal("native_blocked", "minter journal blocked by unresolved send")).toBe(false);
+    expect(isGateRefusal("native_blocked", null)).toBe(false);
   });
 });
 

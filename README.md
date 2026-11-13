@@ -210,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `674 claims: 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `676 claims: 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the verification path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -260,7 +260,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (674 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (676 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Free trial on [/try](https://keyhole-seven.vercel.app/try) | **Real testnet** for the key (mint, tier, transfer, refusal). Each guest receives 0.05 testnet NEAR (`GUEST_DEPOSIT_YOCTO`). The vault trade on that page is a **recorded mainnet** swap, labelled recorded on mainnet | [`docs/trial/testnet.json`](docs/trial/testnet.json) · [verify the recorded swap](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) |
@@ -824,7 +824,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 | CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
 | Web unit tests (Vitest) | **2032** pass in 124 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
 | Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
-| Claims in `docs/claims.json` | **674**: offline 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **676**: offline 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |
@@ -1104,7 +1104,7 @@ Dependency-policy context for clean reproduction is kept in [SECURITY.md](SECURI
 
 The wallet lifecycle and two-tab notification checks are reproducible from the [R5 repair proof](docs/evidence/integration-stack/r5-lifecycle-notification.md), [exact patch lifecycle tests](web/tests/wallet-patch-lifecycle.test.ts), and [real-browser storage regressions](web/e2e/pledge-review-r3.spec.ts).
 
-# Live NEP-178 sale via direct approval — mainnet (2026-11-13)
+# Live NEP-178 sale via direct approval — mainnet (13 Nov 2026)
 
 KEYHOLE demonstrated the full NEP-178 approval lifecycle on NEAR mainnet, on a live
 token, with a real on-chain payment. No contract change was needed: the deployed
