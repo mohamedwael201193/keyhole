@@ -917,3 +917,12 @@ fn wind_down_gate_does_not_block_transfers_or_claims_of_existing_credit() {
     ctx("bob.near", 1, WIND_DOWN_NS); rejected(|| { let _ = c.claim_payout(); }); // no credit: refused by its own rule
     ctx("alice.near", N, WIND_DOWN_NS); rejected(|| { let _ = c.repay_loan("k1".into(), U64(1)); }); // no loan: own rule
 }
+
+// ---------- ATTACK MATRIX (added 2026-11-13): a non-owner must not be able to propose
+// a successor. The owner-only check fires before any proposal is written. ----------
+#[test]
+fn propose_owner_refuses_non_owner() {
+    let mut c = setup();
+    ctx("evil.near", 1, NOW); rejected(|| { let _ = c.propose_owner(a("guardian.near")); });
+    assert!(c.governance_state().pending_owner.is_none(), "a refused proposal writes nothing");
+}

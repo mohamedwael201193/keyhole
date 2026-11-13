@@ -109,3 +109,5 @@ fn rejects<F:FnOnce()>(f:F){assert!(catch_unwind(AssertUnwindSafe(f)).is_err());
  crate::test_register_payouts(&mut c,&[a("alice.near")]);open(&mut c);settle(&mut c,true);buy(&mut c);
  assert_eq!(c.get_payout_credit(a("alice.near")).0,terms().price.0);
 }
+
+#[test] fn cancel_sale_refuses_non_seller_before_expiry(){let mut c=setup();open(&mut c);settle(&mut c,true);ctx("other.near",1,NOW);rejects(||{let _=c.cancel_sale("k1".into(),U64(1));});assert_eq!(c.get_sale("k1".into()).unwrap().state,SaleState::Offered);}
