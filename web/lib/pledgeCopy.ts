@@ -36,8 +36,8 @@ export function policyAction(state: string, kind: "retry" | "check" | "unknown")
   if (kind === "retry") return locking ? "Retry account lock" : "Retry account unlock";
   if (kind === "check") return locking ? "Check lock status" : "Check unlock status";
   return locking
-    ? "Account lock not confirmed. Checking the original command. This command is still pending / UNKNOWN. No redispatch or timeout."
-    : "Unlock not confirmed yet. This command is still pending / UNKNOWN. No redispatch or timeout unlock.";
+    ? "Account lock not confirmed. Checking the original command. This command is still unconfirmed. Nothing is sent again, and there is no timeout."
+    : "Unlock not confirmed yet. This command is still unconfirmed. Nothing is sent again, and there is no timeout unlock.";
 }
 
 /** An in-flight cashout is not a claim. Both actors wait and check the chain. */
@@ -56,12 +56,12 @@ export function disbursementCopy(viewerOwnsAccount: boolean, principal: string):
   if (viewerOwnsAccount) {
     return {
       heading: "Claim the loan",
-      text: `Claim ${principal} NEAR. Repayment starts only after delivery is confirmed. A failed or UNKNOWN cashout starts no debt.`,
+      text: `Claim ${principal} NEAR. Repayment starts only after delivery is confirmed. A failed or unconfirmed cashout starts no debt.`,
     };
   }
   return {
     heading: "Waiting for the borrower",
-    text: "Waiting for borrower to claim. No repayment clock yet. A failed or UNKNOWN cashout starts no debt.",
+    text: "Waiting for borrower to claim. No repayment clock yet. A failed or unconfirmed cashout starts no debt.",
   };
 }
 

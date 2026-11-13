@@ -82,6 +82,12 @@
 .sw-facts dd { margin: 0; min-width: 0; font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .sw-facts dd code, .sw-facts dd .v7-mono { font-family: var(--font-mono); font-weight: 500; }
 
+/* The confirm sheet: the trade's terms, visible before the Confirm button is pressed (not hidden in Details). */
+.sw-confirm { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); }
+.sw-confirm-h { margin: 0; font: 600 var(--text-small)/1.4 var(--font-ui); color: var(--ink); }
+.sw-confirm .sw-facts { padding: 0; }
+.sw-confirm .sw-facts > div:last-child { padding-bottom: 0; }
+
 /* The main action. */
 .sw-page .sw-cta.kh-btn { min-height: 56px; font-size: 17px; }
 .sw-funds { margin: 0; font: 500 var(--text-small)/1.5 var(--font-ui); color: var(--muted); text-align: center; }

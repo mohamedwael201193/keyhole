@@ -24,8 +24,11 @@ const OPTIONS: TokenOption[] = OC_ASSETS.map((a) => {
 /**
  * "Check a price": a dry 1Click quote for any pair of the listed assets. Nothing is signed and nothing moves. The quote comes
  * from /api/oneclick (POST), which only ever makes dry quotes.
+ *
+ * `onInteract` fires on the first touch of any control here, so a parent that latches its tab state on user
+ * interaction can stop its default source from following a read that lands mid-interaction.
  */
-export function PriceCheck() {
+export function PriceCheck({ onInteract }: { onInteract?: () => void }) {
   const [origin, setOrigin] = useState<string>(OC_ASSETS[2].id);
   const [dest, setDest] = useState<string>(OC_ASSETS[0].id);
   const [amount, setAmount] = useState("0.05");
@@ -62,10 +65,10 @@ export function PriceCheck() {
     <Card as="section" testid="dry" labelledBy="act-dry-h" className="act-dry">
       <CardHeader title="Check a price" id="act-dry-h" action={<Badge tone="info" testid="dry-badge">Price only · nothing moves</Badge>} />
       <p className="act-note">A live price from 1Click solvers. Nothing is signed and nothing executes.</p>
-      <form className="act-dry-form" onSubmit={(e) => { e.preventDefault(); void run(); }}>
-        <TokenSelect label="From" options={OPTIONS} value={origin} onChange={(v) => { setOrigin(v); clearOut(); }} testid="oc-from" />
-        <AmountInput label="Amount" value={amount} onChange={(v) => { setAmount(v); clearOut(); }} symbol={sym(o)} error={units ? null : amountHint} testid="oc-amount" />
-        <TokenSelect label="To" options={OPTIONS} value={dest} onChange={(v) => { setDest(v); clearOut(); }} testid="oc-to" />
+      <form className="act-dry-form" onSubmit={(e) => { e.preventDefault(); onInteract?.(); void run(); }}>
+        <TokenSelect label="From" options={OPTIONS} value={origin} onChange={(v) => { onInteract?.(); setOrigin(v); clearOut(); }} testid="oc-from" />
+        <AmountInput label="Amount" value={amount} onChange={(v) => { onInteract?.(); setAmount(v); clearOut(); }} symbol={sym(o)} error={units ? null : amountHint} testid="oc-amount" />
+        <TokenSelect label="To" options={OPTIONS} value={dest} onChange={(v) => { onInteract?.(); setDest(v); clearOut(); }} testid="oc-to" />
         <Button type="submit" loading={busy} loadingLabel="Asking solvers" testid="dry-btn">Get price</Button>
       </form>
       <div ref={outRef} aria-live="polite" className="act-out">

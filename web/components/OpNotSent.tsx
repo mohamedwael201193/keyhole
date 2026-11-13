@@ -9,12 +9,16 @@ import { notSentView } from "@/lib/opResult";
  */
 export function OpNotSent({ code, message, noun, knownOpId, testid = "op-not-sent" }: { code: string; message?: string | null; noun: string; knownOpId?: string | null; testid?: string }) {
   const v = notSentView(code, message, noun, knownOpId);
+  // A replay means the signature was already used: the original request may
+  // already have been sent, so neither "No funds moved" nor "no transaction"
+  // is true for it. The duplicate itself produced no new transaction.
+  const isReplay = code === "replay";
   return (
-    <InCardFailure testid={testid} reason={<><b id={`${testid}-h`}>{v.headline}.</b> No funds moved.</>}>
+    <InCardFailure testid={testid} reason={<><b id={`${testid}-h`}>{v.headline}.</b> {isReplay ? "The original request may already have been sent — check its outcome before signing again." : "No funds moved."}</>}>
       <p className="ic-note" data-testid={`${testid}-next`}><b>Next step.</b> {v.nextStep}</p>
       <Details testid={`${testid}-details`}>
         <p className="ic-note" data-testid={`${testid}-status`}>Not sent yet, and no final answer. {v.detail}</p>
-        <p className="ic-note">This attempt produced no transaction.</p>
+        <p className="ic-note">{isReplay ? "This attempt produced no new transaction." : "This attempt produced no transaction."}</p>
         {v.opId && (
           <p className="ic-note" data-testid={`${testid}-opid`}>
             Reference <code style={{ overflowWrap: "anywhere" }}>{v.opId}</code> <CopyBtn value={v.opId} label="Copy reference" />

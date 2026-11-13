@@ -51,10 +51,19 @@ test("/judge redirects to the verification path", async ({ page }) => {
   await expect(page).toHaveURL(/\/verify\/path$/);
 });
 
-test("hero shows live supply from mainnet and official logos", async ({ page }) => {
+// v2 landing: the supply is in the tokens-and-live band, and the band shows six official token marks (the old hero showed eight
+// <img alt> logos). Each of the six must be present exactly once and be the loaded official image mark, not the monogram fallback.
+const BAND_TOKENS = ["NEAR", "USDC", "USDT", "BTC", "ETH", "SOL"];
+const bandToken = (page: import("@playwright/test").Page, n: string) =>
+  page.locator("#proof .lp-tok-row li.lp-tok").filter({ has: page.locator(".lp-tok-sym", { hasText: new RegExp(`^${n}$`) }) });
+test("home shows live supply from mainnet and the official token marks", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("supply")).toHaveText(/^\d+$/, { timeout: 15_000 });
-  for (const n of ["NEAR", "USDC", "ETH", "SOL", "ARB", "BTC", "ZEC", "Base"]) await expect(page.getByAltText(n, { exact: true })).toHaveCount(1);
+  for (const n of BAND_TOKENS) {
+    await expect(bandToken(page, n)).toHaveCount(1);
+    await bandToken(page, n).scrollIntoViewIfNeeded(); // marks load when they scroll near the viewport
+    await expect(bandToken(page, n).locator('.kh-tmark[data-mark="image"] img')).toHaveCount(1, { timeout: 15_000 });
+  }
 });
 
 test("gallery renders every on-chain key", async ({ page }) => {
@@ -580,7 +589,11 @@ test("reduced motion: content is visible immediately", async ({ browser }) => {
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   const page = await ctx.newPage();
   await page.goto(process.env.BASE_URL || "http://localhost:3100");
-  await expect(page.locator(".hero-line").first()).toHaveCSS("opacity", "1");
+  // v2 hero: the headline (was .hero-line) and every entrance element rest at full opacity with no animation.
+  await expect(page.locator("#hero-h")).toHaveCSS("opacity", "1");
+  const enter = page.locator(".lp-hero [data-enter]");
+  expect(await enter.count()).toBeGreaterThanOrEqual(5);
+  for (const el of await enter.all()) { await expect(el).toHaveCSS("opacity", "1"); await expect(el).toHaveCSS("animation-name", "none"); }
   await ctx.close();
 });
 
@@ -713,13 +726,20 @@ test("technical lists are left-aligned; vault traits keep the body face", async 
   expect(extra, "connected vault scrolls sideways").toBeLessThanOrEqual(0);
 });
 
-test("hero: official token logos are visible in the gold-dust hero", async ({ page }) => {
+test("hero: the real key art is visible in the hero and the official token marks are visible in the band", async ({ page }) => {
   test.skip((page.viewportSize()?.width ?? 0) < 1280, "desktop hero");
   await page.goto("/");
-  const hero = page.locator(".hero");
-  await expect(hero.locator(".hkey")).toBeVisible();
-  for (const n of ["NEAR", "USDC", "ETH", "SOL", "ARB", "BTC", "ZEC", "Base"]) {
-    await expect(hero.getByAltText(n, { exact: true })).toBeVisible({ timeout: 10_000 });
+  // Old: .hero .hkey visible. New: the three real key images (Bronze, Silver, Gold) stand on the hero arch, loaded.
+  const hero = page.locator(".lp-hero");
+  for (const tier of ["bronze", "silver", "gold"]) {
+    const key = hero.getByTestId(`hero-key-${tier}`);
+    await expect(key).toBeVisible();
+    await expect.poll(() => key.evaluate((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  }
+  // Old: eight token logos visible in the hero. New: the six marks of the band, each visible as an image.
+  for (const n of BAND_TOKENS) {
+    await bandToken(page, n).scrollIntoViewIfNeeded();
+    await expect(bandToken(page, n).locator('.kh-tmark[data-mark="image"] img')).toBeVisible({ timeout: 10_000 });
   }
 });
 
@@ -808,12 +828,21 @@ test("verify: one flipped byte of the TD report fails Intel DCAP while the bindi
   await expect(page.getByTestId("verdict")).toHaveAttribute("data-match", "false");
 });
 
-test("landing: the handover shows the real withdraw, transfer and refused call, each with its proof", async ({ page }) => {
+test("landing: the lock-out shows the refused call with its proof and the mainnet transfer, and /judge keeps the withdraw proof", async ({ page }) => {
   await page.goto("/?static");
-  await expect(page.getByTestId("handover-step-3")).toContainText("not_owner");
-  await expect(page.getByTestId("handover-link-1")).toHaveAttribute("href", "/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae");
-  await expect(page.getByTestId("handover-link-2")).toHaveAttribute("href", "https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD");
-  await expect(page.getByTestId("handover-link-3")).toHaveAttribute("href", "/verify?call=e805f050-d416-4a04-9b12-270adbe02068");
+  // Old handover-step-3 contained not_owner: now the previous holder's card shows the refusal.
+  await expect(page.getByTestId("lock-left")).toContainText("not_owner");
+  await expect(page.getByTestId("lock-left")).toContainText("Refused");
+  await expect(page.getByTestId("lock-right")).toContainText("Access granted");
+  // Old link-3 (refused call proof): lock-verify opens the same attested not_owner call.
+  await expect(page.getByTestId("lock-verify")).toHaveAttribute("href", "/verify?call=e805f050-d416-4a04-9b12-270adbe02068");
+  // Old link-2 (transfer on nearblocks): lock-tx is the mainnet sale transfer on nearblocks.
+  await expect(page.getByTestId("lock-tx")).toHaveAttribute("href", "https://nearblocks.io/txns/BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp");
+  // Old link-1 (withdraw before the transfer, call 440c2378) and the earlier G35r5pmC transfer are no longer on the home page; /judge lists both.
+  await page.goto("/judge");
+  await expect(page.locator('a[href="/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae"]').first()).toBeAttached();
+  await expect(page.locator('a[href="/verify?call=e805f050-d416-4a04-9b12-270adbe02068"]').first()).toBeAttached();
+  await expect(page.locator('a[href="https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD"]').first()).toBeAttached();
 });
 
 test("verify: Intel revocation lists, TCB Info and QE identity are checked live and the status is shown as Intel reports it", async ({ page }) => {
@@ -833,11 +862,15 @@ test("api/pcs only forwards the fixed Intel endpoints", async ({ request }) => {
   expect(decodeURIComponent(j.chain)).toContain("-----BEGIN CERTIFICATE-----");
 });
 
-test("landing: the 37 browser checks stat links to /verify", async ({ page }) => {
+test("landing: the verify stat links to /verify, which runs the 37 browser checks", async ({ page }) => {
   await page.goto("/?static");
-  const s = page.getByTestId("checks-stat");
-  await expect(s).toHaveText("37");
+  // Old checks-stat (text 37, href /verify): the v2 stat is a link, with no hard-coded number on the home page.
+  const s = page.getByTestId("verify-cta");
   await expect(s).toHaveAttribute("href", "/verify");
+  await s.click();
+  await expect(page).toHaveURL(/\/verify$/);
+  // The 37 is now proven where the checks run: the tally reaches 37 of 37 in the browser.
+  await expect(page.getByTestId("tally")).toHaveAttribute("data-n", "37", { timeout: 60_000 });
 });
 
 test("key history: a real log re-verifies and an edited row fails", async ({ page }) => {
@@ -897,10 +930,13 @@ test("gallery: every live card shows its token id and links to its history", asy
   await expect(card.getByTestId("key-link")).toHaveAttribute("href", `/key?id=${encodeURIComponent(tid)}`);
 });
 
-test("home: the final band leads to the app and to the proof", async ({ page }) => {
+test("home: the final band leads to the app and the builders band above it leads to the proof", async ({ page }) => {
   await page.goto("/?static");
-  await expect(page.getByTestId("cta-get-key")).toHaveAttribute("href", "/dashboard");
-  await expect(page.getByTestId("cta-proof")).toHaveAttribute("href", "/judge");
+  // Old cta-get-key -> /dashboard is now cta-launch; the v2 cta-get-key is the mint link.
+  await expect(page.locator("#cta").getByTestId("cta-launch")).toHaveAttribute("href", "/dashboard");
+  await expect(page.locator("#cta").getByTestId("cta-get-key")).toHaveAttribute("href", "/mint");
+  // Old cta-proof -> /judge: the proof link now sits in the builders band (build hash), directly above the close.
+  await expect(page.locator("#builders").getByTestId("hash-stat")).toHaveAttribute("href", "/judge");
   await expect(page.getByText("Eight assets.")).toHaveCount(0);
 });
 

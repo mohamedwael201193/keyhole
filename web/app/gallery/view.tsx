@@ -175,7 +175,7 @@ export function GalleryView({ initial, serverTokens: serverTokensProp, serverTie
             data-testid="gallery-search"
           />
         </label>
-        <Button href={dashHref("/mint")} icon={<Icon name="plus" size={18} />} testid="keys-mint">Mint a key</Button>
+        {store.keys.length > 0 ? <Button href={dashHref(`/key?id=${encodeURIComponent(store.keys[0].token_id)}`)} icon={<Icon name="key" size={18} />} testid="keys-mint">View your key</Button> : <Button href={dashHref("/mint")} icon={<Icon name="plus" size={18} />} testid="keys-mint">Mint a key</Button>}
       </div>
 
       {stateBlock}

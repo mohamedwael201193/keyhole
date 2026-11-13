@@ -65,6 +65,17 @@ describe("not-sent states", () => {
     expect(notSentView("admission_unknown", "no confirmed matching pending admission; do not dispatch", "withdrawal", ID).opId).toBe(ID);
     expect(opIdFrom("nothing here")).toBeNull();
   });
+
+  it("a replay means the signature was already used: fresh signature, never 'confirm the earlier operation'", () => {
+    const v = notSentView("replay", "replay: signature already used", "swap");
+    expect(v.headline).toBe("Swap not sent");
+    expect(v.detail).toContain("This signature was already used.");
+    expect(v.detail).toContain("fresh signature");
+    expect(v.detail).not.toContain("was not started, because an earlier one has no final answer yet");
+    expect(v.nextStep).toContain("Sign again with a fresh signature");
+    expect(v.nextStep).toContain("Nothing is resent");
+    expect(v.nextStep).not.toContain("Confirm the earlier operation");
+  });
 });
 
 describe("my calls", () => {

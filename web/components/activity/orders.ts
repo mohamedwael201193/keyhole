@@ -5,6 +5,7 @@
  * nothing here invents a count, a percentage, a time or a hash.
  */
 import { intentTx, tx, txAlt } from "@/lib/config";
+import { explorerChain, explorerUrl } from "@/lib/explorer";
 import { STATUS, assetById, fundsStep, statusOf, type OcAsset } from "@/lib/oneclick";
 import { amountText, entryDetail, kindLabel, type HistEntry } from "@/lib/dashboard";
 import { SETTLEMENTS, VAULT_TRADE, type Settlement } from "@/lib/settlements";
@@ -268,13 +269,8 @@ export function refsOf(list: unknown): HashRef[] {
 
 /** The public explorer for a transaction on a chain, or null when the chain is not one the page links. */
 export function explorerFor(chain: string | undefined, hash: string): string | null {
-  switch (chain) {
-    case "near": return tx(hash);
-    case "sol": return /^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(hash) ? `https://solscan.io/tx/${hash}` : null;
-    case "base": return /^0x[0-9a-fA-F]{64}$/.test(hash) ? `https://basescan.org/tx/${hash}` : null;
-    case "arb": return /^0x[0-9a-fA-F]{64}$/.test(hash) ? `https://arbiscan.io/tx/${hash}` : null;
-    default: return null;
-  }
+  const c = explorerChain(chain);
+  return c ? explorerUrl(c, "tx", hash) : null;
 }
 
 /* ---------- Filters, date range, search, pages ---------- */

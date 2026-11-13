@@ -21,7 +21,7 @@ describe("the recovery card is gone from every page", () => {
     const rec = src("../components/ValueRecovery.tsx");
     expect(rec).not.toContain("Account operation recovery");
     expect(rec).not.toContain("<h2");
-    expect(rec).toContain("Confirming an earlier transaction. New ones wait until it's confirmed.");
+    expect(rec).toContain("Confirming an earlier deposit… no funds at risk");
     expect(rec).toContain(">Confirm</Button>");
   });
   it("it is rendered only inside the card of the operation that waits (swap, withdraw sheet, overview vault)", () => {
@@ -31,8 +31,8 @@ describe("the recovery card is gone from every page", () => {
 });
 
 describe("the swap button never says 'Locked until...'", () => {
-  it("shows 'Confirming earlier transaction…' with a spinner while an earlier operation is pending", () => {
-    expect(LOCK_LABEL).toBe("Confirming earlier transaction…");
+  it("shows 'Confirming earlier deposit…' with a spinner while an earlier operation is pending", () => {
+    expect(LOCK_LABEL).toBe("Confirming earlier deposit…");
     const s = src("../app/swap/view.tsx");
     expect(s).toContain("const ctaLabel = gated ? LOCK_LABEL");
     expect(s).toContain("unlocking || gated}");
@@ -122,7 +122,7 @@ describe("a withdrawal is Settled only with a terminal status and a transaction 
   });
   it("the not-sent card uses plain words", () => {
     const html = renderToStaticMarkup(createElement(OpNotSent, { code: "admission_unknown", noun: "swap" }));
-    const m = text(html.split("<details")[0]);
+    const m = text(html.split("<details>")[0]);
     expect(m).not.toMatch(BANNED);
   });
 });

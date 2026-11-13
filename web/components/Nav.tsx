@@ -67,6 +67,7 @@ export function Nav() {
           ))}
         </div>
         <div className="nav-tools">
+          <span className="nav-net"><i aria-hidden="true" />NEAR Mainnet</span>
           <Button href={LAUNCH_APP.href} size="sm" className="nav-open" testid="open-app">{LAUNCH_APP.label}</Button>
           <button className="burger" aria-expanded={open} aria-controls="mnav" aria-label={t("nav.menu")} onClick={() => setOpen((v) => !v)}>
             <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="1.6" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>

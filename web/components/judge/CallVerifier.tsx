@@ -102,7 +102,11 @@ export function CallVerifier({ initial }: { initial: string | null }) {
   const six = ck ? attestChecks(ck) : null;
   const partial = six && dcap ? six.filter(Boolean).length + dcap.checks.filter((c) => c.pass).length : null;
   const pcsDown = coll === "err" && partial != null;
-  const total = six && dcap && pcs ? six.length + dcap.checks.length + pcs.checks.length : TOTAL_CHECKS;
+  // The denominator is the checks that actually ran for this call, and it only exists once all three groups have
+  // loaded: the attestation group has 5 or 6 checks (the 6th needs a recorded output), and the DCAP group has 18
+  // or 19 (the 19th needs an expected report_data). While anything is still loading there is no denominator at
+  // all — showing the 37 maximum made the counter read "0 of 37 done" while the result said "36 of 36 passed".
+  const total = six && dcap && pcs ? six.length + dcap.checks.length + pcs.checks.length : null;
   const tally = six && dcap && pcs ? six.filter(Boolean).length + dcap.checks.filter((c) => c.pass).length + pcs.checks.filter((c) => c.pass).length : null;
   const rstate = !ck || (ck.fastfs === null && ck.registered) || pcsDown ? "wait" : vd === "current" ? "ok" : vd === "previous" ? "previous" : "bad";
   return (
@@ -111,9 +115,9 @@ export function CallVerifier({ initial }: { initial: string | null }) {
       <h2 className="vf-call-h">{t("verify.h1a")}<em>{t("verify.h1b")}</em></h2>
       <p className="lead vf-call-only">{t("verify.lead")}</p>
       <div className="tally" data-testid="tally" data-n={tally ?? ""}>
-        <b className="tn">{tally ?? "·"}<span>/{total}</span></b>
-        <div><b data-testid="tally-head">{tally != null ? t("verify.tallyH", { n: tally, total }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : busy ? <span data-testid="verify-running"><Spinner label="Checking" /> Checking in your browser… {six ? six.filter(Boolean).length + (dcap ? dcap.checks.filter((c) => c.pass).length : 0) : 0} of {total} done</span> : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small></div>
-        <span className="pp-meter" aria-hidden="true"><i style={{ width: `${tally != null ? (tally / total) * 100 : 0}%` }} /></span>
+        <b className="tn">{tally ?? "·"}{tally != null && total != null && <span>/{total}</span>}</b>
+        <div><b data-testid="tally-head">{tally != null && total != null ? t("verify.tallyH", { n: tally, total }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : busy ? <span data-testid="verify-running"><Spinner label="Checking" /> Checking in your browser… {six ? six.filter(Boolean).length + (dcap ? dcap.checks.filter((c) => c.pass).length : 0) : 0} checks passed so far</span> : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small></div>
+        <span className="pp-meter" aria-hidden="true"><i style={{ width: `${tally != null && total != null ? (tally / total) * 100 : 0}%` }} /></span>
       </div>
       <div className="res" data-state={rstate}>
         <div>
@@ -124,7 +128,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
       </div>
       {/* Separate judge verdicts — one chip each, no combined PASS that hides a miss. */}
       <ul className="vf-verdicts" data-testid="verify-verdicts" aria-label="Separate check verdicts">
-        <li data-testid="verdict-quote" data-ok={dcap ? String(dcap.ok && !!ck?.quote) : "wait"}><span className={`ok ${dcap ? (dcap.ok && ck?.quote ? "" : "bad") : "wait"}`}>{dcap ? (dcap.ok && ck?.quote ? "✓" : "✕") : "·"}</span><b>Quote validity</b><small>TDX quote + 19 Intel DCAP checks</small></li>
+        <li data-testid="verdict-quote" data-ok={dcap ? String(dcap.ok && !!ck?.quote) : "wait"}><span className={`ok ${dcap ? (dcap.ok && ck?.quote ? "" : "bad") : "wait"}`}>{dcap ? (dcap.ok && ck?.quote ? "✓" : "✕") : "·"}</span><b>Quote validity</b><small>{dcap ? `TDX quote + ${dcap.checks.length} Intel DCAP checks` : "TDX quote + Intel DCAP checks"}</small></li>
         <li data-testid="verdict-binding" data-ok={ck?.binding ? String(ck.binding.match) : "wait"}><span className={`ok ${ck?.binding ? (ck.binding.match ? "" : "bad") : "wait"}`}>{ck?.binding ? (ck.binding.match ? "✓" : "✕") : "·"}</span><b>Output binding</b><small>report_data binds request hash / account / token</small></li>
         <li data-testid="verdict-econ" data-ok={ck?.output ? String(ck.output.match) : (ck && ck.fastfs !== null ? "opt" : "wait")}><span className={`ok ${ck?.output ? (ck.output.match ? "" : "bad") : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? (ck.output.match ? "✓" : "✕") : ck && ck.fastfs !== null ? "○" : "·"}</span><b>Economic semantics</b><small>{ck?.output ? `Recorded outcome: ${ck.output.verdict}` : "Evidence / pasted output vs attestation"}</small></li>
         <li data-testid="verdict-build" data-ok={ck ? String(ck.published && bi === 0) : "wait"}><span className={`ok ${ck ? (ck.published && bi === 0 ? "" : bi > 0 ? "opt" : "bad") : "wait"}`}>{ck ? (ck.published && bi === 0 ? "✓" : bi > 0 ? "prev" : "✕") : "·"}</span><b>Current-build identity</b><small>{a ? `executed ${a.executed_wasm_sha256.slice(0, 8)}… · current ${curShort}…` : "Wasm vs the live registry"}</small></li>
@@ -139,7 +143,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
             <input id="cid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder={t("verify.placeholder")} spellCheck={false} />
           </form>
           <section className="pp-group" aria-labelledby="pp-g1">
-            <h3 id="pp-g1">Enclave attestation <small>6 checks</small></h3>
+            <h3 id="pp-g1">Enclave attestation <small>{six ? `${six.length} checks` : "…"}</small></h3>
           <div className="ck"><span className={`ok ${ck ? dot(ck.quote) : "wait"}`}>{ck ? mark(ck.quote) : "·"}</span><div><b>{t("verify.quote")}</b> <Trust src={["outlayer", "browser"]} /><small>{t("verify.quoteD")}{a ? ` · ${a.tdx_quote.length}` : ""}</small></div><span className="att">{ck?.quote ? t("verify.badgeAtt") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ck ? dot(ck.registered && ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs === null ? null : ck.registered && ck.fastfs === true) : "·"}</span><div><b>{t("verify.hash")}</b> <Trust src={["browser"]} /><small>{a?.executed_wasm_sha256 || t("verify.hashD")}</small></div><span className="att">{ck?.registered && ck.fastfs ? t("verify.badgeMatch") : "—"}</span></div>
           <div className="ck"><span className={`ok ${ck ? dot(ck.fastfs === true) : "wait"}`}>{ck ? mark(ck.fastfs) : "·"}</span><div><b>{t("verify.pub")}</b> <Trust src={["chain", "browser"]} /><small>{known && a!.executed_wasm_sha256.toLowerCase() === PUBLISHED_WASM_SHA256 ? <a href={tx(WORKER_PUBLISH_TX)}>{t("verify.tx", { tx: WORKER_PUBLISH_TX })}</a> : a ? <a href={fastfsUrl(a.project_id, a.executed_wasm_sha256)} target="_blank" rel="noreferrer">published wasm file on FastFS ↗</a> : t("verify.pubD")}</small></div><span className="att">{ck?.fastfs ? t("verify.badgeFound") : "—"}</span></div>
@@ -148,7 +152,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
           <div className="ck" data-testid="ck-output"><span className={`ok ${ck?.output ? dot(ck.output.match) : ck && ck.fastfs !== null ? "opt" : "wait"}`}>{ck?.output ? mark(ck.output.match) : ck && ck.fastfs !== null ? "○" : "·"}</span><div><b>{t("verify.out")}</b> <Trust src={["us", "browser"]} /><small>{ck?.output ? t(ck.output.match ? "verify.outOk" : "verify.outBad", { verdict: ck.output.verdict, src: t(ck.output.source === "evidence" ? "verify.srcEvidence" : "verify.srcPasted") }) : t("verify.outNone")}</small></div><span className="att" data-testid="output-verdict">{ck?.output?.match ? ck.output.verdict : "—"}</span></div>
           </section>
           <section className="pp-group" aria-labelledby="pp-g2">
-            <h3 id="pp-g2">Intel quote check <small>19 checks</small></h3>
+            <h3 id="pp-g2">Intel quote check <small>{dcap ? `${dcap.checks.length} checks` : "…"}</small></h3>
           <details className="dcap" data-testid="dcap" data-ok={dcap ? String(dcap.ok) : "wait"} open={!!dcap && !dcap.ok}>
             <summary><span className={`ok ${dcap ? dot(dcap.ok) : "wait"}`}>{dcap ? mark(dcap.ok) : "·"}</span><b>{t("verify.dcapH")}</b> <Trust src={["browser", "intel"]} /><small data-testid="dcap-count">{dcap ? t("verify.dcapCount", { n: dcap.checks.filter((c) => c.pass).length, total: dcap.checks.length }) : "…"}</small></summary>
             {dcap && <ol>{dcap.checks.map((c) => <li key={c.id} data-pass={String(c.pass)}><span>{c.pass ? "✓" : "✕"}</span><div>{c.label}{c.detail ? <em className="mono"> {c.detail}</em> : null}</div></li>)}</ol>}
@@ -157,7 +161,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
           </details>
           </section>
           <section className="pp-group" aria-labelledby="pp-g3">
-            <h3 id="pp-g3">Intel revocation and TCB <small>12 checks</small></h3>
+            <h3 id="pp-g3">Intel revocation and TCB <small>{pcs ? `${pcs.checks.length} checks` : "…"}</small></h3>
           <details className="dcap" data-testid="pcs" data-ok={pcs ? String(pcs.ok) : coll === "err" ? "err" : "wait"} data-tcb={pcs?.tcbStatus ?? ""} open={!!pcs && !pcs.ok}>
             <summary><span className={`ok ${pcs ? dot(pcs.ok) : coll === "err" ? "bad" : "wait"}`}>{pcs ? mark(pcs.ok) : coll === "err" ? "✕" : "·"}</span><b>{t("verify.pcsH")}</b> <Trust src={["intel", "browser"]} /><small data-testid="pcs-status">{pcs ? t("verify.pcsStatus", { tcb: pcs.tcbStatus, qe: pcs.qeStatus, n: pcs.checks.filter((c) => c.pass).length, total: pcs.checks.length }) : coll === "err" ? t("verify.pcsErr") : "…"}</small></summary>
             {pcs && <ol>{pcs.checks.map((c) => <li key={c.id} data-pass={String(c.pass)}><span>{c.pass ? "✓" : "✕"}</span><div>{c.label}{c.detail ? <em className="mono"> {c.detail}</em> : null}</div></li>)}</ol>}
