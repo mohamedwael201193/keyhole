@@ -1,6 +1,6 @@
 # Proof index
 
-Six public records are six records. They are not six customers and they are not commercial traction. No completed loan is claimed. Lending is off. The next loan nonce is 0. The owner is still `keyhole-devmo.near`.
+Six public records are six records. They are not six customers and they are not commercial traction. No completed loan is claimed. Lending is off. The next loan nonce is 0. The owner is the guardian implicit account `0705fdc1…`.
 
 Attribution is only what the record itself says. **Team** means this repository already names that wallet as the operator's. **Unknown** means control is not established. A different address is not verified external usage. This index has no verified-external row. Six public records are not six customers and they are not commercial traction.
 
