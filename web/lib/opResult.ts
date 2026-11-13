@@ -52,12 +52,16 @@ export type NotSentView = {
 /** `noun` is the thing the holder tried: "swap", "withdrawal". `known` is the newest recovery id from this browser, used when the message names none. */
 export function notSentView(code: string, message: string | null | undefined, noun: string, known?: string | null): NotSentView {
   const opId = opIdFrom(message) ?? known ?? null;
-  const detail = code === "admission_unknown"
-    ? `The enclave could not confirm this ${noun} on chain, so it did not dispatch it. This attempt produced no transaction.`
-    : code === "value_op_pending"
-      ? `An earlier operation on this key is still pending, so this ${noun} was not started.`
-      : `This ${noun} was not started, because an earlier one has no final answer yet.`;
-  const nextStep = "Confirm the earlier operation first (one wallet signature). Nothing is resent, and new operations wait until it is confirmed.";
+  const detail = code === "replay"
+    ? "This signature was already used. Each request needs a fresh signature; sign again."
+    : code === "admission_unknown"
+      ? `The enclave could not confirm this ${noun} on chain, so it did not dispatch it. This attempt produced no transaction.`
+      : code === "value_op_pending"
+        ? `An earlier operation on this key is still pending, so this ${noun} was not started.`
+        : `This ${noun} was not started, because an earlier one has no final answer yet.`;
+  const nextStep = code === "replay"
+    ? "Sign again with a fresh signature. Nothing is resent."
+    : "Confirm the earlier operation first (one wallet signature). Nothing is resent, and new operations wait until it is confirmed.";
   return { headline: `${noun[0].toUpperCase()}${noun.slice(1)} not sent`, detail, nextStep, opId };
 }
 

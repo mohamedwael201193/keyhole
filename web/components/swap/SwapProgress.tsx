@@ -80,7 +80,7 @@ export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownO
           {amount && <p className="ic-note" data-testid="swap-refused-amount">Attempted: {amount}.</p>}
           {ref.refHeight && <p className="ic-note" data-testid="swap-refused-ref">The earlier operation is at reference block {ref.refHeight}.</p>}
           <BalanceLine before={balanceBefore} after={balanceAfter} />
-          <p className="ic-note" data-testid="swap-refused-cap">This attempt still counts toward today&apos;s daily cap until it resets at 00:00 UTC.</p>
+          <p className="ic-note" data-testid="swap-refused-cap">Check the Today meter on the Vault page — a refused attempt can still count toward today&apos;s cap until it resets at 00:00 UTC.</p>
           <p className="ic-actions">
             {callId && <button type="button" className="kh-btn kh-btn--secondary kh-btn--sm" onClick={onRetry} data-testid="swap-retry">Try again</button>}
             <button type="button" className="ic-textbtn" onClick={onBack} data-testid="swap-back">Back to swap</button>
