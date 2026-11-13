@@ -74,7 +74,7 @@ describe("a result is never a dead UNKNOWN", () => {
   it("a swap status of UNKNOWN says what to do", () => {
     const o = swapOutcome("UNKNOWN");
     expect(o.headline).toBe("Swap not confirmed");
-    expect(o.where).toContain("Confirm the earlier transaction");
+    expect(o.where).toContain("Confirm the earlier operation");
     expect(o.where).not.toMatch(/UNKNOWN|Account operation recovery/);
   });
 });

@@ -24,7 +24,7 @@ export function PayoutCredit({embeddedHere=false}:{embeddedHere?:boolean}={}) {
    if(duplicate&&await client.payoutAccountRegistered(account)!==true)throw Error("Registration status is inconsistent. Keep the original operation; do not resend.");
    const resolved=await clearVerifiedMoneyOperation(store,saved,async()=>finalized);setOperation(store.load());setMessage(!resolved?"The saved operation changed while its receipt was verified. Keep the current original intent; do not resend.":duplicate?"Payout storage is already ready; the failed batch did not complete the intended action. Retry that action manually without another registration fee.":"Original transaction is finalized; current credit is refreshed. A transaction hash alone was not treated as delivery.");
   }
-  else if(saved||nextPending)setMessage("Native outcome pending / UNKNOWN. Do not resend. Refresh this original operation.");
+  else if(saved||nextPending)setMessage("Your payout is not confirmed yet. Do not send it again. Refresh to check it.");
  },[account,client,store,embedded]);
  useEffect(()=>{let cancelled=false;setCredit("0");setPending(null);setOperation(null);setMessage("");setSupported(false);if(embedded||!account||!store)return;
   let saved:MoneyOperation|null=null;try{saved=store.load();}catch{setMessage("Pending-operation storage is unreadable. Do not submit new money operations.");return;}const url=new URL(location.href),hash=url.searchParams.get("transactionHashes");

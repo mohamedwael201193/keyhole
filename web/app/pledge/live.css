@@ -37,7 +37,6 @@
 .pledge-live label.full { grid-column: 1 / -1; }
 .pledge-live input:not([type="checkbox"]) { min-width: 0; width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #c6d0be; border-radius: 8px; background: #fffdf7; font: inherit; color: inherit; }
 .pledge-live-consent { display: flex !important; flex-direction: row; align-items: center; gap: 8px !important; border-top: 1px solid #dce2d3; padding-top: 10px; margin-top: 10px; font-size: 13px !important; font-weight: 400; min-height: 44px; }
-.pledge-live-consent input { width: 20px; height: 20px; flex-shrink: 0; margin: 0; }
 .pledge-live-important { background: #edf2e5; padding: 10px 12px; border-radius: 8px; font-size: 13px; }
 .pledge-live-credit { background: #e5eedf; border-radius: 10px; padding: 10px 12px; margin-top: 10px; display: grid; gap: 6px; }
 .pledge-live-credit span { font-size: 13px; }
@@ -56,10 +55,10 @@
   .pledge-live { padding: 12px 12px 20px; font-size: 14px; line-height: 1.45; }
   .pledge-live h1 { font-size: 22px; }
   .pledge-live h2 { font-size: 16px; }
-  .pledge-live-eyebrow, .pledge-live-facts dt, .pledge-live-facts small, .pledge-live label small, .pledge-live-muted, .pledge-live-private p, .pledge-live-private li small, .pledge-live-status, .pledge-live-credit span, .pledge-live-compare, .pledge-live-more, .pledge-live-action > small { font-size: 12px; }
+  .pledge-live-eyebrow, .pledge-live-facts dt, .pledge-live-facts small, .pledge-live label small, .pledge-live-muted, .pledge-live-private p, .pledge-live-private li small, .pledge-live-status, .pledge-live-credit span, .pledge-live-compare, .pledge-live-more, .pledge-live-action > small { font-size: var(--ds-small); }
   .pledge-live-steps, .pledge-live label { font-size: 14px; }
   .pledge-live-header { align-items: flex-start; }
-  .pledge-live-state { font-size: 12px; max-width: 9.5rem; text-align: center; }
+  .pledge-live-state { font-size: var(--ds-small); max-width: 9.5rem; text-align: center; }
   .pledge-live-grid { grid-template-columns: 1fr; }
   .pledge-live-identity span { display: none; }
   .pledge-live button, .pledge-live summary, .pledge-live input:not([type="checkbox"]) { min-height: 44px; font-size: 14px; }
@@ -74,4 +73,3 @@
 
 .pledge-live-forfeit { display: grid; gap: 8px; margin-top: 8px; min-width: 0; }
 .pledge-live-forfeit-ack { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; }
-.pledge-live-forfeit-ack input { width: 20px; height: 20px; flex: 0 0 auto; }

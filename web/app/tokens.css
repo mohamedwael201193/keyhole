@@ -77,6 +77,11 @@
   --text-body: 16px;
   --text-small: 13px;
 
+  /* Dashboard type scale (Overview, Swap, Vault, Keys, Pledge, Activity, My proof). One heading font (--font-display), one body
+     font (--font-ui), mono only for hashes and figures. No heading in the app is bigger than --ds-title. */
+  --ds-title: 36px; --ds-title-md: 32px; --ds-title-sm: 28px;
+  --ds-section: 20px; --ds-lead: 15px; --ds-body: 15px; --ds-small: 13px; --ds-figure: 40px; --ds-figure-sm: 34px;
+
   /* Font roles: Cormorant Garamond for headings and big figures, Inter for UI, DM Mono for hashes, ids and figures. */
   --font-display: var(--font-cormorant), Georgia, serif;
   --font-ui: var(--font-inter), system-ui, sans-serif;

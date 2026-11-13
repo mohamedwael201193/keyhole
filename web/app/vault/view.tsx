@@ -25,9 +25,8 @@ import { acct, tx, KEYS_CONTRACT } from "@/lib/config";
 import { minutesLeft } from "@/lib/session";
 import { LOCK_LABEL, LOCK_NOTE, useValueLock } from "@/lib/valueLock";
 import { ValueRecovery } from "@/components/ValueRecovery";
-import { withdrawResultView } from "@/lib/opResult";
 import { Details, InCardFailure, InCardProgress, InCardSuccess } from "@/components/InCard";
-import { isNotSent } from "@/lib/opResult";
+import { isNotSent, withdrawResultView } from "@/lib/opResult";
 import { OpNotSent } from "@/components/OpNotSent";
 import { TeeProgress } from "@/components/TeeProgress";
 import { DepositQr } from "@/components/DepositQr";
@@ -43,6 +42,7 @@ import { KeyLog } from "@/components/KeyLog";
 import { entryDetail, kindLabel, settledOrders, type HistEntry } from "@/lib/dashboard";
 import type { WorkerResult } from "@/lib/worker";
 import { AmountInput, Button, Busy, Sheet, Tabs, TokenSelect, type TokenOption } from "@/components/ui";
+import { TxStatus } from "@/components/ui/tx-status";
 import { Card, CardHeader, CopyButton, EmptyState, Icon, ListRow, PageHeader, ProofPanel, SetupProgress, Skeleton, StatusChip, TierChip, VaultHero, type IconName, type SetupItem } from "@/components/v7";
 import "./vault.css";
 import { dashHref } from "@/lib/dashboardSections";
@@ -659,7 +659,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   testid="settings-withdraw"
                   iconName="arrow-up"
                   title="Withdraw to your NEAR account"
-                  sub={lock.locked ? "Confirming an earlier transaction. New ones wait until it's confirmed." : "Only the current key holder receives withdrawals. Your wallet signs each one."}
+                  sub={lock.locked ? "Confirming an earlier deposit… no funds at risk." : "Only the current key holder receives withdrawals. Your wallet signs each one."}
                   onClick={() => { if (!lock.locked) setWOpen(true); }}
                 />
                 <SettingRow
