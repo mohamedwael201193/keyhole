@@ -3,7 +3,12 @@ use keyhole_worker::native_send;
 /// The single shared transport for every send-tx call site (the stale test
 /// enforces exactly one occurrence of the transport call in this file).
 fn send_tx(signed: &str, wait_until: &str) -> Result<Value, Error> {
+    // Round 4: the transport choke point. A send changes on-chain state,
+    // so the per-run read cache is invalidated after EVERY send — including
+    // a send whose response is unavailable (the tx may still have landed).
+    // A cached value can therefore never survive a send.
     let (v, e) = rpc::send_tx(signed, wait_until);
+    keyhole_worker::read_cache::invalidate();
     if !e.is_empty() {
         return Err(err(
             "native_unknown",
@@ -63,6 +68,12 @@ impl native_send::Rpc for NativeRpc {
         access_key_nonce(&v).ok_or_else(|| err("rpc", "missing native nonce"))
     }
     fn block(&mut self) -> Result<([u8; 32], Option<u64>), Error> {
+        // Round 4: the final block is cached per run, shared with
+        // chain_now_ms (which populates it). The cache is invalidated
+        // after every send, so a stale hash is impossible.
+        if let Some(cached) = keyhole_worker::read_cache::get_block() {
+            return Ok((cached.hash, cached.height));
+        }
         let (v, e) = rpc::block("final");
         if !e.is_empty() {
             return Err(err("rpc", "final block unavailable"));
@@ -72,7 +83,11 @@ impl native_send::Rpc for NativeRpc {
         }
         // Same flattened-or-envelope shapes `chain_now_ms` already accepts.
         let h = final_block_hash(&v).ok_or_else(|| err("rpc", "invalid block hash"))?;
-        Ok((h, native_send::block_height(&v)))
+        let height = native_send::block_height(&v);
+        if let Some(entry) = keyhole_worker::parse_final_block(&v) {
+            keyhole_worker::read_cache::put_block(entry);
+        }
+        Ok((h, height))
     }
     fn broadcast(&mut self, signed: &str) -> Result<Value, Error> {
         // NONE, never FINAL: the OutLayer host caps every near:rpc call at
@@ -141,23 +156,41 @@ impl native_send::Rpc for NativeRpc {
             }
         });
         let final_h = {
-            let (raw, e) = rpc::block("final");
-            if e.is_empty() {
-                native_send::block_height(&raw)
+            // Round 4: reuse the cached final block (populated by
+            // chain_now_ms / NativeRpc::block) instead of a fresh read.
+            if let Some(cached) = keyhole_worker::read_cache::get_block() {
+                cached.height
             } else {
-                None
+                let (raw, e) = rpc::block("final");
+                if e.is_empty() {
+                    if let Some(entry) = keyhole_worker::parse_final_block(&raw) {
+                        keyhole_worker::read_cache::put_block(entry);
+                    }
+                    native_send::block_height(&raw)
+                } else {
+                    None
+                }
             }
         };
         let period = {
-            let (raw, e) = rpc::raw(
-                "EXPERIMENTAL_protocol_config",
-                r#"{"finality":"final"}"#,
-            );
-            if e.is_empty() {
-                native_send::transaction_validity_period(&raw)
-            } else {
-                None
-            }
+            // Round 4: the protocol config is static for the run; cache
+            // the raw response so a second reconcile does not re-read it.
+            let raw_opt = match keyhole_worker::read_cache::get_protocol_config() {
+                Some(raw) => Some(raw),
+                None => {
+                    let (raw, e) = rpc::raw(
+                        "EXPERIMENTAL_protocol_config",
+                        r#"{"finality":"final"}"#,
+                    );
+                    if e.is_empty() {
+                        keyhole_worker::read_cache::put_protocol_config(raw.clone());
+                        Some(raw)
+                    } else {
+                        None
+                    }
+                }
+            };
+            raw_opt.and_then(|raw| native_send::transaction_validity_period(&raw))
         };
         (ref_h, final_h, period)
     }

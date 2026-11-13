@@ -17,12 +17,20 @@ struct Fixture {
     registered: bool,
     finish_calls: usize,
     /// Production near:rpc cost model for the canary (exact-exit) drive, in
-    /// host calls: observe = 5 (production exact_exit_observation: 3 views
-    /// + storage_bounds + view_account; the 2 custody reads are wasi:http),
-    ///   now_ms = 1 (rpc::block), original_delivery = 1 (rpc::tx_status),
-    ///   post_step = 0 (wasi:http). The host allows 100 near:rpc calls per
-    ///   run. This is a model of the production cost, not a live measurement:
-    ///   the mock Host does not touch the RPC.
+    /// host calls. Round 4: the model is cache-aware, using the real
+    /// per-run `read_cache`. `validate_dispatch` replays the production
+      /// read sequence (9 distinct keys: control, project, list_versions,
+      /// version_count, value_op, nft_token, block, binding, loan) through
+      /// the cache, so only the first call costs anything. `observe` = 4
+      /// fresh reads (mt, ft, storage_bal, view_account) + the
+    /// storage_balance_bounds, cached after the first observe. `now_ms` =
+    /// the cached final block (1 on the first read, 0 after).
+    /// `original_delivery` = 1 (rpc::tx_status), `post_step` = 0
+    /// (wasi:http). The before-observe reuse (round 4) means the drive
+    /// calls `observe` only 4 times (baseline + 3 after-observes). The
+    /// host allows 100 near:rpc calls per run. This is a model of the
+    /// production cost, not a live measurement: the mock Host does not
+    /// touch the RPC.
     rpc_cost: usize,
     deny: bool,
     clock: u64,
@@ -41,6 +49,10 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        // Round 4: the per-run read cache is a thread_local shared by all
+        // tests on this thread; reset it so each test starts from an
+        // empty cache (as a fresh production run does).
+        crate::read_cache::invalidate();
         Self {
             obs: Some(Observation {
                 confidential: "1000".into(),
@@ -88,10 +100,38 @@ impl Store for Fixture {
 impl ProviderHost for Fixture {
     fn validate_dispatch(&mut self, _j: &Journal, _key: &str) -> Result<(), Error> {
         if self.deny {
-            Err(err("pledged", "control changed"))
-        } else {
-            Ok(())
+            return Err(err("pledged", "control changed"));
         }
+        // Round 4: replay the production validate_dispatch read sequence
+        // (guarded_host.rs) through the real per-run read cache, in
+        // production order. Only the first call costs anything (9
+        // distinct keys); later calls are all cache hits. The block is
+        // read via chain_now_ms (the cached final block).
+        for (contract, method, args) in [
+            ("keyhole-devmo.near", "get_control_state", "{\"token_id\":\"k1\"}"),
+            ("registry", "get_project", "{\"project_id\":\"p000000000000004b\"}"),
+            ("registry", "list_versions", "{\"project_id\":\"p000000000000004b\"}"),
+            ("registry", "get_version_count", "{\"project_id\":\"p000000000000004b\"}"),
+            ("keyhole-devmo.near", "get_value_op", "{\"token_id\":\"k1\",\"op_id\":\"1:abc\"}"),
+            ("keyhole-devmo.near", "get_control_state", "{\"token_id\":\"k1\"}"),
+            ("keyhole-devmo.near", "nft_token", "{\"token_id\":\"k1\"}"),
+            ("keyhole-devmo.near", "get_collateral_binding", "{\"token_id\":\"k1\"}"),
+            ("keyhole-devmo.near", "get_loan", "{\"token_id\":\"k1\"}"),
+        ] {
+            if crate::read_cache::get_view(contract, method, args).is_none() {
+                self.rpc_cost += 1;
+                crate::read_cache::put_view(contract, method, args, json!(null));
+            }
+        }
+        if crate::read_cache::get_block().is_none() {
+            self.rpc_cost += 1;
+            crate::read_cache::put_block(crate::read_cache::BlockCache {
+                hash: [0; 32],
+                height: None,
+                timestamp_ms: self.clock,
+            });
+        }
+        Ok(())
     }
     fn post(&mut self, _j: &Journal, _key: &str, _path: &str) -> Result<(u16, Value), Error> {
         panic!("legacy endpoint must not be reached")
@@ -135,11 +175,34 @@ impl Host for Fixture {
         Ok(self.receipt.clone().unwrap_or_else(||delivery(j,&self.final_delta.unwrap_or(100).to_string())))
     }
     fn now_ms(&mut self) -> Result<u64, Error> {
-        self.rpc_cost += 1;
+        // Round 4: the final block is cached per run (read_cache). The
+        // first read costs 1; later reads are hits.
+        if crate::read_cache::get_block().is_none() {
+            self.rpc_cost += 1;
+            crate::read_cache::put_block(crate::read_cache::BlockCache {
+                hash: [0; 32],
+                height: None,
+                timestamp_ms: self.clock,
+            });
+        }
         Ok(self.clock)
     }
     fn observe(&mut self, _j: &Journal, _key: &str) -> Result<Observation, Error> {
-        self.rpc_cost += 5;
+        // Round 4: 4 fresh reads (mt_balance_of, ft_balance_of,
+        // storage_balance_of, view_account — never cached) + the
+        // storage_balance_bounds, cached after the first observe.
+        self.rpc_cost += 4;
+        if crate::read_cache::get_view("keyhole-devmo.near", "storage_balance_bounds", "{}")
+            .is_none()
+        {
+            self.rpc_cost += 1;
+            crate::read_cache::put_view(
+                "keyhole-devmo.near",
+                "storage_balance_bounds",
+                "{}",
+                json!(null),
+            );
+        }
         Ok(self.obs.clone().unwrap())
     }
     fn post_step(
@@ -739,14 +802,25 @@ fn successful_original_receipt_reconciles_after_recipient_spends(){
 fn canary_drive_rpc_cost_stays_well_under_host_cap(){
  // A full 3-hop drive (the canary path) must stay well under the host's 100
  // near:rpc calls per run. The count is the production-cost model on the
- // Fixture (observe = 5, now_ms = 1, original_delivery = 1), not a live
- // measurement. Measured here: 39. The begin preflight (one more observe)
- // + the minter send (~7) add ~12 more in production, for a modeled canary
- // total of ~51 — still well under 100.
+ // Fixture, now cache-aware (round 4): validate_dispatch replays the
+ // production read sequence through the real per-run read cache (9 on
+ // the first call, 0 after), observe is 4 fresh reads + the cached
+ // storage_balance_bounds, now_ms is the cached block, and the
+ // before-observe reuse means observe runs only 4 times (baseline + 3
+ // after-observes). Measured here: 27 (validate#1 9 + baseline 5 +
+ // 3 after-observes 12 + original_delivery 1). NOTE: within the full
+ // canary the drive is 26, not 27 — get_value_op is already cached from
+ // confirm_admission's post-send re-read, so validate#1 is 8 there.
+ // The full canary (op handler 21 + drive 26 + finish 7 + op tail 1)
+ // is 55 — see op_cost_tests.rs. The round-2 comment that claimed a
+ // modeled canary total of ~51 was wrong: it omitted validate_dispatch
+ // and the op handler, and the true uncached canary is ~150
+ // (round-4 report §3).
  let mut h=Fixture::new();h.spent_recipient=true;let j=journal();
  assert_eq!(drive(&mut h,&j,"key").unwrap()["status"],"success");
  assert_eq!(h.posts.len(),3);assert_eq!(h.finish_calls,1);
  eprintln!("canary drive modelled rpc_cost={}",h.rpc_cost);
+ assert_eq!(h.rpc_cost,27,"drive rpc_cost changed; see the round-4 report §3");
  assert!(h.rpc_cost<50,"rpc_cost={}",h.rpc_cost);
 }
 #[test]

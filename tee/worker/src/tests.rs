@@ -998,7 +998,11 @@ fn holder_withdraw_rejects_mismatched_chain_even_with_valid_external_address() {
 fn host_withdraw_checks_final_owner_before_custody_and_derives_send_receiver() {
     let src = include_str!("main.rs");
     let view = src.split("fn view(").nth(1).unwrap().split("fn holder_tier").next().unwrap();
-    assert!(view.contains("&args.to_string(), \"final\""));
+    // Round 4: view() now consults the per-run read cache before the
+    // host call, and still reads at final finality.
+    assert!(view.contains("read_cache::get_view"));
+    assert!(view.contains("read_cache::put_view"));
+    assert!(view.contains("rpc::view(contract, method, &args_s, \"final\")"));
     let op = src.split("fn op_withdraw(").nth(1).unwrap().split("fn load_prov(").next().unwrap();
     let guard = op.find("assert_withdraw_to(&chain, &to, &c.account, nft.get(\"owner_id\")").unwrap();
     assert!(op[..guard].contains("let nft = view(&keys_contract(), \"nft_token\""));

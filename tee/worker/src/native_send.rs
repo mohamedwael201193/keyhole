@@ -409,6 +409,11 @@ pub fn rebroadcast(
     }
     // Re-submit the EXACT signed bytes (no re-signing, same hash, same nonce).
     let sent = rpc.broadcast_async(&p.signed).is_ok();
+    // Round 4: a send changes on-chain state, so the per-run read cache
+    // is invalidated after the broadcast (the production transport in
+    // native_host.rs invalidates too; this is the shared-code choke point,
+    // and the mock path in tests).
+    crate::read_cache::invalidate();
     // Poll status once to report the current state.
     match rpc.status(&p.hash, &p.signer) {
         Ok(v) => {
@@ -522,6 +527,11 @@ pub fn execute(
     // was accepted — the exact failure that created the lost claim_payout
     // (J5dHg2q…). A tx that is not FINAL yet returns pending WITH the hash.
     let response = rpc.broadcast_async(&p.signed);
+    // Round 4: a send changes on-chain state, so the per-run read cache
+    // is invalidated after the broadcast (the production transport in
+    // native_host.rs invalidates too; this is the shared-code choke point,
+    // and the mock path in tests).
+    crate::read_cache::invalidate();
     if let Ok(v) = response {
         if let Some(ok) = proof(&v, &p) {
             finish(st, &t, if ok { "success" } else { "failure" })?;
@@ -576,6 +586,9 @@ pub fn execute(
                 // top of the loop tells us whether it landed. Ignore the
                 // broadcast result here (a duplicate rejection is harmless).
                 let _ = rpc.broadcast_async(&p.signed);
+                // Round 4: a (re-)send changes on-chain state; invalidate
+                // the per-run read cache after it (see above).
+                crate::read_cache::invalidate();
             }
             Err(_) => {
                 // Not yet FINAL (or a transport error on the poll): a bounded
@@ -844,6 +857,43 @@ mod tests {
         assert!(current(&mut s).unwrap().is_none());
         run(&mut s, &mut w, "ordinary").unwrap();
         assert_eq!(w.async_sends, 2);
+    }
+    #[test]
+    fn execute_invalidates_the_read_cache_after_broadcast() {
+        // Round 4 (d): the cache must never serve a stale value across a
+        // broadcast. `execute` invalidates the per-run read cache after
+        // every broadcast_async call; this test proves it through the
+        // mock: a control value cached before the send is gone after it,
+        // so the next read is fresh.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        crate::read_cache::invalidate();
+        crate::read_cache::put_view(
+            "keys.near",
+            "get_control_state",
+            "{\"token_id\":\"k1\"}",
+            serde_json::json!({"epoch": "0"}),
+        );
+        assert!(crate::read_cache::get_view(
+            "keys.near",
+            "get_control_state",
+            "{\"token_id\":\"k1\"}"
+        )
+        .is_some());
+        run(&mut s, &mut w, "provision").unwrap();
+        assert_eq!(w.async_sends, 1, "the test must have broadcast once");
+        assert!(
+            crate::read_cache::get_view(
+                "keys.near",
+                "get_control_state",
+                "{\"token_id\":\"k1\"}"
+            )
+            .is_none(),
+            "execute() broadcast but the cached control survived it"
+        );
+        assert!(crate::read_cache::get_block().is_none());
+        assert!(crate::read_cache::get_gas_price().is_none());
+        crate::read_cache::invalidate();
     }
     #[test]
     fn ordinary_and_provisioning_interleaving_never_share_live_nonce() {
