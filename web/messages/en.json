@@ -1275,6 +1275,8 @@
       "live": {
         "eyebrow": "Live on mainnet",
         "holders": "Holders",
+        "liens": "Active liens",
+        "event": "Latest key event",
         "verifyTitle": "Verify it yourself",
         "verify": "Verify",
         "stale": "Stale",

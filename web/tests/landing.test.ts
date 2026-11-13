@@ -141,7 +141,8 @@ describe("landing sections (DESIGN_PLAN_V2)", () => {
   });
 
   it("the copy rules: no judge, no competitor names, no value words about a tier", () => {
-    const visible = html.replace(/<[^>]+>/g, " ");
+    // Visible text only: drop script/style bodies and tags, then no "judge" may remain (ids, hrefs and test ids are not visible).
+    const visible = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, " ").replace(/<[^>]+>/g, " ");
     expect(visible).not.toMatch(/judge/i);
     expect(visible).not.toMatch(/\b(rare|valuable|worth|price|profit|investment)\b/i);
   });

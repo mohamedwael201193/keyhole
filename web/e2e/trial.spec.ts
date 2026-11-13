@@ -86,6 +86,8 @@ test("home links the free trial and shows live mainnet stats", async ({ page }) 
   await expect(page.getByTestId("try-free-cta")).toHaveAttribute("href", "/try?start=1");
   await expect(page.getByTestId("mainnet-badge")).toContainText("Live on mainnet");
   await expect(page.getByTestId("stat-holders")).toHaveText("6");
+  await expect(page.getByTestId("stat-liens")).toHaveText("1");
+  await expect(page.getByTestId("stat-event")).toContainText("nft_transfer");
 });
 
 test("home says unavailable when the stats read fails", async ({ page }) => {
@@ -93,6 +95,8 @@ test("home says unavailable when the stats read fails", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("mainnet-badge")).toBeVisible();
   await expect(page.getByTestId("stat-holders")).toHaveText("—");
+  await expect(page.getByTestId("stat-liens")).toHaveText("—");
+  await expect(page.getByTestId("stat-event")).toHaveText("—");
 });
 
 test("the free trial mints, transfers and refuses the old holder", async ({ page }) => {

@@ -2,7 +2,7 @@
 /**
  * Live on mainnet. Keys held by users is the server-read supply (it polls /api/supply when that read failed); Holders is the
  * /api/mainnet-stats panel's own field. A refresh that hangs is aborted and a reply from an older request is ignored. A number
- * older than STATS_MAX_AGE_MS is labelled Stale, not Live. The third tile is the link to /verify. No number is fixed in this file.
+ * older than STATS_MAX_AGE_MS is labelled Stale, not Live. The fifth tile is the link to /verify. No number is fixed in this file.
  */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -59,6 +59,7 @@ export function LiveStats({ supply }: { supply: number | null }) {
   }, []);
 
   const { phase, ageMs } = statsPhase({ stats, receivedAt, now, loading });
+  const event = phase === "unavailable" ? undefined : stats?.latestEvent;
   const tag = phase === "stale" ? `${t("landing2.v2.live.stale")} · ${staleLabel(ageMs ?? 0)}` : phase === "loading" ? t("landing2.v2.live.reading") : phase === "unavailable" ? t("landing2.v2.live.unavailable") : null;
 
   return (
@@ -79,6 +80,22 @@ export function LiveStats({ supply }: { supply: number | null }) {
           <Icon name="layers" size={28} className="lp-stat-ico" />
           <dd data-testid="stat-holders">{num(stats?.holders, phase)}</dd>
           <dt>{t("landing2.v2.live.holders")}</dt>
+        </div>
+        <div className="lp-stat">
+          <Icon name="lock" size={28} className="lp-stat-ico" />
+          <dd data-testid="stat-liens">{num(stats?.activeLiens, phase)}</dd>
+          <dt>{t("landing2.v2.live.liens")}</dt>
+        </div>
+        <div className="lp-stat">
+          <Icon name="swap" size={28} className="lp-stat-ico" />
+          <dd data-testid="stat-event">
+            {phase === "loading" ? "…" : event?.ok && event.value ? (
+              <a href={`https://nearblocks.io/txns/${event.value.hash}`} target="_blank" rel="noreferrer">
+                {event.value.method}
+              </a>
+            ) : "—"}
+          </dd>
+          <dt>{t("landing2.v2.live.event")}</dt>
         </div>
         <div className="lp-stat">
           <Icon name="shield" size={28} className="lp-stat-ico" />
