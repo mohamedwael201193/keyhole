@@ -3,12 +3,13 @@ export const IDENTITY = {
   "_doc": "Single source of truth for live identities. Generate deployment updates with node scripts/gen-identity.mjs --promote-live <public-capture.json>. Refresh generated files with the same script.",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "119e920d97c753fb00c0cb6e1705d01de6a83ed87ee4272d36114bba57aea391",
-    "bytes": 1370784,
-    "add_version_tx": "6tTmKphgDz4FG3WxP8gwN4w8cRaJu2QCXcBzGBhu59ie",
-    "info_call": "41ace198-a27a-462b-a9a3-b4f93be75c2d",
-    "previous_wasm_sha256": "4702420094dbea7d4092476e784905d9503ac63ff8ecc7403331a8e66526f1e0",
+    "wasm_sha256": "0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a",
+    "bytes": 1379425,
+    "add_version_tx": "7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T",
+    "info_call": "2220caa1-90ad-42a6-b281-cfd08cd1b354",
+    "previous_wasm_sha256": "119e920d97c753fb00c0cb6e1705d01de6a83ed87ee4272d36114bba57aea391",
     "historical_wasm_sha256": [
+      "4702420094dbea7d4092476e784905d9503ac63ff8ecc7403331a8e66526f1e0",
       "9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1",
       "ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8",
       "37628ea5a7ab479411d125b0b7393f04f800214257825451cde2f52adbd183f4",
@@ -64,8 +65,8 @@ export const IDENTITY = {
   },
   "worker_candidate": {
     "status": "published-mainnet",
-    "wasm_sha256": "119e920d97c753fb00c0cb6e1705d01de6a83ed87ee4272d36114bba57aea391",
-    "bytes": 1370784,
+    "wasm_sha256": "0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a",
+    "bytes": 1379425,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {
