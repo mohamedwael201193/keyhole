@@ -87,6 +87,7 @@ fn exact_exit_observation(
     }
     let native: Value = serde_json::from_str(&native)
         .map_err(|_| err("exit_readback", "invalid native reserve"))?;
+    let native = native.get("result").cloned().unwrap_or(native);
     exact_exit::decode_readbacks(
         wallet_id,
         exact_exit::Readbacks {
