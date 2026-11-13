@@ -125,7 +125,7 @@ describe("verify", () => {
     expect(staticChecks({ executed_wasm_sha256: h, wasm_hash: "b".repeat(64), tdx_quote: "" })).toEqual({ quote: false, registered: false, published: false });
     expect(publishedBuild(h)).toBe(false);
     expect(publishedBuild(PUBLISHED_WASM_SHA256)).toBe(true);
-    expect(PUBLISHED_WASM_SHA256.startsWith("9e56a212")).toBe(true);
+    expect(PUBLISHED_WASM_SHA256.startsWith("47024200")).toBe(true);
     expect(publishedBuild(PREVIOUS_WASM_SHA256)).toBe(false);
   });
   it("call id is a uuid", () => { expect(CALL_ID.test("e099f957-e3c6-4035-999a-907d9782997e")).toBe(true); expect(CALL_ID.test("../x")).toBe(false); });
