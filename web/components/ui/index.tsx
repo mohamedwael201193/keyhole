@@ -14,6 +14,7 @@ export { Tabs, nextTabIndex, type TabItem } from "./tabs";
 export { Stepper, type StepItem, type StepState } from "./stepper";
 export { ToastProvider, ToastList, useToast, type ToastItem, type ToastTone, type ToastInput } from "./toast";
 export { EmptyState } from "./empty-state";
+export { Checkbox, Toggle, type CheckboxProps, type ToggleProps } from "./checkbox";
 
 /** One design system for the dense pages: badges, steps, proof drawers, spinners, skeletons, glossary terms. */
 

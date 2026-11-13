@@ -3,12 +3,12 @@ import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 
 /**
- * One button for every flow. Variants: primary (3D teal), secondary (outline), ghost (text), danger (destructive; confirm steps only),
+ * One button for every flow. Three styles: primary (teal), secondary (outline), quiet (text; `ghost` is the same style under its old name). Also danger (destructive; confirm steps only),
  * banner (light, on the dark green surface). Renders a <button>, or a Next <Link> when `href` is given. `loading` keeps the variant
  * colours, adds a spinner, sets aria-busy and blocks repeat presses. `icon` is a decorative icon before the label.
  * Disabled is flat grey. Styles: app/polish.css (.kh-btn) and app/ui.css (.kh-btn--danger, .kh-btn-icon).
  */
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "banner" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "quiet" | "ghost" | "banner" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 type Common = {

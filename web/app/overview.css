@@ -213,18 +213,18 @@
 /* ---- Density: fit Overview on 1440x900 / 1280x800 without vertical scroll; readable at 390px ---- */
 .app-main .ov { padding: var(--space-4) var(--space-5) var(--space-5); gap: var(--space-3); }
 .ov .v7-page-head { margin: 0 0 var(--space-3); gap: var(--space-2) var(--space-4); }
-.ov .v7-page-title { font-size: 36px; line-height: 1.05; }
-.ov .v7-page-lead { margin-top: 8px; font-size: 14px; line-height: 1.45; max-width: 56ch; }
+.ov .v7-page-title { font-size: var(--ds-title); line-height: 1.05; }
+.ov .v7-page-lead { margin-top: 8px; font-size: var(--ds-lead); line-height: 1.45; max-width: 56ch; }
 .ov .v7-eyebrow { margin-bottom: 8px; }
 .ov .v7-hero { min-height: 132px; padding: var(--space-4) var(--space-5); }
-.ov .v7-hero-value { font-size: 40px; gap: 10px; margin-top: 0; }
+.ov .v7-hero-value { font-size: var(--ds-figure); gap: 10px; margin-top: 0; }
 .ov .v7-hero-label { font-size: 13px; }
 .ov .v7-hero-sub { font-size: 13px; margin-top: 2px; }
 .ov .v7-hero-actions { margin-top: var(--space-3); gap: var(--space-2); }
-.ov .v7-hero-chip { top: var(--space-3); right: var(--space-3); min-height: 28px; padding: 0 12px; font-size: 12px; }
+.ov .v7-hero-chip { top: var(--space-3); right: var(--space-3); min-height: 28px; padding: 0 12px; font-size: var(--ds-small); }
 .ov .v7-card { padding: var(--space-4); }
 .ov .v7-card-head { margin-bottom: var(--space-3); }
-.ov .v7-card-h { font-size: 20px; }
+.ov .v7-card-h { font-size: var(--ds-section); }
 .ov-cols { gap: var(--space-3); grid-template-columns: 210px minmax(0, 1fr) 280px; }
 .ov-mid { gap: var(--space-3); }
 .ov-pair { gap: var(--space-3); }
@@ -250,14 +250,14 @@
 }
 @media (max-width: 899px) {
   .app-main .ov { padding: var(--space-4) var(--space-3) var(--space-5); gap: var(--space-3); }
-  .ov .v7-page-title { font-size: 32px; }
+  .ov .v7-page-title { font-size: var(--ds-title-md); }
   .ov .v7-hero { padding: var(--space-4); min-height: 0; }
   .ov .v7-hero-value { font-size: 34px; }
   .ov-key--foil .ov-art .ov-foil.foil-card { width: 100%; }
   .ov-art .ov-foil.foil-card { width: min(100%, 200px); }
 }
 @media (max-width: 419px) {
-  .ov .v7-page-title { font-size: 28px; }
+  .ov .v7-page-title { font-size: var(--ds-title-sm); }
   .ov-key--foil .ov-art .ov-foil.foil-card { width: 100%; }
   .ov-art .ov-foil.foil-card { width: min(100%, 180px); }
   .ov-key:not(.ov-key--foil), .ov-sample:not(.ov-key--foil) { padding: var(--space-3); }

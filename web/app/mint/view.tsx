@@ -1,7 +1,9 @@
 "use client";
 import { useEffect } from "react";
 import { ErrorBox, Attested, OfflineState } from "@/components/Result";
-import { TxResult } from "@/components/TxResult";
+import Link from "next/link";
+import { InCardProgress, InCardSuccess } from "@/components/InCard";
+import { nearTx } from "@/lib/explorer";
 import { TxLinkPill, Card, CardHeader, EmptyState, Icon, PageHeader, TierChip } from "@/components/v7";
 import { KEYS_CONTRACT } from "@/lib/config";
 import { useI18n } from "@/lib/i18n";
@@ -112,19 +114,19 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                 {t("mint.capsLine", { finish: t(`finish.${idn.finish}`), tx: fmtUsd(idn.perTx * 1e6), day: fmtUsd(idn.daily * 1e6) })}
               </p>
               <div className="km-result">
-                <TxResult
-                  state="confirmed"
-                  title={t("mint.done")}
-                  hash={typeof o.tx === "string" ? o.tx : undefined}
-                  callId={m.res?.call_id ?? undefined}
+                <InCardSuccess
                   testid="mint-result"
+                  title="Confirmed"
+                  amount={t("mint.done")}
+                  link={typeof o.tx === "string" ? { href: nearTx(o.tx), label: "View transaction", testid: "mint-tx-link" } : null}
+                  actions={<>
+                    <Button href={dashHref("/vault")} testid="mint-open-vault">{t("mint.openVault")}</Button>
+                    <Button href={dashHref("/swap")} variant="secondary" testid="mint-swap">{t("mint.swap")}</Button>
+                  </>}
                 >
                   {typeof o.tx === "string" && <MintTxSave hash={o.tx} />}
-                  <div className="km-next">
-                    <Button href={dashHref("/vault")} size="lg" testid="mint-open-vault">{t("mint.openVault")}</Button>
-                    <Button href={dashHref("/swap")} variant="secondary" size="lg" testid="mint-swap">{t("mint.swap")}</Button>
-                  </div>
-                </TxResult>
+                  {m.res?.call_id && <p className="ic-note"><Link href={dashHref(`/verify?call=${encodeURIComponent(m.res.call_id)}`)} data-testid="mint-verify-link">See your proof</Link></p>}
+                </InCardSuccess>
               </div>
             </Card>
           ) : (
@@ -184,7 +186,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                       {m.busy ? m.label : "Mint Bronze Key"}
                     </Button>
                     <p className="km-note"><Icon name="shield" size={16} /> You will sign once. The TEE-held minter will mint the NFT to you.</p>
-                    {m.busy && m.stage !== "wallet" && <TxResult state="pending" title="Waiting for the enclave" testid="mint-pending" />}
+                    {m.busy && m.stage !== "wallet" && <InCardProgress title="Minting your key…" line="Waiting for the enclave" testid="mint-pending" />}
                     {m.res?.error && <ErrorBox code={m.res.error.code} retryAfter={m.res.error.retry_after} />}
                     {m.res && !m.res.error && m.res.call_id && <Attested r={m.res} />}
                   </div>

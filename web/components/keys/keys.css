@@ -54,7 +54,7 @@
 }
 .kg-tile-pick:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
 .kg-tile-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 14px 14px 0; }
-.kg-tile-no { font: 500 12px/1 var(--font-mono); color: var(--muted); white-space: nowrap; }
+.kg-tile-no { font: 500 var(--ds-small)/1 var(--font-mono); color: var(--muted); white-space: nowrap; }
 /* Animated foil key face (restored from pre-v7 KeyCard / FoilCard). */
 .kg-tile-pick { background: transparent; padding: 10px 10px 0; }
 .kg-tile .kg-foil.foil-card,
@@ -69,7 +69,7 @@
 .kg-tile-name { font: 600 22px/1.15 var(--font-display); color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
 .kg-tile-name:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
 .kg-tile-name:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
-.kg-tile-tid { margin: 0; font: 400 12px/1.4 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.kg-tile-tid { margin: 0; font: 400 var(--ds-small)/1.4 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
 .kg-tile-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; margin-top: 4px; }
 .kg-tile-meta .v7-chip { max-width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; padding-block: 6px; }
 .kg-tile-cap { font: 600 14px/1.3 var(--font-ui); color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -158,7 +158,7 @@
 }
 .kd-page .kb-card h2, .kd-page .kp-card h2, .kd-page .sale-card h2 { margin: 4px 0 var(--space-3); font: 600 26px/1.15 var(--font-display); letter-spacing: 0; color: var(--ink); }
 .kd-page .kb-card > .eb, .kd-page .kp-card > .eb, .kd-page .sale-card > .eb, .kd-page .sale-record > .eb {
-  margin: 0 0 6px; font: 500 12px/1.2 var(--font-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--rust);
+  margin: 0 0 6px; font: 500 var(--ds-small)/1.2 var(--font-mono); letter-spacing: .24em; text-transform: uppercase; color: var(--rust);
 }
 .kd-page .sale-record { margin-top: var(--space-4); }
 .kd-page .sale-record h3 { margin: 4px 0 var(--space-3); font: 600 22px/1.2 var(--font-display); color: var(--ink); }
@@ -171,7 +171,7 @@
 .kd-page .khold .ktable .kr, .kd-page .klog li {
   padding: 12px 0; border-bottom: 1px solid var(--line); font: 500 14px/1.45 var(--font-ui); color: var(--ink);
 }
-.kd-page .khold .ktable .kr.kh, .kd-page .klog li:first-child { font: 600 12px/1.3 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.kd-page .khold .ktable .kr.kh, .kd-page .klog li:first-child { font: 600 var(--ds-small)/1.3 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .kd-page .klog ol { list-style: none; margin: 0; padding: 0; }
 .kd-page .khead { font: 500 13px/1.5 var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
 

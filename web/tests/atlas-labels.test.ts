@@ -3,7 +3,7 @@ import { ATLAS } from "@/lib/evidence";
 import { EXPLORER_HOST, explorerLabelKey } from "@/lib/atlasLabels";
 import { translate } from "@/lib/i18n";
 
-const NAME: Record<string, string> = { near: "NearBlocks", base: "Basescan", sol: "Solscan" };
+const NAME: Record<string, string> = { near: "NearBlocks", base: "BaseScan", sol: "Solscan" };
 
 describe("atlas explorer labels name the explorer their link opens", () => {
   it("each chain's label names its explorer", () => {

@@ -21,11 +21,9 @@ export function FundOrderCard({ order, status, statusErr, terminal, onClear }: {
     ? (statusErr ? "Status unavailable right now. Retrying every 10 seconds." : "Checking status…")
     : `${statusOf(status.status).label}. ${statusOf(status.status).where}`;
   return (
-    <section className="vlt-order" data-testid="fund-order-card" aria-label={terminal ? "Deposit finished" : "Deposit in progress"}>
-      <div className="vlt-cardhead">
-        <b>{terminal ? "Deposit finished" : "Deposit in progress"}</b>
-        <span className="vlt-sub" data-testid="fund-order-status">{statusText}</span>
-      </div>
+    <section className="ic vlt-order" data-testid="fund-order-card" aria-label={terminal ? "Deposit finished" : "Deposit in progress"} aria-busy={!terminal}>
+      <p className="ic-title">{!terminal && <span className="spin" aria-hidden="true" />}{terminal ? "Deposit finished" : "Deposit in progress…"}</p>
+      <p className="ic-sub" role="status" data-testid="fund-order-status">{statusText}</p>
       <p className="vlt-sub">Send <b>{order.amountIn ?? "—"} {order.originSymbol}</b> on {chain} to the deposit address below. The vault receives about {order.amountOut ?? "—"} {order.destSymbol}.</p>
       <div className="vlt-box ro"><span className="v addr" data-testid="fund-order-address">{order.depositAddress}</span><CopyButton value={order.depositAddress} label="Copy address" /></div>
       {order.amountIn && <div className="vlt-actions"><span className="vlt-sub">Amount: <b>{order.amountIn} {order.originSymbol}</b></span><CopyButton value={order.amountIn} label="Copy amount" /></div>}

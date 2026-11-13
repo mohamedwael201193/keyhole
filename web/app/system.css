@@ -1,0 +1,104 @@
+/*
+ * KEYHOLE app design system, the last stylesheet. It governs the seven dashboard sections (Overview, Swap, Vault, Keys, Pledge,
+ * Activity, My proof) inside .app-main, and nothing on the public site. Tokens live in tokens.css (--ds-*, --space-*, --radius-*).
+ *
+ *   Type     heading = --font-display (Cormorant), body = --font-ui (Inter), mono = hashes and figures only.
+ *            Scale: title 36 / section 20 / body 15 / small 13 (the floor). No heading is bigger than the page title.
+ *   Card     one surface: raised cream, 18px radius, one hairline edge, one soft shadow, 16px padding.
+ *   Button   three styles: primary (teal), secondary (outline), quiet (text). The 44px tap height holds on a phone.
+ *   Link     one style: teal text, underline on hover and focus, 3px offset.
+ *   Control  Checkbox and Toggle (components/ui/checkbox.tsx) replace the browser defaults.
+ *   Details  one collapsed disclosure for everything technical (.kh-details).
+ */
+
+/* ---------- Cards: one style ---------- */
+.app-main :is(.kh-card, .v7-card) {
+  background: var(--raised);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-4);
+}
+.app-main :is(.kh-card, .v7-card) > :is(h2, h3) {
+  margin: 0 0 var(--space-2);
+  font: 600 var(--ds-section)/1.2 var(--font-display);
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.app-main .kh-card > p { font-size: var(--ds-body); line-height: 1.55; color: var(--ink-2); margin: 0 0 var(--space-3); }
+
+/* ---------- Buttons: primary, secondary, quiet ---------- */
+.app-main .kh-btn { min-height: 44px; font-size: var(--ds-body); }
+.app-main .kh-btn--sm { min-height: 40px; font-size: var(--ds-small); }
+.kh-btn--quiet { --kh-btn-bg: transparent; --kh-btn-fg: var(--teal); --kh-btn-bd: transparent; padding: 0 var(--space-3); }
+.kh-btn--quiet:not(:disabled):not([aria-disabled="true"]):hover { --kh-btn-bg: var(--primary-soft); transform: none; }
+.kh-btn--quiet:not(:disabled):not([aria-disabled="true"]):active { --kh-btn-shadow: none; }
+
+/* ---------- Links: one style (teal, underlined, 3px offset; the result and transaction links use it too) ---------- */
+.app-main :is(p, li, dd, small, summary, .kh-panel-note, .vlt-note, .vlt-sub) a:not(.kh-btn):not(.app-link):not(.app-tab):not(.v7-pill-link):not(.v7-icon-btn):not(.v7-card-link):not(.ulink):not(.txl a),
+.app-main .ic-link, .app-main .txl a, .app-main .kh-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.app-main :is(p, li, dd, small, summary) a:not(.kh-btn):not(.app-link):not(.app-tab):not(.v7-pill-link):not(.v7-icon-btn):not(.v7-card-link):not(.ulink):hover,
+.app-main .ic-link:hover, .app-main .txl a:hover { text-decoration-thickness: 2px; }
+.txl { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+.txl .alt { font-size: var(--ds-small); opacity: 1; }
+.app-main a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* ---------- Checkbox and Toggle ---------- */
+.kh-check, .kh-toggle { display: flex; align-items: flex-start; gap: var(--space-3); min-height: 44px; padding: var(--space-2) 0; cursor: pointer; }
+.kh-toggle { cursor: default; }
+.kh-check.is-disabled, .kh-toggle.is-disabled { opacity: .55; cursor: not-allowed; }
+.kh-check-text { display: grid; gap: 2px; min-width: 0; padding-top: 2px; }
+.kh-check-label { font: 500 var(--ds-body)/1.4 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
+.kh-check-hint { font: 400 var(--ds-small)/1.45 var(--font-ui); color: var(--muted); }
+
+.kh-check { position: relative; }
+.kh-check-input { position: absolute; z-index: 1; width: 24px; height: 24px; margin: 0; opacity: 0; cursor: inherit; left: 0; top: 10px; }
+.kh-check-box {
+  flex: none; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
+  background: var(--raised); border: 1.5px solid var(--field); color: transparent;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.kh-check:hover .kh-check-box { border-color: var(--primary); }
+.kh-check-input:checked + .kh-check-box { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.kh-check-input:focus-visible + .kh-check-box { box-shadow: var(--focus-ring); border-color: var(--primary); }
+.kh-check-input:disabled + .kh-check-box { background: var(--sunken); }
+
+.kh-toggle-btn { flex: none; padding: 0; border: 0; background: none; border-radius: var(--radius-pill); cursor: pointer; min-width: 44px; min-height: 28px; display: inline-grid; align-items: center; }
+.kh-toggle-btn:disabled { cursor: not-allowed; }
+.kh-toggle-track { position: relative; width: 44px; height: 26px; border-radius: var(--radius-pill); background: var(--neutral-bg); border: 1.5px solid var(--field); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+.kh-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: var(--raised); box-shadow: 0 1px 3px rgba(60,40,20,.35); transition: transform var(--dur-fast) var(--ease-out); }
+.kh-toggle-btn[aria-checked="true"] .kh-toggle-track { background: var(--primary); border-color: var(--primary); }
+.kh-toggle-btn[aria-checked="true"] .kh-toggle-thumb { transform: translateX(18px); }
+.kh-toggle-btn:focus-visible { outline: none; }
+.kh-toggle-btn:focus-visible .kh-toggle-track { box-shadow: var(--focus-ring); }
+@media (prefers-reduced-motion: reduce) { .kh-check-box, .kh-toggle-track, .kh-toggle-thumb { transition: none; } }
+
+/* ---------- Details: the one collapsed disclosure ---------- */
+.kh-details { margin-top: var(--space-3); font-size: var(--ds-small); color: var(--muted); }
+.kh-details > summary { cursor: pointer; width: fit-content; min-height: 32px; display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; color: var(--primary); list-style: none; }
+.kh-details > summary::-webkit-details-marker { display: none; }
+.kh-details > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform var(--dur-fast) var(--ease-out); }
+.kh-details[open] > summary::before { transform: rotate(45deg); }
+.kh-details > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.kh-details > :not(summary) { margin: var(--space-2) 0 0; line-height: 1.55; overflow-wrap: anywhere; }
+
+/* ---------- Panel: a card with a title, one simple line, controls and an optional Details ---------- */
+.kh-panel { display: grid; gap: var(--space-3); align-content: start; min-width: 0; }
+.kh-panel > h2 { margin: 0; }
+.kh-panel-line { margin: 0; font-size: var(--ds-body); line-height: 1.5; color: var(--ink-2); }
+.kh-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.kh-panel-note { margin: 0; font-size: var(--ds-small); line-height: 1.5; color: var(--muted); }
+
+/* ---------- Lists and tables ---------- */
+.app-main table { width: 100%; border-collapse: collapse; font-size: var(--ds-body); }
+.app-main table :is(th, td) { padding: var(--space-3); text-align: start; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.app-main table th { font: 600 var(--ds-small)/1.3 var(--font-ui); color: var(--muted); letter-spacing: .02em; }
+.app-main table tr:last-child td { border-bottom: 0; }
+
+/* Touch: no double-tap zoom delay on the controls */
+.kh-check, .kh-toggle-btn, .kh-details > summary, .app-main .kh-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }

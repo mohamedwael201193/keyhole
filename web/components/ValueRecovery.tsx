@@ -17,8 +17,9 @@ export async function chainSaysNonePending(tokenId: string, read: (t: string) =>
 
 /**
  * One quiet line inside the card of the operation that is waiting on an earlier one. It is never a page-level card.
- * With a live session the enclave's status is read once in the background (no signature); when it reports nothing pending the
- * local lock is cleared by itself. Confirming the original operation is a money-adjacent check, so the worker still asks for one
+ * With a live session the enclave's status is read in the background (no signature), re-checked on a timer and on focus;
+ * the local lock is cleared only when the enclave reports nothing pending AND the public contract view agrees.
+ * Confirming the original operation is a money-adjacent check, so the worker still asks for one
  * wallet signature (the session is not accepted for it) and this line shows a single "Confirm" button for it.
  */
 export function ValueRecovery({ testid = "value-recovery" }: { testid?: string } = {}) {
@@ -26,7 +27,7 @@ export function ValueRecovery({ testid = "value-recovery" }: { testid?: string }
   const [rows, setRows] = useState<Recovery[]>([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
-    useEffect(() => {
+  useEffect(() => {
     const read = () => { try { setRows(accountId ? recoveries(accountId) : []); } catch { setRows([]); } };
     read();
     addEventListener("storage", read); addEventListener("keyhole-recovery", read);
@@ -75,14 +76,14 @@ export function ValueRecovery({ testid = "value-recovery" }: { testid?: string }
     <div className="kh-quiet" data-testid={testid} role="status">
       <span className="kh-quiet-line">
         {(busy || r) && <span className="spin kh-quiet-spin" aria-hidden="true" />}
-        <span>{note && !r ? note : "Confirming an earlier transaction. New ones wait until it's confirmed."}</span>
+        <span>{note && !r ? note : "Confirming an earlier deposit… no funds at risk"}</span>
         {r && <Button size="sm" variant="secondary" loading={busy} loadingLabel="Confirming" onClick={() => void confirm(r)} testid={`${testid}-confirm`}>Confirm</Button>}
       </span>
       {note && r && <span className="kh-quiet-note">{note}</span>}
       {r && (
         <details className="kh-details">
           <summary>Details</summary>
-          <p>Reference <code>{r.value_op_id}</code> (not a transaction hash). Confirming asks your wallet for one signature and never starts anything new.</p>
+          <p>Reference <code>{r.value_op_id}</code> (a reference, not a transaction). Confirming asks your wallet for one signature and never starts anything new.</p>
         </details>
       )}
     </div>

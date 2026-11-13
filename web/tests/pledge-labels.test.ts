@@ -94,13 +94,13 @@ describe("pledge status labels", () => {
         if (state === "UnlockPending") {
           expect(policyAction(state, "retry")).toBe("Retry account unlock");
           expect(policyAction(state, "check")).toBe("Check unlock status");
-          expect(policyAction(state, "unknown")).toContain("pending / UNKNOWN");
+          expect(policyAction(state, "unknown")).toContain("still unconfirmed");
         }
         if (state === "DisbursementPending") {
           const copy = disbursementCopy(owns, "0.01");
           expect(copy.heading).toBe(owns ? "Claim the loan" : "Waiting for the borrower");
           if (!owns) {
-            expect(copy.text).toBe("Waiting for borrower to claim. No repayment clock yet. A failed or UNKNOWN cashout starts no debt.");
+            expect(copy.text).toBe("Waiting for borrower to claim. No repayment clock yet. A failed or unconfirmed cashout starts no debt.");
             expect(copy.text).not.toContain("your wallet");
             expect(copy.heading).not.toContain("Claim");
           } else {
@@ -202,7 +202,7 @@ describe("pledge copy in the live page", () => {
     expect(css).toMatch(/min-height:\s*44px/);
     const mobile = css.slice(css.indexOf("@media (max-width: 650px)"));
     expect(mobile).toContain("font-size: 14px");
-    expect(mobile).toContain("font-size: 12px");
+    expect(mobile).toContain("font-size: var(--ds-small)"); // 13px, the app floor
     expect(mobile).not.toContain("font-size: 11px");
     expect(mobile).toContain("min-height: 44px");
   });

@@ -22,6 +22,6 @@ export function useValueLock(): { locked: boolean; rows: Recovery[] } {
   return { locked: rows.length > 0, rows };
 }
 
-export const LOCK_NOTE = "Confirming an earlier transaction. New ones wait until it's confirmed.";
+export const LOCK_NOTE = "Confirming an earlier deposit… no funds at risk.";
 /** The label every locked action button shows (with a small spinner). */
-export const LOCK_LABEL = "Confirming earlier transaction…";
+export const LOCK_LABEL = "Confirming earlier deposit…";
