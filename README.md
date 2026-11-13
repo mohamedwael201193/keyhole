@@ -42,8 +42,7 @@ git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
 git fetch --depth 1 origin 33bc30728866088ad7c4d70f4fe4ceeb5a77d216
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"
-```
+test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```
 <!-- JUDGE-CHECKOUT:END -->
 
 ```bash
@@ -58,8 +57,7 @@ No git? Download all three files from that same immutable source commit and run 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/judge/0-live.sh -o keyhole-live.sh
 curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/identity.json -o identity.json
-IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/identity.json -o identity.jsonIDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
 
@@ -623,7 +621,7 @@ Contract configuration at capture (historical; `beats` grows with each heartbeat
 
 </details>
 
-**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) reproduces the **unpublished V2 source candidate** in [candidate identity](docs/evidence/worker-provisioning/candidate.json); the separate published guarded worker remains `62398a8a…cc307f`, 1,085,333 bytes. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json). `node scripts/check-worker-candidate.mjs` compares this checkout with the candidate bytes; recorded live attestations retain the separate published hash. Earlier proofs such as `dc3668db` retain their own historical build and remain verifiable, but do not match today's rebuild. The worker sha256 identifies KEYHOLE code; the TDX measurement names the OutLayer runtime. Published code is not proof that lending or a provider policy pilot is enabled: lending stays OFF.
+**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) reproduces the **unpublished V2 source candidate** in [candidate identity](docs/evidence/worker-provisioning/candidate.json); the separate published guarded worker remains `ed0f614a…a1b8`, 1,353,458 bytes. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json). `node scripts/check-worker-candidate.mjs` compares this checkout with the candidate bytes; recorded live attestations retain the separate published hash. Earlier proofs such as `dc3668db` retain their own historical build and remain verifiable, but do not match today's rebuild. The worker sha256 identifies KEYHOLE code; the TDX measurement names the OutLayer runtime. Published code is not proof that lending or a provider policy pilot is enabled: lending stays OFF.
 
 The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` call is the one the browser verifier shows by default. Each earlier build was published with the same `add_version` method and has its own FastFS upload. [`identity.json`](identity.json) is the single source for the live build, the contract hashes and the publish transaction. `node scripts/gen-identity.mjs --check` fails CI when generated files drift.
 
@@ -666,8 +664,7 @@ git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
 git fetch --depth 1 origin 33bc30728866088ad7c4d70f4fe4ceeb5a77d216
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"
-```
+test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```
 <!-- JUDGE-CHECKOUT:END -->
 
 ```bash
