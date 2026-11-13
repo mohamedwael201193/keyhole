@@ -535,31 +535,31 @@
   },
   {
    "id": "worker-deployed",
-   "claim": "The live worker build is ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8 (tee/worker/DEPLOYED_SHA256)",
+   "claim": "The live worker build is 9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1 (tee/worker/DEPLOYED_SHA256)",
    "where": "README.md:104",
    "evidence_type": "file",
    "evidence": "tee/worker/DEPLOYED_SHA256",
    "check": {
     "type": "grep",
     "path": "tee/worker/DEPLOYED_SHA256",
-    "pattern": "^ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8\\s*$"
+    "pattern": "^9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1\\s*$"
    },
-   "expected": "ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8",
+   "expected": "9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1",
    "verify": "node judge/verify-claims.mjs --only worker-deployed"
   },
   {
    "id": "worker-fastfs",
-   "claim": "The live worker wasm (1353458 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
+   "claim": "The live worker wasm (1365082 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
    "where": "README.md:104",
    "evidence_type": "OutLayer call",
-   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8.wasm",
+   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1.wasm",
    "check": {
     "type": "fastfs",
-    "sha256": "ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8",
-    "bytes": 1353458
+    "sha256": "9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1",
+    "bytes": 1365082
    },
-   "expected": "sha256 == DEPLOYED_SHA256, 1353458 bytes",
-   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8.wasm | sha256sum"
+   "expected": "sha256 == DEPLOYED_SHA256, 1365082 bytes",
+   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1.wasm | sha256sum"
   },
   {
    "id": "att-dc3668db-build",
@@ -1091,17 +1091,17 @@
    "verify": "node judge/verify-claims.mjs --only att-369f522d"
   },
   {
-   "id": "att-ed2c7a62",
-   "claim": "Attested call ed2c7a62 linked from README.md",
+   "id": "att-5dc50687",
+   "claim": "Attested call 5dc50687 linked from README.md",
    "where": "README.md:106",
    "evidence_type": "OutLayer call",
-   "evidence": "https://api.outlayer.ai/attestations/by-call/ed2c7a62-411f-4f8f-b06d-b214898e0ec4",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/5dc50687-1c19-4785-997b-29f8fdda3bcf",
    "check": {
     "type": "attestation",
-    "call": "ed2c7a62-411f-4f8f-b06d-b214898e0ec4"
+    "call": "5dc50687-1c19-4785-997b-29f8fdda3bcf"
    },
    "expected": "attestation exists, executed == wasm_hash",
-   "verify": "node judge/verify-claims.mjs --only att-ed2c7a62"
+   "verify": "node judge/verify-claims.mjs --only att-5dc50687"
   },
   {
    "id": "att-0847b924",
@@ -1832,6 +1832,19 @@
    "verify": "node judge/verify-claims.mjs --only att-962d4374"
   },
   {
+   "id": "att-ed2c7a62",
+   "claim": "Attested call ed2c7a62 linked from README.md",
+   "where": "README.md:635",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/ed2c7a62-411f-4f8f-b06d-b214898e0ec4",
+   "check": {
+    "type": "attestation",
+    "call": "ed2c7a62-411f-4f8f-b06d-b214898e0ec4"
+   },
+   "expected": "attestation exists, executed == wasm_hash",
+   "verify": "node judge/verify-claims.mjs --only att-ed2c7a62"
+  },
+  {
    "id": "att-116641a2",
    "claim": "Attested call 116641a2 linked from README.md",
    "where": "README.md:636",
@@ -2239,18 +2252,18 @@
    "verify": "node judge/verify-claims.mjs --only tx-H8qJNgox"
   },
   {
-   "id": "tx-GXZtL6hg",
-   "claim": "Mainnet transaction GXZtL6hg… linked from README.md (succeeded)",
+   "id": "tx-7fRT8Uee",
+   "claim": "Mainnet transaction 7fRT8Uee… linked from README.md (succeeded)",
    "where": "README.md:105",
    "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5",
+   "evidence": "https://nearblocks.io/txns/7fRT8UeeDwwfrEs2qpsYDuHrcufUmCHwcdDnZ7vF54xk",
    "check": {
     "type": "tx",
-    "hash": "GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5",
+    "hash": "7fRT8UeeDwwfrEs2qpsYDuHrcufUmCHwcdDnZ7vF54xk",
     "expect": "success"
    },
    "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node judge/verify-claims.mjs --only tx-GXZtL6hg"
+   "verify": "node judge/verify-claims.mjs --only tx-7fRT8Uee"
   },
   {
    "id": "tx-5CYYbe6Z",
@@ -2784,6 +2797,20 @@
    },
    "expected": "transaction found on mainnet with no failed receipt",
    "verify": "node judge/verify-claims.mjs --only tx-4XrNsFhg"
+  },
+  {
+   "id": "tx-GXZtL6hg",
+   "claim": "Mainnet transaction GXZtL6hg… linked from README.md (succeeded)",
+   "where": "README.md:635",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5",
+   "check": {
+    "type": "tx",
+    "hash": "GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-GXZtL6hg"
   },
   {
    "id": "tx-B6GReQmb",
@@ -9237,7 +9264,7 @@
   },
   {
    "id": "site-hash",
-   "claim": "Home page names the live build ed0f614a",
+   "claim": "Home page names the live build 9e56a212",
    "where": "README.md:104",
    "evidence_type": "live site",
    "evidence": "https://keyhole-seven.vercel.app",
@@ -9245,9 +9272,9 @@
     "type": "http",
     "url": "https://keyhole-seven.vercel.app/",
     "status": 200,
-    "contains": "ed0f614a"
+    "contains": "9e56a212"
    },
-   "expected": "home carries ed0f614a",
+   "expected": "home carries 9e56a212",
    "verify": "node judge/verify-claims.mjs --only site-hash"
   },
   {

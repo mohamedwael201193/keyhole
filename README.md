@@ -90,7 +90,7 @@ This is an internal reproducible review of the repository, not an independent au
 
 This block is generated from [`identity.json`](identity.json) by `node scripts/gen-identity.mjs`. Do not edit it by hand.
 
-The live worker is `ed0f614a` (1,353,458 bytes).
+The live worker is `9e56a212` (1,365,082 bytes).
 
 | Piece | Live value | Proof |
 |---|---|---|
@@ -101,9 +101,9 @@ The live worker is `ed0f614a` (1,353,458 bytes).
 | Contract code hash | `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH` | deploy tx [`6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h) |
 | Contract wasm sha256 | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` | [`contracts/keys/release/v2.7/keyhole_keys.wasm`](contracts/keys/release/v2.7/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
-| Worker wasm sha256 | `ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
-| Worker publish tx | `GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5` | [nearblocks](https://nearblocks.io/txns/GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5) |
-| Live `info` call | `ed2c7a62-411f-4f8f-b06d-b214898e0ec4` | [attestation](https://api.outlayer.ai/attestations/by-call/ed2c7a62-411f-4f8f-b06d-b214898e0ec4) · [verify](https://keyhole-seven.vercel.app/verify?call=ed2c7a62-411f-4f8f-b06d-b214898e0ec4) |
+| Worker wasm sha256 | `9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
+| Worker publish tx | `7fRT8UeeDwwfrEs2qpsYDuHrcufUmCHwcdDnZ7vF54xk` | [nearblocks](https://nearblocks.io/txns/7fRT8UeeDwwfrEs2qpsYDuHrcufUmCHwcdDnZ7vF54xk) |
+| Live `info` call | `5dc50687-1c19-4785-997b-29f8fdda3bcf` | [attestation](https://api.outlayer.ai/attestations/by-call/5dc50687-1c19-4785-997b-29f8fdda3bcf) · [verify](https://keyhole-seven.vercel.app/verify?call=5dc50687-1c19-4785-997b-29f8fdda3bcf) |
 
 The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.7/identity.json`](contracts/keys/release/v2.7/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
@@ -210,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `676 claims: 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `678 claims: 365 PASS, 0 FAIL, 0 ERROR, 313 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the verification path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -260,7 +260,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (676 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (678 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 365 PASS, 0 FAIL, 0 ERROR, 313 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Free trial on [/try](https://keyhole-seven.vercel.app/try) | **Real testnet** for the key (mint, tier, transfer, refusal). Each guest receives 0.05 testnet NEAR (`GUEST_DEPOSIT_YOCTO`). The vault trade on that page is a **recorded mainnet** swap, labelled recorded on mainnet | [`docs/trial/testnet.json`](docs/trial/testnet.json) · [verify the recorded swap](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) |

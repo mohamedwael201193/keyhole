@@ -1,5 +1,5 @@
 {
-  "status": "source-candidate-not-published",
+  "status": "published-mainnet",
   "wasm_sha256": "9e56a21208b4f7166408e1633c4583492ff490589da97715de1f9607f556dce1",
   "bytes": 1365082,
   "recipe": "tee/worker/build.sh"
