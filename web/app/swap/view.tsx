@@ -24,11 +24,13 @@ import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/token
 import { minutesLeft } from "@/lib/session";
 import { LOCK_LABEL, useValueLock } from "@/lib/valueLock";
 import { ValueRecovery } from "@/components/ValueRecovery";
+import { vaultCacheInvalidate, vaultCacheKey } from "@/lib/vaultCache";
+import { listFailedSwaps, recordFailedSwap } from "@/lib/failedSwaps";
 import "./swap.css";
 import { dashHref } from "@/lib/dashboardSections";
 
 type Quote = { amountInFormatted?: string; amountOutFormatted?: string; amountInUsd?: string; amountOutUsd?: string; minAmountOut?: string; timeEstimate?: number };
-type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; status?: string };
+type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; status?: string; callId?: string };
 type Done = { give: string; decimals: number; symbol: string };
 
 /** The vault's own two assets. They are the pair on first paint and the only choice when the full token list cannot load. */
@@ -83,8 +85,10 @@ export function SwapView() {
   const { held, keyMiss, lookingUp, failed } = heldFrom(store, accountId);
   const quote = useSigned("quote");
   const swap = useSigned("swap");
-  const balance = useSigned("balance");
-  const history = useSigned("history");
+  // The balance and the history are session-scoped cached reads: navigating away and back serves the last answer
+  // instead of re-running the ~8 s attested read. Mutations invalidate them (see the success/failure effects).
+  const balance = useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") });
+  const history = useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") });
   const historyOk = useLogVerified(history.res);
   const historyState = useLogVerifiedState(history.res);
   const list = useTokenList();
@@ -115,6 +119,10 @@ export function SwapView() {
   const [unlockErr, setUnlockErr] = useState<string | null>(null);
   /** The last real stage the signed swap was in. When it fails, this is the step that stopped. */
   const [lastStage, setLastStage] = useState<Stage>("idle");
+  /** The pay-token balance when the swap was sent, for the failure card's before/after line. */
+  const [balBefore, setBalBefore] = useState<string | null>(null);
+  /** Bumped when a failed attempt is recorded, so the Recent swaps list re-reads the failed-swaps store. */
+  const [failedTick, setFailedTick] = useState(0);
   const quoteKey = useRef("");
   /** The trade the latest quote was asked for (state, so the screen can tell "a price is on its way" from "it answered"). */
   const [requestedKey, setRequestedKey] = useState("");
@@ -158,7 +166,10 @@ export function SwapView() {
   const spread = usdSrc && usdSrc.amountInUsd != null && usdSrc.amountOutUsd != null ? Number(usdSrc.amountInUsd) - Number(usdSrc.amountOutUsd) : null;
   const eta = qq?.timeEstimate ?? dq?.timeEstimate ?? null;
   const outUsd = usdSrc?.amountOutUsd != null ? Number(usdSrc.amountOutUsd) : null;
-  const minOutText = quoteFresh && quoted?.minOut ? `${fromBaseUnits(quoted.minOut, to.decimals, 6)} ${to.symbol}` : null;
+  // The minimum received comes from the signed quote once it is fresh; while locked the dry 1Click quote carries the
+  // same figure, so the row is filled instead of showing "—".
+  const dryMinOut = !sessionLive && dq?.minAmountOut && /^\d+$/.test(dq.minAmountOut) ? `${fromBaseUnits(dq.minAmountOut, to.decimals, 6)} ${to.symbol}` : null;
+  const minOutText = quoteFresh && quoted?.minOut ? `${fromBaseUnits(quoted.minOut, to.decimals, 6)} ${to.symbol}` : dryMinOut;
 
   // The swap's own answer, once it has one.
   const out = swap.res?.output ?? null;
@@ -241,10 +252,35 @@ export function SwapView() {
   useEffect(() => { if (swap.stage !== "idle") setLastStage(swap.stage); }, [swap.stage]);
   const readBalance = balance.run;
   const runHistory = history.run;
+  // A settled swap changed the vault: the cached balance and history are dropped and read again fresh.
   useEffect(() => {
     if (!swap.res?.output?.ok || swap.res.output.op !== "swap" || !session) return;
-    void readBalance({}, { quiet: true });
-  }, [swap.res, readBalance, session]);
+    vaultCacheInvalidate(accountId, "balance");
+    vaultCacheInvalidate(accountId, "history");
+    void readBalance({}, { quiet: true, cached: true, fresh: true });
+    void runHistory({}, { quiet: true, cached: true, fresh: true });
+  }, [swap.res, readBalance, runHistory, session, accountId]);
+
+  // A failed swap leaves no trace in the signed history, so it is recorded in this browser (once per attempt) and
+  // shown as a Failed row in Recent swaps and in Activity. The balance is re-read fresh either way: the outcome may
+  // be unknown, and only a new read can say whether anything moved.
+  const failureHandled = useRef<unknown>(null);
+  useEffect(() => {
+    if (!swap.res?.error || done == null || !accountId) return;
+    if (failureHandled.current === swap.res) return;
+    failureHandled.current = swap.res;
+    const callId = swap.res.call_id;
+    if (callId) {
+      recordFailedSwap(accountId, {
+        callId,
+        entry: { kind: "swap", status: "failed", ts_ms: Date.now(), token_in: fromId, token_out: toId, amount_in: units, amount_out: null },
+        code: swap.res.error.code,
+      });
+      setFailedTick((t) => t + 1);
+    }
+    vaultCacheInvalidate(accountId, "balance");
+    void readBalance({}, { quiet: true, cached: true, fresh: true });
+  }, [swap.res, done, accountId, readBalance, fromId, toId, units]);
 
   // With a live session the balance and the history read by themselves, once per session (no popup). Guarded so it cannot loop.
   const heldId = held?.token.token_id ?? null;
@@ -254,8 +290,8 @@ export function SwapView() {
     const k = `${accountId}:${heldId}:${session?.token ?? ""}`;
     if (autoFor.current === k) return;
     autoFor.current = k;
-    void readBalance({}, { quiet: true });
-    void runHistory({}, { quiet: true });
+    void readBalance({}, { quiet: true, cached: true });
+    void runHistory({}, { quiet: true, cached: true });
   }, [sessionLive, accountId, heldId, session, readBalance, runHistory]);
 
   // Between a change of amount or pair and the new price, the old price is hidden and the swap cannot be sent.
@@ -278,6 +314,7 @@ export function SwapView() {
     if (!units || !quoted || quoted.key !== tradeKey || !accountId || lock.locked || quote.busy) return;
     const ctx: OpResume = { op: "swap", give: `${amount} ${from.symbol}`, decimals: to.decimals, symbol: to.symbol };
     sessionStorage.setItem(OP_CTX, JSON.stringify(ctx));
+    setBalBefore(balanceText);
     setDone({ give: ctx.give, decimals: ctx.decimals, symbol: ctx.symbol });
     void swap.run(swapParamsById(fromId, toId, units, quoted.minOut));
   }
@@ -293,7 +330,11 @@ export function SwapView() {
     if (!r.ok) setUnlockErr(r.code);
   }
   function again() {
-    swap.reset(); quote.reset(); quoteKey.current = ""; setRequestedKey(""); setQuoted(null); setQuotedAt(null); setDone(null);
+    swap.reset(); quote.reset(); quoteKey.current = ""; setRequestedKey(""); setQuoted(null); setQuotedAt(null); setDone(null); setBalBefore(null);
+  }
+  /** Back from the confirm sheet to the review step: the quote is dropped, so a fresh price is asked for. */
+  function editTrade() {
+    setQuoted(null); quoteKey.current = ""; setRequestedKey(""); setQuotedAt(null); setAgeS(0);
   }
   function onCta() {
     if (step === "connect") void connect();
@@ -319,7 +360,15 @@ export function SwapView() {
       : null;
 
   const hist = history.res?.output?.ok ? ((history.res.output.entries as Hist[] | undefined) ?? []) : null;
-  const mine = hist ? [...hist].reverse().filter((e) => e.kind === "swap").slice(0, 5) : [];
+  // Failed attempts are not in the signed history, so they are merged in from this browser's record: a failed swap
+  // shows as a Failed row with its own proof link, newest first. The signed rows still need the log to verify.
+  // failedTick is the invalidation signal: recording a failure bumps it so this memo re-reads sessionStorage.
+  // The read itself has no reactive input, so the rule calls the dependency unnecessary.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const failedEntries = useMemo(() => listFailedSwaps(accountId), [accountId, failedTick]);
+  const failedMine: Hist[] = failedEntries.map((f) => ({ ...f.entry, callId: f.callId, amount_in: f.entry.amount_in == null ? undefined : String(f.entry.amount_in), amount_out: f.entry.amount_out == null ? undefined : String(f.entry.amount_out) }));
+  const signedMine = hist && historyOk === true ? [...hist].reverse().filter((e) => e.kind === "swap") : [];
+  const mine = [...failedMine, ...signedMine].sort((a, b) => (b.ts_ms ?? 0) - (a.ts_ms ?? 0)).slice(0, 5);
   const human = (raw?: string, tok?: string) => {
     const t = tok ? findToken(tok) : null;
     const a = !t && tok ? assetByToken(tok) : null;
@@ -327,9 +376,10 @@ export function SwapView() {
     if (a && raw) return `${fromBaseUnits(raw, a.decimals)} ${a.symbol}`;
     return `${raw ?? ""} ${tok ? shortTokenId(tok) : ""}`.trim();
   };
-  // With a live session the swap runs without a wallet popup, so the last step says "Swap now". "Confirm and sign" stays for a wallet signature.
+  // The button label is the step machine's label, one fixed label per step: "Review swap" reviews the quote, then
+  // "Confirm and sign" sends it. It never flips to a different word on the same step.
   const gated = lock.locked && (step === "review" || step === "confirm" || step === "quoting");
-  const ctaLabel = gated ? LOCK_LABEL : step === "short" ? `Not enough ${from.symbol}` : step === "confirm" && sessionLive ? "Swap now" : cta.label;
+  const ctaLabel = gated ? LOCK_LABEL : step === "short" ? `Not enough ${from.symbol}` : cta.label;
   const busyLabel = gated ? LOCK_LABEL : step === "pending" ? swap.label || "Swapping" : step === "quoting" ? quote.label || "Getting your price" : unlocking ? "Waiting for your wallet" : ctaLabel;
   const runTitle = done ? `Swapping ${done.give} for ${done.symbol}` : "Swapping";
 
@@ -348,7 +398,7 @@ export function SwapView() {
   ) : (
     <>
       {!history.res && (sessionLive ? (
-        <Button variant="secondary" size="sm" loading={history.busy} loadingLabel="Reading your history" onClick={() => void history.run({})} testid="history-btn">
+        <Button variant="secondary" size="sm" loading={history.busy} loadingLabel="Reading your history" onClick={() => void history.run({}, { cached: true, fresh: true })} testid="history-btn">
           Read my history
         </Button>
       ) : (
@@ -360,18 +410,23 @@ export function SwapView() {
       {hist && historyOk === null && <p className="sw-note">Checking the log…</p>}
       {hist && historyOk === false && <p className="sw-note" data-testid="swap-log-hidden">{historyState === "previous" ? "Not shown: this log came from a previous worker build (genuine, not the current worker)." : historyState === "quote_unverified" ? "Registry match, but the quote could not be verified in this browser, so the log is not shown." : "Not shown: the log did not verify."}</p>}
       {hist && historyOk === true && mine.length === 0 && <p className="sw-note">No swaps in your history yet.</p>}
-      {hist && historyOk === true && mine.length > 0 && (
+      {mine.length > 0 && (
         <div className="sw-rows" data-testid="swap-mine">
           {mine.map((e, i) => {
             const o = swapOutcome(e.status);
+            const failed = e.status === "failed";
+            const title = failed
+              ? `${human(e.amount_in, e.token_in)} → ${e.token_out ? (findToken(e.token_out)?.symbol ?? shortTokenId(e.token_out)) : "—"}`
+              : `${human(e.amount_in, e.token_in)} → ${human(e.amount_out, e.token_out)}`;
             return (
               <ListRow
-                key={i}
+                key={e.callId ?? i}
                 iconName={o.icon}
                 tone={o.tone}
-                title={`${human(e.amount_in, e.token_in)} → ${human(e.amount_out, e.token_out)}`}
+                title={title}
                 value={when(e.ts_ms)}
                 meta={<StatusChip tone={o.tone} icon={o.tone === "success" ? "check" : "dot"}>{o.chip}</StatusChip>}
+                href={failed && e.callId ? dashHref(`/verify?call=${encodeURIComponent(e.callId)}`) : undefined}
               />
             );
           })}
@@ -405,6 +460,10 @@ export function SwapView() {
               retryAfter={swap.res.error.retry_after}
               message={swap.res.error.message}
               knownOpId={lock.rows[0]?.value_op_id ?? null}
+              callId={swap.res.call_id}
+              amount={done?.give ?? null}
+              balanceBefore={balBefore}
+              balanceAfter={balanceText}
               onRetry={retry}
               onBack={again}
             />
@@ -442,7 +501,7 @@ export function SwapView() {
                       </>
                     ) : accountId && held ? (
                       sessionLive ? (
-                        <button type="button" className="sw-textbtn" disabled={balance.busy} onClick={() => void balance.run({})} data-testid="swap-balance-btn">
+                        <button type="button" className="sw-textbtn" disabled={balance.busy} onClick={() => void balance.run({}, { cached: true, fresh: true })} data-testid="swap-balance-btn">
                           {balance.busy ? "Reading your balance" : "Read balance"}
                         </button>
                       ) : (
@@ -519,6 +578,21 @@ export function SwapView() {
                   <div><dt>Estimated time</dt><dd>{eta != null ? `about ${eta}s` : "—"}</dd></div>
                 </dl>
               </details>
+
+              {step === "confirm" && !gated && (
+                <div className="sw-confirm" data-testid="swap-confirm">
+                  <p className="sw-confirm-h">Check this trade before you confirm it</p>
+                  <dl className="sw-facts">
+                    <div><dt>You pay</dt><dd>{amount} {from.symbol}{payUsd != null ? ` (≈ ${formatUsdMicro(payUsd)})` : ""}</dd></div>
+                    <div><dt>You receive</dt><dd>{estimate ? `${formatAmount(estimate)} ${to.symbol}` : "—"}{outUsd != null && Number.isFinite(outUsd) ? ` (≈ ${formatUsdMicro(Math.max(0, Math.round(outUsd * 1e6)))})` : ""}</dd></div>
+                    <div><dt>Minimum received</dt><dd>{minOutText ?? "—"}</dd></div>
+                    <div><dt>Rate</dt><dd>{rate != null ? `1 ${from.symbol} = ${formatAmount(rate)} ${to.symbol}` : "—"}</dd></div>
+                    <div><dt>Fee and spread</dt><dd>{spread != null ? `about ${formatUsdMicro(Math.max(0, Math.round(spread * 1e6)))}` : "—"}</dd></div>
+                    <div><dt>Max slippage</dt><dd>1%, fixed by the vault</dd></div>
+                  </dl>
+                  <button type="button" className="sw-textbtn" onClick={editTrade} data-testid="swap-edit">Change amount or pair</button>
+                </div>
+              )}
 
               {step === "get_key" ? (
                 <Button href={dashHref("/mint")} block size="lg" className="sw-cta" testid="swap-cta">{cta.label}</Button>

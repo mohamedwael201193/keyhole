@@ -23,6 +23,7 @@ import { TxResult } from "@/components/TxResult";
 import { TokenIcon } from "@/components/TokenIcon";
 import { loadMintTx, saveMintTx } from "@/lib/mintTx";
 import { minutesLeft } from "@/lib/session";
+import { vaultCacheInvalidate } from "@/lib/vaultCache";
 import "./start.css";
 
 const TITLES: Record<StartStep, string> = { connect: "Get started", topup: "Add NEAR", mint: "Get your key", unlock: "Unlock", limits: "Limits", fund: "Fund", done: "Ready" };
@@ -76,7 +77,7 @@ export function StartView() {
   useEffect(() => { setHolder(null); setToken(null); if (accountId) void loadKeys(accountId); }, [accountId, loadKeys]);
   useEffect(() => { if (mint.res?.output?.ok && accountId) { const id = setTimeout(() => void loadKeys(accountId), 3000); return () => clearTimeout(id); } }, [mint.res, accountId, loadKeys]);
   useEffect(() => { setLimitsDone(!!accountId && localStorage.getItem(`${LIMITS_FLAG}:${accountId}`) === "1"); }, [accountId]);
-  useEffect(() => { if (limits.res?.output?.ok && accountId) { localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1"); setLimitsDone(true); } }, [limits.res, accountId]);
+  useEffect(() => { if (limits.res?.output?.ok && accountId) { localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1"); setLimitsDone(true); vaultCacheInvalidate(accountId, "dashboard"); } }, [limits.res, accountId]);
   // Funded = the dashboard shows a non-zero balance. With a session this read costs no popup.
   const runDash = dash.run;
   const unlocked = !!session && !!token && session.token_id === token.token_id;

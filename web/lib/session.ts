@@ -9,6 +9,7 @@
 import { freshNonce, toB64 } from "./nep413";
 import { decimalEpoch, guardedValueOp, type ContractProfile } from "./guardedRequest";
 import { NEP413_RECIPIENT } from "./config";
+import { clearVaultCache } from "./vaultCache";
 
 export const SESSION_TTL_MS = 30 * 60 * 1000;
 /** Default spend cap a session asks for: $5. Tier and holder caps still apply inside the enclave. */
@@ -38,7 +39,8 @@ export function loadSession(account: string | null, now = Date.now(), store: Pic
   } catch { store.removeItem(KEY); return null; }
 }
 export function saveSession(s: Session, store: Pick<Storage, "setItem"> = sessionStorage) { store.setItem(KEY, JSON.stringify(s)); }
-export function clearSession(store: Pick<Storage, "removeItem"> = sessionStorage) { store.removeItem(KEY); }
+/** Forgetting the session also forgets the cached vault reads it scoped: a locked tab shows sealed values again. */
+export function clearSession(store: Pick<Storage, "removeItem"> = sessionStorage) { store.removeItem(KEY); clearVaultCache(); }
 
 /** A worker grant. v2.5 returns owner_epoch. Live v2.4 omits it; the caller must already have proved that profile. Epoch zero is never filled in. */
 export function sessionFromGrant(output: { ok?: boolean; session_token?: unknown; account?: unknown; token_id?: unknown; exp_ms?: unknown; max_usd_micro?: unknown; owner_epoch?: unknown }, tokenId: string, profile: ContractProfile): Session | null {

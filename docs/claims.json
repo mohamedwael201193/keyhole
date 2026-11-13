@@ -4877,6 +4877,27 @@
    "verify": "node judge/verify-claims.mjs --only test-nft_resolve_transfer"
   },
   {
+   "id": "test-nft_revoke_all",
+   "claim": "Named test or symbol `nft_revoke_all` exists in the source",
+   "where": "README.md:1111",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "nft_revoke_all",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`nft_revoke_all` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-nft_revoke_all"
+  },
+  {
    "id": "test-nft_set_tier",
    "claim": "Named test or symbol `nft_set_tier` exists in the source",
    "where": "README.md:141",
@@ -5421,6 +5442,27 @@
    },
    "expected": "`reconcile_without_a_recorded_result_never_clears_a_marker` found in source",
    "verify": "node judge/verify-claims.mjs --only test-reconcile_without_a_recorded_result_never_clears_a_marker"
+  },
+  {
+   "id": "test-register_payout_account",
+   "claim": "Named test or symbol `register_payout_account` exists in the source",
+   "where": "README.md:1139",
+   "evidence_type": "test file",
+   "evidence": "tee/worker/src, contracts/keys/src, web",
+   "check": {
+    "type": "symbol",
+    "name": "register_payout_account",
+    "dirs": [
+     "tee/worker/src",
+     "contracts/keys/src",
+     "contracts/keys-sandbox/tests",
+     "web/lib",
+     "web/app",
+     "cli/src"
+    ]
+   },
+   "expected": "`register_payout_account` found in source",
+   "verify": "node judge/verify-claims.mjs --only test-register_payout_account"
   },
   {
    "id": "test-release_delay_is_24h_and_the_release_script_refuses_the_sandbox_feature",

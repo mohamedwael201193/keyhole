@@ -42,8 +42,7 @@ git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
 git fetch --depth 1 origin 33bc30728866088ad7c4d70f4fe4ceeb5a77d216
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```
-<!-- JUDGE-CHECKOUT:END -->
+test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```<!-- JUDGE-CHECKOUT:END -->
 
 ```bash
 test -f judge/0-live.sh
@@ -57,8 +56,7 @@ No git? Download all three files from that same immutable source commit and run 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/judge/0-live.sh -o keyhole-live.sh
 curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/identity.json -o identity.jsonIDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
-```
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/identity.json -o identity.jsonIDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh```
 <!-- JUDGE-RAW:END -->
 
 It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
@@ -208,7 +206,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `674 claims: 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `676 claims: 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the verification path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -258,7 +256,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (674 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (676 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Free trial on [/try](https://keyhole-seven.vercel.app/try) | **Real testnet** for the key (mint, tier, transfer, refusal). Each guest receives 0.05 testnet NEAR (`GUEST_DEPOSIT_YOCTO`). The vault trade on that page is a **recorded mainnet** swap, labelled recorded on mainnet | [`docs/trial/testnet.json`](docs/trial/testnet.json) · [verify the recorded swap](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) |
@@ -664,8 +662,7 @@ git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
 git fetch --depth 1 origin 33bc30728866088ad7c4d70f4fe4ceeb5a77d216
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```
-<!-- JUDGE-CHECKOUT:END -->
+test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```<!-- JUDGE-CHECKOUT:END -->
 
 ```bash
 
@@ -821,7 +818,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 | CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
 | Web unit tests (Vitest) | **2032** pass in 124 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
 | Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
-| Claims in `docs/claims.json` | **674**: offline 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **676**: offline 365 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |
@@ -1100,3 +1097,72 @@ Clean web installs honor the upstream NEAR signer/transaction/curve hash pins an
 Dependency-policy context for clean reproduction is kept in [SECURITY.md](SECURITY.md#clean-install-dependency-advisory-boundary).
 
 The wallet lifecycle and two-tab notification checks are reproducible from the [R5 repair proof](docs/evidence/integration-stack/r5-lifecycle-notification.md), [exact patch lifecycle tests](web/tests/wallet-patch-lifecycle.test.ts), and [real-browser storage regressions](web/e2e/pledge-review-r3.spec.ts).
+
+# Live NEP-178 sale via direct approval — mainnet (13 Nov 2026)
+
+KEYHOLE demonstrated the full NEP-178 approval lifecycle on NEAR mainnet, on a live
+token, with a real on-chain payment. No contract change was needed: the deployed
+contract already implements NEP-178 (`nft_approve`, `nft_revoke`, `nft_revoke_all`,
+`nft_is_approved`), declared in its own `contract_source_metadata` (nep178 1.0.0).
+
+The buyer is a fresh separate account created and funded (0.3 NEAR) by the project
+(keyhole-devmo.near); the seller is a project test holder (TEST_HOLDER2). There was
+no listing and no marketplace contract: the sale demonstrates the NEP-178 sale
+mechanism (approve → pay → approved transfer → revoke) with a real on-chain payment
+at a nominal 0.1 NEAR price.
+
+## What was sold
+
+- **Token:** `k5f4750858f328940` — "KEYHOLE Key · Bronze" (the standard Bronze title and
+  description: "Viewing key to a confidential account. Holder-only, attested in a TEE.")
+- **Seller:** `3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447`
+- **Buyer:** `456dbde9d96a87444db1f11335adfecd72eb395c59eb7cec0942ccb1623e2a0c`
+  (a fresh separate account created for this sale)
+- **Price:** 0.1 NEAR (nominal, demonstration-scale), paid on-chain by the buyer to the seller before the transfer.
+- **Result:** the token's owner is now the buyer; all approvals are cleared.
+
+## The four steps (five transactions, all FINAL, all on mainnet)
+
+| Step | Call | Transaction |
+|---|---|---|
+| 1. Approve | seller `nft_approve(token, buyer)` | `6auA8cm2GfCvvBP1HyxFq7iwD74a6qi3dVQBZ6xmPsvH` |
+| 2. Pay | buyer pays 0.1 NEAR to seller (plain transfer) | `4xfCSX7Pzq7GUxiW9PvqAryxNniBzFAEcwJBPSxkuueq` |
+| 3. Transfer | buyer `nft_transfer(receiver=buyer, token, approval_id=3)` | `F52PyT43rVizWmkcJVxbcKuj7n3KZFK5GQsNyuiXY2iT` |
+| 4. Revoke | buyer `nft_approve(token, seller)` then `nft_revoke(token, seller)` | approve `Axq76Hk8UMQou7EXMufVpev4Q7gDj73apxAbZfKC6AoX`, revoke `DuMkpjSMmRgtcyQMxRSQZ3Gg6J627B6NeNoQWTCQt8Jr` |
+
+Setup transactions (also on-chain): seller `register_payout_account`
+(`83JmH88kkmC2vo3pzEXCimqZurX5UtkrZXr4E6gB8NFr`), buyer
+`register_payout_account` (`9WbFhtzhGv7GrQnrRv1Nt5stn6vjK1JH77vPedaod1Xm`),
+buyer funding (`HokBiA2wcrTy8QG7AFWWvYm5xDE8x2ZLXeHmcm9RBUgq`), seller top-up 0.2 NEAR (`DVQ5YBFNBpog9y6ghjjkf8TaxCnK1CqcxAor1ZwZ6313`).
+
+Notes on the run, stated plainly:
+
+- The approval was granted with **approval id 3**, not 1: this token's per-token
+  approval counter was already at 3, so two earlier approvals (ids 1–2) had been
+  granted and later cleared before this sale. The sale read the live id from
+  `nft_token` instead of assuming it.
+- Two `nft_approve` attempts by the buyer failed on-chain before the revoke
+  demonstration (txs `FykZ6fZqiFWASC9wG7A5TPaW5mWP3wgsMyjo9Hgy5MYJ` and
+  `F1ryCVVNf9rGUWq15FyBiGSSy4BuFkYE6JavYwzCcnTB`): the contract requires the token
+  owner to hold a payout credit before approving, and the buyer had not registered
+  one yet. The buyer registered a payout account and the approval then succeeded.
+  No state changed on the failed attempts.
+- A fresh mint was not possible at the time: the worker's minter journal is blocked
+  until the chain reaches final height 224346890, so the sale used an existing
+  non-loan token with the standard Bronze title. A second sale with a fresh mint is
+  a separate step once the journal clears.
+
+## Verify it yourself
+
+```bash
+# Current owner (should be the buyer) and approvals (should be empty)
+curl -s https://rpc.mainnet.near.org -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"t","method":"query","params":{"request_type":"call_function","account_id":"keyhole-devmo.near","method_name":"nft_token","args_base64":"eyJ0b2tlbl9pZCI6Ims1ZjQ3NTA4NThmMzI4OTQwIn0=","finality":"final"}}'
+
+# Any transaction above, e.g. the transfer (sender = buyer account):
+curl -s https://rpc.mainnet.near.org -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"t","method":"tx","params":{"tx_hash":"F52PyT43rVizWmkcJVxbcKuj7n3KZFK5GQsNyuiXY2iT","sender_account_id":"456dbde9d96a87444db1f11335adfecd72eb395c59eb7cec0942ccb1623e2a0c","wait_until":"FINAL"}}'
+```
+
+Full evidence (every step, every hash, the blocker, and the fallback choice):
+`keyhole-work/exec/sale/EVIDENCE.md`.
