@@ -111,3 +111,4 @@ fn rejects<F:FnOnce()>(f:F){assert!(catch_unwind(AssertUnwindSafe(f)).is_err());
 }
 
 #[test] fn cancel_sale_refuses_non_seller_before_expiry(){let mut c=setup();open(&mut c);settle(&mut c,true);ctx("other.near",1,NOW);rejects(||{let _=c.cancel_sale("k1".into(),U64(1));});assert_eq!(c.get_sale("k1".into()).unwrap().state,SaleState::Offered);}
+#[test] fn open_sale_refuses_non_seller(){let mut c=setup();ctx("bob.near",SALE_STORAGE_BOND,NOW);rejects(||{let _=c.open_sale("k1".into(),terms());});assert!(c.get_sale("k1".into()).is_none());}
