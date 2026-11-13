@@ -6,6 +6,17 @@
   .app-main .kp-root.vf-page,
   .app-main .kp-root.atk-page { padding: var(--space-4) var(--space-3) var(--space-5); }
 }
+/* Public kp-root pages (/attack, /holders, /verify) render outside .app-main, so the .app-main rules above never
+   apply to them; without an unscoped inset the heading starts flush at the viewport edge and its first letters read
+   as clipped. The .app-main rules still win inside the app shell by specificity. */
+.kp-root.vf-page,
+.kp-root.atk-page,
+.kp-root.holders-page { padding: var(--space-4) var(--space-5) var(--space-5); gap: var(--space-3); display: grid; min-width: 0; }
+@media (max-width: 899px) {
+  .kp-root.vf-page,
+  .kp-root.atk-page,
+  .kp-root.holders-page { padding: var(--space-4) var(--space-3) var(--space-5); }
+}
 
 .ev-pack { display: grid; gap: var(--space-3); min-width: 0; }
 .ev-lead, .ev-note, .atk-foot { margin: 0; font: 400 14px/1.5 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }

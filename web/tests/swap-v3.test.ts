@@ -5,6 +5,7 @@ import { swapStep, SWAP_LABEL, type SwapInput } from "@/lib/swapFlow";
 const base: SwapInput = {
   signedIn: true, lookingUp: false, keyMiss: false, hasKey: true, sessionLive: true,
   amountOk: true, samePair: false, quoteFresh: false, quoting: false, swapping: false, swapDone: false,
+  reviewed: true,
 };
 const src = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 
@@ -18,6 +19,12 @@ describe("swap CTA follows the trade in order", () => {
     expect(swapStep({ ...base, quoteFresh: true })).toBe("confirm");
     expect(swapStep({ ...base, quoteFresh: true, swapping: true })).toBe("pending");
     expect(swapStep({ ...base, quoteFresh: true, swapDone: true })).toBe("done");
+  });
+  it("a fresh quote alone never shows the review panel: the holder has to ask for it", () => {
+    // The auto-quote re-runs on every trade change, so quoteFresh goes true on its own. Without a
+    // review click the step stays "review" (the form), and the panel cannot auto-advance.
+    expect(swapStep({ ...base, quoteFresh: true, reviewed: false })).toBe("review");
+    expect(swapStep({ ...base, quoteFresh: true, reviewed: true })).toBe("confirm");
   });
   it("an empty or junk amount and a same-token pair block the button with a plain reason", () => {
     expect(swapStep({ ...base, amountOk: false })).toBe("enter_amount");

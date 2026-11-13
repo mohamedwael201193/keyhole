@@ -13,6 +13,8 @@ export type SwapInput = {
   overBalance?: boolean;
   samePair: boolean;
   quoteFresh: boolean;
+  /** The holder pressed "Review swap" for this exact trade. A fresh quote alone never shows the panel. */
+  reviewed: boolean;
   quoting: boolean;
   swapping: boolean;
   swapDone: boolean;
@@ -32,6 +34,7 @@ export function swapStep(i: SwapInput): SwapStep {
   if (i.samePair) return "same_pair";
   if (i.quoting) return "quoting";
   if (!i.quoteFresh) return "review";
+  if (!i.reviewed) return "review";
   return "confirm";
 }
 

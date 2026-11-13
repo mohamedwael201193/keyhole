@@ -169,3 +169,69 @@ describe("tour fix: the provider must not wipe a redirect-signed read on wallet 
     expect(p).toContain("resetBalance(); resetHistory(); resetDash();");
   });
 });
+
+// ---------- ROUND 2 (re-test 2026-11-13 20:09-20:24 EET): 2 round-1 fixes did not work, 3 new findings. ----------
+
+describe("tour fix r2: public pages have a page inset outside .app-main", () => {
+  it("/attack, /holders and /verify each get an unscoped .kp-root inset (the .app-main rules never apply there)", () => {
+    const css = src("../app/verify/verify.css");
+    // Unscoped (starts at column 0): not ".app-main .kp-root…". The .app-main rules above still win inside
+    // the app shell by specificity, so app pages are unchanged.
+    expect(css).toMatch(/^\.kp-root\.vf-page,/m);
+    expect(css).toContain(".kp-root.atk-page,");
+    expect(css).toContain(".kp-root.holders-page { padding: var(--space-4) var(--space-5) var(--space-5);");
+    expect(css).toMatch(/@media \(max-width: 899px\) \{\n  \.kp-root\.vf-page,/);
+  });
+
+  it("/holders loads verify.css (it imported no stylesheet at all, so the inset never reached it)", () => {
+    expect(src("../app/holders/view.tsx")).toContain('import "../verify/verify.css";');
+  });
+});
+
+describe("tour fix r2: My proof hides the output verdict when no output exists", () => {
+  it("the verdict-econ chip is rendered only when a worker output exists (it is optional, not a failure)", () => {
+    const cv = src("../components/judge/CallVerifier.tsx");
+    // The <li> must be wrapped in the output guard; an unconditional <li> shows the ○ row on a completed
+    // 36/36 verification that has no output, which reads as a missed check.
+    expect(cv).toMatch(/\{ck\?\.output && <li data-testid="verdict-econ"/);
+  });
+
+  it("the note and the paste form stay: they are the way to supply an output", () => {
+    const cv = src("../components/judge/CallVerifier.tsx");
+    expect(cv).toContain('data-testid="ck-output-none"');
+    expect(cv).toContain("checkPasted");
+  });
+});
+
+describe("tour fix r2: the Activity total tile is dark, not cream-on-cream", () => {
+  it("a vault-tone card inside .app-main keeps its dark teal background (the raised-card rule outranks it)", () => {
+    const css = src("../app/system.css");
+    expect(css).toMatch(/\.app-main \.v7-card--vault\s*\{[^}]*background:\s*var\(--vault\)/);
+    expect(css).toMatch(/\.app-main \.v7-card--vault\s*\{[^}]*color:\s*var\(--vault-ink\)/);
+  });
+});
+
+describe("tour fix r2: the vault 'Updated Xs ago' reads on the dark hero", () => {
+  it("a .vlt-sub inside the dark teal hero is cream, while .vlt-sub elsewhere stays dark", () => {
+    const css = src("../app/vault/vault.css");
+    expect(css).toMatch(/\.v7-hero \.vlt-sub\s*\{\s*color:\s*rgba\(251,\s*247,\s*240,\s*\.88\);/);
+    // The base rule is untouched: the same class on a light card still renders dark.
+    expect(css).toContain(".vlt-sub { margin: 0; font: 500 var(--text-small)/1.55 var(--font-ui); color: var(--ink-2);");
+  });
+});
+
+describe("tour fix r2: the swap review panel only appears after the holder asks for it", () => {
+  it("the swap view tracks a reviewed trade and clears it on any edit", () => {
+    const v = src("../app/swap/view.tsx");
+    expect(v).toContain("const [reviewedKey, setReviewedKey] = useState<string | null>(null);");
+    // review() (the "Review swap" button) marks this trade as reviewed.
+    expect(v).toMatch(/function review\(\) \{\n    if \(!units \|\| !accountId \|\| samePair \|\| lock\.locked \|\| quote\.busy\) return;\n    setReviewedKey\(tradeKey\);/);
+    // Back to the form, and Swap again, both clear it.
+    expect(v).toMatch(/function editTrade\(\) \{\n    setReviewedKey\(null\);/);
+    expect(v).toMatch(/function again\(\) \{\n    setReviewedKey\(null\);/);
+    // Any edit to the trade (amount or pair, even back to the same value) clears it, so the panel
+    // cannot reappear from the auto-quote alone. The amount input stays editable under the panel.
+    expect(v).toMatch(/if \(prevTradeKey\.current !== tradeKey\) \{\s*setReviewedKey\(null\);/);
+    expect(v).toContain("reviewed: reviewedKey === tradeKey,");
+  });
+});

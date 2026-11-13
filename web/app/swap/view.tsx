@@ -128,6 +128,8 @@ export function SwapView() {
   const quoteKey = useRef("");
   /** The trade the latest quote was asked for (state, so the screen can tell "a price is on its way" from "it answered"). */
   const [requestedKey, setRequestedKey] = useState("");
+  /** The trade the holder pressed "Review swap" for. A fresh quote alone never shows the review panel. */
+  const [reviewedKey, setReviewedKey] = useState<string | null>(null);
 
   const fromId = from.assetId;
   const toId = to.assetId;
@@ -136,6 +138,13 @@ export function SwapView() {
   const samePair = fromId === toId;
   const sessionLive = !!(session && held && session.account === accountId && session.token_id === held.token.token_id && minutesLeft(session) > 0);
   const quoteFresh = !!quoted && quoted.key === tradeKey;
+  // Any edit to the trade (amount or pair, even back to the same value) hides the review panel again: the
+  // auto-quote alone must never show it. The amount input stays editable under the panel, so this cannot be
+  // cleared only in editTrade().
+  const prevTradeKey = useRef(tradeKey);
+  useEffect(() => {
+    if (prevTradeKey.current !== tradeKey) { setReviewedKey(null); prevTradeKey.current = tradeKey; }
+  }, [tradeKey]);
   const swapDone = !!(swap.res?.output?.ok && swap.res.output.op === "swap" && done);
   const swapFailed = !swap.busy && !!swap.res?.error && done != null;
   const phase: "form" | "running" | "failed" | "done" = swap.busy ? "running" : swapDone ? "done" : swapFailed ? "failed" : "form";
@@ -294,12 +303,13 @@ export function SwapView() {
   const lock = useValueLock();
   const step = swapStep({
     signedIn: !!accountId, lookingUp, keyMiss, hasKey: !!held, sessionLive,
-    amountOk: !!units && !overBalance, overBalance, samePair, quoteFresh, quoting: quote.busy, swapping: swap.busy, swapDone,
+    amountOk: !!units && !overBalance, overBalance, samePair, quoteFresh, reviewed: reviewedKey === tradeKey, quoting: quote.busy, swapping: swap.busy, swapDone,
   });
   const cta = SWAP_LABEL[step];
 
   function review() {
     if (!units || !accountId || samePair || lock.locked || quote.busy) return;
+    setReviewedKey(tradeKey);
     quoteKey.current = tradeKey;
     setRequestedKey(tradeKey);
     swap.reset();
@@ -325,10 +335,12 @@ export function SwapView() {
     if (!r.ok) setUnlockErr(r.code);
   }
   function again() {
+    setReviewedKey(null);
     swap.reset(); quote.reset(); quoteKey.current = ""; setRequestedKey(""); setQuoted(null); setQuotedAt(null); setDone(null); setBalBefore(null);
   }
   /** Back from the confirm sheet to the review step: the quote is dropped, so a fresh price is asked for. */
   function editTrade() {
+    setReviewedKey(null);
     setQuoted(null); quoteKey.current = ""; setRequestedKey(""); setQuotedAt(null); setAgeS(0);
   }
   function onCta() {

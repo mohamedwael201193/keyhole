@@ -19,6 +19,15 @@
   box-shadow: var(--shadow-1);
   padding: var(--space-4);
 }
+/* A vault-tone card keeps its dark teal surface inside .app-main: the raised-card rule above (same specificity)
+   would otherwise paint it cream while the vault ink stays cream, leaving cream text on cream. This rule sits
+   after it so it wins the tie for the properties it sets; radius and padding still come from the card rule. */
+.app-main .v7-card--vault {
+  background: var(--vault);
+  color: var(--vault-ink);
+  border-color: transparent;
+  box-shadow: var(--shadow-2);
+}
 .app-main :is(.kh-card, .v7-card) > :is(h2, h3) {
   margin: 0 0 var(--space-2);
   font: 600 var(--ds-section)/1.2 var(--font-display);

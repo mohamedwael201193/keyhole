@@ -29,6 +29,8 @@
 .vlt-proof-wrap { container-type: inline-size; min-width: 0; }
 
 .vlt-sub { margin: 0; font: 500 var(--text-small)/1.55 var(--font-ui); color: var(--ink-2); overflow-wrap: anywhere; }
+/* Inside the dark teal hero the "Updated Xs ago" line is cream, not the dark ink-2 of a light card. */
+.v7-hero .vlt-sub { color: rgba(251, 247, 240, .88); }
 .vlt-small { margin: 0; font: 500 var(--text-small)/1.5 var(--font-mono); color: var(--ink-2); overflow-wrap: anywhere; }
 .vlt-cap { margin: 0; font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink-2); }
 .vlt-label { font: 600 var(--text-small)/1.3 var(--font-ui); color: var(--ink); }

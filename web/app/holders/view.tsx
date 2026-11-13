@@ -6,6 +6,7 @@ import { PageHeader, Card, CardHeader, StatusChip } from "@/components/v7";
 import type { SignedAuth } from "@/lib/nep413";
 import { tierName } from "@/lib/near";
 import { holderResume, settleHolderCheck, type HolderView } from "@/lib/holderCheck";
+import "../verify/verify.css";
 
 const REASON: Record<string, string> = {
   not_holder: "This account holds no key on the KEYHOLE contract.",
