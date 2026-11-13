@@ -16,6 +16,27 @@ export function opIdFrom(message: string | null | undefined): string | null {
   return message ? (OP_ID.exec(message)?.[1] ?? null) : null;
 }
 
+/**
+ * A refusal before sending: the enclave refused a new value operation because an earlier one is still open (its
+ * window has not expired), so nothing was dispatched and no transaction exists. The worker reports it as
+ * native_unknown with the message "original send UNKNOWN_TRANSACTION; still within validity window, …;
+ * tx_hash=<hash>; reference_block_height=<height>" (tee/worker/src/native_send.rs: unresolved_error). That message
+ * — not the code alone — is what separates a clean refusal from a genuinely unknown send: a send whose outcome is
+ * really unknown says "original send not yet FINAL" and carries reference_block_height=unknown instead.
+ */
+const GATE_REFUSAL = /still within validity window/;
+const REF_HEIGHT = /reference_block_height=(\d+)/;
+const REF_TX = /tx_hash=([0-9A-Za-z]+)/;
+export function isGateRefusal(code: string | null | undefined, message: string | null | undefined): boolean {
+  return code === "native_unknown" && !!message && GATE_REFUSAL.test(message) && REF_HEIGHT.test(message);
+}
+
+/** The earlier operation a gate refusal names: its reference block height and its transaction hash, when present. */
+export function gateRefusalFrom(message: string | null | undefined): { refHeight: string | null; txHash: string | null } {
+  if (!message) return { refHeight: null, txHash: null };
+  return { refHeight: REF_HEIGHT.exec(message)?.[1] ?? null, txHash: REF_TX.exec(message)?.[1] ?? null };
+}
+
 export type NotSentView = {
   headline: string;
   detail: string;

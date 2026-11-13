@@ -346,7 +346,7 @@ describe("Overview: the page stays inside the design rules", () => {
     const v = readFileSync(new URL("../app/dashboard/view.tsx", import.meta.url), "utf8");
     expect(v).toContain('import { useKeyStore } from "@/lib/keyStore"');
     expect(v).not.toContain("useMyKeys");
-    expect(v).toContain('useSigned("balance")');
-    expect(v).toContain('useSigned("history")');
+    expect(v).toContain('useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") })');
+    expect(v).toContain('useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") })');
   });
 });

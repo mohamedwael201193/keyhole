@@ -111,7 +111,11 @@ describe("/swap phases and their real sources (source contract)", () => {
   it("the recent swaps read only from the verified signed history, and show a real link to Activity", () => {
     expect(view).toContain("useLogVerified(history.res)");
     expect(view).toContain('href={dashHref("/settle")}');
-    expect(view).toContain("const mine = hist ? [...hist].reverse().filter((e) => e.kind === \"swap\").slice(0, 5) : [];");
+    expect(view).toContain("const signedMine = hist && historyOk === true ? [...hist].reverse().filter((e) => e.kind === \"swap\") : [];");
+    // A refused swap has no signed-history entry, so its Failed row comes from this browser's own record instead —
+    // with the failed attempt's own call id linking to its proof. The signed rows still need the verified log.
+    expect(view).toContain("listFailedSwaps(accountId)");
+    expect(view).toContain("dashHref(`/verify?call=${encodeURIComponent(e.callId)}`)");
   });
 
   it("no literal href placeholder and no hard-coded figures on the page or in the new components", () => {

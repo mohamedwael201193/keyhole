@@ -17,9 +17,11 @@ import { OrderDetails } from "@/components/activity/OrderDetails";
 import { useOrderReads } from "@/components/activity/useOrderReads";
 import {
   buildOrders, countsOf, defaultSourceOf, filterOrders, historyRows, mineStateOf, pageSlice, RANGES, timeOf,
-  type ChipTone, type FilterId, type MineState, type RangeId,
+  type ChipTone, type FilterId, type MineState, type OrderRow, type RangeId,
 } from "@/components/activity/orders";
 import { PriceCheck } from "./price";
+import { vaultCacheKey } from "@/lib/vaultCache";
+import { listFailedSwaps } from "@/lib/failedSwaps";
 import "./settle.css";
 
 /**
@@ -55,7 +57,7 @@ export function SettleView() {
   const wallet = useWallet();
   const store = useKeyStore();
   const tokenId = store.primary?.token_id ?? null;
-  const history = useSigned("history");
+  const history = useSigned("history", { cacheKey: vaultCacheKey(wallet.accountId, wallet.session?.token ?? null, "history") });
   const { run: runHistory, reset: resetHistory } = history;
   const { accountId, session } = wallet;
   const live = !!(session && tokenId && session.account === accountId && session.token_id === tokenId && minutesLeft(session) > 0);
@@ -70,9 +72,26 @@ export function SettleView() {
   const readError = keyFailed ? "Your key could not be read. Try again."
     : readFailed ? (history.res?.error ? errorText(history.res.error.code).join(" ") : "The enclave did not answer. Try again in a moment.")
     : null;
-  const mineRows = useMemo(() => (mineState === "ready" ? historyRows(entries, callId) : []), [mineState, entries, callId]);
+  // Failed attempts are not in the signed history, so they are merged in from this browser's record: a failed swap
+  // shows as a Failed row whose proof link is the failed attempt's own call. They are local, so they never change
+  // the "Mine" gate: the signed history still has to be ready before anything lists.
+  const failedRows = useMemo<OrderRow[]>(() => listFailedSwaps(accountId).map((f) => ({
+    id: `failed:${f.callId}`,
+    kind: "mine",
+    title: "Swap",
+    settlement: null,
+    read: { state: "signed", entry: f.entry, callId: f.callId },
+    status: null,
+    from: null,
+    to: null,
+  })), [accountId]);
+  const mineRows = useMemo(() => (mineState === "ready" ? [...failedRows, ...historyRows(entries, callId)] : []), [mineState, failedRows, entries, callId]);
   const [pick, setPick] = useState<Source | null>(null);
-  const source: Source = pick ?? defaultSourceOf(mineRows.length);
+  // Once the reader touches any control on this page, the source stops following the default: a history read landing
+  // must not flip the tab from Public to Mine under their hand.
+  const [frozen, setFrozen] = useState<Source | null>(null);
+  const source: Source = pick ?? frozen ?? defaultSourceOf(mineRows.length);
+  const latchSource = () => { if (pick == null && frozen == null) setFrozen(source); };
   const publicRows = useMemo(() => buildOrders(reads), [reads]);
   const rows = useMemo(() => (source === "mine" ? mineRows : publicRows), [source, mineRows, publicRows]);
   const counts = useMemo(() => countsOf(rows), [rows]);
@@ -87,7 +106,7 @@ export function SettleView() {
     setUnlocking(false);
     if (!r.ok) setUnlockErr(errorText(r.code).join(" "));
   };
-  const retryMine = () => { if (keyFailed) store.refresh(); else void runHistory({}); };
+  const retryMine = () => { if (keyFailed) store.refresh(); else void runHistory({}, { cached: true, fresh: true }); };
 
   // A read belongs to one account: switching accounts clears it. With a live session the history loads by itself, once per
   // session, and only when the session covers the op, so it never opens a wallet popup.
@@ -99,7 +118,7 @@ export function SettleView() {
     const key = `${accountId}:${tokenId}:${session.exp_ms}`;
     if (autoFor.current === key) return;
     autoFor.current = key;
-    void runHistory({});
+    void runHistory({}, { cached: true });
   }, [live, tokenId, accountId, session, runHistory]);
 
   const [filter, setFilter] = useState<FilterId>("all");
@@ -140,9 +159,9 @@ export function SettleView() {
   ];
 
   const pickSource = (s: Source) => { setPick(s); setSelected(null); setPage(1); };
-  const pickFilter = (f: FilterId) => { setFilter(f); setPage(1); };
-  const pickRange = (r: RangeId) => { setRange(r); setPage(1); setNow(Date.now()); };
-  const typeQuery = (q: string) => { setQuery(q); setPage(1); };
+  const pickFilter = (f: FilterId) => { latchSource(); setFilter(f); setPage(1); };
+  const pickRange = (r: RangeId) => { latchSource(); setRange(r); setPage(1); setNow(Date.now()); };
+  const typeQuery = (q: string) => { latchSource(); setQuery(q); setPage(1); };
   const clearAll = () => { setFilter("all"); setRange("all"); setQuery(""); setPage(1); setNow(Date.now()); };
 
   return (
@@ -209,8 +228,8 @@ export function SettleView() {
           page={slice.page}
           pages={slice.pages}
           selectedId={current?.id ?? null}
-          onSelect={setSelected}
-          onPage={setPage}
+          onSelect={(id) => { latchSource(); setSelected(id); }}
+          onPage={(p) => { latchSource(); setPage(p); }}
           query={query}
           onQuery={typeQuery}
           empty={empty}
@@ -222,7 +241,7 @@ export function SettleView() {
 
       <section className="act-extra">
         {source === "public" && <RecordedFailed />}
-        <PriceCheck />
+        <PriceCheck onInteract={latchSource} />
         <Legend />
       </section>
     </div>

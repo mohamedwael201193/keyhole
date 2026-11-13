@@ -228,7 +228,7 @@ export function Overview(p: OverviewProps) {
           <LookupCard failed={failed} onRetry={keys.onRetry} />
         )}
 
-        <SetupChecklist held={held} looking={looking} unlock={unlock} unlocked={unlocked} funded={funded} swapped={swapped} swappedFrom={swappedFrom} balanceBusy={balance.busy} />
+        <SetupChecklist held={held} looking={looking} unlock={unlock} unlocked={unlocked} funded={funded} swapped={swapped} swappedFrom={swappedFrom} balanceBusy={balance.busy} balanceRead={balance.read} activityBusy={activity.busy} activityRead={activity.read} />
 
         <div className="ov-mid">
           {(held || noKey) && (
@@ -578,7 +578,7 @@ function TierCard({ tier, unlock }: { tier: TierView; unlock: UnlockView }) {
  * The shared SetupProgress draws it; this only computes the items.
  */
 function SetupChecklist(p: {
-  held: boolean; looking: boolean; unlock: UnlockView; unlocked: boolean; funded: boolean; swapped: boolean; swappedFrom: "log" | "record" | null; balanceBusy: boolean;
+  held: boolean; looking: boolean; unlock: UnlockView; unlocked: boolean; funded: boolean; swapped: boolean; swappedFrom: "log" | "record" | null; balanceBusy: boolean; balanceRead: boolean; activityBusy: boolean; activityRead: boolean;
 }) {
   const { held, looking, unlock, unlocked, funded, swapped, swappedFrom } = p;
   const items: SetupItem[] = [
@@ -596,13 +596,13 @@ function SetupChecklist(p: {
       ) : undefined,
     },
     {
-      id: "fund", title: "Fund the vault", done: funded,
+      id: "fund", title: "Fund the vault", done: funded, checking: p.balanceBusy && !p.balanceRead,
       note: funded ? "Balance read from the vault." : !held ? "Needs a key first." : !unlocked ? "Checked once you unlock." : p.balanceBusy ? "Reading your vault…" : "A deposit is a transfer you approve in your wallet.",
       action: held && !funded ? <Button href={dashHref("/vault")} variant="secondary" size="sm" testid="setup-fund-action">Deposit</Button> : undefined,
     },
     {
-      id: "swap", title: "First swap", done: swapped,
-      note: swapped ? (swappedFrom === "log" ? "Swap done. Read from your signed activity." : "Swap done. Counted in your key's record (settled swaps and copies, the same count as Tier progress).") : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : "Swaps run inside the enclave, under your caps.",
+      id: "swap", title: "First swap", done: swapped, checking: p.activityBusy && !p.activityRead,
+      note: swapped ? (swappedFrom === "log" ? "Swap done. Read from your signed activity." : "Swap done. Counted in your key's record (settled swaps and copies, the same count as Tier progress).") : !held ? "Needs a key first." : !unlocked ? "Checked from your activity once you unlock." : p.activityBusy && !p.activityRead ? "Reading your activity…" : "Swaps run inside the enclave, under your caps.",
       action: held && !swapped ? <Button href={dashHref("/swap")} variant="secondary" size="sm" testid="setup-swap-action">Swap</Button> : undefined,
     },
   ];

@@ -150,6 +150,7 @@
     "capUsed": "Cap",
     "ofCap": "{used} of {cap}",
     "capOnly": "cap {cap}",
+    "capRefused": "A refused or failed attempt still counts toward today's cap until it resets.",
     "quotePreview": "this quote {used} of {cap}",
     "limitsUnread": "Sign once to read your caps.",
     "flip": "Swap direction",
