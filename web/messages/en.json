@@ -401,6 +401,10 @@
       "The complete wallet authority inventory could not be read.",
       "Wait for a complete authenticated inventory. Never assume missing pages are empty."
     ],
+    "time_budget": [
+      "This request ran out of time before anything was sent.",
+      "Nothing was reserved or moved. Try again; if a withdrawal says Sent, confirming, it continues on its own."
+    ],
     "native_busy": [
       "A native operation is already pending.",
       "Reconcile the original operation before starting another one."

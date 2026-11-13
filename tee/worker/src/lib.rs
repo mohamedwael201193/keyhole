@@ -855,6 +855,45 @@ pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) 
     Ok(now as u64)
 }
 
+/// Wall-clock budget of one worker call. OutLayer's default max_execution_seconds is 60 (callers
+/// here send no override), so the worker plans for 50 s: no new phase starts without room for it,
+/// and a call that runs out of room returns a resumable pending result instead of being killed.
+pub mod budget {
+    use std::cell::Cell;
+    pub const TOTAL_MS: u64 = 50_000;
+    /// The reservation (spend charge) is made only if the call is still this young.
+    pub const PRE_CHARGE_MAX_MS: u64 = 20_000;
+    /// begin_value_op (a FINAL send) needs at least this much room.
+    pub const BEGIN_MIN_LEFT_MS: u64 = 25_000;
+    /// One exit hop (validate, FINAL readbacks, POST, re-read) needs at least this much room.
+    pub const HOP_MIN_LEFT_MS: u64 = 22_000;
+    thread_local! {
+        static START: Cell<Option<std::time::Instant>> = const { Cell::new(None) };
+        static FAKE_ELAPSED: Cell<Option<u64>> = const { Cell::new(None) };
+    }
+    pub fn start() {
+        START.with(|s| s.set(Some(std::time::Instant::now())));
+    }
+    pub fn set_elapsed_for_test(ms: Option<u64>) {
+        FAKE_ELAPSED.with(|f| f.set(ms));
+    }
+    pub fn elapsed_ms() -> u64 {
+        if let Some(v) = FAKE_ELAPSED.with(|f| f.get()) {
+            return v;
+        }
+        START.with(|s| s.get().map(|t| t.elapsed().as_millis() as u64).unwrap_or(0))
+    }
+    pub fn left_ms() -> u64 {
+        TOTAL_MS.saturating_sub(elapsed_ms())
+    }
+    pub fn pre_charge_ok() -> bool {
+        elapsed_ms() <= PRE_CHARGE_MAX_MS
+    }
+    pub fn begin_ok() -> bool {
+        left_ms() >= BEGIN_MIN_LEFT_MS
+    }
+}
+
 /// A spend held against the session cap (when the call runs in a session) and the key's daily cap.
 /// Every refusal before the send gives it back at once (`charge_spend`). A send that failed for good
 /// gives it back in `settle`. A send still pending or under review keeps it.

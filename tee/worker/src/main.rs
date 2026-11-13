@@ -143,7 +143,7 @@ mod host {
         static BIND: std::cell::RefCell<Option<(String, Option<String>)>> = const { std::cell::RefCell::new(None) };
     }
 
-    fn authenticate(input: &Value, op: &str, need_key: bool) -> Result<Ctx, Error> {
+    fn authenticate(input: &Value, op: &str, need_key: bool) -> Result<Ctx, Error> { budget::start();
         if input.pointer("/auth/scheme").and_then(|v| v.as_str()) == Some("session") {
             return authenticate_session(input, op);
         }
@@ -325,7 +325,7 @@ mod host {
         let mut out=json!({"ok":true,"op":"quote","account":c.account,"tier":c.tier,"usd_micro":usd,"limits":lim,"spent_today_usd_micro":spent,"policy":"passed"});
         if !execute{out["quote"]=dry["quote"].clone();return Ok(out);}
         body["dry"]=json!(false);
-        let charge=charge_spend(&mut Host,&c.cap(),&lim,c.session.as_ref().map(|(id,g)|(id.as_str(),g)),usd,c.now_ms)?;
+        if !budget::pre_charge_ok(){return Err(err("time_budget","preflight used too much of the call's time; nothing was reserved or sent, retry"));} let charge=charge_spend(&mut Host,&c.cap(),&lim,c.session.as_ref().map(|(id,g)|(id.as_str(),g)),usd,c.now_ms)?;
         let j=guard_begin(&c,input,"quote",body.clone(),Some(charge))?;
         if !guarded::put_once(&mut Host,&format!("{}/dispatch",j.key()),b"1")?{return Err(err("replay","quote already dispatched"));}
         let real=oneclick_quote(&body).map_err(|_|err("needs_review",format!("quote-only outcome unknown; admission {} remains locked",j.op_id)))?;
@@ -538,7 +538,7 @@ mod host {
             }
         };
         // Everything below holds the spend. Each refusal before the send gives it back (charge_spend and release).
-        let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
+        if !budget::pre_charge_ok() { return Err(err("time_budget", "preflight used too much of the call's time; nothing was reserved or sent, retry")); } let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
         if let Err(e) = settle_gate(&c.token_id(), &c.account, stamped) {
             charge.release(&mut Host);
             return Err(e);
@@ -583,6 +583,8 @@ mod host {
         assert_unlocked(&Host.get(&tkey(&c.token_id(), "lock")), &c.account, c.now_ms)?;
         assert_not_listed("withdraw", &c.token_id())?;
         let stamped = guard_control(&c.token_id())?.epoch;
+        // No reservation unless there is still room to begin: a call killed after charging would leak the hold.
+        if !budget::pre_charge_ok() { return Err(err("time_budget", "preflight used too much of the call's time; nothing was reserved or sent, retry")); }
         // Holds the spend; every refusal before the send gives it back (see charge_spend).
         let charge = charge_spend(&mut Host, &c.cap(), &lim, c.session.as_ref().map(|(i, g)| (i.as_str(), g)), usd, c.now_ms)?;
         if let Err(e) = settle_gate(&c.token_id(), &c.account, stamped) {

@@ -266,7 +266,18 @@ struct VerifiedStep {
     provider: Value,
     observation: Observation,
 }
+/// Remaining wall-clock room for this call is asked of the host; below this a new hop is not started.
+pub const HOP_MIN_LEFT_MS: u64 = 22_000;
+/// Resumable pending result: nothing was lost or resent; a reconcile of the same operation id
+/// continues at `step` (a posted hop is polled, never posted again).
+fn pause(j: &Journal, step: Step) -> Value {
+    json!({"status":"processing","exit_mode":MODE,"step":step.name(),"value_op_id":j.op_id,"request_id":Value::Null,"admission_finished":false,"reason":"time_budget"})
+}
 pub trait Host: ProviderHost {
+    /// Milliseconds left in this call's wall-clock budget (default: unlimited, native tests).
+    fn time_left_ms(&mut self) -> u64 {
+        u64::MAX
+    }
     /// FINAL public intents mt_balance_of and FT balance/storage; confidential ledger
     /// is authenticated provider data. All identities/assets validated by adapter.
     fn observe(&mut self, j: &Journal, key: &str) -> Result<Observation, Error>;
@@ -367,6 +378,9 @@ pub fn drive_continued<H:Host>(h:&mut H,j:&Journal,key:&str,continuation:Option<
             json!({"status":if done{if t.success{"success"}else{"failed"}}else{"needs_review"},"exit_mode":MODE,"value_op_id":j.op_id,"request_id":t.provider_id,"admission_finished":done}),
         );
     }
+    if h.time_left_ms() < HOP_MIN_LEFT_MS {
+        return Ok(pause(j, Step::Unshield));
+    }
     h.validate_dispatch(j, key)?;
     let baseline_key = format!("{root}/baseline");
     let baseline = if let Some(o) = read::<_, Observation>(h, &baseline_key)? {
@@ -422,6 +436,9 @@ pub fn drive_continued<H:Host>(h:&mut H,j:&Journal,key:&str,continuation:Option<
                 return Err(err("exit_wal", "verified storage is not registered"));
             }
             continue;
+        }
+        if h.time_left_ms() < HOP_MIN_LEFT_MS {
+            return Ok(pause(j, step));
         }
         let id_key = format!("{sk}/provider");
         let id = if let Some(id) = read::<_, String>(h, &id_key)? {

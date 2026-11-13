@@ -27,6 +27,9 @@ struct Fixture {
     receipt: Option<Value>,
     spent_recipient: bool,
     finish_fail: bool,
+    one_hop_per_call: bool,
+    call_start_posts: usize,
+    zero_time: bool,
 }
 impl Fixture {
     fn new() -> Self {
@@ -112,6 +115,13 @@ fn delivery(j:&Journal,amount:&str)->Value{
     v["receipts_outcome"].as_array_mut().unwrap().push(json!({"id":"ft","outcome":{"executor_id":TOKEN,"receipt_ids":[],"status":{"SuccessValue":""},"logs":[format!("EVENT_JSON:{log}")]}}));v
 }
 impl Host for Fixture {
+    fn time_left_ms(&mut self) -> u64 {
+        if self.zero_time || (self.one_hop_per_call && self.posts.len() > self.call_start_posts) {
+            0
+        } else {
+            u64::MAX
+        }
+    }
     fn original_delivery(&mut self,j:&Journal,_intent:&str)->Result<Value,Error>{
         Ok(self.receipt.clone().unwrap_or_else(||delivery(j,&self.final_delta.unwrap_or(100).to_string())))
     }
@@ -808,4 +818,54 @@ fn exact_exit_policy_gate_is_enrolled_only_with_exit_not_enrolled_for_collateral
     let main = include_str!("main.rs").split("fn op_withdraw(").nth(1).unwrap().split("fn load_prov(").next().unwrap();
     assert!(main.find("exact_exit_policy(").unwrap() < main.find("charge_spend(").unwrap());
     assert!(main.contains("assert_withdraw_to(") && main.contains("assert_not_listed(") && main.contains("guard_begin("));
+}
+
+#[test]
+fn each_call_does_at_most_one_hop_and_resumes_without_resending() {
+    let mut h = Fixture::new();
+    h.one_hop_per_call = true;
+    let j = journal();
+    let mut seen = Vec::new();
+    for i in 0..6 {
+        h.call_start_posts = h.posts.len();
+        let r = drive(&mut h, &j, "key").unwrap();
+        seen.push((r["status"].as_str().unwrap().to_string(), h.posts.len()));
+        if r["status"] == "success" {
+            break;
+        }
+        assert_eq!(r["status"], "processing", "call {i}: {r}");
+        assert_eq!(r["reason"], "time_budget");
+        assert_eq!(r["admission_finished"], false);
+        // the provider settles the posted hop between calls (readbacks follow the hop)
+        let ids: Vec<String> = h.rows.keys().cloned().collect();
+        for id in ids {
+            h.rows.get_mut(&id).unwrap()["status"] = json!("success");
+        }
+        let o = h.obs.as_mut().unwrap();
+        match h.posts.len() {
+            1 => {
+                o.confidential = "900".into();
+                o.intents = "120".into();
+            }
+            2 => o.registered = true,
+            _ => {}
+        }
+    }
+    assert_eq!(h.posts.len(), 3, "exactly one POST per hop across all calls: {seen:?}");
+    assert_eq!(seen.last().unwrap().0, "success", "{seen:?}");
+    let steps: Vec<Step> = h.posts.iter().map(|p| p.0).collect();
+    assert_eq!(steps, vec![Step::Unshield, Step::Storage, Step::Withdraw]);
+}
+#[test]
+fn out_of_time_before_any_work_posts_nothing_and_pauses() {
+    let mut h = Fixture::new();
+    h.zero_time = true;
+    let j = journal();
+    let r = drive(&mut h, &j, "key").unwrap();
+    assert_eq!(r["status"], "processing");
+    assert_eq!(r["step"], "unshield");
+    assert!(h.posts.is_empty() && h.finish_calls == 0);
+    h.zero_time = false;
+    assert_eq!(drive(&mut h, &j, "key").unwrap()["status"], "success");
+    assert_eq!(h.posts.len(), 3);
 }
