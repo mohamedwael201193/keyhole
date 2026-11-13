@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   description: "An NFT that is the viewing key to a confidential trading account inside an attested TEE on NEAR. Hold the key, run the account. Sell it, and the account goes with it.",
   metadataBase: new URL(siteUrl()),
   openGraph: { title: "KEYHOLE", description: "Nothing on the chain. Everything in the key.", images: [{ url: "/og.png", width: 1200, height: 630 }] },
-  icons: { icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }], apple: "/apple-icon.png" },
+  icons: { icon: [{ url: "/brand/keyhole-emblem.png", type: "image/png" }, { url: "/favicon.ico" }], apple: "/apple-icon.png" },
 };
 export const viewport: Viewport = { themeColor: "#E6DFD0", width: "device-width", initialScale: 1 };
 

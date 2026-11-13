@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/images/emblem.webp" width="220" alt="KEYHOLE emblem"></p>
+<p align="center"><img src="web/public/brand/keyhole-emblem.png" width="220" alt="KEYHOLE emblem"></p>
 
 <h1 align="center">KEYHOLE</h1>
 
