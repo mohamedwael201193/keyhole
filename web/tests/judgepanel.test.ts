@@ -14,7 +14,7 @@ const ev = (id: string) => JSON.parse(readFileSync(`${__dirname}/../public/evide
 const sha = (o: unknown) => createHash("sha256").update(canonical(o)).digest("hex");
 // Public attestation pins: legacy proofs retained; current v2.6 fetched 2026-11-12.
 const ATTESTED = {
-  [PUBLISHED_INFO_CALL]: "12e2b73db77a08b7d72fa599f9e40c8aa48205b4f476f35887d0a2bbcaaf41de",
+  [PUBLISHED_INFO_CALL]: "5db6772a6db9a3799b982d962dc189cd650537a81d516a049c083518e9d2f8eb",
   "116641a2-0744-45a0-9698-4b23dab365fc": "b097b6ad0f3f7fa28564f3eb396afe2969ef16049b3c95449940d65ad6b4b8e4",
   "42f2c909-27db-4562-9a24-a0399c0f9a1d": "515b44fa7318864651938dd36e6e0ccf09d9a0012585ae6b91e414e0ef6a257e",
   "962d4374-b9ec-411a-9efa-973b36260431": "e7fb60372ffdda802b9d5326864fb2b9a8decefe9bad670c72566b9ae3c864f3",
@@ -39,10 +39,10 @@ describe("flagship outputs are published, so the sixth check is a real hash matc
     it(`${id.slice(0, 8)}: published output hashes to the attested output_hash`, () => expect(sha(ev(id).output)).toBe(h));
     it(`${id.slice(0, 8)}: one changed field no longer matches`, () => { const o = structuredClone(ev(id).output); o.ok = !o.ok; expect(sha(o)).not.toBe(h); });
   }
-  it("the current guarded v2.6 info output names all 43 ops, including custody reconciliation and read-only exit preview", () => {
+  it("the current guarded v2.6 info output names all 44 ops, including custody reconciliation and read-only exit preview", () => {
     const o = ev(PUBLISHED_INFO_CALL).output;
-    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(43);
-    for (const op of ["chain_address", "chain_sign", "add_beat_key", "del_beat_key", "session", "session_revoke", "level_up", "withdraw_dry_run", "reconcile_value_op", "prepare_collateral", "pledge_inventory"]) expect(o.ops).toContain(op);
+    expect(o.op).toBe("info"); expect(o.ops).toHaveLength(44);
+    for (const op of ["chain_address", "chain_sign", "add_beat_key", "del_beat_key", "session", "session_revoke", "level_up", "withdraw_dry_run", "reconcile_value_op", "prepare_collateral", "pledge_inventory", "rebroadcast_minter_send"]) expect(o.ops).toContain(op);
   });
   it("the chain_sign output returns the key's EVM address and is listed on /verify", () => {
     const o = ev("0cd1c3bd-21be-44dc-bc60-e792a42344e6").output;
