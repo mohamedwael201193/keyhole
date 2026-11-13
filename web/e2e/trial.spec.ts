@@ -104,7 +104,7 @@ test("the free trial mints, transfers and refuses the old holder", async ({ page
   await page.goto("/try");
   await expect(page.getByTestId("trial-banner")).toContainText("Testnet · free · not real money");
   await expect(page.getByTestId("net-testnet")).toHaveAttribute("aria-current", "page");
-  await expect(page.getByTestId("net-mainnet")).toHaveAttribute("href", "/");
+  await expect(page.getByTestId("net-mainnet")).toHaveAttribute("href", "/dashboard");
   await page.getByTestId("trial-create").click();
   await expect(page.getByTestId("trial-account")).toContainText(HOLDER);
   await page.getByTestId("trial-mint").click();
