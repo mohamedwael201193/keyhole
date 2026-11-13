@@ -26,7 +26,7 @@ import { minutesLeft } from "@/lib/session";
 import { LOCK_LABEL, LOCK_NOTE, useValueLock } from "@/lib/valueLock";
 import { ValueRecovery } from "@/components/ValueRecovery";
 import { Details, InCardFailure, InCardProgress, InCardSuccess } from "@/components/InCard";
-import { isNotSent } from "@/lib/opResult";
+import { isNotSent, withdrawResultView } from "@/lib/opResult";
 import { OpNotSent } from "@/components/OpNotSent";
 import { TeeProgress } from "@/components/TeeProgress";
 import { DepositQr } from "@/components/DepositQr";
@@ -797,12 +797,12 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
 )}
         {withdraw.busy && <InCardProgress title="Withdrawing…" line={withdraw.label || "Sending your payout"} fraction={withdraw.stage === "settling" ? 0.75 : 0.4} testid="withdraw-pending" />}
         {!withdraw.busy && withdraw.res?.output?.ok && withdraw.res.output.op === "exact_near_exit_v1" && doneWithdraw && (
-          <InCardSuccess testid="withdraw-out" amount={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} title="Settled"
-            link={withdraw.res.output.tx_hash ? { href: tx(String(withdraw.res.output.tx_hash)), label: `View ${String(withdraw.res.output.tx_hash).slice(0, 8)}… on NearBlocks` } : { href: acct(accountId || ""), label: "Open your account on NearBlocks" }}
+          <InCardSuccess testid="withdraw-out" amount={withdrawSummary(doneWithdraw.amount, doneWithdraw.to)} title={withdrawResultView(withdraw.res.output).title}
+            link={withdrawResultView(withdraw.res.output).hash ? { href: tx(withdrawResultView(withdraw.res.output).hash!), label: `View ${withdrawResultView(withdraw.res.output).hash!.slice(0, 8)}… on NearBlocks` } : null}
             actions={<><Button size="sm" onClick={() => { withdraw.reset(); }} testid="withdraw-again">Withdraw again</Button><Button size="sm" variant="secondary" href={dashHref("/settle")}>View in Activity</Button></>}>
             <Details>
               <p className="vlt-sub" data-testid="withdraw-receipt">To {String(withdraw.res.output.to ?? doneWithdraw.to)} · amount {String(withdraw.res.output.amount ?? doneWithdraw.amount)}{withdraw.res.output.fee ? ` · fee ${String(withdraw.res.output.fee)}` : ""}</p>
-              {!withdraw.res.output.tx_hash && <p className="vlt-sub" data-testid="withdraw-settling">The payout is sent by the custody wallet and shows on your account page within about a minute.</p>}
+              {!withdrawResultView(withdraw.res.output).settled && <p className="vlt-sub" data-testid="withdraw-settling">The payout is on its way. It shows on <a href={acct(accountId || "")} target="_blank" rel="noreferrer">your account page</a> within about a minute.</p>}
               {isImplicitAccount(accountId || "") && <p className="vlt-sub">{t("vault.storageNote")}</p>}
               {withdraw.res.output.request_id && <p className="mono vlt-small">{t("vault.request")} {String(withdraw.res.output.request_id)}</p>}
               <Attested r={withdraw.res} />
