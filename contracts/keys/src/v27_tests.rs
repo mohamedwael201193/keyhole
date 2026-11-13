@@ -126,6 +126,16 @@ fn owner_proposal_to_self_is_refused() {
 }
 
 #[test]
+fn accept_owner_refuses_without_proposal() {
+    let mut c = setup();
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+    // No proposal was ever staged, so accept must panic instead of handing over.
+    ctx("guardian.near", 1, NOW); rejected(|| c.accept_owner());
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+    assert!(c.governance_state().pending_owner.is_none());
+}
+
+#[test]
 fn a_bad_owner_proposal_can_be_cancelled_before_it_can_take_effect() {
     let mut c = setup();
     ctx("owner.near", 1, NOW); let _ = c.propose_owner(a("attacker.near"));

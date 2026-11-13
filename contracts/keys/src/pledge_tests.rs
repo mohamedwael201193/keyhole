@@ -576,14 +576,21 @@ fn prepaid_loan_terminal_slot(default: bool) {
     assert!(c.get_loan("k1".into()).is_none());
 }
 #[test] fn open_loan_refuses_when_lending_disabled() {
-    let mut c=setup(); let mut cfg=config_required(); cfg.lending_enabled=false; save_config(&cfg);
+    let mut c=setup();
+    // The toggle goes through the real owner path, not a direct config write.
+    ctx("owner.near",1,NOW); let _=c.set_lending_enabled(false);
+    assert!(!config_required().lending_enabled);
     ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
     assert!(c.get_loan("k1".into()).is_none());
 }
 #[test] fn open_loan_refuses_unready_collateral() {
-    let mut c=setup(); collateral().remove(&"k1".into());
-    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
-    assert!(c.get_loan("k1".into()).is_none());
+    let mut c=setup();
+    // A second key whose binding was never registered is naturally unready:
+    // no direct storage write, just the real mint path. Tier 3 (Gold) so the
+    // tier cap cannot be the refusing guard — only the unready binding is.
+    ctx("minter.near",N/10,NOW); c.nft_mint("k2".into(),a("bob.near"),3,TokenMetadata{title:Some("Key".into()),..Default::default()});
+    ctx("bob.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k2".into(),terms());});
+    assert!(c.get_loan("k2".into()).is_none());
 }
 #[test] fn register_collateral_refuses_non_minter() {
     let mut c=setup(); collateral().remove(&"k1".into());
@@ -593,10 +600,16 @@ fn prepaid_loan_terminal_slot(default: bool) {
 }
 #[test] fn register_collateral_refuses_same_wallet_on_second_token() {
     let mut c=setup();
-    // The fixture inserts k1's binding directly into collateral(); mirror the
-    // on-chain invariant the real register path maintains (binding + wallet index
-    // are written together) before probing the second token.
-    bound_wallets().insert(&format!("ed25519:{}", "ab".repeat(32)), &"k1".into());
+    // Drive the FIRST registration through the real path: drop the fixture's
+    // synthetic binding, register k1 for real, and settle the store + policy
+    // read so the binding is ready (binding + wallet index are written
+    // together by the real path, pledge.rs:451). Then the same wallet on a
+    // second token must be refused by the real guard.
+    collateral().remove(&"k1".into());
+    let n=registration(&mut c);
+    result(PromiseResult::Successful(vec![]),NOW); let _=c.on_collateral_stored("k1".into(),n);
+    result(policy(false),NOW); assert!(c.on_collateral_checked("k1".into(),n));
+    assert!(c.get_collateral_binding("k1".into()).map(|b|b.ready).unwrap_or(false));
     ctx("minter.near",N/10,NOW); c.nft_mint("k2".into(),a("bob.near"),1,TokenMetadata::default());
     ctx("minter.near",N/10,NOW);
     rejected(||{let _=c.register_collateral("k2".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("bob.near"),U64(0));});
@@ -614,4 +627,20 @@ fn prepaid_loan_terminal_slot(default: bool) {
     let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
     ctx("bob.near",1,NOW); rejected(||{let _=c.cancel_loan("k1".into(),U64(1));});
     assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn set_lending_enabled_refuses_non_owner() {
+    let mut c=setup();
+    assert!(config_required().lending_enabled);
+    // Only the owner can flip the lending switch — the only owner function
+    // the loans flow needs, and it must be OFF before the lock.
+    ctx("evil.near",1,NOW); rejected(||{let _=c.set_lending_enabled(false);});
+    assert!(config_required().lending_enabled);
+}
+#[test] fn repay_loan_refuses_wrong_amount() {
+    let mut c=setup(); active(&mut c);
+    // Under-pay and over-pay are both refused: the repayment must be exact.
+    ctx("alice.near",N,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    ctx("alice.near",terms().repayment.0+1,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+    assert_eq!(c.get_payout_credit(a("lender.near")).0,0);
 }
