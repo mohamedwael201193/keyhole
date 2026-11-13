@@ -126,6 +126,16 @@ fn owner_proposal_to_self_is_refused() {
 }
 
 #[test]
+fn accept_owner_refuses_without_proposal() {
+    let mut c = setup();
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+    // No proposal was ever staged, so accept must panic instead of handing over.
+    ctx("guardian.near", 1, NOW); rejected(|| c.accept_owner());
+    assert_eq!(c.governance_state().owner, a("owner.near"));
+    assert!(c.governance_state().pending_owner.is_none());
+}
+
+#[test]
 fn a_bad_owner_proposal_can_be_cancelled_before_it_can_take_effect() {
     let mut c = setup();
     ctx("owner.near", 1, NOW); let _ = c.propose_owner(a("attacker.near"));
@@ -916,4 +926,151 @@ fn wind_down_gate_does_not_block_transfers_or_claims_of_existing_credit() {
     ctx("alice.near", 1, WIND_DOWN_NS); c.nft_transfer(a("bob.near"), "k1".into(), None, None);
     ctx("bob.near", 1, WIND_DOWN_NS); rejected(|| { let _ = c.claim_payout(); }); // no credit: refused by its own rule
     ctx("alice.near", N, WIND_DOWN_NS); rejected(|| { let _ = c.repay_loan("k1".into(), U64(1)); }); // no loan: own rule
+}
+
+// ---------- ATTACK MATRIX (added 2026-11-13): a non-owner must not be able to propose
+// a successor. The owner-only check fires before any proposal is written. ----------
+#[test]
+fn propose_owner_refuses_non_owner() {
+    let mut c = setup();
+    ctx("evil.near", 1, NOW); rejected(|| { let _ = c.propose_owner(a("guardian.near")); });
+    assert!(c.governance_state().pending_owner.is_none(), "a refused proposal writes nothing");
+}
+
+// ---------- batch B: governance + treasury pins ----------
+#[test]
+fn stage_upgrade_refuses_uppercase_and_nonhex_hash() {
+    let mut c = setup();
+    let upper = sha_hex(&wasm()).to_uppercase();
+    assert_eq!(upper.len(), 64);
+    ctx("owner.near", 1, NOW); rejected(|| { let _ = c.stage_upgrade(upper.clone()); });
+    let nonhex = format!("g{}", "a".repeat(63));
+    assert_eq!(nonhex.len(), 64);
+    ctx("owner.near", 1, NOW); rejected(|| { let _ = c.stage_upgrade(nonhex); });
+    assert!(c.governance_state().staged_upgrade_sha256.is_none(), "a refused stage writes nothing");
+}
+
+#[test]
+fn cancel_upgrade_refuses_non_owner() {
+    let mut c = setup();
+    let hash = sha_hex(&wasm());
+    ctx("owner.near", 1, NOW); let _ = c.stage_upgrade(hash.clone());
+    ctx("alice.near", 1, NOW); rejected(|| c.cancel_upgrade());
+    assert_eq!(c.governance_state().staged_upgrade_sha256, Some(hash), "a refused cancel leaves the stage");
+}
+
+#[test]
+fn cancel_upgrade_refuses_when_none_staged() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); rejected(|| c.cancel_upgrade());
+    assert!(c.governance_state().staged_upgrade_sha256.is_none());
+}
+
+#[test]
+fn apply_upgrade_refuses_when_none_staged() {
+    let mut c = setup();
+    ctx_input("owner.near", 1, NOW, wasm());
+    rejected(|| { let _ = c.apply_upgrade(); });
+    assert!(c.governance_state().staged_upgrade_sha256.is_none());
+}
+
+#[test]
+fn apply_upgrade_refuses_treasury_pending() {
+    let mut c = setup();
+    ctx("owner.near", N, RECOVERY_UNLOCK_NS); c.fund_treasury();
+    ctx("recovery.near", 1, RECOVERY_UNLOCK_NS); let _ = c.recover_treasury(U128(N));
+    assert!(config_required().treasury_pending.is_some(), "the recovery must be pending");
+    let code = wasm();
+    ctx("owner.near", 1, RECOVERY_UNLOCK_NS); let _ = c.stage_upgrade(sha_hex(&code));
+    ctx_input("owner.near", 1, RECOVERY_UNLOCK_NS + MIN_UPGRADE_DELAY_NS, code);
+    rejected(|| { let _ = c.apply_upgrade(); });
+    assert!(c.governance_state().staged_upgrade_sha256.is_some(), "a refused apply keeps the stage");
+}
+
+#[test]
+fn apply_upgrade_succeeds_at_exact_not_before() {
+    let mut c = setup();
+    let code = wasm();
+    ctx("owner.near", 1, NOW); let not_before = c.stage_upgrade(sha_hex(&code));
+    assert_eq!(not_before.0, NOW + MIN_UPGRADE_DELAY_NS);
+    ctx_input("owner.near", 1, NOW + MIN_UPGRADE_DELAY_NS, code);
+    let _ = c.apply_upgrade();
+    let receipts = format!("{:?}", get_created_receipts());
+    assert!(receipts.contains("DeployContract"), "apply_upgrade must schedule a deploy receipt");
+    assert!(c.governance_state().staged_upgrade_sha256.is_none(), "applied upgrade is consumed");
+}
+
+#[test]
+fn accept_owner_succeeds_at_exact_not_before() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); let not_before = c.propose_owner(a("guardian.near"));
+    assert_eq!(not_before.0, NOW + MIN_UPGRADE_DELAY_NS);
+    ctx("guardian.near", 1, NOW + MIN_UPGRADE_DELAY_NS); c.accept_owner();
+    assert_eq!(c.governance_state().owner, a("guardian.near"));
+}
+
+#[test]
+fn propose_owner_replaces_prior_proposal() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); let _ = c.propose_owner(a("bob.near"));
+    assert_eq!(c.governance_state().pending_owner, Some(a("bob.near")));
+    ctx("owner.near", 1, NOW); let _ = c.propose_owner(a("carol.near"));
+    assert_eq!(c.governance_state().pending_owner, Some(a("carol.near")));
+}
+
+#[test]
+fn cancel_owner_proposal_refuses_when_none_staged() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); rejected(|| c.cancel_owner_proposal());
+    assert!(c.governance_state().pending_owner.is_none());
+}
+
+#[test]
+fn fund_treasury_refuses_zero_amount() {
+    let mut c = setup();
+    let before = config_required().treasury_available.0;
+    ctx("owner.near", 0, NOW); rejected(|| c.fund_treasury());
+    assert_eq!(config_required().treasury_available.0, before, "a refused funding changes nothing");
+}
+
+#[test]
+fn fund_treasury_credits_recoverable_ledger() {
+    let mut c = setup();
+    ctx("owner.near", N, NOW); c.fund_treasury();
+    assert_eq!(c.treasury_recoverable().0, N);
+}
+
+#[test]
+fn recover_treasury_refuses_zero_amount() {
+    let mut c = setup();
+    ctx("owner.near", N, NOW); c.fund_treasury();
+    ctx("recovery.near", 1, RECOVERY_UNLOCK_NS); rejected(|| { let _ = c.recover_treasury(U128(0)); });
+    assert!(config_required().treasury_pending.is_none(), "a refused recovery leaves no pending record");
+}
+
+#[test]
+fn recover_treasury_succeeds_at_exact_recoverable() {
+    let mut c = setup();
+    ctx("owner.near", N, NOW); c.fund_treasury();
+    assert_eq!(c.treasury_recoverable().0, N);
+    ctx("recovery.near", 1, RECOVERY_UNLOCK_NS); let _ = c.recover_treasury(U128(N));
+    assert_eq!(config_required().treasury_available.0, 0);
+    assert!(config_required().treasury_pending.is_some());
+}
+
+#[test]
+fn set_lending_enabled_refuses_zero_yocto() {
+    let mut c = setup();
+    assert!(config_required().lending_enabled);
+    ctx("owner.near", 0, NOW); rejected(|| c.set_lending_enabled(false));
+    assert!(config_required().lending_enabled, "a refused toggle leaves lending on");
+}
+
+#[test]
+fn set_lending_enabled_toggles_both_ways() {
+    let mut c = setup();
+    ctx("owner.near", 1, NOW); c.set_lending_enabled(false);
+    assert!(!config_required().lending_enabled);
+    ctx("owner.near", 1, NOW); c.set_lending_enabled(true);
+    assert!(config_required().lending_enabled);
 }

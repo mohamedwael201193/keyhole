@@ -1420,6 +1420,14 @@ mod v2 {
         yocto("alice.near"); c.nft_revoke("k1".into(), acc("market.near"));
         yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
     }
+    // ATTACK MATRIX (2026-11-13): revoke_all must also kill every approval for transfer purposes.
+    #[test] #[should_panic(expected = "Sender not approved")] fn revoke_all_then_market_cannot_transfer() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        approve(&mut c, "alice.near", "k1", "m1.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("alice.near"); c.nft_revoke_all("k1".into());
+        assert!(!c.nft_is_approved("k1".into(), acc("market.near"), None));
+        yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+    }
     #[test] #[should_panic(expected = "Sender not approved")] fn old_approval_dies_after_resale() {
         let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
         yocto("alice.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
@@ -2345,5 +2353,224 @@ mod compact_json_tests {
         same!("sender_id": account, "previous_owner_id": account, "token_id": text, "msg": text);
         assert!(text.ends_with("🔑 "));
         assert_eq!(account.as_str(), "holder.near");
+    }
+}
+
+/// Batch C: value-op admission refusals plus NEP-178 / listing / transfer-call refusals.
+/// Multi-refusal tests use `refuses` (catch_unwind + exact panic substring) so one
+/// test can pin two refusals without the first panic aborting the test.
+#[cfg(test)]
+mod v26_add_tests {
+    use super::*;
+    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::{testing_env, Gas, NearToken};
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    const NEAR: u128 = 10u128.pow(24);
+    const LIST: u128 = LIST_STORAGE_DEPOSIT;
+
+    fn acc(s: &str) -> AccountId { s.parse().unwrap() }
+    fn y(v: u128) -> NearToken { NearToken::from_yoctonear(v) }
+    fn ctx(pred: &str, dep: NearToken) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).build());
+    }
+    fn ctx_gas(pred: &str, dep: NearToken, gas: Gas) {
+        testing_env!(VMContextBuilder::new().current_account_id(acc("keys.near")).predecessor_account_id(acc(pred)).attached_deposit(dep).prepaid_gas(gas).build());
+    }
+    fn meta() -> TokenMetadata {
+        TokenMetadata { title: Some("K".into()), description: None, media: None, media_hash: None, copies: Some(1), issued_at: None, expires_at: None, starts_at: None, updated_at: None, extra: None, reference: None, reference_hash: None }
+    }
+    fn setup() -> Contract { ctx("keys.near", y(0)); test_funded_contract() }
+    fn mint(c: &mut Contract, id: &str, to: &str) {
+        test_register_payouts(c, &[to.parse().unwrap()]);
+        ctx("minter.near", NearToken::from_millinear(100));
+        c.nft_mint(id.into(), acc(to), 2, meta());
+    }
+    fn approve(c: &mut Contract, owner: &str, id: &str, who: &str) {
+        test_register_payouts(c, &[acc(owner)]);
+        ctx(owner, NearToken::from_millinear(10));
+        c.nft_approve(id.into(), acc(who), None);
+    }
+    /// Admit a value-op as the minter with the standard storage deposit.
+    fn begin(c: &mut Contract, id: &str, epoch: u64, op_id: &str, owner: &str) {
+        ctx("minter.near", NearToken::from_millinear(10));
+        c.begin_value_op(id.into(), near_sdk::json_types::U64(epoch), op_id.into(), "ah".into(), acc(owner));
+    }
+    /// Run `f`, expect a panic whose message contains `expected`.
+    fn refuses<F: FnOnce()>(f: F, expected: &str) {
+        let r = catch_unwind(AssertUnwindSafe(f));
+        match r {
+            Ok(()) => panic!("expected a panic containing {expected:?}, but the call succeeded"),
+            Err(e) => {
+                let msg = e.downcast_ref::<String>().map(|s| s.as_str())
+                    .or_else(|| e.downcast_ref::<&str>().copied())
+                    .unwrap_or("<non-string panic payload>");
+                assert!(msg.contains(expected), "panic {msg:?} did not contain {expected:?}");
+            }
+        }
+    }
+
+    // ---- value-ops ----
+
+    #[test]
+    fn value_op_begin_refuses_bad_op_id() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        refuses(|| { ctx("minter.near", NearToken::from_millinear(10)); c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "".into(), "ah".into(), acc("alice.near")); }, "bad op_id");
+        refuses(|| { ctx("minter.near", NearToken::from_millinear(10)); c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "garbage".into(), "ah".into(), acc("alice.near")); }, "op_id already admitted or nonce out of order");
+    }
+
+    #[test]
+    #[should_panic(expected = "op_id already admitted or nonce out of order")]
+    fn value_op_begin_refuses_future_nonce() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        begin(&mut c, "k1", 0, "3:op", "alice.near");
+    }
+
+    #[test]
+    #[should_panic(expected = "epoch mismatch")]
+    fn value_op_begin_refuses_wrong_epoch() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+        assert_eq!(c.nft_settlement_epoch("k1".into()).0, 1);
+        begin(&mut c, "k1", 0, "1:op", "bob.near");
+    }
+
+    #[test]
+    #[should_panic(expected = "listed: unlist before value-ops")]
+    fn value_op_begin_refuses_listed_token() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(LIST)); c.nft_list("k1".into(), U128(NEAR));
+        begin(&mut c, "k1", 0, "1:op", "alice.near");
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown token")]
+    fn value_op_begin_refuses_unknown_token() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        begin(&mut c, "missing", 0, "1:op", "alice.near");
+    }
+
+    #[test]
+    fn value_op_begin_refuses_bad_action_hash() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        refuses(|| { ctx("minter.near", NearToken::from_millinear(10)); c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "1:op".into(), "".into(), acc("alice.near")); }, "bad action_hash");
+        refuses(|| { ctx("minter.near", NearToken::from_millinear(10)); c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "1:op".into(), "h".repeat(129), acc("alice.near")); }, "bad action_hash");
+    }
+
+    #[test]
+    #[should_panic(expected = "bad op_id")]
+    fn value_op_begin_refuses_long_op_id() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        let op_id = format!("1:{}", "a".repeat(84));
+        assert_eq!(op_id.len(), 86);
+        begin(&mut c, "k1", 0, &op_id, "alice.near");
+    }
+
+    #[test]
+    #[should_panic(expected = "attach value-op storage deposit")]
+    fn value_op_begin_refuses_insufficient_deposit() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("minter.near", y(0));
+        c.begin_value_op("k1".into(), near_sdk::json_types::U64(0), "1:op".into(), "ah".into(), acc("alice.near"));
+    }
+
+    #[test]
+    fn value_op_finish_refuses_unknown_op_id() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        refuses(|| { ctx("minter.near", y(0)); c.finish_value_op("k1".into(), "1:never".into(), true); }, "unknown value-op");
+        refuses(|| { ctx("minter.near", y(0)); c.finish_value_op("missing".into(), "1:op".into(), true); }, "unknown value-op");
+    }
+
+    // ---- NEP-178 / listings / approvals / transfers ----
+
+    #[test]
+    #[should_panic(expected = "Token not found")]
+    fn nft_transfer_refuses_unknown_token() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); c.nft_transfer(acc("bob.near"), "missing".into(), None, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "callback is private")]
+    fn resolve_transfer_call_refuses_non_contract() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1));
+        let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "".into());
+        let epoch = c.nft_settlement_epoch("k1".into()).0;
+        ctx("evil.near", y(1));
+        c.resolve_transfer_call("k1".into(), near_sdk::json_types::U64(epoch));
+    }
+
+    #[test]
+    #[should_panic(expected = "Token not found")]
+    fn nft_revoke_refuses_unknown_token() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); c.nft_revoke("missing".into(), acc("market.near"));
+    }
+
+    #[test]
+    #[should_panic(expected = "Token not found")]
+    fn nft_revoke_all_refuses_unknown_token() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx("alice.near", y(1)); c.nft_revoke_all("missing".into());
+    }
+
+    #[test]
+    fn reapproved_account_old_id_is_stale_for_transfer() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        approve(&mut c, "alice.near", "k1", "market.near");
+        approve(&mut c, "alice.near", "k1", "market.near");
+        assert_eq!(c.nft_token("k1".into()).unwrap().approved_account_ids.unwrap()[&acc("market.near")], 2);
+        refuses(|| { ctx("market.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), Some(1), None); }, "is different from the given approval_id");
+        // On-chain a panicking receipt rolls back, so the refused transfer's
+        // approval-map removal never lands; the unit-test mock does not roll
+        // back, so restore the pre-call approvals to mirror chain semantics.
+        {
+            let mut approved = c.tokens.approvals_by_id.as_mut().expect("approval management required").get(&"k1".to_string()).unwrap_or_default();
+            approved.insert(acc("market.near"), 2);
+            c.tokens.approvals_by_id.as_mut().expect("approval management required").insert(&"k1".to_string(), &approved);
+        }
+        ctx("market.near", y(1)); c.nft_transfer(acc("bob.near"), "k1".into(), Some(2), None);
+        assert_eq!(c.nft_token("k1".into()).unwrap().owner_id, acc("bob.near"));
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown token")]
+    fn nft_payout_refuses_unknown_token() {
+        let c = setup();
+        let _ = c.nft_payout("missing".into(), U128(100), Some(2));
+    }
+
+    #[test]
+    fn set_royalty_accepts_exact_cap() {
+        let mut c = setup();
+        ctx("owner.near", y(1)); c.set_royalty(acc("treasury.near"), MAX_ROYALTY_BPS);
+        assert_eq!(c.royalty_bps, MAX_ROYALTY_BPS);
+    }
+
+    #[test]
+    #[should_panic(expected = "value-op pending: finish before listing")]
+    fn nft_list_refuses_when_value_op_pending() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        begin(&mut c, "k1", 0, "1:op", "alice.near");
+        assert_eq!(c.pending_value_op_count("k1".into()).0, 1);
+        ctx("alice.near", y(LIST)); c.nft_list("k1".into(), U128(NEAR));
+    }
+
+    #[test]
+    #[should_panic(expected = "attach at least 100 Tgas")]
+    fn transfer_call_refuses_low_gas() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        ctx_gas("alice.near", y(1), Gas::from_tgas(50));
+        let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "".into());
+    }
+
+    #[test]
+    fn transfer_call_refuses_oversized_msg() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        refuses(|| { ctx("alice.near", y(1)); let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "x".repeat(16385)); }, "receiver message exceeds 16 KiB");
+        ctx("alice.near", y(1));
+        let _ = c.nft_transfer_call(acc("bob.near"), "k1".into(), None, None, "x".repeat(16384));
+        assert!(c.get_control_state("k1".into()).transfer_pending);
     }
 }

@@ -511,3 +511,380 @@ fn prepaid_loan_terminal_slot(default: bool) {
  result(PromiseResult::Successful(vec![]),NOW);let _=c.on_collateral_stored("k1".into(),n);ctx("alice.near",1,NOW);rejected(||c.nft_transfer(a("bob.near"),"k1".into(),None,None));
  result(policy(false),NOW);assert!(c.on_collateral_checked("k1".into(),n));ctx("alice.near",1,NOW);c.nft_transfer(a("bob.near"),"k1".into(),None,None);assert_eq!(c.get_control_state("k1".into()).owner_epoch.0,1);
 }
+
+// ---------- ATTACK MATRIX (added 2026-11-13): adversarial tests for guards that had
+// no direct test. Each test asserts the contract REFUSES the abuse. No contract
+// source was changed to make these pass. ----------
+
+#[test] fn double_claim_default_is_refused_after_title_moves() {
+    let mut c=setup(); active(&mut c);
+    let overdue=NOW+91*SECOND;
+    // A non-lender cannot seize at all.
+    ctx("bob.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("bob.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+    // The named lender seizes once: the title moves.
+    ctx("lender.near",1,overdue); let _=c.claim_default("k1".into(),U64(1),a("bob.near"));
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("bob.near"));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::UnlockPending);
+    // A second claim on the same loan is refused: the loan is no longer Active.
+    ctx("lender.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("carol.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("bob.near"));
+}
+#[test] fn repay_loan_twice_is_refused() {
+    let mut c=setup(); active(&mut c);
+    // A non-borrower cannot repay at all.
+    ctx("bob.near",terms().repayment.0,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    // The borrower repays once: the loan leaves Active.
+    ctx("alice.near",terms().repayment.0,NOW); let _=c.repay_loan("k1".into(),U64(1));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::UnlockPending);
+    assert_eq!(c.get_payout_credit(a("lender.near")),terms().repayment);
+    // A second repayment is refused: the loan is no longer Active.
+    ctx("alice.near",terms().repayment.0,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_payout_credit(a("lender.near")),terms().repayment);
+}
+#[test] fn claim_default_after_repay_is_refused() {
+    let mut c=setup(); active(&mut c);
+    ctx("alice.near",terms().repayment.0,NOW); let _=c.repay_loan("k1".into(),U64(1));
+    let overdue=NOW+91*SECOND;
+    ctx("lender.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("bob.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+}
+#[test] fn fund_loan_refuses_wrong_lender() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    let v=cert(&c); let sig=signed(&c,&v);
+    ctx("evil.near",N,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn fund_loan_refuses_wrong_amount() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    let v=cert(&c); let sig=signed(&c,&v);
+    ctx("lender.near",N/2,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v.clone(),sig.clone());});
+    ctx("lender.near",N+1,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn fund_loan_refuses_expired_deadline() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    let late=NOW+601*SECOND;
+    let v=c.loan_certificate_template("k1".into(),U64(late),U64(late+30*SECOND));
+    let sig=signed(&c,&v);
+    ctx("lender.near",N,late); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn open_loan_refuses_non_borrower() {
+    let mut c=setup();
+    ctx("bob.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_when_lending_disabled() {
+    let mut c=setup();
+    // The toggle goes through the real owner path, not a direct config write.
+    ctx("owner.near",1,NOW); c.set_lending_enabled(false);
+    assert!(!config_required().lending_enabled);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_unready_collateral() {
+    let mut c=setup();
+    // A second key whose binding was never registered is naturally unready:
+    // no direct storage write, just the real mint path. Tier 3 (Gold) so the
+    // tier cap cannot be the refusing guard — only the unready binding is.
+    ctx("minter.near",N/10,NOW); c.nft_mint("k2".into(),a("bob.near"),3,TokenMetadata{title:Some("Key".into()),..Default::default()});
+    ctx("bob.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k2".into(),terms());});
+    assert!(c.get_loan("k2".into()).is_none());
+}
+#[test] fn register_collateral_refuses_non_minter() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    ctx("alice.near",N/10,NOW);
+    rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));});
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_same_wallet_on_second_token() {
+    let mut c=setup();
+    // Drive the FIRST registration through the real path: drop the fixture's
+    // synthetic binding, register k1 for real, and settle the store + policy
+    // read so the binding is ready (binding + wallet index are written
+    // together by the real path, pledge.rs:451). Then the same wallet on a
+    // second token must be refused by the real guard.
+    collateral().remove(&"k1".into());
+    let n=registration(&mut c);
+    result(PromiseResult::Successful(vec![]),NOW); let _=c.on_collateral_stored("k1".into(),n);
+    result(policy(false),NOW); assert!(c.on_collateral_checked("k1".into(),n));
+    assert!(c.get_collateral_binding("k1".into()).map(|b|b.ready).unwrap_or(false));
+    ctx("minter.near",N/10,NOW); c.nft_mint("k2".into(),a("bob.near"),1,TokenMetadata::default());
+    ctx("minter.near",N/10,NOW);
+    rejected(||{let _=c.register_collateral("k2".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("bob.near"),U64(0));});
+    assert!(c.get_pending_registration("k2".into()).is_none());
+    assert!(c.get_collateral_binding("k1".into()).is_some(), "the first token keeps its binding");
+}
+#[test] fn treasury_recovery_refuses_amount_above_attributed_free_treasury() {
+    let mut c=setup(); ctx("owner.near",N,NOW); c.fund_treasury();
+    assert_eq!(c.treasury_recoverable().0,N);
+    ctx("recovery.near",1,RECOVERY_UNLOCK_NS); rejected(||{let _=c.recover_treasury(U128(N+1));});
+    assert_eq!(config_required().treasury_available.0,N);
+    assert!(config_required().treasury_pending.is_none());
+}
+#[test] fn cancel_loan_refuses_non_borrower_before_expiry() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    ctx("bob.near",1,NOW); rejected(||{let _=c.cancel_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn set_lending_enabled_refuses_non_owner() {
+    let mut c=setup();
+    assert!(config_required().lending_enabled);
+    // Only the owner can flip the lending switch — the only owner function
+    // the loans flow needs, and it must be OFF before the lock.
+    ctx("evil.near",1,NOW); rejected(||{c.set_lending_enabled(false);});
+    assert!(config_required().lending_enabled);
+}
+#[test] fn repay_loan_refuses_wrong_amount() {
+    let mut c=setup(); active(&mut c);
+    // Under-pay and over-pay are both refused: the repayment must be exact.
+    ctx("alice.near",N,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    ctx("alice.near",terms().repayment.0+1,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+    assert_eq!(c.get_payout_credit(a("lender.near")).0,0);
+}
+
+// ---------- BATCH A (added 2026-11-13): 30 loan + 9 collateral refusal tests.
+// Each test drives the real method with a live fixture and asserts a refusal
+// (via rejected()) or a real state change. No contract source was changed. ----------
+
+#[test] fn open_loan_refuses_zero_principal() {
+    let mut c=setup(); let mut t=terms(); t.principal=U128(0);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_principal_above_max_list_price() {
+    let mut c=setup(); let mut t=terms(); t.principal=U128(MAX_LIST_PRICE+1);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_repayment_below_principal() {
+    let mut c=setup(); let mut t=terms(); t.repayment=U128(N-1);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_repayment_above_max_list_price() {
+    let mut c=setup(); let mut t=terms(); t.repayment=U128(MAX_LIST_PRICE+1);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_zero_floor() {
+    let mut c=setup(); let mut t=terms(); t.floor_raw=U128(0);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_funding_deadline_in_past() {
+    let mut c=setup(); let mut t=terms(); t.funding_deadline_ns=U64(NOW);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_funding_deadline_beyond_seven_days() {
+    let mut c=setup(); let mut t=terms(); t.funding_deadline_ns=U64(NOW+7*86400*SECOND+1);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_wrong_bond_amount() {
+    let mut c=setup();
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT-1,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT+1,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_lender_is_borrower() {
+    let mut c=setup(); let mut t=terms(); t.lender=a("alice.near");
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_lender_is_contract() {
+    let mut c=setup(); let mut t=terms(); t.lender=a("keys.near");
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),t);});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_listed_token() {
+    let mut c=setup();
+    ctx("alice.near",LIST_STORAGE_DEPOSIT,NOW); c.nft_list("k1".into(),U128(N));
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_second_loan_on_same_token() {
+    let mut c=setup(); open(&mut c);
+    let l=c.get_loan("k1".into()).unwrap(); assert_eq!(l.nonce,U64(1)); assert_eq!(l.state,LoanState::Freezing);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    let l=c.get_loan("k1".into()).unwrap(); assert_eq!(l.nonce,U64(1)); assert_eq!(l.state,LoanState::Freezing);
+}
+#[test] fn open_loan_accepts_max_duration_and_max_grace_boundaries() {
+    let mut c=setup(); let mut t=terms(); t.duration_sec=U64(30*86400); t.grace_sec=U64(7*86400);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); let _=c.open_loan("k1".into(),t);
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Freezing);
+}
+#[test] fn open_loan_accepts_min_duration_one_second() {
+    let mut c=setup(); let mut t=terms(); t.duration_sec=U64(1); t.grace_sec=U64(0);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); let _=c.open_loan("k1".into(),t);
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Freezing);
+}
+#[test] fn fund_loan_refuses_second_funding() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW); fund(&mut c);
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::DisbursementPending);
+    let v=cert(&c); let sig=signed(&c,&v);
+    ctx("lender.near",N,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::DisbursementPending);
+}
+#[test] fn fund_loan_refuses_cancelled_loan() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    let v=cert(&c); let sig=signed(&c,&v);
+    ctx("alice.near",1,NOW); let _=c.cancel_loan("k1".into(),U64(1));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::UnlockPending);
+    settle_policy(&mut c,false,NOW); assert!(c.get_loan("k1".into()).is_none());
+    ctx("lender.near",N,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+}
+#[test] fn repay_loan_refuses_before_funding() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+    ctx("alice.near",terms().repayment.0,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn repay_loan_refuses_after_grace_expiry() {
+    let mut c=setup(); active(&mut c);
+    // Cashout succeeded at NOW, so due is NOW+60s and due+grace is NOW+90s.
+    ctx("alice.near",terms().repayment.0,NOW+91*SECOND); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+}
+#[test] fn repay_loan_refuses_one_yocto_under() {
+    let mut c=setup(); active(&mut c);
+    ctx("alice.near",terms().repayment.0-1,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+}
+#[test] fn repay_loan_refuses_wrong_nonce() {
+    let mut c=setup(); active(&mut c);
+    ctx("alice.near",terms().repayment.0,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(2));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+}
+#[test] fn claim_default_refuses_before_grace_ends() {
+    let mut c=setup(); active(&mut c);
+    // Due is NOW+60s, still inside the 30s grace: default is not due yet.
+    ctx("lender.near",1,NOW+60*SECOND); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("bob.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+}
+#[test] fn claim_default_refuses_receiver_is_borrower_or_contract() {
+    let mut c=setup(); active(&mut c);
+    let overdue=NOW+91*SECOND;
+    ctx("lender.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("alice.near"));});
+    ctx("lender.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("keys.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+}
+#[test] fn claim_default_refuses_wrong_nonce() {
+    let mut c=setup(); active(&mut c);
+    ctx("lender.near",1,NOW+91*SECOND); rejected(||{let _=c.claim_default("k1".into(),U64(2),a("bob.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+}
+#[test] fn cancel_loan_refuses_funded_loan() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW); fund(&mut c);
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::DisbursementPending);
+    ctx("alice.near",1,NOW); rejected(||{let _=c.cancel_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::DisbursementPending);
+    // Complete the real cashout to Active, exactly as the active() helper does.
+    ctx("alice.near",1,NOW); let _=c.claim_payout(); result(PromiseResult::Successful(vec![]),NOW);
+    assert!(c.on_payout(a("alice.near"),config_required().next_payout_nonce));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+    ctx("alice.near",1,NOW); rejected(||{let _=c.cancel_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Active);
+}
+#[test] fn cancel_loan_allows_anyone_after_funding_deadline() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    // Funding deadline is NOW+600s; anyone may cancel once it has passed.
+    ctx("bob.near",1,NOW+601*SECOND); let _=c.cancel_loan("k1".into(),U64(1));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::UnlockPending);
+}
+#[test] fn cancel_loan_refuses_during_freezing_policy_busy() {
+    let mut c=setup(); open(&mut c);
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Freezing);
+    assert!(c.get_loan("k1".into()).unwrap().policy_busy);
+    ctx("alice.near",1,NOW); rejected(||{let _=c.cancel_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Freezing);
+}
+#[test] fn cancel_loan_refuses_wrong_nonce() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    ctx("alice.near",1,NOW); rejected(||{let _=c.cancel_loan("k1".into(),U64(2));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn claim_payout_refuses_no_credit() {
+    let mut c=setup();
+    assert_eq!(c.get_payout_credit(a("bob.near")).0,0);
+    ctx("bob.near",1,NOW); rejected(||{let _=c.claim_payout();});
+    assert!(c.get_pending_payout(a("bob.near")).is_none());
+}
+#[test] fn claim_payout_refuses_second_pending() {
+    let mut c=setup(); active(&mut c);
+    ctx("alice.near",terms().repayment.0,NOW); let _=c.repay_loan("k1".into(),U64(1));
+    ctx("lender.near",1,NOW); let _=c.claim_payout();
+    assert!(c.get_pending_payout(a("lender.near")).is_some());
+    ctx("lender.near",1,NOW); rejected(||{let _=c.claim_payout();});
+    assert!(c.get_pending_payout(a("lender.near")).is_some());
+}
+#[test] fn reclaim_refuses_at_exact_deadline() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW); fund(&mut c);
+    // Funding at NOW sets the deadline to NOW+DISBURSEMENT_WINDOW_NS; reclaim
+    // requires now strictly greater than the deadline, so exactly at it fails.
+    let deadline=NOW+DISBURSEMENT_WINDOW_NS;
+    ctx("lender.near",1,deadline); rejected(||{let _=c.reclaim_unclaimed_principal("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::DisbursementPending);
+}
+
+fn register_args(c: &mut Contract, wallet: String, data: String, sig: String, version: u64, valid_until: u64, owner: &str, epoch: u64, deposit: u128) {
+    ctx("minter.near",deposit,NOW);
+    let _=c.register_collateral("k1".into(),wallet,data,sig,version,valid_until,a(owner),U64(epoch));
+}
+fn valid_wallet() -> String { format!("ed25519:{}","ab".repeat(32)) }
+#[test] fn register_collateral_refuses_unknown_token() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    ctx("minter.near",N/10,NOW);
+    rejected(||{let _=c.register_collateral("missing".into(),valid_wallet(),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));});
+    assert!(c.get_pending_registration("missing".into()).is_none());
+}
+#[test] fn register_collateral_refuses_non_ed25519_prefix() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    rejected(|| register_args(&mut c,format!("secp256k1:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,N/10));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_short_and_uppercase_wallet_key() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    rejected(|| register_args(&mut c,format!("ed25519:{}","ab".repeat(16)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,N/10));
+    rejected(|| register_args(&mut c,format!("ed25519:{}","AB".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,N/10));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_empty_and_oversized_policy() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    rejected(|| register_args(&mut c,valid_wallet(),"".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,N/10));
+    rejected(|| register_args(&mut c,valid_wallet(),"x".repeat(4097),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,N/10));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_bad_signature_format() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"a".repeat(64),1,NOW/SECOND+60,"alice.near",0,N/10));
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"g".repeat(128),1,NOW/SECOND+60,"alice.near",0,N/10));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_stale_policy() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND-1,"alice.near",0,N/10));
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"a".repeat(128),0,NOW/SECOND+60,"alice.near",0,N/10));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_insufficient_deposit() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,COLLATERAL_STORAGE_DEPOSIT));
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,COLLATERAL_STORAGE_DEPOSIT-1));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_listed_token() {
+    let mut c=setup();
+    ctx("alice.near",LIST_STORAGE_DEPOSIT,NOW); c.nft_list("k1".into(),U128(N));
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",0,N/10));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_epoch_mismatch() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    rejected(|| register_args(&mut c,valid_wallet(),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,"alice.near",99,N/10));
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
