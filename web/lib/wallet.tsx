@@ -6,7 +6,8 @@ import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import {parseWalletRedirect} from "./walletRedirect";
 import { buildMessage, EIP191_ENCLAVE_LIVE, freshNonce, intentMessage, signedCallbackUrl, toB64, utf8ToHex, type Op, type SignedAuth } from "./nep413";
 import { PLEDGE_SANDBOX, NEP413_RECIPIENT } from "./config";
-import { clearSession, inSession, loadSession, saveSession, sessionAuth, sessionFromGrant, sessionParams, type Session } from "./session";
+import { clearSession, inSession, loadSession, onSessionBroadcast, saveSession, sessionAuth, sessionFromGrant, sessionParams, SESSION_KEY, type Session } from "./session";
+import { vaultCacheInvalidate } from "./vaultCache";
 import { readPayout } from "./payout";
 import { contractProfile, guardedValueOp, prepareGuardedRequest } from "./guardedRequest";
 import { callWorker } from "./worker";
@@ -260,6 +261,20 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
   /** The sign-in signature, kept (in memory only) when the account had no key yet, to unlock right after minting. */
   const stash = useRef<SignedAuth | null>(null);
   useEffect(() => { setSession(loadSession(accountId)); const t = setInterval(() => setSession(loadSession(accountId)), 30_000); return () => clearInterval(t); }, [accountId]);
+  // The session is shared across tabs (localStorage + BroadcastChannel): unlocking in one tab unlocks this one
+  // too, and locking in one tab locks this one. A "cleared" broadcast only drops this account's cached reads
+  // (vaultCacheInvalidate, no broadcast) so the tabs cannot ping-pong the clear back and forth.
+  useEffect(() => {
+    const apply = () => {
+      const s = loadSession(accountId);
+      if (!s) vaultCacheInvalidate(accountId);
+      setSession(s);
+    };
+    const off = onSessionBroadcast(apply);
+    const onStorage = (e: StorageEvent) => { if (e.key === SESSION_KEY) apply(); };
+    addEventListener("storage", onStorage);
+    return () => { off(); removeEventListener("storage", onStorage); };
+  }, [accountId]);
   useEffect(() => { const invalid = () => setSession(null); addEventListener("keyhole-session-invalid", invalid); return () => removeEventListener("keyhole-session-invalid", invalid); }, []);
   const [pending, setPending] = useState<(SignedAuth & { ctx?: OpResume | null }) | null>(null);
   const loading = useRef<Promise<void> | null>(null);

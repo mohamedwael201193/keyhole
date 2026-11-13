@@ -13,7 +13,7 @@ const REPO = "https://github.com/mohamedwael201193/keyhole";
 
 /** Where each check lives. The holder's own calls are in the dashboard (My proof); these are the public tools. */
 const TOOLS: { href: string; title: string; body: string; id: string }[] = [
-  { id: "evidence", href: "/verify", title: "Evidence pack and call verifier", body: "Re-check KEYHOLE on mainnet with no wallet: public RPC and attestation reads, a 37-check call verifier, tamper tests, and the lien lookup." },
+  { id: "evidence", href: "/verify", title: "Evidence pack and call verifier", body: "Re-check KEYHOLE on mainnet with no wallet: public RPC and attestation reads, a 36-check call verifier, tamper tests, and the lien lookup." },
   { id: "path", href: "/verify/path", title: "Verification path", body: "Seven checks from the contract to the enclave, each with the command or the page that runs it." },
   { id: "attack", href: "/attack", title: "Attack board", body: "Attempts to move a key's value without the holder, with the refusal the enclave returned for each." },
   { id: "source", href: "/source", title: "Source archive", body: "One tarball cut from one commit, with its sha256, so the code you read is the code that was published." },

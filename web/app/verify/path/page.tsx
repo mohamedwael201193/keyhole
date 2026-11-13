@@ -84,7 +84,7 @@ export default function VerificationPathPage() {
           <p className="jclaim">Intel signs a report naming the code that ran, and we compare its fingerprint with the current build, <b className="mono">{CUR.slice(0, 8)}</b>.</p>
           <div className="uact">
             <CheckBuild callId={INFO_CALL} />
-            <Button variant="secondary" href={`/verify?call=${IDENTITY.worker.info_call}`} testid="judge-do-1">Run all 37 checks on /verify</Button>
+            <Button variant="secondary" href={`/verify?call=${IDENTITY.worker.info_call}`} testid="judge-do-1">Run all 36 checks on /verify</Button>
           </div>
           <See>The quick check shows <b>Pass</b>. On /verify, all checks are green: the worker downloaded from FastFS hashes to <b className="mono">{CUR.slice(0, 8)}…</b>, the quote&apos;s report data matches, and Intel&apos;s certificate chain verifies. Badge: <b>Current build</b>. Published with <TxLink hash={IDENTITY.worker.add_version_tx}>add_version</TxLink>.</See>
           <Proof rows={[

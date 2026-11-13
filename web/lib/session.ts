@@ -4,7 +4,14 @@
  * https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet
  * The wallet signs ONE NEP-413 message (op "session"); the enclave verifies it like any signed request and
  * issues a random token. Later requests carry that token instead of a new wallet signature.
- * Kept in sessionStorage (gone when the tab closes). Scope and expiry are enforced by the enclave.
+ *
+ * Shared across the browser's tabs: the token lives in localStorage (not sessionStorage), so unlocking once
+ * unlocks every tab, and a BroadcastChannel + storage event tells the other tabs at once. The 30-minute expiry
+ * and the scope limits are unchanged and still enforced by the enclave — a tab that opens after the token
+ * expired finds nothing, and a stolen token still cannot withdraw (withdraw is not a session op: it always
+ * asks the wallet for a fresh signature). The trade-off is explicit: unlike sessionStorage, the token is not
+ * sealed when one tab closes; it lives until its 30-minute expiry, and locking (clearSession) removes it
+ * everywhere at once.
  */
 import { freshNonce, toB64 } from "./nep413";
 import { decimalEpoch, guardedValueOp, type ContractProfile } from "./guardedRequest";
@@ -23,14 +30,42 @@ export type SessionOp = (typeof SESSION_OPS)[number];
 export const inSession = (op: string): op is SessionOp => (SESSION_OPS as readonly string[]).includes(op);
 
 export type Session = { token: string; account: string; token_id: string; exp_ms: number; max_usd_micro: number; owner_epoch?: string; profile?: ContractProfile };
-const KEY = "kh_session_v1";
+/** The localStorage key for the shared session token (exported for the cross-tab storage listener). */
+export const SESSION_KEY = "kh_session_v1";
+const KEY = SESSION_KEY;
+
+/** The shared session store: localStorage, so unlocking in one tab unlocks every tab of this browser. */
+function defaultStore(): Pick<Storage, "getItem" | "setItem" | "removeItem"> {
+  if (typeof localStorage !== "undefined") return localStorage;
+  return sessionStorage;
+}
+
+const CHANNEL_NAME = "keyhole-session-v1";
+/** Tell the other tabs the session was saved or cleared (the 30 s re-read is the fallback). Never throws. */
+function broadcast(action: "saved" | "cleared") {
+  try {
+    const ch = new BroadcastChannel(CHANNEL_NAME);
+    ch.postMessage({ action });
+    ch.close();
+  } catch { /* no BroadcastChannel: the storage event / 30 s re-read still picks it up */ }
+}
+
+/** Listen for a session save/clear in another tab. Returns an unsubscribe. Never throws. */
+export function onSessionBroadcast(cb: (action: "saved" | "cleared") => void): () => void {
+  try {
+    const ch = new BroadcastChannel(CHANNEL_NAME);
+    const onMsg = (e: MessageEvent) => { if (e.data?.action === "saved" || e.data?.action === "cleared") cb(e.data.action); };
+    ch.addEventListener("message", onMsg);
+    return () => { ch.removeEventListener("message", onMsg); ch.close(); };
+  } catch { return () => {}; }
+}
 
 function validGrant(s: Session): boolean {
   if (s.profile === "v2.4") return s.owner_epoch == null;
   return decimalEpoch(s.owner_epoch);
 }
 
-export function loadSession(account: string | null, now = Date.now(), store: Pick<Storage, "getItem" | "removeItem"> = sessionStorage): Session | null {
+export function loadSession(account: string | null, now = Date.now(), store: Pick<Storage, "getItem" | "removeItem"> = defaultStore()): Session | null {
   if (!account) return null;
   try {
     const s = JSON.parse(store.getItem(KEY) || "null") as Session | null;
@@ -38,9 +73,9 @@ export function loadSession(account: string | null, now = Date.now(), store: Pic
     return s;
   } catch { store.removeItem(KEY); return null; }
 }
-export function saveSession(s: Session, store: Pick<Storage, "setItem"> = sessionStorage) { store.setItem(KEY, JSON.stringify(s)); }
+export function saveSession(s: Session, store: Pick<Storage, "setItem"> = defaultStore()) { store.setItem(KEY, JSON.stringify(s)); broadcast("saved"); }
 /** Forgetting the session also forgets the cached vault reads it scoped: a locked tab shows sealed values again. */
-export function clearSession(store: Pick<Storage, "removeItem"> = sessionStorage) { store.removeItem(KEY); clearVaultCache(); }
+export function clearSession(store: Pick<Storage, "removeItem"> = defaultStore()) { store.removeItem(KEY); clearVaultCache(); broadcast("cleared"); }
 
 /** A worker grant. v2.5 returns owner_epoch. Live v2.4 omits it; the caller must already have proved that profile. Epoch zero is never filled in. */
 export function sessionFromGrant(output: { ok?: boolean; session_token?: unknown; account?: unknown; token_id?: unknown; exp_ms?: unknown; max_usd_micro?: unknown; owner_epoch?: unknown }, tokenId: string, profile: ContractProfile): Session | null {

@@ -5,6 +5,15 @@ import { OpNotSent } from "@/components/OpNotSent";
 import { InCardFailure, InCardProgress } from "@/components/InCard";
 import { gateRefusalFrom, isGateRefusal, isNotSent } from "@/lib/opResult";
 import { dashHref } from "@/lib/dashboardSections";
+import { tx } from "@/lib/config";
+
+/**
+ * The plain in-card message for a swap the enclave refused or left pending because an earlier transaction is
+ * still confirming: no internal terms, no "Network error". (Claude, brief v2 answers.)
+ */
+export const PAUSED_MESSAGE = "Swaps are paused while an earlier transaction confirms. Nothing was sent.";
+/** A failed attempt that broadcast nothing still holds part of today's limit until the 00:00 UTC reset. */
+export const CAP_NOTE = "A failed attempt may hold part of today's limit until 00:00 UTC. Check the Today meter on the Vault page.";
 
 /**
  * The live panel while a signed swap runs, inside the swap card. The steps come from the real stage (components/swap/progress.ts);
@@ -33,10 +42,13 @@ function BalanceLine({ before, after }: { before?: string | null; after?: string
  * retried from here (the earlier operation is confirmed first), so it offers only the way back. Technical detail is in Details.
  *
  * A refusal before sending is a different failure from an unknown outcome, and the card says which one it is: when the
- * enclave refused the swap because an earlier operation is still open, the card names that earlier operation (its
- * reference block and transaction), the amount attempted, and the balance before and after — and "Try again" is a quiet
- * secondary, because retrying while the earlier operation is open sends nothing and still counts toward today's cap.
- * For a genuinely unknown outcome the primary action is the proof of the attempt (the call id), with "Try again" beside it.
+ * enclave refused the swap because an earlier operation is still open, the card says so in plain words ("Swaps are
+ * paused while an earlier transaction confirms. Nothing was sent."), names that earlier operation (its reference
+ * block and transaction, with an explorer link), the amount attempted, and the balance before and after — and "Try
+ * again" is a quiet secondary, because retrying while the earlier operation is open sends nothing. A failed attempt
+ * may hold part of today's limit until 00:00 UTC. For a genuinely unknown outcome the primary action is the proof
+ * of the attempt (the call id), with "Try again" beside it; when no hash came back, the card says honestly that no
+ * transaction was broadcast and nothing moved.
  */
 export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownOpId, callId, amount, balanceBefore, balanceAfter, onRetry, onBack }: {
   steps: ProgressStep[];
@@ -72,15 +84,16 @@ export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownO
     return (
         <InCardFailure
           testid="trade-failed"
-          reason={<><b>Swap refused — an earlier operation is still open.</b> Nothing was sent, and no funds moved.</>}
+          reason={<><b>{PAUSED_MESSAGE}</b></>}
           action={callId
             ? { label: "View proof", href: dashHref(`/verify?call=${encodeURIComponent(callId)}`), testid: "swap-proof" }
             : { label: "Try again", onClick: onRetry, testid: "swap-retry" }}
         >
           {amount && <p className="ic-note" data-testid="swap-refused-amount">Attempted: {amount}.</p>}
           {ref.refHeight && <p className="ic-note" data-testid="swap-refused-ref">The earlier operation is at reference block {ref.refHeight}.</p>}
+          {ref.txHash && <p className="ic-note" data-testid="swap-refused-tx">Earlier transaction: <a href={tx(ref.txHash)} target="_blank" rel="noreferrer">{ref.txHash}</a></p>}
           <BalanceLine before={balanceBefore} after={balanceAfter} />
-          <p className="ic-note" data-testid="swap-refused-cap">Check the Today meter on the Vault page — a refused attempt can still count toward today&apos;s cap until it resets at 00:00 UTC.</p>
+          <p className="ic-note" data-testid="swap-refused-cap">{CAP_NOTE}</p>
           <p className="ic-actions">
             {callId && <button type="button" className="kh-btn kh-btn--secondary kh-btn--sm" onClick={onRetry} data-testid="swap-retry">Try again</button>}
             <button type="button" className="ic-textbtn" onClick={onBack} data-testid="swap-back">Back to swap</button>
@@ -93,7 +106,12 @@ export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownO
         </InCardFailure>
     );
   }
-  const [reason] = errorText(code, { s: retryAfter ?? 0 });
+  // A refusal or pending outcome that did not carry the gate message still means the same thing: an earlier
+  // transaction is confirming, so this swap was not sent. A gateway failure with no hash means nothing was
+  // broadcast at all. Neither shows an internal code or "Network error" as the reason.
+  const paused = code === "native_blocked" || code === "native_unknown" || code === "pending" || code === "value_op_pending";
+  const noBroadcast = code === "network" || code === "gateway";
+  const reason = paused ? PAUSED_MESSAGE : noBroadcast ? "No transaction was broadcast — nothing moved." : errorText(code, { s: retryAfter ?? 0 })[0];
   return (
       <InCardFailure
         reason={reason}
@@ -102,7 +120,7 @@ export function SwapFailed({ steps, stoppedAt, code, retryAfter, message, knownO
           : { label: "Try again", onClick: onRetry, testid: "swap-retry" }}
       >
         <BalanceLine before={balanceBefore} after={balanceAfter} />
-        <p className="ic-note" data-testid="swap-failed-cap">Check the Today meter on the Vault page — a failed attempt can still count toward today&apos;s cap until it resets at 00:00 UTC.</p>
+        <p className="ic-note" data-testid="swap-failed-cap">{CAP_NOTE}</p>
         <p className="ic-actions">
           {callId && <button type="button" className="kh-btn kh-btn--secondary kh-btn--sm" onClick={onRetry} data-testid="swap-retry">Try again</button>}
           <button type="button" className="ic-textbtn" onClick={onBack} data-testid="swap-back">Back to swap</button>

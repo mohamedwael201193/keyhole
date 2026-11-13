@@ -11,6 +11,7 @@ import { SwapDone } from "@/components/swap/SwapDone";
 import { swapOutcome, swapSteps } from "@/components/swap/progress";
 import { useWallet, OP_CTX, type OpResume } from "@/lib/wallet";
 import { useSigned, type Stage } from "@/lib/useSigned";
+import { formatUpdatedAgo, useNow, useVaultData } from "@/lib/vaultData";
 import { ASSETS, toBaseUnits } from "@/lib/assets";
 import { swapParamsById } from "@/lib/trade";
 import { shortAccount } from "@/lib/near";
@@ -24,13 +25,13 @@ import { chainName, fallbackTokens, useTokenList, type Token } from "@/lib/token
 import { minutesLeft } from "@/lib/session";
 import { LOCK_LABEL, useValueLock } from "@/lib/valueLock";
 import { ValueRecovery } from "@/components/ValueRecovery";
-import { vaultCacheInvalidate, vaultCacheKey } from "@/lib/vaultCache";
-import { listFailedSwaps, recordFailedSwap } from "@/lib/failedSwaps";
+import { vaultCacheInvalidate } from "@/lib/vaultCache";
+import { isLocalFailedId, listFailedSwaps, localFailedId, recordFailedSwap } from "@/lib/failedSwaps";
 import "./swap.css";
 import { dashHref } from "@/lib/dashboardSections";
 
 type Quote = { amountInFormatted?: string; amountOutFormatted?: string; amountInUsd?: string; amountOutUsd?: string; minAmountOut?: string; timeEstimate?: number };
-type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; status?: string; callId?: string };
+type Hist = { ts_ms?: number; kind?: string; token_in?: string; token_out?: string; amount_in?: string; amount_out?: string; status?: string; callId?: string; local?: boolean };
 type Done = { give: string; decimals: number; symbol: string };
 
 /** The vault's own two assets. They are the pair on first paint and the only choice when the full token list cannot load. */
@@ -85,10 +86,11 @@ export function SwapView() {
   const { held, keyMiss, lookingUp, failed } = heldFrom(store, accountId);
   const quote = useSigned("quote");
   const swap = useSigned("swap");
-  // The balance and the history are session-scoped cached reads: navigating away and back serves the last answer
-  // instead of re-running the ~8 s attested read. Mutations invalidate them (see the success/failure effects).
-  const balance = useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") });
-  const history = useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") });
+  // The balance and the history come from the single app-level provider (lib/vaultData): one
+  // stale-while-revalidate read per op, shared by every app page, so navigating away and back serves the last
+  // answer instead of re-running the ~8 s attested read. Mutations invalidate them (see the success/failure effects).
+  const { balance, history } = useVaultData();
+  const now = useNow();
   const historyOk = useLogVerified(history.res);
   const historyState = useLogVerifiedState(history.res);
   const list = useTokenList();
@@ -263,36 +265,29 @@ export function SwapView() {
 
   // A failed swap leaves no trace in the signed history, so it is recorded in this browser (once per attempt) and
   // shown as a Failed row in Recent swaps and in Activity. The balance is re-read fresh either way: the outcome may
-  // be unknown, and only a new read can say whether anything moved.
+  // be unknown, and only a new read can say whether anything moved. A failure with no call id (the gateway timed
+  // out before the worker answered) is still recorded, under a local id with no proof link — the attempt is
+  // traceable by its amount and time, not by a call that never came back.
   const failureHandled = useRef<unknown>(null);
   useEffect(() => {
     if (!swap.res?.error || done == null || !accountId) return;
     if (failureHandled.current === swap.res) return;
     failureHandled.current = swap.res;
     const callId = swap.res.call_id;
-    if (callId) {
-      recordFailedSwap(accountId, {
-        callId,
-        entry: { kind: "swap", status: "failed", ts_ms: Date.now(), token_in: fromId, token_out: toId, amount_in: units, amount_out: null },
-        code: swap.res.error.code,
-      });
-      setFailedTick((t) => t + 1);
-    }
+    const local = !callId;
+    recordFailedSwap(accountId, {
+      callId: callId || localFailedId(),
+      entry: { kind: "swap", status: "failed", ts_ms: Date.now(), token_in: fromId, token_out: toId, amount_in: units, amount_out: null },
+      code: swap.res.error.code,
+      local,
+    });
+    setFailedTick((t) => t + 1);
     vaultCacheInvalidate(accountId, "balance");
     void readBalance({}, { quiet: true, cached: true, fresh: true });
   }, [swap.res, done, accountId, readBalance, fromId, toId, units]);
 
-  // With a live session the balance and the history read by themselves, once per session (no popup). Guarded so it cannot loop.
-  const heldId = held?.token.token_id ?? null;
-  const autoFor = useRef("");
-  useEffect(() => {
-    if (!sessionLive || !accountId || !heldId) { autoFor.current = ""; return; }
-    const k = `${accountId}:${heldId}:${session?.token ?? ""}`;
-    if (autoFor.current === k) return;
-    autoFor.current = k;
-    void readBalance({}, { quiet: true, cached: true });
-    void runHistory({}, { quiet: true, cached: true });
-  }, [sessionLive, accountId, heldId, session, readBalance, runHistory]);
+  // The signed reads are owned by the app-level provider (lib/vaultData): with a live session they load by
+  // themselves, once per session, and tab navigation serves the last answer (no popup). Guarded so it cannot loop.
 
   // Between a change of amount or pair and the new price, the old price is hidden and the swap cannot be sent.
   const repricing = !!units && !samePair && !quoteFresh && (sessionLive ? quote.busy || requestedKey !== tradeKey : dryKey !== tradeKey);
@@ -366,7 +361,7 @@ export function SwapView() {
   // The read itself has no reactive input, so the rule calls the dependency unnecessary.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const failedEntries = useMemo(() => listFailedSwaps(accountId), [accountId, failedTick]);
-  const failedMine: Hist[] = failedEntries.map((f) => ({ ...f.entry, callId: f.callId, amount_in: f.entry.amount_in == null ? undefined : String(f.entry.amount_in), amount_out: f.entry.amount_out == null ? undefined : String(f.entry.amount_out) }));
+  const failedMine: Hist[] = failedEntries.map((f) => ({ ...f.entry, callId: f.callId, local: f.local, amount_in: f.entry.amount_in == null ? undefined : String(f.entry.amount_in), amount_out: f.entry.amount_out == null ? undefined : String(f.entry.amount_out) }));
   const signedMine = hist && historyOk === true ? [...hist].reverse().filter((e) => e.kind === "swap") : [];
   const mine = [...failedMine, ...signedMine].sort((a, b) => (b.ts_ms ?? 0) - (a.ts_ms ?? 0)).slice(0, 5);
   const human = (raw?: string, tok?: string) => {
@@ -426,7 +421,7 @@ export function SwapView() {
                 title={title}
                 value={when(e.ts_ms)}
                 meta={<StatusChip tone={o.tone} icon={o.tone === "success" ? "check" : "dot"}>{o.chip}</StatusChip>}
-                href={failed && e.callId ? dashHref(`/verify?call=${encodeURIComponent(e.callId)}`) : undefined}
+                href={failed && e.callId && !e.local ? dashHref(`/verify?call=${encodeURIComponent(e.callId)}`) : undefined}
               />
             );
           })}
@@ -492,6 +487,7 @@ export function SwapView() {
                     {balanceText ? (
                       <>
                         <span>Balance <b className="sw-bal-num">{balanceText}</b></span>
+                        {formatUpdatedAgo(balance.updatedAt, now) && <span className="sw-updated" data-testid="swap-balance-updated"> · {formatUpdatedAgo(balance.updatedAt, now)}</span>}
                         {fromRaw && fromRaw !== "0" && (
                           <>
                             <span aria-hidden="true">·</span>

@@ -12,6 +12,7 @@ import { TokenMark } from "@/components/TokenMark";
 import { errorText, useI18n } from "@/lib/i18n";
 import { useWallet, OP_CTX, type OpResume } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
+import { formatUpdatedAgo, useNow, useVaultData } from "@/lib/vaultData";
 import { encodeShare } from "@/lib/pnl";
 import { useHealth } from "@/lib/useHealth";
 import { heldFrom, useKeyStore } from "@/lib/keyStore";
@@ -28,7 +29,7 @@ import { ValueRecovery } from "@/components/ValueRecovery";
 import { Details, InCardFailure, InCardProgress, InCardSuccess } from "@/components/InCard";
 import { isNotSent, withdrawResultView } from "@/lib/opResult";
 import { OpNotSent } from "@/components/OpNotSent";
-import { vaultCacheInvalidate, vaultCacheKey } from "@/lib/vaultCache";
+import { vaultCacheInvalidate } from "@/lib/vaultCache";
 import { listFailedSwaps } from "@/lib/failedSwaps";
 import { TeeProgress } from "@/components/TeeProgress";
 import { DepositQr } from "@/components/DepositQr";
@@ -142,13 +143,18 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const online = useHealth(initialOnline);
   const store = useKeyStore();
   const { held, keyMiss, lookingUp, failed } = heldFrom(store, accountId);
-  const balance = useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") });
+  // The signed reads (balance, history, dashboard) come from the single app-level provider (lib/vaultData):
+  // one stale-while-revalidate read per op, shared by every app page, so tab navigation shows the last answer
+  // instantly instead of re-running the ~8 s attested read. Account, withdraw, limits and pnl stay local.
+  const { balance, history, dash } = useVaultData();
   const account = useSigned("account");
-  const history = useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") });
   const withdraw = useSigned("exact_near_exit_v1");
   const limits = useSigned("limits");
   const pnl = useSigned("pnl");
-  const dash = useSigned("dashboard", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "dashboard") });
+  const now = useNow();
+  const runBalance = balance.run;
+  const runDash = dash.run;
+  const runHistory = history.run;
   const logVerified = useLogVerified(history.res);
   const logState = useLogVerifiedState(history.res);
   // New value operations (withdraw here) are locked while an earlier one has no final answer. The worker refuses them too.
@@ -186,23 +192,6 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const fo = useFundOrder(accountId, heldId);
   // Live: a session for this account and this key that has not run out.
   const live = !!(session && heldId && session.account === accountId && session.token_id === heldId && minutesLeft(session) > 0);
-  const sessionToken = live && session ? session.token : "";
-
-  // One automatic read per session: the balance, the dashboard (caps, lock state) and the signed history. Guarded by the
-  // session token, so it cannot loop; a failure shows a retry and never re-runs by itself. The reads are cached per
-  // session, so returning to this page serves the last answer instead of re-running the ~8 s attested read.
-  const runBalance = balance.run;
-  const runDash = dash.run;
-  const runHistory = history.run;
-  const autoFor = useRef("");
-  useEffect(() => {
-    if (!sessionToken) { autoFor.current = ""; return; }
-    if (autoFor.current === sessionToken) return;
-    autoFor.current = sessionToken;
-    void runBalance({}, { quiet: true, cached: true });
-    void runDash({}, { quiet: true, cached: true });
-    void runHistory({}, { quiet: true, cached: true });
-  }, [sessionToken, runBalance, runDash, runHistory]);
 
   // The newest signed read on this page: each finished read that carries a call id becomes the last call.
   const [lastRes, setLastRes] = useState<WorkerResult | null>(null);
@@ -304,7 +293,10 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     void withdraw.run(withdrawParams(accountId, wAsset, wUnits));
   }
 
-  const totalText = totalKind.kind === "unread" ? t("vault.sealed") : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : formatUsdMicro(totalKind.micro);
+  // Never show a partial dollar total: while any asset is still unpriced the headline is a loading state, not a
+  // lower number that jumps once the last price lands (the tour saw $0.21 flip to $0.36). The unpriced amounts
+  // are listed in the subtitle, so the holder sees exactly what is still being priced.
+  const totalText = totalKind.kind === "unread" ? t("vault.sealed") : totalKind.kind === "empty" ? formatUsdMicro(0) : totalKind.kind === "amounts" ? totalKind.text : totalKind.kind === "partial" ? "Pricing…" : formatUsdMicro(totalKind.micro);
   const left = live && session ? minutesLeft(session) : 0;
   const funded = !!balances && balances.some((b) => Number(b.amount ?? b.balance ?? 0) > 0);
   const swapped = logVerified === true && !!entries && settledOrders(entries) > 0;
@@ -403,6 +395,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           ? <>{(balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")}{totalKind.kind === "partial" && <span data-testid="unpriced"> {t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</span>}</>
           : balance.res?.error ? "The balance read did not complete. Use Refresh to try again." : "Reading your balance with your session."}
       {" "}{balancePill}
+      {balances && formatUpdatedAgo(balance.updatedAt, now) && <span className="vlt-sub" data-testid="vault-balance-updated"> · {formatUpdatedAgo(balance.updatedAt, now)}</span>}
     </>
   );
 
@@ -722,7 +715,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           { id: "chain", label: "From another chain" },
         ]} />
         {fo.order && <FundOrderCard order={fo.order} status={fo.status} statusErr={fo.statusErr} terminal={fo.terminal} onClear={fo.clear} />}
-        <p className="vlt-sub">{t("vault.fundLead")}</p>
+        {/* The Direct lead belongs to the Direct tab only: the chain tab has its own 1Click description inside its panel. */}
+        {depTab === "direct" && <p className="vlt-sub">{t("vault.fundLead")}</p>}
         <div className="vlt-stack">
           <div className="vlt-field">
             <span className="vlt-label">{t("vault.asset")}</span>

@@ -8,6 +8,7 @@ import { intentTx, tx, txAlt } from "@/lib/config";
 import { explorerChain, explorerUrl } from "@/lib/explorer";
 import { STATUS, assetById, fundsStep, statusOf, type OcAsset } from "@/lib/oneclick";
 import { amountText, entryDetail, kindLabel, type HistEntry } from "@/lib/dashboard";
+import { isLocalFailedId } from "@/lib/failedSwaps";
 import { SETTLEMENTS, VAULT_TRADE, type Settlement } from "@/lib/settlements";
 
 export type VaultTrade = typeof VAULT_TRADE;
@@ -508,6 +509,8 @@ export type ProofItem = { label: string; value: string; href?: string; alt?: str
 
 /** Every hash and id of an order, with its explorer. Duplicates are dropped (the list keys on label and value). */
 export function proofRowsOf(row: OrderRow): ProofItem[] {
+  // A local failed id is not an enclave call: there is no /verify link for it, only the Failed row itself.
+  if (row.read.state === "signed" && isLocalFailedId(row.read.callId)) return [];
   if (row.read.state === "signed") return [{ label: "enclave call", value: row.read.callId, href: `/verify?call=${row.read.callId}`, internal: true }];
   if (row.kind === "vault") {
     return [
@@ -541,6 +544,7 @@ export function proofRowsOf(row: OrderRow): ProofItem[] {
 
 /** The "View proof" target: the internal enclave call for the vault trade; otherwise the first intent, then any hash link. */
 export function proofHrefOf(row: OrderRow): { href: string; internal: boolean } | null {
+  if (row.read.state === "signed" && isLocalFailedId(row.read.callId)) return null;
   if (row.read.state === "signed") return { href: `/verify?call=${row.read.callId}`, internal: true };
   if (row.kind === "vault") return { href: `/verify?call=${VAULT_TRADE.callId}`, internal: true };
   const items = proofRowsOf(row);

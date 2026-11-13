@@ -9,9 +9,13 @@ const AGENT_ERR: Record<string, string> = {
   policy_transaction_limit_exceeded: "Above the per-trade limit, so the policy refused it. That is the cap doing its job.",
   rate_limited: "Too many requests this minute. Wait a few seconds and try again.",
   unavailable: "The Agent API did not answer. Try again later.",
+  unauthorized: "The Agent API refused this request (401): the demo key does not cover that endpoint. A retry cannot fix it — the key needs the right scope.",
 };
 /** Codes that mean the demo could not be reached or configured. Shown as one plain "unavailable" state with a retry. */
 const DOWN = new Set(["upstream", "config", "unavailable", "timeout", "indexer"]);
+/** A read the upstream refused with 401: the key is valid (the network read answers) but does not cover that endpoint. */
+const isUnauthorized = (j: { ok?: boolean; error?: { code?: string; upstream_status?: number } } | null | undefined) =>
+  j?.error?.code === "upstream" && j.error.upstream_status === 401;
 export const agentErr = (c: string) => AGENT_ERR[c] ?? "The Agent API could not answer that request. Try again in a moment.";
 
 type Q = { limits: Record<string, number>; usage: Record<string, number>; observed_at: string };
@@ -45,8 +49,10 @@ export function AgentPanel() {
         const quotaOk = qq?.ok ? quotasBody(qq.body) : null;
         const polOk = p?.ok ? policyBody(p.body) : null;
         if (netOk) setNet(netOk); else setDown(true);
-        if (quotaOk) setQ({ ...quotaOk, observed_at: "" }); else setQuotaNote("Quotas did not answer.");
-        if (polOk) setPol(polOk as unknown as Pol); else setPolicyNote("The holder-cap policy did not answer.");
+        if (quotaOk) setQ({ ...quotaOk, observed_at: "" });
+        else setQuotaNote(isUnauthorized(qq) ? "Quotas refused (401): the demo key does not cover this read." : "Quotas did not answer.");
+        if (polOk) setPol(polOk as unknown as Pol);
+        else setPolicyNote(isUnauthorized(p) ? "The holder-cap policy refused (401): the demo key does not cover this read." : "The holder-cap policy did not answer.");
       })
       .catch(() => { if (live) setDown(true); });
     return () => { live = false; };
@@ -56,6 +62,9 @@ export function AgentPanel() {
     try {
       const j = await (await fetch("/api/agent", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: USDC, dest: "nep141:wrap.near", amount: usdMicro }) })).json();
       if (j.ok) setDry({ usd: j.body.spend?.amount_usd, warn: policyWarnings(j.body), bal: balanceWarnings(j.body) });
+      // A 401 is the API answering and refusing auth, not the API being down: show the real error and keep the
+      // buttons usable, so the panel never goes dead after one refused quote.
+      else if (isUnauthorized(j)) setErr("unauthorized");
       else if (DOWN.has(j.error?.code)) setDown(true);
       else setErr(j.error?.code ?? "unavailable");
     } catch { setDown(true); } finally { setBusy(false); }

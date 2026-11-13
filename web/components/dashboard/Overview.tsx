@@ -64,6 +64,8 @@ export type BalanceView = {
   total: Total | null;
   rows: AssetRow[] | null;
   error: ErrorInfo | null;
+  /** "Updated 12s ago", from the stored time of the shown answer (stale-while-revalidate). Null until a read lands. */
+  updatedAgo?: string | null;
   onRead: () => void;
 };
 
@@ -76,6 +78,8 @@ export type ActivityView = {
   logOk: boolean | null;
   callId: string | null;
   error: ErrorInfo | null;
+  /** "Updated 12s ago", from the stored time of the shown answer (stale-while-revalidate). Null until a read lands. */
+  updatedAgo?: string | null;
   onRead: () => void;
 };
 
@@ -92,6 +96,8 @@ export type TierView = {
   /** The read answered, but the key's record did not verify, so there is no progress to show. */
   unverifiable: boolean;
   error: ErrorInfo | null;
+  /** "Updated 12s ago", from the stored time of the shown answer (stale-while-revalidate). Null until a read lands. */
+  updatedAgo?: string | null;
   onRead: () => void;
   levelBusy: boolean;
   levelLabel: string;
@@ -126,6 +132,9 @@ function totalText(total: Total | null): string | undefined {
   if (!total || total.kind === "unread") return undefined;
   if (total.kind === "empty") return formatUsdMicro(0);
   if (total.kind === "amounts") return total.text;
+  // A partial total is a priced-only subtotal that jumps when the last price arrives; show a loading state instead, and let
+  // the subtitle (which already names the unpriced assets) carry the detail.
+  if (total.kind === "partial") return "Pricing…";
   return formatUsdMicro(total.micro);
 }
 
@@ -362,7 +371,12 @@ function AssetsCard({ unlock, balance, unpriced }: { unlock: UnlockView; balance
         title="Assets"
         id="dash-assets-h"
         icon="layers"
-        meta={unlock.live && balance.read ? `${balance.rows?.length ?? 0} ${(balance.rows?.length ?? 0) === 1 ? "asset" : "assets"}` : undefined}
+        meta={unlock.live && balance.read ? (
+          <span>
+            {balance.rows?.length ?? 0} {(balance.rows?.length ?? 0) === 1 ? "asset" : "assets"}
+            {balance.updatedAgo ? <> · <span data-testid="dash-balance-updated">{balance.updatedAgo}</span></> : null}
+          </span>
+        ) : undefined}
         action={
           unlock.live && balance.read ? (
             <button type="button" className="v7-card-link" onClick={balance.onRead} disabled={balance.busy} data-testid="dash-balance-refresh">
@@ -448,7 +462,7 @@ function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockVie
         title="Recent activity"
         id="dash-activity-h"
         icon="activity"
-        meta={<span data-testid="stat-settled">Settled orders <b>{settled ?? "—"}</b></span>}
+        meta={<><span data-testid="stat-settled">Settled orders <b>{settled ?? "—"}</b></span>{activity.updatedAgo ? <> · <span data-testid="dash-activity-updated">{activity.updatedAgo}</span></> : null}</>}
         action={
           <Link href={dashHref("/settle")} className="v7-card-link" aria-label="View all activity" data-testid="dash-view-activity">
             <Icon name="arrow-right" size={18} />

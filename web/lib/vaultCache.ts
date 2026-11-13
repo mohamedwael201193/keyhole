@@ -11,12 +11,14 @@ import type { WorkerResult } from "./worker";
  * The key carries the account AND the session token, so a new session never hits an old session's entry, and a
  * different account never sees another account's reads. The cache is cleared with the session (lib/session.ts
  * clearSession calls clearVaultCache), so locking the session seals the reads again.
- * TTL is 60 s: long enough that tab navigation never re-reads, short enough that a path without an explicit
- * invalidation (a deposit, a list/unlist) corrects itself within a minute. Explicit refresh and every mutation
- * invalidate first and re-read.
+ * TTL is 300 s (5 min): long enough that a real browsing session never re-reads on tab navigation (a reader
+ * spends a minute or more per page), short enough that a path without an explicit invalidation (a deposit, a
+ * list/unlist) corrects itself within minutes. Explicit refresh and every mutation invalidate first and re-read.
+ * Stale-while-revalidate: a stale entry is still served instantly (see vaultCacheGetStale) while a background
+ * revalidation runs, so a return visit never waits on the ~8 s attested read.
  */
 
-export const VAULT_CACHE_TTL_MS = 60_000;
+export const VAULT_CACHE_TTL_MS = 300_000;
 const PREFIX = "kh_vault_v1:";
 const memory = new Map<string, { entry: WorkerResult; at: number }>();
 
@@ -59,6 +61,28 @@ export function vaultCacheGet(key: string | null, now = Date.now(), store: Store
     }
     memory.set(key, { entry: j.entry, at: j.at });
     return j.entry;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The cached read for a key EVEN WHEN STALE, with the time it was stored — the stale-while-revalidate serve.
+ * Never deletes: a stale entry stays available to show instantly while a background revalidation runs. The
+ * caller decides freshness (vaultCacheFresh) and revalidates when stale.
+ */
+export function vaultCacheGetStale(key: string | null, store: Store | null = sessionStore()): { entry: WorkerResult; at: number } | null {
+  if (!key) return null;
+  const hit = memory.get(key);
+  if (hit) return { entry: hit.entry, at: hit.at };
+  if (!store) return null;
+  try {
+    const raw = store.getItem(key);
+    if (!raw) return null;
+    const j = JSON.parse(raw) as { entry?: WorkerResult; at?: unknown };
+    if (!j || typeof j.at !== "number" || !j.entry || typeof j.entry !== "object") return null;
+    memory.set(key, { entry: j.entry, at: j.at });
+    return { entry: j.entry, at: j.at };
   } catch {
     return null;
   }

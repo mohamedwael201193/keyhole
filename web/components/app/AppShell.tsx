@@ -10,7 +10,8 @@ import { TxLink } from "@/components/TxLink";
 import { KEYS_CONTRACT, PLEDGE_SANDBOX } from "@/lib/config";
 import { networkPillDetail, networkPillLabel } from "@/lib/networkLabel";
 import { useI18n } from "@/lib/i18n";
-import { KeyStoreProvider, useKeyStore } from "@/lib/keyStore";
+import { KeyStoreProvider } from "@/lib/keyStore";
+import { VaultDataProvider } from "@/lib/vaultData";
 import { useWallet } from "@/lib/wallet";
 import { PayoutPanel } from "@/components/PayoutPanel";
 import { PayoutCredit } from "@/components/PayoutCredit";
@@ -178,16 +179,18 @@ export const hashOf = (href: string) => (href.includes("#") ? href.slice(href.in
 
 /** The shell with the shared key store mounted once for every app route (the store persists across client navigation). */
 export function AppShell({ children }: { children: ReactNode }) {
-  return <KeyStoreProvider><AppShellFrame>{children}</AppShellFrame></KeyStoreProvider>;
+  return <KeyStoreProvider><VaultDataProvider><AppShellFrame>{children}</AppShellFrame></VaultDataProvider></KeyStoreProvider>;
 }
 
 function AppShellFrame({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const pathname = usePathname();
   const { accountId } = useWallet();
-  const keys = useKeyStore();
-  // Mint shows in the sidebar only when the key store has read this account and found no key.
-  const mint = !!accountId && keys.status === "ready" && keys.keys.length === 0;
+  // Mint is a stable sidebar link for every signed-in account: the /mint page itself blocks an account that
+  // already holds a key ("This account already holds a key. One key per account."), so the link is always shown
+  // and the page decides. (It used to appear only when the key store had read this account and found no key,
+  // so a holder never saw it — the tour found it missing.)
+  const mint = !!accountId;
   const hash = useHash();
   const [open, setOpen] = useState(false);
   const network = networkPillLabel(PLEDGE_SANDBOX);

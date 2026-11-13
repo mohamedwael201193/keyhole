@@ -14,12 +14,29 @@ import type { HistEntry } from "./dashboard";
  */
 
 export type FailedSwap = {
-  /** The failed attempt's own call id: the proof link, and the dedupe key. */
+  /**
+   * The failed attempt's own call id: the proof link, and the dedupe key. When the gateway never returned one
+   * (a timeout before the worker answered, so the web has no call to verify), this is a local id
+   * (`local:<time>:<random>`, see localFailedId) and `local` is true: the row is shown as Failed with no proof
+   * link, because there is no call to verify — the attempt is traceable by its amount and time, not by a call.
+   */
   callId: string;
   entry: HistEntry;
   /** The worker error code of the attempt (native_unknown for a refusal, or the real code). */
   code: string;
+  /** True when `callId` is a local id, not an enclave call: no /verify link exists for this attempt. */
+  local?: boolean;
 };
+
+/** A local id for a failed attempt the gateway never gave a call id for. Not an enclave call. */
+export function localFailedId(now = Date.now()): string {
+  return `local:${now.toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Whether an id is a local failed-attempt id (no enclave call behind it), not a real call id. */
+export function isLocalFailedId(id: string | null | undefined): boolean {
+  return !!id && id.startsWith("local:");
+}
 
 const PREFIX = "kh_failed_swaps_v1:";
 const MAX_KEPT = 10;

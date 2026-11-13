@@ -32,7 +32,7 @@ function LienLookup() {
 
 /**
  * Judge proof desk (app shell). Primary action: live evidence pack.
- * Secondary: re-check one TEE call (existing 37-check verifier).
+ * Secondary: re-check one TEE call (existing 36-check verifier).
  */
 export function VerifyView({ initial }: { initial: string | null }) {
   return (

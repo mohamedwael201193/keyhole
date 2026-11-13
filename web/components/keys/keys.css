@@ -7,6 +7,13 @@
 
 /* ---------- Page root (the same frame as the Overview) ---------- */
 .kp-root { display: grid; gap: var(--space-5); min-width: 0; color: var(--ink); }
+/* Public kp-root pages (/attack, /holders, /verify) render outside .app-main, so they need the same page inset here;
+   without it the heading starts flush at the viewport edge and its first letters read as clipped. The .app-main rules
+   below (higher specificity) still control the inset inside the app shell. */
+.kp-root { padding: var(--space-4) var(--space-5) var(--space-5); }
+@media (max-width: 899px) {
+  .kp-root { padding: var(--space-4) var(--space-3) var(--space-5); }
+}
 .app-main .kp-root { padding: var(--space-6) var(--space-6) var(--space-7); }
 @media (max-width: 899px) {
   .app-main .kp-root { padding: var(--space-5) var(--space-4) var(--space-7); }

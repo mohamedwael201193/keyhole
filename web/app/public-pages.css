@@ -253,7 +253,7 @@
 .pp-source .pp-links li { margin: 0; }
 .pp-source .pp-links a { display: inline-flex; align-items: center; min-height: 40px; font-size: 16px; font-weight: 600; color: var(--teal); text-underline-offset: 4px; }
 .pp-source .pp-card p { font-size: 16px; line-height: 1.6; margin: 0 0 10px; }
-.pp-source .pp-card a { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
+.pp-source .pp-card a:not(.kh-btn) { color: var(--teal); font-weight: 600; text-underline-offset: 3px; }
 
 /* ---- not-found ---- */
 .pp-notfound .pp-nf { max-width: 640px; padding: 48px 0 24px; }

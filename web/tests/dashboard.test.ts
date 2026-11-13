@@ -346,7 +346,15 @@ describe("Overview: the page stays inside the design rules", () => {
     const v = readFileSync(new URL("../app/dashboard/view.tsx", import.meta.url), "utf8");
     expect(v).toContain('import { useKeyStore } from "@/lib/keyStore"');
     expect(v).not.toContain("useMyKeys");
-    expect(v).toContain('useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") })');
-    expect(v).toContain('useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") })');
+    // The balance/history/dashboard reads live in the one shared provider (lib/vaultData.tsx), not per page: the page
+    // reads them through useVaultData() and must not open its own signed reads.
+    expect(v).toContain("useVaultData()");
+    expect(v).not.toContain('useSigned("balance"');
+    expect(v).not.toContain('useSigned("history"');
+    expect(v).not.toContain('useSigned("dashboard"');
+    const p = readFileSync(new URL("../lib/vaultData.tsx", import.meta.url), "utf8");
+    expect(p).toContain('useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") })');
+    expect(p).toContain('useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") })');
+    expect(p).toContain('useSigned("dashboard", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "dashboard") })');
   });
 });
