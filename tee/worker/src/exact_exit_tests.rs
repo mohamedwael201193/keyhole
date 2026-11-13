@@ -16,6 +16,14 @@ struct Fixture {
     delta: Option<i128>,
     registered: bool,
     finish_calls: usize,
+    /// Production near:rpc cost model for the canary (exact-exit) drive, in
+    /// host calls: observe = 5 (production exact_exit_observation: 3 views
+    /// + storage_bounds + view_account; the 2 custody reads are wasi:http),
+    ///   now_ms = 1 (rpc::block), original_delivery = 1 (rpc::tx_status),
+    ///   post_step = 0 (wasi:http). The host allows 100 near:rpc calls per
+    ///   run. This is a model of the production cost, not a live measurement:
+    ///   the mock Host does not touch the RPC.
+    rpc_cost: usize,
     deny: bool,
     clock: u64,
     poll_error: bool,
@@ -123,12 +131,15 @@ impl Host for Fixture {
         }
     }
     fn original_delivery(&mut self,j:&Journal,_intent:&str)->Result<Value,Error>{
+        self.rpc_cost += 1;
         Ok(self.receipt.clone().unwrap_or_else(||delivery(j,&self.final_delta.unwrap_or(100).to_string())))
     }
     fn now_ms(&mut self) -> Result<u64, Error> {
+        self.rpc_cost += 1;
         Ok(self.clock)
     }
     fn observe(&mut self, _j: &Journal, _key: &str) -> Result<Observation, Error> {
+        self.rpc_cost += 5;
         Ok(self.obs.clone().unwrap())
     }
     fn post_step(
@@ -723,6 +734,20 @@ fn successful_original_receipt_reconciles_after_recipient_spends(){
  let mut h=Fixture::new();h.spent_recipient=true;let j=journal();
  assert_eq!(drive(&mut h,&j,"key").unwrap()["status"],"success");
  assert_eq!(h.obs.as_ref().unwrap().recipient,"0");assert_eq!(h.finish_calls,1);assert_eq!(h.posts.len(),3);
+}
+#[test]
+fn canary_drive_rpc_cost_stays_well_under_host_cap(){
+ // A full 3-hop drive (the canary path) must stay well under the host's 100
+ // near:rpc calls per run. The count is the production-cost model on the
+ // Fixture (observe = 5, now_ms = 1, original_delivery = 1), not a live
+ // measurement. Measured here: 39. The begin preflight (one more observe)
+ // + the minter send (~7) add ~12 more in production, for a modeled canary
+ // total of ~51 — still well under 100.
+ let mut h=Fixture::new();h.spent_recipient=true;let j=journal();
+ assert_eq!(drive(&mut h,&j,"key").unwrap()["status"],"success");
+ assert_eq!(h.posts.len(),3);assert_eq!(h.finish_calls,1);
+ eprintln!("canary drive modelled rpc_cost={}",h.rpc_cost);
+ assert!(h.rpc_cost<50,"rpc_cost={}",h.rpc_cost);
 }
 #[test]
 fn original_receipt_negative_graphs_and_failed_descendants_never_finish(){

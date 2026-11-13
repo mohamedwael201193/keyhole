@@ -42,7 +42,21 @@ pub trait Rpc {
     /// Final block hash and, when the response carries it, its height.
     fn block(&mut self) -> Result<([u8; 32], Option<u64>), Error>;
     fn broadcast(&mut self, signed: &str) -> Result<Value, Error>;
+    /// Async broadcast: submit the signed bytes and return immediately (NEAR
+    /// `broadcast_tx_async`, wait-until "NONE"). A rebroadcast of identical
+    /// bytes is idempotent (same hash/nonce). Default: delegate to `broadcast`.
+    fn broadcast_async(&mut self, signed: &str) -> Result<Value, Error> {
+        self.broadcast(signed)
+    }
     fn status(&mut self, hash: &str, signer: &str) -> Result<Value, Error>;
+    /// Short wait between status re-polls. Default: none (native tests).
+    /// Production pauses ~2 s so a re-poll happens after the tx has had
+    /// time to enter a block. Without the pause, MAX_STATUS_POLLS instant
+    /// polls all return UNKNOWN_TRANSACTION / not-yet-FINAL before the tx
+    /// is indexed, and the in-call recovery gives up to reconcile having
+    /// learned nothing. The pause is NOT an RPC call, so it does not count
+    /// against the host's 100 near:rpc calls per run.
+    fn pause(&mut self) {}
     /// `(reference_block_height, final_height, transaction_validity_period)`.
     /// Defaults to unknown: a missing value must not be treated as expired.
     fn validity_context(&mut self, _plan: &Plan) -> (Option<u64>, Option<u64>, Option<u64>) {
@@ -340,6 +354,93 @@ pub fn reconcile(
         Err(_) => Err(unresolved_error(&p, None, "original send not yet FINAL")),
     }
 }
+
+/// Maximum in-call re-broadcast attempts after a transport failure.
+/// Each attempt re-submits the SAME signed bytes (idempotent); the loop is
+/// bounded so a degraded RPC cannot spin the call forever.
+pub const MAX_REBROADCAST_ATTEMPTS: usize = 3;
+
+/// Maximum short status re-polls while a sent tx is not FINAL yet. Each poll
+/// is one fast NONE call (no FINAL wait inside one host call, which the host
+/// caps at 30 s). The polls are SPACED: a host pause (~2 s, `Rpc::pause`)
+/// runs before each re-poll, so the tx has time to enter a block — without
+/// the pause the three polls all run in under a second and all return
+/// UNKNOWN_TRANSACTION / not-yet-FINAL before the tx is indexed. After this
+/// many polls the ticket is left for the normal reconcile, which polls again
+/// by hash — never re-signs. Together with the re-broadcast bound, one
+/// execute() makes at most ~13 RPC calls, far under the host's 100 near:rpc
+/// calls per run. The pauses add no RPC calls.
+pub const MAX_STATUS_POLLS: usize = 3;
+
+/// Re-broadcast the exact signed bytes of the current unresolved ticket.
+/// Safety: identical signed bytes cannot execute twice (same nonce/hash — NEAR
+/// rejects a duplicate); expired => the node rejects as Expired, harmless.
+/// Only valid while the validity window is still open (fail closed if the
+/// window cannot be proven open). If the tx is FINAL, the ticket is cleared
+/// here (same proof + finish as `reconcile`); otherwise the ticket remains
+/// and the caller runs the normal `reconcile` once the tx is FINAL.
+/// Never re-signs: the bytes come from the stored plan, not a fresh signing.
+pub fn rebroadcast(
+    st: &mut dyn Store,
+    rpc: &mut dyn Rpc,
+    t: &Ticket,
+) -> Result<Value, Error> {
+    let r = root(t.generation);
+    if st.read(&format!("{r}/decision"))? != b"dispatch" {
+        return Err(err(
+            "native_busy",
+            "native send is preparing; operator may fence proven unsent work",
+        ));
+    }
+    let p: Plan = read(st, &format!("{r}/plan"))?;
+    // Fail closed: only rebroadcast while the validity window is provably open.
+    let (ctx_ref, final_h, period) = rpc.validity_context(&p);
+    let ref_h = p.reference_height.or(ctx_ref);
+    let open = matches!((ref_h, final_h, period), (Some(r), Some(f), Some(pd)) if !reference_expired(f, r, pd));
+    if !open {
+        return Err(err(
+            "rebroadcast_expired",
+            format!(
+                "validity window expired or unprovable; reconcile instead; tx_hash={}; reference_block_height={}",
+                p.hash,
+                ref_h.map(|h| h.to_string()).unwrap_or_else(|| "unknown".into())
+            ),
+        ));
+    }
+    // Re-submit the EXACT signed bytes (no re-signing, same hash, same nonce).
+    let sent = rpc.broadcast_async(&p.signed).is_ok();
+    // Poll status once to report the current state.
+    match rpc.status(&p.hash, &p.signer) {
+        Ok(v) => {
+            if let Some(ok) = proof(&v, &p) {
+                finish(st, t, if ok { "success" } else { "failure" })?;
+                Ok(json!({
+                    "ok": true,
+                    "status": if ok { "success" } else { "failed" },
+                    "tx_hash": p.hash,
+                    "rebroadcast": sent,
+                    "reconciled": true,
+                }))
+            } else {
+                Ok(json!({
+                    "ok": true,
+                    "status": "rebroadcast",
+                    "tx_hash": p.hash,
+                    "rebroadcast": sent,
+                    "final": false,
+                }))
+            }
+        }
+        Err(e) => Ok(json!({
+            "ok": true,
+            "status": "rebroadcast",
+            "tx_hash": p.hash,
+            "rebroadcast": sent,
+            "final": false,
+            "status_error": e.code,
+        })),
+    }
+}
 #[allow(clippy::too_many_arguments)]
 pub fn execute(
     st: &mut dyn Store,
@@ -413,7 +514,14 @@ pub fn execute(
     rpc.prepared(&p)?;
     claim_dispatch(st, &t)?;
     // Dispatch is invoked exactly once, even if transport errors or process crashes.
-    let response = rpc.broadcast(&p.signed);
+    // The hash was computed from the signed bytes BEFORE sending (above), so
+    // the tx is always recoverable by hash afterwards. The send itself is
+    // async (wait-until NONE), never a FINAL wait inside one host call: the
+    // OutLayer host caps every near:rpc call at 30 s, so a FINAL wait that
+    // outlasts 30 s returns "Failed to send RPC request" even when the tx
+    // was accepted — the exact failure that created the lost claim_payout
+    // (J5dHg2q…). A tx that is not FINAL yet returns pending WITH the hash.
+    let response = rpc.broadcast_async(&p.signed);
     if let Ok(v) = response {
         if let Some(ok) = proof(&v, &p) {
             finish(st, &t, if ok { "success" } else { "failure" })?;
@@ -425,6 +533,62 @@ pub fn execute(
                     format!("original native transaction failed: {}", p.hash),
                 ))
             };
+        }
+    }
+    // The broadcast failed or its response is unproven: the tx may or may not
+    // have reached the node. Poll status by hash with short, SPACED NONE
+    // calls — never a FINAL wait inside one host call (30 s host cap). If the tx is
+    // genuinely not on-chain (UNKNOWN_TRANSACTION), re-broadcast the SAME
+    // bytes (idempotent: same hash/nonce cannot execute twice) up to
+    // MAX_REBROADCAST_ATTEMPTS times. If it is not FINAL yet, poll a bounded
+    // number of times, then leave the ticket for the normal reconcile (which
+    // polls again by hash — never re-signs). A single transport failure must
+    // not block the minter journal for the full validity window.
+    let mut rebroadcasts = 0;
+    let mut polls = 0;
+    loop {
+        match rpc.status(&p.hash, &p.signer) {
+            Ok(v) => {
+                if let Some(ok) = proof(&v, &p) {
+                    finish(st, &t, if ok { "success" } else { "failure" })?;
+                    return if ok {
+                        Ok((p.hash, v))
+                    } else {
+                        Err(err(
+                            "tx_failed",
+                            format!("original native transaction failed: {}", p.hash),
+                        ))
+                    };
+                }
+                break;
+            }
+            Err(e) if is_unknown_transaction_error(&e) => {
+                rebroadcasts += 1;
+                if rebroadcasts > MAX_REBROADCAST_ATTEMPTS {
+                    break;
+                }
+                // Space the next status poll (host pause, ~2 s): the tx needs
+                // that long to enter a block, and an instant re-poll would
+                // return UNKNOWN_TRANSACTION again before the tx is indexed.
+                // The pause also spaces the re-broadcasts themselves.
+                rpc.pause();
+                // Async re-broadcast of the SAME bytes; the status poll at the
+                // top of the loop tells us whether it landed. Ignore the
+                // broadcast result here (a duplicate rejection is harmless).
+                let _ = rpc.broadcast_async(&p.signed);
+            }
+            Err(_) => {
+                // Not yet FINAL (or a transport error on the poll): a bounded
+                // number of short re-polls, then reconcile polls again.
+                polls += 1;
+                if polls >= MAX_STATUS_POLLS {
+                    break;
+                }
+                // Space the next status poll (see above): without the pause
+                // the three polls all run in under a second, before the tx
+                // enters a block, and the in-call recovery learns nothing.
+                rpc.pause();
+            }
         }
     }
     let (_, v, ok) = reconcile(st, rpc, &t)?;
@@ -497,6 +661,33 @@ mod tests {
         nonce_err: bool,
         sign_height: Option<u64>,
         validity: (Option<u64>, Option<u64>, Option<u64>),
+        async_sends: usize,
+        async_signed: Vec<String>,
+        async_lands: bool,
+        /// The next broadcast_async call fails with a lost response (the
+        /// one-shot model of a transport failure after sending: the tx may or
+        /// may not have reached the node, and the mock leaves its on-chain
+        /// state untouched). Consumed by that call; later sends behave
+        /// normally. This is how a lost initial send is simulated now that
+        /// every send is async (wait-until NONE): `pending` alone only makes
+        /// status polls report "not indexed".
+        send_fail_once: bool,
+        /// Every Rpc trait invocation (nonce, block, broadcast,
+        /// broadcast_async, status, validity_context). Each is one near:rpc
+        /// host call in production, against the host's 100 calls per run.
+        rpc_calls: usize,
+        /// Host pauses requested between status re-polls (`Rpc::pause`).
+        /// Production sleeps ~2 s per pause; the mock only counts, so the
+        /// tests stay fast while proving the spacing happens.
+        pauses: usize,
+        /// When set, `outcome()` returns a genuine FINAL failure body
+        /// (the receipt failed) instead of the success fixture.
+        fail_outcome: bool,
+        /// Set by `broadcast_async` when the journal already holds the
+        /// ticket (decision=dispatch, plan with hash + the exact bytes
+        /// being broadcast) at broadcast time — the proof that the ticket
+        /// is persisted BEFORE broadcast.
+        persisted_before_broadcast: bool,
     }
     impl Wire {
         fn new(s: &Mem) -> Self {
@@ -512,17 +703,34 @@ mod tests {
                 nonce_err: false,
                 sign_height: Some(100),
                 validity: (None, None, None),
+                async_sends: 0,
+                async_signed: Vec::new(),
+                async_lands: true,
+                send_fail_once: false,
+                rpc_calls: 0,
+                pauses: 0,
+                fail_outcome: false,
+                persisted_before_broadcast: false,
             }
         }
         fn outcome(&self) -> Value {
             let p = self.plan.as_ref().unwrap();
             let mut v = crate::receipts::fixture(&p.hash, &p.signer, &p.receiver, "");
+            if self.fail_outcome {
+                // A genuine FINAL failure: the receipt failed and the
+                // top-level status carries the same Failure (the shape
+                // `receipts::terminal` resolves to Terminal::Failure).
+                v["receipts_outcome"][0]["outcome"]["status"] =
+                    json!({"Failure":{"ActionError":"failed"}});
+                v["status"] = v["receipts_outcome"][0]["outcome"]["status"].clone();
+            }
             v["transaction"] = p.transaction.clone();
             v
         }
     }
     impl Rpc for Wire {
         fn nonce(&mut self, _: &str, _: &str) -> Result<u64, Error> {
+            self.rpc_calls += 1;
             self.reads += 1;
             if self.nonce_err {
                 return Err(err("rpc", "native access key unavailable"));
@@ -531,6 +739,7 @@ mod tests {
             Ok(self.key_nonce.unwrap_or(10))
         }
         fn block(&mut self) -> Result<([u8; 32], Option<u64>), Error> {
+            self.rpc_calls += 1;
             Ok(([0; 32], self.sign_height))
         }
         fn prepared(&mut self, p: &Plan) -> Result<(), Error> {
@@ -543,6 +752,7 @@ mod tests {
             Ok(())
         }
         fn broadcast(&mut self, _: &str) -> Result<Value, Error> {
+            self.rpc_calls += 1;
             self.sends += 1;
             if self.pending {
                 Err(err("lost", "response lost"))
@@ -550,7 +760,44 @@ mod tests {
                 Ok(self.outcome())
             }
         }
+        fn broadcast_async(&mut self, signed: &str) -> Result<Value, Error> {
+            self.rpc_calls += 1;
+            self.async_sends += 1;
+            self.async_signed.push(signed.to_string());
+            // Proof that the ticket is persisted BEFORE broadcast: at the
+            // moment of the send, the journal must already hold the ticket
+            // with decision=dispatch and the plan carrying the hash and the
+            // exact bytes being broadcast.
+            if !self.persisted_before_broadcast {
+                if let Ok(Some(t)) = current(&mut self.store) {
+                    let r = root(t.generation);
+                    let decision = self.store.read(&format!("{r}/decision")).unwrap_or_default();
+                    if decision.as_slice() == b"dispatch" {
+                        if let Ok(p) = read::<Plan>(&mut self.store, &format!("{r}/plan")) {
+                            if p.signed == signed && !p.hash.is_empty() {
+                                self.persisted_before_broadcast = true;
+                            }
+                        }
+                    }
+                }
+            }
+            if self.send_fail_once {
+                // One-shot transport failure after sending: the response is
+                // lost and the tx's on-chain state is untouched (it may or
+                // may not have reached the node). The caller must poll by
+                // hash; it must never assume the tx is or is not on-chain.
+                self.send_fail_once = false;
+                return Err(err("lost", "response lost"));
+            }
+            if self.async_lands {
+                // The re-broadcast reaches the node: the tx is now known and lands.
+                self.unknown = false;
+                self.pending = false;
+            }
+            Ok(Value::Null)
+        }
         fn status(&mut self, _: &str, _: &str) -> Result<Value, Error> {
+            self.rpc_calls += 1;
             if self.unknown {
                 Err(err("unknown_transaction", "UNKNOWN_TRANSACTION"))
             } else if self.pending {
@@ -559,7 +806,14 @@ mod tests {
                 Ok(self.outcome())
             }
         }
+        fn pause(&mut self) {
+            // Counted, not slept: the test proves the production code
+            // requests the pause at the right points; the production
+            // NativeRpc sleeps ~2 s per pause.
+            self.pauses += 1;
+        }
         fn validity_context(&mut self, _: &Plan) -> (Option<u64>, Option<u64>, Option<u64>) {
+            self.rpc_calls += 1;
             self.validity
         }
     }
@@ -585,10 +839,11 @@ mod tests {
         let mut s = Mem::default();
         let mut w = Wire::new(&s);
         run(&mut s, &mut w, "provision").unwrap();
-        assert_eq!((w.reads, w.sends), (1, 1));
+        assert_eq!((w.reads, w.async_sends), (1, 1));
+        assert_eq!(w.sends, 0, "no FINAL broadcast is ever used");
         assert!(current(&mut s).unwrap().is_none());
         run(&mut s, &mut w, "ordinary").unwrap();
-        assert_eq!(w.sends, 2);
+        assert_eq!(w.async_sends, 2);
     }
     #[test]
     fn ordinary_and_provisioning_interleaving_never_share_live_nonce() {
@@ -599,7 +854,7 @@ mod tests {
         assert_eq!(w.reads, 0);
         abort_unsent(&mut s, &t).unwrap();
         run(&mut s, &mut w, "provision").unwrap();
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
     }
     #[test]
     fn abort_fences_in_flight_signer_before_broadcast() {
@@ -607,7 +862,7 @@ mod tests {
         let mut w = Wire::new(&s);
         w.abort_at_prepare = true;
         assert!(run(&mut s, &mut w, "old").is_err());
-        assert_eq!(w.sends, 0);
+        assert_eq!(w.async_sends, 0);
         assert_eq!(current(&mut s).unwrap().unwrap().id, "next");
     }
     #[test]
@@ -616,13 +871,13 @@ mod tests {
         *s.1.borrow_mut() = Some("/plan".into());
         let mut w = Wire::new(&s);
         assert!(run(&mut s, &mut w, "old").is_err());
-        assert_eq!(w.sends, 0);
+        assert_eq!(w.async_sends, 0);
         let t = current(&mut s).unwrap().unwrap();
         *s.1.borrow_mut() = None;
         abort_unsent(&mut s, &t).unwrap();
         assert!(claim_dispatch(&mut s, &t).is_err());
         run(&mut s, &mut w, "new").unwrap();
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
     }
     #[test]
     fn crash_after_dispatch_claim_never_becomes_never_submitted() {
@@ -630,7 +885,7 @@ mod tests {
         *s.1.borrow_mut() = Some("/decision".into());
         let mut w = Wire::new(&s);
         assert!(run(&mut s, &mut w, "old").is_err());
-        assert_eq!(w.sends, 0);
+        assert_eq!(w.async_sends, 0);
         let t = current(&mut s).unwrap().unwrap();
         *s.1.borrow_mut() = None;
         assert!(abort_unsent(&mut s, &t).is_err());
@@ -640,11 +895,15 @@ mod tests {
     fn lost_broadcast_stays_unknown_and_original_is_never_retried() {
         let mut s = Mem::default();
         let mut w = Wire::new(&s);
+        // The initial send's response is lost (one-shot transport failure)
+        // AND the tx outcome is not yet indexed: execute() must leave the
+        // ticket UNKNOWN with the hash, never resend a fresh signing.
+        w.send_fail_once = true;
         w.pending = true;
         assert!(run(&mut s, &mut w, "old").is_err());
         let t = current(&mut s).unwrap().unwrap();
         assert!(run(&mut s, &mut w, "next").is_err());
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
         assert!(abort_unsent(&mut s, &t).is_err());
         w.pending = false;
         reconcile(&mut s, &mut w, &t).unwrap();
@@ -657,6 +916,7 @@ mod tests {
     fn stale_terminal_reconciler_cannot_unlock_a_new_send_generation() {
         let mut s = Mem::default();
         let mut w = Wire::new(&s);
+        w.send_fail_once = true;
         w.pending = true;
         assert!(run(&mut s, &mut w, "old").is_err());
         let old = current(&mut s).unwrap().unwrap();
@@ -678,7 +938,7 @@ mod tests {
         let mut w = Wire::new(&s);
         *s.1.borrow_mut() = Some("/done".into());
         assert!(run(&mut s, &mut w, "old").is_err());
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
         assert_eq!(s.incr(HEAD, 0).unwrap(), 0);
         *s.1.borrow_mut() = None;
         let old: Ticket = read(&mut s, "w/minter_send_v2/0/claim").unwrap();
@@ -692,6 +952,7 @@ mod tests {
     fn malformed_failure_cannot_release_next_generation() {
         let mut s = Mem::default();
         let mut w = Wire::new(&s);
+        w.send_fail_once = true;
         w.pending = true;
         assert!(run(&mut s, &mut w, "old").is_err());
         let t = current(&mut s).unwrap().unwrap();
@@ -704,6 +965,9 @@ mod tests {
         assert!(abort_unsent(&mut s, &t).is_err());
     }
     fn dispatched(s: &mut Mem, w: &mut Wire) -> Ticket {
+        // The initial send's response is lost (one-shot transport failure)
+        // and the tx outcome is not yet indexed: the ticket stays dispatch.
+        w.send_fail_once = true;
         w.pending = true;
         assert!(run(s, w, "old").is_err());
         current(s).unwrap().unwrap()
@@ -725,7 +989,7 @@ mod tests {
         assert!(current(&mut s).unwrap().is_none());
         w.unknown = false;
         run(&mut s, &mut w, "new").unwrap();
-        assert_eq!(w.sends, 2);
+        assert_eq!(w.async_sends, 2);
     }
     #[test]
     fn unknown_at_window_edge_waits_and_returns_hash_and_height() {
@@ -746,7 +1010,7 @@ mod tests {
         assert_eq!(current(&mut s).unwrap().unwrap().generation, t.generation);
         assert!(abort_unsent(&mut s, &t).is_err());
         assert!(run(&mut s, &mut w, "next").is_err());
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
     }
     #[test]
     fn gate_refusal_of_unresolved_ticket_is_native_blocked_and_sends_nothing() {
@@ -770,7 +1034,7 @@ mod tests {
         assert!(e.message.contains("nothing was sent"), "{}", e.message);
         assert!(!e.message.contains(&p.signed));
         assert!(!e.message.to_ascii_lowercase().contains("private"));
-        assert_eq!(w.sends, 1, "the old send only; no new send was attempted");
+        assert_eq!(w.async_sends, 1, "the old send only; no new send was attempted");
         assert_eq!(current(&mut s).unwrap().unwrap().generation, t.generation);
         assert!(abort_unsent(&mut s, &t).is_err());
     }
@@ -860,7 +1124,7 @@ mod tests {
             let e = reconcile(&mut s, &mut w, &t).unwrap_err();
             assert_eq!(e.code, "native_unknown");
             assert!(current(&mut s).unwrap().is_some());
-            assert_eq!(w.sends, 1);
+            assert_eq!(w.async_sends, 1);
         }
         // Control: below the plan nonce, the same context clears.
         let mut s = Mem::default();
@@ -908,7 +1172,7 @@ mod tests {
         assert_eq!(e.code, "native_unknown");
         assert!(current(&mut s).unwrap().is_some());
         assert!(abort_unsent(&mut s, &t).is_err());
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
     }
     #[test]
     fn signing_without_a_parseable_block_height_aborts_before_signing() {
@@ -917,12 +1181,12 @@ mod tests {
         w.sign_height = None;
         let e = run(&mut s, &mut w, "no-height").unwrap_err();
         assert_eq!(e.code, "rpc");
-        assert_eq!(w.sends, 0);
+        assert_eq!(w.async_sends, 0);
         assert!(w.plan.is_none());
         // the reservation was aborted as never submitted: the next send proceeds
         w.sign_height = Some(100);
         run(&mut s, &mut w, "next").unwrap();
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
     }
     #[test]
     fn stored_height_plan_clears_without_any_block_lookup() {
@@ -968,7 +1232,7 @@ mod tests {
         assert_eq!(e.code, "native_unknown");
         assert!(current(&mut s).unwrap().is_some());
         assert!(abort_unsent(&mut s, &t).is_err());
-        assert_eq!(w.sends, 1);
+        assert_eq!(w.async_sends, 1);
         // The read recovers: the same ticket can then clear.
         w.nonce_err = false;
         assert!(reconcile(&mut s, &mut w, &t).is_ok());
@@ -1052,6 +1316,354 @@ mod tests {
         assert!(e.message.contains("reference_block_height=42"));
         assert!(!e.message.contains(&signed));
     }
+    #[test]
+    fn rebroadcast_never_resigns_and_uses_stored_bytes() {
+        // The lost claim_payout (J5dHg2q…): the journal holds the exact signed
+        // bytes; a rebroadcast must re-submit THOSE bytes, never a fresh signing.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        let t = dispatched(&mut s, &mut w);
+        let p = w.plan.clone().unwrap();
+        w.pending = false;
+        w.unknown = false;
+        w.validity = (Some(100), Some(200), Some(86_400));
+        let v = rebroadcast(&mut s, &mut w, &t).unwrap();
+        assert_eq!(v["ok"], true);
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["tx_hash"], p.hash);
+        assert_eq!(v["rebroadcast"], true);
+        assert_eq!(v["reconciled"], true);
+        assert_eq!(w.async_sends, 2, "the original async broadcast + the rebroadcast");
+        assert_eq!(w.async_signed, vec![p.signed.clone(), p.signed.clone()]);
+        assert_eq!(w.sends, 0, "no FINAL broadcast is ever used");
+        // (c) No sign call: a fresh signing needs a fresh nonce read, and
+        // rebroadcast made none (the nonce was read once, by the original
+        // execute). The bytes come from the stored plan, never a re-sign.
+        assert_eq!(w.reads, 1, "rebroadcast must not read a fresh nonce");
+        assert!(current(&mut s).unwrap().is_none());
+    }
+    #[test]
+    fn rebroadcast_refused_after_expiry() {
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        let t = dispatched(&mut s, &mut w);
+        let p = w.plan.clone().unwrap();
+        w.pending = false;
+        w.unknown = false;
+        // Window expired: final == ref + period + 2.
+        w.validity = (Some(100), Some(100 + 86_400 + 2), Some(86_400));
+        let sends_before = w.async_sends;
+        let e = rebroadcast(&mut s, &mut w, &t).unwrap_err();
+        assert_eq!(e.code, "rebroadcast_expired");
+        assert!(e.message.contains(&p.hash), "{}", e.message);
+        assert_eq!(w.async_sends, sends_before, "no broadcast attempted after expiry");
+        assert_eq!(w.async_sends, 1);
+        assert!(current(&mut s).unwrap().is_some(), "ticket stays for reconcile");
+    }
+    #[test]
+    fn double_rebroadcast_submits_identical_bytes_and_finishes_once() {
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        let t = dispatched(&mut s, &mut w);
+        let p = w.plan.clone().unwrap();
+        w.pending = false;
+        w.unknown = false;
+        w.validity = (Some(100), Some(200), Some(86_400));
+        let v1 = rebroadcast(&mut s, &mut w, &t).unwrap();
+        assert_eq!(v1["status"], "success");
+        let head_after_first =
+            String::from_utf8(s.read(HEAD).unwrap()).unwrap().parse::<i64>().unwrap();
+        assert_eq!(head_after_first, 1);
+        // A second rebroadcast (e.g. the operator's response was lost) submits
+        // the SAME bytes again — the node rejects a duplicate nonce/hash, so the
+        // tx can never execute twice — and the journal does not advance again.
+        let v2 = rebroadcast(&mut s, &mut w, &t).unwrap();
+        assert_eq!(v2["status"], "success");
+        // Initial async broadcast + two rebroadcasts, all the SAME bytes.
+        assert_eq!(w.async_sends, 3);
+        assert_eq!(w.async_signed[0], w.async_signed[1]);
+        assert_eq!(w.async_signed[1], w.async_signed[2]);
+        assert_eq!(w.async_signed[0], p.signed);
+        let head_after_second =
+            String::from_utf8(s.read(HEAD).unwrap()).unwrap().parse::<i64>().unwrap();
+        assert_eq!(head_after_second, 1, "finish is idempotent; HEAD advances once");
+        assert!(current(&mut s).unwrap().is_none());
+    }
+    #[test]
+    fn rebroadcast_not_final_leaves_ticket_for_reconcile() {
+        // The rebroadcast was sent but the tx is not FINAL yet: the ticket
+        // stays, and the normal reconcile clears it once the tx is FINAL.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        let t = dispatched(&mut s, &mut w);
+        let p = w.plan.clone().unwrap();
+        w.pending = true;
+        w.unknown = false;
+        w.async_lands = false;
+        w.validity = (Some(100), Some(200), Some(86_400));
+        let v = rebroadcast(&mut s, &mut w, &t).unwrap();
+        assert_eq!(v["ok"], true);
+        assert_eq!(v["status"], "rebroadcast");
+        assert_eq!(v["final"], false);
+        assert_eq!(v["tx_hash"], p.hash);
+        // Initial async broadcast + the one rebroadcast, same bytes.
+        assert_eq!(w.async_sends, 2);
+        assert_eq!(w.async_signed, vec![p.signed.clone(), p.signed.clone()]);
+        assert!(current(&mut s).unwrap().is_some(), "ticket stays until FINAL");
+        w.pending = false;
+        let (p2, v2, ok) = reconcile(&mut s, &mut w, &t).unwrap();
+        assert!(ok);
+        assert_eq!(p2.hash, p.hash);
+        assert_eq!(v2["transaction"]["hash"], p.hash);
+        assert!(current(&mut s).unwrap().is_none());
+    }
+    #[test]
+    fn in_call_retry_rebroadcasts_on_unknown_then_succeeds() {
+        // The exact failure mode that created J5dHg2q…: the broadcast response
+        // was lost AND the tx was not on-chain. execute() must re-broadcast
+        // the SAME bytes inside the call instead of leaving the ticket UNKNOWN.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        // One-shot transport failure on the initial send; the tx is not
+        // on-chain, so the in-call retry must re-submit the same bytes.
+        w.send_fail_once = true;
+        w.pending = true;
+        w.unknown = true;
+        let (hash, _v) = run(&mut s, &mut w, "id").unwrap();
+        let p = w.plan.clone().unwrap();
+        assert_eq!(hash, p.hash);
+        assert_eq!(w.sends, 0, "no FINAL broadcast is ever used");
+        assert_eq!(w.async_sends, 2, "the failed initial send + one in-call re-broadcast");
+        assert_eq!(w.async_signed, vec![p.signed.clone(), p.signed.clone()]);
+        assert!(current(&mut s).unwrap().is_none());
+    }
+    #[test]
+    fn hash_is_known_before_send_and_poll_recovers_by_it() {
+        // The NONE design rests on one property: the tx hash is computable
+        // from the signed bytes BEFORE sending, so a tx whose send response
+        // was lost is always recoverable by hash. The lost claim_payout
+        // (J5dHg2q…) had no hash in its error because the FINAL wait timed
+        // out; with NONE the hash is in the plan from the start.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        w.send_fail_once = true;
+        w.pending = true;
+        let e = run(&mut s, &mut w, "old").unwrap_err();
+        let t = current(&mut s).unwrap().unwrap();
+        let p: Plan = read(&mut s, &format!("{}/plan", root(t.generation))).unwrap();
+        assert!(e.message.contains(&p.hash), "{}", e.message);
+        // Recompute the hash from the signed bytes alone (strip the 65-byte
+        // signature suffix, sha256 the tx, bs58) — the same derivation the
+        // worker does before sending.
+        let raw = B64.decode(&p.signed).unwrap();
+        assert!(raw.len() > 65);
+        let tx = &raw[..raw.len() - 65];
+        let recomputed = bs58::encode(Sha256::digest(tx)).into_string();
+        assert_eq!(recomputed, p.hash);
+        // The ticket is still dispatch with the plan intact: reconcile polls
+        // by that same hash once the tx is indexed.
+        assert_eq!(current(&mut s).unwrap().unwrap().generation, t.generation);
+        w.pending = false;
+        let (p2, _v, ok) = reconcile(&mut s, &mut w, &t).unwrap();
+        assert!(ok);
+        assert_eq!(p2.hash, p.hash);
+    }
+    #[test]
+    fn lost_broadcast_returns_pending_with_hash_never_unknown_without_hash() {
+        // A transport failure after sending must surface as pending WITH the
+        // hash — never as an UNKNOWN that carries no hash (that is what made
+        // J5dHg2q… unrecoverable except by waiting out the validity window).
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        w.send_fail_once = true;
+        w.pending = true;
+        let e = run(&mut s, &mut w, "old").unwrap_err();
+        let t = current(&mut s).unwrap().unwrap();
+        let p = w.plan.clone().unwrap();
+        assert_eq!(e.code, "native_unknown");
+        assert!(e.message.contains(&p.hash), "{}", e.message);
+        assert!(e.message.contains("tx_hash="), "{}", e.message);
+        // A reconcile while the tx is still not indexed reports the same
+        // pending state with the hash and the reference height — never a
+        // bare unknown.
+        let e2 = reconcile(&mut s, &mut w, &t).unwrap_err();
+        assert_eq!(e2.code, "native_unknown");
+        assert!(e2.message.contains(&p.hash), "{}", e2.message);
+        assert!(e2.message.contains("reference_block_height="), "{}", e2.message);
+        assert!(current(&mut s).unwrap().is_some(), "ticket stays for reconcile");
+    }
+    #[test]
+    fn rpc_call_counts_stay_far_under_the_host_cap() {
+        // The host allows 100 near:rpc calls per run. Every op below logs
+        // its count; the mock counts one call per Rpc method (production
+        // validity_context makes up to 3 real calls), so the modeled total
+        // stays far under the cap and polling can never push a run over it.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        // A successful send: nonce + block + async broadcast + one status poll.
+        run(&mut s, &mut w, "ok").unwrap();
+        eprintln!("successful execute rpc_calls={}", w.rpc_calls);
+        assert!(w.rpc_calls <= 10, "rpc_calls={}", w.rpc_calls);
+        assert_eq!(w.sends, 0, "no FINAL broadcast is ever used");
+        // A lost send: nonce + block + failed async broadcast + 3 re-polls +
+        // one reconcile poll.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        w.send_fail_once = true;
+        w.pending = true;
+        assert!(run(&mut s, &mut w, "old").is_err());
+        eprintln!("lost-broadcast execute rpc_calls={}", w.rpc_calls);
+        assert!(w.rpc_calls <= 10, "rpc_calls={}", w.rpc_calls);
+        // A rebroadcast: validity context + async broadcast + one status poll.
+        let before = w.rpc_calls;
+        w.pending = false;
+        w.unknown = false;
+        w.validity = (Some(100), Some(200), Some(86_400));
+        let t = current(&mut s).unwrap().unwrap();
+        rebroadcast(&mut s, &mut w, &t).unwrap();
+        let rebroadcast_calls = w.rpc_calls - before;
+        eprintln!("rebroadcast rpc_calls={rebroadcast_calls}");
+        assert!(rebroadcast_calls <= 10, "rpc_calls={rebroadcast_calls}");
+        eprintln!("full minter-send lifecycle rpc_calls={}", w.rpc_calls);
+        assert!(w.rpc_calls < 50, "rpc_calls={}", w.rpc_calls);
+    }
+    #[test]
+    fn status_repols_are_spaced_by_the_host_pause() {
+        // Round-3 gap 1: MAX_STATUS_POLLS = 3 with no wait between
+        // attempts exhausts all three polls in under a second, before the
+        // tx enters a block. Each re-poll must be preceded by a host pause
+        // (~2 s in production); the mock counts pauses instead of sleeping,
+        // so the test stays fast. A pause is not an RPC call.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        w.send_fail_once = true;
+        w.pending = true;
+        assert!(run(&mut s, &mut w, "old").is_err());
+        // Three bounded re-polls: a pause before the 2nd and the 3rd.
+        assert_eq!(w.pauses, 2, "pauses={}", w.pauses);
+        // The pause adds no RPC calls: the lost-broadcast execute stays ≤ 10.
+        assert!(w.rpc_calls <= 10, "rpc_calls={}", w.rpc_calls);
+        // Behavior unchanged: the ticket stays pending WITH the hash.
+        assert!(current(&mut s).unwrap().is_some());
+        let p = w.plan.clone().unwrap();
+        assert!(!p.hash.is_empty());
+    }
+    #[test]
+    fn unknown_repols_are_spaced_and_rebroadcasts_stay_byte_identical() {
+        // (b) UNKNOWN_TRANSACTION right after send: execute must return
+        // pending WITH the hash, and the ticket must never be
+        // UNKNOWN-without-hash. The re-polls are spaced by a host pause
+        // before each re-broadcast, so the tx has time to propagate instead
+        // of all three polls returning UNKNOWN in under a second.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        w.send_fail_once = true;
+        w.pending = true;
+        w.unknown = true;
+        w.async_lands = false;
+        let e = run(&mut s, &mut w, "old").unwrap_err();
+        let p = w.plan.clone().unwrap();
+        assert_eq!(e.code, "native_unknown");
+        assert!(e.message.contains(&p.hash), "{}", e.message);
+        assert!(e.message.contains("tx_hash="), "{}", e.message);
+        // 1 initial send + 3 in-call re-broadcasts, all the SAME bytes.
+        assert_eq!(w.async_sends, 4, "async_sends={}", w.async_sends);
+        assert!(w.async_signed.iter().all(|b| *b == p.signed));
+        assert_eq!(w.sends, 0, "no FINAL broadcast is ever used");
+        // A pause before each of the 3 re-broadcasts.
+        assert_eq!(w.pauses, 3, "pauses={}", w.pauses);
+        // No RPC-call inflation from the pauses (worst case ~12 here; the
+        // production worst case is ~15-16 once validity_context's up to 3
+        // real calls and the expiry nonce read are counted — still far
+        // under the host's 100 calls per run).
+        eprintln!("unknown-path execute rpc_calls={}", w.rpc_calls);
+        assert!(w.rpc_calls <= 15, "rpc_calls={}", w.rpc_calls);
+        // The ticket stays dispatch with the hash — never UNKNOWN-without-hash.
+        assert!(current(&mut s).unwrap().is_some());
+        // And a later reconcile still reports the same pending state with the hash.
+        let t = current(&mut s).unwrap().unwrap();
+        let e2 = reconcile(&mut s, &mut w, &t).unwrap_err();
+        assert!(e2.message.contains(&p.hash), "{}", e2.message);
+    }
+    #[test]
+    fn ticket_persisted_before_broadcast_with_none_send() {
+        // (a) The ticket (decision=dispatch, hash, signed bytes) must be
+        // persisted in the journal BEFORE the broadcast: the hash is
+        // computed from the signed bytes before sending, so a lost send is
+        // always recoverable by hash. The mock records whether the journal
+        // already held the ticket at broadcast time.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        run(&mut s, &mut w, "ok").unwrap();
+        assert!(w.persisted_before_broadcast, "ticket was not persisted before broadcast");
+        let p = w.plan.clone().unwrap();
+        // The hash is the hash of the signed bytes (recomputed from the
+        // bytes alone, the same derivation the worker does before sending).
+        let raw = B64.decode(&p.signed).unwrap();
+        assert!(raw.len() > 65);
+        let tx = &raw[..raw.len() - 65];
+        let recomputed = bs58::encode(Sha256::digest(tx)).into_string();
+        assert_eq!(recomputed, p.hash);
+        // And the send used the async (NONE) transport, never FINAL.
+        assert_eq!(w.async_sends, 1);
+        assert_eq!(w.sends, 0, "no FINAL broadcast is ever used");
+        assert!(current(&mut s).unwrap().is_none());
+    }
+    #[test]
+    fn final_failure_resolves_as_failed_with_no_rebroadcast() {
+        // (d) A tx that reaches FINAL with a failed receipt is resolved as
+        // failed — the ticket is finished as "failure" and there is NO
+        // re-broadcast (a terminal outcome is never retried).
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        w.fail_outcome = true;
+        let e = run(&mut s, &mut w, "id").unwrap_err();
+        let p = w.plan.clone().unwrap();
+        assert_eq!(e.code, "tx_failed");
+        assert!(e.message.contains(&p.hash), "{}", e.message);
+        assert_eq!(w.async_sends, 1, "the failure was terminal: no re-broadcast");
+        assert_eq!(w.sends, 0, "no FINAL broadcast is ever used");
+        // The ticket is finished as "failure" (HEAD advanced once, no live ticket).
+        assert_eq!(s.incr(HEAD, 0).unwrap(), 1);
+        assert!(current(&mut s).unwrap().is_none());
+        // A later send proceeds (the journal is not blocked by a failed ticket).
+        w.fail_outcome = false;
+        run(&mut s, &mut w, "next").unwrap();
+        assert_eq!(w.async_sends, 2);
+    }
+    #[test]
+    fn expired_ticket_clears_only_via_the_expiry_nonce_rule() {
+        // (e) After the validity window expires, rebroadcast is refused AND
+        // the ticket can only be cleared by reconcile with the #222 rule
+        // (UNKNOWN + expired + signer nonce below the plan nonce). No other
+        // path clears it.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        let t = dispatched(&mut s, &mut w);
+        let p = w.plan.clone().unwrap();
+        w.pending = false;
+        w.unknown = true;
+        w.validity = (Some(100), Some(100 + 86_400 + 2), Some(86_400));
+        // Rebroadcast is refused after expiry (no broadcast attempted).
+        let sends_before = w.async_sends;
+        let e = rebroadcast(&mut s, &mut w, &t).unwrap_err();
+        assert_eq!(e.code, "rebroadcast_expired");
+        assert_eq!(w.async_sends, sends_before, "no broadcast attempted after expiry");
+        assert!(current(&mut s).unwrap().is_some(), "ticket stays for reconcile");
+        // The nonce rule still gates the clear: a nonce at/above the plan
+        // never clears (the tx may have executed).
+        w.key_nonce = Some(11); // the plan nonce is 11
+        assert!(reconcile(&mut s, &mut w, &t).is_err());
+        assert!(current(&mut s).unwrap().is_some());
+        // A nonce below the plan nonce: the #222 rule clears it as does_not_exist.
+        w.key_nonce = Some(10);
+        let (p2, v, ok) = reconcile(&mut s, &mut w, &t).unwrap();
+        assert!(!ok);
+        assert_eq!(v["does_not_exist"], true);
+        assert_eq!(v["tx_hash"], p.hash);
+        assert_eq!(p2.hash, p.hash);
+        assert!(current(&mut s).unwrap().is_none());
+    }
 }
 #[cfg(test)]
 mod stale_tests {
@@ -1066,5 +1678,48 @@ mod stale_tests {
         assert!(adapter.contains("native_send::execute("));
         assert!(collateral.contains("native_send::execute("));
         assert!(!adapter.contains("collateral_minter_pending"));
+    }
+    #[test]
+    fn no_final_wait_in_any_rpc_call() {
+        // The OutLayer host caps every near:rpc call at 30 s with no retry,
+        // so a FINAL wait that outlasts 30 s errors even when the tx was
+        // accepted and gives no hash (the lost claim_payout, J5dHg2q…).
+        // No production call site may pass "FINAL" as a wait_until to
+        // send_tx or tx_status, and the worker must never use the host's
+        // signing call/transfer (it signs in-WASM and sends signed bytes).
+        // Finality is always read from the response body instead.
+        for (name, src) in [
+            ("native_host.rs", include_str!("native_host.rs")),
+            ("collateral_host.rs", include_str!("collateral_host.rs")),
+            ("collateral_evidence_host.rs", include_str!("collateral_evidence_host.rs")),
+            ("exact_exit_host.rs", include_str!("exact_exit_host.rs")),
+        ] {
+            for (i, line) in src.lines().enumerate() {
+                assert!(
+                    !(line.contains("tx_status(") && line.contains("\"FINAL\"")),
+                    "{name}:{} still waits FINAL: {line}",
+                    i + 1
+                );
+                assert!(
+                    !(line.contains("send_tx(") && line.contains("\"FINAL\"")),
+                    "{name}:{} still waits FINAL: {line}",
+                    i + 1
+                );
+                assert!(
+                    !line.contains("rpc::call(") && !line.contains("rpc::transfer("),
+                    "{name}:{} uses the host signing call/transfer: {line}",
+                    i + 1
+                );
+            }
+        }
+        // (a) The production transport must actually pass "NONE": both
+        // NativeRpc send paths (broadcast and broadcast_async) route
+        // through the shared send_tx helper with wait-until "NONE".
+        let adapter = include_str!("native_host.rs");
+        assert_eq!(
+            adapter.matches("send_tx(signed, \"NONE\")").count(),
+            2,
+            "both NativeRpc send paths must use wait-until NONE"
+        );
     }
 }

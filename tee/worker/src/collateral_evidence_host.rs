@@ -279,8 +279,12 @@ fn op_finalize_collateral(input: &Value) -> Result<Value, Error> {
         true,
     )?;
     // Re-read the original FINAL install and the exact public/private policy, not a caller assertion.
+    // NONE, never FINAL: the OutLayer host caps every near:rpc call at 30 s,
+    // so a FINAL wait that outlasts 30 s errors even when the tx was
+    // accepted. Finality is read from the response body instead
+    // (final_registration requires final_execution_status == "FINAL").
     let (mid, _) = guarded_minter()?;
-    let (raw, e) = rpc::tx_status(&r.installed_tx, &mid, "FINAL");
+    let (raw, e) = rpc::tx_status(&r.installed_tx, &mid, "NONE");
     let tx: Value = serde_json::from_str(&raw).map_err(|_| err("rpc_unavailable", "malformed RPC response"))?;
     let deposit = String::from_utf8(Store::read(&mut Host, &format!("{k}/deposit"))?)
         .ok()
