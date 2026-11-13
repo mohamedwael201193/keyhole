@@ -40,6 +40,18 @@ function defaultStore(): Pick<Storage, "getItem" | "setItem" | "removeItem"> {
   return sessionStorage;
 }
 
+/**
+ * The stores a read checks, in order: localStorage (the shared store) first, then sessionStorage (the legacy
+ * store). A session seeded in sessionStorage — by an older build, or by a test that writes the key there — must
+ * still unlock: the site must not strand a valid session just because it lives in the old store.
+ */
+function readStores(): Pick<Storage, "getItem" | "setItem" | "removeItem">[] {
+  const out: Pick<Storage, "getItem" | "setItem" | "removeItem">[] = [];
+  if (typeof localStorage !== "undefined") out.push(localStorage);
+  if (typeof sessionStorage !== "undefined" && sessionStorage !== (out[0] as unknown)) out.push(sessionStorage);
+  return out.length ? out : [defaultStore()];
+}
+
 const CHANNEL_NAME = "keyhole-session-v1";
 /** Tell the other tabs the session was saved or cleared (the 30 s re-read is the fallback). Never throws. */
 function broadcast(action: "saved" | "cleared") {
@@ -65,17 +77,27 @@ function validGrant(s: Session): boolean {
   return decimalEpoch(s.owner_epoch);
 }
 
-export function loadSession(account: string | null, now = Date.now(), store: Pick<Storage, "getItem" | "removeItem"> = defaultStore()): Session | null {
+export function loadSession(account: string | null, now = Date.now(), store?: Pick<Storage, "getItem" | "setItem" | "removeItem">): Session | null {
   if (!account) return null;
-  try {
-    const s = JSON.parse(store.getItem(KEY) || "null") as Session | null;
-    if (!s || typeof s.token !== "string" || s.account !== account || !validGrant(s) || !(s.exp_ms > now + 5_000)) { if (s) store.removeItem(KEY); return null; }
-    return s;
-  } catch { store.removeItem(KEY); return null; }
+  // An explicitly passed store (tests) is the only store. Otherwise check the shared store first, then the legacy
+  // sessionStorage store — and migrate a legacy session into the shared store so it unlocks every tab.
+  const stores = store ? [store] : readStores();
+  for (const st of stores) {
+    try {
+      const s = JSON.parse(st.getItem(KEY) || "null") as Session | null;
+      if (!s || typeof s.token !== "string" || s.account !== account || !validGrant(s) || !(s.exp_ms > now + 5_000)) { if (s) st.removeItem(KEY); continue; }
+      if (!store && st !== stores[0]) stores[0].setItem(KEY, JSON.stringify(s));
+      return s;
+    } catch { st.removeItem(KEY); }
+  }
+  return null;
 }
 export function saveSession(s: Session, store: Pick<Storage, "setItem"> = defaultStore()) { store.setItem(KEY, JSON.stringify(s)); broadcast("saved"); }
-/** Forgetting the session also forgets the cached vault reads it scoped: a locked tab shows sealed values again. */
-export function clearSession(store: Pick<Storage, "removeItem"> = defaultStore()) { store.removeItem(KEY); clearVaultCache(); broadcast("cleared"); }
+/** Forgetting the session also forgets the cached vault reads it scoped: a locked tab shows sealed values again. Clears both stores, so a legacy sessionStorage entry cannot re-unlock the tab. */
+export function clearSession(store?: Pick<Storage, "removeItem">) {
+  for (const st of store ? [store] : readStores()) st.removeItem(KEY);
+  clearVaultCache(); broadcast("cleared");
+}
 
 /** A worker grant. v2.5 returns owner_epoch. Live v2.4 omits it; the caller must already have proved that profile. Epoch zero is never filled in. */
 export function sessionFromGrant(output: { ok?: boolean; session_token?: unknown; account?: unknown; token_id?: unknown; exp_ms?: unknown; max_usd_micro?: unknown; owner_epoch?: unknown }, tokenId: string, profile: ContractProfile): Session | null {

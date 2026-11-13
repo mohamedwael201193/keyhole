@@ -150,4 +150,22 @@ describe("tour fix: session sharing across tabs", () => {
     expect(s).toContain('broadcast("saved")');
     expect(s).toContain('broadcast("cleared")');
   });
+
+  it("a session seeded in the legacy sessionStorage store still unlocks (and is migrated)", () => {
+    const s = src("../lib/session.ts");
+    // The read checks the shared store first, then the legacy store — a session written by an older build
+    // (or by a test that seeds sessionStorage) must not be stranded.
+    expect(s).toContain("readStores()");
+    expect(s).toContain("sessionStorage");
+  });
+});
+
+describe("tour fix: the provider must not wipe a redirect-signed read on wallet restore", () => {
+  it("the account-change reset skips the null -> account restore", () => {
+    const p = src("../lib/vaultData.tsx");
+    expect(p).toContain("prevAccount.current === null");
+    // A redirect-signed read for the restored account can already have landed when the wallet restores;
+    // resetting then would wipe it with no session to re-read it from.
+    expect(p).toContain("resetBalance(); resetHistory(); resetDash();");
+  });
 });

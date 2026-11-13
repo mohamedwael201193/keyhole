@@ -74,11 +74,13 @@ export function VaultDataProvider({ children }: { children: ReactNode }) {
 
   const live = !!(session && tokenId && session.account === accountId && session.token_id === tokenId && minutesLeft(session) > 0);
 
-  // A read belongs to one account: switching or disconnecting clears what was read for the previous one.
-  // (Only on a real change — not on mount — so a return visit keeps the last answer on screen.)
+  // A read belongs to one account: switching accounts (or disconnecting) clears what was read for the previous one.
+  // Only on a real change — not on mount, and NOT on the null -> account restore: the wallet restores after the
+  // page mounts, and a redirect-signed read for that account can already have landed by then; resetting on the
+  // restore would wipe it with no session to re-read it from (the e2e redirect flow caught exactly this).
   const prevAccount = useRef(accountId);
   useEffect(() => {
-    if (prevAccount.current === accountId) return;
+    if (prevAccount.current === accountId || prevAccount.current === null) { prevAccount.current = accountId; return; }
     prevAccount.current = accountId;
     resetBalance(); resetHistory(); resetDash();
   }, [accountId, resetBalance, resetHistory, resetDash]);
