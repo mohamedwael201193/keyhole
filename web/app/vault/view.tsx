@@ -28,6 +28,8 @@ import { ValueRecovery } from "@/components/ValueRecovery";
 import { Details, InCardFailure, InCardProgress, InCardSuccess } from "@/components/InCard";
 import { isNotSent, withdrawResultView } from "@/lib/opResult";
 import { OpNotSent } from "@/components/OpNotSent";
+import { vaultCacheInvalidate, vaultCacheKey } from "@/lib/vaultCache";
+import { listFailedSwaps } from "@/lib/failedSwaps";
 import { TeeProgress } from "@/components/TeeProgress";
 import { DepositQr } from "@/components/DepositQr";
 import { FundFromChain } from "@/components/FundFromChain";
@@ -140,13 +142,13 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const online = useHealth(initialOnline);
   const store = useKeyStore();
   const { held, keyMiss, lookingUp, failed } = heldFrom(store, accountId);
-  const balance = useSigned("balance");
+  const balance = useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") });
   const account = useSigned("account");
-  const history = useSigned("history");
+  const history = useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") });
   const withdraw = useSigned("exact_near_exit_v1");
   const limits = useSigned("limits");
   const pnl = useSigned("pnl");
-  const dash = useSigned("dashboard");
+  const dash = useSigned("dashboard", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "dashboard") });
   const logVerified = useLogVerified(history.res);
   const logState = useLogVerifiedState(history.res);
   // New value operations (withdraw here) are locked while an earlier one has no final answer. The worker refuses them too.
@@ -187,7 +189,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const sessionToken = live && session ? session.token : "";
 
   // One automatic read per session: the balance, the dashboard (caps, lock state) and the signed history. Guarded by the
-  // session token, so it cannot loop; a failure shows a retry and never re-runs by itself.
+  // session token, so it cannot loop; a failure shows a retry and never re-runs by itself. The reads are cached per
+  // session, so returning to this page serves the last answer instead of re-running the ~8 s attested read.
   const runBalance = balance.run;
   const runDash = dash.run;
   const runHistory = history.run;
@@ -196,9 +199,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     if (!sessionToken) { autoFor.current = ""; return; }
     if (autoFor.current === sessionToken) return;
     autoFor.current = sessionToken;
-    void runBalance({}, { quiet: true });
-    void runDash({}, { quiet: true });
-    void runHistory({}, { quiet: true });
+    void runBalance({}, { quiet: true, cached: true });
+    void runDash({}, { quiet: true, cached: true });
+    void runHistory({}, { quiet: true, cached: true });
   }, [sessionToken, runBalance, runDash, runHistory]);
 
   // The newest signed read on this page: each finished read that carries a call id becomes the last call.
@@ -267,13 +270,23 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices((prev) => ({ ...prev, ...j.prices })); }).catch(() => {});
     return () => { cancel = true; };
   }, [balances]);
-  // After a payout the balance is read again, with the session only.
+  // After a payout the balance is read again, with the session only. The payout changed the vault, so the cached
+  // balance and history are dropped first and read again fresh.
   const readBalance = balance.run;
   useEffect(() => {
     const out = withdraw.res?.output;
     if (!out?.ok || out.op !== "exact_near_exit_v1" || !live) return;
-    void readBalance({}, { quiet: true });
-  }, [withdraw.res, readBalance, live]);
+    vaultCacheInvalidate(accountId, "balance");
+    vaultCacheInvalidate(accountId, "history");
+    void readBalance({}, { quiet: true, cached: true, fresh: true });
+    void runHistory({}, { quiet: true, cached: true, fresh: true });
+  }, [withdraw.res, readBalance, runHistory, live, accountId]);
+
+  // A limits set changed the holder limits the dashboard read carries: drop that cached read.
+  useEffect(() => {
+    if (!limits.res?.output?.ok) return;
+    vaultCacheInvalidate(accountId, "dashboard");
+  }, [limits.res, accountId]);
 
   async function unlock() {
     if (!held) return;
@@ -295,6 +308,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const left = live && session ? minutesLeft(session) : 0;
   const funded = !!balances && balances.some((b) => Number(b.amount ?? b.balance ?? 0) > 0);
   const swapped = logVerified === true && !!entries && settledOrders(entries) > 0;
+  /** A failed or refused attempt in this session: the reason the Today meter can show spent money with no trade. */
+  const hasFailedAttempt = !!accountId && listFailedSwaps(accountId).length > 0;
 
   /** The one unlock for a card that needs a read: the same action the top-bar pill starts. */
   const unlockButton = (testid: string) => (
@@ -310,10 +325,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           <p className="vlt-cap" data-testid="limits-label">{lowered ? t("vault.limitsLabelOwn", { tier: t(`finish.${finish}`), tx: fmtUsd(tierCaps!.per_tx_usd_micro), day: fmtUsd(tierCaps!.daily_usd_micro) }) : t("vault.limitsLabel", { tier: t(`finish.${finish}`) })}</p>
           <Meter label={t("vault.perTx")} value={t("vault.capOnly", { cap: fmtUsd(perCap) })} testid="per-trade-meter" />
           <Meter label={t("vault.today")} value={t("vault.ofCap", { used: fmtUsd(spent ?? 0), cap: fmtUsd(dayCap) })} pct={dayPct} note={t("vault.utc", { time: utcReset })} />
+          {spent != null && spent > 0 && hasFailedAttempt && <p className="vlt-sub" data-testid="limits-cap-note">{t("vault.capRefused")}</p>}
         </>
       ) : live ? (
         dash.busy || !dash.res ? <p className="vlt-sub" data-testid="limits-reading"><Busy l="Reading your caps with your session" /></p>
-          : <><p className="vlt-sub">Could not read your caps with the session.</p>{dash.res.error && <ErrorBox code={dash.res.error.code} />}<Button variant="secondary" size="sm" testid="dash-retry" onClick={() => void runDash({})}>Read caps and balance (session, no popup)</Button></>
+          : <><p className="vlt-sub">Could not read your caps with the session.</p>{dash.res.error && <ErrorBox code={dash.res.error.code} />}<Button variant="secondary" size="sm" testid="dash-retry" onClick={() => void runDash({}, { cached: true, fresh: true })}>Read caps and balance (session, no popup)</Button></>
       ) : <div className="vlt-actions">{unlockButton("limits-unlock")}</div>}
       {unlockErr && <ErrorBox code={unlockErr} />}
       {pendingLim && <p className="note-box" data-testid="limits-pending">{t("vault.limitsPending", { tx: fmtUsd(pendingLim.per_tx_usd_micro), day: fmtUsd(pendingLim.daily_usd_micro), time: new Date(pendingLim.effective_ms).toISOString().slice(0, 16).replace("T", " ") })}</p>}
@@ -353,6 +369,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
       ) : (
         <>
           <p className="vlt-sub">Unlock for 30 minutes with one signature. Reads and trades then need no popup. Withdrawals still ask your wallet.</p>
+          <p className="vlt-sub">Sessions are per-tab — unlock this tab to continue.</p>
           <div className="vlt-actions">{unlockButton("session-unlock")}</div>
           {unlockErr && <ErrorBox code={unlockErr} />}
         </>
@@ -363,7 +380,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   // The hero keeps the two big buttons of the mockup (Deposit, Withdraw). Unlock, or refresh once live, is one small pill on
   // the balance line: the same unlock and the same balance read as before (testid balance-btn).
   const balancePill = live ? (
-    <button type="button" className="vlt-pill-btn" data-testid="balance-btn" aria-label="Refresh balance (session, no popup)" title="Refresh balance (session, no popup)" disabled={balance.busy} aria-busy={balance.busy || undefined} onClick={() => { clearOtherErrors(balance); void balance.run({}); }}>
+    <button type="button" className="vlt-pill-btn" data-testid="balance-btn" aria-label="Refresh balance (session, no popup)" title="Refresh balance (session, no popup)" disabled={balance.busy} aria-busy={balance.busy || undefined} onClick={() => { clearOtherErrors(balance); void balance.run({}, { cached: true, fresh: true }); }}>
       <RefreshGlyph />
       <span>{balance.busy ? balance.label : "Refresh"}</span>
     </button>
@@ -395,8 +412,10 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     { id: "sign", title: "Sign in", done: true, note: "Signed in." },
     { id: "key", title: "Get key", done: !!held, note: held ? "Held on NEAR mainnet." : "Needs a key first." },
     { id: "unlock", title: "Unlock", done: live, note: live ? `${left} min left on this session.` : "One signature. 30 minutes." },
-    { id: "fund", title: "Fund vault", done: funded, note: funded ? "Balance read from the vault." : live ? "A deposit is a transfer you approve in your wallet." : "Checked once you unlock." },
-    { id: "swap", title: "First swap", done: swapped, note: swapped ? "Read from your signed activity." : "Checked from your activity once you unlock." },
+    // "Fund vault" and "First swap" are unknown — not undone — while their reads are still in flight: they show as
+    // checking, so the count reads "Checking…" instead of flickering between 3 and 5 of 5.
+    { id: "fund", title: "Fund vault", done: funded, checking: balance.busy && !balances, note: funded ? "Balance read from the vault." : live ? (balance.busy && !balances ? "Reading your vault…" : "A deposit is a transfer you approve in your wallet.") : "Checked once you unlock." },
+    { id: "swap", title: "First swap", done: swapped, checking: history.busy && !entries, note: swapped ? "Read from your signed activity." : live ? (history.busy && !entries ? "Reading your activity…" : "Checked from your activity once you unlock.") : "Checked from your activity once you unlock." },
   ];
 
   // Health is read passively (no paid probe), so before the first read it is neither live nor down. "Not probed" read as a fault to holders.
@@ -558,7 +577,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                 <p className="vlt-sub">{t("vault.pnlHelp")}</p>
                 <div className="vlt-actions">
                   {live ? (
-                    <Button variant="secondary" size="sm" loading={history.busy} loadingLabel={history.label} testid="history-btn" onClick={() => { clearOtherErrors(history); void history.run({}); }}>
+                    <Button variant="secondary" size="sm" loading={history.busy} loadingLabel={history.label} testid="history-btn" onClick={() => { clearOtherErrors(history); void history.run({}, { cached: true, fresh: true }); }}>
                       {history.res ? "Refresh history" : "Read history"}
                     </Button>
                   ) : (!history.res && unlockButton("history-unlock"))}

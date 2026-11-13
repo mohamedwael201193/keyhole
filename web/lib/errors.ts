@@ -6,7 +6,7 @@ export const WORKER_ERROR_CODES = [
   "bad_session", "session_cap", "session_expired", "session_revoked", "session_scope", "session_token", "session_too_long", "session_unknown",
   // Guarded custody and exact ownership-epoch failures.
   "admission_unknown", "certificate", "collateral_ineligible", "cooldown_state", "destination_policy", "epoch_changed", "guard_journal", "guard_state", "legacy_versions", "needs_review", "pledged", "quote_changed", "session_epoch", "transfer_pending", "unsupported_authority", "value_op_pending",
-  "collateral_unknown", "collateral_audit", "collateral_policy", "collateral_quote", "evidence", "guardian", "exit_quote_unavailable", "inventory_changed", "inventory_unavailable", "native_busy", "native_unknown", "rpc_unavailable", "withdraw_minimum_required", "withdraw_quote_expired", "withdraw_execution_unavailable", "withdraw_version", "exit_receipt", "exit_continue",
+  "collateral_unknown", "collateral_audit", "collateral_policy", "collateral_quote", "evidence", "guardian", "exit_quote_unavailable", "inventory_changed", "inventory_unavailable", "native_busy", "native_unknown", "native_blocked", "unknown_transaction", "rpc_unavailable", "withdraw_minimum_required", "withdraw_quote_expired", "withdraw_execution_unavailable", "withdraw_version", "withdraw_exact_policy", "exit_budget", "exit_not_enrolled", "exit_policy", "exit_provider", "exit_readback", "exit_wal", "exit_receipt", "exit_continue",
   // gateway-side codes
   "rate_limited", "service_unfunded", "too_large", "bad_op", "gateway", "wallet_no_sign_message", "wallet_rejected", "wallet_popup_blocked", "metamask_next_enclave", "network",
 ] as const;

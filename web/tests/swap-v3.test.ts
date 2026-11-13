@@ -93,12 +93,15 @@ describe("swap CTA when the amount is more than the balance, and with a live ses
     expect(SWAP_LABEL.short).toEqual({ label: "Not enough", enabled: false });
     expect(src("../app/swap/view.tsx")).toContain("`Not enough ${from.symbol}`");
   });
-  it("labels the final step Swap now with a session, and keeps Confirm and sign without one", () => {
+  it("labels the final step Confirm and sign in every case, and shows the trade before it is sent", () => {
     expect(SWAP_LABEL.confirm.label).toBe("Confirm and sign");
     const v = src("../app/swap/view.tsx");
-    expect(v).toContain(`step === "confirm" && sessionLive ? "Swap now" : cta.label`);
+    expect(v).not.toContain("Swap now");
     expect(v).toContain("Runs through your unlocked session. No wallet popup.");
     expect(v).toContain(`testid="swap-cta"`);
+    expect(v).toContain(`data-testid="swap-confirm"`);
+    expect(v).toContain("Check this trade before you confirm it");
+    expect(v).toContain(`data-testid="swap-edit"`);
   });
   it("names the receive chain under the receive panel when it is not NEAR", () => {
     const v = src("../app/swap/view.tsx");

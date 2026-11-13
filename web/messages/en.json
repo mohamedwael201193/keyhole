@@ -150,6 +150,7 @@
     "capUsed": "Cap",
     "ofCap": "{used} of {cap}",
     "capOnly": "cap {cap}",
+    "capRefused": "A refused or failed attempt still counts toward today's cap until it resets.",
     "quotePreview": "this quote {used} of {cap}",
     "limitsUnread": "Sign once to read your caps.",
     "flip": "Swap direction",
@@ -409,6 +410,14 @@
       "The native operation outcome is unknown.",
       "Recover the original signed hash and FINAL receipts. Do not resend."
     ],
+    "native_blocked": [
+      "The operation was refused before anything was sent.",
+      "Reconcile the original operation before starting another one. Do not resend."
+    ],
+    "unknown_transaction": [
+      "The original transaction is not on chain.",
+      "Recover the original signed hash and FINAL receipts. Do not resend."
+    ],
     "rpc_unavailable": [
       "The chain view is unavailable or malformed.",
       "Wait for a valid FINAL response. An unavailable response does not prove absence."
@@ -424,6 +433,34 @@
     "withdraw_execution_unavailable": [
       "Minimum-protected withdrawal execution is unavailable.",
       "Preview is advisory only. Stop for a separately approved slippage/fee policy; do not fund or enable lending."
+    ],
+    "withdraw_exact_policy": [
+      "The exact exit plan is invalid or missing its deadline.",
+      "Do not execute. Review destination, asset, amount, minimum and deadline together."
+    ],
+    "exit_budget": [
+      "The exact exit cannot be funded from the available reserve.",
+      "Check the reserve and the requested amount. Do not resend."
+    ],
+    "exit_not_enrolled": [
+      "This vault cannot use the exact exit as configured.",
+      "The vault has a loan or collateral binding but no reviewed confinement. Exact exit is unavailable."
+    ],
+    "exit_policy": [
+      "The reviewed exit policy does not match this vault.",
+      "Reconcile the reviewed confinement against the current worker, wallet and key. Do not resend."
+    ],
+    "exit_provider": [
+      "The provider's answer did not match this exit.",
+      "Reconcile the original operation before starting another one. Do not resend."
+    ],
+    "exit_readback": [
+      "The provider's answer could not be read back.",
+      "Reconcile the original operation before starting another one. Do not resend."
+    ],
+    "exit_wal": [
+      "The exit's evidence record could not be read or written.",
+      "Reconcile the original operation before starting another one. Do not resend."
     ],
     "admission_unknown": [
       "Admission outcome is unknown.",

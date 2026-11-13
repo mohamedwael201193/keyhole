@@ -9,6 +9,7 @@ import { assetRows, totalOf, type PriceBook } from "@/lib/amount";
 import { minutesLeft } from "@/lib/session";
 import { useValueLock } from "@/lib/valueLock";
 import { levelUpOf, progressOf, type HistEntry } from "@/lib/dashboard";
+import { vaultCacheInvalidate, vaultCacheKey } from "@/lib/vaultCache";
 
 type RawBalances = Parameters<typeof assetRows>[0];
 
@@ -24,9 +25,9 @@ export function DashboardView() {
   const { accountId, restoring, session, startSession, via, socialEnabled, connectSocial, connectNear, connectMeteor, connectOther } = useWallet();
   const store = useKeyStore();
   const tokenId = store.primary?.token_id ?? null;
-  const balance = useSigned("balance");
-  const history = useSigned("history");
-  const dash = useSigned("dashboard");
+  const balance = useSigned("balance", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "balance") });
+  const history = useSigned("history", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "history") });
+  const dash = useSigned("dashboard", { cacheKey: vaultCacheKey(accountId, session?.token ?? null, "dashboard") });
   const levelUp = useSigned("level_up");
   const [prices, setPrices] = useState<PriceBook>({});
   const { run: runBalance, reset: resetBalance } = balance;
@@ -44,17 +45,18 @@ export function DashboardView() {
   const live = !!(session && tokenId && session.account === accountId && session.token_id === tokenId && minutesLeft(session) > 0);
 
   // With a live session the signed reads load by themselves, once per session. A failure is shown with a retry; it
-  // never re-runs by itself, so a bad read cannot loop.
+  // never re-runs by itself, so a bad read cannot loop. The reads are cached per session, so returning to this page
+  // serves the last answer instead of re-running the ~8 s attested read.
   const autoFor = useRef<string | null>(null);
   useEffect(() => {
     if (!live || !tokenId || !accountId) { autoFor.current = null; return; }
-    const key = `${accountId}:${tokenId}`;
+    const key = `${accountId}:${tokenId}:${session?.token ?? ""}`;
     if (autoFor.current === key) return;
     autoFor.current = key;
-    void runBalance({});
-    void runHistory({});
-    void runDash({});
-  }, [live, tokenId, accountId, runBalance, runHistory, runDash]);
+    void runBalance({}, { quiet: true, cached: true });
+    void runHistory({}, { quiet: true, cached: true });
+    void runDash({}, { quiet: true, cached: true });
+  }, [live, tokenId, accountId, session, runBalance, runHistory, runDash]);
 
   const balances = balance.res?.output?.ok ? (balance.res.output.balances as RawBalances) : null;
   const hasBalances = !!balances;
@@ -76,14 +78,16 @@ export function DashboardView() {
   const dashOut = dash.res?.output?.ok ? dash.res.output : null;
   const progress = dashOut ? progressOf(dashOut.progress) : null;
   // A level up that raised the tier: the chain now holds it, so the key store and the progress are read again.
+  // The level up changed the tier progress the dashboard read carries, so that cached read is dropped first.
   const levelOut = levelUp.res?.output?.ok ? levelUp.res.output : null;
   const levelled = levelUpOf(levelOut);
   const levelHash = levelled?.txHash ?? null;
   useEffect(() => {
     if (!levelHash) return;
     refreshKeys();
-    void runDash({});
-  }, [levelHash, refreshKeys, runDash]);
+    vaultCacheInvalidate(accountId, "dashboard");
+    void runDash({}, { cached: true, fresh: true });
+  }, [levelHash, refreshKeys, runDash, accountId]);
 
   const unlock = async () => {
     if (!tokenId) return;
@@ -117,7 +121,7 @@ export function DashboardView() {
     total: rows ? totalOf(rows) : null,
     rows,
     error: balance.res?.error ?? null,
-    onRead: () => { void runBalance({}); },
+    onRead: () => { void runBalance({}, { cached: true, fresh: true }); },
   };
   const activityView: ActivityView = {
     read: !!entries,
@@ -127,7 +131,7 @@ export function DashboardView() {
     logOk: entries ? logOk : null,
     callId,
     error: history.res?.error ?? null,
-    onRead: () => { void runHistory({}); },
+    onRead: () => { void runHistory({}, { cached: true, fresh: true }); },
   };
   const tierView: TierView = {
     read: !!dashOut,
@@ -136,7 +140,7 @@ export function DashboardView() {
     progress,
     unverifiable: !!dashOut && progress === null,
     error: dash.res?.error ?? null,
-    onRead: () => { void runDash({}); },
+    onRead: () => { void runDash({}, { cached: true, fresh: true }); },
     levelBusy: levelUp.busy,
     levelLabel: levelUp.label || "Working…",
     levelError: levelUp.res?.error ?? null,

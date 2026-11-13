@@ -80,13 +80,15 @@ export function PayoutPanel({ onChanged }: { onChanged?: () => void }) {
     {notice && notice.tone === "bad" && <InCardFailure testid="payout-failed" reason={notice.text} action={{ label: "Check again", onClick: () => setRound(n => n + 1), testid: "payout-retry" }} />}
     {!s.registered ? <>
       <p className="kh-panel-line">One-time setup: {nearText(s.cost)} NEAR opens your payout slot. It is a permanent storage charge.</p>
-      <Details label="Details" testid="payout-details"><p>The slot uses 320 bytes of permanent storage and the charge is not refunded. It is separate from the 0.01 NEAR refundable listing bond and from gas. Sale proceeds, listing and approval refunds, and mint excess become credits you claim here; they are not paid out on their own.</p></Details>
       <Checkbox checked={accepted} onChange={v=>setAcceptedFee(v ? feeKey : null)} label={<>I accept the exact {nearText(s.cost)} NEAR storage charge</>} testid="payout-accept" />
-      <div className="kh-panel-actions"><Button disabled={!accepted || busy || !!operation} onClick={()=>void act(false)}>Register my payout slot</Button>{refreshBtn}</div>
+      <div><Button disabled={!accepted || busy || !!operation} onClick={()=>void act(false)}>Register my payout slot</Button></div>
+      <div>{refreshBtn}</div>
+      <div className="kh-panel-note"><Details label="Details" testid="payout-details"><p>The slot uses 320 bytes of permanent storage and the charge is not refunded. It is separate from the 0.01 NEAR refundable listing bond and from gas. Sale proceeds, listing and approval refunds, and mint excess become credits you claim here; they are not paid out on their own.</p></Details></div>
     </> : <>
       <p className="kh-panel-line">Available credit: {nearText(s.credit)} NEAR. {s.pending ? "A payout is on its way. Funds may already have arrived, so do not send it again." : "Claiming sends it to your wallet."}</p>
-      <Details label="Details" testid="payout-details"><p>The credit is held by the contract and has not been delivered yet.{s.pending ? ` Payout ${s.pending.nonce}: ${nearText(s.pending.amount)} NEAR.` : ""}</p></Details>
-      <div className="kh-panel-actions"><Button disabled={busy || !!s.pending || !!operation || BigInt(s.credit) === 0n} onClick={()=>void act(true)}>Claim native NEAR</Button>{refreshBtn}</div>
+      <div><Button disabled={busy || !!s.pending || !!operation || BigInt(s.credit) === 0n} onClick={()=>void act(true)}>Claim native NEAR</Button></div>
+      <div>{refreshBtn}</div>
+      <div className="kh-panel-note"><Details label="Details" testid="payout-details"><p>The credit is held by the contract and has not been delivered yet.{s.pending ? ` Payout ${s.pending.nonce}: ${nearText(s.pending.amount)} NEAR.` : ""}</p></Details></div>
     </>}
     {operation && <p className="kh-panel-note">Your last payout request is still being confirmed. Do not send it again.</p>}
     {notice && notice.tone === "wait" && <p className="kh-panel-note" role="status">{notice.text}</p>}

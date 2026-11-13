@@ -11,7 +11,11 @@ export function ErrorBox({ code, vars, retryAfter }: { code: string; vars?: Reco
   const [s, setS] = useState(retryAfter || 0);
   useEffect(() => { if (!s) return; const i = setInterval(() => setS((x) => Math.max(0, x - 1)), 1000); return () => clearInterval(i); }, [s]);
   if (OFFLINE_CODES.includes(code)) return <OfflineState />;
-  const [msg, fix] = errorText(code, { ...vars, s });
+  const [msg, fixRaw] = errorText(code, { ...vars, s });
+  // A missing retry_after is not a zero-second wait: "Try again in 0s." is nonsense. The gateway sets a real
+  // countdown when it rate-limits (app/api/worker/route.ts, app/api/ai/route.ts), and that countdown is kept; only
+  // when none arrives do we say "Try again now." instead. (rate_limited is the only template that uses {s}.)
+  const fix = code === "rate_limited" && s <= 0 ? fixRaw.replace("Try again in 0s.", "Try again now.") : fixRaw;
   if (code === "metamask_next_enclave") {
     return (
       <div role="status" className="note-box" data-testid="metamask-next">
