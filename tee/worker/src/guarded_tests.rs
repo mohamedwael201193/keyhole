@@ -309,7 +309,7 @@ impl AdmissionHost for BeginHost{
 }
 fn begin_host(e:Option<Error>)->BeginHost{BeginHost{store:Memory::default(),begin:e,landed:false,begins:0,fail_permit:false}}
 #[test]fn refused_begin_names_native_blocker_and_still_fails_closed(){
- for code in ["native_unknown","native_busy"]{
+ for code in ["native_unknown","native_busy","native_blocked"]{
   let mut h=begin_host(Some(err(code,"another minter send must be reconciled")));
   let e=confirm_admission(&mut h,&journal()).unwrap_err();
   assert_eq!(e.code,code);assert_eq!(h.begins,1);
@@ -603,7 +603,7 @@ fn polling_does_not_apply_to_terminal_or_mismatched_rows() {
 
 #[test]
 fn spend_hold_is_released_only_when_no_begin_could_have_landed() {
-    for code in ["native_busy","guard_state","rpc","collateral_unknown","time_budget","legacy_versions","value_op_pending","not_owner"] {
+    for code in ["native_busy","guard_state","rpc","collateral_unknown","time_budget","legacy_versions","value_op_pending","not_owner","native_blocked"] {
         assert!(begin_never_sent(code),"{code}");
     }
     // a send may have landed, or the outcome is unknown: the hold stays

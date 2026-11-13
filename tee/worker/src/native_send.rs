@@ -353,7 +353,19 @@ pub fn execute(
 ) -> Result<(String, Value), Error> {
     // Automatically finish an older *accepted* terminal send, never resend it.
     if let Some(t) = current(st)? {
-        reconcile(st, rpc, &t)?;
+        // A refusal here happens BEFORE anything was reserved or sent for THIS
+        // request: the old ticket is still unresolved, so no new begin can
+        // proceed. Name it distinctly from native_unknown — the new op provably
+        // sent nothing, so its spend hold must be given back (begin_never_sent).
+        // Only native_unknown is remapped: any other code (e.g. native_busy)
+        // already proves nothing was sent and keeps its own meaning.
+        reconcile(st, rpc, &t).map_err(|e| {
+            if e.code == "native_unknown" {
+                err("native_blocked", format!("minter journal blocked by unresolved send; nothing was sent for this request; reconcile the minter send, never resend; cause: {}", e.message))
+            } else {
+                e
+            }
+        })?;
     }
     let t = reserve(st, id, actor)?;
     let p = (|| {
@@ -735,6 +747,48 @@ mod tests {
         assert!(abort_unsent(&mut s, &t).is_err());
         assert!(run(&mut s, &mut w, "next").is_err());
         assert_eq!(w.sends, 1);
+    }
+    #[test]
+    fn gate_refusal_of_unresolved_ticket_is_native_blocked_and_sends_nothing() {
+        // The live cap-leak bug (call 21af16a3, Nov 13): a swap refused at the
+        // reconcile gate leaked its $0.01 into the daily cap because the gate
+        // returned native_unknown, which is NOT in begin_never_sent. The gate
+        // now returns the distinct native_blocked code: this request provably
+        // sent nothing, so its spend hold must be given back.
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        let t = dispatched(&mut s, &mut w);
+        let p = w.plan.clone().unwrap();
+        w.pending = false;
+        w.unknown = true;
+        // Conservative: one block short of ref + period + 2 is not cleared.
+        w.validity = (Some(100), Some(100 + 86_400 + 1), Some(86_400));
+        let e = run(&mut s, &mut w, "next").unwrap_err();
+        assert_eq!(e.code, "native_blocked");
+        assert!(e.message.contains(&p.hash), "{}", e.message);
+        assert!(e.message.contains("reference_block_height=100"), "{}", e.message);
+        assert!(e.message.contains("nothing was sent"), "{}", e.message);
+        assert!(!e.message.contains(&p.signed));
+        assert!(!e.message.to_ascii_lowercase().contains("private"));
+        assert_eq!(w.sends, 1, "the old send only; no new send was attempted");
+        assert_eq!(current(&mut s).unwrap().unwrap().generation, t.generation);
+        assert!(abort_unsent(&mut s, &t).is_err());
+    }
+    #[test]
+    fn reconcile_itself_still_returns_native_unknown() {
+        // The distinct code lives ONLY at the execute() gate. reconcile() itself
+        // still reports an unresolved ticket as native_unknown — the resolution
+        // contexts (post-broadcast, op_reconcile_minter_send, collateral) must
+        // keep meaning "outcome unknown", never "refused before send".
+        let mut s = Mem::default();
+        let mut w = Wire::new(&s);
+        let t = dispatched(&mut s, &mut w);
+        w.pending = false;
+        w.unknown = true;
+        w.validity = (Some(100), Some(100 + 86_400 + 1), Some(86_400));
+        let e = reconcile(&mut s, &mut w, &t).unwrap_err();
+        assert_eq!(e.code, "native_unknown");
+        assert_eq!(current(&mut s).unwrap().unwrap().generation, t.generation);
     }
     #[test]
     fn timeout_does_not_clear_even_if_the_reference_is_old() {

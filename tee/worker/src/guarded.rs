@@ -219,8 +219,10 @@ pub trait AdmissionHost:Store {
 }
 /// Error codes that prove begin_value_op was refused before anything was sent. The spend hold is
 /// given back for these (and for a begin never attempted); native_unknown and admission_unknown
-/// may mean a send landed, so they keep the hold.
-pub fn begin_never_sent(code:&str)->bool{matches!(code,"native_busy"|"guard_state"|"rpc"|"collateral_unknown"|"time_budget"|"legacy_versions"|"value_op_pending"|"not_owner")}
+/// may mean a send landed, so they keep the hold. native_blocked is the reconcile-gate refusal
+/// (execute() maps it there): the old ticket is still unresolved, so this request's begin was
+/// never reserved or sent.
+pub fn begin_never_sent(code:&str)->bool{matches!(code,"native_busy"|"guard_state"|"rpc"|"collateral_unknown"|"time_budget"|"legacy_versions"|"value_op_pending"|"not_owner"|"native_blocked")}
 pub fn confirm_admission<H:AdmissionHost>(host:&mut H,j:&Journal)->Result<(),Error>{
     j.validate()?;
     // A journal abandoned before any begin (its hold was released) can never be begun later.
@@ -249,7 +251,7 @@ pub fn confirm_admission<H:AdmissionHost>(host:&mut H,j:&Journal)->Result<(),Err
     permit?;
     Err(err("admission_unknown",format!("admission not confirmed; reconcile operation {}",j.op_id)))
 }
-fn begin_blocker_visible(code:&str)->bool{matches!(code,"native_busy"|"native_unknown"|"collateral_unknown"|"guard_state"|"rpc")}
+fn begin_blocker_visible(code:&str)->bool{matches!(code,"native_busy"|"native_unknown"|"native_blocked"|"collateral_unknown"|"guard_state"|"rpc")}
 pub fn settle_admission<H:AdmissionHost>(host:&mut H,j:&Journal,t:&Terminal)->Result<bool,Error>{
     put_once(host,&format!("{}/terminal",j.key()),&serde_json::to_vec(t).map_err(|_|err("guard_journal","encode terminal"))?)?;
     // F3 (M5 #231 review): finish_value_op is a FINAL send; refuse it when out of time. The
