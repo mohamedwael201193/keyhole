@@ -42,7 +42,9 @@ git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
 git fetch --depth 1 origin 33bc30728866088ad7c4d70f4fe4ceeb5a77d216
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```<!-- JUDGE-CHECKOUT:END -->
+test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"
+```
+<!-- JUDGE-CHECKOUT:END -->
 
 ```bash
 test -f judge/0-live.sh
@@ -56,7 +58,9 @@ No git? Download all three files from that same immutable source commit and run 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/judge/0-live.sh -o keyhole-live.sh
 curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/identity.json -o identity.jsonIDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh```
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/33bc30728866088ad7c4d70f4fe4ceeb5a77d216/identity.json -o identity.json
+IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
+```
 <!-- JUDGE-RAW:END -->
 
 It prints `PASS` or `FAIL` for each step and exits non-zero on any `FAIL`:
@@ -662,7 +666,9 @@ git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
 git fetch --depth 1 origin 33bc30728866088ad7c4d70f4fe4ceeb5a77d216
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"```<!-- JUDGE-CHECKOUT:END -->
+test "$(git rev-parse HEAD)" = "33bc30728866088ad7c4d70f4fe4ceeb5a77d216"
+```
+<!-- JUDGE-CHECKOUT:END -->
 
 ```bash
 

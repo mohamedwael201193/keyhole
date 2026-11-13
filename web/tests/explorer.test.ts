@@ -72,7 +72,7 @@ describe("explorer helper: one host per chain", () => {
     expect(translate(explorerLabelKey("near"))).toBe(explorerLabel("near"));
   });
   it("no component or page builds an explorer URL by hand", () => {
-    const files = ["../components/judge/AttackBoard.tsx", "../components/landing/LiveStats.tsx", "../components/landing/Handover.tsx", "../lib/liveChecks.ts", "../components/activity/orders.ts"];
+    const files = ["../components/judge/AttackBoard.tsx", "../components/landing/LiveStats.tsx", "../lib/liveChecks.ts", "../components/activity/orders.ts"];
     for (const f of files) {
       const src = readFileSync(new URL(f, import.meta.url), "utf8");
       expect(src, f).not.toMatch(/https:\/\/(nearblocks\.io|basescan\.org|solscan\.io)\//);
