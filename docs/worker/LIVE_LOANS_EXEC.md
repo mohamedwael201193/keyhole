@@ -563,7 +563,14 @@ pilot_worker_call "$E/M.claim.input.json"
 # query get_payout_credit(M) / get_pending_payout(M), public view_account(M), and governance.
 ```
 Fixed M→M claim70T+1yocto, no arbitrary receiver/amount. Resolve original FINAL and
-transfer/callback. If UNKNOWN, the minter has a singleton WAL; inspect/reconcile only its ORIGINAL head, never a new claim:
+transfer/callback. If UNKNOWN, the minter has a singleton WAL; inspect/reconcile only its ORIGINAL head, never a new claim. **THE recovery step is `rebroadcast_minter_send`** (fresh NEP-413 by the original actor or the project owner; re-broadcasts the EXACT stored signed bytes, never re-signs; send_tx NONE; poll by hash). If the tx reaches FINAL the ticket clears there; otherwise wait a few seconds, then run `reconcile_minter_send` once it is FINAL:
+```bash
+printf '{}' > "$E/M.rebroadcast.params.json"
+make_input "$GOVERNOR_KEY" rebroadcast_minter_send "$E/M.rebroadcast.params.json" "$E/M.rebroadcast.input.json"
+pilot_worker_call "$E/M.rebroadcast.input.json"
+# Wait a few seconds for the tx to reach FINAL, then reconcile (below).
+# Verify the rebroadcast used the stored bytes (no new signing) and the hash matches the recorded ticket.
+```
 ```bash
 printf '{}' > "$E/M.reconcile.params.json"
 make_input "$GOVERNOR_KEY" reconcile_minter_send "$E/M.reconcile.params.json" "$E/M.reconcile.input.json"

@@ -22,7 +22,12 @@ impl exact_exit::Host for Host {
             (guarded::text(&v["result"]["data"],"hash")?.to_owned(),"intents.near".into())
         };
         if bs58::decode(&hash).into_vec().ok().is_none_or(|b|b.len()!=32)||!is_valid_account_id(&signer){return Err(err("exit_receipt","invalid original transaction locator"));}
-        let (raw,e)=rpc::tx_status(&hash,&signer,"FINAL");
+        // NONE, never FINAL: the OutLayer host caps every near:rpc call at
+        // 30 s, so a FINAL wait that outlasts 30 s errors even when the tx
+        // was accepted. Finality is read from the response body instead
+        // (exact_receipt::verify requires final_execution_status == "FINAL"
+        // via receipts::terminal); a tx that is not FINAL yet fails closed.
+        let (raw,e)=rpc::tx_status(&hash,&signer,"NONE");
         if !e.is_empty(){return Err(err("exit_receipt","original FINAL receipt unavailable; supply original signer locator"));}
         let v:Value=serde_json::from_str(&raw).map_err(|_|err("exit_receipt","invalid original receipt"))?;
         let r=v.get("result").unwrap_or(&v);

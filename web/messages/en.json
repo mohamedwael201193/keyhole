@@ -418,6 +418,10 @@
       "The operation was refused before anything was sent.",
       "Reconcile the original operation before starting another one. Do not resend."
     ],
+    "rebroadcast_expired": [
+      "The rebroadcast window for this send has expired.",
+      "Reconcile the journal instead. Do not resend."
+    ],
     "unknown_transaction": [
       "The original transaction is not on chain.",
       "Recover the original signed hash and FINAL receipts. Do not resend."

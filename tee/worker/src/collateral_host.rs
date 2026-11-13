@@ -497,7 +497,12 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
         .and_then(|s| s.parse::<u128>().ok())
         .ok_or_else(|| err("storage", "missing quoted deposit"))?;
     let (mid, _) = guarded_minter()?;
-    let (r, e) = rpc::tx_status(&hash, &mid, "FINAL");
+    // NONE, never FINAL: the OutLayer host caps every near:rpc call at 30 s,
+    // so a FINAL wait that outlasts 30 s errors even when the tx was
+    // accepted. Finality is read from the response body instead
+    // (registration_terminal requires final_execution_status == "FINAL");
+    // a tx that is not FINAL yet returns None → UNKNOWN with the hash.
+    let (r, e) = rpc::tx_status(&hash, &mid, "NONE");
     let tx: Value = serde_json::from_str(&r).map_err(|_| err("rpc_unavailable", "malformed RPC response"))?;
     let result = if e.is_empty() {
         collateral::registration_terminal(&tx, &hash, &mid, &keys_contract(), p, deposit)

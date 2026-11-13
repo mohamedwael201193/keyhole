@@ -863,7 +863,9 @@ pub mod budget {
     pub const TOTAL_MS: u64 = 50_000;
     /// The reservation (spend charge) is made only if the call is still this young.
     pub const PRE_CHARGE_MAX_MS: u64 = 20_000;
-    /// begin_value_op (a FINAL send) needs at least this much room.
+    /// begin_value_op (a NONE send + short status polls, never a FINAL wait
+    /// inside one host call — the host caps every near:rpc call at 30 s)
+    /// needs at least this much room.
     pub const BEGIN_MIN_LEFT_MS: u64 = 25_000;
     /// One exit hop (validate, FINAL readbacks, POST, re-read) needs at least this much room.
     pub const HOP_MIN_LEFT_MS: u64 = 22_000;

@@ -411,5 +411,10 @@
     "output_hash": "12e2b73db77a08b7d72fa599f9e40c8aa48205b4f476f35887d0a2bbcaaf41de",
     "executed_wasm_sha256": "4702420094dbea7d4092476e784905d9503ac63ff8ecc7403331a8e66526f1e0",
     "input_hash": "b178a361d660e91ab33b0dd0fe445e0d1c71fa55bb0a8b5252f5270ff7563ec9"
+  },
+  "41ace198-a27a-462b-a9a3-b4f93be75c2d": {
+    "output_hash": "5db6772a6db9a3799b982d962dc189cd650537a81d516a049c083518e9d2f8eb",
+    "executed_wasm_sha256": "119e920d97c753fb00c0cb6e1705d01de6a83ed87ee4272d36114bba57aea391",
+    "input_hash": "b178a361d660e91ab33b0dd0fe445e0d1c71fa55bb0a8b5252f5270ff7563ec9"
   }
 }

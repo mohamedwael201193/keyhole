@@ -1,5 +1,18 @@
 // Thin production transport: every minter entry uses native_send::execute.
 use keyhole_worker::native_send;
+/// The single shared transport for every send-tx call site (the stale test
+/// enforces exactly one occurrence of the transport call in this file).
+fn send_tx(signed: &str, wait_until: &str) -> Result<Value, Error> {
+    let (v, e) = rpc::send_tx(signed, wait_until);
+    if !e.is_empty() {
+        return Err(err(
+            "native_unknown",
+            "original send response unavailable; reconcile, never resend",
+        ));
+    }
+    serde_json::from_str(&v)
+        .map_err(|_| err("native_unknown", "invalid original send response"))
+}
 struct NativeRpc {
     provision: Option<(Prepared, u128, PreAudit)>,
 }
@@ -62,19 +75,31 @@ impl native_send::Rpc for NativeRpc {
         Ok((h, native_send::block_height(&v)))
     }
     fn broadcast(&mut self, signed: &str) -> Result<Value, Error> {
-        let (v, e) = rpc::send_tx(signed, "FINAL");
-        if !e.is_empty() {
-            return Err(err(
-                "native_unknown",
-                "original send response unavailable; reconcile, never resend",
-            ));
-        }
-        serde_json::from_str(&v)
-            .map_err(|_| err("native_unknown", "invalid original send response"))
+        // NONE, never FINAL: the OutLayer host caps every near:rpc call at
+        // 30 s total / 10 s connect with no retry (host_functions_sync.rs),
+        // so a FINAL wait that outlasts 30 s returns "Failed to send RPC
+        // request" even when the tx was accepted — and gives no hash. That is
+        // the exact failure that created the lost claim_payout (J5dHg2q…).
+        // The tx hash is computed from the signed bytes BEFORE sending
+        // (native_send::execute), so the caller polls tx_status by hash
+        // afterwards; a tx that is not FINAL yet returns pending with the
+        // hash, never UNKNOWN-without-hash.
+        send_tx(signed, "NONE")
+    }
+    fn broadcast_async(&mut self, signed: &str) -> Result<Value, Error> {
+        // Async re-broadcast of the exact stored bytes (same hash/nonce):
+        // the node rejects a duplicate, so the tx can never execute twice.
+        send_tx(signed, "NONE")
     }
     fn status(&mut self, hash: &str, signer: &str) -> Result<Value, Error> {
-        // NONE returns the official cause without waiting. FINAL timeouts were
-        // previously collapsed into "not yet FINAL" and hid UNKNOWN_TRANSACTION.
+        // Short NONE poll only — NEVER a FINAL wait inside one host call.
+        // The OutLayer host caps every near:rpc call at 30 s, so a FINAL
+        // wait that outlasts 30 s returns "Failed to send RPC request" even
+        // when the tx was accepted (the lost claim_payout, J5dHg2q…). NONE
+        // returns the official cause without waiting, and finality is read
+        // from the response body instead: a tx that is not FINAL yet returns
+        // "not yet FINAL" here and the caller polls again by hash
+        // (reconcile) — never re-signs.
         let (v, e) = rpc::tx_status(hash, signer, "NONE");
         if native_send::rpc_reports_unknown(&v, &e) {
             return Err(err("unknown_transaction", "UNKNOWN_TRANSACTION"));
@@ -89,14 +114,16 @@ impl native_send::Rpc for NativeRpc {
         {
             return Ok(body);
         }
-        let (v2, e2) = rpc::tx_status(hash, signer, "FINAL");
-        if native_send::rpc_reports_unknown(&v2, &e2) {
-            return Err(err("unknown_transaction", "UNKNOWN_TRANSACTION"));
-        }
-        if !e2.is_empty() {
-            return Err(err("native_unknown", "original send not yet FINAL"));
-        }
-        serde_json::from_str(&v2).map_err(|_| err("native_unknown", "original status unavailable"))
+        Err(err("native_unknown", "original send not yet FINAL"))
+    }
+    fn pause(&mut self) {
+        // The host pause, shared with the provider driver (guarded_host.rs):
+        // a 2 s thread sleep. In wasi-p2 this yields on the monotonic clock;
+        // it is the only wait the worker has (no busy loop, no timer API).
+        // It spaces status re-polls so a tx has time to enter a block
+        // (native_send::MAX_STATUS_POLLS) instead of three instant polls
+        // all returning UNKNOWN_TRANSACTION before the tx is indexed.
+        std::thread::sleep(std::time::Duration::from_secs(2));
     }
     fn validity_context(&mut self, plan: &native_send::Plan) -> (Option<u64>, Option<u64>, Option<u64>) {
         // A stored height needs no lookup (the caller prefers it); only legacy plans look it up.
@@ -189,4 +216,26 @@ fn op_reconcile_minter_send(input: &Value) -> Result<Value, Error> {
         }));
     }
     Ok(json!({"ok":true,"tx_hash":p.hash,"status":if success{"success"}else{"failed"}}))
+}
+fn op_rebroadcast_minter_send(input: &Value) -> Result<Value, Error> {
+    // Re-broadcast the exact signed bytes of the current unresolved ticket
+    // (lost claim_payout J5dHg2q…, ref block 224377957). Fresh NEP-413 by the
+    // ticket's actor or the project owner. Never re-signs: the bytes come from
+    // the stored plan. Only while the validity window is provably open;
+    // refused after expiry. If the tx is FINAL, the ticket clears here;
+    // otherwise the caller runs the normal reconcile once it is FINAL.
+    if input.pointer("/auth/scheme").and_then(Value::as_str) != Some("nep413") {
+        return Err(err("no_auth", "fresh NEP-413 required"));
+    }
+    let c = authenticate(input, "rebroadcast_minter_send", false)?;
+    let Some(t) = native_send::current(&mut Host)? else {
+        return Ok(json!({"ok":true,"status":"idle"}));
+    };
+    if c.account != t.actor && c.account != keys_contract() {
+        return Err(err(
+            "not_owner",
+            "only original actor or project owner may rebroadcast minter send",
+        ));
+    }
+    native_send::rebroadcast(&mut Host, &mut NativeRpc { provision: None }, &t)
 }
