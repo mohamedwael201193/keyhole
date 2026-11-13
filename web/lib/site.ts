@@ -1,5 +1,5 @@
 /** Canonical public origin. A configured NEXT_PUBLIC_SITE_URL may replace it; a bad value falls back here. */
-export const CANONICAL_SITE = "https://keyhole-seven.vercel.app";
+export const CANONICAL_SITE = "https://www.getkeyhole.xyz";
 
 export function siteUrl(raw: string | undefined = process.env.NEXT_PUBLIC_SITE_URL): string {
   if (!raw) return CANONICAL_SITE;

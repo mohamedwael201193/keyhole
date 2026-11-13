@@ -35,7 +35,7 @@ The output check is the recorded body next to its attested `output_hash` in [`we
 | [identity.json](identity.json) | Live contract v2.7, code hash `3cZsay…`, deploy `6rD2iMs1…`, published worker `62398a8a…`, governance | Team wallet `keyhole-devmo.near` |
 | [THREAT_MODEL.md](THREAT_MODEL.md) | Holder-only NEAR withdrawal on the published worker | Source plus the published hash |
 | [docs/evidence/ownership-and-limits](docs/evidence/ownership-and-limits/README.md) | Ownership moves with the key | Team test wallets where that file says so |
-| [/holders](https://keyhole-seven.vercel.app/holders) | Authenticated proof of keys the connected account holds | The connected signer. Not a confidential-content grant. Not verified-external usage |
+| [/holders](https://www.getkeyhole.xyz/holders) | Authenticated proof of keys the connected account holds | The connected signer. Not a confidential-content grant. Not verified-external usage |
 | Public order census | 1 sealed vault swap and 5 1Click orders | The six rows above. Not six customers |
 
 ## Historical
