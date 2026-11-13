@@ -53,19 +53,45 @@ mod host {
     }
 
     fn chain_now_ms() -> Result<u64, Error> {
+        // Round 4: the final block is cached per run (read_cache). The
+        // timestamp is at most ~180 s stale; that is fail-closed for the
+        // custody-cooldown check (a stale `now` understates elapsed time)
+        // and the provision certificate is fresh by construction.
+        if let Some(block) = read_cache::get_block() {
+            return Ok(block.timestamp_ms);
+        }
         let (r, e) = rpc::block("final");
         if !e.is_empty() { return Err(err("rpc", format!("block: {}", e))); }
         let v: Value = serde_json::from_str(&r).map_err(|_| err("rpc", "block: bad json"))?;
         let ts = v.pointer("/header/timestamp").or(v.pointer("/result/header/timestamp"))
             .and_then(|t| t.as_u64().or_else(|| t.as_str().and_then(|s| s.parse().ok())))
             .ok_or_else(|| err("rpc", "block: no timestamp"))?;
+        // Populate the shared block cache (hash + height + timestamp) so
+        // NativeRpc::block() reuses the same read instead of issuing a
+        // second rpc::block. parse_final_block returns None if the
+        // response is incomplete, in which case nothing is cached.
+        if let Some(entry) = parse_final_block(&r) {
+            read_cache::put_block(entry);
+        }
         Ok(ts / 1_000_000)
     }
 
     fn view(contract: &str, method: &str, args: Value) -> Result<Value, Error> {
-        let (r, e) = rpc::view(contract, method, &args.to_string(), "final");
+        // Round 4: per-run read cache. Identical view calls (same
+        // contract, method and args) are served from the cache instead of
+        // the host. Only methods whose values cannot change within a run
+        // without a send are cached (read_cache::is_cacheable); the
+        // exact-exit readbacks, nft_listing and view_access_key are never
+        // cached. The cache is invalidated after every send.
+        let args_s = args.to_string();
+        if let Some(cached) = read_cache::get_view(contract, method, &args_s) {
+            return Ok(cached);
+        }
+        let (r, e) = rpc::view(contract, method, &args_s, "final");
         if !e.is_empty() { return Err(err("rpc", format!("{}: {}", method, e))); }
-        rpc_view::decode(method, &r)
+        let out = rpc_view::decode(method, &r)?;
+        read_cache::put_view(contract, method, &args_s, out.clone());
+        Ok(out)
     }
 
     fn holder_tier(account: &str) -> Result<Option<u8>, Error> {

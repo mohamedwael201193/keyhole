@@ -435,12 +435,25 @@ fn op_provision_collateral(input: &Value) -> Result<Value, Error> {
     reconcile_provision(&c, &control, &p)
 }
 fn provision_native_budget(mid: &str, deposit: u128) -> Result<(), Error> {
-    let (price, e) = rpc::gas_price("");
-    if !e.is_empty() {
-        return Err(err("rpc", "gas price unavailable"));
-    }
-    let price: Value = serde_json::from_str(&price).map_err(|_| err("rpc", "invalid gas price"))?;
-    let price = price.get("result").cloned().unwrap_or(price);
+    // Round 4: the gas price is a protocol-level value, identical for the
+    // whole run; cache it so a second provision in the same run does not
+    // re-read it. The minter's view_account is NEVER cached (its balance
+    // changes after every send, and the budget must be computed from the
+    // live balance).
+    let price: Value = match read_cache::get_gas_price() {
+        Some(price) => price,
+        None => {
+            let (price, e) = rpc::gas_price("");
+            if !e.is_empty() {
+                return Err(err("rpc", "gas price unavailable"));
+            }
+            let price: Value =
+                serde_json::from_str(&price).map_err(|_| err("rpc", "invalid gas price"))?;
+            let price = price.get("result").cloned().unwrap_or(price);
+            read_cache::put_gas_price(price.clone());
+            price
+        }
+    };
     let fee = guarded::decimal(&price, "gas_price")?
         .checked_mul(240_000_000_000_000)
         .ok_or_else(|| err("collateral_quote", "gas overflow"))?;

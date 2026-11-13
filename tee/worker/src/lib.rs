@@ -860,14 +860,23 @@ pub fn session_charge(st: &mut dyn Store, id: &str, g: &SessionGrant, usd: u64) 
 /// and a call that runs out of room returns a resumable pending result instead of being killed.
 pub mod budget {
     use std::cell::Cell;
-    pub const TOTAL_MS: u64 = 50_000;
+    /// Round 4: raised from 50 s to 150 s. The 50 s budget was set for a
+    /// 60 s client; the client now allows 180 s (the host cap), and the
+    /// worker itself was aborting the exit at 50 s even with a 180 s
+    /// client. 150 s leaves a 30 s margin under the 180 s host cap for
+    /// host overhead and the response.
+    pub const TOTAL_MS: u64 = 150_000;
     /// The reservation (spend charge) is made only if the call is still this young.
-    pub const PRE_CHARGE_MAX_MS: u64 = 20_000;
+    /// Round 4: raised from 20 s to 60 s (3x, in step with TOTAL_MS).
+    /// The preflight is 13 cached reads; at ~3 s per RPC that is ~39 s
+    /// (52 s at 4 s/RPC — gate trips only at ~4.6 s/RPC). Remaining 90 s covers begin + drive + finish.
+    pub const PRE_CHARGE_MAX_MS: u64 = 60_000;
     /// begin_value_op (a NONE send + short status polls, never a FINAL wait
     /// inside one host call — the host caps every near:rpc call at 30 s)
-    /// needs at least this much room.
+    /// needs at least this much room. Unchanged: a begin needs ~8-15 s.
     pub const BEGIN_MIN_LEFT_MS: u64 = 25_000;
     /// One exit hop (validate, FINAL readbacks, POST, re-read) needs at least this much room.
+    /// Unchanged: a hop needs ~15 s, and 22 s is a safe minimum.
     pub const HOP_MIN_LEFT_MS: u64 = 22_000;
     thread_local! {
         static START: Cell<Option<std::time::Instant>> = const { Cell::new(None) };
@@ -937,6 +946,9 @@ impl Charge {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+#[path = "op_cost_tests.rs"]
+mod op_cost_tests;
 #[cfg(test)]
 mod p2harden;
 
@@ -1239,6 +1251,25 @@ pub fn final_block_hash(raw: &str) -> Option<[u8; 32]> {
     bs58::decode(h).into_vec().ok().and_then(|b| b.try_into().ok())
 }
 
+/// Parse a `rpc::block("final")` response into the shared per-run block
+/// cache entry (round 4). Returns `None` if the response is missing the
+/// hash or the timestamp, in which case the caller must not cache it
+/// (a partial entry would serve a zero timestamp or hash). Accepts both
+/// the flattened and the JSON-RPC-envelope shapes.
+pub fn parse_final_block(raw: &str) -> Option<read_cache::BlockCache> {
+    let v: serde_json::Value = serde_json::from_str(raw).ok()?;
+    let hash = final_block_hash(raw)?;
+    let ts = v
+        .pointer("/header/timestamp")
+        .or_else(|| v.pointer("/result/header/timestamp"))
+        .and_then(|t| t.as_u64().or_else(|| t.as_str().and_then(|s| s.parse().ok())))?;
+    Some(read_cache::BlockCache {
+        hash,
+        height: native_send::block_height(raw),
+        timestamp_ms: ts / 1_000_000,
+    })
+}
+
 /// Which key a request operates: the one named in the signed params, or the only one held.
 /// Holding several keys without naming one is refused, so a buyer never runs the wrong account.
 pub fn pick_token(named: Option<&str>, owned: u64) -> Result<(), Error> {
@@ -1465,3 +1496,7 @@ pub mod withdrawal_protection;
 
 pub mod exact_exit;
 pub mod exact_receipt;
+
+/// Per-run read cache (round 4): memoizes identical view calls so the
+/// canary lands at ~52 near:rpc calls instead of ~150. See read_cache.rs.
+pub mod read_cache;
