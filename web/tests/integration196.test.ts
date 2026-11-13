@@ -122,7 +122,12 @@ describe("real hosted gateway adapter",()=>{
     const { POST }=await import("@/app/api/worker/route");const { NextRequest }=await import("next/server");
     const prior=process.env.OUTLAYER_PAYMENT_KEY;process.env.OUTLAYER_PAYMENT_KEY="local-test-not-a-secret";
     const sent:any[]=[];
-    vi.stubGlobal("fetch",vi.fn(async(_url:any,opts:any)=>{const body=JSON.parse(opts.body);sent.push(body.input);return new Response(JSON.stringify({call_id:"local-test",output:{ok:sent.length>1,value_op_id:id,status:sent.length>1?"success":"processing",admission_finished:sent.length>1}}),{headers:{"content-type":"application/json"}});}));
+    vi.stubGlobal("fetch",vi.fn(async(_url:any,opts:any)=>{
+      // The gateway starts the call (async) and polls /calls/{id}. The start
+      // returns pending (no output); the poll returns the terminal output.
+      if(String(_url).includes("/calls/")) return new Response(JSON.stringify({call_id:"local-test",status:"completed",output:{ok:true,value_op_id:id,status:"success",admission_finished:true}}),{headers:{"content-type":"application/json"}});
+      const body=JSON.parse(opts.body);sent.push(body.input);return new Response(JSON.stringify({call_id:"local-test",status:"pending"}),{headers:{"content-type":"application/json"}});}));
+
     try {
       const a=auth("reconcile_value_op",{token_id:"k1234",value_op_id:id});
       for(let i=0;i<2;i++) {const response=await POST(new NextRequest("http://localhost/api/worker",{method:"POST",headers:{"x-forwarded-for":"192.0.2.196"},body:JSON.stringify({op:"reconcile_value_op",auth:a})}));expect(response.status).toBe(200);expect(sent[i]).toEqual({op:"reconcile_value_op",auth:a});}
