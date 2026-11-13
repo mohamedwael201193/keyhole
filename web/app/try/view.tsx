@@ -312,7 +312,7 @@ export function TrialView({ autostart }: { autostart: boolean }) {
               <p><i aria-hidden="true" />{TRIAL_BANNER}</p>
               <div className="net-toggle" role="group" aria-label="Network">
                 <Link href="/try" aria-current="page" data-testid="net-testnet">Testnet</Link>
-                <Link href="/" data-testid="net-mainnet">Mainnet</Link>
+                <Link href="/dashboard" data-testid="net-mainnet">Mainnet</Link>
               </div>
             </div>
             <h1>{t("try2.h1a")} <em>{t("try2.h1b")}</em></h1>

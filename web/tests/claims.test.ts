@@ -40,7 +40,7 @@ describe("docs/claims.json", () => {
   });
   it("live checks name only public, read-only endpoints", () => {
     const s = JSON.stringify(claims);
-    for (const u of s.match(/https:\/\/[^"\s)]+/g) || []) expect(u, u).toMatch(/^https:\/\/(keyhole-seven\.vercel\.app|nearblocks\.io|api\.outlayer\.ai|main\.fastfs\.io|github\.com\/mohamedwael201193\/keyhole)/);
+    for (const u of s.match(/https:\/\/[^"\s)]+/g) || []) expect(u, u).toMatch(/^https:\/\/(www\.getkeyhole\.xyz|nearblocks\.io|api\.outlayer\.ai|main\.fastfs\.io|github\.com\/mohamedwael201193\/keyhole)/);
     expect(s).not.toMatch(/wk_[0-9a-f]{16}|ed25519:[1-9A-HJ-NP-Za-km-z]{80,}/);
   });
 });

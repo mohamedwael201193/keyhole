@@ -192,7 +192,7 @@ export async function context(e = {}, call = rpc, net = fetch, opts={}) {
   // Invalid JSON cannot reach worker submission, even if maintenance is absent.
   ctx.alias_checks = [];
   for (const path of opts.historical?[]:["/api/keyhole", "/api/worker"]) {
-    const r = await net("https://keyhole-seven.vercel.app" + path, {
+    const r = await net("https://www.getkeyhole.xyz" + path, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{",

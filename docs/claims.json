@@ -8982,10 +8982,10 @@
    "claim": "Live page / serves",
    "where": "README.md:933",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/",
+   "evidence": "https://www.getkeyhole.xyz/",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -8996,10 +8996,10 @@
    "claim": "Live page /verify/path serves",
    "where": "judge/gen-claims.py:185",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/verify/path",
+   "evidence": "https://www.getkeyhole.xyz/verify/path",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/verify/path",
+    "url": "https://www.getkeyhole.xyz/verify/path",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9010,10 +9010,10 @@
    "claim": "Live page /verify serves",
    "where": "README.md:939",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/verify",
+   "evidence": "https://www.getkeyhole.xyz/verify",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/verify",
+    "url": "https://www.getkeyhole.xyz/verify",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9024,10 +9024,10 @@
    "claim": "Live page /settle serves",
    "where": "README.md:941",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/settle",
+   "evidence": "https://www.getkeyhole.xyz/settle",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/settle",
+    "url": "https://www.getkeyhole.xyz/settle",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9038,10 +9038,10 @@
    "claim": "Live page /gallery serves",
    "where": "README.md:938",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/gallery",
+   "evidence": "https://www.getkeyhole.xyz/gallery",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/gallery",
+    "url": "https://www.getkeyhole.xyz/gallery",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9052,10 +9052,10 @@
    "claim": "Live page /mint serves",
    "where": "README.md:937",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/mint",
+   "evidence": "https://www.getkeyhole.xyz/mint",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/mint",
+    "url": "https://www.getkeyhole.xyz/mint",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9066,10 +9066,10 @@
    "claim": "Live page /vault serves",
    "where": "README.md:935",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/vault",
+   "evidence": "https://www.getkeyhole.xyz/vault",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/vault",
+    "url": "https://www.getkeyhole.xyz/vault",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9080,10 +9080,10 @@
    "claim": "Live page /ask serves",
    "where": "README.md:945",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/ask",
+   "evidence": "https://www.getkeyhole.xyz/ask",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/ask",
+    "url": "https://www.getkeyhole.xyz/ask",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9094,10 +9094,10 @@
    "claim": "Live page /atlas serves",
    "where": "README.md:934",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/atlas",
+   "evidence": "https://www.getkeyhole.xyz/atlas",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/atlas",
+    "url": "https://www.getkeyhole.xyz/atlas",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9108,10 +9108,10 @@
    "claim": "Live page /identity serves",
    "where": "README.md:946",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/identity",
+   "evidence": "https://www.getkeyhole.xyz/identity",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/identity",
+    "url": "https://www.getkeyhole.xyz/identity",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9122,10 +9122,10 @@
    "claim": "Live page /pnl serves",
    "where": "README.md:944",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/pnl",
+   "evidence": "https://www.getkeyhole.xyz/pnl",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/pnl",
+    "url": "https://www.getkeyhole.xyz/pnl",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9136,10 +9136,10 @@
    "claim": "Live page /key?id=k5f4750858f328940 serves",
    "where": "TRACK_COVERAGE.md:24",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/key?id=k5f4750858f328940",
+   "evidence": "https://www.getkeyhole.xyz/key?id=k5f4750858f328940",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/key?id=k5f4750858f328940",
+    "url": "https://www.getkeyhole.xyz/key?id=k5f4750858f328940",
     "status": 200
    },
    "expected": "HTTP 200",
@@ -9164,11 +9164,11 @@
    "claim": "/ar/… redirects to the same path without the prefix and keeps the query",
    "where": "judge/gen-claims.py:188",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app/ar/judge?x=1",
+   "evidence": "https://www.getkeyhole.xyz/ar/judge?x=1",
    "check": {
     "type": "redirect",
-    "url": "https://keyhole-seven.vercel.app/ar/judge?x=1",
-    "location": "https://keyhole-seven.vercel.app/judge?x=1"
+    "url": "https://www.getkeyhole.xyz/ar/judge?x=1",
+    "location": "https://www.getkeyhole.xyz/judge?x=1"
    },
    "expected": "308 → /judge?x=1",
    "verify": "node judge/verify-claims.mjs --only site-ar-redirect"
@@ -9178,82 +9178,82 @@
    "claim": "Site sends strict-transport-security: …max-age=63072000; includeSubDomains; preload",
    "where": "judge/gen-claims.py:190",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "header",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "header": "strict-transport-security",
     "contains": "max-age=63072000; includeSubDomains; preload"
    },
    "expected": "strict-transport-security contains max-age=63072000; includeSubDomains; preload",
-   "verify": "curl -sI https://keyhole-seven.vercel.app"
+   "verify": "curl -sI https://www.getkeyhole.xyz"
   },
   {
    "id": "site-hdr-x-content-type-options",
    "claim": "Site sends x-content-type-options: …nosniff",
    "where": "judge/gen-claims.py:190",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "header",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "header": "x-content-type-options",
     "contains": "nosniff"
    },
    "expected": "x-content-type-options contains nosniff",
-   "verify": "curl -sI https://keyhole-seven.vercel.app"
+   "verify": "curl -sI https://www.getkeyhole.xyz"
   },
   {
    "id": "site-hdr-content-security-policy",
    "claim": "Site sends content-security-policy: …frame-ancestors 'none'",
    "where": "judge/gen-claims.py:190",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "header",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "header": "content-security-policy",
     "contains": "frame-ancestors 'none'"
    },
    "expected": "content-security-policy contains frame-ancestors 'none'",
-   "verify": "curl -sI https://keyhole-seven.vercel.app"
+   "verify": "curl -sI https://www.getkeyhole.xyz"
   },
   {
    "id": "site-hdr-referrer-policy",
    "claim": "Site sends referrer-policy: …strict-origin-when-cross-origin",
    "where": "judge/gen-claims.py:190",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "header",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "header": "referrer-policy",
     "contains": "strict-origin-when-cross-origin"
    },
    "expected": "referrer-policy contains strict-origin-when-cross-origin",
-   "verify": "curl -sI https://keyhole-seven.vercel.app"
+   "verify": "curl -sI https://www.getkeyhole.xyz"
   },
   {
    "id": "site-hdr-permissions-policy",
    "claim": "Site sends permissions-policy: …camera=()",
    "where": "judge/gen-claims.py:190",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "header",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "header": "permissions-policy",
     "contains": "camera=()"
    },
    "expected": "permissions-policy contains camera=()",
-   "verify": "curl -sI https://keyhole-seven.vercel.app"
+   "verify": "curl -sI https://www.getkeyhole.xyz"
   },
   {
    "id": "site-supply-live",
    "claim": "Home page key count equals nft_total_supply minus the contract-held test key",
    "where": "judge/gen-claims.py:191",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "site_vs_chain",
     "field": "supply",
@@ -9267,10 +9267,10 @@
    "claim": "Home page names the live build 9e56a212",
    "where": "README.md:104",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "status": 200,
     "contains": "9e56a212"
    },
@@ -9977,10 +9977,10 @@
    "claim": "Home and /verify advertise 37 in-browser checks",
    "where": "judge/gen-claims.py:204",
    "evidence_type": "live site",
-   "evidence": "https://keyhole-seven.vercel.app",
+   "evidence": "https://www.getkeyhole.xyz",
    "check": {
     "type": "http",
-    "url": "https://keyhole-seven.vercel.app/",
+    "url": "https://www.getkeyhole.xyz/",
     "status": 200,
     "contains": "37"
    },

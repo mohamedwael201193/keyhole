@@ -335,7 +335,7 @@ The live worker is \`${w8}\` (${bytes} bytes).
 | Worker project | \`${w.project}\` | |
 | Worker wasm sha256 | \`${w.wasm_sha256}\` | [\`tee/worker/DEPLOYED_SHA256\`](tee/worker/DEPLOYED_SHA256) |
 | Worker publish tx | \`${w.add_version_tx}\` | [nearblocks](https://nearblocks.io/txns/${w.add_version_tx}) |
-| Live \`info\` call | \`${w.info_call}\` | [attestation](https://api.outlayer.ai/attestations/by-call/${w.info_call}) · [verify](https://keyhole-seven.vercel.app/verify?call=${w.info_call}) |
+| Live \`info\` call | \`${w.info_call}\` | [attestation](https://api.outlayer.ai/attestations/by-call/${w.info_call}) · [verify](https://www.getkeyhole.xyz/verify?call=${w.info_call}) |
 
 The contract release is **live on mainnet**. Release bytes and recipe are in [\`contracts/keys/release/${liveRelease}/identity.json\`](contracts/keys/release/${liveRelease}/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
