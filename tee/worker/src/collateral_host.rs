@@ -440,6 +440,7 @@ fn provision_native_budget(mid: &str, deposit: u128) -> Result<(), Error> {
         return Err(err("rpc", "gas price unavailable"));
     }
     let price: Value = serde_json::from_str(&price).map_err(|_| err("rpc", "invalid gas price"))?;
+    let price = price.get("result").cloned().unwrap_or(price);
     let fee = guarded::decimal(&price, "gas_price")?
         .checked_mul(240_000_000_000_000)
         .ok_or_else(|| err("collateral_quote", "gas overflow"))?;
@@ -449,6 +450,7 @@ fn provision_native_budget(mid: &str, deposit: u128) -> Result<(), Error> {
     }
     let account: Value =
         serde_json::from_str(&account).map_err(|_| err("rpc", "invalid account"))?;
+    let account = account.get("result").cloned().unwrap_or(account);
     let backing = (account["storage_usage"]
         .as_u64()
         .ok_or_else(|| err("rpc", "missing storage usage"))? as u128)
