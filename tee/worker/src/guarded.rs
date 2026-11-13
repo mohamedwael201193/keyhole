@@ -229,12 +229,22 @@ pub fn confirm_admission<H:AdmissionHost>(host:&mut H,j:&Journal)->Result<(),Err
     }
     if let Ok(v)=host.value_op(j){if j.validate_permit(&v).is_ok(){return Ok(());}}
     // A lost send reply is neither rejection nor finality. Require the exact finalized record.
+    // F1 (M5 #231 review): the reconcile path reaches here with no budget check, so a late
+    // reconcile could send the FINAL begin and be killed mid-wait, creating a new 24 h ticket.
+    // Gate the send here — this funnel covers both the initial and the reconcile path.
+    if !crate::budget::begin_ok(){return Err(err("time_budget","not enough time left to begin safely; nothing was reserved or sent, retry"));}
     let begun=host.begin(j);
     let permit=host.value_op(j);
     if let Ok(v)=&permit{if j.validate_permit(v).is_ok(){return Ok(());}}
     // Fail closed either way, but name the real blocker. A refused/unsent begin (a pending
     // native-journal ticket, an RPC outage, a minter mismatch) must not read as an unknown
     // on-chain outcome: only the native_* codes mean "reconcile the minter send, never resend".
+    // F2 (M5 #231 review): a confirmed send means the permit must exist; a read failure is
+    // unknown, never "never sent". Propagating the permit error raw here let guard_begin
+    // abandon a journal whose begin had LANDED (rpc is in begin_never_sent), which bricks
+    // the token permanently — the contract has no value-op expiry/cancel. A later reconcile
+    // re-reads the permit and proceeds.
+    if begun.is_ok(){return Err(err("admission_unknown",format!("admission not confirmed; reconcile operation {}",j.op_id)));}
     if let Err(e)=begun{if begin_blocker_visible(e.code){return Err(e);}}
     permit?;
     Err(err("admission_unknown",format!("admission not confirmed; reconcile operation {}",j.op_id)))
@@ -242,6 +252,9 @@ pub fn confirm_admission<H:AdmissionHost>(host:&mut H,j:&Journal)->Result<(),Err
 fn begin_blocker_visible(code:&str)->bool{matches!(code,"native_busy"|"native_unknown"|"collateral_unknown"|"guard_state"|"rpc")}
 pub fn settle_admission<H:AdmissionHost>(host:&mut H,j:&Journal,t:&Terminal)->Result<bool,Error>{
     put_once(host,&format!("{}/terminal",j.key()),&serde_json::to_vec(t).map_err(|_|err("guard_journal","encode terminal"))?)?;
+    // F3 (M5 #231 review): finish_value_op is a FINAL send; refuse it when out of time. The
+    // terminal marker above is already durable, so a later reconcile retries the finish.
+    if !crate::budget::begin_ok(){return Ok(false);}
     let _=host.complete(j,t);
     let control=host.control(&j.token_id)?;let last=host.value_op(j)?;
     let done=control.nonce>j.nonce||(last["op_id"]==j.op_id&&last["state"].as_u64()==Some(if t.success{2}else{3}));

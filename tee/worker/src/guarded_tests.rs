@@ -291,7 +291,7 @@ fn original_withdrawal_unknown_poll_is_get_only_and_keeps_admission_locked() {
 
 // A refused begin must surface its real blocker (native journal ticket) instead of a generic
 // admission_unknown, while still failing closed and never reporting success.
-struct BeginHost{store:Memory,begin:Option<Error>,landed:bool,begins:usize}
+struct BeginHost{store:Memory,begin:Option<Error>,landed:bool,begins:usize,fail_permit:bool}
 impl Store for BeginHost{
  fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{self.store.set_if_absent(k,v)}
  fn incr(&mut self,k:&str,d:i64)->Result<i64,Error>{self.store.incr(k,d)}
@@ -301,12 +301,13 @@ impl Store for BeginHost{
 }
 impl AdmissionHost for BeginHost{
  fn value_op(&mut self,j:&Journal)->Result<Value,Error>{
-  if self.landed{Ok(json!({"op_id":j.op_id,"action_hash":j.action_hash,"epoch":j.epoch.to_string(),"nonce":j.nonce.to_string(),"state":0}))}else{Ok(Value::Null)}}
+  if self.landed{if self.fail_permit{return Err(err("rpc","get_value_op read failed"));}
+  Ok(json!({"op_id":j.op_id,"action_hash":j.action_hash,"epoch":j.epoch.to_string(),"nonce":j.nonce.to_string(),"state":0}))}else{Ok(Value::Null)}}
  fn control(&mut self,_:&str)->Result<Control,Error>{unreachable!()}
  fn begin(&mut self,_:&Journal)->Result<(),Error>{self.begins+=1;match self.begin.take(){Some(e)=>Err(e),None=>{self.landed=true;Ok(())}}}
  fn complete(&mut self,_:&Journal,_:&Terminal)->Result<(),Error>{unreachable!()}
 }
-fn begin_host(e:Option<Error>)->BeginHost{BeginHost{store:Memory::default(),begin:e,landed:false,begins:0}}
+fn begin_host(e:Option<Error>)->BeginHost{BeginHost{store:Memory::default(),begin:e,landed:false,begins:0,fail_permit:false}}
 #[test]fn refused_begin_names_native_blocker_and_still_fails_closed(){
  for code in ["native_unknown","native_busy"]{
   let mut h=begin_host(Some(err(code,"another minter send must be reconciled")));
@@ -336,6 +337,64 @@ fn begin_host(e:Option<Error>)->BeginHost{BeginHost{store:Memory::default(),begi
  }
  let mut h=Lost(begin_host(None));
  confirm_admission(&mut h,&journal()).unwrap();assert_eq!(h.0.begins,1);
+}
+// ---- M5 #231 fix-round tests (F1/F2/F3) ----
+#[test]fn reconcile_initiated_begin_is_refused_when_out_of_time(){
+ // F1: the reconcile path (guard_admit -> confirm_admission on an already-created journal,
+ // as op_reconcile_value loads it) sent the FINAL begin with no budget check. The gate now
+ // lives in the shared funnel, so it covers both the initial and the reconcile path.
+ use crate::budget;
+ let mut h=begin_host(None);
+ let j=journal();j.create(&mut h).unwrap();
+ budget::set_elapsed_for_test(Some(budget::TOTAL_MS));
+ let e=confirm_admission(&mut h,&j).unwrap_err();
+ budget::set_elapsed_for_test(None);
+ assert_eq!(e.code,"time_budget");
+ assert_eq!(h.begins,0,"no begin_value_op was sent");
+}
+#[test]fn begun_then_rpc_read_failure_is_admission_unknown_never_abandon(){
+ // F2: begin() returned Ok (its send returns only after FINAL) but the following get_value_op
+ // read failed with rpc. The old code propagated rpc raw, and guard_begin abandons on rpc
+ // with BEGIN_ATTEMPTED set (guarded_host.rs) — permanently bricking the token, since the
+ // contract has no value-op expiry/cancel. The fix returns admission_unknown, which is NOT
+ // in begin_never_sent, so the hold is kept and a later reconcile re-reads the permit.
+ let mut h=begin_host(None);h.fail_permit=true;
+ let e=confirm_admission(&mut h,&journal()).unwrap_err();
+ assert_eq!(e.code,"admission_unknown");
+ assert_eq!(h.begins,1,"the begin landed; only the readback failed");
+ assert!(!begin_never_sent("admission_unknown"),"guard_begin must not abandon this journal");
+}
+struct SettleHost{store:Memory,completes:usize}
+impl Store for SettleHost{
+ fn set_if_absent(&mut self,k:&str,v:&[u8])->Result<bool,Error>{self.store.set_if_absent(k,v)}
+ fn incr(&mut self,k:&str,d:i64)->Result<i64,Error>{self.store.incr(k,d)}
+ fn read(&mut self,k:&str)->Result<Vec<u8>,Error>{self.store.read(k)}
+ fn remove(&mut self,k:&str)->Result<(),Error>{self.store.remove(k)}
+ fn list_prefix(&mut self,p:&str)->Result<Vec<String>,Error>{self.store.list_prefix(p)}
+}
+impl AdmissionHost for SettleHost{
+ fn value_op(&mut self,j:&Journal)->Result<Value,Error>{Ok(json!({"op_id":j.op_id,"action_hash":j.action_hash,"epoch":j.epoch.to_string(),"nonce":j.nonce.to_string(),"state":2}))}
+ fn control(&mut self,_:&str)->Result<Control,Error>{Ok(Control{epoch:0,nonce:2,pending:0,pledged:false,listed:false,transfer_pending:false})}
+ fn begin(&mut self,_:&Journal)->Result<(),Error>{unreachable!()}
+ fn complete(&mut self,_:&Journal,_:&Terminal)->Result<(),Error>{self.completes+=1;Ok(())}
+}
+#[test]fn finish_is_refused_when_out_of_time_and_retried_by_reconcile(){
+ // F3: finish_value_op is a FINAL send; settle_admission sent it with no budget check. Out
+ // of time it now returns Ok(false) without sending; the terminal marker is already durable
+ // (written first), so a later reconcile retries the finish.
+ use crate::budget;
+ let mut h=SettleHost{store:Memory::default(),completes:0};
+ let j=journal();
+ let t=Terminal{success:true,refund_charge:false,provider_id:"550e8400-e29b-41d4-a716-446655440000".into()};
+ budget::set_elapsed_for_test(Some(budget::TOTAL_MS));
+ let done=settle_admission(&mut h,&j,&t).unwrap();
+ budget::set_elapsed_for_test(None);
+ assert!(!done,"finish must not be attempted out of time");
+ assert_eq!(h.completes,0,"no finish_value_op was sent");
+ assert!(!h.read(&format!("{}/terminal",j.key())).unwrap().is_empty(),"terminal marker is durable for the retry");
+ // In time, the same call finishes.
+ assert!(settle_admission(&mut h,&j,&t).unwrap());
+ assert_eq!(h.completes,1);
 }
 
 // ---- request-row binding per journaled kind ----
