@@ -69,7 +69,7 @@ const dig = (o, p) => (p ? p.split(".").reduce((x, k) => (x == null ? undefined 
 const b58 = (buf) => { const A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"; let n = BigInt("0x" + buf.toString("hex")), s = ""; while (n > 0n) { s = A[Number(n % 58n)] + s; n /= 58n; } return s; };
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 function walk(d, out = []) { for (const f of readdirSync(d)) { const p = join(d, f); if (f === "node_modules" || f === "target" || f === ".next") continue; statSync(p).isDirectory() ? walk(p, out) : out.push(p); } return out; }
-const homeHtml = () => once("home", async () => (await get("https://keyhole-seven.vercel.app/")).text());
+const homeHtml = () => once("home", async () => (await get("https://www.getkeyhole.xyz/")).text());
 
 const checks = {
   async path(c) { return existsSync(join(ROOT, c.path)) ? [true, c.path] : [false, `missing ${c.path}`]; },

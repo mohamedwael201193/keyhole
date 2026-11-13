@@ -15,7 +15,7 @@
 - `/source/manifest.json` regenerated to current worker `d337e822` / contract `DEXHHyEM…`; CI hygiene checks tarball identity matches `identity.json`.
 - `/verify` CallVerifier: separate verdict chips (quote validity, output binding, economic semantics, current-build identity) — extends the existing 37 checks, no duplicate page.
 - "Signed PnL" renamed to honest **Signed swap log** (mark-to-market delta, not realized profit) across UI/README.
-- OG/metadata host default → `https://keyhole-seven.vercel.app`.
+- OG/metadata host default → `https://www.getkeyhole.xyz`.
 - `/attack` already links each refusal to `/verify` and requires live attestation + evidence `error.code`.
 
 ## 2026-11-09 — Judge proof UX: live evidence pack + Attack desk (PR #186)
