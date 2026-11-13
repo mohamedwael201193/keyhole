@@ -196,7 +196,9 @@ try:
     if not isinstance(cfg, dict):
         bad("config() did not return a JSON object: %r" % (cfg,))
     else:
-        want_owner = "keyhole-devmo.near"
+        # The expected owner is the pinned identity, not a hardcoded account:
+        # accept_owner moved ownership to the guardian implicit account.
+        want_owner = (ident.get("governance") or {}).get("owner") or "keyhole-devmo.near"
         want_treasury = "keyhole-devmo.near"
         pinned_minter = contract.get("minter") or ""
         problems = []
@@ -252,8 +254,12 @@ except Exception as e:
     bad("nft_total_supply() failed: %s" % e)
 
 gov = ident.get("governance") or {}
-if gov.get("owner") == "keyhole-devmo.near" and gov.get("lending_enabled") is False and gov.get("access_key_total") == 3 and gov.get("full_access_keys") == 2 and gov.get("function_call_keys") == 1:
-    ok("identity.governance owner=keyhole-devmo.near lending_enabled=false access_key_total=3")
+gov_owner = gov.get("owner") or ""
+owner_is_implicit = isinstance(gov_owner, str) and len(gov_owner) == 64 and all(c in "0123456789abcdef" for c in gov_owner)
+# The pinned owner is cross-checked against live config() above; here the pin
+# must be a 64-hex implicit account (the guardian since accept_owner).
+if owner_is_implicit and gov.get("lending_enabled") is False and gov.get("access_key_total") == 3 and gov.get("full_access_keys") == 2 and gov.get("function_call_keys") == 1:
+    ok("identity.governance owner=%s… lending_enabled=false access_key_total=3" % gov_owner[:8])
 else:
     bad("identity.governance owner/lending/keys mismatch: %r" % {k: gov.get(k) for k in ("owner", "lending_enabled", "access_key_total", "full_access_keys", "function_call_keys")})
 

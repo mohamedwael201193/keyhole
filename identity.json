@@ -2,12 +2,13 @@
   "_doc": "Single source of truth for live identities. Generate deployment updates with node scripts/gen-identity.mjs --promote-live <public-capture.json>. Refresh generated files with the same script.",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "37628ea5a7ab479411d125b0b7393f04f800214257825451cde2f52adbd183f4",
-    "bytes": 1350050,
-    "add_version_tx": "B6GReQmb817bqkPrWKoniKRZziWHYK4PZvH1A1u54MqJ",
-    "info_call": "116641a2-0744-45a0-9698-4b23dab365fc",
-    "previous_wasm_sha256": "de9e3005614bbd140f86ca4dd345efc945187dbf09de320ed5483840dcc076b5",
+    "wasm_sha256": "ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8",
+    "bytes": 1353458,
+    "add_version_tx": "GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5",
+    "info_call": "ed2c7a62-411f-4f8f-b06d-b214898e0ec4",
+    "previous_wasm_sha256": "37628ea5a7ab479411d125b0b7393f04f800214257825451cde2f52adbd183f4",
     "historical_wasm_sha256": [
+      "de9e3005614bbd140f86ca4dd345efc945187dbf09de320ed5483840dcc076b5",
       "114dff5afb2b0df038a456594cc91a810da6907e1e8710bf98283fb4d02606d6",
       "34bf835cea7c9977bbd3270851eb27290dd35db4a0afa4652161664f57fc7d01",
       "62398a8aa0451ce58cb5ab814ad8dc7f4e2f3fc55ce874c7672ea986abcc307f",
@@ -55,10 +56,10 @@
     ]
   },
   "review": {
-    "source_commit": "3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7"
+    "source_commit": "29a1850d40971d6e0af09ad18691aeef69626392"
   },
   "worker_candidate": {
-    "status": "source-candidate-not-published",
+    "status": "published-mainnet",
     "wasm_sha256": "ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8",
     "bytes": 1353458,
     "recipe": "tee/worker/build.sh"
@@ -73,17 +74,17 @@
     "recipe": "contracts/keys/build.sh"
   },
   "governance": {
-    "owner": "keyhole-devmo.near",
-    "pending_owner": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
-    "pending_owner_not_before_ns": "1794486987377190950",
-    "staged_upgrade_sha256": "26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
-    "staged_upgrade_not_before_ns": "1794486857027935824",
+    "owner": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+    "pending_owner": "ee91dcebd2e4061271a149abcc8ef2c6be8b9696c928348b52cb3f5204645f67",
+    "pending_owner_not_before_ns": "1794610539900007445",
+    "staged_upgrade_sha256": null,
+    "staged_upgrade_not_before_ns": null,
     "min_upgrade_delay_ns": "86400000000000",
     "wind_down_ns": "1801440000000000000",
     "wound_down": false,
     "lending_enabled": false,
     "stage_upgrade_tx": "5CYYbe6Zx1BVW3qmS63gR6XDGKMx2QzfJ8Pcft8BM3v5",
-    "propose_owner_tx": "9fAHo9ckryNCXr6wxJzr89wayP6fTFKwqjFezXVGYnyk",
+    "propose_owner_tx": "7FUAqceeJYjDVEbzobnELBHjdedGw7YPz6grirRFatym",
     "full_access_keys": 2,
     "function_call_keys": 1,
     "access_key_total": 3

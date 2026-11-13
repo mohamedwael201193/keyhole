@@ -31,7 +31,7 @@ add("contract-wasm-sha", f"Deployed contract wasm is {K['bytes']:,} bytes with s
     {"type":"sha256","path":("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),"sha256":K["wasm_sha256"],"bytes":K["bytes"]}, f"sha256 {K['wasm_sha256']}, {K['bytes']} bytes")
 add("contract-source-version", f"NEP-330 mainnet source metadata reports version {K['version']}", where(RD,K["version"]), "mainnet view", "contract_source_metadata()",
     {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":K["version"]}, f"version == {K['version']}")
-cfg = {"owner":"keyhole-devmo.near","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}
+cfg = {"owner":"0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}
 for k,v in cfg.items():
     add(f"config-{k}", f"Contract config.{k} is {v}", where(RD,'"royalty_bps":500'), "mainnet view", "keyhole-devmo.near config()",
         {"type":"view","method":"config","args":{},"path":k,"op":"eq","value":v}, f"config.{k} == {v}")

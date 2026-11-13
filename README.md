@@ -25,7 +25,7 @@ Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepar
 > **Live contract v2.7:** deployment is FINAL on mainnet ([deployment](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)); the historical Pledge migration remains [FINAL](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa) and is not repeated. Worker publishing is separate; lending remains disabled at release. [Live identities and strict online verification](#live-mainnet-identities).
 <!-- LIVE-SUMMARY:END -->
 
-Release status: contract v2.7.0 is the live wasm (code hash `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH`, deploy [`6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)). The published worker withdraws NEAR only to the current holder. Lending is off. The owner is still `keyhole-devmo.near`. v2.6 is the previous contract. The v2.6 restoration record is historical: [docs/evidence/live-v2.6/restored](docs/evidence/live-v2.6/restored/README.md).
+Release status: contract v2.7.0 is the live wasm (code hash `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH`, deploy [`6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)). The published worker withdraws NEAR only to the current holder. Lending is off. The owner is the guardian implicit account `0705fdc1…`. v2.6 is the previous contract. The v2.6 restoration record is historical: [docs/evidence/live-v2.6/restored](docs/evidence/live-v2.6/restored/README.md).
 
 **Contents:** [1 Verify in 5 minutes](#1-verify-in-5-minutes-zero-install) · [2 Proven](#2-proven-on-near-mainnet) · [3 Try it](#3-try-it) · [3a Real vs simulated](#3a-real-vs-simulated) · [4 How it works](#4-how-it-works) · [5 Why an NFT that does something](#5-why-this-is-an-nft-that-does-something) · [6 NEAR stack](#6-near-stack-used) · [7 Verify](#7-verify-everything-yourself) · [8 Security](#8-security-model) · [9 Numbers](#9-numbers) · [10 Built during the hackathon](#10-built-during-the-hackathon) · [11 Repo map](#11-repo-map) · [12 License](#12-license)
 
@@ -40,9 +40,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7
+git fetch --depth 1 origin 29a1850d40971d6e0af09ad18691aeef69626392
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7"
+test "$(git rev-parse HEAD)" = "29a1850d40971d6e0af09ad18691aeef69626392"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -56,9 +56,9 @@ No git? Download all three files from that same immutable source commit and run 
 <!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/29a1850d40971d6e0af09ad18691aeef69626392/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/29a1850d40971d6e0af09ad18691aeef69626392/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/29a1850d40971d6e0af09ad18691aeef69626392/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -90,7 +90,7 @@ This is an internal reproducible review of the repository, not an independent au
 
 This block is generated from [`identity.json`](identity.json) by `node scripts/gen-identity.mjs`. Do not edit it by hand.
 
-The live worker is `37628ea5` (1,350,050 bytes).
+The live worker is `ed0f614a` (1,353,458 bytes).
 
 | Piece | Live value | Proof |
 |---|---|---|
@@ -101,9 +101,9 @@ The live worker is `37628ea5` (1,350,050 bytes).
 | Contract code hash | `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH` | deploy tx [`6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h) |
 | Contract wasm sha256 | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` | [`contracts/keys/release/v2.7/keyhole_keys.wasm`](contracts/keys/release/v2.7/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
-| Worker wasm sha256 | `37628ea5a7ab479411d125b0b7393f04f800214257825451cde2f52adbd183f4` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
-| Worker publish tx | `B6GReQmb817bqkPrWKoniKRZziWHYK4PZvH1A1u54MqJ` | [nearblocks](https://nearblocks.io/txns/B6GReQmb817bqkPrWKoniKRZziWHYK4PZvH1A1u54MqJ) |
-| Live `info` call | `116641a2-0744-45a0-9698-4b23dab365fc` | [attestation](https://api.outlayer.ai/attestations/by-call/116641a2-0744-45a0-9698-4b23dab365fc) · [verify](https://keyhole-seven.vercel.app/verify?call=116641a2-0744-45a0-9698-4b23dab365fc) |
+| Worker wasm sha256 | `ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e2bfd66a1b8` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
+| Worker publish tx | `GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5` | [nearblocks](https://nearblocks.io/txns/GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5) |
+| Live `info` call | `ed2c7a62-411f-4f8f-b06d-b214898e0ec4` | [attestation](https://api.outlayer.ai/attestations/by-call/ed2c7a62-411f-4f8f-b06d-b214898e0ec4) · [verify](https://keyhole-seven.vercel.app/verify?call=ed2c7a62-411f-4f8f-b06d-b214898e0ec4) |
 
 The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.7/identity.json`](contracts/keys/release/v2.7/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
@@ -122,7 +122,7 @@ Worker source candidate: `ed0f614acd83c8dc4851901206f5e5f065a3a6e7731cf8cc8d6a3e
 
 Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
-Live governance (`governance_state`, `get_pledge_config`): owner `keyhole-devmo.near`; pending owner `0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228`; pending_owner_not_before_ns `1794486987377190950`; staged_upgrade_sha256 `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`; staged_upgrade_not_before_ns `1794486857027935824`; min_upgrade_delay_ns `86400000000000`; wind_down_ns `1801440000000000000`; wound_down false; lending_enabled false. Access keys: 2 FullAccess and 1 FunctionCall (`ed25519:7N1fLo9M…`, `ed25519:FNe2aYtz…`). Stage [tx](https://nearblocks.io/txns/5CYYbe6Zx1BVW3qmS63gR6XDGKMx2QzfJ8Pcft8BM3v5) · owner proposal [tx](https://nearblocks.io/txns/9fAHo9ckryNCXr6wxJzr89wayP6fTFKwqjFezXVGYnyk). The owner is still the contract account.
+Live governance (`governance_state`, `get_pledge_config`): owner `0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228`; pending owner `ee91dcebd2e4061271a149abcc8ef2c6be8b9696c928348b52cb3f5204645f67`; pending_owner_not_before_ns `1794610539900007445`; staged_upgrade_sha256 `null`; staged_upgrade_not_before_ns `null`; min_upgrade_delay_ns `86400000000000`; wind_down_ns `1801440000000000000`; wound_down false; lending_enabled false. Access keys: 2 FullAccess and 1 FunctionCall (`ed25519:7N1fLo9M…`, `ed25519:FNe2aYtz…`). Stage [tx](https://nearblocks.io/txns/5CYYbe6Zx1BVW3qmS63gR6XDGKMx2QzfJ8Pcft8BM3v5) · owner proposal [tx](https://nearblocks.io/txns/7FUAqceeJYjDVEbzobnELBHjdedGw7YPz6grirRFatym). The owner is the guardian implicit account; the contract account no longer owns the contract.
 
 Measured size steps are in [`docs/evidence/integration-stack/contract-size.md`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [`docs/evidence/live-v2.5/all-live-views.json`](docs/evidence/live-v2.5/all-live-views.json).
 <!-- IDENTITY:END -->
@@ -210,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `671 claims: 363 PASS, 0 FAIL, 0 ERROR, 308 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `674 claims: 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [keyhole-seven.vercel.app/verify](https://keyhole-seven.vercel.app/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [keyhole-seven.vercel.app/attack](https://keyhole-seven.vercel.app/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the verification path.** Do: open [keyhole-seven.vercel.app/judge](https://keyhole-seven.vercel.app/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -260,7 +260,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://keyhole-seven.vercel.app/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://keyhole-seven.vercel.app/attack) |
-| Judge-claims machine (671 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 363 PASS, 0 FAIL, 0 ERROR, 308 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (674 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://keyhole-seven.vercel.app/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://keyhole-seven.vercel.app/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Free trial on [/try](https://keyhole-seven.vercel.app/try) | **Real testnet** for the key (mint, tier, transfer, refusal). Each guest receives 0.05 testnet NEAR (`GUEST_DEPOSIT_YOCTO`). The vault trade on that page is a **recorded mainnet** swap, labelled recorded on mainnet | [`docs/trial/testnet.json`](docs/trial/testnet.json) · [verify the recorded swap](https://keyhole-seven.vercel.app/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) |
@@ -619,7 +619,7 @@ Contract configuration at capture (historical; `beats` grows with each heartbeat
 - **Mint authority.** `nft_mint` asserts `predecessor == minter` ([`contracts/keys/src/lib.rs`](contracts/keys/src/lib.rs)). The minter is an implicit account whose secret key was drawn inside the enclave, so only the attested worker can mint. `token_id` is at most 64 bytes, and storage is measured with excess booked as backed native credit; a separate `claim_payout` delivers that credit. A prepaid minter payout slot is required before mint dispatch.
 - **Heartbeat.** `beat(token_ids)`, minter only, batch of at most 50, emits `nft_metadata_update`, and takes no deposit. The beat key on the minter account is FunctionCall and deposit-free. That account also has a full-access enclave key for payable `nft_mint`, `register_collateral` and `begin_value_op`. `nft_set_tier` and `finish_value_op` stay at deposit 0 so a scoped FunctionCall key can call them.
 - **Owner controls.** `set_minter` and `set_royalty` require 1 yoctoNEAR, and `set_royalty` is capped at 10%. `init` and `migrate` are private to the contract account. v2.7 does not add a single-step owner setter: handover is `propose_owner`, then `accept_owner` after 24 h, and the current owner can cancel first. The tier is read from the contract's `holder_tier` on each call (`limits_for_tier`, [`tee/worker/src/lib.rs`](tee/worker/src/lib.rs)).
-- **v2.7, live.** Code-only deploy ([tx](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)). No `new`, `migrate` or `migrate_pledge`. Wasm `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`, 519,382 bytes, in [`contracts/keys/release/v2.7/keyhole_keys.wasm`](contracts/keys/release/v2.7/keyhole_keys.wasm). Versus historical v2.6 (487,260 bytes) the code-storage delta is 32,122 bytes, `321220000000000000000000` yoctoNEAR (0.32122 NEAR at 10^19 yocto per byte). A loan the borrower never claims can be reclaimed by the named lender after the disbursement deadline (`reclaim_unclaimed_principal`). Payout and treasury callbacks return false and record the result instead of panicking (`reconcile_payout`, `reconcile_treasury`). Bronze, Silver and Gold borrow caps are 0.05, 0.5 and 5 NEAR. Upgrade and owner handover wait 24 h (`RELEASE_UPGRADE_DELAY_NS`). `wind_down` uses the fixed timestamp in [`contracts/keys/src/v27.rs`](contracts/keys/src/v27.rs) and is not a pause. Lending stays off. The owner is still the contract account. Proof: [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs) and the sandbox tests `a_v26_state_with_a_listing_and_a_full_loan_cycle_is_identical_after_a_code_only_upgrade_to_v27`, `bc_short_delay_proves_timelock_cancel_apply_and_exact_principal_reclaim` and `parallel_timelock_apply_then_accept_then_zero_key_self_deploy`. The owner may stage an upgrade and name a successor in the same hour. `accept_owner` clears a staged upgrade, so `apply_upgrade` runs first. Governance writes are refused, in the same receipt, when they would spend listing bonds, user liabilities, treasury, a pending recovery or the operating reserve. Limits: [SECURITY.md](SECURITY.md#v27-contract-limits).
+- **v2.7, live.** Code-only deploy ([tx](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)). No `new`, `migrate` or `migrate_pledge`. Wasm `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c`, 519,382 bytes, in [`contracts/keys/release/v2.7/keyhole_keys.wasm`](contracts/keys/release/v2.7/keyhole_keys.wasm). Versus historical v2.6 (487,260 bytes) the code-storage delta is 32,122 bytes, `321220000000000000000000` yoctoNEAR (0.32122 NEAR at 10^19 yocto per byte). A loan the borrower never claims can be reclaimed by the named lender after the disbursement deadline (`reclaim_unclaimed_principal`). Payout and treasury callbacks return false and record the result instead of panicking (`reconcile_payout`, `reconcile_treasury`). Bronze, Silver and Gold borrow caps are 0.05, 0.5 and 5 NEAR. Upgrade and owner handover wait 24 h (`RELEASE_UPGRADE_DELAY_NS`). `wind_down` uses the fixed timestamp in [`contracts/keys/src/v27.rs`](contracts/keys/src/v27.rs) and is not a pause. Lending stays off. The owner is the guardian implicit account; the contract account no longer owns the contract. Proof: [`contracts/keys/src/v27_tests.rs`](contracts/keys/src/v27_tests.rs) and the sandbox tests `a_v26_state_with_a_listing_and_a_full_loan_cycle_is_identical_after_a_code_only_upgrade_to_v27`, `bc_short_delay_proves_timelock_cancel_apply_and_exact_principal_reclaim` and `parallel_timelock_apply_then_accept_then_zero_key_self_deploy`. The owner may stage an upgrade and name a successor in the same hour. `accept_owner` clears a staged upgrade, so `apply_upgrade` runs first. Governance writes are refused, in the same receipt, when they would spend listing bonds, user liabilities, treasury, a pending recovery or the operating reserve. Limits: [SECURITY.md](SECURITY.md#v27-contract-limits).
 
 </details>
 
@@ -632,7 +632,8 @@ The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` 
 
 | Build | Role | `add_version` tx | Live `info` call |
 |---|---|---|---|
-| `37628ea5` (1,350,050 bytes) | current; published from main `6f7816e` (#228) | [`B6GReQmb…`](https://nearblocks.io/txns/B6GReQmb817bqkPrWKoniKRZziWHYK4PZvH1A1u54MqJ) | [`116641a2`](https://api.outlayer.ai/attestations/by-call/116641a2-0744-45a0-9698-4b23dab365fc) |
+| `ed0f614a` (1,353,458 bytes) | current | [`GXZtL6hg…`](https://nearblocks.io/txns/GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5) | [`ed2c7a62`](https://api.outlayer.ai/attestations/by-call/ed2c7a62-411f-4f8f-b06d-b214898e0ec4) |
+| `37628ea5` (1,350,050 bytes) | previous; published from main `6f7816e` (#228) | [`B6GReQmb…`](https://nearblocks.io/txns/B6GReQmb817bqkPrWKoniKRZziWHYK4PZvH1A1u54MqJ) | [`116641a2`](https://api.outlayer.ai/attestations/by-call/116641a2-0744-45a0-9698-4b23dab365fc) |
 | `de9e3005` (1,349,861 bytes) | previous; published from main `07ff852` (#227) | [`5TNWPKKL…`](https://nearblocks.io/txns/5TNWPKKL1XTGQRA5gJ2KsLugc7TFMv6cP17jiRJiW7Ue) | [`1810bf33`](https://api.outlayer.ai/attestations/by-call/1810bf33-2a8c-42c9-931a-f0ececc3a7d0) |
 | `114dff5a` (1,349,199 bytes) | previous; published from main `50f7a5c` (#222) | [`9VNRDazN…`](https://nearblocks.io/txns/9VNRDazNv6dXJjkaybQ4bm1SiTrPvb11p3zycyTj8Hc2) | [`42f2c909`](https://api.outlayer.ai/attestations/by-call/42f2c909-27db-4562-9a24-a0399c0f9a1d) |
 | `34bf835c` (1,340,205 bytes) | previous; live until `114dff5a`; no recorded `info` call | [`y9je7NLY…`](https://nearblocks.io/txns/y9je7NLYr7LnFLNjefkoa6XMSvFBJxmn7CV6SYa3aK5) | none recorded |
@@ -663,9 +664,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7
+git fetch --depth 1 origin 29a1850d40971d6e0af09ad18691aeef69626392
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "3bd48d1755e1310c61c9d0c164cbe9b6b8eb43f7"
+test "$(git rev-parse HEAD)" = "29a1850d40971d6e0af09ad18691aeef69626392"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -823,7 +824,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 | CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
 | Web unit tests (Vitest) | **2032** pass in 124 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
 | Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
-| Claims in `docs/claims.json` | **671**: offline 363 PASS, 0 FAIL, 0 ERROR, 308 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **674**: offline 363 PASS, 0 FAIL, 0 ERROR, 311 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET keyhole-seven.vercel.app/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |

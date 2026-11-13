@@ -47,7 +47,7 @@ test("live identity and the docs that quote it say v2.7", () => {
   assert.doesNotMatch(security, /SOURCE ONLY, NOT PUBLISHED/);
   assert.doesNotMatch(security, /unpublished local head/);
   assert.doesNotMatch(keys, /live on `keyhole-devmo\.near` since/);
-  assert.match(security, /1794486987377190950/);
+  assert.match(security, /1794610539900007445/);
   assert.match(security, /86400000000000/);
   assert.match(security, /reclaim_unclaimed_principal/);
   assert.match(security, /62398a8a/);
