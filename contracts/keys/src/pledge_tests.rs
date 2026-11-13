@@ -511,3 +511,107 @@ fn prepaid_loan_terminal_slot(default: bool) {
  result(PromiseResult::Successful(vec![]),NOW);let _=c.on_collateral_stored("k1".into(),n);ctx("alice.near",1,NOW);rejected(||c.nft_transfer(a("bob.near"),"k1".into(),None,None));
  result(policy(false),NOW);assert!(c.on_collateral_checked("k1".into(),n));ctx("alice.near",1,NOW);c.nft_transfer(a("bob.near"),"k1".into(),None,None);assert_eq!(c.get_control_state("k1".into()).owner_epoch.0,1);
 }
+
+// ---------- ATTACK MATRIX (added 2026-11-13): adversarial tests for guards that had
+// no direct test. Each test asserts the contract REFUSES the abuse. No contract
+// source was changed to make these pass. ----------
+
+#[test] fn double_claim_default_is_refused_after_title_moves() {
+    let mut c=setup(); active(&mut c);
+    let overdue=NOW+91*SECOND;
+    // A non-lender cannot seize at all.
+    ctx("bob.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("bob.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+    // The named lender seizes once: the title moves.
+    ctx("lender.near",1,overdue); let _=c.claim_default("k1".into(),U64(1),a("bob.near"));
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("bob.near"));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::UnlockPending);
+    // A second claim on the same loan is refused: the loan is no longer Active.
+    ctx("lender.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("carol.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("bob.near"));
+}
+#[test] fn repay_loan_twice_is_refused() {
+    let mut c=setup(); active(&mut c);
+    // A non-borrower cannot repay at all.
+    ctx("bob.near",terms().repayment.0,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    // The borrower repays once: the loan leaves Active.
+    ctx("alice.near",terms().repayment.0,NOW); let _=c.repay_loan("k1".into(),U64(1));
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::UnlockPending);
+    assert_eq!(c.get_payout_credit(a("lender.near")),terms().repayment);
+    // A second repayment is refused: the loan is no longer Active.
+    ctx("alice.near",terms().repayment.0,NOW); rejected(||{let _=c.repay_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_payout_credit(a("lender.near")),terms().repayment);
+}
+#[test] fn claim_default_after_repay_is_refused() {
+    let mut c=setup(); active(&mut c);
+    ctx("alice.near",terms().repayment.0,NOW); let _=c.repay_loan("k1".into(),U64(1));
+    let overdue=NOW+91*SECOND;
+    ctx("lender.near",1,overdue); rejected(||{let _=c.claim_default("k1".into(),U64(1),a("bob.near"));});
+    assert_eq!(c.nft_token("k1".into()).unwrap().owner_id,a("alice.near"));
+}
+#[test] fn fund_loan_refuses_wrong_lender() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    let v=cert(&c); let sig=signed(&c,&v);
+    ctx("evil.near",N,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn fund_loan_refuses_wrong_amount() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    let v=cert(&c); let sig=signed(&c,&v);
+    ctx("lender.near",N/2,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v.clone(),sig.clone());});
+    ctx("lender.near",N+1,NOW); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn fund_loan_refuses_expired_deadline() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    let late=NOW+601*SECOND;
+    let v=c.loan_certificate_template("k1".into(),U64(late),U64(late+30*SECOND));
+    let sig=signed(&c,&v);
+    ctx("lender.near",N,late); rejected(||{let _=c.fund_loan("k1".into(),U64(1),v,sig);});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}
+#[test] fn open_loan_refuses_non_borrower() {
+    let mut c=setup();
+    ctx("bob.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_when_lending_disabled() {
+    let mut c=setup(); let mut cfg=config_required(); cfg.lending_enabled=false; save_config(&cfg);
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn open_loan_refuses_unready_collateral() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    ctx("alice.near",LOAN_STORAGE_DEPOSIT,NOW); rejected(||{let _=c.open_loan("k1".into(),terms());});
+    assert!(c.get_loan("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_non_minter() {
+    let mut c=setup(); collateral().remove(&"k1".into());
+    ctx("alice.near",N/10,NOW);
+    rejected(||{let _=c.register_collateral("k1".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("alice.near"),U64(0));});
+    assert!(c.get_pending_registration("k1".into()).is_none());
+}
+#[test] fn register_collateral_refuses_same_wallet_on_second_token() {
+    let mut c=setup();
+    // The fixture inserts k1's binding directly into collateral(); mirror the
+    // on-chain invariant the real register path maintains (binding + wallet index
+    // are written together) before probing the second token.
+    bound_wallets().insert(&format!("ed25519:{}", "ab".repeat(32)), &"k1".into());
+    ctx("minter.near",N/10,NOW); c.nft_mint("k2".into(),a("bob.near"),1,TokenMetadata::default());
+    ctx("minter.near",N/10,NOW);
+    rejected(||{let _=c.register_collateral("k2".into(),format!("ed25519:{}","ab".repeat(32)),"sealed-policy".into(),"a".repeat(128),1,NOW/SECOND+60,a("bob.near"),U64(0));});
+    assert!(c.get_pending_registration("k2".into()).is_none());
+    assert!(c.get_collateral_binding("k1".into()).is_some(), "the first token keeps its binding");
+}
+#[test] fn treasury_recovery_refuses_amount_above_attributed_free_treasury() {
+    let mut c=setup(); ctx("owner.near",N,NOW); c.fund_treasury();
+    assert_eq!(c.treasury_recoverable().0,N);
+    ctx("recovery.near",1,RECOVERY_UNLOCK_NS); rejected(||{let _=c.recover_treasury(U128(N+1));});
+    assert_eq!(config_required().treasury_available.0,N);
+    assert!(config_required().treasury_pending.is_none());
+}
+#[test] fn cancel_loan_refuses_non_borrower_before_expiry() {
+    let mut c=setup(); open(&mut c); settle_policy(&mut c,true,NOW);
+    ctx("bob.near",1,NOW); rejected(||{let _=c.cancel_loan("k1".into(),U64(1));});
+    assert_eq!(c.get_loan("k1".into()).unwrap().state,LoanState::Offered);
+}

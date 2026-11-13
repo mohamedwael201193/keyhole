@@ -1420,6 +1420,14 @@ mod v2 {
         yocto("alice.near"); c.nft_revoke("k1".into(), acc("market.near"));
         yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
     }
+    // ATTACK MATRIX (2026-11-13): revoke_all must also kill every approval for transfer purposes.
+    #[test] #[should_panic(expected = "Sender not approved")] fn revoke_all_then_market_cannot_transfer() {
+        let mut c = setup(); mint(&mut c, "k1", "alice.near");
+        approve(&mut c, "alice.near", "k1", "m1.near"); approve(&mut c, "alice.near", "k1", "market.near");
+        yocto("alice.near"); c.nft_revoke_all("k1".into());
+        assert!(!c.nft_is_approved("k1".into(), acc("market.near"), None));
+        yocto("market.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);
+    }
     #[test] #[should_panic(expected = "Sender not approved")] fn old_approval_dies_after_resale() {
         let mut c = setup(); mint(&mut c, "k1", "alice.near"); approve(&mut c, "alice.near", "k1", "market.near");
         yocto("alice.near"); c.nft_transfer(acc("bob.near"), "k1".into(), None, None);

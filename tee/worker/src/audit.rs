@@ -100,3 +100,13 @@ impl Store for Mem {
 #[test] fn no_claim_or_garbage_claim_is_free() { assert!(wallet_claim_free(b"", 1)); assert!(wallet_claim_free(b"x", 1)); }
 #[test] fn fresh_claim_blocks_a_second_registration() { assert!(!wallet_claim_free(b"1000", 1000 + WALLET_CLAIM_TTL_MS)); }
 #[test] fn abandoned_claim_can_be_taken_over() { assert!(wallet_claim_free(b"1000", 1001 + WALLET_CLAIM_TTL_MS)); }
+
+// Daily free-mint quota (GLOBAL_MINTS_PER_DAY = 25) is enforced through the same
+// bounded counter as the chain-sign quota (main.rs mint handler, error code
+// "mint_quota"). The contract itself has no quota; this is the worker-side guard.
+#[test] fn global_mint_daily_count_stops_at_the_limit() {
+    let mut st = Mem::default();
+    for _ in 0..GLOBAL_MINTS_PER_DAY { bump_within(&mut st, "g/mints/1", 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into()).unwrap(); }
+    assert_eq!(bump_within(&mut st, "g/mints/1", 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into()).unwrap_err().code, "mint_quota");
+    assert!(bump_within(&mut st, "g/mints/2", 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into()).is_ok(), "next day resets");
+}
