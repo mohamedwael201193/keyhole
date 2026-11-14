@@ -62,7 +62,7 @@
     ]
   },
   "review": {
-    "source_commit": "9afabafe4e9e9f37070cae45e8ae1d8fed17f7de"
+    "source_commit": "72ea934addcf953bbd56cc3099156306d43e16bd"
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
