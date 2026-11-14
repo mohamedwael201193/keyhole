@@ -123,7 +123,7 @@ export function nep177(tokenId: string, tier: number | null, contractId = KEYS_C
   const titleId = /^\d+$/.test(tokenId) ? `#${tokenId}` : tokenId;
   return {
     title: `KEYHOLE Key ${titleId}`,
-    description: "Viewing key to a confidential account in an Intel TDX enclave.",
+    description: "Control key to a confidential account in an Intel TDX enclave.",
     media: `/heirloom/keys/k${String(id.art).padStart(2, "0")}.webp`,
     extra: {
       tier: id.finish,

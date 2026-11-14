@@ -408,7 +408,7 @@ mod host {
         bump_within(&mut Host, &format!("g/mints/{}", day), 1, GLOBAL_MINTS_PER_DAY, "mint_quota", "daily free-mint quota reached, try tomorrow (UTC)".into())?;
         let (media, media_hash) = bronze_media(&keys_contract(), &tid);
         let args = json!({"token_id": tid, "receiver_id": c.account, "tier": 1,
-            "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Viewing key to a confidential account. Holder-only, attested in a TEE.", "copies": 1, "media": media, "media_hash": media_hash}});
+            "metadata": {"title": "KEYHOLE Key · Bronze", "description": "Control key to a confidential account. Holder-only, attested in a TEE.", "copies": 1, "media": media, "media_hash": media_hash}});
         let a = args.to_string();
         // 0.012 NEAR covers metadata; v2.5 excess is backed minter credit, cashed out below.
         let r = send(&mid, &msk, &keys_contract(), &[Action::FunctionCall { method: "nft_mint", args: a.as_bytes(), gas: MINT_GAS, deposit: MINT_DEPOSIT_YOCTO }]);

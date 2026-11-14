@@ -40,9 +40,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin de5a35159c399f23138d6eea41bac3b921109b98
+git fetch --depth 1 origin 0d2e5bf19c592fa214363d60806cbefe06119450
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "de5a35159c399f23138d6eea41bac3b921109b98"
+test "$(git rev-parse HEAD)" = "0d2e5bf19c592fa214363d60806cbefe06119450"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -56,9 +56,9 @@ No git? Download all three files from that same immutable source commit and run 
 <!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/de5a35159c399f23138d6eea41bac3b921109b98/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/de5a35159c399f23138d6eea41bac3b921109b98/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/de5a35159c399f23138d6eea41bac3b921109b98/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/0d2e5bf19c592fa214363d60806cbefe06119450/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/0d2e5bf19c592fa214363d60806cbefe06119450/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/0d2e5bf19c592fa214363d60806cbefe06119450/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -90,7 +90,7 @@ This is an internal reproducible review of the repository, not an independent au
 
 This block is generated from [`identity.json`](identity.json) by `node scripts/gen-identity.mjs`. Do not edit it by hand.
 
-The live worker is `0d645930` (1,379,425 bytes).
+The live worker is `e9e570e5` (1,382,833 bytes).
 
 | Piece | Live value | Proof |
 |---|---|---|
@@ -101,9 +101,9 @@ The live worker is `0d645930` (1,379,425 bytes).
 | Contract code hash | `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH` | deploy tx [`6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h) |
 | Contract wasm sha256 | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` | [`contracts/keys/release/v2.7/keyhole_keys.wasm`](contracts/keys/release/v2.7/keyhole_keys.wasm) |
 | Worker project | `keyhole-devmo.near/keyhole` | |
-| Worker wasm sha256 | `0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
-| Worker publish tx | `7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T` | [nearblocks](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T) |
-| Live `info` call | `2220caa1-90ad-42a6-b281-cfd08cd1b354` | [attestation](https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354) · [verify](https://www.getkeyhole.xyz/verify?call=2220caa1-90ad-42a6-b281-cfd08cd1b354) |
+| Worker wasm sha256 | `e9e570e5aa3c308f47a95d3ed6008743a32eb876cd9131481760b50bfc63a886` | [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) |
+| Worker publish tx | `4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t` | [nearblocks](https://nearblocks.io/txns/4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t) |
+| Live `info` call | `c8db49d3-900a-49d7-b7ae-5012579a00ff` | [attestation](https://api.outlayer.ai/attestations/by-call/c8db49d3-900a-49d7-b7ae-5012579a00ff) · [verify](https://www.getkeyhole.xyz/verify?call=c8db49d3-900a-49d7-b7ae-5012579a00ff) |
 
 The contract release is **live on mainnet**. Release bytes and recipe are in [`contracts/keys/release/v2.7/identity.json`](contracts/keys/release/v2.7/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
 
@@ -118,7 +118,7 @@ CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
 node judge/verify-claims.mjs --strict
 ```
 
-Worker source candidate: `0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a` (1,379,425 bytes), generated from the pinned CI build (ubuntu-latest, rustc 1.99.1, tee/worker/build.sh); builds on other hosts may differ. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/r3/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
+Worker source candidate: `e9e570e5aa3c308f47a95d3ed6008743a32eb876cd9131481760b50bfc63a886` (1,382,833 bytes), generated from the pinned CI build (ubuntu-latest, rustc 1.99.1, tee/worker/build.sh); builds on other hosts may differ. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/r3/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).
 
 Contract source candidate **2.7.0**, matches live deployment: [generated release identity](contracts/keys/release/v2.7/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).
 
@@ -210,7 +210,7 @@ The worker build history, with every `add_version` transaction and its live `inf
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `684 claims: 365 PASS, 0 FAIL, 0 ERROR, 319 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `686 claims: 365 PASS, 0 FAIL, 0 ERROR, 321 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this candidate passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this candidate. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [www.getkeyhole.xyz/verify](https://www.getkeyhole.xyz/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [www.getkeyhole.xyz/attack](https://www.getkeyhole.xyz/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the verification path.** Do: open [www.getkeyhole.xyz/judge](https://www.getkeyhole.xyz/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -260,7 +260,7 @@ Honest labels for what a judge sees. Caveats that are not features live in [SECU
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [§2](#2-proven-on-near-mainnet) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://www.getkeyhole.xyz/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://www.getkeyhole.xyz/attack) |
-| Judge-claims machine (684 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 365 PASS, 0 FAIL, 0 ERROR, 319 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
+| Judge-claims machine (686 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 365 PASS, 0 FAIL, 0 ERROR, 321 SKIP (current repair). The strict public-read run recorded on main before this candidate passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this candidate. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://www.getkeyhole.xyz/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://www.getkeyhole.xyz/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Free trial on [/try](https://www.getkeyhole.xyz/try) | **Real testnet** for the key (mint, tier, transfer, refusal). Each guest receives 0.05 testnet NEAR (`GUEST_DEPOSIT_YOCTO`). The vault trade on that page is a **recorded mainnet** swap, labelled recorded on mainnet | [`docs/trial/testnet.json`](docs/trial/testnet.json) · [verify the recorded swap](https://www.getkeyhole.xyz/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) |
@@ -623,7 +623,7 @@ Contract configuration at capture (historical; `beats` grows with each heartbeat
 
 </details>
 
-**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) reproduces the **V2 source candidate** in [candidate identity](docs/evidence/worker-provisioning/candidate.json); that candidate is now the published guarded worker, `0d645930…a9305a`, 1,379,425 bytes. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json). `node scripts/check-worker-candidate.mjs` compares this checkout with the candidate bytes; recorded live attestations retain the separate published hash. Earlier proofs such as `dc3668db` retain their own historical build and remain verifiable, but do not match today's rebuild. The worker sha256 identifies KEYHOLE code; the TDX measurement names the OutLayer runtime. Published code is not proof that lending or a provider policy pilot is enabled: lending stays OFF.
+**Worker.** `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`, `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) reproduces the **V2 source candidate** in [candidate identity](docs/evidence/worker-provisioning/candidate.json); that candidate is now the published guarded worker, `e9e570e5…a886`, 1,382,833 bytes. [`tee/worker/DEPLOYED_SHA256`](tee/worker/DEPLOYED_SHA256) is generated from [`identity.json`](identity.json). `node scripts/check-worker-candidate.mjs` compares this checkout with the candidate bytes; recorded live attestations retain the separate published hash. Earlier proofs such as `dc3668db` retain their own historical build and remain verifiable, but do not match today's rebuild. The worker sha256 identifies KEYHOLE code; the TDX measurement names the OutLayer runtime. Published code is not proof that lending or a provider policy pilot is enabled: lending stays OFF.
 
 The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` call is the one the browser verifier shows by default. Each earlier build was published with the same `add_version` method and has its own FastFS upload. [`identity.json`](identity.json) is the single source for the live build, the contract hashes and the publish transaction. `node scripts/gen-identity.mjs --check` fails CI when generated files drift.
 
@@ -632,7 +632,8 @@ The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` 
 
 | Build | Role | `add_version` tx | Live `info` call |
 |---|---|---|---|
-| `0d645930` (1,379,425 bytes) | current | [`7TMAjPuW…`](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T) | [`2220caa1`](https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354) |
+| `e9e570e5` (1,382,833 bytes) | current | [`4ueDpiq5…`](https://nearblocks.io/txns/4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t) | [`c8db49d3`](https://api.outlayer.ai/attestations/by-call/c8db49d3-900a-49d7-b7ae-5012579a00ff) |
+| `0d645930` (1,379,425 bytes) | previous | [`7TMAjPuW…`](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T) | [`2220caa1`](https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354) |
 | `119e920d` (1,370,784 bytes) | previous | [`6tTmKphg…`](https://nearblocks.io/txns/6tTmKphgDz4FG3WxP8gwN4w8cRaJu2QCXcBzGBhu59ie) | [`41ace198`](https://api.outlayer.ai/attestations/by-call/41ace198-a27a-462b-a9a3-b4f93be75c2d) |
 | `47024200` (1,365,265 bytes) | previous | [`AtETZ9Fd…`](https://nearblocks.io/txns/AtETZ9FdMMUtmWhY16pRCvGgu5efSvUsXWvMGHNyQNiH) | [`4f1133c4`](https://api.outlayer.ai/attestations/by-call/4f1133c4-7925-45a5-87cb-0dfeac3df183) |
 | `9e56a212` (1,365,082 bytes) | previous | [`7fRT8Uee…`](https://nearblocks.io/txns/7fRT8UeeDwwfrEs2qpsYDuHrcufUmCHwcdDnZ7vF54xk) | [`5dc50687`](https://api.outlayer.ai/attestations/by-call/5dc50687-1c19-4785-997b-29f8fdda3bcf) |
@@ -668,9 +669,9 @@ Every on-chain transaction of the project, including deploys, mints, publishes, 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin de5a35159c399f23138d6eea41bac3b921109b98
+git fetch --depth 1 origin 0d2e5bf19c592fa214363d60806cbefe06119450
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "de5a35159c399f23138d6eea41bac3b921109b98"
+test "$(git rev-parse HEAD)" = "0d2e5bf19c592fa214363d60806cbefe06119450"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -828,7 +829,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 | CLI tests | **81** pass | `cd cli && npm test`; [candidate log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
 | Web unit tests (Vitest) | **2032** pass in 124 files | `cd web && npx vitest run`; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
 | Web e2e (Playwright) | **221** pass, 15 opt-in skipped | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [candidate log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
-| Claims in `docs/claims.json` | **684**: offline 365 PASS, 0 FAIL, 0 ERROR, 319 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
+| Claims in `docs/claims.json` | **686**: offline 365 PASS, 0 FAIL, 0 ERROR, 321 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this candidate |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET www.getkeyhole.xyz/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **6** on the contract: 5 keys held by people and token `0`, a test key held by `keyhole-devmo.near` | live RPC `nft_total_supply` (historical). The home page counts the five holder keys |

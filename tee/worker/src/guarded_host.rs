@@ -29,6 +29,10 @@ thread_local!{static BEGIN_ATTEMPTED:std::cell::Cell<bool>=const{std::cell::Cell
 /// The hold is given back and the journal marked abandoned when nothing was (or could have been) sent.
 fn abandon_unbegun(j:&Journal,held:&Option<Charge>){
     let _=guarded::put_once(&mut Host,&format!("{}/abandoned",j.key()),b"1");
+    // The abandoned attempt's own pointer is dead too: its journal can never be
+    // begun later, so freeing this slot prevents the next leak. Only this op's
+    // slot is removed here; other slots are reclaimed by pointer_put_reclaiming.
+    let _=guarded::pointer_remove_op(&mut Host,&tkey(&j.token_id,"value_recovery"),j.nonce,&j.op_id);
     if let Some(ch)=held{ch.release(&mut Host);}
 }
 fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->Result<Journal,Error>{
@@ -46,7 +50,29 @@ fn guard_begin(c:&Ctx,input:&Value,kind:&str,body:Value,charge:Option<Charge>)->
     if let Err(e)=j.create(&mut Host){if let Some(ch)=&held{ch.release(&mut Host);}return Err(e);}
     let root=tkey(&j.token_id,"value_recovery");
     // Fail closed: no begin_value_op may be sent unless status can find the operation again.
-    if let Err(e)=guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id){abandon_unbegun(&j,&held);return Err(e);}
+    // Reclaiming put: frees a slot whose occupant journal was abandoned before any begin
+    // (the already-leaked slots), but never touches a live occupant's slot.
+    if let Err(e)=guarded::pointer_put_reclaiming(&mut Host,&root,j.nonce,&j.contract,&j.token_id,&j.op_id){
+        if e.code!="guard_state"{abandon_unbegun(&j,&held);return Err(e);}
+        // Second branch: reclaim a slot whose occupant PROVABLY never began.
+        // Evidence is gathered host-side, BEFORE the reclaim scan, so the pure
+        // scan never touches Host. Per occupant op_id all three facts must hold:
+        // no on-chain permit (get_value_op is null), no pending value op on the
+        // token, and the minter native journal idle (no unresolved ticket, so no
+        // begin_value_op can still land). Any failed read proves nothing and
+        // fails closed (false): the slot stays and the begin is refused.
+        let occupants=guarded::pointer_ids(&mut Host,&root,j.nonce).unwrap_or_default();
+        let proofs:Vec<(String,bool)>=occupants.iter().map(|op|{
+            let proven=guarded::never_begun_proven(
+                matches!(view(&keys_contract(),"get_value_op",json!({"token_id":j.token_id,"op_id":op})),Ok(v) if v.is_null()),
+                matches!(guard_control(&j.token_id),Ok(c) if c.pending==0),
+                matches!(native_send::current(&mut Host),Ok(None)));
+            (op.clone(),proven)
+        }).collect();
+        if let Err(e2)=guarded::pointer_put_reclaiming_proven(&mut Host,&root,j.nonce,&j.contract,&j.token_id,&j.op_id,&|op|proofs.iter().any(|(id,p)|id==op&&*p)){
+            abandon_unbegun(&j,&held);return Err(e2);
+        }
+    }
     BEGIN_ATTEMPTED.with(|f|f.set(false));
     if let Err(e)=guard_admit(&j){
         if !BEGIN_ATTEMPTED.with(|f|f.get())||guarded::begin_never_sent(e.code){abandon_unbegun(&j,&held);}

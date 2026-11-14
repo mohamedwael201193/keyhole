@@ -184,6 +184,7 @@ Caveats:
 - The token is a bearer credential, like any Web2 session. Anyone who has it can act within its scope until it expires, is revoked, or its cap is used up. That includes script injection on the site, and the site's gateway, which relays the request body (bodies are not logged). The token cannot raise limits (a raise needs a wallet signature and still waits 24 h), lock, prove, mint or use chain_sign.
 - Historical build `94c355ff` accepted session withdrawals to the holder's own NEAR account. That is historical. Current sessions cannot withdraw. The published worker `62398a8a` sends NEAR only to the current holder, not to an arbitrary destination.
 - **Live since a985fd87 (still in cc8d2fa8 and d337e822):** `withdraw` is removed from `SESSION_OPS`. A withdraw needs a fresh NEP-413 or EIP-191 signature, and a session token gets `session_scope`. The site already asks the wallet for that signature, and its gateway refuses a session-scheme withdraw. The site changes that go with this worker are in this repository and reach the live site on the next site deploy.
+- Metadata wording: worker `e9e570e5` mints new keys with the description "Control key to a confidential account". The 8 tokens already minted on-chain (supply verified by `nft_total_supply`) still carry the old description "Viewing key to a confidential account" — on-chain token metadata does not change when the worker changes, so the old wording stays on those tokens. The site copy now says "Control key".
 
 ## Worker hardening (live since a985fd87)
 

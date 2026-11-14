@@ -556,12 +556,159 @@ fn pointer_put_fails_closed_on_write_error_and_slot_exhaustion() {
     pointer_put(&mut st,"r",3,"3:0").unwrap();
     pointer_put(&mut st,"r",4,"4:x").unwrap();
 }
+// ---- Round 6: pointer-slot leak (token 0 / nonce 3 deadlock) ----
+fn abandoned_op(n:u64)->String{format!("3:{n:064}")}
+fn mark_abandoned(st:&mut Memory,contract:&str,token:&str,op:&str){
+    put_once(st,&format!("{}/abandoned",journal_key(contract,token,op)),b"1").unwrap();
+}
+#[test]
+fn abandoned_pointer_slots_are_reclaimed_and_live_slots_never_are() {
+    // (1) All 8 slots full with ABANDONED attempts: a 9th begin must proceed.
+    // This is the live token-0/nonce-3 state: 8 leaked slots, nonce stuck at 3.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {let op=abandoned_op(n);pointer_put(&mut st,"r",3,&op).unwrap();mark_abandoned(&mut st,"keys.near","k1",&op);}
+    let ninth=format!("3:{}", "f".repeat(64));
+    pointer_put_reclaiming(&mut st,"r",3,"keys.near","k1",&ninth).unwrap();
+    let ids=pointer_ids(&mut st,"r",3).unwrap();
+    assert_eq!(ids.len() as u64,POINTER_SLOTS);
+    assert!(ids.contains(&ninth),"the 9th begin must hold a reclaimed slot");
+    assert_eq!(ids.iter().filter(|id|*id!=&ninth).count(),7,"exactly one abandoned slot is freed");
+    // (2) All 8 slots full with LIVE attempts: the 9th begin still fails closed.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&abandoned_op(n)).unwrap();}
+    let e=pointer_put_reclaiming(&mut st,"r",3,"keys.near","k1",&ninth).unwrap_err();
+    assert_eq!(e.code,"guard_state");
+    assert!(e.message.contains("no value operation started"));
+    assert_eq!(pointer_ids(&mut st,"r",3).unwrap().len() as u64,POINTER_SLOTS,"no live slot may be removed");
+    // (3) 7 live + 1 abandoned: the 9th succeeds and frees ONLY the abandoned slot.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&abandoned_op(n)).unwrap();}
+    mark_abandoned(&mut st,"keys.near","k1",&abandoned_op(5));
+    pointer_put_reclaiming(&mut st,"r",3,"keys.near","k1",&ninth).unwrap();
+    let ids=pointer_ids(&mut st,"r",3).unwrap();
+    assert!(ids.contains(&ninth));
+    assert!(!ids.contains(&abandoned_op(5)),"the abandoned slot is the one freed");
+    for n in [0,1,2,3,4,6,7] {assert!(ids.contains(&abandoned_op(n)),"live slot {n} must survive");}
+}
+#[test]
+fn reclaim_never_frees_slots_abandoned_under_another_contract_or_token() {
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&abandoned_op(n)).unwrap();}
+    for n in 0..4 {mark_abandoned(&mut st,"other.near","k1",&abandoned_op(n));}
+    for n in 4..POINTER_SLOTS {mark_abandoned(&mut st,"keys.near","k2",&abandoned_op(n));}
+    let ninth=format!("3:{}", "f".repeat(64));
+    let e=pointer_put_reclaiming(&mut st,"r",3,"keys.near","k1",&ninth).unwrap_err();
+    assert_eq!(e.code,"guard_state");
+    assert_eq!(pointer_ids(&mut st,"r",3).unwrap().len() as u64,POINTER_SLOTS);
+}
+#[test]
+fn pointer_remove_op_removes_only_the_named_attempt() {
+    let mut st=Memory::default();
+    for op in ["3:a","3:b","3:c"] {pointer_put(&mut st,"r",3,op).unwrap();}
+    pointer_remove_op(&mut st,"r",3,"3:b").unwrap();
+    assert_eq!(pointer_ids(&mut st,"r",3).unwrap(),vec!["3:a".to_string(),"3:c".to_string()]);
+    pointer_remove_op(&mut st,"r",3,"3:absent").unwrap();
+    assert_eq!(pointer_ids(&mut st,"r",3).unwrap(),vec!["3:a".to_string(),"3:c".to_string()]);
+    pointer_remove_op(&mut st,"r",3,"3:a").unwrap();
+    pointer_remove_op(&mut st,"r",3,"3:c").unwrap();
+    assert!(pointer_ids(&mut st,"r",3).unwrap().is_empty());
+    assert!(st.0.is_empty(),"no stale keys left behind");
+}
+#[test]
+fn never_begun_proof_requires_all_three_facts() {
+    assert!(never_begun_proven(true,true,true));
+    for (a,p,m) in [(false,true,true),(true,false,true),(true,true,false),(false,false,false)]{
+        assert!(!never_begun_proven(a,p,m),"value_op_absent={a} pending_zero={p} minter_idle={m} must not prove never-begun");
+    }
+}
+#[test]
+fn twenty_failed_before_begin_attempts_never_exhaust_slots() {
+    // guard_begin's put/abandon cycle, simulated at the pointer layer: each
+    // failed-before-begin attempt puts its pointer, then abandon_unbegun
+    // removes exactly that attempt's pointer. 20 in a row must all succeed.
+    let mut st=Memory::default();
+    for n in 0..20u64 {
+        let op=format!("3:{n:064}");
+        pointer_put_reclaiming_proven(&mut st,"r",3,"keys.near","k1",&op,&|_|false).unwrap();
+        pointer_remove_op(&mut st,"r",3,&op).unwrap();
+        assert!(pointer_ids(&mut st,"r",3).unwrap().is_empty(),"attempt {n} must leave no pointer behind");
+    }
+    // Pre-fix shape (plain put, no removal on abandon): the 9th attempt fails.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&format!("3:{n:064}")).unwrap();}
+    let ninth=format!("3:{:064}",POINTER_SLOTS);
+    assert_eq!(pointer_put(&mut st,"r",3,&ninth).unwrap_err().code,"guard_state");
+}
+#[test]
+fn stale_eight_slots_recover_via_proven_never_begun_and_next_op_admits() {
+    // No abandoned markers at all: the slots are stale only because the
+    // occupants provably never began. One proven slot frees the 9th begin.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&abandoned_op(n)).unwrap();}
+    let ninth=format!("3:{}", "f".repeat(64));
+    pointer_put_reclaiming_proven(&mut st,"r",3,"keys.near","k1",&ninth,&|op|op==abandoned_op(3).as_str()).unwrap();
+    let ids=pointer_ids(&mut st,"r",3).unwrap();
+    assert_eq!(ids.len() as u64,POINTER_SLOTS);
+    assert!(ids.contains(&ninth),"the 9th begin must hold a reclaimed slot");
+    assert!(!ids.contains(&abandoned_op(3)),"only the proven slot is freed");
+    for n in [0,1,2,4,5,6,7] {assert!(ids.contains(&abandoned_op(n)),"unproven slot {n} must survive");}
+}
+#[test]
+fn slot_whose_op_began_on_chain_is_never_reclaimed() {
+    // Every occupant began on-chain (oracle false for all): the 9th fails and
+    // all 8 begun slots survive untouched.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&abandoned_op(n)).unwrap();}
+    let ninth=format!("3:{}", "f".repeat(64));
+    let e=pointer_put_reclaiming_proven(&mut st,"r",3,"keys.near","k1",&ninth,&|_|false).unwrap_err();
+    assert_eq!(e.code,"guard_state");
+    assert_eq!(pointer_ids(&mut st,"r",3).unwrap().len() as u64,POINTER_SLOTS,"no begun slot may be removed");
+    // Mixed: 7 begun + 1 never begun — the 9th succeeds and every begun slot survives.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&abandoned_op(n)).unwrap();}
+    pointer_put_reclaiming_proven(&mut st,"r",3,"keys.near","k1",&ninth,&|op|op==abandoned_op(6).as_str()).unwrap();
+    let ids=pointer_ids(&mut st,"r",3).unwrap();
+    assert!(ids.contains(&ninth));
+    assert!(!ids.contains(&abandoned_op(6)));
+    for n in [0,1,2,3,4,5,7] {assert!(ids.contains(&abandoned_op(n)),"begun slot {n} must survive");}
+}
+#[test]
+fn slot_is_never_reclaimed_while_minter_ticket_unresolved() {
+    // get_value_op is null and pending is 0 for every occupant, but the
+    // minter native journal has an unresolved ticket: the conjunction fails,
+    // so no slot is freed even though the other two facts hold.
+    let mut st=Memory::default();
+    for n in 0..POINTER_SLOTS {pointer_put(&mut st,"r",3,&abandoned_op(n)).unwrap();}
+    let ninth=format!("3:{}", "f".repeat(64));
+    let minter_busy=|_:&str|never_begun_proven(true,true,false);
+    let e=pointer_put_reclaiming_proven(&mut st,"r",3,"keys.near","k1",&ninth,&minter_busy).unwrap_err();
+    assert_eq!(e.code,"guard_state");
+    assert_eq!(pointer_ids(&mut st,"r",3).unwrap().len() as u64,POINTER_SLOTS,"no slot may be freed while the minter ticket is unresolved");
+    // Same occupants, minter journal idle: the conjunction holds and the 9th admits.
+    let minter_idle=|_:&str|never_begun_proven(true,true,true);
+    pointer_put_reclaiming_proven(&mut st,"r",3,"keys.near","k1",&ninth,&minter_idle).unwrap();
+    assert!(pointer_ids(&mut st,"r",3).unwrap().contains(&ninth));
+}
 #[test]
 fn guard_begin_requires_the_pointer_before_admission() {
     let host=include_str!("guarded_host.rs");
-    let a=host.find("if let Err(e)=guarded::pointer_put(&mut Host,&root,j.nonce,&j.op_id){abandon_unbegun(&j,&held);return Err(e);}").expect("pointer_put must propagate its error");
+    let a=host.find("if let Err(e)=guarded::pointer_put_reclaiming(&mut Host,&root,j.nonce,&j.contract,&j.token_id,&j.op_id){").expect("reclaiming pointer_put must propagate its error");
     let b=host.find("if let Err(e)=guard_admit(&j)").expect("admission");
     assert!(a<b,"the pointer must be written before begin_value_op can be sent");
+    // abandon_unbegun must free this attempt's own pointer slot, or every
+    // refused begin leaks one slot until the nonce's 8 slots are exhausted.
+    let start=host.find("fn abandon_unbegun").expect("abandon_unbegun");
+    let end=host[start..].find("fn guard_begin").expect("guard_begin follows abandon_unbegun")+start;
+    assert!(host[start..end].contains("pointer_remove_op(&mut Host,&tkey(&j.token_id,\"value_recovery\"),j.nonce,&j.op_id)"),"abandon_unbegun must remove only this attempt's pointer");
+    // The proven-never-begun branch must gather all three live facts inside
+    // guard_begin before reclaiming: no on-chain permit, no pending value op,
+    // and an idle minter native journal. Any missing fact fails closed.
+    let gb=host.find("fn guard_begin").expect("guard_begin");
+    let ga=host[gb..].find("fn guard_admit").expect("guard_admit follows guard_begin")+gb;
+    let span=&host[gb..ga];
+    for needle in ["pointer_put_reclaiming_proven","never_begun_proven","get_value_op","native_send::current"]{
+        assert!(span.contains(needle),"guard_begin must gather {needle} before reclaiming a never-begun slot");
+    }
 }
 
 #[test]
