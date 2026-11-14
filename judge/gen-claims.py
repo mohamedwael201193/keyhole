@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Regenerates docs/claims.json from README.md, TRACK_COVERAGE.md, SECURITY.md and the site source.
-# usage: python3 judge/gen-claims.py .
+# usage: python3 verify/gen-claims.py .
 import re, json, os, sys, inspect
 R = sys.argv[1] if len(sys.argv) > 1 else "."; os.chdir(R)
 DOCS = ["README.md", "TRACK_COVERAGE.md", "SECURITY.md"]
@@ -12,10 +12,10 @@ def add(id, claim, where, etype, evidence, check, expected, verify=None):
     # Retained source assertions cite their real generator callsite, not README line zero.
     caller = inspect.currentframe().f_back
     if caller.f_code.co_name == "<lambda>": caller = caller.f_back
-    origin = f"judge/gen-claims.py:{caller.f_lineno}"
+    origin = f"verify/gen-claims.py:{caller.f_lineno}"
     C.append(dict(id=id, claim=claim, where=where or origin, evidence_type=etype, evidence=evidence,
                   check=check, expected=expected,
-                  verify=verify or f"node judge/verify-claims.mjs --only {id}"))
+                  verify=verify or f"node verify/verify-claims.mjs --only {id}"))
 def where(doc, needle):
     for i, l in enumerate(open(doc, encoding="utf8"), 1):
         if needle in l: return f"{doc}:{i}"
@@ -25,8 +25,8 @@ def where(doc, needle):
 ID=json.load(open("identity.json")); W=ID["worker"]; K=ID["contract"]
 RD="README.md"; TC="TRACK_COVERAGE.md"; SE="SECURITY.md"
 # ---------------- contract (live RPC) ----------------
-add("contract-code-hash", f"Mainnet code_hash {K['code_hash']} equals base58 sha256 of the committed deployed contract", where(RD,K["code_hash"]), "script", "judge/1-contract.sh",
-    {"type":"code_hash","account":K["account"],"wasm":("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),"code_hash":K["code_hash"]}, "chain == committed deployed wasm == identity", "bash judge/1-contract.sh --strict")
+add("contract-code-hash", f"Mainnet code_hash {K['code_hash']} equals base58 sha256 of the committed deployed contract", where(RD,K["code_hash"]), "script", "verify/1-contract.sh",
+    {"type":"code_hash","account":K["account"],"wasm":("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),"code_hash":K["code_hash"]}, "chain == committed deployed wasm == identity", "bash verify/1-contract.sh --strict")
 add("contract-wasm-sha", f"Deployed contract wasm is {K['bytes']:,} bytes with sha256 {K['wasm_sha256']}", where(RD,K["wasm_sha256"]), "file", ("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),
     {"type":"sha256","path":("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),"sha256":K["wasm_sha256"],"bytes":K["bytes"]}, f"sha256 {K['wasm_sha256']}, {K['bytes']} bytes")
 add("contract-source-version", f"NEP-330 mainnet source metadata reports version {K['version']}", where(RD,K["version"]), "mainnet view", "contract_source_metadata()",
@@ -37,8 +37,8 @@ for k,v in cfg.items():
         {"type":"view","method":"config","args":{},"path":k,"op":"eq","value":v}, f"config.{k} == {v}")
 add("config-beats", "Heartbeat count config.beats was 2 at capture (2026-11-03) and only grows", where(RD,'"beats":"2"'), "mainnet view", "keyhole-devmo.near config()",
     {"type":"view","method":"config","args":{},"path":"beats","op":"gte","value":2}, "config.beats >= 2 (live value printed)")
-add("supply", "nft_total_supply was 6 on 2026-11-07 (live value can only grow)", where(RD,"`nft_total_supply` = 6"), "mainnet view", "keyhole-devmo.near nft_total_supply()",
-    {"type":"view","method":"nft_total_supply","args":{},"op":"gte","value":6}, ">= 6 (live value printed)")
+add("supply", "nft_total_supply was 8 on 2026-11-14 (live value can only grow)", where(RD,"Supply **8**"), "mainnet view", "keyhole-devmo.near nft_total_supply()",
+    {"type":"view","method":"nft_total_supply","args":{},"op":"gte","value":8}, ">= 8 (live value printed)")
 add("metadata-symbol", "NEP-177 metadata is KEYHOLE / KEY", where(RD,"(`KEYHOLE` / `KEY`)"), "mainnet view", "nft_metadata()",
     {"type":"view","method":"nft_metadata","args":{},"path":"symbol","op":"eq","value":"KEY"}, "symbol == KEY")
 add("metadata-name", "NEP-177 metadata name is KEYHOLE", where(RD,"(`KEYHOLE` / `KEY`)"), "mainnet view", "nft_metadata()",

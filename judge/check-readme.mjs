@@ -58,7 +58,10 @@ if (isMain) {
   }
   let failed = 0;
   for (const row of fences) {
-    const result = await runFence(row.body, { timeoutMs: 120_000 });
+    // 300s: the fence fetches the pinned commit from GitHub; on a slow
+    // network that alone can exceed two minutes. The fence content is
+    // verified separately by judge/checkout-command.test.mjs.
+    const result = await runFence(row.body, { timeoutMs: 300_000 });
     if (result.code !== 0) failed += 1;
     console.log(`${result.code === 0 ? "PASS" : "FAIL"} ${row.path} exit ${result.code}`);
   }

@@ -6,7 +6,7 @@ const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const identity = JSON.parse(read("../identity.json"));
 const readme = read("../README.md");
 const track = read("../TRACK_COVERAGE.md");
-const judge = read("../JUDGE_AGENT.md");
+const judge = read("../AGENTS.md");
 const verify = read("../VERIFY.md");
 const security = read("../SECURITY.md");
 const costs = read("../docs/COSTS_AND_RISK.md");

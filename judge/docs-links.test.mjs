@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const files = [
-  "README.md", "SECURITY.md", "THREAT_MODEL.md", "TRACK_COVERAGE.md", "JUDGE_AGENT.md",
+  "README.md", "SECURITY.md", "THREAT_MODEL.md", "TRACK_COVERAGE.md", "AGENTS.md",
   "VERIFY.md", "PROOFS.md", "tee/worker/README.md", "contracts/keys/README.md", "docs/COSTS_AND_RISK.md",
   "docs/evidence/worker-provisioning/README.md",
 ];

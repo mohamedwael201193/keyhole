@@ -70,7 +70,7 @@ fi
 export IDENT OUTLAYER RECEIPT_PY
 export NEAR_RPC="${NEAR_RPC:-}"
 "$PYTHONBIN" - <<'PY'
-import json, os, sys, urllib.error, urllib.request
+import json, os, subprocess, sys, urllib.error, urllib.request
 
 import importlib.util
 ident_path = os.environ["IDENT"]
@@ -123,6 +123,14 @@ def http_json(url, data=None, timeout=12):
         except Exception as e:
             last = e
     raise last
+
+def curl_json(url, timeout=30):
+    # The OutLayer attestation response truncates under urllib through some
+    # egress proxies (IncompleteRead at ~5KB of 7463 bytes, both attempts);
+    # curl reads it whole. curl is already a hard requirement of this script.
+    out = subprocess.run(["curl", "-fsSL", "--max-time", str(timeout), url],
+                         capture_output=True, timeout=timeout + 5)
+    return json.loads(out.stdout.decode())
 
 def rpc(method, params, urls=None, timeout=12):
     last = None
@@ -265,7 +273,7 @@ else:
 
 # 3. Recorded attestation: the live worker info call in identity.json
 try:
-    att = http_json("%s/attestations/by-call/%s" % (outlayer, info_call))
+    att = curl_json("%s/attestations/by-call/%s" % (outlayer, info_call))
     executed = (att.get("executed_wasm_sha256") or "").strip()
     registered = (att.get("wasm_hash") or "").strip()
     quote = att.get("tdx_quote") or ""

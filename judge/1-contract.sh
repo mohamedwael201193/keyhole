@@ -31,11 +31,14 @@ M=$(jq -r .minter <<<"$CFG")
 if [ "$STRICT" -eq 1 ]; then
   export VERIFY_CONTRACT="$C" VERIFY_RPC="$RPC"
   python3 - <<'PYVERIFY'
-import base64,hashlib,json,os,urllib.request
+import base64,hashlib,json,os,subprocess
 identity=json.load(open('identity.json'))['contract']
 def query(kind,**kw):
- req=urllib.request.Request(os.environ['VERIFY_RPC'],data=json.dumps({'jsonrpc':'2.0','id':'strict-read-only','method':'query','params':dict(request_type=kind,account_id=os.environ['VERIFY_CONTRACT'],**kw)}).encode(),headers={'content-type':'application/json','User-Agent':'KEYHOLE-release-verifier/2.6 (+https://github.com/mohamedwael201193/keyhole)'})
- with urllib.request.urlopen(req,timeout=30) as r:j=json.load(r)
+ # curl, not urllib: the view_code response (~692KB base64) truncates under
+ # urllib through some egress proxies (IncompleteRead); curl reads it whole.
+ payload=json.dumps({'jsonrpc':'2.0','id':'strict-read-only','method':'query','params':dict(request_type=kind,account_id=os.environ['VERIFY_CONTRACT'],**kw)})
+ out=subprocess.run(['curl','-fsS','--max-time','60',os.environ['VERIFY_RPC'],'-H','content-type: application/json','-d',payload],capture_output=True,timeout=70)
+ j=json.loads(out.stdout.decode())
  if 'error' in j:raise RuntimeError(j['error'])
  return j['result']
 a=query('view_account',finality='final');block=a['block_hash']
