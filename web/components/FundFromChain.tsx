@@ -150,7 +150,6 @@ export function FundFromChain({ recipient, dest, destSymbol, units, amount, evm,
           </ol>
           <p className="vlt-sub" data-testid="fac-status">{stText}</p>
           <p className="vlt-sub">Routed by NEAR Intents 1Click into this vault&apos;s deposit address. First time? Send a small amount first.</p>
-          <p className="vlt-sub"><a href={`https://explorer.near-intents.org/transactions/${order.depositAddress}`} target="_blank" rel="noreferrer">Intents explorer ↗</a></p>
         </div>
       )}
     </div>

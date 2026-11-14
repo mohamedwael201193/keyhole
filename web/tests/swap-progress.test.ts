@@ -97,8 +97,9 @@ describe("/swap phases and their real sources (source contract)", () => {
   it("the success state keeps the trade line, the status word and the call link the e2e flows read", () => {
     expect(done).toContain("summary || outcome.headline");
     expect(done).toContain("{status ?? \"not shown\"}");
-    expect(done).toContain("intentTx(intentHash)");
-    expect(done).toContain("View transaction");
+    expect(done).not.toContain("intentTx");
+    expect(done).not.toContain("View transaction");
+    expect(done).toContain("See your proof");
     expect(done).toContain("`/verify?call=${encodeURIComponent(callId)}`");
     expect(view).toContain("const summary = done && out ? tradeSummary(done.give, String(out.amount_out ?? \"0\"), done.decimals, done.symbol) : \"\";");
   });

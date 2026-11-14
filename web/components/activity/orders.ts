@@ -4,7 +4,7 @@
  * lib/settlements.ts (SETTLEMENTS, VAULT_TRADE) and the 1Click asset list (OC_ASSETS). A value that was not read stays missing;
  * nothing here invents a count, a percentage, a time or a hash.
  */
-import { intentTx, tx, txAlt } from "@/lib/config";
+import { tx, txAlt } from "@/lib/config";
 import { explorerChain, explorerUrl } from "@/lib/explorer";
 import { STATUS, assetById, fundsStep, statusOf, type OcAsset } from "@/lib/oneclick";
 import { amountText, entryDetail, kindLabel, type HistEntry } from "@/lib/dashboard";
@@ -442,7 +442,7 @@ export function timelineOf(row: OrderRow): Timeline {
         },
         {
           id: "intent", title: "Intent matched", sub: "Route sent through NEAR Intents.", state: "done", amount: null,
-          links: [{ label: "intent", hash: VAULT_TRADE.intentHash, href: intentTx(VAULT_TRADE.intentHash) }],
+          links: [{ label: "intent", hash: VAULT_TRADE.intentHash, href: null }],
         },
         {
           id: "final", title: "Settled", sub: "Received in the key's sealed account.", state: "done", amount: VAULT_TRADE.amountOut, links: [],
@@ -471,7 +471,7 @@ export function timelineOf(row: OrderRow): Timeline {
       : intentState === "todo" ? "Starts once the deposit is seen."
       : "Route sent through NEAR Intents.",
     state: intentState, amount: null,
-    links: intents.map((h) => ({ label: "intent", hash: h.hash, href: intentTx(h.hash) })),
+    links: intents.map((h) => ({ label: "intent", hash: h.hash, href: null })),
   };
 
   let final: TimelineStep;
@@ -515,7 +515,7 @@ export function proofRowsOf(row: OrderRow): ProofItem[] {
   if (row.kind === "vault") {
     return [
       { label: "enclave call", value: VAULT_TRADE.callId, href: `/verify?call=${VAULT_TRADE.callId}`, internal: true },
-      { label: "intent hash", value: VAULT_TRADE.intentHash, href: intentTx(VAULT_TRADE.intentHash) },
+      { label: "intent hash", value: VAULT_TRADE.intentHash },
       { label: "account", value: VAULT_TRADE.account },
       { label: "evidence file", value: VAULT_TRADE.file },
     ];
@@ -528,7 +528,7 @@ export function proofRowsOf(row: OrderRow): ProofItem[] {
     out.push({ label: "deposit tx", value: s.depositTx, href: href ?? undefined, alt: !s.depositTxUrl && row.from?.chain === "near" ? txAlt(s.depositTx) : undefined });
   }
   out.push({ label: "deposit address", value: row.id });
-  for (const h of refsOf(d?.intentHashes)) out.push({ label: "intent", value: h.hash, href: intentTx(h.hash) });
+  for (const h of refsOf(d?.intentHashes)) out.push({ label: "intent", value: h.hash });
   for (const h of refsOf(d?.nearTxHashes)) out.push({ label: "near tx", value: h.hash, href: tx(h.hash), alt: txAlt(h.hash) });
   for (const h of refsOf(d?.originChainTxHashes)) out.push({ label: "origin tx", value: h.hash, href: h.explorerUrl ?? explorerFor(row.from?.chain, h.hash) ?? undefined });
   for (const h of refsOf(d?.destinationChainTxHashes)) out.push({ label: "destination tx", value: h.hash, href: h.explorerUrl ?? explorerFor(row.to?.chain, h.hash) ?? undefined });
@@ -552,10 +552,13 @@ export function proofHrefOf(row: OrderRow): { href: string; internal: boolean } 
   return pick?.href ? { href: pick.href, internal: false } : null;
 }
 
-/** The explorer behind the header's external-link icon: the intent when there is one, otherwise the first hash link. */
+/** The explorer behind the header's external-link icon: the first real transaction link (a NEAR tx or a deposit tx).
+ * An intent hash is not a transaction hash and the Intents explorer does not resolve it (verified 2026-11-14:
+ * /transactions/<intent-hash> returns "Transaction not found"), so intent rows carry no explorer link; a vault
+ * row's proof is its attested call, shown as "View proof". */
 export function explorerHrefOf(row: OrderRow): string | null {
   if (row.read.state === "signed") return null;
-  if (row.kind === "vault") return intentTx(VAULT_TRADE.intentHash);
+  if (row.kind === "vault") return null;
   const p = proofHrefOf(row);
   return p && !p.internal ? p.href : null;
 }

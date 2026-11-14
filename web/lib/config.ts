@@ -26,9 +26,10 @@ export const TEE_MINTER = "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870c
 export const NEARBLOCKS = "https://nearblocks.io";
 export const tx = nearTx;
 export const acct = nearAccount;
-/** Public transaction page. The path is /transactions/<id>; an intent hash uses that same path. */
-export const INTENTS_EXPLORER = "https://explorer.near-intents.org";
-export const intentTx = (hash: string) => `${INTENTS_EXPLORER}/transactions/${hash}`;
+/** The Intents explorer resolves NEAR transaction hashes only. An intent hash is
+ * not a transaction hash: /transactions/<intent-hash> returns "Transaction not
+ * found" (verified 2026-11-14 on the live explorer), so no surface links an
+ * intent hash or a deposit address to it. Intent hashes are shown as text. */
 export const attestation = (callId: string) => `${OUTLAYER_API}/attestations/by-call/${callId}`;
 /** Second explorer for when nearblocks is blocked (it sits behind Cloudflare, which can refuse automated browsers). */
 export const ALT_EXPLORER = "https://pikespeak.ai";

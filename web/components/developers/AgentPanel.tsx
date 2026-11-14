@@ -7,6 +7,7 @@ import { Button } from "@/components/ui";
 
 const AGENT_ERR: Record<string, string> = {
   policy_transaction_limit_exceeded: "Above the per-trade limit, so the policy refused it. That is the cap doing its job.",
+  policy_action_denied: "The owner's policy turns this action off for every grant; the real request would be refused.",
   rate_limited: "Too many requests this minute. Wait a few seconds and try again.",
   unavailable: "The Agent API did not answer. Try again later.",
   unauthorized: "The Agent API refused this request (401): the demo key does not cover that endpoint. A retry cannot fix it — the key needs the right scope.",

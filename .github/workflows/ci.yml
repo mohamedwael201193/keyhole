@@ -6,6 +6,10 @@ on:
 # Runs on GitHub-hosted runners. Only pushes and same-repo PRs run; fork PRs are skipped and there is no pull_request_target.
 permissions:
   contents: read
+# One run per ref: a newer push cancels the older run instead of queueing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   contract:
     runs-on: ubuntu-latest

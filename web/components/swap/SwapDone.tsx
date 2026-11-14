@@ -2,15 +2,15 @@
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import { InCardSuccess, InCardProgress, Details } from "@/components/InCard";
-import { intentTx } from "@/lib/config";
 import type { SwapOutcome } from "./progress";
 import { dashHref } from "@/lib/dashboardSections";
 
 /**
  * The finished swap, in place inside the swap card: a check mark, the amount, the word from the enclave's status ("Settled")
- * and a transaction link. A swap that is still on its way or was refunded keeps its own plain word and renders progress, not
+ * and a link to the attested call proof. A swap that is still on its way or was refunded keeps its own plain word and renders progress, not
  * a success check: the outcome is not settled yet. Everything technical is in Details. Nothing here is computed beyond
- * formatting: the amounts and hashes come from the enclave's answer.
+ * formatting: the amounts and hashes come from the enclave's answer. The intent hash is shown as text only: it is not a
+ * transaction hash and the Intents explorer does not resolve it (verified 2026-11-14).
  */
 export function SwapDone({ outcome, summary, status, requestId, intentHash, callId, minOut, onAgain, testid = "trade-out" }: {
   outcome: SwapOutcome;
@@ -46,7 +46,6 @@ export function SwapDone({ outcome, summary, status, requestId, intentHash, call
       <div>
         <InCardProgress title={outcome.chip} line={outcome.where} testid={testid} />
         <p className="ic-note">{summary || outcome.headline}</p>
-        {intentHash && <p className="ic-note"><a className="ic-link" href={intentTx(intentHash)} target="_blank" rel="noreferrer" data-testid="swap-intent-link">View transaction</a></p>}
         {facts}
         <div className="ic-actions">{actions}</div>
       </div>
@@ -58,7 +57,7 @@ export function SwapDone({ outcome, summary, status, requestId, intentHash, call
       status={status ?? undefined}
       amount={summary || outcome.headline}
       title={outcome.chip}
-      link={intentHash ? { href: intentTx(intentHash), label: "View transaction", testid: "swap-intent-link" } : null}
+      link={null}
       actions={actions}
     >
       {facts}

@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge, CopyBtn } from "@/components/ui";
 import { SuccessCheck } from "@/components/motion";
-import { intentTx } from "@/lib/config";
 import { TxLink } from "./TxLink";
 import { dashHref } from "@/lib/dashboardSections";
 
@@ -59,7 +58,7 @@ export function TxResult({ state, hash, intentHash, callId, title, reason, child
       {intentHash && (
         <div className="kh-tx-row" data-testid="tx-intent-row">
           <span>Intents</span>
-          <a href={intentTx(intentHash)} target="_blank" rel="noreferrer">View on the intents explorer ↗</a>
+          <code title={intentHash}>{`${intentHash.slice(0, 8)}…${intentHash.slice(-4)}`}</code>
         </div>
       )}
 

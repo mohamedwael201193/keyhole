@@ -2,13 +2,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DEMO_META, DEMO_STEPS, type DemoProof } from "@/lib/demo";
-import { intentTx, tx } from "@/lib/config";
+import { tx } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import "../public-pages.css";
 
 function Proof({ p }: { p: DemoProof }) {
   if (p.kind === "call") return <Link className="dproof" href={`/verify?call=${p.ref}`}>verify call {p.ref.slice(0, 8)} →</Link>;
-  if (p.kind === "intent") return <a className="dproof" href={intentTx(p.ref)} target="_blank" rel="noreferrer">intent {p.ref.slice(0, 8)}… ↗</a>;
+  if (p.kind === "intent") return <span className="dproof">intent {p.ref.slice(0, 8)}…</span>;
   return <a className="dproof" href={tx(p.ref)} target="_blank" rel="noreferrer">tx {p.ref.slice(0, 8)}… ↗</a>;
 }
 

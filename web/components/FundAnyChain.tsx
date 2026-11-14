@@ -67,7 +67,7 @@ export function FundAnyChain({ recipient, evm }: { recipient: string; evm?: stri
             <div className="vbox ro"><span className="v addr">{q.depositAddress}</span><CopyButton value={q.depositAddress} /></div>
             <p className="vhelp">You receive about {q.amountOutFormatted ?? "—"} USDC in your vault{q.timeEstimate ? `, usually within ${q.timeEstimate}s` : ""}. Quote valid until {q.deadline ? new Date(q.deadline).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}.</p>
             <ol className="fanyc-steps" data-testid="fac-progress">{FUND_STEPS.map((s, i) => <li key={s} data-state={fs && i < fs.step ? "done" : fs && i === fs.step ? "now" : "next"}>{i === 3 && fs?.refund ? "Refunded to you" : i === 3 ? "Your vault" : s}</li>)}</ol>
-            <p className="note" data-testid="fac-status">{st ? `${statusOf(st.status).label}. ${statusOf(st.status).where}` : "Checking status…"} <a href={`https://explorer.near-intents.org/transactions/${q.depositAddress}`} target="_blank" rel="noreferrer">Intents explorer ↗</a></p>
+            <p className="note" data-testid="fac-status">{st ? `${statusOf(st.status).label}. ${statusOf(st.status).where}` : "Checking status…"}</p>
           </div>
         </div>
       )}

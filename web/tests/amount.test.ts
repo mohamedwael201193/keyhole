@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { assetRows, formatUsdMicro, fromBaseUnits, priceToMicro, totalOf, tradeSummary, valueMicro, withdrawSummary } from "@/lib/amount";
-import { intentTx } from "@/lib/config";
 
 const USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 const WNEAR = "nep141:wrap.near";
@@ -65,10 +64,8 @@ describe("dollar totals", () => {
 });
 
 describe("trade and withdraw results", () => {
-  it("states the trade in human amounts and links the intent hash", () => {
+  it("states the trade in human amounts", () => {
     expect(tradeSummary("0.02 USDC", OUT, 24, "wNEAR")).toBe("Traded 0.02 USDC → 0.004484 wNEAR");
-    const hash = "4qAnExampleIntentHash";
-    expect(intentTx(hash)).toBe(`https://explorer.near-intents.org/transactions/${hash}`);
   });
 
   it("states the withdraw with the destination and the request", () => {

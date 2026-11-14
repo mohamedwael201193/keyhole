@@ -111,7 +111,7 @@ export const RESERVES = {
   custodyCreditUsdc: "0.899818",
   custodyCreditRaw: "899,818",
   floorUsdc: "0.50",
-  reportedAt: "14 Nov 2026, at funding",
+  reportedAt: "14 Nov 2026",
   pooledUsdc: "352.541527",
 };
 
