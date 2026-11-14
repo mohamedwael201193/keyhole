@@ -28,7 +28,7 @@ export const LIEN_REFUSALS = [
   { action: "withdraw", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_withdraw via guard_preflight (tee/worker/src/main.rs:577)" },
   { action: "swap", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap via guard_preflight (tee/worker/src/main.rs:527)" },
   { action: "copy", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached from op_swap(copy) via guard_preflight (tee/worker/src/main.rs:527)" },
-  { action: "withdraw_dry_run", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached via guard_preflight (tee/worker/src/guarded_host.rs:27-28)" },
+  { action: "withdraw_dry_run", refused_by: "enclave", code: "pledged", message: PLEDGED_ENCLAVE, source: "tee/worker/src/guarded.rs:35 Control::admit, reached via guard_preflight (tee/worker/src/guarded_host.rs:39-40)" },
 ] as const;
 
 /** The only way the key moves under a loan that this page reads. Identical to web/lib/lien.ts DEFAULT_PATH_RULES. */
