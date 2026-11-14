@@ -30,8 +30,8 @@ export function Pledge() {
         <div className="lp-pledge-copy">
           <p className="lp-eyebrow">{t("landing2.v2.pledge.eyebrow")}</p>
           <h2 id="pledge-h" className="lp-h2">{t("landing2.v2.pledge.h2")}</h2>
-          <p className="lp-body">{t("landing2.v2.pledge.body")}</p>
           <p className="lp-chip" data-testid="pledge-badge">{t("landing2.v2.pledge.badge")}</p>
+          <p className="lp-body">{t("landing2.v2.pledge.body")}</p>
           <div className="lp-cta lp-cta--tight">
             <Link href="/pledge" className="lp-btn lp-btn--ghost" data-testid="pledge-cta">{t("landing2.v2.pledge.cta")}<Icon name="arrow" size={18} /></Link>
           </div>

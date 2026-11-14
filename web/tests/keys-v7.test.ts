@@ -131,7 +131,8 @@ describe("mint screen parts", () => {
       { finish: "Silver", art: 4, mintable: false },
     ] }));
     expect(m).toContain("1 of 2");
-    expect(m).toContain("Mintable today");
+    expect(m).toContain("Mintable");
+    expect(m).not.toContain("Mintable today");
     expect(m).toContain('aria-label="Next key"');
   });
 });

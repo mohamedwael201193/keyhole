@@ -4,7 +4,10 @@
   position: relative;
   z-index: 1;
   min-width: 0;
-  overflow: visible;
+  /* Clip horizontally only: the floating key hangs ~1px past the viewport at 900/1200px
+     (a real H-scrollbar). Vertical stays visible so the key tip shows above the card. */
+  overflow-x: clip;
+  overflow-y: visible;
   /* Fill the main pane; safe-center when there is spare height (never grow scroll). */
   min-height: calc(100dvh - 64px);
   display: flex;

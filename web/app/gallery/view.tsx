@@ -125,7 +125,9 @@ export function GalleryView({ initial, serverTokens: serverTokensProp, serverTie
           action={<Button variant="secondary" onClick={() => setClientAll(null)} testid="gallery-all-retry">Try again</Button>} />
       );
     } else if (!serverTokens) {
-      stateBlock = <div data-testid="gallery-all-loading" aria-live="polite"><p className="kg-note">Reading the keys minted on NEAR mainnet…</p><Skeleton lines={2} /></div>;
+      // The list itself is still on its way, but the total (one cheap read) is usually known already:
+      // show it so the page is not a bare spinner for the whole chain read.
+      stateBlock = <div data-testid="gallery-all-loading" aria-live="polite"><p className="kg-note">{total != null ? `${total} keys minted on NEAR mainnet. Reading the list…` : "Reading the keys minted on NEAR mainnet…"}</p><Skeleton lines={2} /></div>;
     } else if (serverTokens.length === 0) {
       stateBlock = <EmptyState title="No keys yet" body={t("gallery.empty")} testid="gallery-empty" />;
     }

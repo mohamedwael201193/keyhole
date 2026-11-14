@@ -936,7 +936,7 @@ test("home: the final band leads to the app and the builders band above it leads
   await expect(page.locator("#cta").getByTestId("cta-launch")).toHaveAttribute("href", "/dashboard");
   await expect(page.locator("#cta").getByTestId("cta-get-key")).toHaveAttribute("href", "/mint");
   // Old cta-proof -> /judge: the proof link now sits in the builders band (build hash), directly above the close.
-  await expect(page.locator("#builders").getByTestId("hash-stat")).toHaveAttribute("href", "/judge");
+  await expect(page.locator("#builders").getByTestId("hash-stat")).toHaveAttribute("href", "/verify/path");
   await expect(page.getByText("Eight assets.")).toHaveCount(0);
 });
 

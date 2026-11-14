@@ -93,3 +93,31 @@ describe("holder-only withdrawal UI", () => {
     expect(v).toContain('title="Withdraw to your NEAR account"');
   });
 });
+
+describe("held vault shows the top-up code when the account is not on chain yet (F-3R)", () => {
+  it("mounts TopupQr in the held body as well as the holder-only branch, and nowhere else", () => {
+    const v = src("../app/vault/view.tsx");
+    // Exactly two mounts, one per mutually exclusive branch: no key held (holder-only) and key held.
+    expect(v.match(/<TopupQr accountId=\{accountId\} \/>/g)?.length).toBe(2);
+    // The held body is the final `else` after the keyMiss branch; it holds the balance hero.
+    const keyMissAt = v.indexOf("} else if (keyMiss) {");
+    expect(keyMissAt).toBeGreaterThan(-1);
+    const heldAt = v.indexOf("} else {", keyMissAt);
+    expect(heldAt).toBeGreaterThan(keyMissAt);
+    const heldBody = v.slice(heldAt);
+    expect(heldBody).toContain('testid="balance-card"');
+    const topupAt = heldBody.indexOf("<TopupQr accountId={accountId} />");
+    expect(topupAt).toBeGreaterThan(-1);
+    // Above the columns, directly under the balance hero, so an unfunded holder sees it first.
+    expect(topupAt).toBeLessThan(heldBody.indexOf('className="vlt-cols"'));
+  });
+
+  it("TopupQr only renders its vault-topup marker for an account that does not exist yet", () => {
+    const v = src("../app/vault/view.tsx");
+    // The gate is the component's own: an account that exists on chain — funded, locked or sealed —
+    // never sees the code, so the held-body mount cannot duplicate it for funded accounts.
+    expect(v).toContain("if (!acct || acct.exists) return null;");
+    expect(v).toContain('data-testid="vault-topup"');
+    expect(v).toContain("Your account is not on chain yet.");
+  });
+});

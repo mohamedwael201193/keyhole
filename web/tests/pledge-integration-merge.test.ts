@@ -30,8 +30,16 @@ describe("two-sided Pledge + integrated recovery invariants", () => {
   });
   it("keeps recovery + ordinary onboarding and exactly one claim owner per route", () => {
     const shell = source("../components/app/AppShell.tsx"), credit = source("../components/PayoutCredit.tsx"), panel = source("../components/PayoutPanel.tsx");
-    expect(shell).not.toContain("ValueRecovery"); expect(shell).toContain("<PayoutCredit"); expect(shell).toContain("{vaultOpen && <PayoutPanel />}"); expect(shell).toContain('pathname === "/vault" || (pathname === "/dashboard"');
-    expect(credit).toContain('pathname==="/vault"'); expect(credit).toContain('pathname?.startsWith("/pledge")');
+    const dash = source("../app/dashboard/view.tsx"), pledge = source("../app/pledge/view.tsx");
+    expect(shell).not.toContain("ValueRecovery"); expect(shell).not.toContain("<PayoutCredit"); expect(shell).toContain("{vaultOpen && <PayoutPanel />}");
+    // The payout notice lives only on the pages that own payout, never site-wide in the shell; /vault
+    // returns null there because the vault panel already shows the same credit.
+    expect(dash).toContain("<PayoutCredit />"); expect(pledge).toContain("<PayoutCredit />");
+    expect(credit).toContain('pathname==="/vault"');
+    // One claim owner: the notice is a notice (a link to the vault), never a second claim button.
+    // The link anchors straight to the vault's claim panel.
+    expect(credit).not.toContain("Claim your funds"); expect(credit).toContain("Claim in your vault"); expect(credit).toContain('href="/vault#payout"');
+    expect(panel).toContain('id="payout"');
     for (const guard of ["dispatchMoneyBatch", "expectedSigner: accountId", "finalMoneyReceipt", "clearVerifiedMoneyOperation", "verifyPayoutReceipt"]) expect(panel).toContain(guard);
     expect(panel).toContain("!!operation"); expect(panel).toContain("value.pending");
   });

@@ -109,6 +109,14 @@ describe("Overview: signed out", () => {
     expect(m).toContain('data-testid="dash-restoring"');
     expect(m).not.toContain("Open your <em>key</em>");
   });
+
+  it("shows the same six-step checklist, nothing done and no actions, so an old /start link lands on it", () => {
+    const m = html({ accountId: null });
+    expect(m).toContain('data-testid="setup-checklist"');
+    expect(m).toContain('data-testid="setup-count">0 of 6');
+    for (const id of ["sign", "key", "unlock", "limits", "fund", "swap"]) expect(m).toContain(`data-testid="setup-${id}" data-done="0"`);
+    expect(m).not.toMatch(/data-testid="setup-(key|unlock|limits|fund|swap)-action"/);
+  });
 });
 
 describe("Overview: signed in, keys still loading", () => {
@@ -311,6 +319,11 @@ describe("Overview: setup checklist from real state", () => {
     expect(tagOf(m, "setup-fund-action")).toContain('href="/dashboard#vault"');
   });
 
+  it("the Fund step tells an unfunded account the vault shows a top-up code", () => {
+    const m = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, read: true, rows: [], total: { kind: "empty" } } });
+    expect(from(m, "setup-fund")).toContain("the vault shows a top-up code for 0.01 NEAR");
+  });
+
   it("a funded vault marks Fund done", () => {
     const { rows, total } = usdcRows("2500000");
     const m = html({ keys: keysReady(1, 1), unlock: unlockOn, balance: { ...balanceUnread, read: true, rows, total } });
@@ -318,19 +331,19 @@ describe("Overview: setup checklist from real state", () => {
     expect(m).not.toContain('data-testid="setup-fund-action"');
   });
 
-  it("all five done keeps the five steps listed as done (no collapse), with no actions, and the proof card stays", () => {
+  it("all six done keeps the six steps listed as done (no collapse), with no actions, and the proof card stays", () => {
     const { rows, total } = usdcRows("2500000");
     const entries: HistEntry[] = [{ ts_ms: 1, kind: "swap", token_in: USDC, amount_in: "1", token_out: USDC, amount_out: "1", status: "success" }];
     const m = html({
-      keys: keysReady(1, 1), unlock: unlockOn,
+      keys: keysReady(1, 1), unlock: unlockOn, limitsDone: true,
       balance: { ...balanceUnread, read: true, rows, total },
       activity: { ...activityUnread, read: true, entries, logOk: true, callId: "abcdef1234567890" },
     });
     expect(m).not.toContain('data-testid="setup-complete"');
-    for (const id of ["sign", "key", "unlock", "fund", "swap"]) expect(m).toContain(`data-testid="setup-${id}" data-done="1"`);
-    expect(m).toContain('data-testid="setup-count">5 of 5');
+    for (const id of ["sign", "key", "unlock", "limits", "fund", "swap"]) expect(m).toContain(`data-testid="setup-${id}" data-done="1"`);
+    expect(m).toContain('data-testid="setup-count">6 of 6');
     expect(m).toContain("Swap done. Read from your signed activity.");
-    expect(m).not.toMatch(/data-testid="setup-(key|unlock|fund|swap)-action"/);
+    expect(m).not.toMatch(/data-testid="setup-(key|unlock|limits|fund|swap)-action"/);
     expect(m).toContain('data-testid="ov-proof"');
   });
 });

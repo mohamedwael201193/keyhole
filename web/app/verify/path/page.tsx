@@ -17,12 +17,12 @@ const INFO_CALL = IDENTITY.worker.info_call;
 const CUR = IDENTITY.worker.wasm_sha256;
 
 type Call = { id: string; what: string; ok: boolean; result: string; file?: string; build?: string; current?: boolean };
-/** Worker build each step-3 call executed on (executed_wasm_sha256 in its attestation). Not the current build. */
+/** Worker build each step-3 call executed on (executed_wasm_sha256 in its attestation). Not the repo-pinned build. */
 const STEP3_BUILD = "a55ebb14";
 const txRow = (label: string, h: string): ProofRow => ({ label, value: h, href: tx(h), alt: txAlt(h) });
-/** Transfer run on build a985fd87 (see docs/evidence/transfer-a985fd87). Both wallets are team test wallets, not independent users. */
+/** Transfer run on build a985fd87 (see docs/evidence/transfer-a985fd87). Both wallets are team test wallets, not outside users. */
 const SALE_TX = "89vSYY4tbeNPuNuhHB8YmkkAWAcjW5VdniQm3ePHuPYz";
-/** Handover calls on build a985fd87 (executed_wasm_sha256). Not the current build — see liveChecks / OutLayer. */
+/** Handover calls on build a985fd87 (executed_wasm_sha256). Not the repo-pinned build — see liveChecks / OutLayer. */
 const STEP4_BUILD = "a985fd87";
 const STEP4_NOW: Call[] = [
   { id: "baccd727-cdca-4b3e-ae93-999fd581444a", what: "Seller A's status, before the sale", ok: true, result: "Allowed: A holds the key.", build: STEP4_BUILD },
@@ -81,14 +81,14 @@ export default function VerificationPathPage() {
       <Steps testid="judge-steps">
         <Reveal><Step n={1} title="The code running in the enclave is the code in the repo" testid="judge-step-1">
           <Trust src={["outlayer", "browser", "intel", "chain"]} />
-          <p className="jclaim">Intel signs a report naming the code that ran, and we compare its fingerprint with the current build, <b className="mono">{CUR.slice(0, 8)}</b>.</p>
+          <p className="jclaim">Intel signs a report naming the code that ran, and we compare its fingerprint with the repo-pinned build, <b className="mono">{CUR.slice(0, 8)}</b>.</p>
           <div className="uact">
             <CheckBuild callId={INFO_CALL} />
             <Button variant="secondary" href={`/verify?call=${IDENTITY.worker.info_call}`} testid="judge-do-1">Run all 36 checks on /verify</Button>
           </div>
-          <See>The quick check shows <b>Pass</b>. On /verify, all checks are green: the worker downloaded from FastFS hashes to <b className="mono">{CUR.slice(0, 8)}…</b>, the quote&apos;s report data matches, and Intel&apos;s certificate chain verifies. Badge: <b>Current build</b>. Published with <TxLink hash={IDENTITY.worker.add_version_tx}>add_version</TxLink>.</See>
+          <See>The quick check shows <b>Pass</b>. On /verify, all checks are green: the worker downloaded from FastFS hashes to <b className="mono">{CUR.slice(0, 8)}…</b>, the quote&apos;s report data matches, and Intel&apos;s certificate chain verifies. Badge: <b>Repo-pinned build</b>. Published with <TxLink hash={IDENTITY.worker.add_version_tx}>add_version</TxLink>.</See>
           <Proof rows={[
-            { label: "current build", value: CUR },
+            { label: "repo-pinned build", value: CUR },
             txRow("published in", IDENTITY.worker.add_version_tx),
             { label: "attested call", value: INFO_CALL, href: `/verify?call=${INFO_CALL}`, internal: true },
           ]} />
@@ -123,8 +123,8 @@ export default function VerificationPathPage() {
 
         <Reveal><Step n={4} title="Selling the key moves the account; the old holder is locked out" testid="judge-step-4">
           <Trust src={["chain", "outlayer", "us"]} />
-          <p className="jclaim">The key moved from account A to account B on build <b className="mono">{STEP4_BUILD}</b> (not the current build <b className="mono">{CUR.slice(0, 8)}</b>). A and B are team test wallets, not independent users. Before the move A reads its balance. After it, A is refused and B reads the same balance. A replayed request and an early withdrawal by B are refused too.</p>
-          <See>Each call below is labelled <b>build {STEP4_BUILD}, previous</b>. Its attestation names that wasm, not the current <b className="mono">{CUR.slice(0, 8)}</b>. Click <b>Verify this call</b> to check one. The sale is one NEAR transaction, and its receipt shows SuccessValue.</See>
+          <p className="jclaim">The key moved from account A to account B on build <b className="mono">{STEP4_BUILD}</b> (not the repo-pinned build <b className="mono">{CUR.slice(0, 8)}</b>). A and B are team test wallets, not outside users. Before the move A reads its balance. After it, A is refused and B reads the same balance. A replayed request and an early withdrawal by B are refused too.</p>
+          <See>Each call below is labelled <b>build {STEP4_BUILD}, previous</b>. Its attestation names that wasm, not the repo-pinned <b className="mono">{CUR.slice(0, 8)}</b>. Click <b>Verify this call</b> to check one. The sale is one NEAR transaction, and its receipt shows SuccessValue.</See>
           <Calls testid="judge-step4-calls" rows={STEP4_NOW} />
           <Proof rows={[txRow(`sale: nft_transfer, A → B (build ${STEP4_BUILD})`, SALE_TX)]} title="Transfer" />
           <p className="muted">The site gateway also refuses a session-scheme withdraw with HTTP 403 <span className="mono">session_scope</span>, before any enclave call. It has no call id.</p>

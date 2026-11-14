@@ -19,12 +19,16 @@ export function EvidenceTable() {
   const [rows, setRows] = useState<LiveRow[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // When these rows were read: a number like "Live supply = 11" is only true at the moment it was read,
+  // and the pack does not re-read itself — stamp it so a reader never mistakes a stale read for a live one.
+  const [readAt, setReadAt] = useState<string | null>(null);
 
   const run = async () => {
     setBusy(true);
     setErr(null);
     try {
       setRows(await runEvidencePack());
+      setReadAt(new Date().toISOString().slice(11, 16));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Checks failed");
       setRows(null);
@@ -47,7 +51,7 @@ export function EvidenceTable() {
         meta={rows ? <StatusChip tone={pass === total && total > 0 ? "success" : "warn"}>{pass}/{total} pass</StatusChip> : <StatusChip tone="info">Running</StatusChip>}
         action={<Button variant="secondary" size="sm" loading={busy} loadingLabel="Checking" onClick={() => void run()} testid="evidence-rerun">Re-check</Button>}
       />
-      <p className="ev-lead">Each row is a claim, the exact public read used to check it, and the live result. No wallet. No signing.</p>
+      <p className="ev-lead">Each row is a claim, the exact public read used to check it, and the live result. No wallet. No signing.{readAt ? ` Read ${readAt} UTC — Re-check refreshes it.` : ""}</p>
       {err && <p className="ev-err" role="alert" data-testid="evidence-error">{err}</p>}
       <div className="ev-table-wrap" role="table" aria-label="Evidence checks">
         <div className="ev-head" role="row">

@@ -73,7 +73,7 @@ export function PayoutPanel({ onChanged }: { onChanged?: () => void }) {
   if (!accountId || s?.supported === false) return null;
   const refreshBtn = <Button variant="quiet" size="sm" disabled={busy} onClick={()=>setRound(n=>n+1)}>Refresh payout state</Button>;
   const link = hash ? { href: nearTx(hash), label: "View transaction", testid: "payout-tx-link" } : null;
-  return <Card as="section" testid="payout-panel" className="kh-panel"><h2>Native payouts &amp; refunds</h2>
+  return <Card as="section" id="payout" testid="payout-panel" className="kh-panel"><h2>Native payouts &amp; refunds</h2>
     {busy ? <InCardProgress title={s?.supported && s.registered ? "Claiming your payout…" : "Registering your payout slot…"} line="Confirm in your wallet, then wait a moment." testid="payout-pending" lineTestid="payout-pending-line" />
     : notice?.tone === "ok" && hash ? <InCardSuccess testid="payout-out" title="Confirmed" amount={notice.text} link={link} actions={<>{refreshBtn}<Button variant="quiet" size="sm" onClick={() => { setNotice(null); setHash(null); }}>Done</Button></>} />
     : !s ? <p className="kh-panel-line" role="status">{notice?.text || "Reading your payout state…"}</p> : <>
@@ -85,7 +85,7 @@ export function PayoutPanel({ onChanged }: { onChanged?: () => void }) {
       <div>{refreshBtn}</div>
       <div className="kh-panel-note"><Details label="Details" testid="payout-details"><p>The slot uses 320 bytes of permanent storage and the charge is not refunded. It is separate from the 0.01 NEAR refundable listing bond and from gas. Sale proceeds, listing and approval refunds, and mint excess become credits you claim here; they are not paid out on their own.</p></Details></div>
     </> : <>
-      <p className="kh-panel-line">Available credit: {nearText(s.credit)} NEAR. {s.pending ? "A payout is on its way. Funds may already have arrived, so do not send it again." : "Claiming sends it to your wallet."}</p>
+      <p className="kh-panel-line kh-panel-line--spaced"><span>Available credit:</span><span>{nearText(s.credit)} NEAR.</span><span>{s.pending ? "A payout is on its way. Funds may already have arrived, so do not send it again." : "Claiming sends it to your wallet."}</span></p>
       <div><Button disabled={busy || !!s.pending || !!operation || BigInt(s.credit) === 0n} onClick={()=>void act(true)}>Claim native NEAR</Button></div>
       <div>{refreshBtn}</div>
       <div className="kh-panel-note"><Details label="Details" testid="payout-details"><p>The credit is held by the contract and has not been delivered yet.{s.pending ? ` Payout ${s.pending.nonce}: ${nearText(s.pending.amount)} NEAR.` : ""}</p></Details></div>

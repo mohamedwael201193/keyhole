@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const r = await fetch(`${OC}/quote`, { method: "POST", headers: { "content-type": "application/json", "user-agent": "keyhole/1.0", ...(k ? { authorization: `Bearer ${k}` } : {}) }, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(20_000) });
     const j = (await r.json().catch(() => ({}))) as { quote?: Record<string, unknown> };
     const q = j.quote ?? {};
-    if (!r.ok || typeof q.depositAddress !== "string") return NextResponse.json({ ok: false, error: { code: "quote_refused" } }, { headers: { "cache-control": "no-store" } });
+    if (!r.ok || typeof q.depositAddress !== "string") return NextResponse.json({ ok: false, error: { code: "quote_refused" } }, { status: 502, headers: { "cache-control": "no-store" } });
     const pick = ["depositAddress", "amountInFormatted", "amountInUsd", "amountOutFormatted", "minAmountOut", "timeEstimate", "deadline"] as const;
     return NextResponse.json({ ok: true, quote: Object.fromEntries(pick.map((x) => [x, q[x] ?? null])) }, { headers: { "cache-control": "no-store" } });
   } catch { return no("upstream", 502); }

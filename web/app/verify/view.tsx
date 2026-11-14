@@ -20,10 +20,10 @@ function LienLookup() {
     <section id="lien-check" className="vf-lien" aria-label="Lien check" data-testid="lien-check">
       <form className="vf-lien-form" onSubmit={(e) => { e.preventDefault(); setTokenId(draft.trim()); setLookup((n) => n + 1); }}>
         <label htmlFor="lien-id">Key id</label>
-        <input id="lien-id" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
-        <button type="submit" className="kh-btn kh-btn--secondary kh-btn--sm">Read lien</button>
+        <input id="lien-id" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="k + 16 hex characters" spellCheck={false} />
+        <button type="submit" className="kh-btn kh-btn--secondary kh-btn--sm" disabled={!draft.trim()}>{draft.trim() ? "Read lien" : "Enter a key id first"}</button>
       </form>
-      <p className="lien-note">Reads the key&apos;s owner, lien state, loan terms and refusal rules from the final chain. Nothing is signed.</p>
+      <p className="lien-note">Reads the key&apos;s owner, lien state, loan terms and refusal rules from the final chain. Nothing is signed. Paste a key id, such as k5f4750858f328940 or 0.</p>
       {bad && <p className="lien-note" role="alert">That is not a key id. Use k plus 16 lowercase hex characters, like k5f4750858f328940.</p>}
       {!bad && tokenId && <LienPanel lien={lien} testid="verify-lien" />}
     </section>

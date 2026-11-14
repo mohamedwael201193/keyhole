@@ -26,8 +26,8 @@ const serif = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600", "7
 const sans = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-inter", display: "swap" });
 const mono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm", display: "swap" });
 export const metadata: Metadata = {
-  title: "KEYHOLE — the NFT is the viewing key",
-  description: "An NFT that is the viewing key to a confidential trading account inside an attested TEE on NEAR. Hold the key, run the account. Sell it, and the account goes with it.",
+  title: "KEYHOLE — the NFT is the title to a private trading account",
+  description: "An NFT that is the title to a confidential trading account inside an attested TEE on NEAR. Hold the key, run the account. Sell it, and the account goes with it.",
   metadataBase: new URL(siteUrl()),
   openGraph: { title: "KEYHOLE", description: "Nothing on the chain. Everything in the key.", images: [{ url: "/og.png", width: 1200, height: 630 }] },
   icons: { icon: [{ url: "/brand/keyhole-emblem.png", type: "image/png" }, { url: "/favicon.ico" }], apple: "/apple-icon.png" },

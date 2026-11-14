@@ -51,7 +51,7 @@ export function PreviewCarousel({ slides, startAt = 0 }: { slides: PreviewSlide[
         <TierChip tier={cur.finish} />
         <p className="km-caption-name">{cur.finish} Key</p>
         <p className="km-caption-cap">{formatTradePrice(CAPS[cur.finish].perTx)} · ${CAPS[cur.finish].daily} a day</p>
-        {cur.mintable ? <StatusChip tone="success">Mintable today</StatusChip> : <StatusChip tone="neutral" icon="none">Preview only</StatusChip>}
+        {cur.mintable ? <StatusChip tone="success">Mintable</StatusChip> : <StatusChip tone="neutral" icon="none">Preview only</StatusChip>}
       </div>
       <div className="km-nav">
         <button type="button" className="km-arrow" onClick={() => go(-1)} aria-label="Previous key" data-testid="mint-prev">

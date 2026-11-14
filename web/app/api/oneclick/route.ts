@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   try {
     const r = await fetch(`${OC}/quote`, { method: "POST", headers: headers(), body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(20_000) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return NextResponse.json({ ok: false, error: { code: "quote_refused" } }, { status: 200 });
+    if (!r.ok) return NextResponse.json({ ok: false, error: { code: "quote_refused" } }, { status: 502 });
     const q = (j as { quote?: Record<string, unknown> }).quote ?? {};
     const pick = ["amountInFormatted", "amountInUsd", "amountOutFormatted", "amountOutUsd", "minAmountOut", "timeEstimate"] as const;
     return NextResponse.json({ ok: true, dry: true, quote: Object.fromEntries(pick.map((k) => [k, q[k] ?? null])) }, { headers: { "cache-control": "no-store" } });

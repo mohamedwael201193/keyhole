@@ -111,8 +111,8 @@ export function KeyHistoryView() {
       />
       <form className="kd-lookup" onSubmit={(e) => { e.preventDefault(); setProof(null); history.replaceState(null, "", `/key?id=${id.trim()}`); void load(id.trim()); }}>
         <label htmlFor="kid" className="sr-only">key id</label>
-        <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k5f4750858f328940" spellCheck={false} />
-        <Button type="submit" loading={busy} loadingLabel="Opening" testid="key-load">Open</Button>
+        <input id="kid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder="k + 16 hex characters" spellCheck={false} />
+        <Button type="submit" loading={busy} loadingLabel="Opening" disabled={!id.trim() && !busy} testid="key-load">Open</Button>
       </form>
       <p className="kd-help" data-testid="key-help">Paste a key id, for example <span className="kd-mono">k5f4750858f328940</span> or <span className="kd-mono">0</span>.</p>
       {busy && !body && <p className="kg-note" data-testid="key-loading"><Spinner label="Loading" /> Reading the book from the enclave and checking every link…</p>}
@@ -121,7 +121,7 @@ export function KeyHistoryView() {
       {legacy !== null && (
         <Card as="section" testid="key-legacy" labelledBy="key-legacy-h">
           <CardHeader title={`KEYHOLE Key #${legacy}`} id="key-legacy-h" />
-          <p className="kg-note">An early key, minted before per-key history books existed. Its owner is still on chain: see <span className="kd-mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
+          <p className="kg-note">An early test key, minted before per-key history books existed. Its owner is still on chain: see <span className="kd-mono">nft_token</span> on <TxLink account="keyhole-devmo.near" />.</p>
         </Card>
       )}
 

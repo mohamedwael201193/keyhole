@@ -49,6 +49,8 @@ import { TxStatus } from "@/components/ui/tx-status";
 import { Card, CardHeader, CopyButton, EmptyState, Icon, ListRow, PageHeader, ProofPanel, SetupProgress, Skeleton, StatusChip, TierChip, VaultHero, type IconName, type SetupItem } from "@/components/v7";
 import "./vault.css";
 import { dashHref } from "@/lib/dashboardSections";
+import { SAFE_LIMITS, LIMITS_FLAG, TOPUP_HINT_NEAR } from "@/lib/start";
+import { accountState, type AccountState } from "@/lib/nearAccount";
 
 type Bal = { token?: string; symbol?: string; amount?: string; balance?: string; usd?: number; usd_micro?: number };
 type DepTab = "direct" | "chain";
@@ -89,6 +91,24 @@ function RefreshGlyph() {
     <svg className="vlt-pill-icon" width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
     </svg>
+  );
+}
+
+/** The old /start top-up step, moved here: a new Google/email account is an unfunded implicit id, and it
+ * needs 0.01 NEAR before it exists on chain. Shown only when the account is not on chain yet. */
+function TopupQr({ accountId }: { accountId: string }) {
+  const [acct, setAcct] = useState<AccountState | null>(null);
+  useEffect(() => {
+    let stop = false;
+    void accountState(accountId).then((a) => { if (!stop && a) setAcct(a); });
+    return () => { stop = true; };
+  }, [accountId]);
+  if (!acct || acct.exists) return null;
+  return (
+    <div className="vlt-topup" data-testid="vault-topup">
+      <p className="vlt-sub">Your account is not on chain yet. Send {TOPUP_HINT_NEAR} NEAR to it first — scan the code or copy the address.</p>
+      <DepositQr otherChain={false} evm={null} address={accountId} amount={`${TOPUP_HINT_NEAR} NEAR`} />
+    </div>
   );
 }
 
@@ -272,9 +292,12 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   }, [withdraw.res, readBalance, runHistory, live, accountId]);
 
   // A limits set changed the holder limits the dashboard read carries: drop that cached read.
+  // It also completes the dashboard checklist's "Set safe limits" item (the same flag the old /start
+  // limits step set), so the item completes whichever surface set the limits.
   useEffect(() => {
     if (!limits.res?.output?.ok) return;
     vaultCacheInvalidate(accountId, "dashboard");
+    if (accountId) localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1");
   }, [limits.res, accountId]);
 
   async function unlock() {
@@ -340,6 +363,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
             </div>
           </div>
           {tierCaps && <p className="vlt-sub">{t("vault.limHelp", { tx: fmtUsd(tierCaps.per_tx_usd_micro), day: fmtUsd(tierCaps.daily_usd_micro) })}</p>}
+          <Button type="button" variant="secondary" block loading={limits.busy} loadingLabel={limits.label} disabled={limits.busy} testid="limits-preset" onClick={() => { clearOtherErrors(limits); void limits.run({ per_tx_usd_micro: SAFE_LIMITS.per_tx_usd_micro, daily_usd_micro: SAFE_LIMITS.daily_usd_micro }); }}>
+            Use recommended ($1/trade, $5/day)
+          </Button>
           <Button type="submit" block loading={limits.busy} loadingLabel={limits.label} disabled={limits.busy || !usdMicro(limTx) || !usdMicro(limDay)} testid="limits-btn">
             {limits.busy ? limits.label : t("vault.setLimits")}
           </Button>
@@ -466,11 +492,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           action={(
             <div className="vlt-actions">
               <Button href={dashHref("/mint")} testid="vault-mint">{t("vault.mintFirst")}</Button>
-              <Button variant="ghost" href="/start" testid="vault-start">Start setup</Button>
             </div>
           )}
           testid="holder-only"
         />
+        {accountId && <TopupQr accountId={accountId} />}
         <HowStrip active={1} />
       </div>
     );
@@ -494,6 +520,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           <TeeProgress active={balance.busy} label="Reading your balance inside the enclave" testid="balance-progress" />
           {balance.res && <CallLine r={balance.res} />}
         </div>
+
+        {/* Held but not on chain yet (a minter-paid mint to an implicit account): the top-up code the
+            dashboard checklist points at. TopupQr hides itself once the account exists, so funded,
+            locked and sealed accounts never see it. */}
+        {accountId && <TopupQr accountId={accountId} />}
 
         <div className="vlt-cols">
           <div className="vlt-col vlt-col-a">
@@ -644,7 +675,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
 
             <Card as="section" labelledBy="vlt-setup-h" testid="vault-setup-card" className="vlt-card" style={{ order: 4 }}>
               <SetupProgress items={setupItems} variant="horizontal" title="Setup progress" headingId="vlt-setup-h" doneText="Setup complete" testid="vault-setup-steps" />
-              {held && !session && <p className="vlt-note" data-testid="vault-setup"><Link href="/start">New here? Finish setup in 5 steps →</Link></p>}
+              {held && !session && <p className="vlt-note" data-testid="vault-setup"><Link href={dashHref("/dashboard")}>New here? See your setup checklist →</Link></p>}
             </Card>
 
             <Card as="section" labelledBy="vlt-set-h" testid="settings-card" className="vlt-card" style={{ order: 6 }}>

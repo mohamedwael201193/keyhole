@@ -120,7 +120,7 @@ test("the free trial mints, transfers and refuses the old holder", async ({ page
 });
 
 test("/start and /judge link the free trial", async ({ page }) => {
-  await page.goto("/start");
+  await page.goto("/start?step=connect");
   await expect(page.getByTestId("start-try-free")).toHaveAttribute("href", "/try?start=1");
   await page.goto("/judge");
   await expect(page.getByTestId("judge-try-free")).toHaveAttribute("href", "/try?start=1");
