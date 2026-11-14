@@ -222,7 +222,8 @@ describe("the timeline follows the real status and the real hashes", () => {
     expect(t.step).toBe(3);
     expect(t.refund).toBe(false);
     expect(t.steps.map((s) => s.state)).toEqual(["done", "done", "done"]);
-    expect(t.steps[1].links[0].href).toBe("https://explorer.near-intents.org/transactions/9H8uEEKhAuHwgKnjg2gfSKeiCjCZDE2d4k2SmgVmnRav");
+    // The intent hash is shown as text only: the Intents explorer does not resolve intent hashes (verified 2026-11-14).
+    expect(t.steps[1].links[0]).toEqual({ label: "intent", hash: "9H8uEEKhAuHwgKnjg2gfSKeiCjCZDE2d4k2SmgVmnRav", href: null });
     expect(t.steps[2].amount).toBe("0.367068 USDC");
     expect(t.steps[2].links[0].hash).toBe("8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh");
   });
@@ -246,7 +247,7 @@ describe("the timeline follows the real status and the real hashes", () => {
     expect(timelineOf(rowOf(buildOrders(reads({ [B]: PENDING })), B)).steps[0].state).toBe("current");
     const p = timelineOf(rowOf(buildOrders(reads({ [C]: PROCESSING })), C));
     expect(p.steps.map((s) => s.state)).toEqual(["done", "current", "todo"]);
-    expect(p.steps[1].links[0].href).toContain("Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so");
+    expect(p.steps[1].links[0]).toEqual({ label: "intent", hash: "Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so", href: null });
   });
 
   it("an order still loading shows every step as waiting and the step as -1 (not read)", () => {
@@ -255,10 +256,10 @@ describe("the timeline follows the real status and the real hashes", () => {
     expect(t.steps.map((s) => s.state)).toEqual(["todo", "todo", "todo"]);
   });
 
-  it("the vault trade is settled from its record, with its intent link", () => {
+  it("the vault trade is settled from its record, with its intent hash as text", () => {
     const t = timelineOf(buildOrders({})[0]);
     expect(t.steps.every((s) => s.state === "done")).toBe(true);
-    expect(t.steps[1].links[0].href).toBe(`https://explorer.near-intents.org/transactions/${VAULT_TRADE.intentHash}`);
+    expect(t.steps[1].links[0]).toEqual({ label: "intent", hash: VAULT_TRADE.intentHash, href: null });
     expect(t.steps[2].amount).toBe(VAULT_TRADE.amountOut);
   });
 });
@@ -305,9 +306,10 @@ describe("proof and links", () => {
       for (const i of items) if (i.href && !i.internal) expect(i.href.startsWith("https://"), i.href).toBe(true);
     }
   });
-  it("View proof goes to the intent first, and the vault trade to its enclave call", () => {
+  it("View proof goes to the first real transaction link, and the vault trade to its enclave call", () => {
+    // The intent hash carries no explorer link, so View proof falls to the deposit tx.
     expect(proofHrefOf(rowOf(buildOrders(reads({ [C]: PROCESSING })), C))).toEqual({
-      href: `https://explorer.near-intents.org/transactions/Xr4TM3tEwfpwF9Hg2BcGJTH3uzZ7LroqBk9wgUnN1so`, internal: false,
+      href: "https://basescan.org/tx/0x0e46c0f0b49be71f36d4437e71fa9e1d689d4f91fc1e948872320d50126661f3", internal: false,
     });
     expect(proofHrefOf(buildOrders({})[0])).toEqual({ href: `/verify?call=${VAULT_TRADE.callId}`, internal: true });
   });

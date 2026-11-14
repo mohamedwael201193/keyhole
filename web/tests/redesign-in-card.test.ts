@@ -50,13 +50,16 @@ describe("results show in place inside their own card", () => {
     expect(m).toContain('role="progressbar"');
     expect(m).toContain("Swapping…");
   });
-  it("success: check mark, amount, the word Settled and a transaction link", () => {
+  it("success: check mark, amount, the word Settled and the intent hash as text, no explorer link", () => {
     const m = renderToStaticMarkup(createElement(SwapDone, { outcome: swapOutcome("success"), summary: "Traded 0.02 USDC → 0.004 wNEAR", status: "success", intentHash: "4qAbc", onAgain: () => {} }));
     const t = text(m);
     expect(t).toContain("Traded 0.02 USDC → 0.004 wNEAR");
     expect(t).toContain("Settled");
-    expect(m).toContain("https://explorer.near-intents.org/transactions/4qAbc");
-    expect(m).toContain("View transaction");
+    // The intent hash is text only (shortened, full hash in the title): the Intents explorer does not resolve it.
+    expect(m).toContain("4qAbc…qAbc");
+    expect(m).toContain('title="4qAbc"');
+    expect(m).not.toContain("explorer.near-intents.org");
+    expect(m).not.toContain("View transaction");
     expect(m).toContain("<svg");
   });
   it("failure: one plain line, one button, the code only in Details", () => {
