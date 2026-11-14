@@ -1158,6 +1158,33 @@ fn r8_gas_price_unrecognized_shape_preserves_s11_error() {
 }
 
 #[test]
+fn r8_gas_price_error_key_edge_cases() {
+    // Round 8 (adversarial F7): the error-key rule has three edge cases.
+    // (a) "error":null is NOT an error — the key is present but null, so
+    // the body parses normally.
+    assert_eq!(
+        gas_price_of(r#"{"error":null,"result":{"gas_price":"100000000"}}"#).unwrap(),
+        100_000_000u128
+    );
+    // (b) A present-but-null "gas_price" must not shadow "result": fall
+    // through to it.
+    assert_eq!(
+        gas_price_of(r#"{"gas_price":null,"result":{"gas_price":"100000000"}}"#).unwrap(),
+        100_000_000u128
+    );
+    // (c) A nested error inside "result" alongside a gas_price is rejected,
+    // like a top-level error — an inconsistent body must never parse.
+    let e = gas_price_of(r#"{"result":{"error":{"code":-32000},"gas_price":"100000000"}}"#).unwrap_err();
+    assert_eq!(e.code, "guard_state");
+    assert_eq!(e.message, "missing/string gas_price");
+    // (d) A present non-null but invalid gas_price does NOT fall through
+    // to "result": it rejects strictly.
+    let e = gas_price_of(r#"{"gas_price":"abc","result":{"gas_price":"100000000"}}"#).unwrap_err();
+    assert_eq!(e.code, "guard_state");
+    assert_eq!(e.message, "missing/string gas_price");
+}
+
+#[test]
 fn r8_provision_native_budget_pipeline_live_bodies() {
     // Mirrors provision_native_budget (collateral_host.rs): gas_price_of ->
     // fee = gas_price * 240_000_000_000_000 -> native_budget_check on the
@@ -1471,7 +1498,9 @@ fn r8_sweep_loan_certificate_template_shape() {
 
 #[test]
 fn r8_sweep_loan_binding_offered_state() {
-    // Offered-state loan + binding + control + config, built from the live
+    // DOCUMENTED shapes (no loan exists live yet): Loan, CollateralBinding
+    // and Control field-for-field from the contract structs
+    // (contracts/keys/src/pledge.rs:131-200), built from the live
     // get_pledge_config / get_control_state shapes (fixtures) with the two
     // fields that only become true after finalize + lending-ON flipped:
     // control.pledged and config.lending_enabled. Everything else is the
@@ -1575,10 +1604,17 @@ fn r8_sweep_fixed_floor_live_balance() {
 
 #[test]
 fn r8_sweep_custody_inventory_live_shapes() {
-    // Exact live creation_inventory from the Run 13 wallet creation
-    // (fixture sweep_r8_creation_inventory.json): one empty requests page,
-    // no resting orders, no pending approvals, empty initial balances.
-    // These are the exact shapes certificate_inventory reads.
+    // Creation inventory from the Run 13 wallet creation (fixture
+    // sweep_r8_creation_inventory.json): one empty requests page, no resting
+    // orders, no pending approvals, empty initial balances. These are the
+    // exact shapes certificate_inventory reads. PROVENANCE: the fixture is
+    // byte-identical to the creation_inventory embedded in the live Run 13
+    // worker output (create_run13.out.json), and evidence::digest over it
+    // equals the live-recorded initial_inventory_sha256
+    // 903858166927d7d167b911b8e7c5bd4d4ac96c8efc3986864efa9cb14957899b in
+    // create_run13.out.json / candidate_run13.out.json. (The
+    // funding-status inventory_sha256 d466aecd… is a LATER inventory state,
+    // not the creation inventory, so it is not expected to match.)
     let raw = include_str!("fixtures/sweep_r8_creation_inventory.json");
     let inv: serde_json::Value = serde_json::from_str(raw).unwrap();
     let pages = inv["pages"].as_array().unwrap();
@@ -1671,28 +1707,66 @@ fn r8_gas_price_old_path_fails_with_s11_error() {
 }
 
 #[test]
+fn r8_cert_window_fresh_recency() {
+    // Round 8 (adversarial F5/F6): BEHAVIOURAL test of the pure lib function
+    // cert_window_fresh, which op_loan_certificate now calls after
+    // invalidating the block cache and re-reading the live FINAL block.
+    // The fresh block must be at least as new as the run-start block and no
+    // more than 120 s ahead; the window is observed=fresh, expires=+59 s
+    // (contract max 60). A lagging RPC would otherwise yield a born-expired
+    // certificate that only fails later at fund_loan.
+    let now = 1_792_000_000_000u64; // run-start block timestamp (ms)
+    // Same instant: valid, 59 s window.
+    let (obs, exp) = cert_window_fresh(now, now).unwrap();
+    assert_eq!(obs, now * 1_000_000);
+    assert_eq!(exp, obs + 59_000_000_000);
+    // 30 s later: valid.
+    assert!(cert_window_fresh(now + 30_000, now).is_ok());
+    // Exactly 120 s ahead: valid (boundary).
+    assert!(cert_window_fresh(now + 120_000, now).is_ok());
+    // 120 s + 1 ms ahead: too far ahead.
+    let e = cert_window_fresh(now + 120_001, now).unwrap_err();
+    assert_eq!(e.code, "certificate");
+    // 1 ms older than run start: stale (a lagging RPC).
+    let e = cert_window_fresh(now - 1, now).unwrap_err();
+    assert_eq!(e.code, "certificate");
+    assert_eq!(e.message, "fresh block is stale or too far ahead");
+    // Overflow is fail-closed.
+    assert!(cert_window_fresh(u64::MAX, now).is_err());
+}
+
+#[test]
 fn r8_cert_window_fresh_block_and_59s() {
     // Round 8 certificate-window fix (guarded_host.rs, wasm32-only, so this
-    // is a SOURCE check in the round-7 style, not a behavioural execution
-    // of op_loan_certificate): the re-reads bypass the view cache, the block
-    // cache is invalidated, the template is re-issued against a fresh FINAL
-    // block with the contract-maximum 59 s window, and the FRESH cert is what
-    // gets signed. LIMIT: this test asserts on source text, it does not run
-    // the op. Residual staleness (disclosed): `config` (run-start cached
-    // get_pledge_config) is used in the fresh loan_binding check and the
-    // attestor-key check, and `balance` (collected before the re-reads) is
-    // used in the fresh fixed_floor check. The config is static within a run
-    // (it changes only via a governance config update), and the balance is a
-    // pre-read floor input, not a signing-time value — but neither is
-    // re-read fresh. A future round may re-read both via view_fresh.
+    // is a SOURCE (wiring) check in the round-7 style, not a behavioural
+    // execution of op_loan_certificate): the re-reads bypass the view cache,
+    // the block cache is invalidated, the template is re-issued against a
+    // fresh FINAL block with the contract-maximum 59 s window, and the FRESH
+    // cert is what gets signed. The BEHAVIOUR of the window rule is covered
+    // by r8_cert_window_fresh_recency (pure lib cert_window_fresh) and the
+    // BEHAVIOUR of native_status by r8_native_status_unwraps_result.
+    // Round 8 (adversarial F4, CLOSED): config, balance and the registry are
+    // now also re-read fresh — the residual staleness disclosed in the
+    // original round-8 submission (run-start config in the fresh
+    // loan_binding/attestor checks, pre-re-read balance in the fresh
+    // fixed_floor, cached second guard_registry) is fixed by fresh_config,
+    // fresh_balance and guard_registry_fresh below.
     let src = include_str!("guarded_host.rs");
     let op = src.split("fn op_loan_certificate(").nth(1).unwrap().split("fn pending_value_identity(").next().unwrap();
     assert!(op.contains("guard_control_fresh(token)?"), "fresh control re-read");
     assert!(op.contains("view_fresh(&contract,\"get_loan\""), "fresh loan re-read");
     assert!(op.contains("view_fresh(&contract,\"get_collateral_binding\""), "fresh binding re-read");
     assert!(op.contains("view_fresh(custody,\"get_wallet_policy\""), "fresh policy re-read");
+    assert!(op.contains("view_fresh(&contract,\"get_pledge_config\""), "fresh config re-read (F4)");
+    assert!(op.contains("fresh_balance=custody_get"), "fresh balance re-read (F4)");
+    assert!(op.contains("guard_registry_fresh()?"), "fresh registry re-check (F4)");
+    assert!(op.contains("cert_window_fresh(fresh_now,now)?"), "recency-validated window (F5)");
     assert!(op.contains("read_cache::invalidate_block();"), "block cache invalidated");
-    assert!(op.contains("59_000_000_000"), "59 s window (contract max 60)");
+    // The 59 s constant lives in the pure lib function cert_window_fresh
+    // (its value is proven behaviourally by r8_cert_window_fresh_recency),
+    // not inline in the op any more.
+    let lib = include_str!("lib.rs");
+    assert!(lib.contains("59_000_000_000"), "59 s window (contract max 60)");
     assert!(op.contains("fresh_cert.live("), "fresh cert validated live");
     assert!(op.contains("fresh_cert.sign(&seed)?"), "fresh cert signed");
     assert!(op.contains("\"certificate\":fresh_cert"), "fresh cert returned");
@@ -1708,12 +1782,37 @@ fn r8_cert_window_fresh_block_and_59s() {
 fn r8_native_status_unwraps_result() {
     // Round 8 native_status fix (collateral_evidence_host.rs, wasm32-only):
     // the tx_status envelope carries status under "result", so reading
-    // ["status"] off the envelope always yielded null.
+    // ["status"] off the envelope always yielded null. BEHAVIOURAL (round 8,
+    // adversarial F6): feed the CAPTURED mint envelope through the pure lib
+    // function native_status and assert it yields the SuccessValue status
+    // object — the same expression the host file now calls. The old read
+    // (["status"] off the envelope) is asserted null on the same body,
+    // proving the bug the fix closes.
+    let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap();
+    // The old (buggy) read: null on the envelope.
+    assert!(v["status"].is_null(), "old envelope read must be null");
+    // The fixed read: the SuccessValue status object.
+    let st = native_status(&v);
+    assert!(!st.is_null(), "native_status must unwrap .result");
+    let b64 = st["SuccessValue"].as_str().expect("SuccessValue status");
+    use base64::Engine;
+    let text = String::from_utf8(
+        base64::engine::general_purpose::STANDARD.decode(b64).unwrap(),
+    )
+    .unwrap();
+    assert!(text.contains("\"token_id\":\"k88bf49da96212902\""), "{text}");
+    // A flattened body (no "result" envelope) falls back to itself.
+    let flat = v["result"].clone();
+    assert_eq!(native_status(&flat), st);
+    // Degenerate bodies never panic and yield null.
+    assert!(native_status(&serde_json::Value::Null).is_null());
+    assert!(native_status(&serde_json::json!("x")).is_null());
+    assert!(native_status(&serde_json::json!({"result": "x"})).is_null());
+    // The host file wires the pure function (wiring check, not the proof —
+    // the proof is the behavioural assertions above).
     let src = include_str!("collateral_evidence_host.rs");
-    assert!(
-        src.contains("out.1.get(\"result\").unwrap_or(&out.1)[\"status\"]"),
-        "native_status unwraps .result"
-    );
+    assert!(src.contains("native_status(&out.1)"), "host calls native_status");
     assert!(
         !src.contains("\"native_status\":out.1[\"status\"]"),
         "old envelope read removed"

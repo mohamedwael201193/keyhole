@@ -1277,18 +1277,18 @@ pub fn parse_final_block(raw: &str) -> Option<read_cache::BlockCache> {
 /// `guarded::decimal` expects, so `provision_native_budget` failed every time
 /// with "missing/string gas_price" (Run 14 S11, call 103d999d-...). Accepts a
 /// digit string, a bare JSON number, `{"gas_price":…}`, and `{"result":…}`
-/// (one level of unwrapping). Any body carrying a TOP-LEVEL "error" key is
-/// rejected: the host returns the whole error envelope as the result string
-/// when `result.gas_price` is absent (host_functions_sync.rs:743-744), so an
-/// error body must never parse as a price. (Only the top level is checked; a
-/// nested "error" inside "result" alongside a gas_price would still parse.
-/// The live host returns top-level error envelopes, so the live case is
-/// covered.) Digits only; a parsed value is cached as a u128 (read_cache),
-/// never as a Value.
+/// (one level of unwrapping). Any body carrying a TOP-LEVEL non-null
+/// "error" key is rejected: the host returns the whole error envelope as
+/// the result string when `result.gas_price` is absent
+/// (host_functions_sync.rs:743-744), so an error body must never parse as
+/// a price. A nested "error" inside "result" alongside a gas_price is also
+/// rejected (gas_price_value checks every object it descends into). An
+/// "error":null is NOT an error (the key is present but null). Digits
+/// only; a parsed value is cached as a u128 (read_cache), never as a Value.
 pub fn gas_price_of(raw: &str) -> Result<u128, Error> {
     let v: serde_json::Value =
         serde_json::from_str(raw).map_err(|_| err("rpc", "invalid gas price"))?;
-    if v.get("error").is_some() {
+    if v.get("error").is_some_and(|e| !e.is_null()) {
         return Err(err("rpc", "gas price error"));
     }
     let price = gas_price_value(&v)
@@ -1310,13 +1310,57 @@ fn gas_price_value(v: &serde_json::Value) -> Option<u128> {
         }
         Value::Number(n) => n.as_u64().map(u128::from),
         Value::Object(_) => {
+            // A non-null "error" at any level we descend into rejects the
+            // body: {"result":{"error":{...},"gas_price":...}} must not
+            // parse as a price, just like a top-level error.
+            if v.get("error").is_some_and(|e| !e.is_null()) {
+                return None;
+            }
+            // A present-but-null "gas_price" must not shadow "result":
+            // fall through to it. A present non-null gas_price is parsed
+            // strictly (an invalid value rejects, it does not fall through).
             if let Some(g) = v.get("gas_price") {
-                return gas_price_value(g);
+                if !g.is_null() {
+                    return gas_price_value(g);
+                }
             }
             v.get("result").and_then(gas_price_value)
         }
         _ => None,
     }
+}
+
+/// Extract the native transaction status object from a tx_status body.
+/// Round 8: the host returns the full EXPERIMENTAL_tx_status envelope, so
+/// the status lives under "result"; reading ["status"] off the envelope
+/// always yielded null (collateral_evidence_host.rs:589). Unwrap .result,
+/// falling back to the body itself for a flattened response. Pure, so it
+/// is unit-tested against the captured mint envelope (round 8, adversarial
+/// F6) instead of only by a source-text check. Serde indexing never panics:
+/// a missing key yields Null.
+pub fn native_status(body: &serde_json::Value) -> &serde_json::Value {
+    &body.get("result").unwrap_or(body)["status"]
+}
+
+/// Validate the fresh FINAL block timestamp against the run-start timestamp
+/// and compute the certificate window (observed_ns, expires_ns).
+/// Round 8 (adversarial F5): the fresh block must be at least as new as the
+/// run-start block and no more than 120 s ahead; a lagging RPC would
+/// otherwise yield a born-expired certificate that only fails later at
+/// fund_loan. The window is the contract-maximum 59 s (contract max 60).
+/// Pure, so the recency rule is unit-tested (round 8, adversarial F6)
+/// instead of only by a source-text check.
+pub fn cert_window_fresh(fresh_now_ms: u64, run_start_ms: u64) -> Result<(u64, u64), Error> {
+    if fresh_now_ms < run_start_ms || fresh_now_ms.saturating_sub(run_start_ms) > 120_000 {
+        return Err(err("certificate", "fresh block is stale or too far ahead"));
+    }
+    let observed = fresh_now_ms
+        .checked_mul(1_000_000)
+        .ok_or_else(|| err("certificate", "timestamp overflow"))?;
+    let expires = observed
+        .checked_add(59_000_000_000)
+        .ok_or_else(|| err("certificate", "expiry overflow"))?;
+    Ok((observed, expires))
 }
 
 /// Parse a `view_account` response (full JSON-RPC envelope or flattened

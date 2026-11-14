@@ -11,6 +11,18 @@ fn guard_registry()->Result<(),Error>{
     let count=view("outlayer.near","get_version_count",json!({"project_id":guarded::PROJECT_ID}))?.as_u64().ok_or_else(||err("legacy_versions","missing registry count"))?;
     guarded::registry(&project,&versions,count,&expected)
 }
+// Round 8 (adversarial F4): the second registry check inside
+// op_loan_certificate must observe the LIVE registry, not the run-start
+// cached views — a mid-run registry change is otherwise undetected. Same
+// three reads as guard_registry, via view_fresh (never consults or
+// populates the view cache).
+fn guard_registry_fresh()->Result<(),Error>{
+    let expected=cfg("GUARDED_WORKER_HASH","");
+    let project=view_fresh("outlayer.near","get_project",json!({"project_id":guarded::PROJECT_ID}))?;
+    let versions=view_fresh("outlayer.near","list_versions",json!({"project_id":guarded::PROJECT_ID,"from_index":0,"limit":100}))?;
+    let count=view_fresh("outlayer.near","get_version_count",json!({"project_id":guarded::PROJECT_ID}))?.as_u64().ok_or_else(||err("legacy_versions","missing registry count"))?;
+    guarded::registry(&project,&versions,count,&expected)
+}
 fn guarded_wallet(token:&str)->Result<(String,String),Error>{
     // NEVER register/rebind or fall back to an owner alias on guarded value/certificate paths.
     let raw=Store::read(&mut Host,&tkey(token,"wallet"))?;
@@ -220,33 +232,43 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     // Round 8: re-read control, exact loan and policy FRESH (bypass the view
     // cache). The cached values are from run start and cannot detect a change,
     // so the old cached re-read was vacuous; no stale-loan signing.
+    // Round 8 (adversarial F4): config and the custody balance were still
+    // run-start values in the fresh checks below (loan_binding used the
+    // stale config, fixed_floor the pre-re-read balance) and the second
+    // guard_registry re-checked cached views. All three are re-read fresh
+    // here so the re-validation observes the live chain on every input.
     let fresh_control=guard_control_fresh(token)?;
     let fresh_loan=view_fresh(&contract,"get_loan",json!({"token_id":token}))?;
     let fresh_binding=view_fresh(&contract,"get_collateral_binding",json!({"token_id":token}))?;
     let fresh_policy=view_fresh(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?;
-    if fresh_control!=control||fresh_loan!=loan||fresh_binding!=binding||fresh_policy!=policy{return Err(err("collateral_ineligible","loan/custody changed during observation"));}
+    let fresh_config=view_fresh(&contract,"get_pledge_config",json!({}))?;
+    if fresh_config["network"]!="mainnet"{return Err(err("collateral_ineligible","custody certificate requires configured mainnet domain"));}
+    let fresh_balance=custody_get(&key,&format!("/wallet/v1/confidential/balance?token=nep141%3A{}",guarded::ASSET.trim_start_matches("nep141:")))?;
+    if fresh_control!=control||fresh_loan!=loan||fresh_binding!=binding||fresh_policy!=policy||fresh_config!=config{return Err(err("collateral_ineligible","loan/custody changed during observation"));}
     let effective=custody_get(&key,"/wallet/v1/policy")?;
     if !evidence::effective_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true){return Err(err("evidence","decrypted policy changed during certificate observation"));}
-    guard_registry()?;
+    guard_registry_fresh()?;
     // Round 8: the certificate window. The first template was issued against
     // the run-start block with a 30 s expiry, and the old final live() re-read
     // the SAME cached block, so it could not detect a slow run. Invalidate the
     // block cache, re-read the live FINAL block, and re-issue the template
     // against it with the contract-maximum 59 s window; sign the FRESH cert.
+    // cert_window_fresh (lib, pure) validates the fresh block against the
+    // run-start block (adversarial F5: must be >= now and <= 120 s ahead)
+    // and computes the window.
     read_cache::invalidate_block();
     let fresh_now=chain_now_ms()?;
-    let fresh_observed=fresh_now.checked_mul(1_000_000).ok_or_else(||err("certificate","timestamp overflow"))?;
-    let fresh_expires=fresh_observed.checked_add(59_000_000_000).ok_or_else(||err("certificate","expiry overflow"))?;
+    let (fresh_observed,fresh_expires)=cert_window_fresh(fresh_now,now)?;
     let fresh_template=view_fresh(&contract,"loan_certificate_template",json!({"token_id":token,"observed_at_ns":fresh_observed.to_string(),"expires_at_ns":fresh_expires.to_string()}))?;
     let fresh_cert:guarded::Certificate=serde_json::from_value(fresh_template).map_err(|_|err("certificate","malformed contract template"))?;
     fresh_cert.live(&contract,token,nonce,fresh_control.epoch,fresh_observed)?;
-    guarded::loan_binding(&fresh_cert,&fresh_loan,&fresh_binding,&fresh_control,&config)?;
+    guarded::loan_binding(&fresh_cert,&fresh_loan,&fresh_binding,&fresh_control,&fresh_config)?;
     guarded::frozen_policy(&fresh_cert,&fresh_policy)?;
-    guarded::fixed_floor(&fresh_cert,&balance,&id)?;
+    guarded::fixed_floor(&fresh_cert,&fresh_balance,&id)?;
     let (_,msk)=guarded_minter()?;let seed=minter_secret(&msk)?;
     use base64::Engine;
     let public_key=base64::engine::general_purpose::STANDARD.encode(ed25519_dalek::SigningKey::from_bytes(&seed).verifying_key().to_bytes());
-    if config["attestor_public_key"]!=public_key{return Err(err("certificate","worker key does not match pinned contract attestor"));}
+    if fresh_config["attestor_public_key"]!=public_key{return Err(err("certificate","worker key does not match pinned contract attestor"));}
     let signature=fresh_cert.sign(&seed)?;
     Ok(json!({"ok":true,"op":"loan_certificate","certificate":fresh_cert,"signature":signature,"public_key":public_key,
         "guarded_revision":guarded::REVISION,"registry_version":cfg("GUARDED_WORKER_HASH",""),

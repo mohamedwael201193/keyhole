@@ -338,7 +338,9 @@ fn provision_events() -> Vec<Event> {
 }
 
 /// `op_loan_certificate` (guarded_host.rs). No auth, no send: a pure
-/// read + sign. Uncached 20; with the cache 11.
+/// read + sign. Modeled 22 (round 8: 17; +5 adversarial F4 fresh reads:
+/// get_pledge_config, confidential balance, and the 3 registry reads now
+/// bypass the cache).
 // The event list is built incrementally; a `vec![...]` literal would
 // hide that structure, so the `vec_init_then_push` lint is allowed here
 // by design.
@@ -364,14 +366,19 @@ fn loan_certificate_events() -> Vec<Event> {
     e.push(FreshView); // get_loan
     e.push(FreshView); // get_collateral_binding
     e.push(FreshView); // get_wallet_policy
+    // Round 8 (adversarial F4): config and the custody balance were still
+    // run-start values in the fresh checks, and the second guard_registry
+    // re-checked cached views. All are re-read fresh here.
+    e.push(FreshView); // get_pledge_config
+    e.push(Fresh); // confidential balance (custody_get, non-cacheable)
     // Round 8: invalidate the run-start block, re-read the live FINAL block,
     // re-issue the template against it (+59 s). The template is never cached.
     e.push(InvalidateBlock);
     e.push(Block); // chain_now_ms — miss after invalidation
     e.push(View(KEYS, "loan_certificate_template", "{\"token_id\":\"k1\",\"observed_at_ns\":\"2\"}")); // fresh args — never cached
-    e.push(View(REGISTRY, "get_project", PROJECT)); // guard_registry — hit
-    e.push(View(REGISTRY, "list_versions", PROJECT)); // hit
-    e.push(View(REGISTRY, "get_version_count", PROJECT)); // hit
+    e.push(FreshView); // guard_registry_fresh — get_project (bypasses cache)
+    e.push(FreshView); // list_versions
+    e.push(FreshView); // get_version_count
     e.push(View(KEYS, "config", "{}")); // guarded_minter
     e
 }
@@ -405,11 +412,13 @@ fn provision_cost_is_at_most_70() {
 #[test]
 fn loan_certificate_cost_is_at_most_70() {
     let total = simulate(&loan_certificate_events());
-    // The modeled loan-certificate path is 17 (round 8: was 11; +4 fresh
+    // The modeled loan-certificate path is 22 (round 8: was 11; +4 fresh
     // re-reads that bypass the view cache, +1 fresh FINAL block after
-    // invalidation, +1 fresh template re-issued at +59 s). Still well under
-    // the 70-call budget and the 100-call host cap.
-    assert_eq!(total, 17, "loan-certificate model total changed; see the round-8 report §3");
+    // invalidation, +1 fresh template re-issued at +59 s; +5 adversarial
+    // F4: fresh get_pledge_config, fresh confidential balance, and the 3
+    // registry reads now bypass the cache). Still well under the 70-call
+    // budget and the 100-call host cap.
+    assert_eq!(total, 22, "loan-certificate model total changed; see the round-8 report §3");
     assert!(total <= 70, "loan-certificate {total} exceeds the 70-call budget");
 }
 

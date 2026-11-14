@@ -588,9 +588,10 @@ fn op_claim_minter_credit(input: &Value) -> Result<Value, Error> {
     Ok(
         // Round 8: out.1 is the full EXPERIMENTAL_tx_status envelope, so the
         // status lives under "result"; reading ["status"] off the envelope
-        // always yielded null. Unwrap .result (falling back to the body
-        // itself for a flattened response).
-        json!({"ok":true,"op":"claim_minter_credit","tx_hash":out.0,"native_status":out.1.get("result").unwrap_or(&out.1)["status"],"amount_yocto":amount.to_string(),"receiver":mid}),
+        // always yielded null. native_status (lib, pure) unwraps .result
+        // (falling back to the body itself for a flattened response); it is
+        // unit-tested against the captured mint envelope.
+        json!({"ok":true,"op":"claim_minter_credit","tx_hash":out.0,"native_status":native_status(&out.1),"amount_yocto":amount.to_string(),"receiver":mid}),
     )
 }
 
