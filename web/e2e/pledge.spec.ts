@@ -10,53 +10,49 @@ async function shot(page: import("@playwright/test").Page, name: string) {
   await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: false });
 }
 
-test.describe("Pledge dashboard", () => {
-  test("preview at 1440x900 fits without vertical scroll", async ({ page }, info) => {
+async function noHorizontalOverflow(page: import("@playwright/test").Page) {
+  const metrics = await page.evaluate(() => {
+    const el = document.scrollingElement || document.documentElement;
+    return { scrollWidth: el.scrollWidth, clientWidth: el.clientWidth };
+  });
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+}
+
+test.describe("Loans showcase", () => {
+  test("desktop 1440x900 shows both settled loans, timelines, costs, live state", async ({ page }, info) => {
     test.skip(info.project.name !== "desktop", "desktop density");
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/pledge");
     await expect(page.getByTestId("pledge-page")).toBeVisible();
-    await expect(page.getByTestId("pledge-preview-banner")).toContainText(/Example|preview/i);
-    await expect(page.getByTestId("pledge-cta")).toBeDisabled();
-    await expect(page.getByTestId("pledge-cta")).toHaveText(/Pledge launches after audit/);
-    await expect(page.getByTestId("pledge-warn")).toContainText(/Whole account is collateral/);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(/Borrow NEAR without publishing/);
-    await expect(page.getByTestId("pledge-caps")).toContainText(/exit caps/);
-    await expect(page.getByTestId("pledge-float-key")).toBeVisible();
-    await expect(page.getByTestId("pledge-floor")).toHaveText("0.50");
-    await expect(page.getByTestId("pledge-borrow")).toHaveValue("0.01");
-    const metrics = await page.evaluate(() => {
-      const el = document.scrollingElement || document.documentElement;
-      return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth };
-    });
-    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
-    expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 8);
-    await shot(page, "pledge_1440x900");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/Borrow against your key/);
+    await expect(page.getByTestId("loans-hero")).toContainText(/Two real loans on NEAR mainnet/);
+    await expect(page.getByTestId("loan-card-a")).toContainText("REPAID");
+    await expect(page.getByTestId("loan-card-b")).toContainText("DEFAULTED");
+    await expect(page.getByTestId("loan-card-b")).toContainText(/Key transferred to lender/);
+    await expect(page.getByTestId("loans-timeline-a").locator("li")).toHaveCount(7);
+    await expect(page.getByTestId("loans-timeline-b").locator("li")).toHaveCount(5);
+    await expect(page.getByTestId("loans-timeline-a")).toContainText(/Fund — first try failed/);
+    await expect(page.getByTestId("loans-costs")).toContainText("0.1 NEAR");
+    await expect(page.getByTestId("loans-costs")).toContainText("0.0032 NEAR");
+    await expect(page.getByTestId("loans-value-history")).toContainText("0.213652 USDC");
+    await expect(page.getByTestId("loans-reserves")).toContainText(/not a live on-chain balance/);
+    await expect(page.getByTestId("loans-live-state")).toBeVisible();
+    await expect(page.getByTestId("loans-footer")).toContainText(/Borrowing from the browser opens in a later release/);
+    await expect(page.getByTestId("pledge-page")).not.toContainText(/Example — preview|lender-demo\.near|Pledge launches after audit/);
+    await noHorizontalOverflow(page);
+    await shot(page, "loans_1440x900");
   });
 
-  test("preview at 1280x800 fits without vertical scroll", async ({ page }, info) => {
-    test.skip(info.project.name !== "desktop", "desktop density");
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/pledge");
-    await expect(page.getByTestId("pledge-widget")).toBeVisible();
-    const metrics = await page.evaluate(() => {
-      const el = document.scrollingElement || document.documentElement;
-      return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
-    });
-    expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 8);
-    await shot(page, "pledge_1280x800");
-  });
-
-  test("preview at 390 and morph to active chrome", async ({ page }, info) => {
+  test("mobile 390x844 stacks the loans without horizontal overflow", async ({ page }, info) => {
     test.skip(info.project.name !== "mobile", "mobile shot");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/pledge");
     await expect(page.getByTestId("pledge-page")).toBeVisible();
-    await shot(page, "pledge_390");
-    await page.getByTestId("pledge-preview-morph").click();
-    await expect(page.getByTestId("pledge-page")).toHaveClass(/is-active/);
-    await expect(page.getByTestId("pledge-active")).toBeVisible();
-    await shot(page, "pledge_active_390");
+    await expect(page.getByTestId("loan-card-a")).toBeVisible();
+    await expect(page.getByTestId("loan-card-b")).toBeVisible();
+    await expect(page.getByTestId("loans-costs")).toBeVisible();
+    await noHorizontalOverflow(page);
+    await shot(page, "loans_390");
   });
 
   test("sidebar lists Pledge and marks it current", async ({ page }, info) => {
