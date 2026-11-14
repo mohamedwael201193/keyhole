@@ -13,8 +13,8 @@ export const LOAN_BORROWER = "4058dd7adc2cb7450f816c9b9eba1c1efe600b2346f75f1962
 export const LOAN_LENDER = "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228";
 /** When the 12 hashes were last verified against the Nearblocks API. */
 export const EVIDENCE_VERIFIED_AT = "14 Nov 2026, 16:35 UTC";
-/** r9 worker attestation for the live build behind the loans. */
-export const ATTESTATION_URL = "https://api.outlayer.ai/attestations/1392083";
+/** Attested r9 worker call made 6 s before the loan-key mint (live build behind the loans). */
+export const ATTESTATION_URL = "https://api.outlayer.ai/attestations/by-call/14c8de8d-baa0-46d2-9936-140a357d9670";
 
 export type LoanTx = {
   label: string;
@@ -45,8 +45,8 @@ export const LOAN_A: LoanShowcase = {
   repaidNear: "0.0101",
   bondNear: "0.009",
   floorUsdc: "0.50",
-  term: "10 min",
-  grace: "1 min",
+  term: "600 s",
+  grace: "60 s",
   txs: [
     { label: "Open", plain: "The borrower opened the loan and pledged the key as collateral.", hash: "BSkutP8G6ZWtWahYisXai9k5V579otDKYRsYwWSkjXQx", block: 224503090, timeUtc: "2026-11-14 10:45:29", status: "SUCCESS" },
     { label: "Fund — first try failed", plain: "The lender's first funding attempt failed: the certificate had expired. No funds moved.", hash: "FBw6qwpXks9NX18uJcFbJzahEeU6kJQYAnanN7WnsB38", block: 224503251, timeUtc: "2026-11-14 10:47:01", status: "FAILED" },
@@ -65,8 +65,8 @@ export const LOAN_B: LoanShowcase = {
   repaidNear: null,
   bondNear: "0.009",
   floorUsdc: "0.50",
-  term: "10 min",
-  grace: "1 min",
+  term: "1 s",
+  grace: "0 s",
   txs: [
     { label: "Open", plain: "The borrower opened a second loan on the same key.", hash: "4dHXBPJdWPTAg2pgUc5Rg5EWuFoJnHHTqvFoq4PzPgmo", block: 224503654, timeUtc: "2026-11-14 10:50:52", status: "SUCCESS" },
     { label: "Fund", plain: "The lender funded the loan.", hash: "9XZ53tkXgfBzTsKKVGjRf8K18HLWxQpsB3qmNfwv9kNj", block: 224503740, timeUtc: "2026-11-14 10:51:42", status: "SUCCESS" },
@@ -102,12 +102,11 @@ export const VAULT_READS: { valueUsdc: string; wnear: string; date: string }[] =
 
 /**
  * Lender reserves — TEE-reported custody credit, NOT a live on-chain balance.
- * The loan wallet id is an enclave wallet id, not a NEAR account, so a public
+ * The loan wallet is an enclave wallet, not a NEAR account, so a public
  * balance read for it returns 0. The 0.899818 figure is the worker's own
  * accounting at funding (credit verified), dated 14 Nov 2026.
  */
 export const RESERVES = {
-  walletId: "e6184650-8e9b-482d-8cc3-983530f52cf0",
   custodyCreditUsdc: "0.899818",
   custodyCreditRaw: "899,818",
   floorUsdc: "0.50",

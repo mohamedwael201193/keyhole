@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ATTESTATION_URL,
   LOAN_A,
   LOAN_B,
   LOAN_COSTS,
@@ -46,6 +47,10 @@ describe("loans evidence data", () => {
     expect(LOAN_B.outcome).toBe("DEFAULTED");
     expect(LOAN_A.repaidNear).toBe("0.0101");
     expect(LOAN_B.repaidNear).toBeNull();
+    // terms as passed to open_loan on chain
+    expect([LOAN_A.term, LOAN_A.grace]).toEqual(["600 s", "60 s"]);
+    expect([LOAN_B.term, LOAN_B.grace]).toEqual(["1 s", "0 s"]);
+    expect(ATTESTATION_URL).toBe("https://api.outlayer.ai/attestations/by-call/14c8de8d-baa0-46d2-9936-140a357d9670");
   });
 
   it("formats loan times and short ids", () => {
@@ -73,6 +78,6 @@ describe("loans evidence data", () => {
   it("reserves are labelled TEE-internal, never a live balance", () => {
     expect(RESERVES.custodyCreditRaw).toBe("899,818");
     expect(RESERVES.custodyCreditUsdc).toBe("0.899818");
-    expect(RESERVES.walletId).toBe("e6184650-8e9b-482d-8cc3-983530f52cf0");
+    expect("walletId" in RESERVES).toBe(false);
   });
 });
