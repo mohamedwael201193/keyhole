@@ -9,6 +9,17 @@ test("/start redirects to the dashboard checklist", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByTestId("setup-checklist")).toBeVisible();
 });
+test("signed-out new visitor: /start and /dashboard never loop back to /start", async ({ page }) => {
+  // A fresh Playwright context carries no wallet and no storage: the new-visitor state.
+  // /start redirects everyone to /dashboard, so /dashboard must NOT send a signed-out visitor
+  // back to /start, or a new visitor would loop forever.
+  await page.goto("/start");
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page.getByTestId("setup-checklist")).toBeVisible();
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page.getByTestId("setup-checklist")).toBeVisible();
+});
 test("/start?step=connect shows the first step and progress dots without a wallet", async ({ page }) => {
   await page.goto("/start?step=connect");
   await expect(page.getByTestId("start-connect")).toBeVisible();

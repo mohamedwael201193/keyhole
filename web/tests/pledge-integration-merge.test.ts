@@ -37,7 +37,9 @@ describe("two-sided Pledge + integrated recovery invariants", () => {
     expect(dash).toContain("<PayoutCredit />"); expect(pledge).toContain("<PayoutCredit />");
     expect(credit).toContain('pathname==="/vault"');
     // One claim owner: the notice is a notice (a link to the vault), never a second claim button.
-    expect(credit).not.toContain("Claim your funds"); expect(credit).toContain("Claim in your vault");
+    // The link anchors straight to the vault's claim panel.
+    expect(credit).not.toContain("Claim your funds"); expect(credit).toContain("Claim in your vault"); expect(credit).toContain('href="/vault#payout"');
+    expect(panel).toContain('id="payout"');
     for (const guard of ["dispatchMoneyBatch", "expectedSigner: accountId", "finalMoneyReceipt", "clearVerifiedMoneyOperation", "verifyPayoutReceipt"]) expect(panel).toContain(guard);
     expect(panel).toContain("!!operation"); expect(panel).toContain("value.pending");
   });

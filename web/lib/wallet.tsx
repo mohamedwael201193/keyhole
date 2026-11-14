@@ -228,6 +228,26 @@ async function init(): Promise<{ selector: WalletSelector; modal: WalletSelector
   return { selector, modal };
 }
 
+/**
+ * The ONLY localStorage keys sign-out removes: the wallet-connection keys. The session key
+ * (kh_session_v1) is removed separately by clearSession, via revokeStored in disconnect().
+ * Saved money-operation records are NEVER removed here — browserMoneyStore
+ * (`keyhole:pledge-money:v1:*`) and saved pledge exits (`keyhole:pledge-exit:v1:*`) are what stop a
+ * resend after an UNKNOWN, so wiping them on sign-out would let a signed-out-and-back-in user resend
+ * an operation whose receipt was never confirmed. A pending op must survive disconnect.
+ */
+export const DISCONNECT_WALLET_KEYS = [
+  "near-wallet-selector:selectedWalletId",
+  "near-wallet-selector:recentlySignedInWallets",
+  NC_WALLET_KEY,
+  PRIVY_FLAG,
+] as const;
+
+/** Forget the wallet-connection keys on sign-out. Saved money operations are left untouched. */
+export function clearWalletConnectionKeys(store: Pick<Storage, "removeItem"> = localStorage): void {
+  for (const key of DISCONNECT_WALLET_KEYS) store.removeItem(key);
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {return PLEDGE_SANDBOX?<SandboxWalletProvider context={Ctx}>{children}</SandboxWalletProvider>:<NativeWalletProvider>{children}</NativeWalletProvider>;}
 function NativeWalletProvider({ children }: { children: ReactNode }) {
   const ref = useRef<{ selector: WalletSelector; modal: WalletSelectorModal } | null>(null);
@@ -392,10 +412,9 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
       // Local state clears even when the wallet sign-out throws, and the wallet selector's remembered
       // connection is forgotten too, so the next load does not silently restore the account that was
       // just signed out of (the "Disconnect only locks the session" failure).
-      localStorage.removeItem("near-wallet-selector:selectedWalletId");
-      localStorage.removeItem("near-wallet-selector:recentlySignedInWallets");
-      localStorage.removeItem(NC_WALLET_KEY);
-      localStorage.removeItem(PRIVY_FLAG);
+      // Only the wallet-connection keys are removed: saved money operations survive sign-out, so an
+      // UNKNOWN operation can still be reconciled instead of resent (see clearWalletConnectionKeys).
+      clearWalletConnectionKeys();
       owner.current = null; setVia(null); setAccountId(null); setMismatch(null);
     }
   }, [ensure, accountId]);

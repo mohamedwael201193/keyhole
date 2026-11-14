@@ -42,10 +42,10 @@ export function PayoutCredit({embeddedHere=false}:{embeddedHere?:boolean}={}) {
  useEffect(()=>{if(embedded||!account||!supported)return;const update=()=>{if(document.visibilityState!=="hidden")void refresh().catch(()=>{ /* keep last known state; never send */ });};const timer=setInterval(update,15_000);addEventListener("focus",update);return ()=>{clearInterval(timer);removeEventListener("focus",update);};},[account,supported,refresh,embedded]);
  useEffect(()=>store?.subscribe?.(()=>{try{setOperation(store.load());}catch{setSupported(false);setMessage("Pending operation storage is unreadable; do not send.");}}),[store]);
  if(embedded||!account||(credit==="0"&&!pending&&!operation&&!message))return null;
- return <section aria-label="Payout credit" data-testid="payout-credit" style={{margin:"16px 24px",padding:20,border:"1px solid #d0ddd4",borderRadius:16,background:"#f3f8f4",color:"#1d3430"}}>
+ return <section aria-label="Payout credit" data-testid="payout-credit" className="kh-card" style={{margin:"16px 24px"}}>
   <p>You have {nearText(credit)} NEAR to collect. It is held by the contract and has not been sent to your wallet yet.</p>
   {pending&&<p>A payout is already on its way (reference {pending.nonce}). Please wait — do not send it again.</p>}
-  <p><Link href="/vault">Claim in your vault →</Link></p>
+  <p><Link href="/vault#payout">Claim in your vault →</Link></p>
   {message&&<p role="status">{message}</p>}
  </section>;
 }
