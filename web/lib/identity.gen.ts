@@ -63,7 +63,7 @@ export const IDENTITY = {
     ]
   },
   "review": {
-    "source_commit": "052007f350bc24622764222306cc646874eb61cd"
+    "source_commit": "bffbfa466b8f6238fc625378a487089eb33df98f"
   },
   "worker_candidate": {
     "status": "source-candidate-not-published",
