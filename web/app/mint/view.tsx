@@ -57,13 +57,16 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
   const online = useHealth(initialOnline);
   const o = m.res?.output;
   const revealed = !!(o?.ok && o.token_id);
-  // A mint changes what the key store holds: re-read the holder's keys at once (once per minted token),
-  // so the unlock affordances stop gating on the pre-mint snapshot — the store otherwise serves its cached
-  // "no key" answer until a manual retry, and every unlock entry vanishes with it.
+  // A mint changes what the key store holds. Trust the mint receipt first: the
+  // minted token counts as held at once (once per minted token), so the unlock
+  // affordances stop gating on the pre-mint snapshot — the store otherwise serves
+  // its cached "no key" answer until a manual retry, and every unlock entry
+  // vanishes with it. The re-read below still runs in the background to confirm.
   const refreshedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!revealed || !o?.token_id || refreshedFor.current === String(o.token_id)) return;
     refreshedFor.current = String(o.token_id);
+    store.noteMinted(String(o.token_id));
     store.refresh();
     window.dispatchEvent(new Event("keyhole:keys-changed"));
   }, [revealed, o?.token_id, store]);

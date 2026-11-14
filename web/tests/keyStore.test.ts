@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ usePathname: () => null }));
 vi.mock("@/lib/wallet", () => ({ useWallet: () => ({ accountId: null }) }));
 
-import { FRESH_MS, heldFrom, keyEntryFresh } from "@/lib/keyStore";
+import { FRESH_MS, heldFrom, keyEntryFresh, mergeOptimistic } from "@/lib/keyStore";
 
 describe("key store freshness", () => {
   const now = 1_000_000;
@@ -25,8 +25,7 @@ describe("key store freshness", () => {
   });
 });
 
-describe("the holder's key, read from the shared store", () => {
-  const token = { token_id: "4", owner_id: "holder.near" } as never;
+describe("the holder's key, read from the shared store", () => {  const token = { token_id: "4", owner_id: "holder.near" } as never;
   it("a cached key resolves at once: no looking up, the first key and its tier", () => {
     const h = heldFrom({ status: "ready", primary: token, tier: 1 }, "holder.near");
     expect(h.lookingUp).toBe(false);
@@ -45,5 +44,19 @@ describe("the holder's key, read from the shared store", () => {
     expect(failed.failed).toBe(true);
     expect(failed.keyMiss).toBe(false);
     expect(failed.held).toBeNull();
+  });
+});
+
+describe("mint receipts survive a lagging chain read", () => {
+  const minted = { token_id: "new-key", owner_id: "holder.near", metadata: null } as never;
+  it("a lagging empty read keeps the receipt-backed token", () => {
+    expect(mergeOptimistic([], ["new-key"], "holder.near")).toEqual([minted]);
+  });
+  it("a caught-up read is never duplicated", () => {
+    expect(mergeOptimistic([minted], ["new-key"], "holder.near")).toEqual([minted]);
+  });
+  it("no receipt means the read stands as-is", () => {
+    expect(mergeOptimistic([], [], "holder.near")).toEqual([]);
+    expect(mergeOptimistic([minted], [], "holder.near")).toEqual([minted]);
   });
 });

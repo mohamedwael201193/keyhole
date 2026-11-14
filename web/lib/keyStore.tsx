@@ -43,6 +43,17 @@ export function keyEntryFresh(entry: Pick<KeyEntry, "at"> | null, now: number, f
   return !force && !!entry && now - entry.at < FRESH_MS;
 }
 
+/**
+ * Keep receipt-backed tokens in a read result: a chain read that has not caught
+ * up with a fresh mint yet must not turn a held key into "no key". Tokens the
+ * read already returns are never duplicated. Pure, so it is unit-tested.
+ */
+export function mergeOptimistic(keys: Token[], optimistic: string[], accountId: string): Token[] {
+  const seen = new Set(keys.map((k) => k.token_id));
+  const extra = optimistic.filter((id) => !seen.has(id)).map((token_id) => ({ token_id, owner_id: accountId, metadata: null }));
+  return [...keys, ...extra];
+}
+
 function readStored(accountId: string): KeyEntry | null {
   try {
     const raw = sessionStorage.getItem(STORE_PREFIX + accountId);
@@ -79,6 +90,12 @@ export type KeyStore = {
   capped: boolean;
   /** Reads the keys again now, whatever the cache says. */
   refresh: () => void;
+  /**
+   * Trust a mint receipt at once: the minted token counts as held immediately,
+   * without waiting for the chain read to catch up. A background re-read still
+   * confirms it; the receipt is never dropped by a lagging empty read.
+   */
+  noteMinted: (tokenId: string) => void;
 };
 
 type Snap = { accountId: string | null; status: KeyStatus; keys: Token[]; tier: number | null };
@@ -91,6 +108,10 @@ export function KeyStoreProvider({ children }: { children: ReactNode }) {
   const [snap, setSnap] = useState<Snap>(EMPTY);
   const [round, setRound] = useState(0);
   const force = useRef(false);
+  /** Token ids from mint receipts not yet confirmed by a chain read. */
+  const optimistic = useRef<Set<string>>(new Set());
+  const snapRef = useRef(snap);
+  snapRef.current = snap;
   useEffect(()=>{const changed=()=>{force.current=true;setRound(n=>n+1);};window.addEventListener("keyhole:keys-changed",changed);return()=>window.removeEventListener("keyhole:keys-changed",changed);},[]);
 
   useEffect(() => {
@@ -104,10 +125,16 @@ export function KeyStoreProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const { keys, tier } = await readKeys(accountId);
-        const entry: KeyEntry = { keys, tier, at: Date.now() };
+        // The read may lag a fresh mint: keep receipt-backed tokens until the
+        // chain itself returns them, then stop carrying them optimistically.
+        const merged = mergeOptimistic(keys, [...optimistic.current], accountId);
+        for (const k of keys) optimistic.current.delete(k.token_id);
+        const firstIsOptimistic = merged[0] !== undefined && optimistic.current.has(merged[0].token_id);
+        const mergedTier = tier ?? (firstIsOptimistic ? 1 : null);
+        const entry: KeyEntry = { keys: merged, tier: mergedTier, at: Date.now() };
         memory.set(accountId, entry);
         writeStored(accountId, entry);
-        if (!cancel) setSnap({ accountId, status: "ready", keys, tier });
+        if (!cancel) setSnap({ accountId, status: "ready", keys: merged, tier: mergedTier });
       } catch {
         if (!cancel) setSnap((p) => (p.accountId === accountId && p.status === "ready" ? p : { accountId, status: "error", keys: [], tier: null }));
       }
@@ -116,6 +143,21 @@ export function KeyStoreProvider({ children }: { children: ReactNode }) {
   }, [accountId, path, round]);
 
   const refresh = useCallback(() => { force.current = true; setRound((n) => n + 1); }, []);
+
+  const noteMinted = useCallback((tokenId: string) => {
+    if (!accountId || !tokenId) return;
+    optimistic.current.add(tokenId);
+    const prev = snapRef.current.accountId === accountId ? snapRef.current : cachedKeys(accountId);
+    const prevKeys = prev?.keys ?? [];
+    const keys = mergeOptimistic(prevKeys, [tokenId], accountId);
+    // A mint only happens on an account with no key, so a fresh mint is Bronze (tier 1);
+    // an existing key keeps its own tier.
+    const tier = prevKeys.length > 0 ? prev?.tier ?? null : 1;
+    const entry: KeyEntry = { keys, tier, at: Date.now() };
+    memory.set(accountId, entry);
+    writeStored(accountId, entry);
+    setSnap({ accountId, status: "ready", keys, tier });
+  }, [accountId]);
 
   // A snapshot for another account is never shown.
   const current = accountId && snap.accountId === accountId ? snap : accountId ? { ...EMPTY, status: "loading" as const, accountId } : EMPTY;
@@ -127,7 +169,8 @@ export function KeyStoreProvider({ children }: { children: ReactNode }) {
     tier: current.tier,
     capped: current.keys.length >= KEY_LIST_LIMIT,
     refresh,
-  }), [current.status, current.accountId, current.keys, current.tier, refresh]);
+    noteMinted,
+  }), [current.status, current.accountId, current.keys, current.tier, refresh, noteMinted]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
