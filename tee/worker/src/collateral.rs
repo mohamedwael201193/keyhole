@@ -377,7 +377,14 @@ pub fn policy_diff(
         return diff;
     };
     match o.get("refund_addresses") {
-        None => {}
+        // ROUND 9 FIX (panel H5): observed-absent is only a match when the
+        // expected map is empty. If the expected template ever carries a
+        // refund address, its disappearance must be a diff.
+        None => {
+            if refunds_expected != json!({}) {
+                diff.push("refund_addresses:value".to_string());
+            }
+        }
         Some(Value::Null) => diff.push("top.null:refund_addresses".to_string()),
         Some(Value::Object(m)) => {
             if !m.values().all(Value::is_string) {
@@ -709,11 +716,15 @@ pub fn policy_diff_is_sync_only(
             ) || frozen_is_sync_lag(t)
         });
     }
+    // Case 2: policy is stored; every token must be a version sync token,
+    // or a frozen token explained by the chain-known frozen state differing
+    // from the observed frozen state (the provider view lags the chain).
+    // NOTE: `meta.version:type` is deliberately NOT sync. A version rendered
+    // in the wrong type is a real mismatch, not a sync lag (plan section 4.3
+    // lists only absent/0 as version sync tokens). It fails hard.
     diff.iter().all(|t| {
-        matches!(
-            t.as_str(),
-            "meta.version:absent" | "meta.version:0" | "meta.version:type"
-        ) || frozen_is_sync_lag(t)
+        matches!(t.as_str(), "meta.version:absent" | "meta.version:0")
+            || frozen_is_sync_lag(t)
     })
 }
 

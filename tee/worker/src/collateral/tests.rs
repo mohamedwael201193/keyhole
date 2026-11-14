@@ -848,16 +848,74 @@ fn r9_t3_diff_names_each_field() {
         }),
         vec!["top.extra_key:webhook_url"],
     ));
+    // ROUND 9 FIX (panel H6): pin the mutations the code catches but T3 did
+    // not cover — approval/rules extra fields (fallback), capability
+    // missing/extra (fallback), authorized_key_hashes null, version as a
+    // string, controller absent.
+    cases.push((
+        "approval extra field".into(),
+        Box::new(|v: &mut Value| {
+            v["approval"]["admin_quorum"] = json!(2);
+        }),
+        vec!["approval:differs"],
+    ));
+    cases.push((
+        "rules extra field".into(),
+        Box::new(|v: &mut Value| {
+            v["rules"]["admin_quorum"] = json!(2);
+        }),
+        vec!["rules.extra_key:admin_quorum"],
+    ));
+    cases.push((
+        "capability missing".into(),
+        Box::new(|v: &mut Value| {
+            v["capabilities"].as_object_mut().unwrap().remove("sign_message");
+        }),
+        vec!["capabilities.sign_message:missing"],
+    ));
+    cases.push((
+        "capability extra".into(),
+        Box::new(|v: &mut Value| {
+            v["capabilities"]["new_capability"] = json!({"allowed": true});
+        }),
+        vec!["capabilities.new_capability:extra"],
+    ));
+    cases.push((
+        "authorized_key_hashes null".into(),
+        Box::new(|v: &mut Value| {
+            v["authorized_key_hashes"] = Value::Null;
+        }),
+        vec!["authorized_key_hashes:missing"],
+    ));
+    cases.push((
+        "version as string".into(),
+        Box::new(|v: &mut Value| {
+            v["version"] = json!("1");
+        }),
+        vec!["meta.version:type"],
+    ));
+    cases.push((
+        "controller absent".into(),
+        Box::new(|v: &mut Value| {
+            v.as_object_mut().unwrap().remove("controller");
+        }),
+        vec!["meta.controller:absent"],
+    ));
     for (name, mutate, want) in cases {
         let mut v = stored.clone();
         mutate(&mut v);
         let diff = policy_diff(&expected, &v, &p, contract);
-        for token in &want {
-            assert!(
-                diff.iter().any(|t| t == token),
-                "T3 {name}: diff must contain {token}, got {diff:?}"
-            );
-        }
+        // ROUND 9 FIX (panel H6): assert EXACT equality, not containment.
+        // If a fallback is ever refactored away, a missing token must fail
+        // this test. The expected list is the complete diff for the mutation.
+        let mut got: Vec<&str> = diff.iter().map(|s| s.as_str()).collect();
+        got.sort_unstable();
+        let mut want_sorted = want.clone();
+        want_sorted.sort_unstable();
+        assert_eq!(
+            got, want_sorted,
+            "T3 {name}: diff must be exactly {want:?}, got {diff:?}"
+        );
         if want.is_empty() {
             assert!(
                 diff.is_empty(),
@@ -961,15 +1019,19 @@ fn r9_t5_canonical_hash_and_provider_hash_relationship() {
         enc["policy_hash"].as_str().unwrap(),
         "T5 canonical_hash(P.json) must DIFFER from the provider policy_hash (the stored form adds controller+meta)"
     );
-    // The B3 case reproduces the same relationship independently.
+    // The B3 case reproduces the same relationship independently, by
+    // RECOMPUTING the canonical hash over the captured B3 candidate_policy
+    // (not just reading the recorded field).
     let b3 = live_fixture("b3_prepare.out.json");
+    let b3_candidate = &b3["candidate_policy"];
+    let b3_recomputed = canonical_hash(b3_candidate);
     assert_eq!(
+        b3_recomputed,
         b3["candidate_policy_sha256"].as_str().unwrap(),
-        "277efe0bf68d42c3dd75299687add3d157822a98bb2175e8db9c7cc557bca932",
-        "T5 B3 candidate_policy_sha256 must match the worker's recorded value"
+        "T5 B3 canonical_hash(candidate_policy) must equal the recorded candidate_policy_sha256"
     );
     assert_ne!(
-        b3["candidate_policy_sha256"].as_str().unwrap(),
+        b3_recomputed,
         b3["plaintext_hash"].as_str().unwrap(),
         "T5 B3 candidate hash must differ from the provider plaintext_hash"
     );
@@ -1116,20 +1178,30 @@ fn r9_t10_every_custody_get_path_has_a_fixture() {
     ];
     assert_eq!(_fixtures.len(), 13, "T10 must list all 13 coverage fixtures");
     // Every custody_get path family must be represented by a fixture.
+    // ROUND 9 FIX (panel H2): the guard must iterate the DISCOVERED paths,
+    // not a fixed list of known families. A new custody_get path that
+    // matches no fixture family must FAIL this test, so a new first-live
+    // shape cannot be added silently.
     let families = [
-        ("/wallet/v1/requests", "e2_requests.json"),
-        ("/wallet/v1/limit-orders", "e2_limit_orders.json"),
-        ("/wallet/v1/pending_approvals", "e2_pending_approvals.json"),
-        ("/wallet/v1/confidential/balance", "e2_conf_balance_token.json"),
-        ("/wallet/v1/balance", "e2_balance_intents.json"),
-        ("/wallet/v1/policy", "e7_policy_final.json"),
+        "/wallet/v1/requests",
+        "/wallet/v1/limit-orders",
+        "/wallet/v1/pending_approvals",
+        "/wallet/v1/confidential/balance",
+        "/wallet/v1/balance",
+        "/wallet/v1/policy",
     ];
-    for (prefix, fixture) in families {
+    for p in &paths {
+        assert!(
+            families.iter().any(|f| p.starts_with(f)),
+            "T10 custody_get path {p} has no fixture family — add a captured fixture for it"
+        );
+    }
+    // Each known family must also be present in the source (guards deletion).
+    for prefix in families {
         assert!(
             paths.iter().any(|p| p.starts_with(prefix)),
             "T10 custody_get path family {prefix} not found in host sources"
         );
-        let _ = fixture;
     }
     // The policy path must have all four shapes: none, stored, frozen, thawed.
     let _policy_shapes: &[&str] = &[
@@ -1139,4 +1211,76 @@ fn r9_t10_every_custody_get_path_has_a_fixture() {
         include_str!("../fixtures/live_r9/e10_policy_thawed_t60s.json"),
     ];
     assert_eq!(_policy_shapes.len(), 4, "T10 must list all 4 policy shapes");
+}
+
+#[test]
+fn r9_custody_probe_is_wired_read_only_and_honest() {
+    // ROUND 9 (panel H7): custody_probe had zero tests. This text test pins
+    // the wiring and the honesty properties that the library tests cannot
+    // reach (the op is a host function, wasm32-only).
+    let host = include_str!("../collateral_host.rs");
+    let main = include_str!("../main.rs");
+    // Wired: in the ops list and in the dispatch match.
+    assert!(main.contains("\"custody_probe\""), "T-custody_probe: ops list");
+    assert!(
+        main.contains("\"custody_probe\" => op_custody_probe(&input)"),
+        "T-custody_probe: dispatch"
+    );
+    // The op function exists and authenticates as the owner (NEP-413).
+    assert!(
+        host.contains("fn op_custody_probe(input: &Value)"),
+        "T-custody_probe: op function"
+    );
+    assert!(
+        host.contains("provision_auth(input, \"custody_probe\")"),
+        "T-custody_probe: owner auth"
+    );
+    // Read-only: the probe body uses GET only. Extract the op function and
+    // assert it contains no POST/send.
+    let start = host.find("fn op_custody_probe").unwrap();
+    let probe = &host[start..];
+    // The op ends at the next top-level `fn ` after its start.
+    let end = probe[10..].find("\nfn ").map(|i| i + 10).unwrap_or(probe.len());
+    let probe = &probe[..end];
+    assert!(
+        probe.contains("http(\"GET\""),
+        "T-custody_probe: must use GET"
+    );
+    assert!(
+        !probe.contains("http(\"POST\""),
+        "T-custody_probe: must not POST"
+    );
+    assert!(
+        !probe.contains("native_send"),
+        "T-custody_probe: must not send a transaction"
+    );
+    // Honest ok: the top-level ok reflects the core policy read, not a
+    // hardcoded true. (Panel H7: ok:true with every endpoint failed misleads.)
+    assert!(
+        probe.contains("let ok = policy_status.as_u64() == Some(200);"),
+        "T-custody_probe: ok must derive from the policy read status"
+    );
+    assert!(
+        !probe.contains("\"ok\":true,\"op\":\"custody_probe\""),
+        "T-custody_probe: ok must not be hardcoded true"
+    );
+    // The op returns per-endpoint status/shape and the three verdicts.
+    for key in [
+        "\"policy\"",
+        "\"requests\"",
+        "\"limit_orders\"",
+        "\"pending_approvals\"",
+        "\"confidential_balance\"",
+        "\"confidential_balance_token\"",
+        "\"balance_intents\"",
+        "\"policy_diff\"",
+        "\"settled_inventory\"",
+        "\"authority_inventory\"",
+        "\"fixed_floor_shape\"",
+    ] {
+        assert!(
+            probe.contains(key),
+            "T-custody_probe: output must carry {key}"
+        );
+    }
 }

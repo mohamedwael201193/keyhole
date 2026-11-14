@@ -89,7 +89,7 @@
       "public_key": "ed25519:UR9rDFHYZFNHxbTgXf7Chu8baLByhZ49bX6RoNvdsM9",
       "recipient": "keyhole",
       "scheme": "nep413",
-      "signature": "8kgvFtUC+wrcFbCGrgJ6zfmSLFoVeri0l3QIlM1FLhTHFJMhIHlvbo6lR6iIYIwNeq4GJBRpsUAIw/qXhE2/AQ=="
+      "signature": "[REDACTED \u2014 NEP-413 guardian signature, 88 chars base64; see exec/loans/live_r9/b3_prepare.out.json for the source]"
     },
     "observed_at_ms": 1794639681370
   },

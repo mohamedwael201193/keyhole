@@ -739,7 +739,12 @@ fn op_custody_probe(input: &Value) -> Result<Value, Error> {
         _ => (Value::Null, json!(false)),
     };
     let policy_none = policy_body.get("policy").and_then(Value::as_str) == Some("none");
-    Ok(json!({"ok":true,"op":"custody_probe","token_id":token,"owner_epoch":control.epoch.to_string(),
+    // ROUND 9 FIX (panel H7): `ok` is true only when the core probe read
+    // (GET /policy) succeeded. Returning ok:true when every endpoint failed
+    // misleads an operator into reading the probe as a pass; the per-endpoint
+    // statuses and per-verdict fields carry the detail either way.
+    let ok = policy_status.as_u64() == Some(200);
+    Ok(json!({"ok":ok,"op":"custody_probe","token_id":token,"owner_epoch":control.epoch.to_string(),
         "endpoints":{
             "policy":{"status":policy_status,"shape":collateral::observed_shape(&policy_body)},
             "requests":{"status":req_status,"pages":pages.len(),"shape":collateral::observed_shape(&json!(pages))},
