@@ -1,0 +1,4 @@
+{
+  "wallet_id": "08bff346-2c28-4390-8d00-049ed43f656d",
+  "note": "Keep this wallet. GET /wallet/v1/policy on it is free and read-only; re-run at the probe step and diff against e7_policy_final.json (must be empty)."
+}

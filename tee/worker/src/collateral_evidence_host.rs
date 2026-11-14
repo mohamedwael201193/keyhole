@@ -315,9 +315,22 @@ fn op_finalize_collateral(input: &Value) -> Result<Value, Error> {
     let (key, _) = guarded_wallet(&p.token_id)?;
     let effective = custody_get(&key, "/wallet/v1/policy")?;
     if !collateral::binding_matches(&p, &b, &public, &keys_contract())
-        || !collateral::effective_policy_matches(&expected, &effective, &p, &keys_contract())
     {
         return Err(err("evidence", "installed policy changed since review"));
+    }
+    // ROUND 9: field-level diff (names only) so a changed policy names the
+    // field instead of failing silently. Finalize is post-install: a mismatch
+    // here is a real change, not a sync artifact (no retryable class).
+    let diff = collateral::policy_diff(&expected, &effective, &p, &keys_contract());
+    if !diff.is_empty() {
+        return Err(err(
+            "evidence",
+            format!(
+                "installed policy changed since review {} (shape: {})",
+                collateral::policy_diff_message(&diff),
+                collateral::observed_shape(&effective)
+            ),
+        ));
     }
     evidence_inventory(&key)?;
     let auth: Auth = serde_json::from_value(r.guardian_auth.clone())
@@ -610,6 +623,21 @@ fn prepared_review_summary(p: &Prepared, guardian: Value) -> Result<Value, Error
     let mut out = prepared_summary(p);
     out["candidate_policy"] = expected.clone();
     out["candidate_policy_sha256"] = json!(evidence::digest(&expected)?);
+    // ROUND 9 tripwire correction (ground truth, experiment E0.1/E3): the
+    // provider's `plaintext_hash` is the hash of the STORED plaintext, which
+    // includes the `controller` (the wallet's own public key) and meta fields
+    // that the reviewed candidate P.json does not contain. A pre-register
+    // check requiring `canonical_hash(P.json) == plaintext_hash` can therefore
+    // NEVER pass (proven: 23 candidate stored-forms across 2 independent
+    // cases, 0 matches). The `canonical_hash` below is the reviewed
+    // candidate's canonical hash, recorded for the audit trail; it is NOT
+    // compared to `plaintext_hash`. The pre-register gate is the provider's
+    // own self-consistency (sign-policy policy_hash == encrypt policy_hash,
+    // checked in op_prepare_collateral) plus the post-register GET /policy
+    // field diff in reconcile (which must be empty before finalize). That
+    // diff is the real verification that the stored policy matches the
+    // reviewed candidate, at the earliest point it is observable.
+    out["canonical_hash"] = json!(collateral::canonical_hash(&expected));
     out["manifest"] = json!(m);
     out["manifest_sha256"] = json!(evidence::digest(&m)?);
     out["guardian"] = guardian;

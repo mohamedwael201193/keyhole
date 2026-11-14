@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "public_key_hex": "21d789097f45a577a3867bdfb01901cc8cc7a7737041c63e7988f73e710f8ea0",
+  "version": 1,
+  "locked": true,
+  "valid_until": 1795247501,
+  "policy_hash": "ae2071168e77d6c0af147a316775e2020a63bc56ace9a7db6b551a91d1ff882b",
+  "policy_hash_eq_encrypt": true,
+  "policy_hash_eq_H_local": false,
+  "signature_hex_length": 128
+}

@@ -1,0 +1,14 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "intent_id": "5f8f93f5-3651-4d01-abbc-83745527e336",
+    "deposit_address": "0x1432b8581aF504527f7e3f7c637b2E5fD5F8d5E0",
+    "amount": "900000",
+    "amount_out": "899818",
+    "min_amount_out": "890819",
+    "expires_at": "2026-11-17T08:21:34.318Z",
+    "estimated_time_secs": 35,
+    "hint": "Send 900000 of nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near on base to the deposit_address; funds will settle into your confidential balance."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "expected_wallet_id": "08bff346-2c28-4390-8d00-049ed43f656d",
+  "stored_top_keys": [
+    "approval",
+    "authorized_key_hashes",
+    "capabilities",
+    "controller",
+    "frozen",
+    "locked",
+    "policy",
+    "rules",
+    "usage",
+    "version",
+    "wallet_id"
+  ],
+  "diff_count": 1,
+  "diffs": [
+    "meta.controller:\"ed25519:21d789097f45…\"(len 72) (expected keyhole-devmo.near for prod; experiment CTRL differs — note only)"
+  ],
+  "stored_policy_marker": "stored",
+  "stored_version": 1,
+  "stored_locked": true,
+  "stored_frozen": false
+}

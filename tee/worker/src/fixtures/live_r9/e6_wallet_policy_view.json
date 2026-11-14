@@ -1,0 +1,11 @@
+{
+  "owner": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+  "encrypted_data": "[REDACTED — ciphertext, see .enc.json]",
+  "frozen": false,
+  "updated_at": 1794642715311082200,
+  "storage_refund_to": "3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
+  "storage_deposit": "16910000000000000000000",
+  "version": 1,
+  "locked": true,
+  "encrypted_data_sha256_hex": "1605ef65a63f3b749eedacf19f9dd890afbf5caf0f1528da8d1e9897a5f0c661"
+}

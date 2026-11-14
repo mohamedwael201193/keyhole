@@ -1,0 +1,55 @@
+{
+  "balance": {
+    "account_id": "85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1",
+    "balance": "899818",
+    "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"
+  },
+  "bind": {
+    "account": "13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda",
+    "nonce": "bO+YwtgiEMPa+cqmlQK/W2U6Y6DgMcIGo6SqvZs06hQ=",
+    "req_sha256": "cb66cd5b6211a018fb95c288c9aabd07a8158557da5f331b1163fa9f794d8239",
+    "token_id": "k68e644e95934e9a4"
+  },
+  "canonical_wallet_pubkey": "ed25519:85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1",
+  "credit_verified": true,
+  "inventory_sha256": "1d0b1f7b9c998f8c8de444687aa91529d70fb2ded68a763e8707f6ad3a89eda7",
+  "ok": true,
+  "op": "collateral_funding_status",
+  "request": {
+    "created_at": "2026-11-14T06:58:44.872033+00:00",
+    "request_id": "e436bf05-0406-4d84-b7b9-f970ae5575ac",
+    "result": {
+      "amount": "900000",
+      "amount_out": "899818",
+      "confidential": true,
+      "deposit_address": "0x4f13894E79D485897F65e621E80304DbE4653bc4",
+      "destination_asset": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+      "oneclick_status": "SUCCESS",
+      "origin_asset": "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+      "recipient": "85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1",
+      "swap_details": {
+        "amountIn": "900000",
+        "amountInFormatted": "0.9",
+        "amountOut": "899818",
+        "amountOutFormatted": "0.899818",
+        "destinationChainTxHashes": [],
+        "intentHashes": [
+          "2EC6tqX9gVGHp1SXUfX8sh7qqnKhtjex4oqw8ytEk5JC"
+        ],
+        "minAmountOut": null,
+        "nearTxHashes": [
+          "Fd9v4A1QEDMfjWvWhYNiy6iAKup7f4PUA9VoSviZ4Y6a",
+          "DgtDAEP8hnCEgfSczfE8N4hnSHbqdu5Sgs3bZ6Q8vD5P"
+        ],
+        "originChainTxHashes": [
+          "0xd1c068803a9a8ecb9de54fcd1539d81e756618489698967abb57b5de4f585c10"
+        ],
+        "refundReason": null,
+        "refundedAmount": "0"
+      }
+    },
+    "status": "success",
+    "type": "confidential_deposit_intent",
+    "updated_at": "2026-11-14T07:01:51.341260+00:00"
+  }
+}

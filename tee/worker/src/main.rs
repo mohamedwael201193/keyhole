@@ -962,7 +962,7 @@ mod host {
         let (mid, _) = minter()?;
         Ok(json!({"ok": true, "op": "info", "version": VERSION, "guarded_revision":guarded::REVISION, "guarded_registry_hash":cfg("GUARDED_WORKER_HASH",""), "keys_contract": keys_contract(), "nep413_recipient": recipient(),
             "minter_account": mid, "limits": {"1": limits_for_tier(1), "2": limits_for_tier(2), "3": limits_for_tier(3)},
-            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","exact_near_exit_v1","transfer","loan_certificate","collateral_funding_quote","collateral_funding_status","claim_minter_credit","create_collateral_wallet","collateral_candidate","collateral_report","finalize_collateral","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","reconcile_minter_send","rebroadcast_minter_send","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
+            "ops": ["info","status","quote","mint","account","balance","swap","copy","withdraw","exact_near_exit_v1","transfer","loan_certificate","collateral_funding_quote","collateral_funding_status","claim_minter_credit","create_collateral_wallet","collateral_candidate","collateral_report","finalize_collateral","prepare_collateral","collateral_quote","provision_collateral","reconcile_collateral","custody_probe","reconcile_minter_send","rebroadcast_minter_send","withdraw_dry_run","pledge_inventory","reconcile_value_op","history","provenance","record","lock","prove","limits","pnl","sweep_minter","chain_address","chain_sign","add_beat_key","del_beat_key","dashboard","level_up","session","session_revoke"], "raise_delay_ms": RAISE_DELAY_MS, "transfer_cooldown_ms": TRANSFER_COOLDOWN_MS, "global_per_minute": GLOBAL_PER_MINUTE, "global_mints_per_day": GLOBAL_MINTS_PER_DAY,
             "sign": "NEP-413 signMessage: message = JSON {op, account_id, ts_ms, params}, recipient = nep413_recipient, nonce = 32 random bytes", "session": {"max_ms": SESSION_MAX_MS, "ops": SESSION_OPS, "start_op": "session", "doc": "https://docs.near.org/web3-apps/backend/backend#backend-auth-with-a-near-wallet"}}))
     }
 
@@ -1001,6 +1001,7 @@ mod host {
             "withdraw_dry_run" => op_withdraw_dry_run(&input),
             "provision_collateral" => op_provision_collateral(&input),
             "reconcile_collateral" => op_reconcile_collateral(&input),
+            "custody_probe" => op_custody_probe(&input),
             "reconcile_minter_send" => op_reconcile_minter_send(&input),
             "rebroadcast_minter_send" => op_rebroadcast_minter_send(&input),
             "pledge_inventory" => op_pledge_inventory(&input),

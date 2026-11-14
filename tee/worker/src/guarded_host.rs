@@ -226,7 +226,18 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     evidence_inventory(&key)?;
     let proof=evidence::load_proof(&mut Host,token)?;
     let effective=custody_get(&key,"/wallet/v1/policy")?;
-    if !evidence::effective_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true){return Err(err("evidence","live decrypted policy differs from V2 reviewed policy"));}
+    // ROUND 9: field-level diff (names only). A diff that is only a
+    // provider-sync artifact (policy/version not yet visible, or the provider
+    // view lagging the chain freeze state) is retryable: the operator waits
+    // and repeats the SAME loan_certificate (or a single invalidate-cache).
+    // Anything else is a real policy change.
+    let diff=evidence::policy_diff_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true);
+    if !diff.is_empty(){
+        if collateral::policy_diff_is_sync_only(&diff,policy["frozen"].as_bool(),effective["frozen"].as_bool()){
+            return Ok(json!({"ok":false,"op":"loan_certificate","status":"PENDING_PROVIDER_SYNC","token_id":token,"loan_nonce":nonce.to_string(),"policy_diff":diff,"observed_shape":collateral::observed_shape(&effective)}));
+        }
+        return Err(err("evidence",format!("live decrypted policy differs from V2 reviewed policy {} (shape: {})",collateral::policy_diff_message(&diff),collateral::observed_shape(&effective))));
+    }
     let balance=custody_get(&key,&format!("/wallet/v1/confidential/balance?token=nep141%3A{}",guarded::ASSET.trim_start_matches("nep141:")))?;
     guarded::fixed_floor(&cert,&balance,&id)?;
     // Round 8: re-read control, exact loan and policy FRESH (bypass the view
@@ -246,7 +257,15 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     let fresh_balance=custody_get(&key,&format!("/wallet/v1/confidential/balance?token=nep141%3A{}",guarded::ASSET.trim_start_matches("nep141:")))?;
     if fresh_control!=control||fresh_loan!=loan||fresh_binding!=binding||fresh_policy!=policy||fresh_config!=config{return Err(err("collateral_ineligible","loan/custody changed during observation"));}
     let effective=custody_get(&key,"/wallet/v1/policy")?;
-    if !evidence::effective_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true){return Err(err("evidence","decrypted policy changed during certificate observation"));}
+    // ROUND 9: field-level diff (names only); sync-only diffs are retryable
+    // (same PENDING_PROVIDER_SYNC class as the first certificate check).
+    let diff=evidence::policy_diff_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true);
+    if !diff.is_empty(){
+        if collateral::policy_diff_is_sync_only(&diff,fresh_policy["frozen"].as_bool(),effective["frozen"].as_bool()){
+            return Ok(json!({"ok":false,"op":"loan_certificate","status":"PENDING_PROVIDER_SYNC","token_id":token,"loan_nonce":nonce.to_string(),"policy_diff":diff,"observed_shape":collateral::observed_shape(&effective)}));
+        }
+        return Err(err("evidence",format!("decrypted policy changed during certificate observation {} (shape: {})",collateral::policy_diff_message(&diff),collateral::observed_shape(&effective))));
+    }
     guard_registry_fresh()?;
     // Round 8: the certificate window. The first template was issued against
     // the run-start block with a 30 s expiry, and the old final live() re-read

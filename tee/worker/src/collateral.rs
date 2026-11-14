@@ -234,44 +234,510 @@ pub fn quote(q: &Value, max: &str) -> Result<u128, Error> {
     Ok(d)
 }
 
+/// Canonical JSON: every object's keys sorted recursively, compact separators.
+/// Matches the provider's policy_canonical_hash rule (WP :923-947) and the
+/// Python `json.dumps(sort_keys=True, separators=(",",":"))` used in E0.
+/// `serde_json::to_value` already sorts keys (BTreeMap), but the explicit sort
+/// below makes the rule independent of the Map implementation.
+pub fn canonical_json(v: &Value) -> String {
+    fn sort(v: &Value) -> Value {
+        match v {
+            Value::Object(m) => {
+                let mut keys: Vec<&String> = m.keys().collect();
+                keys.sort();
+                let mut out = serde_json::Map::new();
+                for k in keys {
+                    out.insert(k.clone(), sort(&m[k]));
+                }
+                Value::Object(out)
+            }
+            Value::Array(a) => Value::Array(a.iter().map(sort).collect()),
+            other => other.clone(),
+        }
+    }
+    serde_json::to_string(&sort(v)).expect("serializable value")
+}
+
+/// sha256 hex of the canonical JSON. Same as `evidence::digest` for Values.
+pub fn canonical_hash(v: &Value) -> String {
+    sha256_hex(&canonical_json(v))
+}
+
+/// Shape summary of an observed policy body: key -> type, arrays as [type;len].
+/// No values. At most 600 chars. Used in policy errors so a reviewer can see
+/// the observed shape without any secret or hash material.
+pub fn observed_shape(observed: &Value) -> String {
+    fn shape(v: &Value) -> String {
+        match v {
+            Value::Null => "null".into(),
+            Value::Bool(_) => "bool".into(),
+            Value::Number(_) => "number".into(),
+            Value::String(_) => "string".into(),
+            Value::Array(a) => {
+                if a.is_empty() {
+                    "[;0]".into()
+                } else {
+                    format!("[{};{}]", shape(&a[0]), a.len())
+                }
+            }
+            Value::Object(m) => {
+                let mut parts: Vec<String> =
+                    m.iter().map(|(k, val)| format!("{k}:{}", shape(val))).collect();
+                parts.sort();
+                format!("{{{}}}", parts.join(","))
+            }
+        }
+    }
+    let s = shape(observed);
+    if s.len() > 600 {
+        let mut t: String = s.chars().take(597).collect();
+        t.push_str("...");
+        t
+    } else {
+        s
+    }
+}
+
+/// Field-level diff between the reviewed (expected) policy and the provider's
+/// live (observed) GET /wallet/v1/policy body. Returns stable name-only tokens;
+/// empty == match. Values are printed only for booleans, the policy marker and
+/// the version number. Hashes, account ids, wallet ids and keys print "differs"
+/// only, so the diff never leaks secret or identifying material.
+///
+/// ROUND 9 (ground truth, experiment E7/E8): the provider returns the wallet's
+/// OWN public key as `controller` (`"ed25519:<wallet near_account_id hex>"`),
+/// NOT the keys contract. The old code required `observed["controller"] ==
+/// contract`, which is the single field that failed in S11. The controller
+/// check below therefore compares against `p.wallet_pubkey` (the Prepared's
+/// wallet key). The `contract` parameter is retained for signature stability;
+/// the contract is the on-chain owner, verified separately by
+/// `binding_matches` (which checks `policy["owner"] == contract` on the
+/// outlayer.near view). `usage` accepts absent | null | object (documented
+/// OA default, plan section 4.2). `refund_addresses` null is NOT accepted:
+/// the experiment captured it absent in both bodies, never null.
+pub fn policy_diff(
+    expected: &Value,
+    observed: &Value,
+    p: &Prepared,
+    contract: &str,
+) -> Vec<String> {
+    let _ = contract;
+    let mut diff: Vec<String> = Vec::new();
+    const POLICY: &[&str] = &[
+        "wallet_id",
+        "rules",
+        "approval",
+        "capabilities",
+        "authorized_key_hashes",
+        "refund_addresses",
+    ];
+    const META: &[&str] = &["policy", "controller", "version", "locked", "frozen", "usage"];
+    let Some(e) = expected.as_object() else {
+        return vec!["top.expected:not_object".to_string()];
+    };
+    let Some(o) = observed.as_object() else {
+        return vec!["top.observed:not_object".to_string()];
+    };
+    // Top-level key sets (closed allowlists; a newly introduced authority
+    // surface must never be silently ignored).
+    for k in e.keys() {
+        if !POLICY.contains(&k.as_str()) {
+            diff.push(format!("top.extra_key:{k}"));
+        }
+    }
+    for k in o.keys() {
+        if !POLICY.contains(&k.as_str()) && !META.contains(&k.as_str()) {
+            diff.push(format!("top.extra_key:{k}"));
+        }
+    }
+    // wallet_id.
+    match e.get("wallet_id").and_then(Value::as_str) {
+        Some(s) if !s.is_empty() => {
+            if o.get("wallet_id") != e.get("wallet_id") {
+                diff.push("wallet_id:differs".to_string());
+            }
+        }
+        _ => diff.push("wallet_id:missing".to_string()),
+    }
+    // usage: absent | null | object. Any other type is a real difference.
+    if let Some(u) = o.get("usage") {
+        if !u.is_null() && !u.is_object() {
+            diff.push("usage:type".to_string());
+        }
+    }
+    // refund_addresses: absent == {} ; null is NOT an empty map (captured
+    // absent in both bodies, never null); a non-string value is a type error.
+    let refunds_expected = match e.get("refund_addresses") {
+        None => Some(json!({})),
+        Some(Value::Object(m)) if m.values().all(Value::is_string) => Some(json!(m)),
+        _ => None,
+    };
+    let Some(refunds_expected) = refunds_expected else {
+        diff.push("refund_addresses:expected_invalid".to_string());
+        return diff;
+    };
+    match o.get("refund_addresses") {
+        // ROUND 9 FIX (panel H5): observed-absent is only a match when the
+        // expected map is empty. If the expected template ever carries a
+        // refund address, its disappearance must be a diff.
+        None => {
+            if refunds_expected != json!({}) {
+                diff.push("refund_addresses:value".to_string());
+            }
+        }
+        Some(Value::Null) => diff.push("top.null:refund_addresses".to_string()),
+        Some(Value::Object(m)) => {
+            if !m.values().all(Value::is_string) {
+                diff.push("refund_addresses:type".to_string());
+            } else if json!(m) != refunds_expected {
+                diff.push("refund_addresses:value".to_string());
+            }
+        }
+        Some(_) => diff.push("refund_addresses:type".to_string()),
+    }
+    // Meta: policy marker.
+    match o.get("policy") {
+        None => diff.push("meta.policy:absent".to_string()),
+        Some(Value::String(s)) if s == "stored" => {}
+        Some(Value::String(s)) if s == "none" => diff.push("meta.policy:none".to_string()),
+        Some(_) => diff.push("meta.policy:value".to_string()),
+    }
+    // Meta: controller. Ground truth (E7/E8): the provider returns the
+    // wallet's own public key, never the contract. Compare the 32-byte key
+    // (encoding-tolerant) against p.wallet_pubkey.
+    match o.get("controller") {
+        None => diff.push("meta.controller:absent".to_string()),
+        Some(v) => {
+            if v.as_str().is_none() {
+                diff.push("meta.controller:type".to_string());
+            } else if !same_wallet_pubkey(v, &p.wallet_pubkey) {
+                diff.push("meta.controller:differs".to_string());
+            }
+        }
+    }
+    // Meta: version (number; 0 is a distinct sync token).
+    match o.get("version") {
+        None => diff.push("meta.version:absent".to_string()),
+        Some(Value::Number(n)) => {
+            if let Some(v) = n.as_u64() {
+                if v == 0 {
+                    diff.push("meta.version:0".to_string());
+                } else if v != p.version {
+                    diff.push(format!("meta.version:{v}"));
+                }
+            } else {
+                diff.push("meta.version:type".to_string());
+            }
+        }
+        Some(_) => diff.push("meta.version:type".to_string()),
+    }
+    // Meta: locked must be true.
+    match o.get("locked") {
+        None => diff.push("meta.locked:absent".to_string()),
+        Some(Value::Bool(true)) => {}
+        Some(Value::Bool(false)) => diff.push("meta.locked:false".to_string()),
+        Some(_) => diff.push("meta.locked:type".to_string()),
+    }
+    // Meta: frozen must be false (callers that expect frozen use
+    // `policy_diff_with_freeze`, which normalises before calling this).
+    match o.get("frozen") {
+        None => diff.push("meta.frozen:absent".to_string()),
+        Some(Value::Bool(false)) => {}
+        Some(Value::Bool(true)) => diff.push("meta.frozen:true".to_string()),
+        Some(_) => diff.push("meta.frozen:type".to_string()),
+    }
+    // rules / approval / capabilities / authorized_key_hashes (strict Value==,
+    // with per-field tokens so a reviewer sees which surface moved).
+    diff.extend(diff_policy_section("rules", &expected["rules"], &observed["rules"]));
+    diff.extend(diff_policy_section(
+        "approval",
+        &expected["approval"],
+        &observed["approval"],
+    ));
+    diff.extend(diff_policy_section(
+        "capabilities",
+        &expected["capabilities"],
+        &observed["capabilities"],
+    ));
+    match (&expected["authorized_key_hashes"], &observed["authorized_key_hashes"]) {
+        (Value::Array(ea), Value::Array(oa)) => {
+            if ea.len() != oa.len() {
+                diff.push(format!(
+                    "authorized_key_hashes:len {}->{}",
+                    ea.len(),
+                    oa.len()
+                ));
+            } else if ea != oa {
+                diff.push("authorized_key_hashes:elements differ".to_string());
+            }
+        }
+        (Value::Null, _) | (_, Value::Null) => {
+            diff.push("authorized_key_hashes:missing".to_string())
+        }
+        _ => diff.push("authorized_key_hashes:type".to_string()),
+    }
+    diff
+}
+
+/// Per-section diff for the strict Value== policy sections. Returns stable
+/// tokens; empty when the section matches exactly.
+fn diff_policy_section(section: &str, expected: &Value, observed: &Value) -> Vec<String> {
+    let mut diff = Vec::new();
+    if expected.is_null() || observed.is_null() {
+        if expected != observed {
+            diff.push(format!("{section}:missing"));
+        }
+        return diff;
+    }
+    if expected == observed {
+        return diff;
+    }
+    match section {
+        "rules" => {
+            diff.extend(diff_string_array(
+                "rules.transaction_types",
+                expected.get("transaction_types"),
+                observed.get("transaction_types"),
+            ));
+            if let (Some(eo), Some(oo)) = (expected.as_object(), observed.as_object()) {
+                for k in eo.keys() {
+                    if k == "transaction_types" {
+                        continue;
+                    }
+                    if oo.get(k) != Some(&eo[k]) {
+                        diff.push(format!("rules.{k}:differs"));
+                    }
+                }
+                for k in oo.keys() {
+                    if !eo.contains_key(k) {
+                        diff.push(format!("rules.extra_key:{k}"));
+                    }
+                }
+            }
+            if diff.is_empty() {
+                diff.push("rules:differs".to_string());
+            }
+        }
+        "approval" => {
+            // threshold: type first (number vs {"required":n}), then value.
+            match (&expected["threshold"], &observed["threshold"]) {
+                (Value::Number(_), Value::Object(_))
+                | (Value::Object(_), Value::Number(_)) => {
+                    diff.push("approval.threshold:type number->object".to_string())
+                }
+                (a, b) if a != b => diff.push("approval.threshold:value".to_string()),
+                _ => {}
+            }
+            if expected["locked"] != observed["locked"] {
+                diff.push("approval.locked:value".to_string());
+            }
+            match (
+                expected["approvers"].as_array(),
+                observed["approvers"].as_array(),
+            ) {
+                (Some(ea), Some(oa)) => {
+                    if ea.len() != oa.len() {
+                        diff.push(format!(
+                            "approval.approvers:len {}->{}",
+                            ea.len(),
+                            oa.len()
+                        ));
+                    }
+                    for (i, (e0, o0)) in ea.iter().zip(oa.iter()).enumerate() {
+                        if let (Some(eo), Some(oo)) = (e0.as_object(), o0.as_object()) {
+                            if eo.get("role").is_none() || oo.get("role").is_none() {
+                                if eo.get("role") != oo.get("role") {
+                                    diff.push(format!(
+                                        "approval.approvers[{i}].role:missing"
+                                    ));
+                                }
+                            } else if eo["role"] != oo["role"] {
+                                diff.push(format!(
+                                    "approval.approvers[{i}].role:value"
+                                ));
+                            }
+                            if eo.get("id") != oo.get("id") {
+                                diff.push(format!(
+                                    "approval.approvers[{i}].id:differs"
+                                ));
+                            }
+                            for k in oo.keys() {
+                                if !eo.contains_key(k) {
+                                    diff.push(format!(
+                                        "approval.approvers[{i}].extra_key:{k}"
+                                    ));
+                                }
+                            }
+                        } else if e0 != o0 {
+                            diff.push(format!("approval.approvers[{i}]:differs"));
+                        }
+                    }
+                }
+                _ => diff.push("approval.approvers:type".to_string()),
+            }
+            diff.extend(diff_string_array(
+                "approval.excluded_types",
+                expected.get("excluded_types"),
+                observed.get("excluded_types"),
+            ));
+            if diff.is_empty() {
+                diff.push("approval:differs".to_string());
+            }
+        }
+        "capabilities" => {
+            if let (Some(eo), Some(oo)) = (expected.as_object(), observed.as_object()) {
+                for (name, ecap) in eo {
+                    match oo.get(name) {
+                        None => diff.push(format!("capabilities.{name}:missing")),
+                        Some(ocap) => {
+                            if ecap["allowed"] != ocap["allowed"] {
+                                diff.push(format!(
+                                    "capabilities.{name}.allowed:value"
+                                ));
+                            }
+                            if let (Some(em), Some(om)) =
+                                (ecap.as_object(), ocap.as_object())
+                            {
+                                for k in om.keys() {
+                                    if !em.contains_key(k) {
+                                        diff.push(format!(
+                                            "capabilities.{name}.extra_key:{k}"
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                for name in oo.keys() {
+                    if !eo.contains_key(name) {
+                        diff.push(format!("capabilities.{name}:extra"));
+                    }
+                }
+            }
+            if diff.is_empty() {
+                diff.push("capabilities:differs".to_string());
+            }
+        }
+        _ => diff.push(format!("{section}:differs")),
+    }
+    diff
+}
+
+/// Diff for an ordered string array (transaction_types, excluded_types).
+/// Order-sensitive: same elements in a different order is a real difference.
+fn diff_string_array(
+    path: &str,
+    expected: Option<&Value>,
+    observed: Option<&Value>,
+) -> Vec<String> {
+    let mut diff = Vec::new();
+    match (expected.and_then(Value::as_array), observed.and_then(Value::as_array)) {
+        (Some(ea), Some(oa)) => {
+            if ea.len() != oa.len() {
+                diff.push(format!("{path}:len"));
+            } else if ea != oa {
+                let mut sorted_e: Vec<&Value> = ea.iter().collect();
+                let mut sorted_o: Vec<&Value> = oa.iter().collect();
+                sorted_e.sort_by_key(|v| v.as_str().unwrap_or_default());
+                sorted_o.sort_by_key(|v| v.as_str().unwrap_or_default());
+                if sorted_e == sorted_o {
+                    diff.push(format!("{path}:order"));
+                } else {
+                    for (i, (a, b)) in ea.iter().zip(oa.iter()).enumerate() {
+                        if a != b {
+                            diff.push(format!("{path}:element[{i}]"));
+                            break;
+                        }
+                    }
+                    if diff.is_empty() {
+                        diff.push(format!("{path}:differs"));
+                    }
+                }
+            }
+        }
+        _ => diff.push(format!("{path}:type")),
+    }
+    diff
+}
+
+/// Format a policy diff for an error message: `[token, token, ...]`, at most
+/// 400 chars (truncated with "..."). Name-only tokens, no values.
+pub fn policy_diff_message(diff: &[String]) -> String {
+    let joined = diff.join(", ");
+    if joined.len() > 400 {
+        let mut t: String = joined.chars().take(397).collect();
+        t.push_str("...");
+        format!("[{t}]")
+    } else {
+        format!("[{joined}]")
+    }
+}
+
+/// True when every diff token is a provider-sync artifact (the provider's view
+/// has not caught up with the chain yet), not a real policy mismatch. Two
+/// cases. (1) The policy marker itself is absent/none: the provider has not
+/// stored or exposed the policy yet, so every missing section / absent
+/// version / absent locked token is a consequence of that, and the whole diff
+/// is sync (a controller diff is NOT sync -- the controller is set at wallet
+/// creation, independent of the policy). (2) The policy is stored: every
+/// token must be a version sync token, or a frozen token explained by the
+/// chain-known frozen state differing from the observed frozen state (the
+/// provider view lags the chain).
+pub fn policy_diff_is_sync_only(
+    diff: &[String],
+    chain_frozen: Option<bool>,
+    observed_frozen: Option<bool>,
+) -> bool {
+    if diff.is_empty() {
+        return false;
+    }
+    let frozen_is_sync_lag = |t: &str| -> bool {
+        (t == "meta.frozen:true" || t == "meta.frozen:false")
+            && chain_frozen.is_some()
+            && observed_frozen.is_some()
+            && chain_frozen != observed_frozen
+    };
+    if diff
+        .iter()
+        .any(|t| t == "meta.policy:absent" || t == "meta.policy:none")
+    {
+        return diff.iter().all(|t| {
+            matches!(
+                t.as_str(),
+                "meta.policy:absent"
+                    | "meta.policy:none"
+                    | "meta.version:absent"
+                    | "meta.locked:absent"
+                    | "rules:missing"
+                    | "approval:missing"
+                    | "capabilities:missing"
+                    | "authorized_key_hashes:missing"
+            ) || frozen_is_sync_lag(t)
+        });
+    }
+    // Case 2: policy is stored; every token must be a version sync token,
+    // or a frozen token explained by the chain-known frozen state differing
+    // from the observed frozen state (the provider view lags the chain).
+    // NOTE: `meta.version:type` is deliberately NOT sync. A version rendered
+    // in the wrong type is a real mismatch, not a sync lag (plan section 4.3
+    // lists only absent/0 as version sync tokens). It fails hard.
+    diff.iter().all(|t| {
+        matches!(t.as_str(), "meta.version:absent" | "meta.version:0")
+            || frozen_is_sync_lag(t)
+    })
+}
+
 /// The ciphertext signature is checked separately. Also require the provider's
 /// current decrypted view to expose the exact restricted rules actually prepared.
+/// (Bool wrapper over `policy_diff`; empty diff == match.)
 pub fn effective_policy_matches(
     expected: &Value,
     observed: &Value,
     p: &Prepared,
     contract: &str,
 ) -> bool {
-    // Complete reviewed policy projection; metadata is a closed allowlist, never
-    // a reason to ignore a newly introduced authority surface.
-    const POLICY: &[&str] = &["wallet_id", "rules", "approval", "capabilities", "authorized_key_hashes", "refund_addresses"];
-    const META: &[&str] = &["policy", "controller", "version", "locked", "frozen", "usage"];
-    let (Some(e), Some(o)) = (expected.as_object(), observed.as_object()) else { return false; };
-    if e.keys().any(|k| !POLICY.contains(&k.as_str()))
-        || o.keys().any(|k| !POLICY.contains(&k.as_str()) && !META.contains(&k.as_str()))
-        || !e.get("wallet_id").and_then(Value::as_str).is_some_and(|s| !s.is_empty())
-        || o.get("wallet_id") != e.get("wallet_id")
-        || o.get("usage").is_some_and(|v| !v.is_object())
-    { return false; }
-    // No refund entries means provider-derived destination defaults. Explicit
-    // empty object and absence are equivalent; null is NOT an empty map.
-    let refunds = |v: &Value| -> Option<Value> {
-        match v.get("refund_addresses") {
-            None => Some(json!({})),
-            Some(Value::Object(m)) if m.values().all(Value::is_string) => Some(json!(m)),
-            _ => None,
-        }
-    };
-    let Some(refunds_expected) = refunds(expected) else { return false; };
-    observed["policy"] == "stored"
-        && observed["controller"] == contract
-        && observed["version"].as_u64() == Some(p.version)
-        && observed["locked"] == true
-        && observed["frozen"] == false
-        && refunds(observed) == Some(refunds_expected)
-        && ["rules", "approval", "capabilities", "authorized_key_hashes"]
-            .iter()
-            .all(|k| !expected[*k].is_null() && observed[*k] == expected[*k])
+    policy_diff(expected, observed, p, contract).is_empty()
 }
 
 pub fn binding_matches(p: &Prepared, b: &Value, policy: &Value, contract: &str) -> bool {

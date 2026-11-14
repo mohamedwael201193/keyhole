@@ -1,0 +1,25 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "requests": [
+      {
+        "request_id": "5f8f93f5-3651-4d01-abbc-83745527e336",
+        "type": "confidential_deposit_intent",
+        "status": "pending_deposit",
+        "result": {
+          "amount": "900000",
+          "recipient": "21d789097f45a577a3867bdfb01901cc8cc7a7737041c63e7988f73e710f8ea0",
+          "confidential": true,
+          "origin_asset": "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+          "deposit_address": "0x1432b8581aF504527f7e3f7c637b2E5fD5F8d5E0",
+          "oneclick_status": "PENDING_DEPOSIT",
+          "destination_asset": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"
+        },
+        "created_at": "2026-11-14T07:51:39.502897+00:00",
+        "updated_at": "2026-11-14T07:51:39.502897+00:00"
+      }
+    ],
+    "total": 1
+  }
+}
