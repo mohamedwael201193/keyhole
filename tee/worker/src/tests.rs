@@ -1011,3 +1011,680 @@ fn host_withdraw_checks_final_owner_before_custody_and_derives_send_receiver() {
     assert!(op.find("settle_gate(").unwrap() < op.find("guard_provider(").unwrap());
     assert!(op.contains("guard_begin(&c,input,\"withdraw\""));
 }
+
+// ---------------------------------------------------------------------------
+// ROUND 8 (2026-11-14): gas_price fix + F1 sweep of the remaining loan path.
+// Every live body below is a byte-identical fixture captured from mainnet on
+// 2026-11-14 ~06:18-06:40 EET (near.org / fastnear, read-only calls) or from
+// a live worker run (S9 quote, S6 balance, Run 13 inventory). Fixtures live
+// in src/fixtures/ and are only compiled into the test binary (include_str!
+// under #[cfg(test)]); they never ship in the release wasm. Shapes that
+// could not be observed live (no loan exists yet) are built from the contract
+// / outlayer source and labelled DOCUMENTED.
+// ---------------------------------------------------------------------------
+
+const R8_MINTER: &str = "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443";
+const R8_CONTRACT: &str = "keyhole-devmo.near";
+const R8_TOKEN_K88: &str = "k88bf49da96212902";
+const R8_B2: &str = "583a3a561dbabe9558c8ffa25b5fb3424200580ac14665428f96e6a0572d569b";
+const R8_WALLET_HEX: &str = "e32942f2403cc161fc50c6f47642ee5630b3e645b3debb84e55466c94bea49a8";
+const R8_WALLET_PUBKEY: &str = "ed25519:e32942f2403cc161fc50c6f47642ee5630b3e645b3debb84e55466c94bea49a8";
+const R8_WORKER_R7: &str = "5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231";
+const R8_MINT_TX: &str = "27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV";
+const R8_GUARDIAN: &str = "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228";
+
+fn r8_views() -> serde_json::Value {
+    serde_json::from_str(include_str!("fixtures/sweep_r8_views.json")).unwrap()
+}
+
+fn r8_certificate() -> guarded::Certificate {
+    // DOCUMENTED shape (no loan exists live yet): field-for-field from the
+    // contract's LoanCertificate struct (contracts/keys/src/pledge.rs:179-197).
+    let observed: u64 = 1_794_630_156_669_000_000;
+    let cert_json = serde_json::json!({
+        "domain": guarded::DOMAIN,
+        "network": "mainnet",
+        "contract": R8_CONTRACT,
+        "token_id": R8_TOKEN_K88,
+        "loan_nonce": "0",
+        "borrower": R8_B2,
+        "owner_epoch": "0",
+        "terms": {
+            "lender": "lender.near",
+            "principal": "10000000000000000000000",
+            "repayment": "10100000000000000000000",
+            "duration_sec": "600",
+            "grace_sec": "60",
+            "floor_raw": "500000",
+            "funding_deadline_ns": "1794631000000000000",
+        },
+        "asset": guarded::ASSET,
+        "wallet_pubkey": R8_WALLET_PUBKEY,
+        "policy_version": "1",
+        "policy_hash": B64.encode(Sha256::digest(b"r8-test-encrypted-policy")),
+        "observed_at_ns": observed.to_string(),
+        "expires_at_ns": (observed + 30_000_000_000).to_string(),
+        "floor_met": true,
+        "frozen": true,
+        "pending_value_ops": "0",
+    });
+    serde_json::from_value(cert_json).unwrap()
+}
+
+fn r8_prepared() -> collateral::Prepared {
+    collateral::Prepared {
+        token_id: R8_TOKEN_K88.into(),
+        owner: R8_B2.into(),
+        owner_epoch: 0,
+        worker_hash: R8_WORKER_R7.into(),
+        wallet_pubkey: R8_WALLET_PUBKEY.into(),
+        plaintext_hash: "ab".repeat(32),
+        encrypted_data: "r8-test-encrypted-policy".into(),
+        wallet_signature: "r8-test-wallet-signature".into(),
+        version: 1,
+        valid_until: 9_999_999_999,
+    }
+}
+
+#[test]
+fn r8_gas_price_bare_string_live_host_body() {
+    // Exact live host body: the OutLayer host returns the gas price as a bare
+    // JSON string on success (host_functions_sync.rs:729-747). This is the
+    // shape that failed every time before round 8 (Run 14 S11).
+    assert_eq!(gas_price_of("\"100000000\"").unwrap(), 100_000_000u128);
+}
+
+#[test]
+fn r8_gas_price_full_rpc_envelope_live() {
+    // Exact live NEAR RPC body, captured 2026-11-14 06:18 EET from
+    // rpc.mainnet.near.org (fixture sweep_r8_gas_price.json):
+    // {"jsonrpc":"2.0","result":{"gas_price":"100000000"},"id":"proxy"}
+    let raw = include_str!("fixtures/sweep_r8_gas_price.json");
+    assert_eq!(gas_price_of(raw).unwrap(), 100_000_000u128);
+}
+
+#[test]
+fn r8_gas_price_object_and_number_forms() {
+    for raw in [
+        r#"{"gas_price":"100000000"}"#,
+        r#"{"gas_price":100000000}"#,
+        "100000000",
+        r#"{"result":{"gas_price":"100000000"}}"#,
+        r#"{"result":"100000000"}"#,
+        r#"{"result":100000000}"#,
+    ] {
+        assert_eq!(gas_price_of(raw).unwrap(), 100_000_000u128, "{raw}");
+    }
+}
+
+#[test]
+fn r8_gas_price_unrecognized_shape_preserves_s11_error() {
+    // Shapes with no readable gas_price field: the exact Run 14 S11 error.
+    for raw in [
+        "{}",
+        r#"{"foo":1}"#,
+        r#""abc""#,
+        "null",
+        "true",
+        r#"{"gas_price":true}"#,
+        r#"{"result":{"other":1}}"#,
+        r#"{"gas_price":""}"#,
+    ] {
+        let e = gas_price_of(raw).unwrap_err();
+        assert_eq!(e.code, "guard_state");
+        assert_eq!(e.message, "missing/string gas_price", "{raw}");
+    }
+    // An error envelope (what the host returns when result.gas_price is
+    // absent) must never parse as a price.
+    for raw in [
+        r#"{"jsonrpc":"2.0","error":{"code":-32000,"message":"x"},"id":"1"}"#,
+        r#"{"error":{}}"#,
+    ] {
+        let e = gas_price_of(raw).unwrap_err();
+        assert_eq!(e.code, "rpc");
+        assert_eq!(e.message, "gas price error", "{raw}");
+    }
+    // Malformed JSON is an rpc error, not a guard error.
+    assert_eq!(gas_price_of("not json").unwrap_err().code, "rpc");
+}
+
+#[test]
+fn r8_provision_native_budget_pipeline_live_bodies() {
+    // Mirrors provision_native_budget (collateral_host.rs): gas_price_of ->
+    // fee = gas_price * 240_000_000_000_000 -> native_budget_check on the
+    // real view_account envelope. Both the exact live host body (bare string)
+    // and the exact live RPC envelope. WITHOUT gas_price_of the bare-string
+    // case fails with the verbatim S11 error (see the old-path test below).
+    for raw in ["\"100000000\"", include_str!("fixtures/sweep_r8_gas_price.json")] {
+        let price = gas_price_of(raw).unwrap();
+        let fee = price.checked_mul(240_000_000_000_000).unwrap();
+        assert_eq!(fee, 24_000_000_000_000_000_000_000u128, "{raw}");
+        let account = include_str!("fixtures/sweep_r8_view_account_minter.json");
+        native_budget_check(account, 36_910_000_000_000_000_000_000, price).unwrap();
+    }
+}
+
+#[test]
+fn r8_native_budget_check_live_envelopes() {
+    // Budget check on the real minter view_account envelope (fixture):
+    // amount 0.588067 NEAR, storage 315 bytes -> backing 0.00315 NEAR.
+    // Requirement is 0.06506 NEAR at the live deposit (0.03691) and 0.09434
+    // at the maximum deposit (0.06619) — the minter passes both, so no
+    // top-up is needed before the r8 loans (verified live 2026-11-14).
+    let account = include_str!("fixtures/sweep_r8_view_account_minter.json");
+    let (amount, storage) = view_account_budget(account).unwrap();
+    assert_eq!(amount, 588_067_418_517_366_499_999_998u128);
+    assert_eq!(storage, 315);
+    native_budget_check(account, 36_910_000_000_000_000_000_000, 100_000_000).unwrap();
+    native_budget_check(account, 66_190_000_000_000_000_000_000, 100_000_000).unwrap();
+    // Claude's DEV-account envelope values (amount 5.423454 NEAR, storage
+    // 530063) also pass — barely (backing 5.30063 + 0.06191 = 5.36254).
+    let dev = r#"{"jsonrpc":"2.0","result":{"amount":"5423454394016032562621662","locked":"0","code_hash":"11111111111111111111111111111111","storage_usage":530063,"storage_paid_at":0,"block_height":224463245,"block_hash":"x"},"id":"1"}"#;
+    native_budget_check(dev, 36_910_000_000_000_000_000_000, 100_000_000).unwrap();
+    // A minter holding only 0.04 NEAR fails the same check (the short case
+    // Claude flagged) — the error names the reserve/ceiling.
+    let short = r#"{"jsonrpc":"2.0","result":{"amount":"40000000000000000000000","locked":"0","code_hash":"11111111111111111111111111111111","storage_usage":315,"storage_paid_at":0,"block_height":1,"block_hash":"x"},"id":"1"}"#;
+    let e = native_budget_check(short, 36_910_000_000_000_000_000_000, 100_000_000).unwrap_err();
+    assert_eq!(e.code, "collateral_quote");
+    // A deposit+fee above the 0.1 NEAR ceiling fails even with a rich minter.
+    let e = native_budget_check(account, 90_000_000_000_000_000_000_000, 100_000_000).unwrap_err();
+    assert_eq!(e.code, "collateral_quote");
+}
+
+#[test]
+fn r8_sweep_view_account_live_envelope() {
+    // Exact live view_account body for the minter, rpc.mainnet.near.org,
+    // block 224463245 (fixture sweep_r8_view_account_minter.json). The host
+    // returns the full JSON-RPC envelope; provision_native_budget unwraps .result.
+    let raw = include_str!("fixtures/sweep_r8_view_account_minter.json");
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap();
+    let account = v.get("result").cloned().unwrap_or(v);
+    assert_eq!(
+        guarded::decimal(&account, "amount").unwrap(),
+        588_067_418_517_366_499_999_998u128
+    );
+    assert_eq!(account["storage_usage"].as_u64().unwrap(), 315);
+    assert_eq!(account["block_height"].as_u64().unwrap(), 224_463_245);
+}
+
+#[test]
+fn r8_sweep_block_final_live_envelope() {
+    // Exact live final block, rpc.mainnet.near.org, height 224463250
+    // (fixture sweep_r8_block_final.json). chain_now_ms / parse_final_block /
+    // final_block_hash / block_height all read this envelope.
+    let raw = include_str!("fixtures/sweep_r8_block_final.json");
+    let cache = parse_final_block(raw).expect("final block parses");
+    assert_eq!(cache.height, Some(224_463_250));
+    assert_eq!(cache.timestamp_ms, 1_794_630_156_669);
+    assert_eq!(cache.hash.len(), 32);
+    assert_eq!(native_send::block_height(raw), Some(224_463_250));
+    assert!(final_block_hash(raw).is_some());
+}
+
+#[test]
+fn r8_sweep_protocol_config_live_envelope() {
+    // Exact live EXPERIMENTAL_protocol_config body (fixture
+    // sweep_r8_protocol_config.json). transaction_validity_period is a NUMBER.
+    let raw = include_str!("fixtures/sweep_r8_protocol_config.json");
+    assert_eq!(native_send::transaction_validity_period(raw), Some(86_400));
+}
+
+#[test]
+fn r8_sweep_view_access_key_live_envelope() {
+    // Exact live view_access_key body for the minter's full-access key
+    // (fixture sweep_r8_view_access_key_minter.json). The host returns the
+    // full envelope; the parsers accept the envelope or the flattened result.
+    let raw = include_str!("fixtures/sweep_r8_view_access_key_minter.json");
+    assert_eq!(access_key_nonce(raw), Some(221_861_956_000_020));
+    assert!(is_full_access(raw));
+}
+
+#[test]
+fn r8_sweep_tx_status_final_mint_receipts() {
+    // Exact live EXPERIMENTAL_tx_status body for the real final B2 mint tx
+    // 27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV (fixture
+    // sweep_r8_tx_status_mint.json). Reconcile / final-registration parse this.
+    let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap();
+    let term = receipts::terminal(
+        &v,
+        R8_MINT_TX,
+        R8_MINTER,
+        R8_CONTRACT,
+        Some(&[R8_MINTER, R8_CONTRACT, "outlayer.near"]),
+    )
+    .expect("final mint tx has a terminal receipt");
+    match term {
+        receipts::Terminal::Success { bytes, executor } => {
+            assert_eq!(executor, R8_CONTRACT);
+            let text = String::from_utf8(bytes).unwrap();
+            assert!(text.contains("\"token_id\":\"k88bf49da96212902\""), "{text}");
+        }
+        receipts::Terminal::Failure => panic!("mint tx must not be a failure"),
+    }
+    assert!(!receipts::has_failure(&v));
+}
+
+#[test]
+fn r8_sweep_registration_terminal_rejects_mint_tx() {
+    // The live mint tx is FINAL and well-formed, but its action is nft_mint,
+    // not register_collateral — registration_terminal must refuse it (None),
+    // proving the identity check is not a rubber stamp.
+    let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap();
+    let p = r8_prepared();
+    assert_eq!(
+        collateral::registration_terminal(
+            &v,
+            R8_MINT_TX,
+            R8_MINTER,
+            R8_CONTRACT,
+            &p,
+            36_910_000_000_000_000_000_000
+        ),
+        None
+    );
+}
+
+#[test]
+fn r8_sweep_registration_terminal_accepts_register_collateral() {
+    // CONSTRUCTED body: no register_collateral tx exists live yet (the
+    // provision was blocked at S11 before install). The envelope structure is
+    // copied from the live mint tx_status body; only the action is the real
+    // register_collateral call with the exact Prepared args, deposit and gas.
+    let p = r8_prepared();
+    let deposit: u128 = 36_910_000_000_000_000_000_000; // live S9 binding_deposit_yocto
+    let args_b64 = B64.encode(serde_json::to_string(&p.args()).unwrap());
+    let body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "result": {
+            "final_execution_status": "FINAL",
+            "transaction": {
+                "hash": "regtx",
+                "signer_id": R8_MINTER,
+                "receiver_id": R8_CONTRACT,
+                "actions": [{
+                    "FunctionCall": {
+                        "method_name": "register_collateral",
+                        "args": args_b64,
+                        "gas": 200_000_000_000_000u64,
+                        "deposit": deposit.to_string(),
+                    }
+                }],
+            },
+            "transaction_outcome": {
+                "id": "regtx",
+                "outcome": {
+                    "executor_id": R8_MINTER,
+                    "receipt_ids": ["call"],
+                    "status": {"SuccessReceiptId": "call"},
+                },
+            },
+            "receipts_outcome": [{
+                "id": "call",
+                "outcome": {
+                    "executor_id": R8_CONTRACT,
+                    "receipt_ids": [],
+                    "status": {"SuccessValue": B64.encode("true")},
+                },
+            }],
+            "status": {"SuccessValue": B64.encode("true")},
+        },
+        "id": "1",
+    });
+    assert_eq!(
+        collateral::registration_terminal(&body, "regtx", R8_MINTER, R8_CONTRACT, &p, deposit),
+        Some(true)
+    );
+    assert!(collateral::final_registration(&body, "regtx", R8_MINTER, R8_CONTRACT, &p, deposit));
+}
+
+#[test]
+fn r8_sweep_get_control_state_live() {
+    // Exact live get_control_state for k88, decoded view text (fixture
+    // sweep_r8_views.json). The worker's view() receives exactly this string.
+    let views = r8_views();
+    let raw = views["get_control_state"].as_str().unwrap();
+    let v = rpc_view::decode("get_control_state", raw).unwrap();
+    let c = guarded::Control::parse(&v, R8_TOKEN_K88).unwrap();
+    assert_eq!(c.epoch, 0);
+    assert_eq!(c.nonce, 0);
+    assert_eq!(c.pending, 0);
+    assert!(!c.pledged);
+    assert!(!c.listed);
+    assert!(!c.transfer_pending);
+}
+
+#[test]
+fn r8_sweep_get_collateral_binding_and_loan_null() {
+    // Exact live decoded views for k88: no binding, no loan, no pending
+    // registration, no value op yet (fixture sweep_r8_views.json).
+    let views = r8_views();
+    for method in [
+        "get_collateral_binding",
+        "get_loan",
+        "get_pending_registration",
+        "get_value_op",
+    ] {
+        let raw = views[method].as_str().unwrap();
+        assert_eq!(raw, "null", "{method}");
+        let v = rpc_view::decode(method, raw).unwrap();
+        assert!(v.is_null(), "{method}");
+    }
+    // An error body is never read as absence.
+    assert!(rpc_view::decode("get_loan", r#"{"error":{"code":-32000}}"#).is_err());
+}
+
+#[test]
+fn r8_sweep_get_wallet_policy_null() {
+    // Exact live get_wallet_policy for the r7 wallet: null, no policy
+    // installed yet (fixture sweep_r8_wallet_policy_r7.json).
+    let raw = include_str!("fixtures/sweep_r8_wallet_policy_r7.json");
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap();
+    let decoded = v["decoded"].as_str().unwrap();
+    assert_eq!(decoded, "null");
+    assert!(rpc_view::decode("get_wallet_policy", decoded).unwrap().is_null());
+}
+
+#[test]
+fn r8_sweep_get_pledge_config_live() {
+    // Exact live get_pledge_config, decoded view text (fixture).
+    let views = r8_views();
+    let raw = views["get_pledge_config"].as_str().unwrap();
+    let v = rpc_view::decode("get_pledge_config", raw).unwrap();
+    assert_eq!(guarded::text(&v, "network").unwrap(), "mainnet");
+    assert_eq!(guarded::text(&v, "custody_contract").unwrap(), "outlayer.near");
+    assert_eq!(
+        guarded::text(&v, "attestor_public_key").unwrap(),
+        "AVoCWQaln59Ayhfa8qPGHF5jo3wIHHUjCHDKpqgqxEM="
+    );
+    assert_eq!(v["lending_enabled"], serde_json::Value::Bool(false));
+    assert_eq!(guarded::text(&v, "recovery_account").unwrap(), R8_GUARDIAN);
+}
+
+#[test]
+fn r8_sweep_outlayer_registry_singleton() {
+    // Exact live outlayer.near registry views (fixture): r7 is the sole
+    // version, count 1. This is the shape guard_registry reads.
+    let views = r8_views();
+    let proj_raw = views["outlayer.get_project"].as_str().unwrap();
+    let proj = rpc_view::decode("get_project", proj_raw).unwrap();
+    assert_eq!(guarded::text(&proj, "active_version").unwrap(), R8_WORKER_R7);
+    assert_eq!(guarded::text(&proj, "project_id").unwrap(), "keyhole-devmo.near/keyhole");
+    let count_raw = views["outlayer.get_version_count"].as_str().unwrap();
+    let count = rpc_view::decode("get_version_count", count_raw).unwrap();
+    assert_eq!(count.as_u64().unwrap(), 1);
+    let list_raw = views["outlayer.list_versions"].as_str().unwrap();
+    let list = rpc_view::decode("list_versions", list_raw).unwrap();
+    let arr = list.as_array().unwrap();
+    assert_eq!(arr.len(), 1);
+    assert_eq!(arr[0]["wasm_hash"].as_str().unwrap(), R8_WORKER_R7);
+}
+
+#[test]
+fn r8_sweep_config_live() {
+    // Exact live config view, decoded view text (fixture).
+    let views = r8_views();
+    let raw = views["config"].as_str().unwrap();
+    let v = rpc_view::decode("config", raw).unwrap();
+    assert_eq!(guarded::text(&v, "owner").unwrap(), R8_GUARDIAN);
+    assert_eq!(guarded::text(&v, "minter").unwrap(), R8_MINTER);
+    assert_eq!(v["royalty_bps"].as_u64().unwrap(), 500);
+}
+
+#[test]
+fn r8_sweep_loan_certificate_template_shape() {
+    // DOCUMENTED shape (no loan exists live yet): r8_certificate() builds the
+    // template field-for-field from the contract's LoanCertificate struct.
+    // deny_unknown_fields means one extra field fails the parse.
+    let observed: u64 = 1_794_630_156_669_000_000;
+    let cert = r8_certificate();
+    cert.live(R8_CONTRACT, R8_TOKEN_K88, 0, 0, observed).unwrap();
+    assert!(!cert.bytes().unwrap().is_empty());
+    let sig = cert.sign(&[7u8; 32]).unwrap();
+    assert_eq!(sig.len(), 88); // base64 of a 64-byte ed25519 signature
+    // A stale certificate (now past expiry) must fail live().
+    assert!(cert.live(R8_CONTRACT, R8_TOKEN_K88, 0, 0, observed + 60_000_000_000).is_err());
+}
+
+#[test]
+fn r8_sweep_loan_binding_offered_state() {
+    // Offered-state loan + binding + control + config, built from the live
+    // get_pledge_config / get_control_state shapes (fixtures) with the two
+    // fields that only become true after finalize + lending-ON flipped:
+    // control.pledged and config.lending_enabled. Everything else is the
+    // live value. This is the exact check op_loan_certificate runs.
+    let cert = r8_certificate();
+    let loan = serde_json::json!({
+        "token_id": R8_TOKEN_K88,
+        "nonce": "0",
+        "borrower": R8_B2,
+        "owner_epoch": "0",
+        "terms": {
+            "lender": "lender.near",
+            "principal": "10000000000000000000000",
+            "repayment": "10100000000000000000000",
+            "duration_sec": "600",
+            "grace_sec": "60",
+            "floor_raw": "500000",
+            "funding_deadline_ns": "1794631000000000000",
+        },
+        "state": "Offered",
+        "due_ns": "0",
+        "storage_bond": "9000000000000000000000",
+        "policy_sequence": "0",
+        "policy_busy": false,
+        "policy_call_complete": false,
+        "resolution": null,
+    });
+    let binding = serde_json::json!({
+        "wallet_pubkey": R8_WALLET_PUBKEY,
+        "encrypted_policy_hash": cert.policy_hash,
+        "policy_version": "1",
+        "ready": true,
+        "policy_generation": "0",
+    });
+    let control_json = serde_json::json!({
+        "token_id": R8_TOKEN_K88,
+        "owner_epoch": "0",
+        "pending_value_ops": "0",
+        "listed": false,
+        "transfer_pending": false,
+        "pledged": true,
+        "value_op_nonce": "0",
+    });
+    let control = guarded::Control::parse(&control_json, R8_TOKEN_K88).unwrap();
+    let mut config: serde_json::Value = {
+        let views = r8_views();
+        let raw = views["get_pledge_config"].as_str().unwrap();
+        rpc_view::decode("get_pledge_config", raw).unwrap()
+    };
+    config["lending_enabled"] = serde_json::Value::Bool(true);
+    guarded::loan_binding(&cert, &loan, &binding, &control, &config).unwrap();
+    // A loan that is not Offered must fail the same check.
+    let mut not_offered = loan.clone();
+    not_offered["state"] = serde_json::Value::String("Active".into());
+    assert!(guarded::loan_binding(&cert, &not_offered, &binding, &control, &config).is_err());
+}
+
+#[test]
+fn r8_sweep_frozen_policy_shape() {
+    // DOCUMENTED shape: no policy is installed live (get_wallet_policy is
+    // null), so the object is built field-for-field from the outlayer
+    // contract's WalletPolicyView (outlayer-src/contract/src/wallet.rs:63):
+    // owner, encrypted_data, frozen, updated_at, storage_refund_to,
+    // storage_deposit, version (a JSON NUMBER), locked.
+    let cert = r8_certificate();
+    let policy = serde_json::json!({
+        "owner": R8_CONTRACT,
+        "encrypted_data": "r8-test-encrypted-policy",
+        "frozen": true,
+        "updated_at": 1_794_630_156u64,
+        "storage_refund_to": null,
+        "storage_deposit": "0",
+        "version": 1u64,
+        "locked": true,
+    });
+    guarded::frozen_policy(&cert, &policy).unwrap();
+    // A thawed policy (frozen false) must fail the same check.
+    let mut thawed = policy.clone();
+    thawed["frozen"] = serde_json::Value::Bool(false);
+    assert!(guarded::frozen_policy(&cert, &thawed).is_err());
+}
+
+#[test]
+fn r8_sweep_fixed_floor_live_balance() {
+    // Exact live /wallet/v1/confidential/balance body from Run 13 S6
+    // (fixture sweep_r8_funding_status_resume.json): the 899818 raw USDC
+    // credit in the r7 wallet, token == ASSET.
+    let raw = include_str!("fixtures/sweep_r8_funding_status_resume.json");
+    let v: serde_json::Value = serde_json::from_str(raw).unwrap();
+    let balance = &v["balance"];
+    assert_eq!(guarded::text(balance, "account_id").unwrap(), R8_WALLET_HEX);
+    assert_eq!(guarded::text(balance, "token").unwrap(), guarded::ASSET);
+    assert_eq!(guarded::decimal(balance, "balance").unwrap(), 899_818u128);
+    let mut cert = r8_certificate();
+    guarded::fixed_floor(&cert, balance, R8_WALLET_HEX).unwrap();
+    // A floor above the live credit must fail.
+    cert.terms.floor_raw = "900000".into();
+    assert!(guarded::fixed_floor(&cert, balance, R8_WALLET_HEX).is_err());
+}
+
+#[test]
+fn r8_sweep_custody_inventory_live_shapes() {
+    // Exact live creation_inventory from the Run 13 wallet creation
+    // (fixture sweep_r8_creation_inventory.json): one empty requests page,
+    // no resting orders, no pending approvals, empty initial balances.
+    // These are the exact shapes certificate_inventory reads.
+    let raw = include_str!("fixtures/sweep_r8_creation_inventory.json");
+    let inv: serde_json::Value = serde_json::from_str(raw).unwrap();
+    let pages = inv["pages"].as_array().unwrap();
+    assert_eq!(pages.len(), 1);
+    guarded::settled_inventory(pages).unwrap();
+    assert!(inv["orders"].as_array().is_some_and(|o| o.is_empty()));
+    assert!(inv["approvals"]["approvals"].as_array().is_some_and(|a| a.is_empty()));
+    assert_eq!(
+        guarded::text(&inv["initial_balances"], "account_id").unwrap(),
+        R8_WALLET_HEX
+    );
+    assert!(inv["initial_balances"]["balances"].as_array().is_some_and(|b| b.is_empty()));
+}
+
+#[test]
+fn r8_sweep_tx_status_unknown_pointers() {
+    // The live UNKNOWN_TRANSACTION error body could not be captured (both
+    // RPCs returned empty for a bogus hash on 2026-11-14 ~06:40 EET), so the
+    // parser is tested against the documented NEAR shape at every pointer it
+    // accepts: /error/cause/name, /cause/name, /error/name, /name, plus the
+    // bare string. A success body must never read as unknown.
+    let documented = r#"{"jsonrpc":"2.0","error":{"code":-32000,"message":"Transaction ... doesn't exist","cause":{"name":"UNKNOWN_TRANSACTION"}},"id":"1"}"#;
+    assert!(native_send::is_unknown_transaction_text(documented));
+    assert!(native_send::rpc_reports_unknown(documented, ""));
+    for body in [
+        r#"{"cause":{"name":"UNKNOWN_TRANSACTION"}}"#,
+        r#"{"error":{"name":"UNKNOWN_TRANSACTION"}}"#,
+        r#"{"name":"UNKNOWN_TRANSACTION"}"#,
+        "UNKNOWN_TRANSACTION",
+    ] {
+        assert!(native_send::is_unknown_transaction_text(body), "{body}");
+    }
+    // A timeout / generic error is not unknown.
+    assert!(!native_send::is_unknown_transaction_text(
+        r#"{"error":{"code":-32000,"message":"timeout"}}"#
+    ));
+    // The live final mint body is a success and must never read as unknown.
+    let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
+    assert!(!native_send::is_unknown_transaction_text(raw));
+    assert!(!native_send::rpc_reports_unknown(raw, ""));
+}
+
+#[test]
+fn r8_sweep_quote_live_value() {
+    // Exact live S9 values (Run 14, op_collateral_quote): the provider quote
+    // is a bare decimal string, the signed maximum is the binding deposit.
+    let q = serde_json::Value::String("16910000000000000000000".into());
+    let d = collateral::quote(&q, "36910000000000000000000").unwrap();
+    assert_eq!(d, 36_910_000_000_000_000_000_000u128);
+    // A quote above MAX_QUOTE, or a maximum below the total, must fail.
+    assert!(collateral::quote(
+        &serde_json::Value::String("99999999999999999999999".into()),
+        "36910000000000000000000"
+    )
+    .is_err());
+    assert!(collateral::quote(&q, "10000000000000000000000").is_err());
+}
+
+#[test]
+fn r8_sweep_send_tx_broadcast_shape() {
+    // DOCUMENTED NEAR RPC shape for broadcast_tx_async (the wait_until NONE
+    // path native_send uses): the result is the tx hash string. The worker
+    // only requires valid JSON here; the hash is computed from the signed
+    // bytes, not read from this body. The hash below is the real public-RPC
+    // send tx (J5dHg2q..., PUBLIC_RPC_SEND_REPORT.md).
+    let body = r#"{"jsonrpc":"2.0","result":"J5dHg2qran5QaHuizajA4vCzJjeU8g8BVPaTUUBXzEvi","id":"1"}"#;
+    let v: serde_json::Value = serde_json::from_str(body).unwrap();
+    assert_eq!(
+        v["result"].as_str().unwrap(),
+        "J5dHg2qran5QaHuizajA4vCzJjeU8g8BVPaTUUBXzEvi"
+    );
+    assert!(!native_send::is_unknown_transaction_text(body));
+}
+
+#[test]
+fn r8_gas_price_old_path_fails_with_s11_error() {
+    // Pre-fix reproduction, kept as a permanent regression guard: the exact
+    // Run 14 S11 code path (from_str -> get("result") -> guarded::decimal,
+    // WITHOUT gas_price_of) on the exact live host body (the bare string)
+    // fails with the verbatim S11 error. If this test ever stops failing,
+    // the bug is back.
+    // Note: the full RPC envelope shape actually worked with the old code —
+    // get("result") unwraps to the object carrying gas_price — which is why
+    // the bug is specifically the host's bare-string return, not the envelope.
+    let price: serde_json::Value = serde_json::from_str("\"100000000\"").unwrap();
+    let price = price.get("result").cloned().unwrap_or(price);
+    let e = guarded::decimal(&price, "gas_price").unwrap_err();
+    assert_eq!(e.code, "guard_state");
+    assert_eq!(e.message, "missing/string gas_price");
+}
+
+#[test]
+fn r8_cert_window_fresh_block_and_59s() {
+    // Round 8 certificate-window fix (guarded_host.rs, wasm32-only, so this
+    // is a source check in the round-7 style): the re-reads bypass the view
+    // cache, the block cache is invalidated, the template is re-issued
+    // against a fresh FINAL block with the contract-maximum 59 s window, and
+    // the FRESH cert is what gets signed.
+    let src = include_str!("guarded_host.rs");
+    let op = src.split("fn op_loan_certificate(").nth(1).unwrap().split("fn pending_value_identity(").next().unwrap();
+    assert!(op.contains("guard_control_fresh(token)?"), "fresh control re-read");
+    assert!(op.contains("view_fresh(&contract,\"get_loan\""), "fresh loan re-read");
+    assert!(op.contains("view_fresh(&contract,\"get_collateral_binding\""), "fresh binding re-read");
+    assert!(op.contains("view_fresh(custody,\"get_wallet_policy\""), "fresh policy re-read");
+    assert!(op.contains("read_cache::invalidate_block();"), "block cache invalidated");
+    assert!(op.contains("59_000_000_000"), "59 s window (contract max 60)");
+    assert!(op.contains("fresh_cert.live("), "fresh cert validated live");
+    assert!(op.contains("fresh_cert.sign(&seed)?"), "fresh cert signed");
+    assert!(op.contains("\"certificate\":fresh_cert"), "fresh cert returned");
+    // The old vacuous final check is gone: no live() against a cached
+    // chain_now_ms() on the run-start cert.
+    assert!(!op.contains("cert.live(&contract,token,nonce,control.epoch,chain_now_ms()"), "old vacuous re-check removed");
+    // The first template still uses the 30 s window at run start (it is the
+    // observation template, not the signing template).
+    assert!(op.contains("30_000_000_000"), "first template keeps 30 s");
+}
+
+#[test]
+fn r8_native_status_unwraps_result() {
+    // Round 8 native_status fix (collateral_evidence_host.rs, wasm32-only):
+    // the tx_status envelope carries status under "result", so reading
+    // ["status"] off the envelope always yielded null.
+    let src = include_str!("collateral_evidence_host.rs");
+    assert!(
+        src.contains("out.1.get(\"result\").unwrap_or(&out.1)[\"status\"]"),
+        "native_status unwraps .result"
+    );
+    assert!(
+        !src.contains("\"native_status\":out.1[\"status\"]"),
+        "old envelope read removed"
+    );
+}

@@ -1270,6 +1270,93 @@ pub fn parse_final_block(raw: &str) -> Option<read_cache::BlockCache> {
     })
 }
 
+/// Parse a `gas_price` host response into the price in yocto. Round 8: the
+/// OutLayer host returns the gas price as a BARE JSON string on success
+/// (`"100000000"`, host_functions_sync.rs:729-747), and the live NEAR RPC
+/// returns `{"result":{"gas_price":"100000000"}}` — neither is the object
+/// `guarded::decimal` expects, so `provision_native_budget` failed every time
+/// with "missing/string gas_price" (Run 14 S11, call 103d999d-...). Accepts a
+/// digit string, a bare JSON number, `{"gas_price":…}`, and `{"result":…}`
+/// (one level of unwrapping). Any body carrying an "error" key is rejected:
+/// the host returns the whole error envelope as the result string when
+/// `result.gas_price` is absent (host_functions_sync.rs:743-744), so an error
+/// body must never parse as a price. Digits only; a parsed value is cached as
+/// a u128 (read_cache), never as a Value.
+pub fn gas_price_of(raw: &str) -> Result<u128, Error> {
+    let v: serde_json::Value =
+        serde_json::from_str(raw).map_err(|_| err("rpc", "invalid gas price"))?;
+    if v.get("error").is_some() {
+        return Err(err("rpc", "gas price error"));
+    }
+    gas_price_value(&v).ok_or_else(|| err("guard_state", "missing/string gas_price"))
+}
+
+fn gas_price_value(v: &serde_json::Value) -> Option<u128> {
+    use serde_json::Value;
+    match v {
+        Value::String(s) if !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()) => {
+            s.parse().ok()
+        }
+        Value::Number(n) => n.as_u64().map(u128::from),
+        Value::Object(_) => {
+            if let Some(g) = v.get("gas_price") {
+                return gas_price_value(g);
+            }
+            v.get("result").and_then(gas_price_value)
+        }
+        _ => None,
+    }
+}
+
+/// Parse a `view_account` response (full JSON-RPC envelope or flattened
+/// result) into (amount_yocto, storage_usage_bytes). The amount is a decimal
+/// string; storage_usage is a NUMBER (proven live: the minter envelope
+/// carries `"storage_usage":315`, not a string).
+pub fn view_account_budget(raw: &str) -> Result<(u128, u64), Error> {
+    let v: serde_json::Value =
+        serde_json::from_str(raw).map_err(|_| err("rpc", "invalid account"))?;
+    let account = v.get("result").cloned().unwrap_or(v);
+    let amount = guarded::decimal(&account, "amount")?;
+    let storage_usage = account["storage_usage"]
+        .as_u64()
+        .ok_or_else(|| err("rpc", "missing storage usage"))?;
+    Ok((amount, storage_usage))
+}
+
+/// Pure minter-budget check from `provision_native_budget`
+/// (collateral_host.rs). The minter must hold its storage backing (1e19
+/// yocto/byte) plus the deposit, the fee and a 0.001 NEAR reserve, and
+/// deposit+fee must fit the 0.1 NEAR transaction ceiling.
+pub fn native_budget_ok(amount: u128, storage_usage: u64, deposit: u128, fee: u128) -> Result<(), Error> {
+    let backing = (storage_usage as u128)
+        .checked_mul(10_000_000_000_000_000_000)
+        .ok_or_else(|| err("collateral_quote", "storage overflow"))?;
+    let total = backing
+        .checked_add(deposit)
+        .and_then(|t| t.checked_add(fee))
+        .and_then(|t| t.checked_add(1_000_000_000_000_000_000_000))
+        .ok_or_else(|| err("collateral_quote", "budget overflow"))?;
+    let ceiling = 100_000_000_000_000_000_000_000u128;
+    if deposit.checked_add(fee).map(|d| d > ceiling).unwrap_or(true) || amount < total {
+        return Err(err(
+            "collateral_quote",
+            "minter reserve or transaction ceiling insufficient",
+        ));
+    }
+    Ok(())
+}
+
+/// Full native-budget check for a `view_account` body: parse the envelope,
+/// compute the fee from the gas price (240 Tgas), and run the budget check.
+/// This is exactly what `provision_native_budget` does after the gas price.
+pub fn native_budget_check(account_raw: &str, deposit: u128, gas_price: u128) -> Result<(), Error> {
+    let (amount, storage_usage) = view_account_budget(account_raw)?;
+    let fee = gas_price
+        .checked_mul(240_000_000_000_000)
+        .ok_or_else(|| err("collateral_quote", "gas overflow"))?;
+    native_budget_ok(amount, storage_usage, deposit, fee)
+}
+
 /// Which key a request operates: the one named in the signed params, or the only one held.
 /// Holding several keys without naming one is refused, so a buyer never runs the wrong account.
 pub fn pick_token(named: Option<&str>, owned: u64) -> Result<(), Error> {

@@ -1,0 +1,10 @@
+{
+ "jsonrpc": "2.0",
+ "result": {
+  "block_hash": "3v17PDYhQVUdAjBfaGNKbdudEWL9qq7t1BKMG9cXRB58",
+  "block_height": 224463399,
+  "nonce": 221861956000020,
+  "permission": "FullAccess"
+ },
+ "id": "1"
+}

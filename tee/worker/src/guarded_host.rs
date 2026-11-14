@@ -1,5 +1,9 @@
 // Included inside the WASI host module: no production action happens during native tests/builds.
 fn guard_control(token:&str)->Result<Control,Error>{Control::parse(&view(&keys_contract(),"get_control_state",json!({"token_id":token}))?,token)}
+// Round 8: the control re-read that must observe the live chain. The cached
+// get_control_state is from run start and cannot detect a change, so the
+// certificate re-validation reads it fresh (view_fresh bypasses the cache).
+fn guard_control_fresh(token:&str)->Result<Control,Error>{Control::parse(&view_fresh(&keys_contract(),"get_control_state",json!({"token_id":token}))?,token)}
 fn guard_registry()->Result<(),Error>{
     let expected=cfg("GUARDED_WORKER_HASH","");
     let project=view("outlayer.near","get_project",json!({"project_id":guarded::PROJECT_ID}))?;
@@ -213,19 +217,38 @@ fn op_loan_certificate(input:&Value)->Result<Value,Error>{
     if !evidence::effective_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true){return Err(err("evidence","live decrypted policy differs from V2 reviewed policy"));}
     let balance=custody_get(&key,&format!("/wallet/v1/confidential/balance?token=nep141%3A{}",guarded::ASSET.trim_start_matches("nep141:")))?;
     guarded::fixed_floor(&cert,&balance,&id)?;
-    // Re-read control, exact loan and policy after balance/inventory collection; no stale-loan signing.
-    if guard_control(token)?!=control||view(&contract,"get_loan",json!({"token_id":token}))?!=loan||view(&contract,"get_collateral_binding",json!({"token_id":token}))?!=binding
-        ||view(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?!=policy{return Err(err("collateral_ineligible","loan/custody changed during observation"));}
+    // Round 8: re-read control, exact loan and policy FRESH (bypass the view
+    // cache). The cached values are from run start and cannot detect a change,
+    // so the old cached re-read was vacuous; no stale-loan signing.
+    let fresh_control=guard_control_fresh(token)?;
+    let fresh_loan=view_fresh(&contract,"get_loan",json!({"token_id":token}))?;
+    let fresh_binding=view_fresh(&contract,"get_collateral_binding",json!({"token_id":token}))?;
+    let fresh_policy=view_fresh(custody,"get_wallet_policy",json!({"wallet_pubkey":cert.wallet_pubkey}))?;
+    if fresh_control!=control||fresh_loan!=loan||fresh_binding!=binding||fresh_policy!=policy{return Err(err("collateral_ineligible","loan/custody changed during observation"));}
     let effective=custody_get(&key,"/wallet/v1/policy")?;
     if !evidence::effective_with_freeze(&proof.expected_policy,&effective,&proof.prepared,&contract,true){return Err(err("evidence","decrypted policy changed during certificate observation"));}
     guard_registry()?;
-    cert.live(&contract,token,nonce,control.epoch,chain_now_ms()?.checked_mul(1_000_000).ok_or_else(||err("certificate","timestamp overflow"))?)?;
+    // Round 8: the certificate window. The first template was issued against
+    // the run-start block with a 30 s expiry, and the old final live() re-read
+    // the SAME cached block, so it could not detect a slow run. Invalidate the
+    // block cache, re-read the live FINAL block, and re-issue the template
+    // against it with the contract-maximum 59 s window; sign the FRESH cert.
+    read_cache::invalidate_block();
+    let fresh_now=chain_now_ms()?;
+    let fresh_observed=fresh_now.checked_mul(1_000_000).ok_or_else(||err("certificate","timestamp overflow"))?;
+    let fresh_expires=fresh_observed.checked_add(59_000_000_000).ok_or_else(||err("certificate","expiry overflow"))?;
+    let fresh_template=view_fresh(&contract,"loan_certificate_template",json!({"token_id":token,"observed_at_ns":fresh_observed.to_string(),"expires_at_ns":fresh_expires.to_string()}))?;
+    let fresh_cert:guarded::Certificate=serde_json::from_value(fresh_template).map_err(|_|err("certificate","malformed contract template"))?;
+    fresh_cert.live(&contract,token,nonce,fresh_control.epoch,fresh_observed)?;
+    guarded::loan_binding(&fresh_cert,&fresh_loan,&fresh_binding,&fresh_control,&config)?;
+    guarded::frozen_policy(&fresh_cert,&fresh_policy)?;
+    guarded::fixed_floor(&fresh_cert,&balance,&id)?;
     let (_,msk)=guarded_minter()?;let seed=minter_secret(&msk)?;
     use base64::Engine;
     let public_key=base64::engine::general_purpose::STANDARD.encode(ed25519_dalek::SigningKey::from_bytes(&seed).verifying_key().to_bytes());
     if config["attestor_public_key"]!=public_key{return Err(err("certificate","worker key does not match pinned contract attestor"));}
-    let signature=cert.sign(&seed)?;
-    Ok(json!({"ok":true,"op":"loan_certificate","certificate":cert,"signature":signature,"public_key":public_key,
+    let signature=fresh_cert.sign(&seed)?;
+    Ok(json!({"ok":true,"op":"loan_certificate","certificate":fresh_cert,"signature":signature,"public_key":public_key,
         "guarded_revision":guarded::REVISION,"registry_version":cfg("GUARDED_WORKER_HASH",""),
         "execution_verification":"Verify the OutLayer attestation over this exact output separately; registry version is NOT a measured self hash"}))
 }

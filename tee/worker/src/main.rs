@@ -94,6 +94,18 @@ mod host {
         Ok(out)
     }
 
+    fn view_fresh(contract: &str, method: &str, args: Value) -> Result<Value, Error> {
+        // Round 8: bypass the per-run read cache entirely — never consults
+        // it and never populates it. For re-reads that must observe the live
+        // chain (the loan-certificate re-validation): the cached values are
+        // from run start and cannot detect a change, so a cached re-read is
+        // vacuous. Identical to view() except for the cache.
+        let args_s = args.to_string();
+        let (r, e) = rpc::view(contract, method, &args_s, "final");
+        if !e.is_empty() { return Err(err("rpc", format!("{}: {}", method, e))); }
+        rpc_view::decode(method, &r)
+    }
+
     fn holder_tier(account: &str) -> Result<Option<u8>, Error> {
         Ok(view(&keys_contract(), "holder_tier", json!({"account_id": account}))?.as_u64().map(|t| t as u8))
     }

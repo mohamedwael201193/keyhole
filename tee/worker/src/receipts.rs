@@ -212,4 +212,37 @@ mod tests {
         v["status"] = json!({"SuccessValue":B64.encode("true")});
         assert_eq!(check(&v), None);
     }
+    #[test]
+    fn captured_mainnet_mint_tx_status() {
+        // Round 8: the synthetic fixture() above is flat (no "result"
+        // envelope). This test feeds the CAPTURED mainnet
+        // EXPERIMENTAL_tx_status body for the real final B2 mint tx
+        // 27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV — full envelope,
+        // two receipt outcomes, the second executed by the minter (the
+        // refund/payout receipt). The terminal receipt is the contract's
+        // nft_mint return value.
+        let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
+        let v: Value = serde_json::from_str(raw).unwrap();
+        let term = terminal(
+            &v,
+            "27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV",
+            "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+            "keyhole-devmo.near",
+            Some(&[
+                "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+                "keyhole-devmo.near",
+                "outlayer.near",
+            ]),
+        )
+        .expect("captured final mint tx has a terminal receipt");
+        match term {
+            Terminal::Success { bytes, executor } => {
+                assert_eq!(executor, "keyhole-devmo.near");
+                let text = String::from_utf8(bytes).unwrap();
+                assert!(text.contains("\"token_id\":\"k88bf49da96212902\""), "{text}");
+            }
+            Terminal::Failure => panic!("captured mint tx must not be a failure"),
+        }
+        assert!(!has_failure(&v));
+    }
 }
