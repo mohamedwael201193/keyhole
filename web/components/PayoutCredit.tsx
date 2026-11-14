@@ -8,8 +8,8 @@ import {browserMoneyStore,finalMoneyReceipt,updateMoneyOperation,clearVerifiedMo
 import {nearText} from "@/lib/sale";
 /**
  * Payout credit notice. It is a notice, not a second claim button: the one claim action lives in the
- * vault (PayoutPanel, the working claim path — claim_payout pays only the caller's own credit). It never
- * shows the amount in NEAR only (never the raw chain units), never shows a button that cannot work, and it is mounted only on the pages
+ * vault (PayoutPanel, the working claim path — claim_payout pays only the caller's own credit). It shows
+ * the amount in NEAR only (never the raw chain units), never shows a button that cannot work, and it is mounted only on the pages
  * that own payout (dashboard home, /pledge) — never site-wide in the app shell, and never on /vault,
  * where the vault panel already shows the same credit.
  */

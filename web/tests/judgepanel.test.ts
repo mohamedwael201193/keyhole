@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { EVIDENCE_IDS } from "@/lib/evidenceIds";
 import { CALLS, PUBLISHED_INFO_CALL } from "@/lib/evidence";
 import { SETTLEMENTS, VAULT_TRADE } from "@/lib/settlements";
+import { fallbackTokens } from "@/lib/tokens";
 import { IDENTITY } from "@/lib/identity.gen";
 import { canonical } from "@/lib/verify";
 import enJson from "../messages/en.json";
@@ -68,8 +69,24 @@ describe("settle page data stays true", () => {
 describe("copy matches the product", () => {
   const mint = en.mint;
   it("home does not promise eight vault assets", () => { expect(JSON.stringify(liveLanding.landing2.v2)).not.toMatch(/eight assets/i); expect(liveLanding.landing2.v2.hero.body).not.toMatch(/eight assets/i); });
-  it("home gallery is labelled as concept art, not minted tokens", () => { expect(liveLanding.landing2.v2.keys.preview).toMatch(/preview/i); expect(liveLanding.landing2.v2.keys.mintable).toMatch(/mintable/i); });
-  it("mint says Bronze is what minting issues today and Legendary is not a fourth cap", () => { expect(mint.bronzeOnly).toMatch(/today issues a Bronze key/); expect(mint.bronzeOnly).toMatch(/not a fourth cap/); });
+  it("the vault names its two supported assets, USDC and wNEAR", () => {
+    // The landing no longer lists assets (L-2 dropped the list), so the claim lives where the vault states it:
+    // the fallback token list the trade runs on, and the vault's own line pointing at the Swap page.
+    expect(fallbackTokens().map((t) => t.symbol)).toEqual(["USDC", "wNEAR"]);
+    const vault = readFileSync(`${__dirname}/../app/vault/view.tsx`, "utf8");
+    expect(vault).toMatch(/Trade USDC and wNEAR from this vault/);
+  });
+  it("home gallery labels Bronze Mintable and Silver, Gold and Legendary Preview", () => {
+    expect(liveLanding.landing2.v2.keys.preview).toMatch(/preview/i);
+    expect(liveLanding.landing2.v2.keys.mintable).toMatch(/mintable/i);
+    // Label existence alone would pass a mislabelled gallery: assert the per-finish wiring in the fan itself.
+    const fan = readFileSync(`${__dirname}/../components/landing/KeysFan.tsx`, "utf8");
+    expect(fan).toContain('{ finish: "Bronze", art: 3, rot: -8, mintable: true }');
+    expect(fan).toContain('{ finish: "Silver", art: 4, rot: -3, mintable: false }');
+    expect(fan).toContain('{ finish: "Gold", art: 2, rot: 3, mintable: false }');
+    expect(fan).toContain('{ finish: "Legendary", art: 1, rot: 8, mintable: false }');
+    expect(fan).toContain('c.mintable ? t("landing2.v2.keys.mintable") : t("landing2.v2.keys.preview")');
+  });
   it("verify explains worker_measurement is not the wasm hash", () => expect(en.verify.hashesNote).toMatch(/RTMR3/));
 });
 

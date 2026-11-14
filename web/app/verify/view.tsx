@@ -23,7 +23,7 @@ function LienLookup() {
         <input id="lien-id" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="k + 16 hex characters" spellCheck={false} />
         <button type="submit" className="kh-btn kh-btn--secondary kh-btn--sm" disabled={!draft.trim()}>{draft.trim() ? "Read lien" : "Enter a key id first"}</button>
       </form>
-      <p className="lien-note">Reads the key&apos;s owner, lien state, loan terms and refusal rules from the final chain. Nothing is signed. Paste a key id, for example k5f4750858f328940 or 0.</p>
+      <p className="lien-note">Reads the key&apos;s owner, lien state, loan terms and refusal rules from the final chain. Nothing is signed. Paste a key id, such as k5f4750858f328940 or 0.</p>
       {bad && <p className="lien-note" role="alert">That is not a key id. Use k plus 16 lowercase hex characters, like k5f4750858f328940.</p>}
       {!bad && tokenId && <LienPanel lien={lien} testid="verify-lien" />}
     </section>

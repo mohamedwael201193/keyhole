@@ -441,6 +441,14 @@ body, .big, h1, h2, h3, dd { font-variant-numeric: lining-nums; }
   .empty { grid-template-columns: 1fr; }
   .ft { padding: 36px 20px; }
 }
+@media (max-width: 1200px) {
+  /* The "Try to steal a key" label widens the centre column past ~1200px: tighten the row and never wrap a
+     label mid-phrase. This narrows the overflow band but does not close it below ~1100px — that still needs
+     the live-browser check at 900px and 1200px. */
+  .nav { padding: 0 20px; gap: 10px; }
+  .links { gap: 16px; font-size: 15px; }
+  .links a { white-space: nowrap; }
+}
 @media (max-width: 860px) {
   .links, .desk { display: none; }
   .burger { display: grid; }

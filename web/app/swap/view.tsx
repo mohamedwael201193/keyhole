@@ -581,7 +581,7 @@ export function SwapView() {
                 <dl className="sw-facts" data-testid="swap-facts">
                   <div><dt>Route</dt><dd>NEAR Intents, via 1Click</dd></div>
                   <div><dt>Fee and spread</dt><dd>{spread != null ? `about ${formatUsdMicro(Math.max(0, Math.round(spread * 1e6)))}` : "—"}</dd></div>
-                  <div><dt>1Click fee</dt><dd>0.20% with an API key, 0.25% without one; stablecoin pairs 0.01%; plus a 0.0001% protocol fee. The spread above is separate.</dd></div>
+                  <div><dt>1Click fee</dt><dd>0.20% with an API key, additional 0.25% without one; USDC, USDT and DAI pairs 0.01%; plus a 0.0001% protocol fee. The spread above is separate.</dd></div>
                   <div><dt>Max slippage</dt><dd>1%, fixed by the vault</dd></div>
                   <div><dt>Minimum received</dt><dd>{minOutText ?? "—"}</dd></div>
                   <div><dt>Estimated time</dt><dd>{eta != null ? `about ${eta}s` : "—"}</dd></div>
@@ -597,7 +597,7 @@ export function SwapView() {
                     <div><dt>Minimum received</dt><dd>{minOutText ?? "—"}</dd></div>
                     <div><dt>Rate</dt><dd>{rate != null ? `1 ${from.symbol} = ${formatAmount(rate)} ${to.symbol}` : "—"}</dd></div>
                     <div><dt>Fee and spread</dt><dd>{spread != null ? `about ${formatUsdMicro(Math.max(0, Math.round(spread * 1e6)))}` : "—"}</dd></div>
-                    <div><dt>1Click fee</dt><dd>0.20% with an API key, 0.25% without one; stablecoin pairs 0.01%; plus a 0.0001% protocol fee. The spread above is separate.</dd></div>
+                    <div><dt>1Click fee</dt><dd>0.20% with an API key, additional 0.25% without one; USDC, USDT and DAI pairs 0.01%; plus a 0.0001% protocol fee. The spread above is separate.</dd></div>
                     <div><dt>Max slippage</dt><dd>1%, fixed by the vault</dd></div>
                   </dl>
                   <button type="button" className="sw-textbtn" onClick={editTrade} data-testid="swap-edit">Change amount or pair</button>

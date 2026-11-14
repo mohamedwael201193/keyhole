@@ -127,6 +127,8 @@ export type OverviewProps = {
 };
 
 const RECENT = 8;
+/** No-op unlock view for the signed-out checklist preview: no action renders there, so it is never called. */
+const SIGNED_OUT_UNLOCK: UnlockView = { live: false, minutes: 0, busy: false, busyLabel: "", via: null, error: null, onUnlock: () => {} };
 /** The mintable tier's artwork, shown as a sample on the Mint card. Token ids pick the art only once a key is minted. */
 const SAMPLE_BRONZE_ART = 3;
 
@@ -598,8 +600,27 @@ function TierCard({ tier, unlock }: { tier: TierView; unlock: UnlockView }) {
  */
 function SetupChecklist(p: {
   held: boolean; looking: boolean; unlock: UnlockView; unlocked: boolean; limitsDone: boolean; funded: boolean; swapped: boolean; swappedFrom: "log" | "record" | null; balanceBusy: boolean; balanceRead: boolean; activityBusy: boolean; activityRead: boolean;
+  /** Signed-out preview: the same six steps, none done, no actions — the checklist a visitor sees before signing in. */
+  preview?: boolean;
 }) {
   const { held, looking, unlock, unlocked, limitsDone, funded, swapped, swappedFrom } = p;
+  if (p.preview) {
+    // Nothing here is done and nothing has an action: sign-in is the only way forward, and the
+    // sign-in card above this list is where it happens.
+    const items: SetupItem[] = [
+      { id: "sign", title: "Sign in", done: false, note: "Sign in to start." },
+      { id: "key", title: "Get your key", done: false, note: "Free. One signature." },
+      { id: "unlock", title: "Unlock session", done: false, note: "Needs sign-in first." },
+      { id: "limits", title: "Set safe limits", done: false, note: "Needs sign-in first." },
+      { id: "fund", title: "Fund the vault", done: false, note: "Needs sign-in first." },
+      { id: "swap", title: "First swap", done: false, note: "Needs sign-in first." },
+    ];
+    return (
+      <Card as="section" labelledBy="ov-setup-h" className="ov-setup">
+        <SetupProgress items={items} variant="vertical" title="Setup progress" headingId="ov-setup-h" testid="setup-checklist" />
+      </Card>
+    );
+  }
   const items: SetupItem[] = [
     { id: "sign", title: "Sign in", done: true, note: "Signed in." },
     {
@@ -623,7 +644,7 @@ function SetupChecklist(p: {
     },
     {
       id: "fund", title: "Fund the vault", done: funded, checking: p.balanceBusy && !p.balanceRead,
-      note: funded ? "Balance read from the vault." : !held ? "Needs a key first." : !unlocked ? "Checked once you unlock." : p.balanceBusy ? "Reading your vault…" : "A deposit is a transfer you approve in your wallet.",
+      note: funded ? "Balance read from the vault." : !held ? "Needs a key first." : !unlocked ? "Checked once you unlock." : p.balanceBusy ? "Reading your vault…" : "A deposit is a transfer you approve in your wallet. If your account is not on chain yet, the vault shows a top-up code for 0.01 NEAR.",
       action: held && !funded ? <Button href={dashHref("/vault")} variant="secondary" size="sm" testid="setup-fund-action">Deposit</Button> : undefined,
     },
     {
@@ -724,6 +745,9 @@ function SignedOut({ signIn }: { signIn: SignInOptionsProps }) {
           <p className="ov-sentence">Minting today issues a Bronze key: $1 a trade, $5 a day. Silver and Gold are previews for now.</p>
         </Card>
       </div>
+      {/* Signed-out visitors following an old /start link land here: the same six-step checklist, nothing done
+          and no actions, so the redirect lands on the checklist it promises instead of a page without one. */}
+      <SetupChecklist preview held={false} looking={false} unlock={SIGNED_OUT_UNLOCK} unlocked={false} limitsDone={false} funded={false} swapped={false} swappedFrom={null} balanceBusy={false} balanceRead={false} activityBusy={false} activityRead={false} />
       <Steps step={1} />
     </div>
   );
