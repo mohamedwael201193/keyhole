@@ -3991,7 +3991,7 @@
   {
    "id": "test-all_aliases_reviewed",
    "claim": "Named test or symbol `all_aliases_reviewed` exists in the source",
-   "where": "SECURITY.md:707",
+   "where": "SECURITY.md:710",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4138,7 +4138,7 @@
   {
    "id": "test-create_collateral_wallet",
    "claim": "Named test or symbol `create_collateral_wallet` exists in the source",
-   "where": "SECURITY.md:732",
+   "where": "SECURITY.md:735",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4222,7 +4222,7 @@
   {
    "id": "test-effective_policy_reviewed",
    "claim": "Named test or symbol `effective_policy_reviewed` exists in the source",
-   "where": "SECURITY.md:741",
+   "where": "SECURITY.md:744",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4264,7 +4264,7 @@
   {
    "id": "test-exact_near_exit_v1",
    "claim": "Named test or symbol `exact_near_exit_v1` exists in the source",
-   "where": "SECURITY.md:861",
+   "where": "SECURITY.md:864",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4348,7 +4348,7 @@
   {
    "id": "test-get_control_state",
    "claim": "Named test or symbol `get_control_state` exists in the source",
-   "where": "SECURITY.md:638",
+   "where": "SECURITY.md:641",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4390,7 +4390,7 @@
   {
    "id": "test-get_payout_credit",
    "claim": "Named test or symbol `get_payout_credit` exists in the source",
-   "where": "SECURITY.md:368",
+   "where": "SECURITY.md:371",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5356,7 +5356,7 @@
   {
    "id": "test-payout_account_registered",
    "claim": "Named test or symbol `payout_account_registered` exists in the source",
-   "where": "SECURITY.md:473",
+   "where": "SECURITY.md:476",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5377,7 +5377,7 @@
   {
    "id": "test-payout_storage_cost",
    "claim": "Named test or symbol `payout_storage_cost` exists in the source",
-   "where": "SECURITY.md:473",
+   "where": "SECURITY.md:476",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5650,7 +5650,7 @@
   {
    "id": "test-resolve_transfer_call",
    "claim": "Named test or symbol `resolve_transfer_call` exists in the source",
-   "where": "SECURITY.md:638",
+   "where": "SECURITY.md:641",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5986,7 +5986,7 @@
   {
    "id": "test-withdraw_dry_run",
    "claim": "Named test or symbol `withdraw_dry_run` exists in the source",
-   "where": "SECURITY.md:616",
+   "where": "SECURITY.md:619",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -8985,7 +8985,7 @@
   {
    "id": "path-docs/evidence/integration-stack/validation.json",
    "claim": "Linked repo path docs/evidence/integration-stack/validation.json exists",
-   "where": "SECURITY.md:437",
+   "where": "SECURITY.md:440",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/validation.json",
    "check": {
@@ -8998,7 +8998,7 @@
   {
    "id": "path-web/next.config.ts",
    "claim": "Linked repo path web/next.config.ts exists",
-   "where": "SECURITY.md:545",
+   "where": "SECURITY.md:548",
    "evidence_type": "file",
    "evidence": "web/next.config.ts",
    "check": {
@@ -9011,7 +9011,7 @@
   {
    "id": "path-skills/keyhole/SKILL.md",
    "claim": "Linked repo path skills/keyhole/SKILL.md exists",
-   "where": "SECURITY.md:610",
+   "where": "SECURITY.md:613",
    "evidence_type": "file",
    "evidence": "skills/keyhole/SKILL.md",
    "check": {
@@ -9024,7 +9024,7 @@
   {
    "id": "path-web/tests/sourceTarball.test.ts",
    "claim": "Linked repo path web/tests/sourceTarball.test.ts exists",
-   "where": "SECURITY.md:610",
+   "where": "SECURITY.md:613",
    "evidence_type": "file",
    "evidence": "web/tests/sourceTarball.test.ts",
    "check": {
@@ -9037,7 +9037,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/TOOLING.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/TOOLING.md exists",
-   "where": "SECURITY.md:650",
+   "where": "SECURITY.md:653",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/TOOLING.md",
    "check": {
@@ -9050,7 +9050,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/RUNBOOK_DELTA.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/RUNBOOK_DELTA.md exists",
-   "where": "SECURITY.md:654",
+   "where": "SECURITY.md:657",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/RUNBOOK_DELTA.md",
    "check": {
@@ -9063,7 +9063,7 @@
   {
    "id": "path-scripts/release/lifecycle.mjs",
    "claim": "Linked repo path scripts/release/lifecycle.mjs exists",
-   "where": "SECURITY.md:679",
+   "where": "SECURITY.md:682",
    "evidence_type": "file",
    "evidence": "scripts/release/lifecycle.mjs",
    "check": {
@@ -9076,7 +9076,7 @@
   {
    "id": "path-scripts/release/lifecycle.test.mjs",
    "claim": "Linked repo path scripts/release/lifecycle.test.mjs exists",
-   "where": "SECURITY.md:679",
+   "where": "SECURITY.md:682",
    "evidence_type": "file",
    "evidence": "scripts/release/lifecycle.test.mjs",
    "check": {
@@ -9089,7 +9089,7 @@
   {
    "id": "path-docs/worker/outlayer-exact-exit-schemas.json",
    "claim": "Linked repo path docs/worker/outlayer-exact-exit-schemas.json exists",
-   "where": "SECURITY.md:828",
+   "where": "SECURITY.md:831",
    "evidence_type": "file",
    "evidence": "docs/worker/outlayer-exact-exit-schemas.json",
    "check": {
@@ -9102,7 +9102,7 @@
   {
    "id": "path-docs/worker/EXACT_NEAR_EXIT.md",
    "claim": "Linked repo path docs/worker/EXACT_NEAR_EXIT.md exists",
-   "where": "SECURITY.md:836",
+   "where": "SECURITY.md:839",
    "evidence_type": "file",
    "evidence": "docs/worker/EXACT_NEAR_EXIT.md",
    "check": {
