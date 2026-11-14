@@ -1,6 +1,6 @@
 # Proof index
 
-Six public records are six records. They are not six customers and they are not commercial traction. No completed loan is claimed. Lending is off. The next loan nonce is 0. The owner is the guardian implicit account `0705fdc1…`.
+Six public records are six records. They are not six customers and they are not commercial traction. Two loans are settled on NEAR mainnet and no other loan is claimed. On NEAR mainnet the next loan nonce is 2: [Loan A repaid](https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c), [Loan B defaulted, key transferred to the lender](https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6), and [lending switched off](https://nearblocks.io/txns/9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA) afterwards (`lending_enabled` false). The owner is the guardian implicit account `0705fdc1…`.
 
 Attribution is only what the record itself says. **Team** means this repository already names that wallet as the operator's. **Unknown** means control is not established. A different address is not verified external usage. This index has no verified-external row. Six public records are not six customers and they are not commercial traction.
 
@@ -18,7 +18,7 @@ Attribution is only what the record itself says. **Team** means this repository 
 
 ## Attempted action, refusal, proof
 
-These are recorded refusals. They are not a completed loan. Lending is off. The next loan nonce is 0.
+These are recorded refusals. They are not the two settled loans. On NEAR mainnet the next loan nonce is 2: [Loan A repaid](https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c), [Loan B defaulted, key transferred to the lender](https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6), and [lending switched off](https://nearblocks.io/txns/9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA) afterwards (`lending_enabled` false).
 
 | Attempted action | Refusal | Attestation | Output check | Build |
 |---|---|---|---|---|
@@ -52,8 +52,8 @@ The output check is the recorded body next to its attested `output_hash` in [`we
 
 | Record | What it shows |
 |---|---|
-| `contracts/keys/src/pledge.rs` `tier_loan_cap` | Borrow maxima 0.05 / 0.5 / 5 NEAR. Lending is off, so these are configured maxima |
-| `loan_principal_delivered` | Emitted on `claim_payout` or `reconcile_payout` when a loan exists. None is recorded on mainnet while nonce is 0 |
+| `contracts/keys/src/pledge.rs` `tier_loan_cap` | Borrow maxima 0.05 / 0.5 / 5 NEAR. Lending is switched off, so these are configured maxima |
+| `loan_principal_delivered` | Emitted on `claim_payout` or `reconcile_payout` when a loan exists. The two settled loans (nonces 1 and 2) are listed above |
 | `judge/live.mts` | Opt-in. It can mint. It is not a passive proof |
 
 A public certificate or a floor note is a viewing right for that page. It is not spend authority, not a dollar price, and not a zero-knowledge balance. See [SECURITY.md](SECURITY.md#viewing-right-and-selective-disclosure).

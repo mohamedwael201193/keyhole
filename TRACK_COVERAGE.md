@@ -1,7 +1,7 @@
 # Track coverage
 
 Track mapping: implemented features and their concrete evidence. This is not certification that every optional prompt or trust property is complete; residual boundaries are retained in [SECURITY.md](SECURITY.md#qualifications-moved-from-the-readme).
-Current release: contract v2.7 and guarded worker `62398a8a` are live; lending remains OFF. Each scope label describes only the feature actually evidenced.
+Current release: contract v2.7 and guarded worker `62398a8a` are live; lending is switched off after two settled mainnet loans ([repaid](https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c), [defaulted, key transferred to the lender](https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6)). Each scope label describes only the feature actually evidenced.
 
 Official NFT-track sentence, quoted once from the [HACKATHON.md tracks table](https://nearhackathon.com/HACKATHON.md): “Build NFTs as accounts — assets that own money, earn royalties, hold inventory, carry credentials, memberships or access rights. Ownership with behavior.” The prompt file is a separate reference and is worded differently: [tracks/10-nfts.md](https://github.com/nearai/near-hackathon-prompt-examples/blob/main/tracks/10-nfts.md).
 
@@ -11,7 +11,7 @@ Official NFT-track sentence, quoted once from the [HACKATHON.md tracks table](ht
 | Royalties | `nft_buy` pays `royalty_bps` 500 | Read the recorded sale | [docs/evidence/contract-v2](docs/evidence/contract-v2/README.md) | Current |
 | Sealed inventory | Holder vault inside the enclave | Open [/vault](https://www.getkeyhole.xyz/vault) as the holder | [SECURITY.md](SECURITY.md#viewing-right-and-selective-disclosure) | Current for the holder. Not a zero-knowledge balance |
 | Access right | `/holders` checks the connected account's tokens | Open [/holders](https://www.getkeyhole.xyz/holders) | [web/app/holders](web/app/holders) | Authenticated holder proof. Not authorization for every confidential byte |
-| Borrow caps | `tier_loan_cap`: 0.05 / 0.5 / 5 NEAR | Read the mint page | [`contracts/keys/src/pledge.rs`](contracts/keys/src/pledge.rs) | Configured maxima. Lending is off. Nonce 0. Not a completed loan |
+| Borrow caps | `tier_loan_cap`: 0.05 / 0.5 / 5 NEAR | Read the mint page | [`contracts/keys/src/pledge.rs`](contracts/keys/src/pledge.rs) | Configured maxima. Lending is off; next loan nonce 2 ([Loan A repaid](https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c), [Loan B defaulted, key transferred to the lender](https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6)) |
 | Chain address | Browser derivation from the minter and token id | Open `/key` | [signature evidence, historical](docs/evidence/publish-09d481a5/README.md#chain-signatures-one-real-mpc-signature) | Derivation only. Signing is disabled |
 
 ## NFTs That Do Something (primary)

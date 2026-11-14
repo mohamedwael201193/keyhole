@@ -83,7 +83,7 @@ Randomised invariant tests run many random sequences per CI run (`tee/worker/src
 - **Call time budget and spend holds.** Each worker call plans for 50 s of wall clock (OutLayer default 60 s). No spend hold is taken after 20 s, no begin_value_op is sent with under 25 s left, and an exit hop starts only with 22 s left; otherwise the call returns a resumable processing result and a holder-signed reconcile of the original id continues without ever resending a hop. A hold is released, and the journal abandoned, only when no begin could have been sent; unknown outcomes keep the hold.
 - **Beat key.** The function-call key on the TEE minter can call only `beat` on the keys contract, with no deposit, until its 0.05 NEAR gas allowance is spent. If it leaked, the worst case is extra `nft_metadata_update` events for existing tokens; no mint, transfer, minter change or fund movement is possible. The owner removes it with `del_beat_key`.
 
-## Independent review
+## Separate review
 
 Two-pass review with a NEAR AI Cloud TEE model, each reply's signature and Intel DCAP quote checked, every finding triaged by hand: [docs/evidence/red-review](docs/evidence/red-review/README.md). Four real findings (R1 to R4) are fixed with regression tests.
 
@@ -459,7 +459,7 @@ Operation identities survive reload/tabs without persisting signatures or amount
 
 Ordinary seller/buyer/refund onboarding exposes the exact 320-byte nonrefundable slot fee separately from listing bond, gas and proceeds. Native cashout in Vault requires a separately signed `claim_payout`; an in-flight payout stays locked on UNKNOWN. The interface labels delivery only after a FINAL receipt tree with a genuine successful callback. Definitive missing-method feature detection retains v2.4 behavior; network errors never downgrade it. The worker minter preflights its own permanent slot before spending mint quota or dispatching a mint and refuses with an operator-onboarding instruction; it never silently purchases/sponsors that slot. The operator must explicitly register minter and any external treasury/refund recipients in the separately approved release batch and may use the CLI payout command to inspect/claim credits.
 
-Protected lending and protected sales remain OFF. The next loan nonce is 0. No completed loan is claimed. On the live v2.7 contract, the named lender can reclaim principal the borrower never claims once 24 hours have passed after funding, and only when that loan stored a disbursement deadline (`reclaim_unclaimed_principal` in [contracts/keys/src/pledge.rs](contracts/keys/src/pledge.rs)). A legacy v2.6 loan with no stored deadline still has no funding-deadline escape. A lost native payout callback stays UNKNOWN; this sentence does not invent that outcome. Source: [contracts/keys/src/v27.rs](contracts/keys/src/v27.rs). No timeout refund, fabricated audit record, new signer or FullAccess removal is introduced here.
+Protected lending and protected sales remain OFF (`lending_enabled` false). On NEAR mainnet the next loan nonce is 2: [Loan A repaid](https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c), [Loan B defaulted, key transferred to the lender](https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6), and [lending switched off](https://nearblocks.io/txns/9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA) afterwards (`lending_enabled` false). On the live v2.7 contract, the named lender can reclaim principal the borrower never claims once 24 hours have passed after funding, and only when that loan stored a disbursement deadline (`reclaim_unclaimed_principal` in [contracts/keys/src/pledge.rs](contracts/keys/src/pledge.rs)). A legacy v2.6 loan with no stored deadline still has no funding-deadline escape. A lost native payout callback stays UNKNOWN; this sentence does not invent that outcome. Source: [contracts/keys/src/v27.rs](contracts/keys/src/v27.rs). No timeout refund, fabricated audit record, new signer or FullAccess removal is introduced here.
 
 ## Two-sided Pledge UI release gate
 
@@ -598,7 +598,7 @@ Remaining runtime-graph roots include elliptic/secp256k1, bn.js, uuid and MetaMa
 - One window remains between the last owner read and the send. A seller can set a lock before a sale to close it. Proof: `transfer_while_withdraw_is_pending_does_not_send` in [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs).
 - Money already paid out is not recalled by a later transfer.
 
-These are limits of the published path. They are not a claim that a loan has completed. Lending is off and the next loan nonce is 0.
+These are limits of the published path. On NEAR mainnet the next loan nonce is 2: [Loan A repaid](https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c), [Loan B defaulted, key transferred to the lender](https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6), and [lending switched off](https://nearblocks.io/txns/9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA) afterwards (`lending_enabled` false).
 
 ## Viewing right and selective disclosure
 
