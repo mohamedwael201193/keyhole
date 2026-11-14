@@ -1,6 +1,6 @@
 {
   "status": "published-mainnet",
-  "wasm_sha256": "e9e570e5aa3c308f47a95d3ed6008743a32eb876cd9131481760b50bfc63a886",
-  "bytes": 1382833,
+  "wasm_sha256": "5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231",
+  "bytes": 1382841,
   "recipe": "tee/worker/build.sh"
 }
