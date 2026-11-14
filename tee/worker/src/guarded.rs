@@ -139,6 +139,57 @@ pub fn pointer_put(st:&mut dyn Store,root:&str,nonce:u64,op_id:&str)->Result<(),
     }
     Err(err("guard_state","recovery pointer slots exhausted; no value operation started"))
 }
+/// Remove the slot holding exactly `op_id` for `nonce`, if any. No other slot is touched.
+pub fn pointer_remove_op(st:&mut dyn Store,root:&str,nonce:u64,op_id:&str)->Result<(),Error>{
+    for slot in 0..POINTER_SLOTS{
+        let k=pointer_key(root,nonce,slot);
+        if st.read(&k)?==op_id.as_bytes(){st.remove(&k)?;return Ok(());}
+    }
+    Ok(())
+}
+/// All three facts must hold for "provably never begun". Any failed read is
+/// passed in as false by the caller; nothing is ever assumed. A slot whose op
+/// began on-chain, a slot taken while another value op is pending, and a slot
+/// taken while the minter native journal has an unresolved ticket are all
+/// unreclaimable by this branch.
+pub fn never_begun_proven(value_op_absent:bool,pending_zero:bool,minter_idle:bool)->bool{
+    value_op_absent&&pending_zero&&minter_idle
+}
+/// Like `pointer_put`, but when every slot is taken it reclaims one slot whose
+/// occupant journal is marked abandoned (`{journal_key}/abandoned` non-empty).
+/// A journal abandoned before any begin can never be begun later
+/// (confirm_admission refuses it outright), so its pointer can never be needed
+/// by a live operation. Slots whose occupant is live, unparseable, or abandoned
+/// under a different contract/token are NEVER removed: exhaustion still fails
+/// closed. Exact keys only; no listing.
+pub fn pointer_put_reclaiming(st:&mut dyn Store,root:&str,nonce:u64,contract:&str,token:&str,op_id:&str)->Result<(),Error>{
+    pointer_put_reclaiming_proven(st,root,nonce,contract,token,op_id,&|_|false)
+}
+/// `pointer_put_reclaiming` plus the proven-never-begun branch: a slot is also
+/// freed when the host-side oracle proves its occupant never began
+/// (`never_begun_proven` of the live on-chain reads). The oracle is consulted
+/// only for occupants with no abandoned marker, and only after the plain put
+/// found every slot taken. The oracle must fail closed: any doubt is `false`.
+pub fn pointer_put_reclaiming_proven(st:&mut dyn Store,root:&str,nonce:u64,contract:&str,token:&str,op_id:&str,never_begun:&dyn Fn(&str)->bool)->Result<(),Error>{
+    match pointer_put(st,root,nonce,op_id){
+        Ok(())=>return Ok(()),
+        Err(e) if e.code=="guard_state"=>{},
+        Err(e)=>return Err(e),
+    }
+    for slot in 0..POINTER_SLOTS{
+        let k=pointer_key(root,nonce,slot);
+        let raw=st.read(&k)?;
+        if raw.is_empty(){continue;}
+        let occupant=match String::from_utf8(raw){Ok(s)=>s,Err(_)=>continue};
+        if occupant==op_id{return Ok(());}
+        let jk=journal_key(contract,token,&occupant);
+        let abandoned=!st.read(&format!("{jk}/abandoned"))?.is_empty();
+        if !abandoned&&!never_begun(&occupant){continue;}
+        st.remove(&k)?;
+        if st.set_if_absent(&k,op_id.as_bytes())?{return Ok(());}
+    }
+    Err(err("guard_state","recovery pointer slots exhausted; no value operation started"))
+}
 pub fn pointer_ids(st:&mut dyn Store,root:&str,nonce:u64)->Result<Vec<String>,Error>{
     let mut out=Vec::new();
     for slot in 0..POINTER_SLOTS{
