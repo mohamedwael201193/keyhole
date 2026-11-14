@@ -10108,6 +10108,19 @@
    "verify": "node judge/verify-claims.mjs --only att-c247eaf3"
   },
   {
+   "id": "att-e6184650",
+   "claim": "Attested call e6184650 shown on the site (web/lib/loans.ts)",
+   "where": "web/lib/loans.ts:110",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/e6184650-8e9b-482d-8cc3-983530f52cf0",
+   "check": {
+    "type": "attestation",
+    "call": "e6184650-8e9b-482d-8cc3-983530f52cf0"
+   },
+   "expected": "attestation exists, executed == wasm_hash",
+   "verify": "node judge/verify-claims.mjs --only att-e6184650"
+  },
+  {
    "id": "site-37",
    "claim": "Home and /verify advertise 37 in-browser checks",
    "where": "judge/gen-claims.py:204",
