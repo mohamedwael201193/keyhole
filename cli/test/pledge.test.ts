@@ -125,9 +125,9 @@ test("cited line numbers point at the function each row names", () => {
   assert.match(at("contracts/keys/src/lib.rs", 478), /assert_token_idle/);
   assert.match(at("contracts/keys/src/pledge.rs", 504), /fn assert_token_idle/);
   assert.match(at("contracts/keys/src/pledge.rs", 676), /fn claim_default/);
-  assert.match(at("tee/worker/src/main.rs", 591), /guard_preflight/);
-  assert.match(at("tee/worker/src/main.rs", 541), /guard_preflight/);
-  assert.match(at("tee/worker/src/guarded_host.rs", 24), /admit|guard_preflight|provision_idle/);
+  assert.match(at("tee/worker/src/main.rs", 603), /guard_preflight/);
+  assert.match(at("tee/worker/src/main.rs", 553), /guard_preflight/);
+  assert.match(at("tee/worker/src/guarded_host.rs", 40), /admit|guard_preflight|provision_idle/);
   for (const r of LIEN_REFUSALS) {
     for (const m of r.source.matchAll(/((?:contracts|tee)\/[\w/.-]+\.rs):(\d+)/g)) {
       assert.ok(existsSync(root(m[1])), `${m[1]} does not exist`);

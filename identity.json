@@ -62,12 +62,12 @@
     ]
   },
   "review": {
-    "source_commit": "d42920f8531dfa37429d8876f73eb86d9f421304"
+    "source_commit": "a388a1f740dc3fd32b91139997f5a2a49091e392"
   },
   "worker_candidate": {
-    "status": "published-mainnet",
-    "wasm_sha256": "5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231",
-    "bytes": 1382841,
+    "status": "source-candidate-not-published",
+    "wasm_sha256": "59e89b352058659c1d081553f61470216fefa02128ce0e862233c1d018a6f707",
+    "bytes": 1389400,
     "recipe": "tee/worker/build.sh"
   },
   "contract_candidate": {

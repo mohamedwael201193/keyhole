@@ -440,44 +440,26 @@ fn provision_native_budget(mid: &str, deposit: u128) -> Result<(), Error> {
     // re-read it. The minter's view_account is NEVER cached (its balance
     // changes after every send, and the budget must be computed from the
     // live balance).
-    let price: Value = match read_cache::get_gas_price() {
+    // Round 8: the cache holds the PARSED u128 (gas_price_of), not the raw
+    // host response — the host returns a bare string the old code could not
+    // read (Run 14 S11).
+    let price: u128 = match read_cache::get_gas_price() {
         Some(price) => price,
         None => {
             let (price, e) = rpc::gas_price("");
             if !e.is_empty() {
                 return Err(err("rpc", "gas price unavailable"));
             }
-            let price: Value =
-                serde_json::from_str(&price).map_err(|_| err("rpc", "invalid gas price"))?;
-            let price = price.get("result").cloned().unwrap_or(price);
-            read_cache::put_gas_price(price.clone());
+            let price = gas_price_of(&price)?;
+            read_cache::put_gas_price(price);
             price
         }
     };
-    let fee = guarded::decimal(&price, "gas_price")?
-        .checked_mul(240_000_000_000_000)
-        .ok_or_else(|| err("collateral_quote", "gas overflow"))?;
     let (account, e) = rpc::view_account(mid, "final");
     if !e.is_empty() {
         return Err(err("rpc", "minter balance unavailable"));
     }
-    let account: Value =
-        serde_json::from_str(&account).map_err(|_| err("rpc", "invalid account"))?;
-    let account = account.get("result").cloned().unwrap_or(account);
-    let backing = (account["storage_usage"]
-        .as_u64()
-        .ok_or_else(|| err("rpc", "missing storage usage"))? as u128)
-        * 10_000_000_000_000_000_000;
-    if deposit + fee > 100_000_000_000_000_000_000_000
-        || guarded::decimal(&account, "amount")?
-            < backing + deposit + fee + 1_000_000_000_000_000_000_000
-    {
-        return Err(err(
-            "collateral_quote",
-            "minter reserve or transaction ceiling insufficient",
-        ));
-    }
-    Ok(())
+    native_budget_check(&account, deposit, price)
 }
 
 fn op_reconcile_collateral(input: &Value) -> Result<Value, Error> {

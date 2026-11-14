@@ -46,6 +46,14 @@ enum Event {
     /// `tx_status`, `mt_balance_of`, `ft_balance_of`,
     /// `storage_balance_of`, `nft_listing`. Always costs 1.
     Fresh,
+    /// A view call that bypasses the per-run read cache (round 8: the
+    /// certificate re-validation reads). Always costs 1 and never populates
+    /// the cache. The method is named in the call-site comment; the model
+    /// only needs the count, so this is a unit variant.
+    FreshView,
+    /// Invalidate only the cached final block (round 8: the certificate
+    /// re-reads the live FINAL block before signing). Costs 0.
+    InvalidateBlock,
     /// A broadcast (`send_tx`). Costs 1 and invalidates the cache.
     Send,
 }
@@ -76,10 +84,15 @@ fn simulate(events: &[Event]) -> usize {
             Event::GasPrice => {
                 if read_cache::get_gas_price().is_none() {
                     total += 1;
-                    read_cache::put_gas_price(Value::Null);
+                    // Round 8: the cache holds the parsed u128 (the live
+                    // gas price), not a Value — the old Value::Null only
+                    // marked "cached" with a shape the host never returns.
+                    read_cache::put_gas_price(100_000_000);
                 }
             }
             Event::Fresh => total += 1,
+            Event::FreshView => total += 1,
+            Event::InvalidateBlock => read_cache::invalidate_block(),
             Event::Send => {
                 total += 1;
                 read_cache::invalidate();
@@ -325,7 +338,9 @@ fn provision_events() -> Vec<Event> {
 }
 
 /// `op_loan_certificate` (guarded_host.rs). No auth, no send: a pure
-/// read + sign. Uncached 20; with the cache 11.
+/// read + sign. Modeled 22 (round 8: 17; +5 adversarial F4 fresh reads:
+/// get_pledge_config, confidential balance, and the 3 registry reads now
+/// bypass the cache).
 // The event list is built incrementally; a `vec![...]` literal would
 // hide that structure, so the `vec_init_then_push` lint is allowed here
 // by design.
@@ -344,15 +359,26 @@ fn loan_certificate_events() -> Vec<Event> {
     e.push(View(KEYS, "loan_certificate_template", "{\"token_id\":\"k1\"}")); // per-call args — never cached
     e.push(View(KEYS, "get_collateral_binding", TOKEN)); // guarded_wallet — hit
     e.push(View(CUSTODY, "get_wallet_policy", "{\"wallet_pubkey\":\"ed25519:abc\"}"));
-    // Re-read after balance/inventory: control, loan, binding, policy — all hit.
-    e.push(View(KEYS, "get_control_state", TOKEN)); // hit
-    e.push(View(KEYS, "get_loan", TOKEN)); // hit
-    e.push(View(KEYS, "get_collateral_binding", TOKEN)); // hit
-    e.push(View(CUSTODY, "get_wallet_policy", "{\"wallet_pubkey\":\"ed25519:abc\"}")); // hit
-    e.push(View(REGISTRY, "get_project", PROJECT)); // guard_registry — hit
-    e.push(View(REGISTRY, "list_versions", PROJECT)); // hit
-    e.push(View(REGISTRY, "get_version_count", PROJECT)); // hit
-    e.push(Block); // chain_now_ms — hit
+    // Round 8: the re-reads after balance/inventory bypass the view cache
+    // (the cached values are from run start and cannot detect a change) —
+    // each costs a fresh host call.
+    e.push(FreshView); // get_control_state
+    e.push(FreshView); // get_loan
+    e.push(FreshView); // get_collateral_binding
+    e.push(FreshView); // get_wallet_policy
+    // Round 8 (adversarial F4): config and the custody balance were still
+    // run-start values in the fresh checks, and the second guard_registry
+    // re-checked cached views. All are re-read fresh here.
+    e.push(FreshView); // get_pledge_config
+    e.push(Fresh); // confidential balance (custody_get, non-cacheable)
+    // Round 8: invalidate the run-start block, re-read the live FINAL block,
+    // re-issue the template against it (+59 s). The template is never cached.
+    e.push(InvalidateBlock);
+    e.push(Block); // chain_now_ms — miss after invalidation
+    e.push(View(KEYS, "loan_certificate_template", "{\"token_id\":\"k1\",\"observed_at_ns\":\"2\"}")); // fresh args — never cached
+    e.push(FreshView); // guard_registry_fresh — get_project (bypasses cache)
+    e.push(FreshView); // list_versions
+    e.push(FreshView); // get_version_count
     e.push(View(KEYS, "config", "{}")); // guarded_minter
     e
 }
@@ -386,8 +412,13 @@ fn provision_cost_is_at_most_70() {
 #[test]
 fn loan_certificate_cost_is_at_most_70() {
     let total = simulate(&loan_certificate_events());
-    // The modeled loan-certificate path is 11.
-    assert_eq!(total, 11, "loan-certificate model total changed; see the round-4 report §3");
+    // The modeled loan-certificate path is 22 (round 8: was 11; +4 fresh
+    // re-reads that bypass the view cache, +1 fresh FINAL block after
+    // invalidation, +1 fresh template re-issued at +59 s; +5 adversarial
+    // F4: fresh get_pledge_config, fresh confidential balance, and the 3
+    // registry reads now bypass the cache). Still well under the 70-call
+    // budget and the 100-call host cap.
+    assert_eq!(total, 22, "loan-certificate model total changed; see the round-8 report §3");
     assert!(total <= 70, "loan-certificate {total} exceeds the 70-call budget");
 }
 

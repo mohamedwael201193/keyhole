@@ -1,0 +1,14 @@
+{
+ "get_control_state": "{\"token_id\":\"k88bf49da96212902\",\"owner_epoch\":\"0\",\"pending_value_ops\":\"0\",\"listed\":false,\"transfer_pending\":false,\"pledged\":false,\"value_op_nonce\":\"0\"}",
+ "get_collateral_binding": "null",
+ "get_loan": "null",
+ "get_pledge_config": "{\"recovery_account\":\"0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228\",\"recovery_unlock_ns\":\"1796169600000000000\",\"attestor_public_key\":\"AVoCWQaln59Ayhfa8qPGHF5jo3wIHHUjCHDKpqgqxEM=\",\"custody_contract\":\"outlayer.near\",\"network\":\"mainnet\",\"lending_enabled\":false,\"next_loan_nonce\":\"0\",\"next_payout_nonce\":\"2\",\"treasury_available\":\"0\",\"user_liabilities\":\"20000000000000000000000\",\"treasury_pending\":null}",
+ "get_pending_registration": "null",
+ "config": "{\"owner\":\"0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228\",\"minter\":\"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443\",\"treasury\":\"keyhole-devmo.near\",\"royalty_bps\":500,\"beats\":\"2\"}",
+ "get_value_op": "null",
+ "nft_token": "{\"token_id\":\"k88bf49da96212902\",\"owner_id\":\"583a3a561dbabe9558c8ffa25b5fb3424200580ac14665428f96e6a0572d569b\",\"metadata\":{\"title\":\"KEYHOLE Key \u00b7 Bronze\",\"description\":\"Control key to a confidential account. Holder-only, attested in a TEE.\",\"media\":\"https://keyhole-seven.vercel.app/heirloom/keys/k05.webp\",\"media_hash\":\"anYO1n9BD73N0+2k3SJF/NK3hBda0WVx1Xqzg1hwetw=\",\"copies\":1,\"issued_at\":null,\"expires_at\":null,\"starts_at\":null,\"updated_at\":null,\"extra\":null,\"reference\":null,\"reference_hash\":null},\"approved_account_ids\":{}}",
+ "payout_account_registered": "true",
+ "outlayer.get_project": "{\"uuid\":\"p000000000000004b\",\"owner\":\"keyhole-devmo.near\",\"name\":\"keyhole\",\"project_id\":\"keyhole-devmo.near/keyhole\",\"active_version\":\"5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231\",\"created_at\":1793124564786701492,\"storage_deposit\":\"2670000000000000000000\"}",
+ "outlayer.get_version_count": "1",
+ "outlayer.list_versions": "[{\"wasm_hash\":\"5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231\",\"source\":{\"WasmUrl\":{\"url\":\"https://main.fastfs.io/keyhole-devmo.near/outlayer.near/5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231.wasm\",\"hash\":\"5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231\",\"build_target\":\"wasm32-wasip2\"}},\"added_at\":1794620959720951789,\"is_active\":true}]"
+}

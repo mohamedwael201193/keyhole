@@ -8,6 +8,14 @@ pub enum Terminal {
     Failure,
 }
 pub fn has_failure(v: &Value) -> bool {
+    // Round 8 (adversarial F2): unwrap "result" like terminal() does. The
+    // host returns the full tx_status envelope, so reading
+    // ["receipts_outcome"] off the envelope always found nothing and the
+    // function could never return true on a live body — the R8 tests
+    // asserting "the mint tx has no failure" proved nothing. Production
+    // callers already unwrapped before calling; this makes the function
+    // itself correct for both envelope and flattened bodies.
+    let v = v.get("result").unwrap_or(v);
     v["receipts_outcome"].as_array().is_some_and(|rs| {
         rs.iter()
             .any(|r| r["outcome"]["status"].get("Failure").is_some())
@@ -211,5 +219,68 @@ mod tests {
         let mut v = fixture("tx", "minter.near", "keys.near", "false");
         v["status"] = json!({"SuccessValue":B64.encode("true")});
         assert_eq!(check(&v), None);
+    }
+    #[test]
+    fn captured_mainnet_mint_tx_status() {
+        // Round 8: the synthetic fixture() above is flat (no "result"
+        // envelope). This test feeds the CAPTURED mainnet
+        // EXPERIMENTAL_tx_status body for the real final B2 mint tx
+        // 27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV — full envelope,
+        // two receipt outcomes, the second executed by the minter (the
+        // refund/payout receipt). The terminal receipt is the contract's
+        // nft_mint return value. (Fixture transaction signature redacted to
+        // "ed25519:REDACTED" for the repo credential-hygiene scan.)
+        let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
+        let v: Value = serde_json::from_str(raw).unwrap();
+        let term = terminal(
+            &v,
+            "27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV",
+            "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+            "keyhole-devmo.near",
+            Some(&[
+                "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+                "keyhole-devmo.near",
+                "outlayer.near",
+            ]),
+        )
+        .expect("captured final mint tx has a terminal receipt");
+        match term {
+            Terminal::Success { bytes, executor } => {
+                assert_eq!(executor, "keyhole-devmo.near");
+                let text = String::from_utf8(bytes).unwrap();
+                assert!(text.contains("\"token_id\":\"k88bf49da96212902\""), "{text}");
+            }
+            Terminal::Failure => panic!("captured mint tx must not be a failure"),
+        }
+        assert!(!has_failure(&v));
+    }
+    #[test]
+    fn has_failure_detects_injected_failure_in_envelope() {
+        // Round 8 (adversarial F2): has_failure used to read
+        // ["receipts_outcome"] off the full envelope WITHOUT unwrapping
+        // "result", so it could never return true on a live body and the
+        // "!has_failure" assertions above proved nothing. Inject a Failure
+        // receipt into the envelope's result and require has_failure to
+        // see it — on the envelope AND on the flattened body.
+        let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
+        let mut v: Value = serde_json::from_str(raw).unwrap();
+        v["result"]["receipts_outcome"][0]["outcome"]["status"] =
+            json!({"Failure": {"ActionError": {"index": 0, "kind": {"AccountDoesNotExist": {"account_id": "nope.near"}}}}});
+        assert!(has_failure(&v));
+        let flat = v["result"].clone();
+        assert!(has_failure(&flat));
+    }
+    #[test]
+    fn terminal_reports_injected_failure() {
+        // The terminal receipt's status drives terminal(): a Failure there
+        // (matching the top-level status) must yield Some(Failure).
+        let fail = json!({"Failure": {"ActionError": {"index": 0, "kind": {"AccountDoesNotExist": {"account_id": "nope.near"}}}}});
+        let mut v = fixture("tx", "minter.near", "keys.near", "false");
+        v["receipts_outcome"][0]["outcome"]["status"] = fail.clone();
+        v["status"] = fail;
+        assert_eq!(
+            terminal(&v, "tx", "minter.near", "keys.near", None),
+            Some(Terminal::Failure)
+        );
     }
 }

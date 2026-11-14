@@ -57,7 +57,7 @@ pub struct BlockCache {
 struct Cache {
     views: HashMap<ViewKey, Value>,
     block: Option<BlockCache>,
-    gas_price: Option<Value>,
+    gas_price: Option<u128>,
     protocol_config: Option<String>,
 }
 
@@ -134,13 +134,23 @@ pub fn put_block(block: BlockCache) {
     CACHE.with(|c| c.borrow_mut().block = Some(block));
 }
 
-/// Look up the cached gas-price response, if any.
-pub fn get_gas_price() -> Option<Value> {
-    CACHE.with(|c| c.borrow().gas_price.clone())
+/// Clear only the cached final block, so the next `chain_now_ms()` re-reads
+/// the live chain. Round 8: the loan certificate must be signed against a
+/// fresh block, not the run-start block (the cached re-check was vacuous).
+pub fn invalidate_block() {
+    CACHE.with(|c| c.borrow_mut().block = None);
 }
 
-/// Store the gas-price response.
-pub fn put_gas_price(value: Value) {
+/// Look up the cached gas price in yocto, if any. Round 8: the cache holds
+/// the PARSED u128, not a Value — the host never returns the
+/// `{"gas_price":...}` object the old cache stored, so caching the raw
+/// response only preserved the wrong shape.
+pub fn get_gas_price() -> Option<u128> {
+    CACHE.with(|c| c.borrow().gas_price)
+}
+
+/// Store the parsed gas price in yocto.
+pub fn put_gas_price(value: u128) {
     CACHE.with(|c| c.borrow_mut().gas_price = Some(value));
 }
 
@@ -264,8 +274,14 @@ mod tests {
             height: Some(224_400_000),
             timestamp_ms: 1_793_000_000_000,
         });
-        put_gas_price(json!({"gas_price": "100000000"}));
-        put_protocol_config("{\"genesis_config\":{\"transaction_validity_period\":86400}}".into());
+        put_gas_price(100_000_000);
+        // Round 8: the protocol-config body carries transaction_validity_period
+        // TOP-LEVEL in result, not under a genesis_config wrapper (the old
+        // test string used a shape the live RPC never returns).
+        put_protocol_config(
+            "{\"jsonrpc\":\"2.0\",\"result\":{\"transaction_validity_period\":86400},\"id\":\"1\"}"
+                .into(),
+        );
         assert_eq!(
             get_block(),
             Some(BlockCache {
@@ -274,10 +290,13 @@ mod tests {
                 timestamp_ms: 1_793_000_000_000,
             })
         );
-        assert_eq!(get_gas_price(), Some(json!({"gas_price": "100000000"})));
+        assert_eq!(get_gas_price(), Some(100_000_000));
         assert_eq!(
             get_protocol_config(),
-            Some("{\"genesis_config\":{\"transaction_validity_period\":86400}}".into())
+            Some(
+                "{\"jsonrpc\":\"2.0\",\"result\":{\"transaction_validity_period\":86400},\"id\":\"1\"}"
+                    .into()
+            )
         );
     }
 
@@ -290,13 +309,32 @@ mod tests {
             height: None,
             timestamp_ms: 1,
         });
-        put_gas_price(json!({"gas_price": "1"}));
+        put_gas_price(1);
         put_protocol_config("{}".into());
         invalidate();
         assert!(get_view("keys.near", "nft_token", "{}").is_none());
         assert!(get_block().is_none());
         assert!(get_gas_price().is_none());
         assert!(get_protocol_config().is_none());
+    }
+
+    #[test]
+    fn invalidate_block_clears_only_the_block() {
+        // Round 8: the loan certificate invalidates just the block so the
+        // next chain_now_ms() re-reads the live FINAL block, while the gas
+        // price and views stay cached.
+        reset();
+        put_block(BlockCache {
+            hash: [1u8; 32],
+            height: Some(100),
+            timestamp_ms: 1,
+        });
+        put_gas_price(100_000_000);
+        put_view("keys.near", "nft_token", "{}", json!({"a": 1}));
+        invalidate_block();
+        assert!(get_block().is_none());
+        assert_eq!(get_gas_price(), Some(100_000_000));
+        assert!(get_view("keys.near", "nft_token", "{}").is_some());
     }
 
     #[test]
