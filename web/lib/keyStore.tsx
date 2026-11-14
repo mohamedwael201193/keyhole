@@ -111,7 +111,9 @@ export function KeyStoreProvider({ children }: { children: ReactNode }) {
   /** Token ids from mint receipts not yet confirmed by a chain read. */
   const optimistic = useRef<Set<string>>(new Set());
   const snapRef = useRef(snap);
-  snapRef.current = snap;
+  // The ref is read only from event handlers (noteMinted), so an effect keeps
+  // it current without writing during render (react-hooks/refs).
+  useEffect(() => { snapRef.current = snap; });
   useEffect(()=>{const changed=()=>{force.current=true;setRound(n=>n+1);};window.addEventListener("keyhole:keys-changed",changed);return()=>window.removeEventListener("keyhole:keys-changed",changed);},[]);
 
   useEffect(() => {
