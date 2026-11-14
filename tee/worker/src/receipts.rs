@@ -220,7 +220,8 @@ mod tests {
         // 27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV — full envelope,
         // two receipt outcomes, the second executed by the minter (the
         // refund/payout receipt). The terminal receipt is the contract's
-        // nft_mint return value.
+        // nft_mint return value. (Fixture transaction signature redacted to
+        // "ed25519:REDACTED" for the repo credential-hygiene scan.)
         let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
         let v: Value = serde_json::from_str(raw).unwrap();
         let term = terminal(

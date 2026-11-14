@@ -1096,9 +1096,11 @@ fn r8_gas_price_bare_string_live_host_body() {
 
 #[test]
 fn r8_gas_price_full_rpc_envelope_live() {
-    // Exact live NEAR RPC body, captured 2026-11-14 06:18 EET from
-    // rpc.mainnet.near.org (fixture sweep_r8_gas_price.json):
-    // {"jsonrpc":"2.0","result":{"gas_price":"100000000"},"id":"proxy"}
+    // Live NEAR RPC gas_price value, captured 2026-11-14 06:18 EET (fixture
+    // sweep_r8_gas_price.json). The envelope carries "id":"proxy": it is the
+    // OutLayer proxy's framing of the NEAR RPC response, not a raw near.org
+    // echo (which would carry id "1"). The VALUE was verified live on both
+    // rpc.mainnet.near.org and rpc.mainnet.fastnear.com.
     let raw = include_str!("fixtures/sweep_r8_gas_price.json");
     assert_eq!(gas_price_of(raw).unwrap(), 100_000_000u128);
 }
@@ -1144,6 +1146,13 @@ fn r8_gas_price_unrecognized_shape_preserves_s11_error() {
         assert_eq!(e.code, "rpc");
         assert_eq!(e.message, "gas price error", "{raw}");
     }
+    // A zero price is never valid on NEAR (minimum 100000000) and would make
+    // the budget fee zero. Every shape that yields zero is rejected.
+    for raw in ["\"0\"", "0", r#"{"gas_price":"0"}"#, r#"{"gas_price":0}"#, r#"{"result":{"gas_price":"0"}}"#, r#"{"result":0}"#] {
+        let e = gas_price_of(raw).unwrap_err();
+        assert_eq!(e.code, "rpc");
+        assert_eq!(e.message, "gas price is zero", "{raw}");
+    }
     // Malformed JSON is an rpc error, not a guard error.
     assert_eq!(gas_price_of("not json").unwrap_err().code, "rpc");
 }
@@ -1170,7 +1179,9 @@ fn r8_native_budget_check_live_envelopes() {
     // amount 0.588067 NEAR, storage 315 bytes -> backing 0.00315 NEAR.
     // Requirement is 0.06506 NEAR at the live deposit (0.03691) and 0.09434
     // at the maximum deposit (0.06619) — the minter passes both, so no
-    // top-up is needed before the r8 loans (verified live 2026-11-14).
+    // top-up is needed before the r8 loans. Fixture captured 2026-11-14
+    // 06:18 EET (pre-B3-mint); live minter after the B3 mint (07:04 EET) is
+    // 0.576175 NEAR, still far above the 0.09434 requirement.
     let account = include_str!("fixtures/sweep_r8_view_account_minter.json");
     let (amount, storage) = view_account_budget(account).unwrap();
     assert_eq!(amount, 588_067_418_517_366_499_999_998u128);
@@ -1209,9 +1220,15 @@ fn r8_sweep_view_account_live_envelope() {
 
 #[test]
 fn r8_sweep_block_final_live_envelope() {
-    // Exact live final block, rpc.mainnet.near.org, height 224463250
+    // Live final block, rpc.mainnet.near.org, height 224463250
     // (fixture sweep_r8_block_final.json). chain_now_ms / parse_final_block /
-    // final_block_hash / block_height all read this envelope.
+    // final_block_hash / block_height all read this envelope. The fixture is
+    // byte-identical to the captured body EXCEPT the 90 public ed25519
+    // validator signatures (chunk/header/approvals), redacted to
+    // "ed25519:REDACTED" so the file passes the repo credential-hygiene scan
+    // (check-hygiene.py flags any ed25519: + 80 chars; these are public
+    // on-chain signatures, not secrets). No parsed field is redacted; the
+    // byte-identical original is kept in sweep-r8/ outside the repo.
     let raw = include_str!("fixtures/sweep_r8_block_final.json");
     let cache = parse_final_block(raw).expect("final block parses");
     assert_eq!(cache.height, Some(224_463_250));
@@ -1241,9 +1258,13 @@ fn r8_sweep_view_access_key_live_envelope() {
 
 #[test]
 fn r8_sweep_tx_status_final_mint_receipts() {
-    // Exact live EXPERIMENTAL_tx_status body for the real final B2 mint tx
+    // Live EXPERIMENTAL_tx_status body for the real final B2 mint tx
     // 27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV (fixture
     // sweep_r8_tx_status_mint.json). Reconcile / final-registration parse this.
+    // The fixture is byte-identical to the captured body EXCEPT the one public
+    // ed25519 transaction signature, redacted to "ed25519:REDACTED" for the
+    // repo credential-hygiene scan (public on-chain signature, not a secret).
+    // No parsed field is redacted; the byte-identical original is in sweep-r8/.
     let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
     let v: serde_json::Value = serde_json::from_str(raw).unwrap();
     let term = receipts::terminal(
@@ -1269,7 +1290,8 @@ fn r8_sweep_tx_status_final_mint_receipts() {
 fn r8_sweep_registration_terminal_rejects_mint_tx() {
     // The live mint tx is FINAL and well-formed, but its action is nft_mint,
     // not register_collateral — registration_terminal must refuse it (None),
-    // proving the identity check is not a rubber stamp.
+    // proving the identity check is not a rubber stamp. (Fixture signature
+    // redacted; see r8_sweep_tx_status_final_mint_receipts.)
     let raw = include_str!("fixtures/sweep_r8_tx_status_mint.json");
     let v: serde_json::Value = serde_json::from_str(raw).unwrap();
     let p = r8_prepared();
@@ -1534,8 +1556,9 @@ fn r8_sweep_frozen_policy_shape() {
 
 #[test]
 fn r8_sweep_fixed_floor_live_balance() {
-    // Exact live /wallet/v1/confidential/balance body from Run 13 S6
-    // (fixture sweep_r8_funding_status_resume.json): the 899818 raw USDC
+    // collateral_funding_status worker output from Run 13 S6 (fixture
+    // sweep_r8_funding_status_resume.json); only its "balance" sub-object
+    // is the /wallet/v1/confidential/balance body. The 899818 raw USDC
     // credit in the r7 wallet, token == ASSET.
     let raw = include_str!("fixtures/sweep_r8_funding_status_resume.json");
     let v: serde_json::Value = serde_json::from_str(raw).unwrap();
@@ -1650,10 +1673,18 @@ fn r8_gas_price_old_path_fails_with_s11_error() {
 #[test]
 fn r8_cert_window_fresh_block_and_59s() {
     // Round 8 certificate-window fix (guarded_host.rs, wasm32-only, so this
-    // is a source check in the round-7 style): the re-reads bypass the view
-    // cache, the block cache is invalidated, the template is re-issued
-    // against a fresh FINAL block with the contract-maximum 59 s window, and
-    // the FRESH cert is what gets signed.
+    // is a SOURCE check in the round-7 style, not a behavioural execution
+    // of op_loan_certificate): the re-reads bypass the view cache, the block
+    // cache is invalidated, the template is re-issued against a fresh FINAL
+    // block with the contract-maximum 59 s window, and the FRESH cert is what
+    // gets signed. LIMIT: this test asserts on source text, it does not run
+    // the op. Residual staleness (disclosed): `config` (run-start cached
+    // get_pledge_config) is used in the fresh loan_binding check and the
+    // attestor-key check, and `balance` (collected before the re-reads) is
+    // used in the fresh fixed_floor check. The config is static within a run
+    // (it changes only via a governance config update), and the balance is a
+    // pre-read floor input, not a signing-time value — but neither is
+    // re-read fresh. A future round may re-read both via view_fresh.
     let src = include_str!("guarded_host.rs");
     let op = src.split("fn op_loan_certificate(").nth(1).unwrap().split("fn pending_value_identity(").next().unwrap();
     assert!(op.contains("guard_control_fresh(token)?"), "fresh control re-read");

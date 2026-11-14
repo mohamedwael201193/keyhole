@@ -1277,18 +1277,29 @@ pub fn parse_final_block(raw: &str) -> Option<read_cache::BlockCache> {
 /// `guarded::decimal` expects, so `provision_native_budget` failed every time
 /// with "missing/string gas_price" (Run 14 S11, call 103d999d-...). Accepts a
 /// digit string, a bare JSON number, `{"gas_price":…}`, and `{"result":…}`
-/// (one level of unwrapping). Any body carrying an "error" key is rejected:
-/// the host returns the whole error envelope as the result string when
-/// `result.gas_price` is absent (host_functions_sync.rs:743-744), so an error
-/// body must never parse as a price. Digits only; a parsed value is cached as
-/// a u128 (read_cache), never as a Value.
+/// (one level of unwrapping). Any body carrying a TOP-LEVEL "error" key is
+/// rejected: the host returns the whole error envelope as the result string
+/// when `result.gas_price` is absent (host_functions_sync.rs:743-744), so an
+/// error body must never parse as a price. (Only the top level is checked; a
+/// nested "error" inside "result" alongside a gas_price would still parse.
+/// The live host returns top-level error envelopes, so the live case is
+/// covered.) Digits only; a parsed value is cached as a u128 (read_cache),
+/// never as a Value.
 pub fn gas_price_of(raw: &str) -> Result<u128, Error> {
     let v: serde_json::Value =
         serde_json::from_str(raw).map_err(|_| err("rpc", "invalid gas price"))?;
     if v.get("error").is_some() {
         return Err(err("rpc", "gas price error"));
     }
-    gas_price_value(&v).ok_or_else(|| err("guard_state", "missing/string gas_price"))
+    let price = gas_price_value(&v)
+        .ok_or_else(|| err("guard_state", "missing/string gas_price"))?;
+    // A zero price is never valid on NEAR (minimum is 100000000 yocto) and
+    // would make the budget fee zero, silently underpricing the provision.
+    // Reject it loudly rather than let a bogus RPC value pass the check.
+    if price == 0 {
+        return Err(err("rpc", "gas price is zero"));
+    }
+    Ok(price)
 }
 
 fn gas_price_value(v: &serde_json::Value) -> Option<u128> {

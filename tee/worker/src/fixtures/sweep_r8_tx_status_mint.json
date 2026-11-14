@@ -282,7 +282,7 @@
    "priority_fee": 0,
    "public_key": "ed25519:6H1iG1oHWKQZ7smE6yh5rMAeJ4tJ61tvtZGzuW7kSY2",
    "receiver_id": "keyhole-devmo.near",
-   "signature": "ed25519:5XyRNMQzCctstfvjsZfdAr6CcYjVfkzdhkXTimpmXmTC6xh4CfhXENRMFTdp2fZN2Kv3gXJ8GmGeRPeHK2q4kwi4",
+   "signature": "ed25519:REDACTED",
    "signer_id": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443"
   },
   "transaction_outcome": {
