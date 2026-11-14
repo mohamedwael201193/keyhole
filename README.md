@@ -61,7 +61,7 @@ Every row is a mainnet transaction or an attested TEE call. Full history, includ
 | 1Click REFUNDED (`NO_LIQUIDITY`) | 0.00089235 SOL returned | SOL [`5qumXJw4…`](https://solscan.io/tx/5qumXJw4bCdfGzSbVP4Vas12JMkxWEuqaPpzWhHKoTYmxpifbowQKuL1hv9WxyMd9TrNe93WrivimTUcEcok7tPy) |
 | Prompt-injection refusal | poisoned note: pay `attacker.near` refused | [`c1312e2d`](https://www.getkeyhole.xyz/verify?call=c1312e2d-8c20-4b3e-ad5b-22dd3102826d) `bad_params` · [evidence](docs/evidence/prompt-injection/README.md) |
 | Lost payout recovered | 0.02124 NEAR paid to the minter | tx [`J5dHg2q…`](https://nearblocks.io/txns/J5dHg2qran5QaHuizajA4vCzJjeU8g8BVPaTUUBXzEvi) — rebroadcast via public RPC 22:44:57 UTC Nov 13, block 224428029 |
-| Loans A + B | <!-- TODO: tx hashes once on-chain --> | — |
+| Loans A + B | Not completed — lending is off; no Loan A/B transactions exist | — |
 | Handover H (token 0) | <!-- TODO: tx hashes once on-chain --> | — |
 | Lock + key deletions | <!-- TODO: tx hashes once on-chain --> | — |
 
@@ -111,11 +111,11 @@ What stays true after the lock: the contract keeps working for everyone from the
 
 ## Loans
 
-<!-- TODO(LOANS): fill with real tx hashes once loans A+B are on-chain. -->
+<!-- Loans A+B were not completed; lending stays off. No tx hashes exist for them. -->
 
-Lending is **off** on mainnet. The contract supports guarded loans against a key's whole account as collateral: borrow NEAR without publishing the full balance; miss repayment and the lender can claim the entire account. The first mainnet loans are being executed now; their transaction hashes land in the proof table above when they are final. After them, lending stays off.
+Lending is **off** on mainnet. The contract supports guarded loans against a key's whole account as collateral: borrow NEAR without publishing the full balance; miss repayment and the lender can claim the entire account. The first mainnet loans were attempted but not completed (see status below); lending stays off.
 
-Status 14 Nov 2026: the 0.90 USDC funding was sent once ([tx `0x4f37ad7a…`](https://basescan.org/tx/0x4f37ad7aee14fd5fbd4d8c14bd343495c1191ccd58e02d9eda7e266d201915df), block 57185863) and credited 899,818 raw USDC to the loan wallet; it is never sent again. The provision step then hit a deterministic worker bug — the host returns the gas price as a bare string (`"100000000"`) and the worker expects an object with a `gas_price` field, so `provision_collateral` fails before any transaction is built. Round 8 fixes that plus a full sweep of the remaining loan path; the loans then run on the new worker with a fresh borrower and a fresh mint. See [SECURITY.md](SECURITY.md) for the stranded wallets this republish creates.
+Status 14 Nov 2026: round 8 fixed the gas-price bug (worker `59e89b35…`), but the provision then failed deterministically with a new error — the worker's strict policy comparison rejects the provider's live policy response (`collateral_ineligible`), and a single retry with the same provision failed identically. Loan A and Loan B were not completed; lending stays off. The 0.90 USDC funding for this attempt was sent once ([tx `0xd1c06880…`](https://basescan.org/tx/0xd1c068803a9a8ecb9de54fcd1539d81e756618489698967abb57b5de4f585c10), block 57246595) and credited 899,818 raw USDC to the loan wallet; it is never sent again for this wallet. See [SECURITY.md](SECURITY.md) for the stranded wallets.
 
 ## Video
 
@@ -124,8 +124,8 @@ Status 14 Nov 2026: the 0.90 USDC funding was sent once ([tx `0x4f37ad7a…`](ht
 ## Known issues
 
 - **Stuck payout, recovered.** The OutLayer host RPC returned Ok on an error JSON, so a minter payout never landed and its journal blocked new mints. Recovered with a read-only export op plus a public-RPC rebroadcast ([tx `J5dHg2q…`](https://nearblocks.io/txns/J5dHg2qran5QaHuizajA4vCzJjeU8g8BVPaTUUBXzEvi)). Root cause in [SECURITY.md](SECURITY.md).
-- **Three stranded collateral wallets.** 2,699,454 raw USDC (~2.70 USDC) sits in three confidential wallets no current worker can spend, because each wallet's provision plan is bound to the worker hash it was prepared under. See [SECURITY.md](SECURITY.md) (§ Stranded collateral wallets).
-- **Loan provision blocked by a worker bug (round 8 fix in progress).** The host returns the gas price as a bare string and the worker expects an object, so `provision_collateral` fails deterministically before any transaction is built. No money is at risk from the bug itself; the fix plus a full sweep of the loan path ships as round 8. See [Loans](#loans).
+- **Four stranded collateral wallets.** 3,599,272 raw USDC (~3.60 USDC) sits in four confidential wallets no current worker can spend, because each wallet's provision plan is bound to the worker hash it was prepared under. See [SECURITY.md](SECURITY.md) (§ Stranded collateral wallets).
+- **Loans not completed (provision blocked).** Round 8 fixed the gas-price bug, but the provision then failed deterministically with a new error: the worker's strict policy comparison rejects the provider's live policy response (`collateral_ineligible`), and a single retry failed identically. Loan A and Loan B were not completed; lending stays off. See [Loans](#loans).
 - **Handover attempt failed (token 0 still listed).** The 14 Nov handover of token 0 failed on-chain: the buyer already held a KEYHOLE key and the contract enforces one key per account ([tx `89SJxNHk…`](https://nearblocks.io/txns/89SJxNHkeYXBkheNkJEekizKb8nDYdziSt1TLJYspVaX)). The buyer's 0.1 NEAR payment was refunded in full ([tx `8dPmJjus…`](https://nearblocks.io/txns/8dPmJjus3B2T5uJPcjDC5f4RfnK2pg6JMJ9brTHqKJnL)). Token 0 stays with `keyhole-devmo.near`, listed at 0.1 NEAR, until a fresh buyer completes the handover.
 - **Cap leak (F11).** A failed swap did not release its $0.01 daily-cap hold. The leak is bounded by the $5 daily cap and resets at 00:00 UTC. See [SECURITY.md](SECURITY.md).
 - **After the lock**, a stuck minter ticket clears only by expiry (~13.7 h) — the export tool needs `keyhole-devmo.near` keys, which will be gone. See [SECURITY.md](SECURITY.md).
