@@ -168,6 +168,16 @@
   .app-top-end { gap: 6px; padding-inline-end: 12px; min-width: 0; flex: 1 1 auto; overflow: visible; justify-content: flex-end; }
   .app-top .app-net { display: none; }
   .app-top .sp-pill { height: 40px; min-height: 40px; padding: 0 10px; gap: 6px; flex: none; }
+  /* CI pledge-funded 00_ready/lender at 390px: the long session labels ("No key on this
+     account", "Key check failed · Try again") made the top-end row 5px too wide
+     (scrollWidth 396 vs 391) — the network pill slid left over the brand and the
+     account avatar was cut at the right edge. On phones the labels shorten to one
+     short word; the full label stays in the DOM (and in the link's accessible name),
+     the icon and the /mint link are unchanged. */
+  .app-top .sp-pill[data-state="no-key"] span { font-size: 0; }
+  .app-top .sp-pill[data-state="no-key"] span::after { content: "No key"; font-size: 14px; }
+  .app-top .sp-pill[data-state="key-error"] span { font-size: 0; }
+  .app-top .sp-pill[data-state="key-error"] span::after { content: "Retry"; font-size: 14px; }
   .app-top .sp-pill .sp-word, .app-top .sp-pill .sp-sep { display: none; }
   .app-top .sp-pill[data-state="unlocked"] .sp-time { font-variant-numeric: tabular-nums; }
   .app-top .sp-unit { font-size: 0; }
