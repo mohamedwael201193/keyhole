@@ -1,5 +1,9 @@
 /* Pledge live surface. One primary action per card. Extra ids live in collapsed details. */
-.pledge-live { color: var(--ink, #1d3430); max-width: 1120px; margin: 0 auto; padding: 18px 24px 16px; font-size: 15px; line-height: 1.45; }
+/* Clip horizontally only: at 390px the account panel measured 396px of document scrollWidth
+   (CI pledge-funded 00_ready/lender, +5px) with every visible line already inside the viewport.
+   Same containment as .plg (pledge.css): no scroll container is created, so the fixed inventory
+   dialog still escapes this box. */
+.pledge-live { color: var(--ink, #1d3430); max-width: 1120px; margin: 0 auto; padding: 18px 24px 16px; font-size: 15px; line-height: 1.45; overflow-x: clip; }
 .pledge-live * { box-sizing: border-box; }
 .pledge-live p { margin: 8px 0; }
 .pledge-live h1 { font: 500 28px/1.15 var(--serif, Georgia); margin: 4px 0; }
