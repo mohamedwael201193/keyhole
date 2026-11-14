@@ -460,6 +460,20 @@ pub fn fixed_floor(cert:&Certificate,balance:&Value,wallet_id:&str)->Result<(),E
     if floor==0||actual<floor{return Err(err("collateral_ineligible","fixed collateral minimum cannot be certified"));}Ok(())
 }
 
+/// ROUND 9: shape-only fixed-floor check for `custody_probe` (no certificate,
+/// no floor value). Verifies the confidential-balance echo form: the
+/// account_id is the wallet hex, the token is the exact ASSET string, and the
+/// balance is a digit string. No values are compared and none are returned.
+pub fn fixed_floor_shape(balance:&Value,wallet_id:&str)->Result<(),Error>{
+    if text(balance,"account_id").map(|s| s.to_string()).ok().as_deref()!=Some(wallet_id)
+        || !lower_hash(wallet_id)
+        || text(balance,"token").map(|s| s.to_string()).ok().as_deref()!=Some(ASSET)
+    {return Err(err("collateral_ineligible","custody identity or asset mismatch"));}
+    let b=balance.get("balance").and_then(Value::as_str).ok_or_else(||err("collateral_ineligible","balance is not a digit string"))?;
+    if b.is_empty()||!b.bytes().all(|c|c.is_ascii_digit()){return Err(err("collateral_ineligible","balance is not a digit string"));}
+    Ok(())
+}
+
 pub fn loan_binding(cert:&Certificate,loan:&Value,binding:&Value,control:&Control,config:&Value)->Result<(),Error>{
     let terms:LoanTerms=serde_json::from_value(loan["terms"].clone()).map_err(|_|err("certificate","invalid authoritative terms"))?;
     if loan["state"]!="Offered"||loan["policy_busy"]!=false||loan["token_id"]!=cert.token_id||loan["borrower"]!=cert.borrower||loan["nonce"]!=cert.loan_nonce||loan["owner_epoch"]!=cert.owner_epoch

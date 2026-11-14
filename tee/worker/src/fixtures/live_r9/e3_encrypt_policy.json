@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "encrypted_base64_length": 1168,
+  "wallet_pubkey": "08bff346-2c28-4390-8d00-049ed43f656d",
+  "policy_hash": "ae2071168e77d6c0af147a316775e2020a63bc56ace9a7db6b551a91d1ff882b",
+  "policy_hash_eq_H_local": false
+}

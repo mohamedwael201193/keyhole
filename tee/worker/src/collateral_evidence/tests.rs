@@ -138,7 +138,9 @@ fn fixture() -> Proof {
     };
     let mut effective = expected.clone();
     effective["policy"] = json!("stored");
-    effective["controller"] = json!("keys.near");
+    // ROUND 9: the provider returns the wallet's own public key as
+    // controller, not the keys contract (experiment E7/E8).
+    effective["controller"] = json!(p.wallet_pubkey);
     effective["version"] = json!(1);
     effective["locked"] = json!(true);
     effective["frozen"] = json!(false);
@@ -1128,4 +1130,41 @@ fn resigned_wrong_readback_wallet_or_extra_authority_never_finalizes_or_certifie
         r.effective_policy["frozen"] = json!(true);
         assert!(!effective_with_freeze(&p.expected_policy,&r.effective_policy,&p.prepared,"keys.near",true));
     }
+}
+
+// ---------------------------------------------------------------------------
+// ROUND 9 live ground-truth tests (T6 authority_inventory). Fed by CAPTURED
+// request inventories from the Phase-1 experiment (fixtures/live_r9/). No
+// body is synthesized.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn r9_t6_authority_inventory_from_captured_bodies() {
+    // T6: authority_inventory fed by captured request inventories.
+    // E2 (fresh wallet): total 0, no rows -> pass.
+    let e2: Value = serde_json::from_str(include_str!("../fixtures/live_r9/e2_requests.json")).unwrap();
+    assert!(authority_inventory(std::slice::from_ref(&e2["body"])).is_ok());
+    // B3 funding row (status success, type confidential_deposit_intent,
+    // no leftover keys) -> pass.
+    let b3f: Value = serde_json::from_str(include_str!("../fixtures/live_r9/b3_funding_status.out.json")).unwrap();
+    let page = json!({"total": 1, "requests": [b3f["request"].clone()]});
+    assert!(authority_inventory(std::slice::from_ref(&page)).is_ok());
+    // E2c quote row (status pending_deposit) -> FAILS authority (settled
+    // first: a pending quote is not settled). The TYPE itself is in the
+    // allowlist -- with the status patched to success it passes.
+    let e2c: Value = serde_json::from_str(include_str!("../fixtures/live_r9/e2c_requests_after_deposit.json")).unwrap();
+    assert!(authority_inventory(std::slice::from_ref(&e2c["body"])).is_err());
+    let mut settled_e2c = e2c["body"].clone();
+    settled_e2c["requests"][0]["status"] = json!("success");
+    assert!(authority_inventory(std::slice::from_ref(&settled_e2c)).is_ok());
+    // Unknown type -> fails authority (unreviewed or reusable prior authority).
+    let mut unknown = settled_e2c.clone();
+    unknown["requests"][0]["type"] = json!("unknown_type");
+    let e = authority_inventory(std::slice::from_ref(&unknown)).unwrap_err();
+    assert!(e.message.contains("unreviewed"), "T6 unknown type: {e:?}");
+    // Leftover key (wallet_signature inside the row result) -> fails authority.
+    let mut leftover = settled_e2c.clone();
+    leftover["requests"][0]["result"]["wallet_signature"] = json!("ed25519:abc");
+    let e = authority_inventory(std::slice::from_ref(&leftover)).unwrap_err();
+    assert!(e.message.contains("leftover"), "T6 leftover key: {e:?}");
 }

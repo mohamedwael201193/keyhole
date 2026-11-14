@@ -788,6 +788,34 @@ pub fn quote_expiry_ms(value: &str) -> Option<u64> {
     };
     Some(((days * 24 + h) * 3600 + min * 60 + sec) * 1000 + fraction)
 }
+/// Field-level diff for the frozen-policy path (loan certificate, exact exit).
+/// The frozen marker is checked first against the expected freeze state, then
+/// normalised to false before the shared `policy_diff` runs, so the frozen
+/// token is named explicitly instead of being folded into a bare bool.
+/// Empty == match.
+pub fn policy_diff_with_freeze(
+    expected: &Value,
+    observed: &Value,
+    p: &Prepared,
+    contract: &str,
+    frozen: bool,
+) -> Vec<String> {
+    let mut diff = Vec::new();
+    match observed.get("frozen") {
+        Some(Value::Bool(b)) if *b == frozen => {}
+        Some(Value::Bool(true)) => diff.push("meta.frozen:true".to_string()),
+        Some(Value::Bool(false)) => diff.push("meta.frozen:false".to_string()),
+        Some(_) => diff.push("meta.frozen:type".to_string()),
+        None => diff.push("meta.frozen:absent".to_string()),
+    }
+    let mut normalized = observed.clone();
+    normalized["frozen"] = json!(false);
+    diff.extend(collateral::policy_diff(
+        expected, &normalized, p, contract,
+    ));
+    diff
+}
+
 pub fn effective_with_freeze(
     expected: &Value,
     observed: &Value,
@@ -795,12 +823,7 @@ pub fn effective_with_freeze(
     contract: &str,
     frozen: bool,
 ) -> bool {
-    if observed["frozen"] != frozen {
-        return false;
-    }
-    let mut normalized = observed.clone();
-    normalized["frozen"] = json!(false);
-    collateral::effective_policy_matches(expected, &normalized, p, contract)
+    policy_diff_with_freeze(expected, observed, p, contract, frozen).is_empty()
 }
 /// Inspect even terminal results. Unknown authority-producing request types are not "drained".
 ///

@@ -1,0 +1,45 @@
+{
+  "bind": {
+    "account": "13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda",
+    "nonce": "wIEVgaMXZWl3BM95umvUqiiO8xJGdrbJ20z7X8kXeaM=",
+    "req_sha256": "bd959ebf03becf6e509f901f04c45f3a720457583cf3a8294e28090a5274cd72",
+    "token_id": "k68e644e95934e9a4"
+  },
+  "creation_inventory": {
+    "approvals": {
+      "approvals": []
+    },
+    "initial_balances": {
+      "account_id": "85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1",
+      "balances": []
+    },
+    "orders": [],
+    "pages": [
+      {
+        "requests": [],
+        "total": 0
+      }
+    ]
+  },
+  "manifest": {
+    "api_key_sha256": "05b6580d8b0a41629ae1d0814398c9da65e50d5efa7326e7cd8a5ccad0950a22",
+    "authority_scope": "reviewed-worker-and-documented-tee-provider-v2",
+    "contract": "keyhole-devmo.near",
+    "created_at_ms": 1794639455338,
+    "domain": "KEYHOLE_FRESH_WALLET_V2",
+    "initial_inventory_sha256": "fdfe34e3b6601fe7938d3bb86e65c05e95a92acff806a9a687f9f6d71453f358",
+    "namespace_absence_sha256": "fe0d31923e8bcd015e31eac696992d7f38ee329f3595bea9c735fb12218de671",
+    "owner": "13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda",
+    "owner_epoch": 0,
+    "project_uuid": "p000000000000004b",
+    "register_operation_id": "b612a31f4a86614d6aa3fa35f56ad31917c7e1a2657062037f9c82734ce69c3b",
+    "registration_sha256": "e7ed2bf47901fffa9204034f7f1017db68d3a2a91a01af16a2af333ba990b7a2",
+    "token_id": "k68e644e95934e9a4",
+    "wallet_id": "0d7d7f6b-719f-46c9-a6f7-3e2687d36f12",
+    "wallet_pubkey": "ed25519:85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1",
+    "worker_hash": "59e89b352058659c1d081553f61470216fefa02128ce0e862233c1d018a6f707"
+  },
+  "manifest_sha256": "e9510d2450459dab402dec195661aa3dabdcc2b1be4bc445cb2733b637d127eb",
+  "ok": true,
+  "op": "create_collateral_wallet"
+}

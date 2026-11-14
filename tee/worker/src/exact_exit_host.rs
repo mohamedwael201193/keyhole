@@ -156,16 +156,29 @@ fn exact_exit_policy(token: &str, key: &str, wallet_id: &str) -> Result<(), Erro
     )?;
     let effective = custody_get(key, "/wallet/v1/policy")?;
     if !collateral::binding_matches(&proof.prepared, &binding, &public, &keys_contract())
-        || !collateral::effective_policy_matches(
-            &proof.expected_policy,
-            &effective,
-            &proof.prepared,
-            &keys_contract(),
-        )
     {
         return Err(err(
             "exit_policy",
             "current locked/thawed decrypted policy differs from exact reviewed exit policy",
+        ));
+    }
+    // ROUND 9: field-level diff (names only) so a changed policy names the
+    // field instead of failing silently. Exact exit is post-install: a
+    // mismatch here is a real change, not a sync artifact.
+    let diff = collateral::policy_diff(
+        &proof.expected_policy,
+        &effective,
+        &proof.prepared,
+        &keys_contract(),
+    );
+    if !diff.is_empty() {
+        return Err(err(
+            "exit_policy",
+            format!(
+                "current locked/thawed decrypted policy differs from exact reviewed exit policy {} (shape: {})",
+                collateral::policy_diff_message(&diff),
+                collateral::observed_shape(&effective)
+            ),
         ));
     }
     Ok(())

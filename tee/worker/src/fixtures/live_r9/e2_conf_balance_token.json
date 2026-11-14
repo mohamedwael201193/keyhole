@@ -1,0 +1,9 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "balance": "0",
+    "token": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "account_id": "21d789097f45a577a3867bdfb01901cc8cc7a7737041c63e7988f73e710f8ea0"
+  }
+}

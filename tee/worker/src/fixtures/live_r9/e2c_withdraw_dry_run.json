@@ -1,0 +1,13 @@
+{
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "would_succeed": false,
+    "reason": "storage_not_registered",
+    "message": "Receiver '3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447' has no storage on '17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1'. Register it, then retry: POST /wallet/v1/intents/storage-deposit with {\"token\":\"17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1\",\"account_id\":\"3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447\"} pays from this wallet's wNEAR in intents; POST /wallet/v1/storage-deposit with the same body pays in NEAR from the wallet's own account.",
+    "policy_check": {
+      "within_limits": true,
+      "address_allowed": true
+    }
+  }
+}

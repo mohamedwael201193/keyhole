@@ -1,0 +1,10 @@
+{
+  "owner": "keyhole-devmo.near",
+  "encrypted_data": "[REDACTED \u2014 ciphertext, public on-chain; see chain read]",
+  "frozen": false,
+  "updated_at": 1794639797945389403,
+  "storage_refund_to": "015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
+  "storage_deposit": "16910000000000000000000",
+  "version": 1,
+  "locked": true
+}

@@ -249,6 +249,16 @@ fn op_prepare_collateral(input: &Value) -> Result<Value, Error> {
     if ciphertext.is_empty() || ciphertext.len() > 4096 || !guarded::lower_hash(&plaintext_hash) {
         return Err(err("collateral_unknown", "invalid encryption response"));
     }
+    // ROUND 9 tripwire correction: do NOT require
+    // `canonical_hash(policy) == plaintext_hash` here. The provider's
+    // plaintext_hash is over the STORED plaintext, which adds the `controller`
+    // (the wallet's own public key) and meta fields the reviewed candidate
+    // does not contain (experiment E0.1/E3; 23 candidate stored-forms across
+    // 2 independent cases, 0 matches). Such a check would always trip and
+    // block every provision. The pre-register gate is the provider's own
+    // self-consistency below (sign-policy policy_hash == encrypt policy_hash)
+    // plus the post-register GET /policy field diff in reconcile_provision,
+    // which must be empty before finalize_collateral.
     provision_unchanged(&c, &control)?;
     let (st, signed) = http(
         "POST",
@@ -548,10 +558,28 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
         serde_json::from_slice(&Store::read(&mut Host, &format!("{k}/expected_policy"))?)
             .map_err(|_| err("collateral_audit", "prepared policy missing"))?;
     let effective = custody_get(&key, "/wallet/v1/policy")?;
-    if !collateral::effective_policy_matches(&expected, &effective, p, &keys_contract()) {
+    // ROUND 9: field-level diff (names only). The controller is the wallet's
+    // own public key (experiment E7/E8); the old bool check compared it to
+    // the contract and was the single failing field in S11. A diff that is
+    // only a provider-sync artifact (policy/version not yet visible, or the
+    // provider view lagging the chain freeze state) is retryable, not a hard
+    // mismatch: the operator waits and repeats the SAME reconcile (or a
+    // single invalidate-cache). Anything else is a real mismatch: the token
+    // is dead, capture the diff, do NOT re-register.
+    let diff = collateral::policy_diff(&expected, &effective, p, &keys_contract());
+    if !diff.is_empty() {
+        let chain_frozen = policy["frozen"].as_bool();
+        let observed_frozen = effective["frozen"].as_bool();
+        if collateral::policy_diff_is_sync_only(&diff, chain_frozen, observed_frozen) {
+            return Ok(json!({"ok":false,"op":"reconcile_collateral","status":"PENDING_PROVIDER_SYNC","provision_id":p.id(),"tx_hash":hash,"policy_diff":diff,"observed_shape":collateral::observed_shape(&effective)}));
+        }
         return Err(err(
             "collateral_ineligible",
-            "effective custody policy differs from reviewed restricted policy",
+            format!(
+                "effective custody policy differs from reviewed restricted policy {} (shape: {})",
+                collateral::policy_diff_message(&diff),
+                collateral::observed_shape(&effective)
+            ),
         ));
     }
     certificate_inventory(&key)?;
@@ -633,6 +661,95 @@ fn reconcile_provision(c: &Ctx, control: &Control, p: &Prepared) -> Result<Value
     Ok(
         json!({"ok":true,"op":"collateral_report","status":"post_review_required","provision_id":p.id(),"tx_hash":hash,"binding_ready":true,"eligibility_sealed":false,"post_review_required":true,"report":signed,"report_sha256":report_hash,"candidate_policy":expected,"manifest":manifest,"inventory":inv,"original_installation":tx,"attestor_public_key":public,"authority_scope":evidence::SCOPE}),
     )
+}
+/// ROUND 9: read-only custody probe (S10). Verifies the funded wallet's
+/// provider state BEFORE prepare_collateral, so a bad request type, leftover
+/// key, or unexpected policy shape stops the run with only the 0.90 USDC and
+/// the token committed. Sends nothing. Names and types only: no hashes, keys,
+/// balances or ciphertext in the output. The expected policy exists only
+/// after prepare; before prepare the probe verifies the policy endpoint shows
+/// `policy:"none"` (nothing installed) and the inventory verdicts run on the
+/// real funded rows.
+fn op_custody_probe(input: &Value) -> Result<Value, Error> {
+    let (c, control) = provision_auth(input, "custody_probe")?;
+    let token = c.token_id();
+    let (key, id) = guarded_wallet(&token)?;
+    let k = provision_root(&token, control.epoch);
+    let expected: Option<Value> = serde_json::from_slice(
+        &Store::read(&mut Host, &format!("{k}/expected_policy"))?,
+    )
+    .ok();
+    let prepared: Option<Prepared> = load_prepared(&token, control.epoch).ok();
+    // GET one endpoint; record the HTTP status and the type skeleton (no
+    // values). A transport failure is recorded, never fatal to the probe.
+    let probe_get = |path: &str| -> (Value, Value) {
+        match http("GET", &format!("{OL}{path}"), Some(&key), None) {
+            Ok((st, body)) => (json!(st), body),
+            Err(e) => (json!("error"), json!({"error": e.code})),
+        }
+    };
+    let (policy_status, policy_body) = probe_get("/wallet/v1/policy");
+    let mut pages: Vec<Value> = Vec::new();
+    let mut req_status = Value::Null;
+    for offset in (0..1000).step_by(100) {
+        let (st, page) = probe_get(&format!("/wallet/v1/requests?limit=100&offset={offset}"));
+        if req_status.is_null() {
+            req_status = st.clone();
+        }
+        if st.as_u64() != Some(200) {
+            break;
+        }
+        let total = page["total"].as_u64();
+        pages.push(page);
+        match total {
+            Some(t) if t <= (offset as u64) + 100 => break,
+            Some(_) => continue,
+            None => break,
+        }
+    }
+    let (orders_status, orders_body) =
+        probe_get("/wallet/v1/limit-orders?open=true&limit=1&offset=0");
+    let (approvals_status, approvals_body) = probe_get("/wallet/v1/pending_approvals");
+    let (bal_status, bal_body) = probe_get("/wallet/v1/confidential/balance");
+    let (bal_tok_status, bal_tok_body) = probe_get(&format!(
+        "/wallet/v1/confidential/balance?token=nep141%3A{}",
+        guarded::ASSET.trim_start_matches("nep141:")
+    ));
+    let (intents_status, intents_body) = probe_get(&format!(
+        "/wallet/v1/balance?chain=near&token={}&source=intents&account=executor",
+        guarded::ASSET
+    ));
+    let settled = match guarded::settled_inventory(&pages) {
+        Ok(()) => json!({"verdict": "pass"}),
+        Err(e) => json!({"verdict": "fail", "code": e.code}),
+    };
+    let authority = match evidence::authority_inventory(&pages) {
+        Ok(()) => json!({"verdict": "pass"}),
+        Err(e) => json!({"verdict": "fail", "code": e.code, "message": e.message}),
+    };
+    let floor_shape = match guarded::fixed_floor_shape(&bal_tok_body, &id) {
+        Ok(()) => json!({"verdict": "pass"}),
+        Err(e) => json!({"verdict": "fail", "code": e.code}),
+    };
+    let (policy_diff, policy_expected) = match (&expected, &prepared) {
+        (Some(exp), Some(p)) => (
+            json!(collateral::policy_diff(exp, &policy_body, p, &keys_contract())),
+            json!(true),
+        ),
+        _ => (Value::Null, json!(false)),
+    };
+    let policy_none = policy_body.get("policy").and_then(Value::as_str) == Some("none");
+    Ok(json!({"ok":true,"op":"custody_probe","token_id":token,"owner_epoch":control.epoch.to_string(),
+        "endpoints":{
+            "policy":{"status":policy_status,"shape":collateral::observed_shape(&policy_body)},
+            "requests":{"status":req_status,"pages":pages.len(),"shape":collateral::observed_shape(&json!(pages))},
+            "limit_orders":{"status":orders_status,"shape":collateral::observed_shape(&orders_body)},
+            "pending_approvals":{"status":approvals_status,"shape":collateral::observed_shape(&approvals_body)},
+            "confidential_balance":{"status":bal_status,"shape":collateral::observed_shape(&bal_body)},
+            "confidential_balance_token":{"status":bal_tok_status,"shape":collateral::observed_shape(&bal_tok_body)},
+            "balance_intents":{"status":intents_status,"shape":collateral::observed_shape(&intents_body)}},
+        "policy_diff":policy_diff,"policy_expected":policy_expected,"policy_none":policy_none,
+        "settled_inventory":settled,"authority_inventory":authority,"fixed_floor_shape":floor_shape}))
 }
 /// Public output is a quote and non-reusable hashes, never the policy signature or API key.
 fn op_collateral_quote(input: &Value) -> Result<Value, Error> {

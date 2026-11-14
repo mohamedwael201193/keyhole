@@ -1,0 +1,63 @@
+{
+  "approval": {
+    "approvers": [
+      {
+        "id": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+        "role": "admin"
+      }
+    ],
+    "excluded_types": [
+      "confidential",
+      "swap",
+      "cross_chain_withdraw",
+      "withdraw"
+    ],
+    "locked": true,
+    "threshold": 1
+  },
+  "authorized_key_hashes": [
+    "1dc141bb10dbbb8984b06d7e4a00e9c60e4180a595a20bb915328777f4604aba"
+  ],
+  "capabilities": {
+    "confidential": {
+      "allowed": true
+    },
+    "cross_chain_withdraw": {
+      "allowed": true
+    },
+    "evm_sign": {
+      "allowed": false
+    },
+    "intents_call": {
+      "allowed": false
+    },
+    "limit_order": {
+      "allowed": false
+    },
+    "payment_check": {
+      "allowed": false
+    },
+    "raw_sign": {
+      "allowed": false
+    },
+    "sign_message": {
+      "allowed": false
+    },
+    "solana_sign": {
+      "allowed": false
+    },
+    "swap": {
+      "allowed": true
+    }
+  },
+  "rules": {
+    "transaction_types": [
+      "confidential",
+      "swap",
+      "cross_chain_withdraw",
+      "withdraw",
+      "call"
+    ]
+  },
+  "wallet_id": "08bff346-2c28-4390-8d00-049ed43f656d"
+}

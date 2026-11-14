@@ -1,0 +1,127 @@
+{
+  "audit_domain": "KEYHOLE_COLLATERAL_PRE_AUDIT_V2",
+  "authority_review_required": true,
+  "bind": {
+    "account": "13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda",
+    "nonce": "Fz5n35MQhTN2kENDDJMwuEpPA/vhGqc5rUITbZQDnak=",
+    "req_sha256": "783539e276d56da81bd9bb61238940fe1c398ff3ececd7fb6a1e639d5496d2e0",
+    "token_id": "k68e644e95934e9a4"
+  },
+  "candidate_policy": {
+    "approval": {
+      "approvers": [
+        {
+          "id": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+          "role": "admin"
+        }
+      ],
+      "excluded_types": [
+        "confidential",
+        "swap",
+        "cross_chain_withdraw",
+        "withdraw"
+      ],
+      "locked": true,
+      "threshold": 1
+    },
+    "authorized_key_hashes": [
+      "05b6580d8b0a41629ae1d0814398c9da65e50d5efa7326e7cd8a5ccad0950a22"
+    ],
+    "capabilities": {
+      "confidential": {
+        "allowed": true
+      },
+      "cross_chain_withdraw": {
+        "allowed": true
+      },
+      "evm_sign": {
+        "allowed": false
+      },
+      "intents_call": {
+        "allowed": false
+      },
+      "limit_order": {
+        "allowed": false
+      },
+      "payment_check": {
+        "allowed": false
+      },
+      "raw_sign": {
+        "allowed": false
+      },
+      "sign_message": {
+        "allowed": false
+      },
+      "solana_sign": {
+        "allowed": false
+      },
+      "swap": {
+        "allowed": true
+      }
+    },
+    "rules": {
+      "transaction_types": [
+        "confidential",
+        "swap",
+        "cross_chain_withdraw",
+        "withdraw",
+        "call"
+      ]
+    },
+    "wallet_id": "0d7d7f6b-719f-46c9-a6f7-3e2687d36f12"
+  },
+  "candidate_policy_sha256": "277efe0bf68d42c3dd75299687add3d157822a98bb2175e8db9c7cc557bca932",
+  "guardian": {
+    "access_key": {
+      "id": "proxy",
+      "jsonrpc": "2.0",
+      "result": {
+        "block_hash": "8idMEaNCJTdoFe59RfxjE3EDKUvdbaNcgnEMx5tPNd7c",
+        "block_height": 224479554,
+        "nonce": 222899389000019,
+        "permission": "FullAccess"
+      }
+    },
+    "auth": {
+      "account_id": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
+      "message": "{\"op\":\"collateral_guardian\",\"account_id\":\"0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228\",\"ts_ms\":1794639671162,\"params\":{\"candidate_policy_sha256\":\"277efe0bf68d42c3dd75299687add3d157822a98bb2175e8db9c7cc557bca932\",\"contract\":\"keyhole-devmo.near\",\"domain\":\"KEYHOLE_GUARDIAN_LIVENESS_V2\",\"owner\":\"13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda\",\"owner_epoch\":\"0\",\"project_id\":\"keyhole-devmo.near/keyhole\",\"project_uuid\":\"p000000000000004b\",\"threshold\":1,\"token_id\":\"k68e644e95934e9a4\",\"wallet_pubkey\":\"ed25519:85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1\",\"worker_hash\":\"59e89b352058659c1d081553f61470216fefa02128ce0e862233c1d018a6f707\"}}",
+      "nonce": "9LcaM0oG1YJA857bSWuRvTUDVR4EDucUwLP6WEYNSSA=",
+      "public_key": "ed25519:UR9rDFHYZFNHxbTgXf7Chu8baLByhZ49bX6RoNvdsM9",
+      "recipient": "keyhole",
+      "scheme": "nep413",
+      "signature": "8kgvFtUC+wrcFbCGrgJ6zfmSLFoVeri0l3QIlM1FLhTHFJMhIHlvbo6lR6iIYIwNeq4GJBRpsUAIw/qXhE2/AQ=="
+    },
+    "observed_at_ms": 1794639681370
+  },
+  "guardian_sha256": "2fc39175b2dc2a949a196728bdff30ed74c6e2524b092270103c667dfd4e3e53",
+  "manifest": {
+    "api_key_sha256": "05b6580d8b0a41629ae1d0814398c9da65e50d5efa7326e7cd8a5ccad0950a22",
+    "authority_scope": "reviewed-worker-and-documented-tee-provider-v2",
+    "contract": "keyhole-devmo.near",
+    "created_at_ms": 1794639455338,
+    "domain": "KEYHOLE_FRESH_WALLET_V2",
+    "initial_inventory_sha256": "fdfe34e3b6601fe7938d3bb86e65c05e95a92acff806a9a687f9f6d71453f358",
+    "namespace_absence_sha256": "fe0d31923e8bcd015e31eac696992d7f38ee329f3595bea9c735fb12218de671",
+    "owner": "13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda",
+    "owner_epoch": 0,
+    "project_uuid": "p000000000000004b",
+    "register_operation_id": "b612a31f4a86614d6aa3fa35f56ad31917c7e1a2657062037f9c82734ce69c3b",
+    "registration_sha256": "e7ed2bf47901fffa9204034f7f1017db68d3a2a91a01af16a2af333ba990b7a2",
+    "token_id": "k68e644e95934e9a4",
+    "wallet_id": "0d7d7f6b-719f-46c9-a6f7-3e2687d36f12",
+    "wallet_pubkey": "ed25519:85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1",
+    "worker_hash": "59e89b352058659c1d081553f61470216fefa02128ce0e862233c1d018a6f707"
+  },
+  "manifest_sha256": "e9510d2450459dab402dec195661aa3dabdcc2b1be4bc445cb2733b637d127eb",
+  "ok": true,
+  "op": "prepare_collateral",
+  "owner_epoch": "0",
+  "plaintext_hash": "5852f6d15b1940b9cc17b3bbe74109c0e88d612e01c9a69534dd903e217d8e78",
+  "policy_hash": "3UUFfcw9I6NOJeRpdfw08xb9whXAfCZ2Qz0gTJdezis=",
+  "post_review_required": true,
+  "provision_id": "ce6ac4712c78f9543681bc0af4b70d5e8b27cc231f5a2e921744b498b40be22d",
+  "token_id": "k68e644e95934e9a4",
+  "valid_until": 1795244300,
+  "version": 1,
+  "wallet_pubkey": "ed25519:85eba57887f1fe1c22c8b97ed137c4b52da4cdbfb19394c37118210d4fba53f1"
+}

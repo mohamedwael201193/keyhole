@@ -756,7 +756,10 @@ fn production_rechecks_reviewed_effective_policy_before_unshield_and_spend() {
         "evidence::verify_proof",
         "evidence::validate_policy",
         "collateral::binding_matches",
-        "collateral::effective_policy_matches",
+        // ROUND 9: the exit gate is now the field-level policy_diff (which
+        // names the differing field); effective_policy_matches is the bool
+        // wrapper over it in the library crate.
+        "collateral::policy_diff",
     ] {
         assert!(h.contains(gate));
     }
