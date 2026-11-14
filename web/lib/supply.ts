@@ -19,7 +19,16 @@ export function holderSupply(total: string, own: string): SupplySnapshot | null 
 /**
  * Keys held by people, for the home stat. Total minted (NEP-181 nft_total_supply) minus the tokens the
  * contract account itself holds (the test key, KEYHOLE Key #0). Both reads use one finalized block hash.
+ *
+ * Stale-while-revalidate: the last verified snapshot is kept in memory and served ONLY when the chain
+ * cannot be reached at all (fetch throws / times out / the node errors). A logical failure — reads that
+ * land on different blocks, or values that fail validation — still returns null, never a stale number.
+ * The value is always a real on-chain read with its real block hash; it is never invented, and it is
+ * never 0 as a stand-in. This exists because the public FastNear RPC throttles under the e2e suite's
+ * load: without it the home stat flips to "—" for 15 s+ mid-run and the viewport test fails.
  */
+let lastGood: SupplySnapshot | null = null;
+
 export async function readHolderSupply(opts?: ViewOpts): Promise<SupplySnapshot | null> {
   try {
     const pinOpts = { timeoutMs: opts?.timeoutMs, shared: false as const };
@@ -32,8 +41,10 @@ export async function readHolderSupply(opts?: ViewOpts): Promise<SupplySnapshot 
     ]);
     if (total.blockHash !== pin.blockHash || own.blockHash !== pin.blockHash) return null;
     const snap = holderSupply(String(total.value), String(own.value));
-    return snap ? { ...snap, block_hash: pin.blockHash } : null;
-  } catch { return null; }
+    if (!snap) return null;
+    lastGood = { ...snap, block_hash: pin.blockHash };
+    return lastGood;
+  } catch { return lastGood; }
 }
 
 export async function readHolderKeys(opts?: ViewOpts): Promise<number | null> {
