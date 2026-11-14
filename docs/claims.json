@@ -139,7 +139,7 @@
   {
    "id": "supply",
    "claim": "nft_total_supply was 8 on 2026-11-14 (live value can only grow)",
-   "where": "README.md:22",
+   "where": "verify/gen-claims.py:40",
    "evidence_type": "mainnet view",
    "evidence": "keyhole-devmo.near nft_total_supply()",
    "check": {
@@ -535,31 +535,31 @@
   },
   {
    "id": "worker-deployed",
-   "claim": "The live worker build is 0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a (tee/worker/DEPLOYED_SHA256)",
+   "claim": "The live worker build is 5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231 (tee/worker/DEPLOYED_SHA256)",
    "where": "verify/gen-claims.py:69",
    "evidence_type": "file",
    "evidence": "tee/worker/DEPLOYED_SHA256",
    "check": {
     "type": "grep",
     "path": "tee/worker/DEPLOYED_SHA256",
-    "pattern": "^0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a\\s*$"
+    "pattern": "^5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231\\s*$"
    },
-   "expected": "0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a",
+   "expected": "5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231",
    "verify": "node verify/verify-claims.mjs --only worker-deployed"
   },
   {
    "id": "worker-fastfs",
-   "claim": "The live worker wasm (1379425 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
+   "claim": "The live worker wasm (1382841 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
    "where": "verify/gen-claims.py:71",
    "evidence_type": "OutLayer call",
-   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a.wasm",
+   "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231.wasm",
    "check": {
     "type": "fastfs",
-    "sha256": "0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a",
-    "bytes": 1379425
+    "sha256": "5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231",
+    "bytes": 1382841
    },
-   "expected": "sha256 == DEPLOYED_SHA256, 1379425 bytes",
-   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a.wasm | sha256sum"
+   "expected": "sha256 == DEPLOYED_SHA256, 1382841 bytes",
+   "verify": "curl -fsS https://main.fastfs.io/keyhole-devmo.near/outlayer.near/5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231.wasm | sha256sum"
   },
   {
    "id": "att-dc3668db-build",
@@ -1077,17 +1077,17 @@
    "verify": "node verify/verify-claims.mjs --only att-369f522d"
   },
   {
-   "id": "att-2220caa1",
-   "claim": "Attested call 2220caa1 linked from README.md",
+   "id": "att-91b0e9a9",
+   "claim": "Attested call 91b0e9a9 linked from README.md",
    "where": "README.md:45",
    "evidence_type": "OutLayer call",
-   "evidence": "https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/91b0e9a9-219b-46ec-a174-1f74e2f24b85",
    "check": {
     "type": "attestation",
-    "call": "2220caa1-90ad-42a6-b281-cfd08cd1b354"
+    "call": "91b0e9a9-219b-46ec-a174-1f74e2f24b85"
    },
    "expected": "attestation exists, executed == wasm_hash",
-   "verify": "node verify/verify-claims.mjs --only att-2220caa1"
+   "verify": "node verify/verify-claims.mjs --only att-91b0e9a9"
   },
   {
    "id": "att-440c2378",
@@ -1156,18 +1156,18 @@
    "verify": "node verify/verify-claims.mjs --only tx-6rD2iMs1"
   },
   {
-   "id": "tx-7TMAjPuW",
-   "claim": "Mainnet transaction 7TMAjPuW… linked from README.md (succeeded)",
+   "id": "tx-Mi9fYL9U",
+   "claim": "Mainnet transaction Mi9fYL9U… linked from README.md (succeeded)",
    "where": "README.md:22",
    "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T",
+   "evidence": "https://nearblocks.io/txns/Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU",
    "check": {
     "type": "tx",
-    "hash": "7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T",
+    "hash": "Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU",
     "expect": "success"
    },
    "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node verify/verify-claims.mjs --only tx-7TMAjPuW"
+   "verify": "node verify/verify-claims.mjs --only tx-Mi9fYL9U"
   },
   {
    "id": "tx-G35r5pmC",
@@ -1266,6 +1266,62 @@
    },
    "expected": "transaction found on mainnet with no failed receipt",
    "verify": "node verify/verify-claims.mjs --only tx-C4mjHMwU"
+  },
+  {
+   "id": "tx-4ueDpiq5",
+   "claim": "Mainnet transaction 4ueDpiq5… linked from README.md (succeeded)",
+   "where": "README.md:68",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t",
+   "check": {
+    "type": "tx",
+    "hash": "4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node verify/verify-claims.mjs --only tx-4ueDpiq5"
+  },
+  {
+   "id": "tx-H7AuJHbj",
+   "claim": "Mainnet transaction H7AuJHbj… linked from README.md (succeeded)",
+   "where": "README.md:68",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/H7AuJHbjqrLMa8mv5LR1LPkBmMbpK5NWjnhTid2JoYDB",
+   "check": {
+    "type": "tx",
+    "hash": "H7AuJHbjqrLMa8mv5LR1LPkBmMbpK5NWjnhTid2JoYDB",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node verify/verify-claims.mjs --only tx-H7AuJHbj"
+  },
+  {
+   "id": "tx-89SJxNHk",
+   "claim": "Mainnet transaction 89SJxNHk… linked from README.md (succeeded)",
+   "where": "README.md:129",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/89SJxNHkeYXBkheNkJEekizKb8nDYdziSt1TLJYspVaX",
+   "check": {
+    "type": "tx",
+    "hash": "89SJxNHkeYXBkheNkJEekizKb8nDYdziSt1TLJYspVaX",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node verify/verify-claims.mjs --only tx-89SJxNHk"
+  },
+  {
+   "id": "tx-8dPmJjus",
+   "claim": "Mainnet transaction 8dPmJjus… linked from README.md (succeeded)",
+   "where": "README.md:129",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/8dPmJjus3B2T5uJPcjDC5f4RfnK2pg6JMJ9brTHqKJnL",
+   "check": {
+    "type": "tx",
+    "hash": "8dPmJjus3B2T5uJPcjDC5f4RfnK2pg6JMJ9brTHqKJnL",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node verify/verify-claims.mjs --only tx-8dPmJjus"
   },
   {
    "id": "tx-biJNTxXc",
@@ -1648,7 +1704,7 @@
   {
    "id": "src-pledge-preview",
    "claim": "Pledge preview label is Preview — in review · not live",
-   "where": "README.md:140",
+   "where": "README.md:146",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeClient.ts",
    "check": {
@@ -1704,7 +1760,7 @@
   {
    "id": "src-pledge-route",
    "claim": "Pledge dashboard route exists at web/app/pledge",
-   "where": "README.md:140",
+   "where": "README.md:146",
    "evidence_type": "file",
    "evidence": "web/app/pledge/page.tsx",
    "check": {
@@ -3665,7 +3721,7 @@
   {
    "id": "path-docs/trial/testnet.json",
    "claim": "Linked repo path docs/trial/testnet.json exists",
-   "where": "README.md:139",
+   "where": "README.md:145",
    "evidence_type": "file",
    "evidence": "docs/trial/testnet.json",
    "check": {
@@ -3678,7 +3734,7 @@
   {
    "id": "path-LICENSE",
    "claim": "Linked repo path LICENSE exists",
-   "where": "README.md:166",
+   "where": "README.md:172",
    "evidence_type": "file",
    "evidence": "LICENSE",
    "check": {
@@ -3691,7 +3747,7 @@
   {
    "id": "path-CONTRIBUTIONS.md",
    "claim": "Linked repo path CONTRIBUTIONS.md exists",
-   "where": "README.md:168",
+   "where": "README.md:174",
    "evidence_type": "file",
    "evidence": "CONTRIBUTIONS.md",
    "check": {
@@ -3704,7 +3760,7 @@
   {
    "id": "path-PROOFS.md",
    "claim": "Linked repo path PROOFS.md exists",
-   "where": "README.md:168",
+   "where": "README.md:174",
    "evidence_type": "file",
    "evidence": "PROOFS.md",
    "check": {
@@ -4690,7 +4746,7 @@
   },
   {
    "id": "site-hash",
-   "claim": "Home page names the live build 0d645930",
+   "claim": "Home page names the live build 5c786666",
    "where": "verify/gen-claims.py:192",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz",
@@ -4698,9 +4754,9 @@
     "type": "http",
     "url": "https://www.getkeyhole.xyz/",
     "status": 200,
-    "contains": "0d645930"
+    "contains": "5c786666"
    },
-   "expected": "home carries 0d645930",
+   "expected": "home carries 5c786666",
    "verify": "node verify/verify-claims.mjs --only site-hash"
   },
   {
@@ -6406,6 +6462,19 @@
    },
    "expected": "attestation exists, executed == wasm_hash",
    "verify": "node verify/verify-claims.mjs --only att-41ace198"
+  },
+  {
+   "id": "att-2220caa1",
+   "claim": "Attested call 2220caa1 shown on the site (web/lib/evidenceIds.ts)",
+   "where": "web/lib/evidenceIds.ts:10",
+   "evidence_type": "OutLayer call",
+   "evidence": "https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354",
+   "check": {
+    "type": "attestation",
+    "call": "2220caa1-90ad-42a6-b281-cfd08cd1b354"
+   },
+   "expected": "attestation exists, executed == wasm_hash",
+   "verify": "node verify/verify-claims.mjs --only att-2220caa1"
   },
   {
    "id": "att-184b6075",

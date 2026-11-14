@@ -19,7 +19,7 @@
 <a href="VERIFY.md">Verify the deployment</a>
 </p>
 
-Live contract v2.7.0 on NEAR mainnet: code hash `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH` ([deploy](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)). Contract source candidate **2.7.0**, matches live deployment. Live worker `0d645930…a9305a` (1,379,425 bytes, [publish](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T)). Supply **8** (`nft_total_supply`, read live 14 Nov 2026). Lending is off. Author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
+Live contract v2.7.0 on NEAR mainnet: code hash `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH` ([deploy](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)). Contract source candidate **2.7.0**, matches live deployment. Live worker `5c786666…43231` (1,382,841 bytes, [publish](https://nearblocks.io/txns/Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU)). Supply **9** (`nft_total_supply`, read live 14 Nov 2026). Lending is off. Author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
 
 **Contents:** [Try it](#try-it-5-minutes) · [Proof](#proof) · [How it works](#how-it-works) · [Lock / no-rug](#lock--no-rug) · [Loans](#loans) · [Video](#video) · [Known issues](#known-issues) · [Real vs simulated](#real-vs-simulated) · [Repo map](#repo-map) · [License](#license)
 
@@ -27,24 +27,24 @@ Live contract v2.7.0 on NEAR mainnet: code hash `3cZsaySYgqZntFaRKEUffQUMGqRjkQ2
 
 No wallet, no Rust, no `npm install`. You need `curl`, `bash` and `python3`.
 
-Step 0 checks out the pinned review commit `de5a35159c399f23138d6eea41bac3b921109b98` (from [`identity.json`](identity.json)), not HEAD, so the checks below run against the exact source that was reviewed — HEAD moves, the pinned commit does not.
+Step 0 checks out the pinned review commit `d42920f8531dfa37429d8876f73eb86d9f421304` (from [`identity.json`](identity.json)), not HEAD, so the checks below run against the exact source that was reviewed — HEAD moves, the pinned commit does not.
 
 <!-- keyhole-fence: safe -->
 <!-- VERIFY-CHECKOUT:START -->
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin de5a35159c399f23138d6eea41bac3b921109b98
+git fetch --depth 1 origin d42920f8531dfa37429d8876f73eb86d9f421304
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "de5a35159c399f23138d6eea41bac3b921109b98"
+test "$(git rev-parse HEAD)" = "d42920f8531dfa37429d8876f73eb86d9f421304"
 ```
 <!-- VERIFY-CHECKOUT:END -->
 
-1. **Run the live check.** Do: `bash verify/0-live.sh`. See: `PASS` for each step — on-chain `code_hash` equals `3cZsaySY…KGZH`, supply **8**, owner, minter `015a0259…c443`, and a valid TDX attestation for the live `info` call; exit 0. (No git? Download the source tarball from the pinned commit — see [AGENTS.md](AGENTS.md).)
+1. **Run the live check.** Do: `bash verify/0-live.sh`. See: `PASS` for each step — on-chain `code_hash` equals `3cZsaySY…KGZH`, supply **9**, owner, minter `015a0259…c443`, and a valid TDX attestation for the live `info` call; exit 0. (No git? Download the source tarball from the pinned commit — see [AGENTS.md](AGENTS.md).)
 2. **Watch a real handover.** Do: open [getkeyhole.xyz/attack](https://www.getkeyhole.xyz/attack). See: the key moves A → B in one transfer ([tx `G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD)); A's withdraw before it is ok, A's next withdraw after it is refused `not_owner`; every card links its attestation. <!-- TODO(H): replace with the newest handover tx hashes once H lands. -->
-3. **Verify one attested call.** Do: open [getkeyhole.xyz/verify?call=2220caa1-90ad-42a6-b281-cfd08cd1b354](https://www.getkeyhole.xyz/verify?call=2220caa1-90ad-42a6-b281-cfd08cd1b354). See: a valid TDX quote, `executed_wasm_sha256` = `0d645930…a9305a` = the worker in [`identity.json`](identity.json).
+3. **Verify one attested call.** Do: open [getkeyhole.xyz/verify?call=91b0e9a9-219b-46ec-a174-1f74e2f24b85](https://www.getkeyhole.xyz/verify?call=91b0e9a9-219b-46ec-a174-1f74e2f24b85). See: a valid TDX quote, `executed_wasm_sha256` = `5c786666…43231` = the worker in [`identity.json`](identity.json).
 
-More checks: Claims machine (446 claims): `node verify/verify-claims.mjs --offline` → **446 claims: 178 PASS, 0 FAIL, 0 ERROR, 268 SKIP** (**446**: offline 178 PASS, 0 FAIL, 0 ERROR, 268 SKIP). `bash verify/1-contract.sh --strict` (committed wasm == chain), `bash verify/2-attestations.sh` (every recorded call). Full instructions: [AGENTS.md](AGENTS.md).
+More checks: Claims machine (451 claims): `node verify/verify-claims.mjs --offline` → **451 claims: 178 PASS, 0 FAIL, 0 ERROR, 273 SKIP** (**451**: offline 178 PASS, 0 FAIL, 0 ERROR, 273 SKIP). `bash verify/1-contract.sh --strict` (committed wasm == chain), `bash verify/2-attestations.sh` (every recorded call). Full instructions: [AGENTS.md](AGENTS.md).
 
 ## Proof
 
@@ -53,7 +53,7 @@ Every row is a mainnet transaction or an attested TEE call. Full history, includ
 | Claim | Evidence | Check it |
 |---|---|---|
 | Contract v2.7.0 live on mainnet | code hash `3cZsaySY…KGZH` | [deploy `6rD2iMs1…`](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h) · `bash verify/0-live.sh` |
-| Worker `0d645930` published | add_version tx | [`7TMAjPuW…`](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T) · info call [`2220caa1`](https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354) |
+| Worker `5c786666` published | add_version tx | [`Mi9fYL9U…`](https://nearblocks.io/txns/Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU) · info call [`91b0e9a9`](https://api.outlayer.ai/attestations/by-call/91b0e9a9-219b-46ec-a174-1f74e2f24b85) |
 | Mint signed in the enclave | key `k5f4750858f328940` | [tx `DJxbuaJV…`](https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF) |
 | Handover A → B, seller refused after | transfer + `not_owner` | [tx `G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · before [`440c2378`](https://www.getkeyhole.xyz/verify?call=440c2378-6c27-49fd-8b6b-d74054f331ae) ok · after [`e805f050`](https://www.getkeyhole.xyz/verify?call=e805f050-d416-4a04-9b12-270adbe02068) `not_owner` · [evidence](docs/evidence/ownership-and-limits/README.md) |
 | Sale via NEP-178 direct approval | approve → pay 0.1 NEAR → transfer → revoke | transfer [`F52PyT43…`](https://nearblocks.io/txns/F52PyT43rVizWmkcJVxbcKuj7n3KZFK5GQsNyuiXY2iT) |
@@ -65,7 +65,7 @@ Every row is a mainnet transaction or an attested TEE call. Full history, includ
 | Handover H (token 0) | <!-- TODO: tx hashes once on-chain --> | — |
 | Lock + key deletions | <!-- TODO: tx hashes once on-chain --> | — |
 
-History: worker version r5 (`1992b736…`) was added 21:43 UTC Nov 13, active 41 minutes, set inactive 22:24 UTC ([`HHN5SC6U…`](https://nearblocks.io/txns/HHN5SC6UGifXQJCbQ6GcC72mH7AaPYyxxCJoJB2Wcyck)), and removed 23:09:45 UTC ([`C4mjHMwU…`](https://nearblocks.io/txns/C4mjHMwURnRPC5JTN7jegEj3zBSqhKrMcs6CgDnxY6kC)). The registry is a singleton again (active `0d645930` only). The r5 export op was used once, to recover the lost payout above.
+History: worker version r5 (`1992b736…`) was added 21:43 UTC Nov 13, active 41 minutes, set inactive 22:24 UTC ([`HHN5SC6U…`](https://nearblocks.io/txns/HHN5SC6UGifXQJCbQ6GcC72mH7AaPYyxxCJoJB2Wcyck)), and removed 23:09:45 UTC ([`C4mjHMwU…`](https://nearblocks.io/txns/C4mjHMwURnRPC5JTN7jegEj3zBSqhKrMcs6CgDnxY6kC)). The r5 export op was used once, to recover the lost payout above. Round 6 (`e9e570e5…`, [publish](https://nearblocks.io/txns/4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t)) fixed the recovery-pointer leak, then round 7 (`5c786666…`, [publish](https://nearblocks.io/txns/Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU)) fixed the storage allowlist; r6 was removed ([`H7AuJHbj…`](https://nearblocks.io/txns/H7AuJHbjqrLMa8mv5LR1LPkBmMbpK5NWjnhTid2JoYDB)). The registry is a singleton again (active `5c786666` only).
 
 Collateral provisioning is an internal reproducible review of the repository, not an external audit — see [docs/IDENTITY.md](docs/IDENTITY.md) ([R2 map](docs/evidence/worker-provisioning/R2.md)).
 
@@ -105,6 +105,8 @@ curl -s https://rpc.mainnet.near.org -X POST -H 'Content-Type: application/json'
   -d '{"jsonrpc":"2.0","id":"t","method":"query","params":{"request_type":"view_access_key_list","account_id":"keyhole-devmo.near","finality":"final"}}'
 ```
 
+Token 0 is currently listed at 0.1 NEAR (the handover attempt in [Known issues](#known-issues) left the listing open); the listing must resolve — sale completed or `nft_unlist` — before the lock, which requires no listing.
+
 What stays true after the lock: the contract keeps working for everyone from their own accounts (NFT, vault, loans); the worker keeps running while OutLayer credit lasts. What stops: no upgrades, no worker or secrets updates, no transfers from `keyhole-devmo.near`. The guardian's only remaining power is `recover_treasury` (timelocked, treasury is 0, it cannot move tokens or upgrade). The full lock proof (transactions + key-list reads) lands with the lock.
 
 ## Loans
@@ -113,14 +115,18 @@ What stays true after the lock: the contract keeps working for everyone from the
 
 Lending is **off** on mainnet. The contract supports guarded loans against a key's whole account as collateral: borrow NEAR without publishing the full balance; miss repayment and the lender can claim the entire account. The first mainnet loans are being executed now; their transaction hashes land in the proof table above when they are final. After them, lending stays off.
 
+Status 14 Nov 2026: the 0.90 USDC funding was sent once ([tx `0x4f37ad7a…`](https://basescan.org/tx/0x4f37ad7aee14fd5fbd4d8c14bd343495c1191ccd58e02d9eda7e266d201915df), block 57185863) and credited 899,818 raw USDC to the loan wallet; it is never sent again. The provision step then hit a deterministic worker bug — the host returns the gas price as a bare string (`"100000000"`) and the worker expects an object with a `gas_price` field, so `provision_collateral` fails before any transaction is built. Round 8 fixes that plus a full sweep of the remaining loan path; the loans then run on the new worker with a fresh borrower and a fresh mint. See [SECURITY.md](SECURITY.md) for the stranded wallets this republish creates.
+
 ## Video
 
-<!-- TODO(VIDEO): link once the video is recorded (after the lock, so it shows the locked state). -->
+<!-- TODO(VIDEO): link once the video is recorded today, 14 Nov 2026, before the 23:59 UTC submission deadline (the submission cannot be edited after it is sent). -->
 
 ## Known issues
 
 - **Stuck payout, recovered.** The OutLayer host RPC returned Ok on an error JSON, so a minter payout never landed and its journal blocked new mints. Recovered with a read-only export op plus a public-RPC rebroadcast ([tx `J5dHg2q…`](https://nearblocks.io/txns/J5dHg2qran5QaHuizajA4vCzJjeU8g8BVPaTUUBXzEvi)). Root cause in [SECURITY.md](SECURITY.md).
-- **Two stranded collateral wallets.** 1,799,636 raw USDC (~1.80 USDC) sits in two confidential wallets no current worker can spend, because each wallet is bound to a superseded worker hash. See [SECURITY.md](SECURITY.md) (§ Stranded collateral wallets).
+- **Three stranded collateral wallets.** 2,699,454 raw USDC (~2.70 USDC) sits in three confidential wallets no current worker can spend, because each wallet's provision plan is bound to the worker hash it was prepared under. See [SECURITY.md](SECURITY.md) (§ Stranded collateral wallets).
+- **Loan provision blocked by a worker bug (round 8 fix in progress).** The host returns the gas price as a bare string and the worker expects an object, so `provision_collateral` fails deterministically before any transaction is built. No money is at risk from the bug itself; the fix plus a full sweep of the loan path ships as round 8. See [Loans](#loans).
+- **Handover attempt failed (token 0 still listed).** The 14 Nov handover of token 0 failed on-chain: the buyer already held a KEYHOLE key and the contract enforces one key per account ([tx `89SJxNHk…`](https://nearblocks.io/txns/89SJxNHkeYXBkheNkJEekizKb8nDYdziSt1TLJYspVaX)). The buyer's 0.1 NEAR payment was refunded in full ([tx `8dPmJjus…`](https://nearblocks.io/txns/8dPmJjus3B2T5uJPcjDC5f4RfnK2pg6JMJ9brTHqKJnL)). Token 0 stays with `keyhole-devmo.near`, listed at 0.1 NEAR, until a fresh buyer completes the handover.
 - **Cap leak (F11).** A failed swap did not release its $0.01 daily-cap hold. The leak is bounded by the $5 daily cap and resets at 00:00 UTC. See [SECURITY.md](SECURITY.md).
 - **After the lock**, a stuck minter ticket clears only by expiry (~13.7 h) — the export tool needs `keyhole-devmo.near` keys, which will be gone. See [SECURITY.md](SECURITY.md).
 - Older mint metadata uses the phrase "viewing key"; the key is a control key.

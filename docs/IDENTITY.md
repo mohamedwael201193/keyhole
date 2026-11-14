@@ -14,15 +14,15 @@ tables the README used to carry; the README keeps only the current live values.
 | Contract wasm sha256 | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` (519,382 bytes) | [`contracts/keys/release/v2.7/keyhole_keys.wasm`](../contracts/keys/release/v2.7/keyhole_keys.wasm) |
 | TEE minter | `015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443` | `verify/0-live.sh` requires `config.minter` to equal this 64-hex implicit account |
 | Worker project | `keyhole-devmo.near/keyhole` | |
-| Worker wasm sha256 | `0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a` (1,379,425 bytes) | [`tee/worker/DEPLOYED_SHA256`](../tee/worker/DEPLOYED_SHA256) |
-| Worker publish tx | `7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T` | [nearblocks](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T) |
-| Live `info` call | `2220caa1-90ad-42a6-b281-cfd08cd1b354` | [attestation](https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354) · [verify](https://www.getkeyhole.xyz/verify?call=2220caa1-90ad-42a6-b281-cfd08cd1b354) |
+| Worker wasm sha256 | `5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231` (1,382,841 bytes) | [`tee/worker/DEPLOYED_SHA256`](../tee/worker/DEPLOYED_SHA256) |
+| Worker publish tx | `Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU` | [nearblocks](https://nearblocks.io/txns/Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU) |
+| Live `info` call | `91b0e9a9-219b-46ec-a174-1f74e2f24b85` | [attestation](https://api.outlayer.ai/attestations/by-call/91b0e9a9-219b-46ec-a174-1f74e2f24b85) · [verify](https://www.getkeyhole.xyz/verify?call=91b0e9a9-219b-46ec-a174-1f74e2f24b85) |
 | Treasury | `keyhole-devmo.near` | `config` |
 | Royalty | 500 bps (cap 1000) | `config` |
 
-<!-- TODO(R6): once worker r6 is live and the canary passes, re-pin every 0d645930
-reference in README.md and this file to the r6 hash, and replace the info call above
-with a fresh info call on r6 (2220caa1… is on 0d645930). -->
+<!-- TODO(R8): once worker r8 is live and the probe passes, re-pin every 5c786666
+reference in README.md and this file to the r8 hash, and replace the info call above
+with a fresh info call on r8 (91b0e9a9… is on 5c786666). -->
 
 ## Governance (live `governance_state`, read 2026-11-14)
 
@@ -48,9 +48,9 @@ Access keys on `keyhole-devmo.near` (live `view_access_key_list`, read 2026-11-1
 The lock deletes all three keys (D1–D3) after `accept_owner` moves ownership to the
 lock account. Verify with `view_access_key_list` — see the README's Lock section.
 
-## Keys on the contract (supply 8, live `nft_total_supply`, read 2026-11-14)
+## Keys on the contract (supply 9, live `nft_total_supply`, read 2026-11-14)
 
-Five keys are tier 1; `k5f4750858f328940` is tier 2 after `level_up`. Token `0` is a
+Eight keys are tier 1; `k5f4750858f328940` is tier 2 after `level_up`. Token `0` is a
 test key held by the contract account. The four tokens minted before the build that
 writes `media` (`0`, `k0642e7964b2fb515`, `k5f4750858f328940`, `k857b6b68facc0f94`)
 have `media: null` on chain; newer mints write `media` and its hash into the token.
@@ -65,6 +65,7 @@ have `media: null` on chain; newer mints write `media` and its hash into the tok
 | `k22b07f20ff167d8d` | `a838e946…92f4` | 1 | `media` is set on chain |
 | `k4f29a567a21b2177` | `4c7143d8…` | 1 | <!-- TODO: mint tx once confirmed --> |
 | `ka6ad6993999b8fee` | `0c086e09…` | 1 | <!-- TODO: mint tx once confirmed --> |
+| `k88bf49da96212902` | `583a3a56…569b` (fresh borrower B2) | 1 | [`27zmxP3b…`](https://nearblocks.io/txns/27zmxP3bEJfMvgRKFf3Wt7hDLc8AiRGJLoiSetTgboCV) (loan token) |
 
 Note: older mint metadata uses the phrase "viewing key" ("Viewing key to a
 confidential account"); the key is a control key. That wording is frozen on-chain
@@ -95,7 +96,9 @@ operating reserve. Limits: [SECURITY.md](../SECURITY.md#v27-contract-limits).
 
 | Build | Role | `add_version` tx | Live `info` call |
 |---|---|---|---|
-| `0d645930` (1,379,425 bytes) | current | [`7TMAjPuW…`](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T) | [`2220caa1`](https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354) |
+| `5c786666` (1,382,841 bytes) | current | [`Mi9fYL9U…`](https://nearblocks.io/txns/Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU) | [`91b0e9a9`](https://api.outlayer.ai/attestations/by-call/91b0e9a9-219b-46ec-a174-1f74e2f24b85) |
+| `e9e570e5` (1,382,833 bytes) | previous | [`4ueDpiq5…`](https://nearblocks.io/txns/4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t) | [`c8db49d3`](https://api.outlayer.ai/attestations/by-call/c8db49d3-900a-49d7-b7ae-5012579a00ff) |
+| `0d645930` (1,379,425 bytes) | previous | [`7TMAjPuW…`](https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T) | [`2220caa1`](https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354) |
 | `1992b736` (1,383,708 bytes) | removed | add [`HPzsQa4r…`](https://nearblocks.io/txns/HPzsQa4r6Ey6maeFJ9SnYJadqAFR2NuvdnaeSDuFkcJR) 21:43:46 UTC Nov 13 (set active) · set inactive [`HHN5SC6U…`](https://nearblocks.io/txns/HHN5SC6UGifXQJCbQ6GcC72mH7AaPYyxxCJoJB2Wcyck) 22:24:51 UTC (41 min active) · remove [`C4mjHMwU…`](https://nearblocks.io/txns/C4mjHMwURnRPC5JTN7jegEj3zBSqhKrMcs6CgDnxY6kC) 23:09:45 UTC | — |
 | `119e920d` (1,370,784 bytes) | previous | [`6tTmKphg…`](https://nearblocks.io/txns/6tTmKphgDz4FG3WxP8gwN4w8cRaJu2QCXcBzGBhu59ie) | [`41ace198`](https://api.outlayer.ai/attestations/by-call/41ace198-a27a-462b-a9a3-b4f93be75c2d) |
 | `47024200` (1,365,265 bytes) | previous | [`AtETZ9Fd…`](https://nearblocks.io/txns/AtETZ9FdMMUtmWhY16pRCvGgu5efSvUsXWvMGHNyQNiH) | [`4f1133c4`](https://api.outlayer.ai/attestations/by-call/4f1133c4-7925-45a5-87cb-0dfeac3df183) |
@@ -152,7 +155,7 @@ Build: `cd tee/worker && ./build.sh` (rustc 1.99.1 from `rust-toolchain.toml`,
 `cargo --locked`, `--remap-path-prefix`, `SOURCE_DATE_EPOCH=0`) reproduces the
 source candidate; `node scripts/check-worker-candidate.mjs` compares this
 checkout with the candidate bytes. The worker source candidate is an unpublished
-candidate unless its hash matches the published `0d645930…` above.
+candidate unless its hash matches the published `5c786666…` above.
 
 ## Test counts (pinned review commit; re-verified at PR time)
 

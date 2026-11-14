@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Generates web/lib/identity.gen.ts and tee/worker/DEPLOYED_SHA256 from identity.json, and
 // checks that identity.json agrees with contracts/keys/deployed (sha256 + base58 code hash).
-// Also refreshes the <!-- IDENTITY:START --> … <!-- IDENTITY:END --> block in README.md.
+// Also refreshes the <!-- VERIFY-CHECKOUT:START --> … <!-- VERIFY-CHECKOUT:END --> fence in
+// README.md. Live identities live in docs/IDENTITY.md; the retired JUDGE-CHECKOUT /
+// JUDGE-RAW / LIVE-SUMMARY / LIVE-ARTIFACT / IDENTITY markers are not re-added.
 // usage: node scripts/gen-identity.mjs [--promote-v26 POST.json | --promote-worker-v26 EVIDENCE.json --release-trust TRUST.json] [--check] [--promote-live <public-capture.json>] [--review-source <full-commit>]
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -317,43 +319,6 @@ const candidate = {
   binaryen: "123",
 };
 const liveRelease = "v" + k.version.split(".").slice(0, 2).join(".");
-const identityBlock = `<!-- IDENTITY:START -->
-### Live mainnet identities
-
-This block is generated from [\`identity.json\`](identity.json) by \`node scripts/gen-identity.mjs\`. Do not edit it by hand.
-
-The live worker is \`${w8}\` (${bytes} bytes).
-
-| Piece | Live value | Proof |
-|---|---|---|
-| Contract account | \`${k.account}\` | [nearblocks](https://nearblocks.io/address/${k.account}) |
-| TEE minter | \`${k.minter}\` | [\`judge/0-live.sh\`](judge/0-live.sh) requires \`config.minter\` to equal this 64-hex implicit account |
-| Contract version | \`${k.version ?? "2.4.0"}\` | NEP-330 \`contract_source_metadata\` |
-| Pledge migration | \`${k.migrate_pledge_tx ? tx8(k.migrate_pledge_tx) : "not migrated"}\` | ${k.migrate_pledge_tx ? `[nearblocks](https://nearblocks.io/txns/${k.migrate_pledge_tx})` : "—"} |
-| Contract code hash | \`${k.code_hash}\` | deploy tx [\`${tx8(k.deploy_tx)}\`](https://nearblocks.io/txns/${k.deploy_tx}) |
-| Contract wasm sha256 | \`${k.wasm_sha256}\` | [\`${liveArtifact}\`](${liveArtifact}) |
-| Worker project | \`${w.project}\` | |
-| Worker wasm sha256 | \`${w.wasm_sha256}\` | [\`tee/worker/DEPLOYED_SHA256\`](tee/worker/DEPLOYED_SHA256) |
-| Worker publish tx | \`${w.add_version_tx}\` | [nearblocks](https://nearblocks.io/txns/${w.add_version_tx}) |
-| Live \`info\` call | \`${w.info_call}\` | [attestation](https://api.outlayer.ai/attestations/by-call/${w.info_call}) · [verify](https://www.getkeyhole.xyz/verify?call=${w.info_call}) |
-
-The contract release is **live on mainnet**. Release bytes and recipe are in [\`contracts/keys/release/${liveRelease}/identity.json\`](contracts/keys/release/${liveRelease}/identity.json). The worker identity is separate: updating the contract does not publish the guarded worker or enable lending.
-
-| Contract release | Bytes | SHA256 | Code storage at 0.00001 NEAR/B |
-|---|---:|---|---:|
-| ${liveRelease} (live) | ${Number(k.bytes).toLocaleString("en-US")} | \`${k.wasm_sha256}\` | ${(k.bytes / 100000).toFixed(5)} NEAR |
-
-Strict read-only online verification of the live deployment:
-
-\`\`\`bash
-CARGO_BUILD_JOBS=1 bash judge/1-contract.sh --strict
-node judge/verify-claims.mjs --strict
-\`\`\`
-
-${id.worker_candidate ? `Worker source candidate: \`${id.worker_candidate.wasm_sha256}\` (${id.worker_candidate.bytes.toLocaleString("en-US")} bytes), generated from the pinned CI build (ubuntu-latest, rustc 1.99.1, tee/worker/build.sh); builds on other hosts may differ. [Candidate identity](docs/evidence/worker-provisioning/candidate.json) · [V2 phased provisioning](docs/worker/confinement-v2.md) · [Candidate validation](docs/evidence/worker-provisioning/v2/r3/validation.json) · [Authority regressions](tee/worker/src/collateral_evidence/tests.rs).\n\n` : ""}${id.contract_candidate ? `Contract source candidate **${id.contract_candidate.version}**, ${id.contract_candidate.wasm_sha256 === k.wasm_sha256 ? "matches live deployment" : "staged for deploy, not live"}: [generated release identity](contracts/keys/release/${id.contract_candidate.release}/identity.json). Its owner/epoch CAS is required before collateral provisioning. The original release-file candidate label is historical; current deployment is proved by [FINAL v2.7 evidence](docs/evidence/live-v2.7/promotion.public.json).\n\n` : ""}${id.governance ? `Live governance (\`governance_state\`, \`get_pledge_config\`): owner \`${id.governance.owner}\`; pending owner \`${id.governance.pending_owner}\`; pending_owner_not_before_ns \`${id.governance.pending_owner_not_before_ns}\`; staged_upgrade_sha256 \`${id.governance.staged_upgrade_sha256}\`; staged_upgrade_not_before_ns \`${id.governance.staged_upgrade_not_before_ns}\`; min_upgrade_delay_ns \`${id.governance.min_upgrade_delay_ns}\`; wind_down_ns \`${id.governance.wind_down_ns}\`; wound_down ${id.governance.wound_down}; lending_enabled ${id.governance.lending_enabled}. Access keys: ${id.governance.full_access_keys} FullAccess and ${id.governance.function_call_keys} FunctionCall (\`ed25519:7N1fLo9M…\`, \`ed25519:FNe2aYtz…\`). Stage [tx](https://nearblocks.io/txns/${id.governance.stage_upgrade_tx}) · owner proposal [tx](https://nearblocks.io/txns/${id.governance.propose_owner_tx}). The owner is the guardian implicit account; the contract account no longer owns the contract.\n\n` : ""}Measured size steps are in [\`docs/evidence/integration-stack/contract-size.md\`](docs/evidence/integration-stack/contract-size.md). Live public post-upgrade views and both FINAL receipt trees are in [\`docs/evidence/live-v2.5/all-live-views.json\`](docs/evidence/live-v2.5/all-live-views.json).
-<!-- IDENTITY:END -->
-`;
-
 const ts = `// GENERATED by scripts/gen-identity.mjs from identity.json. Do not edit.
 export const IDENTITY = ${JSON.stringify(id, null, 2)} as const;
 export const WORKER_SHA256 = IDENTITY.worker.wasm_sha256;
@@ -420,8 +385,6 @@ for (const [p, body] of Object.entries(out)) {
 }
 
 const readmePath = root + "README.md";
-const START = "<!-- IDENTITY:START -->";
-const END = "<!-- IDENTITY:END -->";
 let readme = "";
 try {
   readme = readFileSync(readmePath, "utf8");
@@ -430,7 +393,7 @@ try {
 }
 if (readme) {
   const repo = "https://github.com/mohamedwael201193/keyhole.git";
-  const checkout = `<!-- JUDGE-CHECKOUT:START -->
+  const checkout = `<!-- VERIFY-CHECKOUT:START -->
 \`\`\`bash
 git init keyhole && cd keyhole
 git remote add origin ${repo}
@@ -438,66 +401,25 @@ git fetch --depth 1 origin ${reviewRef}
 git checkout --detach FETCH_HEAD
 test "$(git rev-parse HEAD)" = "${reviewRef}"
 \`\`\`
-<!-- JUDGE-CHECKOUT:END -->`;
-  const rawBase = `https://raw.githubusercontent.com/mohamedwael201193/keyhole/${reviewRef}`;
-  const raw = `<!-- JUDGE-RAW:START -->
-\`\`\`bash
-curl -fsSL ${rawBase}/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL ${rawBase}/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL ${rawBase}/identity.json -o identity.json
-IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
-\`\`\`
-<!-- JUDGE-RAW:END -->`;
-  for (const [name, body, count] of [
-    ["JUDGE-CHECKOUT", checkout, 2],
-    ["JUDGE-RAW", raw, 1],
-  ]) {
-    const pattern = new RegExp(
-      `<!-- ${name}:START -->[\\s\\S]*?<!-- ${name}:END -->`,
-      "g",
-    );
-    if ([...readme.matchAll(pattern)].length !== count)
-      errs.push(`README missing ${name} blocks`);
-    const next = readme.replace(pattern, () => body);
-    if (next !== readme && process.argv.includes("--check"))
-      errs.push(`README ${name} is stale: run node scripts/gen-identity.mjs`);
-    readme = next;
-  }
-  const summary = `<!-- LIVE-SUMMARY:START -->
-> **Live contract v${k.version.split(".").slice(0, 2).join(".")}:** deployment is FINAL on mainnet ([deployment](https://nearblocks.io/txns/${k.deploy_tx})); the historical Pledge migration remains [FINAL](https://nearblocks.io/txns/${k.migrate_pledge_tx}) and is not repeated. Worker publishing is separate; lending remains disabled at release. [Live identities and strict online verification](#live-mainnet-identities).
-<!-- LIVE-SUMMARY:END -->`;
-  const summaryPattern =
-    /<!-- LIVE-SUMMARY:START -->[\s\S]*?<!-- LIVE-SUMMARY:END -->/;
-  if (!summaryPattern.test(readme))
-    errs.push("README live summary marker missing");
-  else readme = readme.replace(summaryPattern, () => summary);
-  const artifactSummary = `<!-- LIVE-ARTIFACT:START -->
-\`${liveArtifact}\` is the live **${liveRelease}** code: **${Number(k.bytes).toLocaleString("en-US")} bytes**, SHA256 \`${k.wasm_sha256}\`. \`bash judge/1-contract.sh --strict\` checks actual finalized bytes, version and minter. [Historical v2.5 source rebuild proof](docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log) remains labelled historical. The current checkout rebuilds the separately generated source candidate, checked by CI against [\`release/SHA256SUMS\`](contracts/keys/release/SHA256SUMS) and its identity. The pinned recipe uses rustc 1.86.0, cargo-near 0.22.0 and Binaryen 123.
-<!-- LIVE-ARTIFACT:END -->`;
-  const artifactPattern =
-    /<!-- LIVE-ARTIFACT:START -->[\s\S]*?<!-- LIVE-ARTIFACT:END -->/;
-  if (!artifactPattern.test(readme))
-    errs.push("README live artifact marker missing");
-  else readme = readme.replace(artifactPattern, () => artifactSummary);
-  const i = readme.indexOf(START);
-  const j = readme.indexOf(END);
-  if (i < 0 || j < 0 || j < i) {
-    errs.push(
-      "README.md is missing the <!-- IDENTITY:START --> … <!-- IDENTITY:END --> block; run node scripts/gen-identity.mjs after inserting the markers",
-    );
+<!-- VERIFY-CHECKOUT:END -->`;
+  const pattern =
+    /<!-- VERIFY-CHECKOUT:START -->[\s\S]*?<!-- VERIFY-CHECKOUT:END -->/g;
+  const matches = [...readme.matchAll(pattern)];
+  if (matches.length !== 1) {
+    errs.push("README missing VERIFY-CHECKOUT block");
   } else {
-    const next =
-      readme.slice(0, i) +
-      identityBlock.trimEnd() +
-      readme.slice(j + END.length);
-    if (next !== readFileSync(readmePath, "utf8")) {
+    const next = readme.replace(pattern, () => checkout);
+    if (next !== readme) {
       if (process.argv.includes("--check"))
         errs.push(
-          "README.md identity block is stale: run node scripts/gen-identity.mjs",
+          "README VERIFY-CHECKOUT is stale: run node scripts/gen-identity.mjs",
         );
       else writeFileSync(readmePath, next);
     }
   }
+  // Retired markers (pre-rewrite): live identities moved to docs/IDENTITY.md;
+  // the JUDGE-RAW, LIVE-SUMMARY, LIVE-ARTIFACT and IDENTITY blocks are gone
+  // and must not be re-added.
 }
 
 if (errs.length) {

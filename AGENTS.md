@@ -68,4 +68,4 @@ bash verify/2-attestations.sh             # every recorded call: attested build 
 
 ## Expected live facts
 
-Contract v2.7.0, code hash `3cZsaySY…KGZH`, worker `0d645930…`, supply 8, lending off.
+Contract v2.7.0, code hash `3cZsaySY…KGZH`, worker `5c786666…`, supply 9, lending off.
