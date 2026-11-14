@@ -34,7 +34,7 @@ export function KeyTile({ token, tier, index, viewer, sale, selected, onSelect }
   const title = t("gallery.key", { id: shortKeyId(token.token_id) });
   const listed = sale !== null && typeof sale === "object";
   return (
-    <article className={`kg-tile${selected ? " is-selected" : ""}`} data-state={state} data-tier={id.finish.toLowerCase()} data-testid="key-nft">
+    <article className={`kg-tile${selected ? " is-selected" : ""}`} data-state={state} data-tier={id.finish.toLowerCase()} data-testid="key-nft" style={{ animationDelay: `${Math.min(index - 1, 9) * 45}ms` }}>
       <button type="button" className="kg-tile-pick" aria-pressed={selected} aria-label={`Show details for ${title}`} onClick={onSelect}>
         <FoilCard finish={id.finish} className="kg-foil">
           <div className="top">

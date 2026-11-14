@@ -44,12 +44,8 @@
 }
 .ov-art .ov-foil.foil-card,
 .ov-art .foil-card.ov-foil {
-  width: min(100%, 220px); aspect-ratio: 1 / 1.55; padding: 12px 12px 10px;
+  width: min(100%, 300px); aspect-ratio: 1 / 1.45; padding: 12px 12px 10px;
   box-shadow: 0 12px 28px -18px rgba(26, 42, 44, .42);
-}
-.ov-key--foil .ov-art .ov-foil.foil-card,
-.ov-key--foil .ov-art .foil-card.ov-foil {
-  width: 100%; max-width: 100%;
 }
 .ov-art img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
 .ov-key-name { margin: 0; font: 600 22px/1.15 var(--font-display); color: var(--ink); overflow-wrap: anywhere; }

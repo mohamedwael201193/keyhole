@@ -41,7 +41,7 @@
 .kg-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-color: var(--primary); }
 
 .kg-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 232px), 1fr)); gap: var(--space-4); min-width: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--space-4); min-width: 0;
 }
 @media (max-width: 560px) {
   .kg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -51,8 +51,10 @@
   position: relative; display: grid; min-width: 0; border-radius: var(--radius-lg); background: var(--raised);
   border: 1px solid var(--card-edge); box-shadow: var(--shadow-1); overflow: hidden;
   transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+  animation: kg-fade-up .5s var(--ease-out) both;
 }
-.kg-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+@keyframes kg-fade-up { from { opacity: 0; translate: 0 10px; } }
+.kg-tile:hover { transform: translateY(-2px) rotate(-.4deg); box-shadow: var(--shadow-2); }
 .kg-tile.is-selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), var(--shadow-2); }
 .kg-tile[data-tier="legendary"] { border-color: var(--tier-legendary); }
 .kg-tile-pick {
@@ -66,7 +68,7 @@
 .kg-tile-pick { background: transparent; padding: 10px 10px 0; }
 .kg-tile .kg-foil.foil-card,
 .kg-tile .foil-card.kg-foil {
-  width: 100%; aspect-ratio: 1 / 1.55; padding: 14px 14px 12px; border-radius: var(--radius-lg);
+  width: min(100%, 300px); margin-inline: auto; aspect-ratio: 1 / 1.45; padding: 14px 14px 12px; border-radius: var(--radius-lg);
   box-shadow: 0 14px 28px -20px rgba(26, 42, 44, .4);
 }
 .kg-tile .foil-card .art { min-height: 0; }
@@ -111,10 +113,10 @@
 }
 .kd-art .kd-foil.foil-card,
 .kd-art .foil-card.kd-foil {
-  width: min(100%, 300px); aspect-ratio: 1 / 1.65; margin-inline: auto;
+  width: min(100%, 300px); aspect-ratio: 1 / 1.45; margin-inline: auto;
 }
 .kd-art .v7-icon-btn { position: absolute; top: 12px; right: 12px; background: var(--raised); z-index: 8; }
-.kd-dialog-art .kd-foil.foil-card { width: min(100%, 420px); aspect-ratio: 1 / 1.65; margin-inline: auto; }
+.kd-dialog-art .kd-foil.foil-card { width: min(100%, 420px); aspect-ratio: 1 / 1.45; margin-inline: auto; }
 .kd-body { display: grid; gap: 12px; min-width: 0; align-content: start; }
 .kd-body .v7-eyebrow { margin: 0; }
 .kd-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; min-width: 0; }
@@ -207,7 +209,7 @@
 }
 .km-stage .km-foil.foil-card,
 .km-stage .foil-card.km-foil {
-  width: min(100%, 280px); aspect-ratio: 1 / 1.65; animation: km-fade var(--dur-base) var(--ease-out) both;
+  width: min(100%, 280px); aspect-ratio: 1 / 1.45; animation: km-fade var(--dur-base) var(--ease-out) both;
 }
 .km-art { display: block; height: 100%; width: auto; max-width: 92%; object-fit: contain; }
 .km-caption { display: grid; justify-items: center; gap: 6px; padding-top: var(--space-4); text-align: center; min-width: 0; }
@@ -301,6 +303,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .kg-tile, .kg-tile:hover { transition: none; transform: none; }
+  .kg-tile { animation: none; }
   .kg-tile .foil-card .foil, .kd-foil .foil, .km-foil .foil { animation: none !important; --p: 50%; background-position: 50% 0; }
   .kg-tile .foil-card .bw, .kd-foil .bw, .km-foil .bw { display: none !important; }
   .kg-skel-art, .kg-skel-line { animation: none; }
