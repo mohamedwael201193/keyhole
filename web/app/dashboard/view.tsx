@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Overview, type ActivityView, type BalanceView, type KeysView, type TierView, type UnlockView } from "@/components/dashboard/Overview";
 import { useWallet } from "@/lib/wallet";
 import { useSigned } from "@/lib/useSigned";
@@ -13,6 +13,7 @@ import { levelUpOf, progressOf, type HistEntry } from "@/lib/dashboard";
 import { vaultCacheInvalidate } from "@/lib/vaultCache";
 import { PayoutCredit } from "@/components/PayoutCredit";
 import { LIMITS_FLAG } from "@/lib/start";
+import type { WorkerResult } from "@/lib/worker";
 
 type RawBalances = Parameters<typeof assetRows>[0];
 
@@ -34,6 +35,18 @@ export function DashboardView() {
   const { balance, history, dash } = useVaultData();
   const levelUp = useSigned("level_up");
   const [prices, setPrices] = useState<PriceBook>({});
+  /** True once the price book has been attempted (resolved or failed). */
+  const [pricesReady, setPricesReady] = useState(false);
+  /** The newest signed read that carries a call id (same pattern as the vault view): the proof card verifies the last call, not only the history read. */
+  const [lastCall, setLastCall] = useState<string | null>(null);
+  const seenRes = useRef<(WorkerResult | null | undefined)[]>([]);
+  useEffect(() => {
+    const before = seenRes.current;
+    const now = [balance.res, history.res, dash.res, levelUp.res];
+    seenRes.current = now;
+    const fresh = now.find((r, i) => !!r && r !== before[i] && !!r.call_id);
+    if (fresh?.call_id) setLastCall(fresh.call_id);
+  }, [balance.res, history.res, dash.res, levelUp.res]);
   const { run: runBalance } = balance;
   const { run: runHistory } = history;
   const { run: runDash } = dash;
@@ -66,7 +79,8 @@ export function DashboardView() {
     let cancel = false;
     fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (!cancel && j?.prices) setPrices((prev) => ({ ...prev, ...j.prices }));
-    }).catch(() => {});
+      if (!cancel) setPricesReady(true);
+    }).catch(() => { if (!cancel) setPricesReady(true); });
     return () => { cancel = true; };
   }, [hasBalances]);
   const rows = balances ? assetRows(balances, prices) : null;
@@ -123,6 +137,7 @@ export function DashboardView() {
     rows,
     error: balance.res?.error ?? null,
     updatedAgo: formatUpdatedAgo(balance.updatedAt, now),
+    pricesReady,
     onRead: () => { void runBalance({}, { cached: true, fresh: true }); },
   };
   const activityView: ActivityView = {
@@ -162,6 +177,7 @@ export function DashboardView() {
     tier: tierView,
     valueLocked: valueLock.locked,
     limitsDone,
+    lastCall,
     signIn: {
       socialEnabled,
       onGoogle: () => connectSocial("google"),

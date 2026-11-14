@@ -94,6 +94,10 @@ const checks = {
     if (c.op === "nonempty") return [typeof v === "string" && v.length > 0, s?.slice(0, 80)];
     return [false, "bad op"];
   },
+  async empty_keys(c) {
+    const r = await once(`ak:${c.account}`, () => rpc("query", { request_type: "view_access_key_list", finality: "final", account_id: c.account }));
+    return [r.keys.length === 0, `${r.keys.length} key(s)`];
+  },
   async access_key(c) {
     const r = await once(`ak:${c.account}`, () => rpc("query", { request_type: "view_access_key_list", finality: "final", account_id: c.account }));
     const k = r.keys.find((x) => x.public_key.startsWith(c.prefix));
@@ -149,7 +153,7 @@ const checks = {
     const j = await r.json(); return [j.conclusion === "success", `${j.status}/${j.conclusion}`];
   },
 };
-const LIVE = new Set(["code_hash", "view", "access_key", "account", "holder", "tx", "attestation", "fastfs", "http", "redirect", "header", "site_vs_chain", "ci_run"]);
+const LIVE = new Set(["code_hash", "view", "access_key", "empty_keys", "account", "holder", "tx", "attestation", "fastfs", "http", "redirect", "header", "site_vs_chain", "ci_run"]);
 
 const list = doc.claims.filter((c) => !only || c.id === only);
 let pass = 0, fail = 0, skip = 0, errs = 0; const failed = [], errored = [];

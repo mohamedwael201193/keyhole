@@ -147,7 +147,9 @@ export function SwapView() {
   }, [tradeKey]);
   const swapDone = !!(swap.res?.output?.ok && swap.res.output.op === "swap" && done);
   const swapFailed = !swap.busy && !!swap.res?.error && done != null;
-  const phase: "form" | "running" | "failed" | "done" = swap.busy ? "running" : swapDone ? "done" : swapFailed ? "failed" : "form";
+  /** Sent but not yet confirmed: the enclave admitted the swap (value_op_id) but has not finished admitting it (ok false, no error). The form must NOT come back here — that silent return is what let the tester send the same swap twice. */
+  const swapConfirming = !swap.busy && !!swap.res && !swap.res.error && swap.res.output?.ok === false && swap.res.output.op === "swap" && typeof swap.res.output.value_op_id === "string" && done != null;
+  const phase: "form" | "running" | "failed" | "done" | "confirming" = swap.busy ? "running" : swapDone ? "done" : swapFailed ? "failed" : swapConfirming ? "confirming" : "form";
 
   // Balances come only from the holder's signed read. Nothing is guessed.
   const bal = balance.res?.output?.ok ? (balance.res.output.balances as RawBalance[]) : null;
@@ -474,6 +476,19 @@ export function SwapView() {
               onRetry={retry}
               onBack={again}
             />
+          )}
+
+          {phase === "confirming" && swap.res?.output && (
+            <section className="sw-confirm" data-testid="swap-confirming" role="status">
+              <p className="sw-confirm-h">Swap sent — still confirming</p>
+              <p className="sw-note">Your swap of {done?.give} for {done?.symbol} was sent to the enclave. It is still confirming — do not send it again. Once it settles it shows in Activity.</p>
+              <p className="vlt-sub">Reference <code>{String(swap.res.output.value_op_id)}</code> (a reference, not a transaction).</p>
+              <div className="vlt-actions">
+                <Button variant="secondary" size="sm" onClick={() => { void runHistory({}, { cached: true, fresh: true }); }} testid="swap-confirming-check">Check status</Button>
+                <Button variant="secondary" size="sm" href={dashHref("/settle")} testid="swap-confirming-activity">View in Activity</Button>
+                <Button variant="ghost" size="sm" onClick={again} testid="swap-confirming-back">Back to swap</Button>
+              </div>
+            </section>
           )}
 
           {phase === "done" && done && swap.res?.output && (

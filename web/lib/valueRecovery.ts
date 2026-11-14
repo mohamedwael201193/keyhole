@@ -25,6 +25,14 @@ export function forgetResolved(account: string, tokenId: string | null, status: 
   }
   return n;
 }
+/** Drop one recovery row by its exact id (the confirm that reconciled it knows the id; the reconcile answer does not have to echo it). Returns true when a row was removed. */
+export function forgetRecovery(account: string, tokenId: string, valueOpId: string, store: Storage = localStorage): boolean {
+  const r: Recovery = { account, token_id: tokenId, value_op_id: valueOpId, status: "UNKNOWN" };
+  const k = key(r);
+  if (store.getItem(k) == null) return false;
+  store.removeItem(k);
+  return true;
+}
 export function recoveries(account: string, store: Storage = localStorage): Recovery[] {
   const rows: Recovery[] = [];
   for (let i = 0; i < store.length; i++) { const k = store.key(i); if (!k?.startsWith(prefix)) continue;

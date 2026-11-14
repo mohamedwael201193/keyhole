@@ -117,7 +117,7 @@ describe("issue 5: value actions follow the lock", () => {
     expect(vault).toContain("|| lock.locked}");
     expect(vault).toContain('testid="withdraw-recovery"');
     expect(vault).toContain("LOCK_LABEL");
-    expect(vault).toContain("if (!wUnits || !accountId || !wDest.ok || lock.locked) return;");
+    expect(vault).toContain("if (!wUnits || !accountId || !wDest.ok || lock.locked || wAsset !== \"usdc\") return;");
     const swap = src("../app/swap/view.tsx");
     expect(swap).toContain("gated");
     expect(swap).toContain("lock.locked || quote.busy");

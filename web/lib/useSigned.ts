@@ -103,9 +103,11 @@ export function useSigned(op: Op, opts?: { cacheKey?: string | null }) {
       }
     }
     const background = !!opts?.background && servedStale;
-    if (!opts?.quiet && !background) setRes(null);
-    if (!background) { setBusy(true); t0.current = Date.now(); }
+    // A background revalidation must never open the wallet: with no live session it simply does not run (the Confirm button is the way forward).
     const viaSession = !!(inSession(op) && loadSession(accountId));
+    if (background && !viaSession) return;
+    if (!opts?.quiet && !background && !opts?.fresh) setRes(null);
+    if (!background) { setBusy(true); t0.current = Date.now(); }
     if (!background) { setStage(viaSession ? "enclave" : "wallet"); setVia(viaSession ? "session" : "signature"); }
     try {
       const auth = await sign(op, params);

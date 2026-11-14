@@ -22,6 +22,8 @@ async function pollWorkerCall(callId: string): Promise<WorkerResult | null> {
   }
   return { call_id: callId, status: "processing", output: null, attestation_url: null, time_ms: null };
 }
+/** Ops that move value (or reconcile one): only their answers can create a recovery row. A read (balance, history, status, …) that merely mentions a pending operation must never lock the UI — a background refresh did exactly that mid-swap. */
+const VALUE_OPS = new Set(["swap", "copy", "exact_near_exit_v1", "withdraw", "transfer", "reconcile_value_op"]);
 export async function callWorker(op: Op, auth?: SignedAuth): Promise<WorkerResult> {
   // NEAR wallets omit the optional scheme; native/exact host admission requires an explicit NEP-413 tag.
   const transportAuth = auth && auth.scheme === undefined ? { ...auth, scheme: "nep413" as const } : auth;
@@ -31,7 +33,7 @@ export async function callWorker(op: Op, auth?: SignedAuth): Promise<WorkerResul
     const resumed = await pollWorkerCall(j.call_id).catch(() => null);
     if (resumed) j = resumed;
   }
-  if (typeof window !== "undefined") { try { rememberRecovery(auth, j.output ?? j); window.dispatchEvent(new Event("keyhole-recovery")); } catch { /* storage unavailable; worker retains journal */ } }
+  if (typeof window !== "undefined" && VALUE_OPS.has(op)) { try { rememberRecovery(auth, j.output ?? j); window.dispatchEvent(new Event("keyhole-recovery")); } catch { /* storage unavailable; worker retains journal */ } }
   if (typeof window !== "undefined" && auth?.scheme === "session" && ["session_epoch", "session_expired", "session_revoked", "not_owner"].includes(j.output?.error?.code ?? j.error?.code)) {
     try { clearSession(); window.dispatchEvent(new Event("keyhole-session-invalid")); } catch { /* blocked storage does not weaken server auth */ }
   }

@@ -66,6 +66,8 @@ export type BalanceView = {
   error: ErrorInfo | null;
   /** "Updated 12s ago", from the stored time of the shown answer (stale-while-revalidate). Null until a read lands. */
   updatedAgo?: string | null;
+  /** True once the price book has been attempted: the "not priced yet" note is only shown after that, so it never contradicts a total that already includes the asset. Undefined keeps the old behaviour. */
+  pricesReady?: boolean;
   onRead: () => void;
 };
 
@@ -122,6 +124,8 @@ export type OverviewProps = {
   valueLocked?: boolean;
   /** Whether this account has chosen safe limits (the same flag the old /start limits step set). */
   limitsDone?: boolean;
+  /** The newest signed call id across the balance, history, dashboard and level-up reads (the vault view keeps the same): the proof card verifies the last call, not only the history read. */
+  lastCall?: string | null;
   /** The sign-in handlers for the signed-out card (the same rows as the sign-in sheet). */
   signIn: SignInOptionsProps;
 };
@@ -174,7 +178,8 @@ export function Overview(p: OverviewProps) {
   const swappedFrom: "log" | "record" | null = settled != null && settled > 0 ? "log" : recorded != null && recorded > 0 ? "record" : null;
   const unlocked = unlock.live || balance.read || activity.read;
   const recent = activity.entries ? [...activity.entries].reverse().slice(0, RECENT) : [];
-  const unpriced = balance.total?.kind === "partial" ? balance.total.unpriced : [];
+  // The "not priced yet" note is only shown once the price book has been attempted: while prices are still loading the note would contradict a total that already includes the asset.
+  const unpriced = balance.pricesReady === false ? [] : balance.total?.kind === "partial" ? balance.total.unpriced : [];
   const rowCount = balance.rows?.length ?? 0;
 
   // The vault banner: the balance only from a signed read, otherwise "Sealed" and the one line that says why.
@@ -256,7 +261,7 @@ export function Overview(p: OverviewProps) {
               <ActivityCard unlock={unlock} activity={activity} settled={settled} recent={recent} />
             </div>
           )}
-          <ProofCard callId={activity.callId} logOk={activity.logOk} />
+          <ProofCard callId={p.lastCall ?? activity.callId} logOk={activity.logOk} />
         </div>
       </div>
 
@@ -480,7 +485,9 @@ function ActivityCard({ unlock, activity, settled, recent }: { unlock: UnlockVie
       {unlock.live && !activity.read && (
         activity.error
           ? <ErrorBox code={activity.error.code} retryAfter={activity.error.retry_after} />
-          : <><p className="ov-muted">{activity.busy ? activity.busyLabel : "Reading this key’s log…"}</p><TeeProgress active={activity.busy} label="Reading this key's log" testid="dash-activity-progress" /></>
+          : activity.busy
+            ? <><p className="ov-muted">{activity.busyLabel}</p><TeeProgress active label="Reading this key's log" testid="dash-activity-progress" /></>
+            : <><p className="ov-muted">Your activity has not been read yet.</p><Button variant="secondary" size="sm" onClick={activity.onRead} testid="dash-activity-read">Read my history</Button></>
       )}
       {activity.read && activity.logOk === null && <p className="ov-muted">Checking the log…</p>}
       {activity.read && activity.logOk === false && <p className="ov-muted" data-testid="dash-log-hidden">The log did not verify, so no entries are shown and none are counted.</p>}

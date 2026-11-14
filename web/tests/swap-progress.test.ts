@@ -70,11 +70,12 @@ describe("/swap phases and their real sources (source contract)", () => {
   const prog = src("../components/swap/SwapProgress.tsx");
   const about = src("../components/swap/SwapAbout.tsx");
 
-  it("the card has four phases from the real swap state: running, failed, done, and the form", () => {
-    expect(view).toContain(`const phase: "form" | "running" | "failed" | "done" = swap.busy ? "running" : swapDone ? "done" : swapFailed ? "failed" : "form";`);
+  it("the card has five phases from the real swap state: running, failed, done, confirming, and the form", () => {
+    expect(view).toContain(`const phase: "form" | "running" | "failed" | "done" | "confirming" = swap.busy ? "running" : swapDone ? "done" : swapFailed ? "failed" : swapConfirming ? "confirming" : "form";`);
     expect(view).toContain("const swapFailed = !swap.busy && !!swap.res?.error && done != null;");
     expect(view).toContain('phase === "running" && <SwapRunning');
     expect(view).toContain('phase === "failed" && swap.res?.error && (');
+    expect(view).toContain('phase === "confirming" && swap.res?.output && (');
     expect(view).toContain('phase === "done" && done && swap.res?.output && (');
   });
 

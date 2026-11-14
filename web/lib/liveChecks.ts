@@ -89,24 +89,26 @@ export async function checkContractCodeHash(): Promise<LiveRow> {
   }
 }
 
-/** Operator account access keys (honesty). */
+/** Operator account access keys (honesty). Post-lock the contract holds NO keys: the lock (owner is the keyless ee91dc account, all keys deleted) is the locked state, so zero keys PASS and any key FAILS. */
 export async function checkOperatorKeys(): Promise<LiveRow> {
   const how = `NEAR RPC query view_access_key_list final · account_id=${KEYS_CONTRACT}`;
   try {
     const list = await viewAccessKeyList(KEYS_CONTRACT);
     const full = list.keys.filter((k) => k.access_key.permission === "FullAccess").length;
     const fc = list.keys.length - full;
-    const ok = full === 2;
+    const ok = list.keys.length === 0;
     return {
       id: "operator-keys",
-      claim: `${KEYS_CONTRACT} has exactly two FullAccess keys (documented in SECURITY.md §11)`,
+      claim: `${KEYS_CONTRACT} holds no access keys (locked: the owner is the keyless account, documented in SECURITY.md §11)`,
       how,
       ok,
-      detail: `Live: ${full} FullAccess, ${fc} FunctionCall (total ${list.keys.length}).`,
+      detail: ok
+        ? `Live: 0 keys. The contract is locked: no key can sign for it.`
+        : `Live: ${full} FullAccess, ${fc} FunctionCall (total ${list.keys.length}). Expected 0 after the lock.`,
       href: nearAccount(KEYS_CONTRACT),
     };
   } catch (e) {
-    return { id: "operator-keys", claim: `${KEYS_CONTRACT} has exactly two FullAccess keys`, how, ok: false, detail: `RPC failed: ${e instanceof Error ? e.message : "error"}` };
+    return { id: "operator-keys", claim: `${KEYS_CONTRACT} holds no access keys (locked)`, how, ok: false, detail: `RPC failed: ${e instanceof Error ? e.message : "error"}` };
   }
 }
 

@@ -7,7 +7,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const doc = JSON.parse(readFileSync(path.join(root, "docs/claims.json"), "utf8"));
 const claims: Array<Record<string, any>> = doc.claims;
-const TYPES = ["path", "grep", "count", "symbol", "sha256", "code_hash", "view", "access_key", "account", "holder", "tx", "attestation", "fastfs", "http", "redirect", "header", "site_vs_chain", "ci_run"];
+const TYPES = ["path", "grep", "count", "symbol", "sha256", "code_hash", "view", "access_key", "empty_keys", "account", "holder", "tx", "attestation", "fastfs", "http", "redirect", "header", "site_vs_chain", "ci_run"];
 const EVIDENCE = ["mainnet tx", "mainnet view", "OutLayer call", "test file", "CI run", "script", "file", "live site"];
 
 describe("docs/claims.json", () => {

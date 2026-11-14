@@ -61,6 +61,8 @@ const ASSET_KEYS = Object.keys(ASSETS) as AssetKey[];
 const keyOfId = (id: string): AssetKey => ASSET_KEYS.find((k) => ASSETS[k].id === id) ?? "usdc";
 /** The vault holds and withdraws the two assets the trade supports. */
 const TOKEN_OPTIONS: TokenOption[] = ASSET_KEYS.map((k) => ({ id: ASSETS[k].id, symbol: ASSETS[k].symbol, name: ASSETS[k].name, assetId: ASSETS[k].id, chain: "near" }));
+/** Withdrawals pay out in USDC only: the enclave's exact exit (exact_near_exit_v1) only executes the canonical USDC exit — a wNEAR withdrawal is refused with withdraw_minimum_required. */
+const WITHDRAW_OPTIONS: TokenOption[] = [{ id: ASSETS.usdc.id, symbol: ASSETS.usdc.symbol, name: ASSETS.usdc.name, assetId: ASSETS.usdc.id, chain: "near" }];
 
 /** Icon, tone and one plain line for each kind of vault entry. The kind comes from the signed, verified history. */
 const ENTRY_ICON: Record<string, IconName> = { deposit: "arrow-down", withdraw: "arrow-up", swap: "arrow-swap", copy: "swap" };
@@ -193,6 +195,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const [wAmt, setWAmt] = useState("0.05");
   const [doneWithdraw, setDoneWithdraw] = useState<DoneWithdraw | null>(null);
   const [prices, setPrices] = useState(initialPrices);
+  /** True once the price book has been attempted (resolved or failed): the "not priced yet" note is only shown after that, so it never appears while prices are still loading and contradicts a total that already includes the asset. */
+  const [pricesReady, setPricesReady] = useState(Object.keys(initialPrices).length > 0);
   const [mintTx, setMintTx] = useState<string | null>(null);
   const [copiedConf, setCopiedConf] = useState(false);
   const [slowKey, setSlowKey] = useState(false);
@@ -227,6 +231,9 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const lastVerified = useLogVerified(lastRes);
 
   useEffect(() => { setMintTx(loadMintTx(accountId)); }, [accountId]);
+  /** Whether this account has chosen safe limits (the same flag the Overview reads). Re-read when the limits read lands, so setting limits on this page completes the item at once. */
+  const [limitsDone, setLimitsDone] = useState(false);
+  useEffect(() => { if (accountId) setLimitsDone(localStorage.getItem(`${LIMITS_FLAG}:${accountId}`) === "1"); else setLimitsDone(false); }, [accountId, limits.res]);
   useEffect(() => { setSlowKey(false); if (!lookingUp) return; const id = setTimeout(() => setSlowKey(true), 12_000); return () => clearTimeout(id); }, [lookingUp]);
 
   // Balances and state are shown only while the session is live: after a lock or an expiry the page is sealed again.
@@ -279,7 +286,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   useEffect(() => {
     if (!balances) return;
     let cancel = false;
-    fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices((prev) => ({ ...prev, ...j.prices })); }).catch(() => {});
+    fetch("/api/prices").then((r) => (r.ok ? r.json() : null)).then((j) => { if (!cancel && j?.prices) setPrices((prev) => ({ ...prev, ...j.prices })); if (!cancel) setPricesReady(true); }).catch(() => { if (!cancel) setPricesReady(true); });
     return () => { cancel = true; };
   }, [balances]);
   // After a payout the balance is read again, with the session only. The payout changed the vault, so the cached
@@ -319,7 +326,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     }
   }
   function doWithdraw() {
-    if (!wUnits || !accountId || !wDest.ok || lock.locked) return;
+    if (!wUnits || !accountId || !wDest.ok || lock.locked || wAsset !== "usdc") return;
     const ctx: OpResume = { op: "withdraw", amount: `${wAmt} ${ASSETS[wAsset].symbol}`, to: shortAccount(wAddr.trim()) };
     sessionStorage.setItem(OP_CTX, JSON.stringify(ctx));
     setDoneWithdraw(ctx);
@@ -429,7 +436,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
       {!live
         ? t("vault.sealedBook")
         : balances
-          ? <>{(balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")}{totalKind.kind === "partial" && <span data-testid="unpriced"> {t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</span>}</>
+          ? <>{(balance.res?.output?.ok ? balance.via : dash.via) === "session" ? t("vault.balanceSession") : t("vault.balanceReal")}{totalKind.kind === "partial" && pricesReady && <span data-testid="unpriced"> {t("vault.unpriced", { amounts: totalKind.unpriced.join(" · ") })}</span>}</>
           : balance.res?.error ? "The balance read did not complete. Use Refresh to try again." : "Reading your balance with your session."}
       {" "}{balancePill}
       {balances && formatUpdatedAgo(balance.updatedAt, now) && <span className="vlt-sub" data-testid="vault-balance-updated"> · {formatUpdatedAgo(balance.updatedAt, now)}</span>}
@@ -442,6 +449,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
     { id: "sign", title: "Sign in", done: true, note: "Signed in." },
     { id: "key", title: "Get key", done: !!held, note: held ? "Held on NEAR mainnet." : "Needs a key first." },
     { id: "unlock", title: "Unlock", done: live, note: live ? `${left} min left on this session.` : "One signature. 30 minutes." },
+    // Same six steps as the Overview checklist (sign, key, unlock, limits, fund, swap): the denominators must agree.
+    { id: "limits", title: "Set safe limits", done: limitsDone, note: limitsDone ? "Safe limits chosen." : "Recommended: safe limits — set in the limits panel on this page." },
     // "Fund vault" and "First swap" are unknown — not undone — while their reads are still in flight: they show as
     // checking, so the count reads "Checking…" instead of flickering between 3 and 5 of 5.
     { id: "fund", title: "Fund vault", done: funded, checking: balance.busy && !balances, note: funded ? "Balance read from the vault." : live ? (balance.busy && !balances ? "Reading your vault…" : "A deposit is a transfer you approve in your wallet.") : "Checked once you unlock." },
@@ -775,6 +784,7 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
                   <div className="vlt-stack" data-testid="deposit">
                     <span className="vlt-label">{t("vault.deposit")}</span>
                     <DepositQr otherChain={false} evm={accountId && /^0x[0-9a-fA-F]{40}$/.test(accountId) ? accountId : null} address={String(account.res.output.deposit.deposit_address)} amount={`${fundAmt} ${ASSETS[fundAsset].symbol}`} />
+                    <p className="vlt-sub">This address is new for this deposit — your wallet may say the account does not exist yet. That is expected: the first transfer creates it, and the vault credits it once it lands.</p>
                     {typeof account.res.output.deposit.hint === "string" && <p className="vlt-sub">{String(account.res.output.deposit.hint)}</p>}
                     {typeof account.res.output.deposit.expires_at === "string" && <p className="vlt-sub">{t("vault.expires", { time: String(account.res.output.deposit.expires_at) })}</p>}
                   </div>
@@ -829,7 +839,8 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
         <div className="vlt-stack">
           <div className="vlt-field">
             <span className="vlt-label">{t("vault.asset")}</span>
-            <TokenSelect label={t("vault.asset")} options={TOKEN_OPTIONS} value={ASSETS[wAsset].id} onChange={(id) => setWAsset(keyOfId(id))} testid="w-asset" />
+            <TokenSelect label={t("vault.asset")} options={WITHDRAW_OPTIONS} value={ASSETS[wAsset].id} onChange={(id) => setWAsset(keyOfId(id))} testid="w-asset" />
+            <p className="vlt-sub">Withdrawals pay out in USDC only. To withdraw wNEAR, swap it to USDC on the Swap page first.</p>
           </div>
           <AmountInput label={t("vault.amount")} value={wAmt} onChange={setWAmt} symbol={ASSETS[wAsset].symbol} error={wUnits ? null : t("vault.badAmount")} testid="w-amt" />
           <div className="vlt-field" data-testid="w-chain-field">

@@ -10,6 +10,7 @@ export const EVIDENCE_IDS: ReadonlySet<string> = new Set([
   "2220caa1-90ad-42a6-b281-cfd08cd1b354",
   "c8db49d3-900a-49d7-b7ae-5012579a00ff",
   "91b0e9a9-219b-46ec-a174-1f74e2f24b85",
+  "4175df5d-335d-4a82-b37a-978ac52853b6",
   "dc3668db-674f-4865-a2ce-272f70c41b0d",
   "0847b924-df76-4cee-ab5a-a96c789d2983",
   "246e4a7a-f138-4459-8548-350dd9960751",

@@ -31,7 +31,7 @@ add("contract-wasm-sha", f"Deployed contract wasm is {K['bytes']:,} bytes with s
     {"type":"sha256","path":("contracts/keys/release/v2.7/keyhole_keys.wasm" if K["version"] == "2.7.0" else "contracts/keys/deployed/keyhole_keys.wasm"),"sha256":K["wasm_sha256"],"bytes":K["bytes"]}, f"sha256 {K['wasm_sha256']}, {K['bytes']} bytes")
 add("contract-source-version", f"NEP-330 mainnet source metadata reports version {K['version']}", where(RD,K["version"]), "mainnet view", "contract_source_metadata()",
     {"type":"view","method":"contract_source_metadata","args":{},"path":"version","op":"eq","value":K["version"]}, f"version == {K['version']}")
-cfg = {"owner":"0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"keyhole-devmo.near","royalty_bps":500}
+cfg = {"owner":"ee91dcebd2e4061271a149abcc8ef2c6be8b9696c928348b52cb3f5204645f67","minter":"015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443","treasury":"devmo.near","royalty_bps":500}
 for k,v in cfg.items():
     add(f"config-{k}", f"Contract config.{k} is {v}", where(RD,'"royalty_bps":500'), "mainnet view", "keyhole-devmo.near config()",
         {"type":"view","method":"config","args":{},"path":k,"op":"eq","value":v}, f"config.{k} == {v}")
@@ -56,10 +56,11 @@ for t in ["0","k0642e7964b2fb515","k5f4750858f328940","k857b6b68facc0f94"]:
     add(f"token-{t}-media-null", f"Token {t}, minted before media was written, has media: null", where(RD,"have `media: null`"), "mainnet view", f"nft_token({t})",
         {"type":"view","method":"nft_token","args":{"token_id":t},"path":"metadata.media","op":"eq","value":None}, "metadata.media == null")
 # ---------------- access keys ----------------
-add("key-fastfs-scoped", "keyhole-devmo.near has a FunctionCall key FNe2aYtz… limited to `social` methods __fastdata_kv, __fastdata_fastfs", where(RD,"`ed25519:FNe2aYtz…`"), "mainnet view", "view_access_key_list keyhole-devmo.near",
-    {"type":"access_key","account":"keyhole-devmo.near","prefix":"ed25519:FNe2aYtz","receiver":"social","methods":["__fastdata_kv","__fastdata_fastfs"]}, "FunctionCall receiver social, methods exactly those two")
-add("key-owner-full", "keyhole-devmo.near FullAccess key 7N1fLo9M…", where(RD,"`ed25519:7N1fLo9M…`"), "mainnet view", "view_access_key_list keyhole-devmo.near",
-    {"type":"access_key","account":"keyhole-devmo.near","prefix":"ed25519:7N1fLo9M","full":True}, "FullAccess")
+# Lock (final): both key lists are empty. The deleted keys are named in the README lock section.
+add("lock-keys-empty-contract", "keyhole-devmo.near holds no access keys (lock final, read at block 224576783)", where(RD,"view_access_key_list"), "mainnet view", "view_access_key_list keyhole-devmo.near",
+    {"type":"empty_keys","account":"keyhole-devmo.near"}, "0 keys")
+add("lock-keys-empty-owner", "owner ee91dc… holds no access keys (lock final, read at block 224576783)", where(RD,"view_access_key_list"), "mainnet view", "view_access_key_list owner",
+    {"type":"empty_keys","account":"ee91dcebd2e4061271a149abcc8ef2c6be8b9696c928348b52cb3f5204645f67"}, "0 keys")
 add("key-minter-full", "TEE minter 015a0259… FullAccess key 6H1iG1oH…", where(RD,"`ed25519:6H1iG1oH…`"), "mainnet view", "view_access_key_list minter",
     {"type":"access_key","account":cfg["minter"],"prefix":"ed25519:6H1iG1oH","full":True}, "FullAccess")
 add("key-beat-scoped", "Beat key 9FiNXX2M… on the minter: FunctionCall to keyhole-devmo.near, method beat only, allowance at most 0.05 NEAR", where(RD,"`ed25519:9FiNXX2M…` (beat key)"), "mainnet view", "view_access_key_list minter",

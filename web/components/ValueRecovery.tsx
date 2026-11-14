@@ -4,7 +4,7 @@ import { nearView } from "@/lib/rpc";
 import { useWallet } from "@/lib/wallet";
 import { callWorker } from "@/lib/worker";
 import { loadSession } from "@/lib/session";
-import { forgetResolved, recoveries, type Recovery } from "@/lib/valueRecovery";
+import { forgetRecovery, forgetResolved, recoveries, type Recovery } from "@/lib/valueRecovery";
 import { Button } from "@/components/ui";
 
 /** How often the lock is re-checked while it is active, besides when the window regains focus. */
@@ -65,8 +65,15 @@ export function ValueRecovery({ testid = "value-recovery" }: { testid?: string }
     setBusy(true); setNote("");
     try {
       const out = await callWorker("reconcile_value_op", await sign("reconcile_value_op", { token_id: r.token_id, value_op_id: r.value_op_id }));
-      if (out.error) setNote("Still confirming. Nothing was resent. Try again in a moment.");
-      else setNote(out.output?.admission_finished === true ? "Confirmed." : "Still confirming. Nothing was resent.");
+      if (out.error) {
+        // The journal entry is gone server-side: there is nothing left to confirm, so the local lock goes too.
+        if (out.error.code === "guard_journal" && accountId && forgetRecovery(accountId, r.token_id, r.value_op_id)) dispatchEvent(new Event("keyhole-recovery"));
+        setNote("Still confirming. Nothing was resent. Try again in a moment.");
+      } else if (out.output?.admission_finished === true && ["success", "completed", "failed", "refunded"].includes(String(out.output?.status ?? ""))) {
+        // Finished: drop this row by the id that was reconciled (the answer does not have to echo it), so the lock clears at once instead of waiting on the next status read.
+        if (accountId && forgetRecovery(accountId, r.token_id, r.value_op_id)) dispatchEvent(new Event("keyhole-recovery"));
+        setNote("Confirmed.");
+      } else setNote("Still confirming. Nothing was resent.");
     } catch { setNote("Still confirming. Nothing was resent."); } finally { setBusy(false); }
   }
 

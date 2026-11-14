@@ -236,6 +236,8 @@ function AppShellFrame({ children }: { children: ReactNode }) {
             <p className="app-net-line" title={networkDetail}><i aria-hidden="true" />{network}</p>
             <Link href="/" className="app-back" data-testid="app-back">← Back to site</Link>
             <Link href="/developers" className="app-proof" data-testid="app-developers">Developers and verification</Link>
+            <Link href="/attack" className="app-proof" data-testid="app-attack">Try to steal a key</Link>
+            <Link href="/verify" className="app-proof" data-testid="app-verify">Verify</Link>
             <p className="app-legal">
               <a href="https://near.org" target="_blank" rel="noreferrer">Built on NEAR</a>
               <span aria-hidden="true"> · </span>

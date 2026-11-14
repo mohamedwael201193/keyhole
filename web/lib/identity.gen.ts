@@ -3,12 +3,13 @@ export const IDENTITY = {
   "_doc": "Single source of truth for live identities. Generate deployment updates with node scripts/gen-identity.mjs --promote-live <public-capture.json>. Refresh generated files with the same script.",
   "worker": {
     "project": "keyhole-devmo.near/keyhole",
-    "wasm_sha256": "5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231",
-    "bytes": 1382841,
-    "add_version_tx": "Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU",
-    "info_call": "91b0e9a9-219b-46ec-a174-1f74e2f24b85",
-    "previous_wasm_sha256": "e9e570e5aa3c308f47a95d3ed6008743a32eb876cd9131481760b50bfc63a886",
+    "wasm_sha256": "230a4c3b6e5b5455c959f396889ae2fd7e1fc2919c180aef2203ce574eece4b9",
+    "bytes": 1439876,
+    "add_version_tx": "Bn1TxXLYxTPvA8ECPHa3HS2PfhyjyjXyfy6FxQPu2iPf",
+    "info_call": "4175df5d-335d-4a82-b37a-978ac52853b6",
+    "previous_wasm_sha256": "5c7866666010068e77652d21265df9b0d6fc30b934627be5af53194be8743231",
     "historical_wasm_sha256": [
+      "e9e570e5aa3c308f47a95d3ed6008743a32eb876cd9131481760b50bfc63a886",
       "0d64593011330e98a57b76467bcf013f01944460b8c11f9e6c5319eaada9305a",
       "119e920d97c753fb00c0cb6e1705d01de6a83ed87ee4272d36114bba57aea391",
       "4702420094dbea7d4092476e784905d9503ac63ff8ecc7403331a8e66526f1e0",
@@ -66,7 +67,7 @@ export const IDENTITY = {
     "source_commit": "4ed46f74b96461637dbe5849996c3cb69bbfd143"
   },
   "worker_candidate": {
-    "status": "source-candidate-not-published",
+    "status": "published-mainnet",
     "wasm_sha256": "230a4c3b6e5b5455c959f396889ae2fd7e1fc2919c180aef2203ce574eece4b9",
     "bytes": 1439876,
     "recipe": "tee/worker/build.sh"
@@ -81,9 +82,9 @@ export const IDENTITY = {
     "recipe": "contracts/keys/build.sh"
   },
   "governance": {
-    "owner": "0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
-    "pending_owner": "ee91dcebd2e4061271a149abcc8ef2c6be8b9696c928348b52cb3f5204645f67",
-    "pending_owner_not_before_ns": "1794610539900007445",
+    "owner": "ee91dcebd2e4061271a149abcc8ef2c6be8b9696c928348b52cb3f5204645f67",
+    "pending_owner": null,
+    "pending_owner_not_before_ns": null,
     "staged_upgrade_sha256": null,
     "staged_upgrade_not_before_ns": null,
     "min_upgrade_delay_ns": "86400000000000",
@@ -92,9 +93,9 @@ export const IDENTITY = {
     "lending_enabled": false,
     "stage_upgrade_tx": "5CYYbe6Zx1BVW3qmS63gR6XDGKMx2QzfJ8Pcft8BM3v5",
     "propose_owner_tx": "7FUAqceeJYjDVEbzobnELBHjdedGw7YPz6grirRFatym",
-    "full_access_keys": 2,
-    "function_call_keys": 1,
-    "access_key_total": 3
+    "full_access_keys": 0,
+    "function_call_keys": 0,
+    "access_key_total": 0
   }
 } as const;
 export const WORKER_SHA256 = IDENTITY.worker.wasm_sha256;
