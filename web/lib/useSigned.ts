@@ -52,7 +52,20 @@ export function useSigned(op: Op, opts?: { cacheKey?: string | null }) {
     if (!background) { setBusy(true); setStage("enclave"); t0.current = t0.current || Date.now(); }
     try {
       const { ctx: _ctx, ...rest } = auth as Parameters<typeof callWorker>[1] & { ctx?: unknown };
-      const r = await callWorker(op, rest);
+      // The tier-1 worker limit is 6 calls/min; the unlock burst (session +
+      // balance + history + dashboard + account + limits + pnl) can exceed it.
+      // A rate-limited READ is retried once after the gateway's window instead
+      // of failing the vault read — the signed auth is reusable, no new popup,
+      // and a rate-limited call never executed (the worker rejects it before
+      // binding), so the retry cannot double-run anything. Mutations are NOT
+      // retried: their rate_limited error surfaces and the user retries by hand.
+      let r = await callWorker(op, rest);
+      const READ_OPS = new Set(["balance", "history", "dashboard", "account", "limits", "pnl", "status"]);
+      if (r.error?.code === "rate_limited" && READ_OPS.has(op)) {
+        const waitS = Math.min(Math.max(r.error.retry_after ?? 15, 1), 30);
+        await new Promise((resolve) => setTimeout(resolve, waitS * 1000));
+        r = await callWorker(op, rest);
+      }
       if (/^(session_|bad_session$)/.test(r.error?.code || "")) clearSession();
       // A background revalidation that fails must not overwrite the stale values still on screen.
       if (!background || !r.error) setRes(r);

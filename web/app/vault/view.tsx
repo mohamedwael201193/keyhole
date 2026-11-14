@@ -247,7 +247,10 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   const dayPct = Math.min(100, ((spent ?? 0) / dayCap) * 100);
   const idn = held ? keyIdentity(held.token.token_id, held.tier) : null;
   // A read signed directly (a redirect wallet, no session) counts as much as a session read.
-  const balances = balance.res?.output?.ok && (live || balance.via === "signature") ? (balance.res.output.balances as Bal[]) : d ? (d.balances as Bal[]) : null;
+  // A session read that succeeded counts too: the worker bound it to this account's
+  // key at read time, so hiding it whenever `live` disagrees (e.g. the held-key
+  // read lagging after an account switch) leaves a working vault looking sealed.
+  const balances = balance.res?.output?.ok && (live || balance.via === "signature" || balance.via === "session") ? (balance.res.output.balances as Bal[]) : d ? (d.balances as Bal[]) : null;
   const rows = balances ? assetRows(balances, prices) : null;
   const totalKind = totalOf(rows);
   const entries = (history.res?.output?.ok ? history.res.output.entries as HistEntry[] : null);
@@ -303,9 +306,17 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
   async function unlock() {
     if (!held) return;
     setUnlocking(true); setUnlockErr(null);
-    const r = await startSession(held.token.token_id);
-    setUnlocking(false);
-    if (!r.ok) setUnlockErr(r.code);
+    try {
+      const r = await startSession(held.token.token_id);
+      if (!r.ok) setUnlockErr(r.code);
+    } catch (e) {
+      // startSession can throw (wallet sign failure); a throw left the vault
+      // silently sealed with the button stuck loading. Show the reason instead.
+      const code = (e as { code?: string } | null)?.code;
+      setUnlockErr(typeof code === "string" && code ? code : "session_failed");
+    } finally {
+      setUnlocking(false);
+    }
   }
   function doWithdraw() {
     if (!wUnits || !accountId || !wDest.ok || lock.locked) return;
