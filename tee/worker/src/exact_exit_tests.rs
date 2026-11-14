@@ -37,6 +37,10 @@ struct Fixture {
     poll_error: bool,
     write_fail: Option<String>,
     duplicate: bool,
+    /// Round 7: provider row type returned for the Storage hop. The live
+    /// provider returns "storage_deposit" for POST /wallet/v1/storage-deposit;
+    /// None keeps the documented "call" spelling (the old fixture default).
+    storage_row_type: Option<&'static str>,
     final_delta: Option<i128>,
     bad_result: Option<Value>,
     storage_noop: bool,
@@ -48,6 +52,15 @@ struct Fixture {
     zero_time: bool,
 }
 impl Fixture {
+    /// Row type the fixture provider reports for a hop: the Storage override
+    /// when set, else the step's documented `request_type()`.
+    fn row_type(&self, step: Step) -> &'static str {
+        if step == Step::Storage {
+            self.storage_row_type.unwrap_or(step.request_type())
+        } else {
+            step.request_type()
+        }
+    }
     fn new() -> Self {
         // Round 4: the per-run read cache is a thread_local shared by all
         // tests on this thread; reset it so each test starts from an
@@ -229,7 +242,7 @@ impl Host for Fixture {
         };
         self.rows.insert(
             id.clone(),
-            json!({"request_id":id,"type":step.request_type(),"status":status,"result":result}),
+            json!({"request_id":id,"type":self.row_type(step),"status":status,"result":result}),
         );
         let o = self.obs.as_mut().unwrap();
         if status == "success" {
@@ -267,7 +280,7 @@ impl Host for Fixture {
         }
         if self.duplicate {
             reply["error"] = json!("duplicate_idempotency_key");
-            reply["type"] = json!(step.request_type());
+            reply["type"] = json!(self.row_type(step));
         }
         Ok((200, reply))
     }
@@ -883,7 +896,7 @@ fn hop_rows_accept_documented_types_and_name_the_failed_predicate() {
     let id = "12345678-1234-1234-1234-123456789abc";
     for (step, ok, bad) in [
         (Step::Unshield, ["confidential", "confidential_unshield"], "withdraw"),
-        (Step::Storage, ["call", "call"], "confidential"),
+        (Step::Storage, ["call", "storage_deposit"], "confidential"),
         (Step::Withdraw, ["withdraw", "withdraw"], "confidential_unshield"),
     ] {
         for ty in ok {
@@ -907,6 +920,103 @@ fn hop_rows_accept_documented_types_and_name_the_failed_predicate() {
     assert!(!Step::Storage.request_types().contains(&"confidential_unshield"));
     assert!(!Step::Withdraw.request_types().contains(&"confidential_unshield"));
 }
+#[test]
+fn storage_deposit_row_is_accepted_and_wrong_type_still_rejected() {
+    // Round 7: exact reconcile #4 shape (LOANS_EXEC_REPORT_RUN9 §3d) —
+    // step=storage, id matches, type=storage_deposit, no error. Pre-fix
+    // row() returned exit_provider "original request identity/type/error
+    // mismatch: ... type=storage_deposit type_ok=false"; post-fix it
+    // returns the row's status.
+    let id = "12345678-1234-1234-1234-123456789abc";
+    for (status, want) in [
+        ("success", "success"),
+        ("completed", "success"),
+        ("processing", "processing"),
+        ("failed", "failed"),
+    ] {
+        let v = json!({"request_id":id,"type":"storage_deposit","status":status});
+        assert_eq!(row(&v, id, Step::Storage).unwrap(), want, "status {status}");
+    }
+    // The wrong type for the storage step is still refused with the same
+    // mismatch error naming the failed predicate.
+    let v = json!({"request_id":id,"type":"withdraw","status":"success"});
+    let e = row(&v, id, Step::Storage).unwrap_err();
+    assert_eq!(e.code, "exit_provider");
+    assert!(
+        e.message.contains("step=storage")
+            && e.message.contains("id_match=true")
+            && e.message.contains("type=withdraw")
+            && e.message.contains("type_ok=false")
+            && e.message.contains("error_present=false"),
+        "{}",
+        e.message
+    );
+    // And the old "call" spelling still works (no regression for rows
+    // the provider reports that way).
+    let v = json!({"request_id":id,"type":"call","status":"success"});
+    assert_eq!(row(&v, id, Step::Storage).unwrap(), "success");
+}
+
+#[test]
+fn storage_deposit_duplicate_is_the_right_operation() {
+    // Round 7: a duplicate_idempotency_key reply whose row type is the
+    // observed storage_deposit is the right operation, not an error —
+    // the drive completes on the original GET evidence.
+    let mut h = Fixture::new();
+    h.duplicate = true;
+    h.storage_row_type = Some("storage_deposit");
+    assert_eq!(
+        drive(&mut h, &journal(), "key").unwrap()["status"],
+        "success"
+    );
+    assert_eq!(h.posts.len(), 3);
+    // A duplicate referring to a row of a type outside the storage
+    // allowlist still fails closed with the duplicate error.
+    let mut h = Fixture::new();
+    h.duplicate = true;
+    h.storage_row_type = Some("withdraw");
+    let e = drive(&mut h, &journal(), "key").unwrap_err();
+    assert_eq!(e.code, "exit_provider");
+    assert!(e.message.contains("duplicate refers to wrong operation"), "{}", e.message);
+    assert_eq!(h.posts.len(), 2);
+    assert_eq!(h.finish_calls, 0);
+}
+
+#[test]
+fn live_storage_resume_stored_storage_deposit_row_advances_past_storage() {
+    // Round 7: live resume simulation for op 3:6896… (RUN9 §3-§5). The
+    // storage request id + dispatch marker are already stored (first drive
+    // posts unshield + storage; the storage row is storage_deposit and
+    // still processing), then a later reconcile re-fetches the SAME stored
+    // id — never re-posts — and the drive must advance past storage to
+    // withdraw and finish. The recipient storage was already registered
+    // live, mirrored here by setting registered=true on resume.
+    let mut h = Fixture::new();
+    h.storage_row_type = Some("storage_deposit");
+    h.status = Some((Step::Storage, "processing".into()));
+    let j = journal();
+    assert_eq!(drive(&mut h, &j, "key").unwrap()["status"], "processing");
+    assert_eq!(h.posts.len(), 2);
+    assert_eq!(h.posts[1].0, Step::Storage);
+    let stored: String = read(&mut h, &format!("{}/exact/storage/provider", j.key()))
+        .unwrap()
+        .unwrap();
+    assert!(guarded::uuid(&stored));
+    // Provider settles the stored storage request between calls.
+    h.rows.get_mut(&stored).unwrap()["status"] = json!("success");
+    assert_eq!(h.rows[&stored]["type"], "storage_deposit");
+    h.obs.as_mut().unwrap().registered = true;
+    h.status = None;
+    assert_eq!(drive(&mut h, &j, "key").unwrap()["status"], "success");
+    assert_eq!(h.posts.len(), 3, "storage was never re-posted");
+    assert_eq!(h.posts[2].0, Step::Withdraw);
+    assert_eq!(h.finish_calls, 1);
+    let stored_after: String = read(&mut h, &format!("{}/exact/storage/provider", j.key()))
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored, stored_after, "same stored request id throughout");
+}
+
 #[test]
 fn exact_exit_policy_gate_is_enrolled_only_with_exit_not_enrolled_for_collateral() {
     let host = include_str!("exact_exit_host.rs");
