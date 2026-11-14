@@ -521,6 +521,11 @@ export function VaultView({ initialOnline, initialPrices = {} }: { initialOnline
           {balance.res && <CallLine r={balance.res} />}
         </div>
 
+        {/* Held but not on chain yet (a minter-paid mint to an implicit account): the top-up code the
+            dashboard checklist points at. TopupQr hides itself once the account exists, so funded,
+            locked and sealed accounts never see it. */}
+        {accountId && <TopupQr accountId={accountId} />}
+
         <div className="vlt-cols">
           <div className="vlt-col vlt-col-a">
             <Card as="section" labelledBy="vlt-assets-h" testid="assets-card" className="vlt-card" style={{ order: 1 }}>
