@@ -1,16 +1,24 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
 import {usePathname} from "next/navigation";
+import Link from "next/link";
 import {useWallet} from "@/lib/wallet";
-import {createPledgeClient,buildClaimPayout,payoutStorageConsent,type PendingPayout} from "@/lib/pledgeClient";
-import {browserMoneyStore,dispatchMoneyBatch,finalMoneyReceipt,nextFinalBlockHeight,updateMoneyOperation,clearVerifiedMoneyOperation,type MoneyOperation} from "@/lib/pledgeMoney";
-/** Shared across borrower, lender and sale routes: a credit is not wallet delivery. */
+import {createPledgeClient,type PendingPayout} from "@/lib/pledgeClient";
+import {browserMoneyStore,finalMoneyReceipt,updateMoneyOperation,clearVerifiedMoneyOperation,type MoneyOperation} from "@/lib/pledgeMoney";
+import {nearText} from "@/lib/sale";
+/**
+ * Payout credit notice. It is a notice, not a second claim button: the one claim action lives in the
+ * vault (PayoutPanel, the working claim path — claim_payout pays only the caller's own credit). It never
+ * shows the amount in NEAR only (never the raw chain units), never shows a button that cannot work, and it is mounted only on the pages
+ * that own payout (dashboard home, /pledge) — never site-wide in the app shell, and never on /vault,
+ * where the vault panel already shows the same credit.
+ */
 export function PayoutCredit({embeddedHere=false}:{embeddedHere?:boolean}={}) {
  const wallet=useWallet(),account=wallet.accountId,pathname=usePathname();
- // Vault owns ordinary onboarding + a claim panel backed by this same money store.
- const embedded=pathname?.startsWith("/pledge")||pathname==="/vault"||embeddedHere;
+ // The vault owns the claim panel backed by this same money store.
+ const embedded=pathname==="/vault"||embeddedHere;
  const client=useMemo(()=>createPledgeClient({live:true}),[]);
- const [credit,setCredit]=useState("0"),[pending,setPending]=useState<PendingPayout|null>(null),[operation,setOperation]=useState<MoneyOperation|null>(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[supported,setSupported]=useState(false);
+ const [credit,setCredit]=useState("0"),[pending,setPending]=useState<PendingPayout|null>(null),[operation,setOperation]=useState<MoneyOperation|null>(null),[message,setMessage]=useState(""),[supported,setSupported]=useState(false);
  const store=useMemo(()=>account&&typeof window!=="undefined"?browserMoneyStore(account,client.contractId):null,[account,client.contractId]);
  const refresh=useCallback(async()=>{
   if(embedded||!account||!store)return;
@@ -33,28 +41,11 @@ export function PayoutCredit({embeddedHere=false}:{embeddedHere?:boolean}={}) {
  },[account,store,refresh,pathname,embedded]);
  useEffect(()=>{if(embedded||!account||!supported)return;const update=()=>{if(document.visibilityState!=="hidden")void refresh().catch(()=>{ /* keep last known state; never send */ });};const timer=setInterval(update,15_000);addEventListener("focus",update);return ()=>{clearInterval(timer);removeEventListener("focus",update);};},[account,supported,refresh,embedded]);
  useEffect(()=>store?.subscribe?.(()=>{try{setOperation(store.load());}catch{setSupported(false);setMessage("Pending operation storage is unreadable; do not send.");}}),[store]);
- async function claim(){
-  if(!account||!store||busy||!client.canTransact()||pending||operation||BigInt(credit)<=0n||/^0x[0-9a-f]{40}$/i.test(account))return;
-  setBusy(true);setMessage("Confirm Claim your funds in the connected native NEAR wallet.");
-  try {
-   const [freshCredit,freshPending]=await Promise.all([client.getPayoutCredit(account),client.getPendingPayout(account)]);
-   setCredit(freshCredit??"0");setPending(freshPending);
-   if(freshPending)throw Error("A native cashout is already pending. Do not resend.");
-   if(!freshCredit||BigInt(freshCredit)<=0n)throw Error("No available credit in the current final-chain view.");
-   const plan=await client.prepareAction(account,buildClaimPayout());
-   setMessage(payoutStorageConsent(plan.payoutStorageChargeYocto));
-   const op=await dispatchMoneyBatch(account,client.contractId,plan.calls,store,calls=>wallet.sendTxBatch(calls,{expectedSigner:account}),await nextFinalBlockHeight(client.rpcUrl));setOperation(op);await refresh();
-  }
-  catch(e){setMessage(e instanceof Error?e.message:"Outcome unknown; keep the original operation.");setOperation(store.load());}
-  finally{setBusy(false);}
- }
  if(embedded||!account||(credit==="0"&&!pending&&!operation&&!message))return null;
- return <section aria-label="Claim your funds" data-testid="payout-credit" style={{margin:"16px 24px",padding:20,border:"1px solid #d0ddd4",borderRadius:16,background:"#f3f8f4",color:"#1d3430"}}>
-  <strong>Claim your funds</strong><p>{credit} yoctoNEAR available as backed contract credit, not delivered wallet funds.</p>
-  {pending&&<p>Native cashout pending: nonce {pending.nonce}. No timeout refund or guessed retry.</p>}
-  <button type="button" disabled={!client.canTransact()||busy||!!pending||!!operation||BigInt(credit)<=0n} onClick={()=>void claim()}>Claim your funds</button>{" "}
-  <button type="button" disabled={busy} onClick={()=>{setBusy(true);void refresh().catch(()=>setMessage("Status unavailable. Do not resend.")).finally(()=>setBusy(false));}}>Refresh original status</button>
-  {!client.canTransact()&&<p>Wallet dispatch is disabled until the separately reviewed write gate is enabled.</p>}
-  <p role="status">{message}</p>
+ return <section aria-label="Payout credit" data-testid="payout-credit" style={{margin:"16px 24px",padding:20,border:"1px solid #d0ddd4",borderRadius:16,background:"#f3f8f4",color:"#1d3430"}}>
+  <p>You have {nearText(credit)} NEAR to collect. It is held by the contract and has not been sent to your wallet yet.</p>
+  {pending&&<p>A payout is already on its way (reference {pending.nonce}). Please wait — do not send it again.</p>}
+  <p><Link href="/vault">Claim in your vault →</Link></p>
+  {message&&<p role="status">{message}</p>}
  </section>;
 }

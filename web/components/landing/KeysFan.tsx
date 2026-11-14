@@ -33,7 +33,7 @@ export function KeysFan() {
         <ul className="lp-fan" aria-label={t("landing2.v2.keys.region")}>
           {CARDS.map((c) => (
             <li key={c.finish} className="lp-fcard" style={{ "--r": `${c.rot}deg` } as React.CSSProperties} data-finish={c.finish.toLowerCase()}>
-              <Link href="/mint" className="lp-fcard-link" aria-label={`${t(`finish.${c.finish}`)} · ${formatTradePrice(CAPS[c.finish].perTx)} · $${CAPS[c.finish].daily} ${t("landing2.v2.keys.daily")}`}>
+              <Link href="/mint" className="lp-fcard-link" aria-label={c.finish === "Legendary" ? `${t(`finish.${c.finish}`)} · cosmetic finish on Gold · same $100 / trade · $500 / day caps` : `${t(`finish.${c.finish}`)} · ${formatTradePrice(CAPS[c.finish].perTx)} · $${CAPS[c.finish].daily} ${t("landing2.v2.keys.daily")}`}>
                 <FoilCard finish={c.finish} as="div" className="lp-fcard-card">
                   <div className="top">
                     <span className="tier">{t(`finish.${c.finish}`)}</span>
@@ -42,7 +42,15 @@ export function KeysFan() {
                   <div className="art"><KeyArt n={c.art} alt="" width={430} height={1080} /></div>
                 </FoilCard>
               </Link>
-              <p className="lp-fcard-caps"><span>{formatTradePrice(CAPS[c.finish].perTx)}</span><span className="lp-sep"> · </span><span>${CAPS[c.finish].daily} {t("landing2.v2.keys.daily")}</span></p>
+              <p className="lp-fcard-caps">
+                {c.finish === "Legendary" ? (
+                  <span>Cosmetic finish on Gold — same $100 / trade · $500 / day caps</span>
+                ) : (
+                  <>
+                    <span>{formatTradePrice(CAPS[c.finish].perTx)}</span><span className="lp-sep"> · </span><span>{`$${CAPS[c.finish].daily} ${t("landing2.v2.keys.daily")}`}</span>
+                  </>
+                )}
+              </p>
             </li>
           ))}
         </ul>

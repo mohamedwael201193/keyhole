@@ -50,8 +50,8 @@ function MailMark() {
   );
 }
 
-export function StartView() {
-  const { accountId, connectNear, connectOther, connectSocial, socialEnabled, socialCreating, socialFinishing, via, session, startSession } = useWallet();
+export function StartView({ forceStep }: { forceStep?: "connect" } = {}) {
+  const { accountId, connectNear, connectOther, connectSocial, disconnect, socialEnabled, socialCreating, socialFinishing, via, session, startSession } = useWallet();
   const [acct, setAcct] = useState<AccountState | null>(null);
   const [sawTopup, setSawTopup] = useState(false);
   const [qr, setQr] = useState("");
@@ -75,7 +75,7 @@ export function StartView() {
     setToken(toks[0] ?? null); setHolder(toks.length > 0);
   }, []);
   useEffect(() => { setHolder(null); setToken(null); if (accountId) void loadKeys(accountId); }, [accountId, loadKeys]);
-  useEffect(() => { if (mint.res?.output?.ok && accountId) { const id = setTimeout(() => void loadKeys(accountId), 3000); return () => clearTimeout(id); } }, [mint.res, accountId, loadKeys]);
+  useEffect(() => { if (mint.res?.output?.ok && accountId) { window.dispatchEvent(new Event("keyhole:keys-changed")); const id = setTimeout(() => void loadKeys(accountId), 3000); return () => clearTimeout(id); } }, [mint.res, accountId, loadKeys]);
   useEffect(() => { setLimitsDone(!!accountId && localStorage.getItem(`${LIMITS_FLAG}:${accountId}`) === "1"); }, [accountId]);
   useEffect(() => { if (limits.res?.output?.ok && accountId) { localStorage.setItem(`${LIMITS_FLAG}:${accountId}`, "1"); setLimitsDone(true); vaultCacheInvalidate(accountId, "dashboard"); } }, [limits.res, accountId]);
   // Funded = the dashboard shows a non-zero balance. With a session this read costs no popup.
@@ -103,7 +103,11 @@ export function StartView() {
   }, [accountId]);
   useEffect(() => { if (acct && !acct.exists) setSawTopup(true); }, [acct]);
   useEffect(() => { if (accountId && acct && !acct.exists) QRCode.toString(accountId, { type: "svg", margin: 1, width: 168 }).then(setQr).catch(() => setQr("")); }, [accountId, acct]);
-  const step = startStep({ connected: !!accountId, exists: acct ? acct.exists : null, holder, unlocked, limitsDone, funded });
+  // ?step=connect asks for the sign-in step even when the account is already signed in (switching
+  // accounts): stay there until the holder chooses to continue, instead of deriving the next step and
+  // unmounting the sign-in card ~1s after load.
+  const [stayOnConnect, setStayOnConnect] = useState(forceStep === "connect");
+  const step = stayOnConnect ? "connect" : startStep({ connected: !!accountId, exists: acct ? acct.exists : null, holder, unlocked, limitsDone, funded });
   useEffect(() => { setMintTx(loadMintTx(accountId)); }, [accountId]);
   useEffect(() => { const h = mint.res?.output?.tx; if (mint.res?.output?.ok && accountId) { saveMintTx(accountId, h); setMintTx(loadMintTx(accountId)); } }, [mint.res, accountId]);
   const wasUnlocked = useRef(false);
@@ -129,6 +133,13 @@ export function StartView() {
       <StepTransition k={step}>
         {step === "connect" ? (
           <div className="sg-connect" data-testid="start-step-connect">
+            {accountId && (
+              <p className="sg-signed-in" data-testid="start-signed-in">
+                Signed in as <b>{accountId}</b>.{" "}
+                <Button variant="secondary" onClick={() => setStayOnConnect(false)} testid="start-continue-setup">Continue setup</Button>{" "}
+                <Button variant="secondary" onClick={() => { void disconnect(); }} testid="start-sign-out">Sign out</Button>
+              </p>
+            )}
             {socialFinishing && !socialCreating && <p className="sg-busy" data-testid="start-finishing"><Busy l="Finishing Google sign-in" /></p>}
             {socialCreating && <p className="sg-busy" data-testid="start-creating"><Busy l="Creating your NEAR account" /></p>}
             {!socialCreating && !socialFinishing && <>

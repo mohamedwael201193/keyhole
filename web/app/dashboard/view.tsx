@@ -11,6 +11,8 @@ import { minutesLeft } from "@/lib/session";
 import { useValueLock } from "@/lib/valueLock";
 import { levelUpOf, progressOf, type HistEntry } from "@/lib/dashboard";
 import { vaultCacheInvalidate } from "@/lib/vaultCache";
+import { PayoutCredit } from "@/components/PayoutCredit";
+import { LIMITS_FLAG } from "@/lib/start";
 
 type RawBalances = Parameters<typeof assetRows>[0];
 
@@ -46,6 +48,10 @@ export function DashboardView() {
   // on a full load before the wallet hydrates.
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  // Whether this account has chosen safe limits (the same flag the old /start limits step set).
+  // Read after mount so the server render and the first client render agree.
+  const [limitsDone, setLimitsDone] = useState(false);
+  useEffect(() => { if (accountId) setLimitsDone(localStorage.getItem(`${LIMITS_FLAG}:${accountId}`) === "1"); else setLimitsDone(false); }, [accountId]);
 
   // A level-up result belongs to one account: switching or disconnecting clears it. (The provider clears the
   // shared reads itself on an account change.)
@@ -146,25 +152,31 @@ export function DashboardView() {
     noRaise: !!levelOut && !levelled,
     onLevelUp: () => { void runLevel({}); },
   };
+  const overviewProps: React.ComponentProps<typeof Overview> = {
+    accountId,
+    restoring: restoring || !mounted,
+    keys: keysView,
+    unlock: unlockView,
+    balance: balanceView,
+    activity: activityView,
+    tier: tierView,
+    valueLocked: valueLock.locked,
+    limitsDone,
+    signIn: {
+      socialEnabled,
+      onGoogle: () => connectSocial("google"),
+      onEmail: () => connectSocial("email"),
+      onNear: () => { void connectNear(); },
+      onMeteor: () => connectMeteor(),
+      onOther: () => { void connectOther(); },
+    },
+  };
 
   return (
-    <Overview
-      accountId={accountId}
-      restoring={restoring || !mounted}
-      keys={keysView}
-      unlock={unlockView}
-      balance={balanceView}
-      activity={activityView}
-      tier={tierView}
-      valueLocked={valueLock.locked}
-      signIn={{
-        socialEnabled,
-        onGoogle: () => connectSocial("google"),
-        onEmail: () => connectSocial("email"),
-        onNear: () => { void connectNear(); },
-        onMeteor: () => connectMeteor(),
-        onOther: () => { void connectOther(); },
-      }}
-    />
+    <>
+      {/* The payout notice lives on the holder's home page (it owns payout), not site-wide in the shell. */}
+      <PayoutCredit />
+      <Overview {...overviewProps} />
+    </>
   );
 }

@@ -6,16 +6,20 @@ import { minutesLeft } from "@/lib/session";
 import { capsOf } from "@/lib/dashboard";
 import { errorText } from "@/lib/i18n";
 import { Icon } from "@/components/v7/icons";
+import Link from "next/link";
+import { dashHref } from "@/lib/dashboardSections";
 
 /**
  * The session pill in the app top bar. Locked: one tap starts the 30-minute session (one signature, or in-page for
  * Google and email). Unlocked: the pill opens a small popover that says what the session allows and offers Revoke.
- * Hidden when signed out or when the holder has no key. It only calls useWallet() and useKeyStore(); the session logic
+ * The pill never vanishes for a signed-in account: while the key read is still running it reads "Checking your key…",
+ * and when the account holds no key it links to /mint. Only a signed-out visitor sees nothing here.
+ * It only calls useWallet() and useKeyStore(); the session logic
  * stays in lib/wallet.tsx (startSession, revokeSession) and lib/session.ts.
  */
 export function SessionPill() {
   const { accountId, session, startSession, revokeSession, via } = useWallet();
-  const { primary, tier } = useKeyStore();
+  const { primary, tier, status, refresh } = useKeyStore();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -47,7 +51,42 @@ export function SessionPill() {
     return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("pointerdown", onDown); };
   }, [pop]);
 
-  if (!accountId || !tokenId) return null;
+  if (!accountId) return null;
+
+  // Signed in, but the key read has not settled yet (or has never run): the pill stays visible as a
+  // disabled "Checking your key…" instead of vanishing — a vanished pill left a signed-in holder with no
+  // unlock affordance anywhere while a mint's key was still propagating to the store.
+  if (!tokenId && (status === "idle" || status === "loading")) {
+    return (
+      <div className="sp" ref={wrap}>
+        <button type="button" className="sp-pill" disabled aria-busy data-testid="session-pill" data-state="checking">
+          <Icon name="lock" size={16} />
+          <span>Checking your key…</span>
+        </button>
+      </div>
+    );
+  }
+  if (!tokenId && status === "error") {
+    return (
+      <div className="sp" ref={wrap}>
+        <button type="button" className="sp-pill" onClick={() => refresh()} data-testid="session-pill" data-state="key-error">
+          <Icon name="lock" size={16} />
+          <span>Key check failed · Try again</span>
+        </button>
+      </div>
+    );
+  }
+  // Signed in, key read settled, no key on this account: link to /mint instead of hiding.
+  if (!tokenId) {
+    return (
+      <div className="sp" ref={wrap}>
+        <Link href={dashHref("/mint")} className="sp-pill" data-testid="session-pill" data-state="no-key">
+          <Icon name="key" size={16} />
+          <span>No key on this account</span>
+        </Link>
+      </div>
+    );
+  }
 
   const unlock = async () => {
     setBusy(true); setErr(null);

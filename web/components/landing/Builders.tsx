@@ -33,7 +33,7 @@ export function Builders({ hash, orders }: { hash: string; orders: ReturnType<ty
             <a href={`${REPO}/blob/main/SECURITY.md`} target="_blank" rel="noopener noreferrer" className="lp-textlink">SECURITY.md ↗</a>
             <a href={`${REPO}/blob/main/VERIFY.md`} target="_blank" rel="noopener noreferrer" className="lp-textlink">VERIFY.md ↗</a>
             <span className="lp-hashline">{orders.label} <b data-testid="orders-stat" title={orders.detail}>{orders.total}</b> <em>{t("landing2.v2.builders.recordTag")}</em></span>
-            <span className="lp-hashline">{t("landing2.v2.builders.build")} <a href="/judge" className="mono" data-testid="hash-stat">{hash}</a> <em>{t("landing2.v2.builders.buildTag")}</em></span>
+            <span className="lp-hashline">{t("landing2.v2.builders.build")} <a href="/verify/path" className="mono" data-testid="hash-stat">{hash}</a> <em>{t("landing2.v2.builders.buildTag")}</em></span>
           </p>
         </div>
       </div>

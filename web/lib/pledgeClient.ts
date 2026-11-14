@@ -48,6 +48,8 @@ export type PledgeConfig = {
   custody_contract: AccountId;
   network: string;
   lending_enabled: boolean;
+  /** The last-used loan nonce, not the next one: the contract increments then assigns (pledge.rs),
+   * so after two loans this reads "2" and the next loan would be nonce 3. Do not read it as a collision. */
   next_loan_nonce: U64;
   next_payout_nonce: U64;
   treasury_available: U128;

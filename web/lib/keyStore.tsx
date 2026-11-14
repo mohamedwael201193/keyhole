@@ -138,6 +138,11 @@ export function useKeyStore(): KeyStore {
   return c;
 }
 
+/** The key store when the caller may render outside the provider (account menu): null instead of throwing. */
+export function useKeyStoreOptional(): KeyStore | null {
+  return useContext(Ctx);
+}
+
 /**
  * The holder's key as /vault and /swap read it, from the shared store (no lookup of their own). Pure, so it is unit-tested.
  * `lookingUp`: the first read for this account is still running (a cached answer is never "looking up").

@@ -302,6 +302,7 @@
 .ft-col a { display: inline-flex; align-items: center; min-height: 40px; color: #EDE6D8; text-decoration: none; font-weight: 600; }
 .ft-col a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .ft-bar { max-width: 1328px; margin: 44px auto 0; padding-top: 22px; border-top: 1px solid #EDE6D833; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+.ft-contract { display: inline-flex; flex-wrap: wrap; gap: 0 6px; }
 .ft-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 
 /* ---------- Hover layer (fine pointers): every linked card lifts 2 px, buttons step, underlines draw ---------- */

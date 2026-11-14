@@ -100,6 +100,9 @@
 .kh-panel { display: grid; gap: var(--space-3); align-content: start; min-width: 0; }
 .kh-panel > h2 { margin: 0; }
 .kh-panel-line { margin: 0; font-size: var(--ds-body); line-height: 1.5; color: var(--ink-2); }
+/* Label and value are separate elements with an explicit gap: a plain text space between a label and a
+   value expression collapsed in the live render ("Available credit:0.03NEAR"), so the gap is structural now. */
+.kh-panel-line--spaced { display: flex; flex-wrap: wrap; gap: 0 6px; }
 .kh-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .kh-panel-note { margin: 0; font-size: var(--ds-small); line-height: 1.5; color: var(--muted); }
 

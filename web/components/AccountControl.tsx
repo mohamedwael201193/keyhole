@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import { useWallet } from "@/lib/wallet";
+import { useKeyStoreOptional } from "@/lib/keyStore";
+import { minutesLeft } from "@/lib/session";
 import { compactAccount, shortAccount } from "@/lib/near";
 import { acct } from "@/lib/config";
 import { copyText } from "@/lib/copyText";
@@ -14,7 +16,13 @@ import { copyText } from "@/lib/copyText";
  */
 export function AccountControl() {
   const { t } = useI18n();
-  const { accountId, connect, disconnect, restoring, mismatch } = useWallet();
+  const { accountId, connect, disconnect, restoring, mismatch, session, startSession, revokeSession } = useWallet();
+  // The account menu is the one place a holder looks when the top-bar pill is missed: offer the same
+  // unlock there when this account holds a key. Outside the app shell there is no key store; then no
+  // unlock entry is shown rather than throwing.
+  const keyStore = useKeyStoreOptional();
+  const tokenId = keyStore?.primary?.token_id ?? null;
+  const live = !!(session && tokenId && session.account === accountId && session.token_id === tokenId && minutesLeft(session) > 0);
   const path = usePathname();
   const [menu, setMenu] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -47,8 +55,11 @@ export function AccountControl() {
         {menu && (
           <div id="acct-menu" className="acct-menu" role="menu" data-testid="account-menu">
             <p className="id" data-testid="account-id">{accountId}</p>
+            {tokenId && !live && <button type="button" role="menuitem" onClick={() => { setMenu(false); void startSession(tokenId); }} data-testid="account-unlock">Unlock</button>}
+            {tokenId && live && <button type="button" role="menuitem" onClick={() => { setMenu(false); void revokeSession(); }} data-testid="account-lock">Lock now</button>}
             <button type="button" role="menuitem" onClick={() => void copyAccount()}>{copied ? t("nav.copied") : t("nav.copy")}</button>
             <a role="menuitem" href={acct(accountId)} target="_blank" rel="noreferrer">{t("nav.explorer")}</a>
+            <button type="button" role="menuitem" onClick={() => { setMenu(false); void disconnect().then(() => connect()); }} data-testid="account-switch">Switch account</button>
             <button type="button" role="menuitem" onClick={() => { setMenu(false); void disconnect(); }}>{t("nav.disconnect")}</button>
           </div>
         )}
@@ -56,7 +67,8 @@ export function AccountControl() {
     );
   }
   if (restoring) {
-    return <button type="button" className="cw" disabled data-testid="wallet-restoring" aria-busy="true">{t("nav.connect")}</button>;
+    // A disabled "Connect wallet" while the session restores reads as a dead button; say what is happening.
+    return <button type="button" className="cw" disabled data-testid="wallet-restoring" aria-busy="true">{t("nav.signingBackIn")}</button>;
   }
   return <button type="button" className="cw" onClick={() => void connect()} disabled={!hydrated} data-hydrated={hydrated ? "1" : "0"} data-testid="connect">{t("nav.connect")}</button>;
 }

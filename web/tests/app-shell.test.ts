@@ -11,7 +11,7 @@ vi.mock("@/lib/wallet", () => ({
   useWallet: () => ({ accountId: null, connect: () => {}, disconnect: async () => {}, restoring: false, mismatch: null }),
 }));
 
-import { APP_NAV, APP_ROUTES, AppNav, AppShell, AppTabs, hashOf, isAppRoute, isItemActive, pageTitle, type AppNavItem } from "@/components/app/AppShell";
+import { APP_NAV, APP_ROUTES, AppNav, AppShell, AppTabs, hashOf, isAppRoute, isItemActive, isMintActive, pageTitle, type AppNavItem } from "@/components/app/AppShell";
 import { SiteFrame } from "@/components/SiteFrame";
 import { I18nProvider } from "@/lib/i18n";
 
@@ -74,9 +74,15 @@ describe("active state", () => {
     expect(on.map((i) => i.id)).toEqual(["vault"]);
   });
 
-  it("Keys is active on /keys, /gallery, a key page and /mint (mint lives inside keys)", () => {
-    for (const p of ["/keys", "/gallery", "/key", "/mint"]) expect(isItemActive(item("keys"), p, ""), p).toBe(true);
+  it("Keys is active on /keys, /gallery and a key page; /mint lights the separate Mint link instead", () => {
+    for (const p of ["/keys", "/gallery", "/key"]) expect(isItemActive(item("keys"), p, ""), p).toBe(true);
     expect(isItemActive(item("keys"), "/vault", "")).toBe(false);
+    expect(isItemActive(item("keys"), "/mint", "")).toBe(false);
+    expect(isMintActive("/mint", "")).toBe(true);
+    expect(isMintActive("/mint/extra", "")).toBe(true);
+    expect(isMintActive("/dashboard", "#mint")).toBe(true);
+    expect(isMintActive("/keys", "")).toBe(false);
+    expect(isMintActive("/vault", "")).toBe(false);
   });
 
   it("Swap is active on /swap only; the settlements history belongs to Activity", () => {
@@ -91,11 +97,14 @@ describe("active state", () => {
     expect(isItemActive(item("keys"), "/pledge", "")).toBe(false);
   });
 
-  it("only one item is active on each app route", () => {
-    for (const p of ["/vault", "/mint", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/pledge"]) {
+  it("only one item is active on each app route (on /mint the separate Mint link lights instead)", () => {
+    for (const p of ["/vault", "/settle", "/swap", "/keys", "/gallery", "/key", "/pnl", "/pledge"]) {
       const on = APP_NAV.flatMap((g) => g.items).filter((i) => isItemActive(i, p, ""));
       expect(on.length, p).toBe(1);
     }
+    const onMint = APP_NAV.flatMap((g) => g.items).filter((i) => isItemActive(i, "/mint", ""));
+    expect(onMint).toEqual([]);
+    expect(isMintActive("/mint", "")).toBe(true);
   });
 
   it("nothing is active without a pathname (server render before the route is known)", () => {

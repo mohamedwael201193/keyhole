@@ -19,6 +19,7 @@ import {useWallet} from "@/lib/wallet";
 import {usePayoutStorageFee} from "@/lib/usePayoutStorageFee";
 import {LivePledge} from "./LivePledge";
 import {ComparisonCard} from "./ComparisonCard";
+import { PayoutCredit } from "@/components/PayoutCredit";
 
 const KEY_ART = "/heirloom/keys/k03.webp";
 const USDC_ICON = "/tokens/usdc.svg";
@@ -71,7 +72,7 @@ export function PledgeView() {
       if(cancel)return;setLoan(L);setChainNowNs(now);setLoaded(true);setLoadError("");
       if(L)setMode(["DisbursementPending","Active","UnlockPending"].includes(L.state)?"active":"form");
     }).catch(()=>{if(!cancel){setLoaded(true);setChainNowNs(null);setLoadError("On-chain status unavailable. Do not retry a money operation; reload the original loan.");}});
-    void refresh();const timer=setInterval(()=>{if(document.visibilityState!=="hidden")void refresh();},5000);
+    void refresh();const timer=setInterval(()=>{if(document.visibilityState!=="hidden")void refresh();},15_000);
     return () => { cancel = true;clearInterval(timer); };
   }, [live, keys.primary, client]);
 
@@ -100,6 +101,9 @@ export function PledgeView() {
   if(live) return <LivePledge role="borrower" tokenId={keys.primary?.token_id}/>;
 
   return (
+    <>
+      {/* The payout notice belongs to this page (it owns payout), not site-wide in the shell. */}
+      <PayoutCredit />
     <div className={`plg${active ? " is-active" : ""}`} data-testid="pledge-page" data-live={live ? "1" : "0"}>
       <div className="plg-ambient" aria-hidden="true">
         <div className="plg-blob a" />
@@ -363,6 +367,7 @@ export function PledgeView() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

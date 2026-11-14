@@ -85,7 +85,7 @@ export function PayoutPanel({ onChanged }: { onChanged?: () => void }) {
       <div>{refreshBtn}</div>
       <div className="kh-panel-note"><Details label="Details" testid="payout-details"><p>The slot uses 320 bytes of permanent storage and the charge is not refunded. It is separate from the 0.01 NEAR refundable listing bond and from gas. Sale proceeds, listing and approval refunds, and mint excess become credits you claim here; they are not paid out on their own.</p></Details></div>
     </> : <>
-      <p className="kh-panel-line">Available credit: {nearText(s.credit)} NEAR. {s.pending ? "A payout is on its way. Funds may already have arrived, so do not send it again." : "Claiming sends it to your wallet."}</p>
+      <p className="kh-panel-line kh-panel-line--spaced"><span>Available credit:</span><span>{nearText(s.credit)} NEAR.</span><span>{s.pending ? "A payout is on its way. Funds may already have arrived, so do not send it again." : "Claiming sends it to your wallet."}</span></p>
       <div><Button disabled={busy || !!s.pending || !!operation || BigInt(s.credit) === 0n} onClick={()=>void act(true)}>Claim native NEAR</Button></div>
       <div>{refreshBtn}</div>
       <div className="kh-panel-note"><Details label="Details" testid="payout-details"><p>The credit is held by the contract and has not been delivered yet.{s.pending ? ` Payout ${s.pending.nonce}: ${nearText(s.pending.amount)} NEAR.` : ""}</p></Details></div>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ErrorBox, Attested, OfflineState } from "@/components/Result";
 import Link from "next/link";
 import { InCardProgress, InCardSuccess } from "@/components/InCard";
@@ -51,12 +51,22 @@ const WHAT = [
 
 export function MintView({ initialOnline }: { initialOnline: boolean }) {
   const { t, fmtUsd } = useI18n();
-  const { accountId, connect } = useWallet();
+  const { accountId, connect, restoring } = useWallet();
   const store = useKeyStore();
   const m = useSigned("mint");
   const online = useHealth(initialOnline);
   const o = m.res?.output;
   const revealed = !!(o?.ok && o.token_id);
+  // A mint changes what the key store holds: re-read the holder's keys at once (once per minted token),
+  // so the unlock affordances stop gating on the pre-mint snapshot — the store otherwise serves its cached
+  // "no key" answer until a manual retry, and every unlock entry vanishes with it.
+  const refreshedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!revealed || !o?.token_id || refreshedFor.current === String(o.token_id)) return;
+    refreshedFor.current = String(o.token_id);
+    store.refresh();
+    window.dispatchEvent(new Event("keyhole:keys-changed"));
+  }, [revealed, o?.token_id, store]);
   const idn = revealed ? keyIdentity(String(o.token_id), 1) : null;
   /** A key the store has read for this account. Not shown while the store is still reading. */
   const holds = !!accountId && store.status === "ready" && store.keys.length > 0;
@@ -149,7 +159,7 @@ export function MintView({ initialOnline }: { initialOnline: boolean }) {
                 <dl className="km-dl">
                   <div>
                     <dt>Minting to</dt>
-                    <dd data-testid="mint-to">{accountId ? <span className="km-mono">{accountId}</span> : "Sign in to choose the account"}</dd>
+                    <dd data-testid="mint-to">{accountId ? <span className="km-mono">{accountId}</span> : restoring ? "Reading…" : "Sign in to choose the account"}</dd>
                   </div>
                   <div>
                     <dt>Network</dt>

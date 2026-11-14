@@ -14,7 +14,6 @@ import { KeyStoreProvider } from "@/lib/keyStore";
 import { VaultDataProvider } from "@/lib/vaultData";
 import { useWallet } from "@/lib/wallet";
 import { PayoutPanel } from "@/components/PayoutPanel";
-import { PayoutCredit } from "@/components/PayoutCredit";
 import { SessionPill } from "./SessionPill";
 
 /**
@@ -51,8 +50,9 @@ export type AppNavItem = {
 export type AppNavGroup = { title: string; items: AppNavItem[] };
 
 /**
- * Overview, Swap, Vault, Keys, Pledge, Activity and My proof: the sections of /dashboard. Mint lives inside Keys, so Keys stays
- * lit on #mint. The bottom tabs are the first four of these (the rest are reached from More on phones). The developer pages
+ * Overview, Swap, Vault, Keys, Pledge, Activity and My proof: the sections of /dashboard. Mint has its own
+ * active state on its link (below), so Keys is lit only for the keys routes — never for /mint.
+ * The bottom tabs are the first four of these (the rest are reached from More on phones). The developer pages
  * are not in this list on purpose: they are linked from the foot of the sidebar (components/app/AppShell.tsx).
  */
 export const APP_NAV: AppNavGroup[] = [
@@ -62,7 +62,7 @@ export const APP_NAV: AppNavGroup[] = [
       { id: "overview", label: "Overview", href: sectionHref("overview"), icon: "home", section: "overview", match: ["/dashboard"] },
       { id: "swap", label: "Swap", href: sectionHref("swap"), icon: "swap", section: "swap", match: ["/swap"] },
       { id: "vault", label: "Vault", href: sectionHref("vault"), icon: "vault", section: "vault", match: ["/vault", "/pnl"] },
-      { id: "keys", label: "Keys", href: sectionHref("keys"), icon: "key", section: "keys", match: ["/keys", "/gallery", "/key", "/mint"] },
+      { id: "keys", label: "Keys", href: sectionHref("keys"), icon: "key", section: "keys", match: ["/keys", "/gallery", "/key"] },
       { id: "pledge", label: "Pledge", href: sectionHref("pledge"), icon: "pledge", section: "pledge", match: ["/pledge"] },
       { id: "activity", label: "Activity", href: sectionHref("activity"), icon: "activity", section: "activity", match: ["/settle"] },
       { id: "proof", label: "My proof", href: sectionHref("proof"), icon: "shield", section: "proof", match: [] },
@@ -78,6 +78,13 @@ export function isItemActive(item: AppNavItem, pathname: string | null | undefin
   // On /dashboard the hash picks the section; on an old route the route does.
   if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return navSectionOf(parseSectionHash(hash).section) === item.section;
   return item.match.some((m) => pathname === m || pathname.startsWith(m + "/"));
+}
+
+/** Whether the "Mint a key" sidebar link is the current page. Pure, so the active state is unit-tested.
+ * It is separate from isItemActive because Mint has its own link: Keys no longer matches /mint, so on /mint
+ * no APP_NAV item is active and this link lights instead. */
+export function isMintActive(pathname: string | null | undefined, hash: string): boolean {
+  return pathname === "/mint" || pathname?.startsWith("/mint/") === true || (pathname === "/dashboard" && parseSectionHash(hash).section === "mint");
 }
 
 /** The title shown in the top bar for a route. Pure. */
@@ -120,6 +127,8 @@ export function AppNav({ pathname, hash, mint = false, onNavigate }: { pathname:
           <ul>
             {group.items.map((item) => {
               const on = isItemActive(item, pathname, hash);
+              // "Mint a key" has its own active state (the Keys item no longer matches /mint).
+              const mintOn = isMintActive(pathname, hash);
               return (
                 <Fragment key={item.id}>
                   <li>
@@ -136,7 +145,7 @@ export function AppNav({ pathname, hash, mint = false, onNavigate }: { pathname:
                   </li>
                   {mint && item.id === "keys" && (
                     <li>
-                      <Link href={sectionHref("mint")} className="app-link app-link-cta" data-testid="app-nav-mint" onClick={() => onNavigate?.(sectionHref("mint"))}>
+                      <Link href={sectionHref("mint")} className={`app-link app-link-cta${mintOn ? " on" : ""}`} aria-current={mintOn ? "page" : undefined} data-testid="app-nav-mint" onClick={() => onNavigate?.(sectionHref("mint"))}>
                         <AppNavIcon name="key" />
                         <span>Mint a key</span>
                       </Link>
@@ -234,7 +243,7 @@ function AppShellFrame({ children }: { children: ReactNode }) {
             </p>
           </div>
         </aside>
-        <main id="main" className="app-main" tabIndex={-1}><PayoutCredit key={accountId??"signed-out"} embeddedHere={vaultOpen || (pathname === "/dashboard" && parseSectionHash(hash).section === "pledge")} />{children}{vaultOpen && <PayoutPanel />}</main>
+        <main id="main" className="app-main" tabIndex={-1}>{children}{vaultOpen && <PayoutPanel />}</main>
       </div>
       <AppTabs pathname={pathname} hash={hash} moreOpen={open} onMore={() => setOpen((v) => !v)} />
     </div>

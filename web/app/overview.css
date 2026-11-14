@@ -150,6 +150,7 @@
   display: inline-flex; align-items: center; gap: 8px; height: 40px; min-height: 40px; padding: 0 16px;
   border-radius: var(--radius-pill); border: 1px solid var(--card-edge); background: var(--raised); color: var(--ink);
   box-shadow: var(--shadow-1); font: 600 14px/1 var(--font-ui); white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums;
+  text-decoration: none;
   transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 .sp-pill svg { flex: none; color: var(--ink-2); }

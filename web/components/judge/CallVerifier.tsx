@@ -116,7 +116,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
       <p className="lead vf-call-only">{t("verify.lead")}</p>
       <div className="tally" data-testid="tally" data-n={tally ?? ""}>
         <b className="tn">{tally ?? "·"}{tally != null && total != null && <span>/{total}</span>}</b>
-        <div><b data-testid="tally-head">{tally != null && total != null ? t("verify.tallyH", { n: tally, total }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : busy ? <span data-testid="verify-running"><Spinner label="Checking" /> Checking in your browser… {six ? six.filter(Boolean).length + (dcap ? dcap.checks.filter((c) => c.pass).length : 0) : 0} checks passed so far</span> : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small></div>
+        <div><b data-testid="tally-head">{tally != null && total != null ? t("verify.tallyH", { n: tally, total }) : pcsDown ? t("verify.pcsDown", { n: partial ?? 0 }) : busy ? <span data-testid="verify-running"><Spinner label="Checking" /> Checking in your browser… {six ? six.filter(Boolean).length + (dcap ? dcap.checks.filter((c) => c.pass).length : 0) : 0} checks passed so far</span> : t("verify.tallyWait")}</b><small>{t("verify.tallyD")}</small>{a && tally != null && total != null && <small data-testid="tally-builds">Checks run against worker {a.executed_wasm_sha256.slice(0, 8)} · current worker {curShort}…</small>}</div>
         <span className="pp-meter" aria-hidden="true"><i style={{ width: `${tally != null && total != null ? (tally / total) * 100 : 0}%` }} /></span>
       </div>
       <div className="res" data-state={rstate}>
@@ -139,7 +139,7 @@ export function CallVerifier({ initial }: { initial: string | null }) {
           <p className="eb" style={{ marginBottom: 10 }}>{t("verify.report")}</p>
           <TrustLegend />
           <form className="field" onSubmit={(e) => { e.preventDefault(); void go(id); }} style={{ marginBottom: 8 }}>
-            <label htmlFor="cid" className="vlabel">Call ID <small>(an enclave run; prefilled with the latest published one, or paste any from /atlas)</small></label>
+            <label htmlFor="cid" className="vlabel">Call ID <small>(an enclave run; prefilled with the call from the link, or paste any from /atlas)</small></label>
             <input id="cid" className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder={t("verify.placeholder")} spellCheck={false} />
           </form>
           <section className="pp-group" aria-labelledby="pp-g1">

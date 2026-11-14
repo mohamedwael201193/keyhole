@@ -86,7 +86,7 @@ export function KeyDetails({ tokenId, owner, tier, viewer, sale, proofHref, sale
           <div><dt>Serial</dt><dd className="kd-mono">{serial}</dd></div>
           <div><dt>{t("field.cipher")}</dt><dd className="kd-cipher"><Cipher bits={id.bits} width={112} height={22} /><span className="kd-mono">{id.bits}</span></dd></div>
           <div><dt>Token</dt><dd className="kd-mono kd-token"><span>{tokenId}</span><CopyButton value={tokenId} label="Copy token id" testid="kd-copy-token" /></dd></div>
-          <div><dt>Holder</dt><dd>{owner === undefined ? "Reading…" : owner === null ? "Not readable right now." : <span className="kd-mono">{shortAccount(owner, 8)}</span>}{isOwner && <StatusChip tone="success">You hold it</StatusChip>}</dd></div>
+          <div><dt>Holder</dt><dd>{owner === undefined ? "Reading…" : owner === null ? "Not readable right now." : (<><TxLinkPill account={owner} label={/^[0-9a-f]{64}$/.test(owner) ? shortAccount(owner, 8) : owner} testid="kd-holder" />{/^[0-9a-f]{64}$/.test(owner) && <span className="kd-note"> Implicit account</span>}</>)}{isOwner && <StatusChip tone="success">You hold it</StatusChip>}</dd></div>
           <div><dt>Contract</dt><dd><TxLinkPill account={KEYS_CONTRACT} label={KEYS_CONTRACT} testid="kd-contract" /></dd></div>
         </dl>
 

@@ -9,6 +9,8 @@ import { canonical } from "@/lib/verify";
 import enJson from "../messages/en.json";
 
 const en = enJson as unknown as Record<string, Record<string, string>>;
+/** The live v2 landing strings (nested objects, so they need their own shape — the flat Record cast above types every leaf as a string). */
+const liveLanding = enJson as unknown as { landing2: { v2: { hero: { body: string }; keys: { preview: string; mintable: string } } } };
 
 const ev = (id: string) => JSON.parse(readFileSync(`${__dirname}/../public/evidence/${id}.json`, "utf8"));
 const sha = (o: unknown) => createHash("sha256").update(canonical(o)).digest("hex");
@@ -64,11 +66,10 @@ describe("settle page data stays true", () => {
 });
 
 describe("copy matches the product", () => {
-  const land = en.land;
   const mint = en.mint;
-  it("home does not promise eight vault assets", () => { expect(land.chainH).not.toMatch(/eight assets/i); expect(land.chainLead).toMatch(/USDC and wNEAR/); });
-  it("home gallery is labelled as concept art, not minted tokens", () => expect(land.concept).toMatch(/not minted tokens/));
-  it("mint says Bronze is what minting issues today and Legendary is not a fourth cap", () => { expect(mint.bronzeOnly).toMatch(/today issues a Bronze key/); expect(land.tierLead).toMatch(/not a fourth cap/); });
+  it("home does not promise eight vault assets", () => { expect(JSON.stringify(liveLanding.landing2.v2)).not.toMatch(/eight assets/i); expect(liveLanding.landing2.v2.hero.body).not.toMatch(/eight assets/i); });
+  it("home gallery is labelled as concept art, not minted tokens", () => { expect(liveLanding.landing2.v2.keys.preview).toMatch(/preview/i); expect(liveLanding.landing2.v2.keys.mintable).toMatch(/mintable/i); });
+  it("mint says Bronze is what minting issues today and Legendary is not a fourth cap", () => { expect(mint.bronzeOnly).toMatch(/today issues a Bronze key/); expect(mint.bronzeOnly).toMatch(/not a fourth cap/); });
   it("verify explains worker_measurement is not the wasm hash", () => expect(en.verify.hashesNote).toMatch(/RTMR3/));
 });
 

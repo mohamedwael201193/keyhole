@@ -3,7 +3,10 @@ import { shareText, type Counts } from "./orders";
 
 /**
  * The four stat tiles. Every figure comes from the real rows (countsOf). A share is a share of the orders whose status is read;
- * before any read it says "Not read yet" instead of a percentage. There is no trend arrow: no earlier period is read.
+ * before any read it says "Not read yet" instead of a percentage. The settled tile says "success rate of read orders", not just
+ * "success rate": at first paint only the recorded vault trade is read (1 of 1), and "100% success rate" would read as if every
+ * listed order had settled while the other five are still loading (the total tile names them: "5 reading live"). There is no
+ * trend arrow: no earlier period is read.
  * When `ready` is false (the source is not readable yet, for example "Your vault" while locked), no figure is shown: each tile
  * shows a dash and `notReadText` says why, so a locked source never reads as zero trades.
  */
@@ -26,7 +29,7 @@ export function ActivityStats({ counts: c, ready = true, notReadText = "Not read
   return (
     <div className="act-stats" data-testid="act-stats" data-ready="1">
       <StatTile tone="total" icon="layers" label={totalLabel} value={c.total} sub={pending.length ? pending.join(" · ") : (totalDetail ?? "Every status read")} testid="act-stat-total" />
-      <StatTile tone="ok" icon="check" label="Settled" value={c.settled} sub={share(c.settled, "success rate")} testid="act-stat-settled" />
+      <StatTile tone="ok" icon="check" label="Settled" value={c.settled} sub={share(c.settled, "success rate of read orders")} testid="act-stat-settled" />
       <StatTile tone="warn" icon="arrow-down" label="Refunded" value={c.refunded} sub={share(c.refunded, "of read orders")} testid="act-stat-refunded" />
       <StatTile tone="bad" icon="x" label="Failed" value={c.failed} sub={share(c.failed, "of read orders")} testid="act-stat-failed" />
     </div>

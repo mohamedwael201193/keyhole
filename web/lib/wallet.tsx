@@ -383,10 +383,21 @@ function NativeWalletProvider({ children }: { children: ReactNode }) {
   }, [ensure]);
   const disconnect = useCallback(async () => {
     setSession(null); stash.current = null; await revokeStored(accountId);
-    if (owner.current === "privy") { await privy.current?.logout().catch(() => {}); localStorage.removeItem(PRIVY_FLAG); }
-    else if (owner.current === "nc") { const nc = await nearConnector(); await nc.disconnect().catch(() => {}); localStorage.removeItem(NC_WALLET_KEY); }
-    else { await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); }
-    owner.current = null; setVia(null); setAccountId(null); setMismatch(null);
+    try {
+      if (owner.current === "privy") { await privy.current?.logout().catch(() => {}); localStorage.removeItem(PRIVY_FLAG); }
+      else if (owner.current === "nc") { const nc = await nearConnector(); await nc.disconnect().catch(() => {}); localStorage.removeItem(NC_WALLET_KEY); }
+      else { await ensure(); const w = await ref.current!.selector.wallet(); await w.signOut(); }
+    } catch { /* A wallet sign-out that throws must not leave the account signed in locally. */ }
+    finally {
+      // Local state clears even when the wallet sign-out throws, and the wallet selector's remembered
+      // connection is forgotten too, so the next load does not silently restore the account that was
+      // just signed out of (the "Disconnect only locks the session" failure).
+      localStorage.removeItem("near-wallet-selector:selectedWalletId");
+      localStorage.removeItem("near-wallet-selector:recentlySignedInWallets");
+      localStorage.removeItem(NC_WALLET_KEY);
+      localStorage.removeItem(PRIVY_FLAG);
+      owner.current = null; setVia(null); setAccountId(null); setMismatch(null);
+    }
   }, [ensure, accountId]);
 
   const sign = useCallback(async (op: Op, params: Record<string, unknown> = {}): Promise<SignedAuth> => {
