@@ -104,10 +104,17 @@ impl Step {
     /// Provider row types accepted for this hop. The unshield hop also accepts the
     /// confidential_unshield spelling by analogy with the confidential_swap type observed
     /// live for swaps (NOT yet observed for unshield); any other type refuses and is named.
+    /// The storage hop accepts `call` (the documented spelling) and `storage_deposit`
+    /// (observed live: the provider returns type=storage_deposit for a
+    /// POST /wallet/v1/storage-deposit request — reconcile call
+    /// c76c92fc-604a-41d6-8ffa-e70f24121cc7, attestation 1386828, returned
+    /// exactly that row and the `call`-only allowlist rejected it before
+    /// reading its status; same class of gap as the confidential_swap
+    /// precedent in guarded.rs).
     pub fn request_types(self) -> &'static [&'static str] {
         match self {
             Self::Unshield => &["confidential", "confidential_unshield"],
-            Self::Storage => &["call"],
+            Self::Storage => &["call", "storage_deposit"],
             Self::Withdraw => &["withdraw"],
         }
     }
