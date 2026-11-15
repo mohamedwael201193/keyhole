@@ -4,8 +4,6 @@
 
 <p align="center"><b>KEYHOLE: an NFT that is a private trading account. Sell the key. The private account goes with it.</b> Hold the key, control the money. The account, its record and its tier move to the buyer; the seller is refused on the next request. Proof: <a href="docs/evidence/ownership-and-limits/README.md">ownership and limits</a> and <a href="THREAT_MODEL.md">THREAT_MODEL.md</a>.</p>
 
-![KEYHOLE home page — the live app on mainnet](web/screenshots/desktop-home.webp)
-
 <p align="center">
 <a href="https://github.com/mohamedwael201193/keyhole/actions/workflows/ci.yml"><img src="https://github.com/mohamedwael201193/keyhole/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 <a href="https://nearblocks.io/address/keyhole-devmo.near"><img src="https://img.shields.io/badge/NEAR%20mainnet-keyhole--devmo.near-00EC97" alt="Keys contract on NEAR mainnet"></a>
@@ -22,23 +20,27 @@
 <a href="VERIFY.md">Verify the deployment</a>
 </p>
 
+**Submission snapshot: tag hackathon-submission (b3f0dd1). Later commits are docs and CI pin fixes only.**
+
+![The live app — Sell a trading account like an NFT, on NEAR mainnet](web/screenshots/hero.png)
+
 Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepared source/sandbox features are not live. Contract and worker author and deployer: **devmo** ([`keyhole-devmo.near`](https://nearblocks.io/address/keyhole-devmo.near)).
 
 ## The numbers
 
-| | |
-|---|---|
-| Contract tests | **457 unit + 62 sandbox** |
-| TEE worker tests | **920** |
-| CLI tests | **81** |
-| Web tests (Vitest) | **2,311** |
-| Web e2e (Playwright) | **255** |
-| Claims machine | **714 claims** (0 FAIL) |
-| CI | **6/6 jobs** |
-| Mainnet loans | **2** (one repaid, one defaulted) |
-| Lock transactions | **6 FINAL** |
-| Access keys on the contract | **0** |
-| Keys minted | **13** |
+| Measure | Count | Proof |
+|---|---|---|
+| Contract tests | **457 unit + 62 sandbox** | [`contracts/keys`](contracts/keys) |
+| TEE worker tests | **920** | [`tee/worker/src/tests.rs`](tee/worker/src/tests.rs) |
+| CLI tests | **81** | [`cli`](cli) |
+| Web tests (Vitest) | **2,311** | [`web/tests`](web/tests) |
+| Web e2e (Playwright) | **255** | [`web/e2e`](web/e2e) |
+| Claims machine | **714 claims** (0 FAIL) | [`docs/claims.json`](docs/claims.json) |
+| CI | **6/6 jobs** | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| Mainnet loans | **2** (one repaid, one defaulted) | [The two mainnet loans](#the-two-mainnet-loans) |
+| Lock transactions | **6 FINAL** | [The lock](#the-lock--6-transactions-all-final) |
+| Access keys on the contract | **0** | [The lock](#the-lock--6-transactions-all-final) |
+| Keys minted | **13** | [Keys contract](https://nearblocks.io/address/keyhole-devmo.near) |
 
 ## Try it in 60 seconds
 
@@ -51,7 +53,9 @@ Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepar
 | 5 | Open [/pledge](https://www.getkeyhole.xyz/pledge) | The two real mainnet loans: one repaid, one defaulted |
 | 6 | Run the 5-minute check below | The same claims machine this README is built from |
 
-![A KEYHOLE key card — the NFT is the title to the account](web/screenshots/desktop-gallery.webp)
+![Overview — the vault ($0.15), key #3a8f, and the two assets](web/screenshots/overview.png)
+
+![A KEYHOLE key card — the NFT is the title to the account](web/screenshots/keys.png)
 
 ---
 
@@ -72,9 +76,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 4ed46f74b96461637dbe5849996c3cb69bbfd143
+git fetch --depth 1 origin b3f0dd19fb7563f345b7638b5c1f5f90d217ece9
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "4ed46f74b96461637dbe5849996c3cb69bbfd143"
+test "$(git rev-parse HEAD)" = "b3f0dd19fb7563f345b7638b5c1f5f90d217ece9"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -88,9 +92,9 @@ No git? Download all three files from that same immutable source commit and run 
 <!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/4ed46f74b96461637dbe5849996c3cb69bbfd143/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/4ed46f74b96461637dbe5849996c3cb69bbfd143/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/4ed46f74b96461637dbe5849996c3cb69bbfd143/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/b3f0dd19fb7563f345b7638b5c1f5f90d217ece9/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/b3f0dd19fb7563f345b7638b5c1f5f90d217ece9/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/b3f0dd19fb7563f345b7638b5c1f5f90d217ece9/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -167,6 +171,8 @@ The downloadable source bundle carries the same generated live and candidate ide
 ---
 
 ## Proof ledger — every transaction, every call
+
+Jump to: [12 headline rows](#proven-on-near-mainnet--the-12-headline-rows) · [All proof rows](#all-proof-rows-the-table-this-section-started-from-plus-the-earlier-runs-refusals-and-attack-log) · [Two mainnet loans](#the-two-mainnet-loans) · [The lock](#the-lock--6-transactions-all-final) · [Keys on the contract](#keys-on-the-contract--all-13) · [Every on-chain transaction](#every-on-chain-transaction-of-the-project) · [NEP-178 sale](#the-nep-178-sale--what-was-sold) · [Verify the sale yourself](#verify-the-sale-yourself)
 
 ### Proven on NEAR mainnet — the 12 headline rows
 
@@ -265,6 +271,8 @@ Both loans ran on NEAR mainnet against the real contract and the real worker. Lo
 | — | Lending OFF | [`9ANg3eDZ…`](https://nearblocks.io/txns/9ANg3eDZ) |
 
 Final state: token `kae885635fb7065c2` is owned by the lender (`0705fdc1…`), the loan is null, owner epoch is 1, lending is OFF.
+
+![The two mainnet loans — Loan A REPAID, Loan B DEFAULTED](web/screenshots/pledge.png)
 
 ---
 
@@ -465,6 +473,8 @@ flowchart LR
 - **Built-in sale and listing freeze.** `nft_list`, `nft_unlist` and `nft_buy` are in the contract. A listed key's account is frozen for value moves: the worker refuses swap and withdraw while it is listed (`listed`), and quote and chain signature refuse a key locked for sale. Balance reads still work.
 - **Verifiable builds.** Three different checks, with the commands in [Reproduce in full](#reproduce-in-full): deployed bytes match historical attestations ([identity block](#live-mainnet-identities)); the historical v2.5 source rebuild matches its [generated release identity](contracts/keys/release/v2.5/identity.json); rebuilding the worker from this checkout is not the same as reproducing the deployed worker. Every call is attested with the executed wasm hash, and the browser checks the quote.
 
+![Swap — 0.05 USDC → 0.016847 wNEAR, 1 USDC = 0.336946 wNEAR, inside the key's vault](web/screenshots/swap.png)
+
 ---
 
 ### The three diagrams
@@ -510,7 +520,7 @@ flowchart LR
     C --> D[Delete FNe2aYtz<br/>DVhsRMs8]
     D --> E[Delete 7N1fLo9M<br/>self, last<br/>ycvzWh7a]
     E --> F[Self-delete H4H2ySmJ<br/>8xXyVD1F]
-    F --> G[0 keys<br/>keyhole-devmo.near: []<br/>owner ee91dc: []]
+    F --> G["0 keys<br/>keyhole-devmo.near: []<br/>owner ee91dc: []"]
 ```
 
 #### The vault — how a request is served
@@ -526,9 +536,9 @@ flowchart LR
 
 ---
 
-![Verify a TEE call — the evidence pack, 7 checks](web/screenshots/desktop-verify.webp)
+![Activity — every order with its call ID and proof, one click away](web/screenshots/activity.png)
 
-![The vault on a phone](web/screenshots/mobile-vault.webp)
+![The vault — $0.15, USDC 0.058737 + wNEAR 0.03, call d2e23c6b, TEE 4550 ms](web/screenshots/vault.png)
 
 ---
 
@@ -621,6 +631,8 @@ Architecture, history and trust boundary: [SECURITY.md](SECURITY.md#qualificatio
 ### Earned tier, then a sale
 
 The same key goes from tier 1 to tier 2 through `level_up`, is listed and sold, and the seller is frozen while it is listed and locked out after. The steps, ids, links and results are in [`docs/evidence/earned-tier-and-sale`](docs/evidence/earned-tier-and-sale/README.md). These are team test wallets.
+
+![Mint Bronze — $1 per trade, $5 a day; Silver and Gold are earned by trading](web/screenshots/mint.png)
 
 | Step | Id | Result |
 |---|---|---|
@@ -1072,7 +1084,6 @@ Not used: NEP-366 meta-transactions, NEP-145/148/141, sub-accounts, Intent Conne
 | v2.2 | `9e685c32bf5f57e0fda86f270e96f79723b54499a670306bb8f8bc0a68d5089e` (209,952 bytes) | `BfMiMAfgMzVYHRREaZr4QTfifwzbqR1wjGweH86xMLeZ` | previous |
 | v2.3 | `700bd51fc1cd9bfb46b655f2c6c77632f2c6b6c3c53329dd2990ea36eb00e09d` (210,474 bytes) | `8YP8Mr2c8yCxtZU1xtio8K5Lk5YuPC7WPBzuGFS9WwLG` | previous release |
 | **v2.4** | `b5c30849079e18a4a6d13037e43f56952ca8a479bbf64848ce20d21b481a1e5c` (241,621 bytes) | **`DEXHHyEMdFTdFQ32dYnj264RSj3QG2FSwCY5fbjzSiZZ`** | superseded by v2.5 (deploy tx [`84zVBikU…`](https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn), [evidence](docs/evidence/contract-v2-4/README.md)) |
-
 | **v2.5** | `28cbe755268145d1e675106c8b9834e2c2b05baafccd3296e894072ecdaa25ce` (485,855 bytes) | **`3kFeCRQMfBweSDsL72DrggEeJJ6v9DLw2xSn7T6zqK3b`** | recorded v2.5 rollout; superseded by historical v2.6 and live v2.7 ([deploy](https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S), [Pledge migration](https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa)) |
 | **v2.6** | `54ba51b3d7d256820e751c9fa4e0cda55c66b30111a186c6d9eff03b561b7b8a` (487,260 bytes) | **`6hk2duibNShFzCpBchJaJM7DMpzBT4Jgt99e7pxpBoww`** | historical ([deploy](https://nearblocks.io/txns/4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj)) |
 | **v2.7** | `26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c` (519,382 bytes) | **`3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH`** | **live** on `keyhole-devmo.near` ([deploy](https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h)) |
@@ -1113,9 +1124,9 @@ The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 4ed46f74b96461637dbe5849996c3cb69bbfd143
+git fetch --depth 1 origin b3f0dd19fb7563f345b7638b5c1f5f90d217ece9
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "4ed46f74b96461637dbe5849996c3cb69bbfd143"
+test "$(git rev-parse HEAD)" = "b3f0dd19fb7563f345b7638b5c1f5f90d217ece9"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
