@@ -311,8 +311,9 @@ for (const kind of ["swap", "withdraw"] as const) {
     if (kind === "swap") {
       await expect(page.getByTestId("trade-out")).toContainText("Traded 0.02 USDC → 0.004484 wNEAR", { timeout: 20_000 });
       await expect(page.getByTestId("trade-out")).toContainText("Settled");
-      // The swap result links its transaction on the intents explorer.
-      await expect(page.getByRole("link", { name: /view transaction/i })).toHaveAttribute("href", "https://explorer.near-intents.org/transactions/4qAnExample");
+      // The intent hash is text only, not a transaction: the Intents explorer does not resolve it (SwapDone renders link={null}).
+      await expect(page.getByRole("link", { name: /view transaction/i })).toHaveCount(0);
+      await expect(page.getByTestId("trade-out")).toContainText("4qAnExam…mple");
       await expect(page.getByTestId("error")).toHaveCount(0);
     } else {
       await expect(page.getByTestId("withdraw-out")).toContainText("Withdrawn 0.01 USDC to holder.keyhole.test", { timeout: 20_000 });
@@ -562,12 +563,16 @@ test("a connected wallet with no key cannot open the vault", async ({ page }) =>
     localStorage.setItem("near-wallet-selector:selectedWalletId", JSON.stringify("my-near-wallet"));
   });
   await page.route("**/api/health", (route) => route.fulfill({ json: { online: true, reason: null } }));
+  // The vault reads keys through the server route /api/keys first (12 s client abort, 4 s per RPC attempt server-side):
+  // answer it at once so the gate does not depend on live RPC latency. The direct RPC stub below stays as the fallback.
+  await page.route("**/api/keys**", (route) => route.fulfill({ json: { keys: [], tier: null } }));
   await page.route("https://rpc.mainnet.fastnear.com/**", async (route) => {
     let method = "";
     try { method = (route.request().postDataJSON() as { params?: { method_name?: string } })?.params?.method_name || ""; } catch { /* not a view */ }
     if (method !== "nft_tokens_for_owner") return route.continue();
     const bytes = [...new TextEncoder().encode("[]")];
-    await route.fulfill({ json: { jsonrpc: "2.0", id: "kh", result: { result: bytes } } });
+    // lib/rpc.ts callOne requires a block_hash, or the read throws and falls through to the real fallback RPC.
+    await route.fulfill({ json: { jsonrpc: "2.0", id: "kh", result: { result: bytes, block_hash: "11111111111111111111111111111111" } } });
   });
   await page.goto("/vault");
   const gate = page.getByTestId("holder-only");
