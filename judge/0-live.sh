@@ -124,6 +124,16 @@ def http_json(url, data=None, timeout=12):
             last = e
     raise last
 
+def http_json_curl(url, timeout=20):
+    """Fetch JSON with curl (a script prerequisite). urllib hits IncompleteRead
+    on the attestation endpoint from some networks; curl fetches it reliably."""
+    import subprocess
+    out = subprocess.run(["curl", "-fsSL", "--max-time", str(timeout), url],
+                         capture_output=True, timeout=timeout + 5)
+    if out.returncode != 0:
+        raise RuntimeError("curl %s failed: %s" % (url, out.stderr.decode(errors="replace")[:200]))
+    return json.loads(out.stdout.decode())
+
 def rpc(method, params, urls=None, timeout=12):
     last = None
     payload = {"jsonrpc": "2.0", "id": "kh-live", "method": method, "params": params}
@@ -198,8 +208,10 @@ try:
     else:
         # The expected owner is the pinned identity, not a hardcoded account:
         # accept_owner moved ownership to the guardian implicit account.
+        # The treasury is the pinned contract config value (devmo.near since
+        # the lock; the old keyhole-devmo.near value is pre-lock and wrong).
         want_owner = (ident.get("governance") or {}).get("owner") or "keyhole-devmo.near"
-        want_treasury = "keyhole-devmo.near"
+        want_treasury = contract.get("treasury") or "devmo.near"
         pinned_minter = contract.get("minter") or ""
         problems = []
         if cfg.get("owner") != want_owner:
@@ -239,17 +251,18 @@ except Exception as e:
 
 try:
     supply = view("nft_total_supply")
-    # view may return "6" or 6
+    # view may return "13" or 13
     if isinstance(supply, str) and supply.isdigit():
         n = int(supply)
     elif isinstance(supply, int):
         n = supply
     else:
         n = None
-    if n is not None and n >= 6:
-        ok("nft_total_supply == %s (>= 6, captured 2026-11-09)" % n)
+    # Live supply is 13; assert the README's "supply >= 13" floor, not an exact count.
+    if n is not None and n >= 13:
+        ok("nft_total_supply == %s (>= 13, live)" % n)
     else:
-        bad("nft_total_supply == %r (expected >= 6)" % supply)
+        bad("nft_total_supply == %r (expected >= 13)" % supply)
 except Exception as e:
     bad("nft_total_supply() failed: %s" % e)
 
@@ -258,14 +271,20 @@ gov_owner = gov.get("owner") or ""
 owner_is_implicit = isinstance(gov_owner, str) and len(gov_owner) == 64 and all(c in "0123456789abcdef" for c in gov_owner)
 # The pinned owner is cross-checked against live config() above; here the pin
 # must be a 64-hex implicit account (the guardian since accept_owner).
-if owner_is_implicit and gov.get("lending_enabled") is False and gov.get("access_key_total") == 3 and gov.get("full_access_keys") == 2 and gov.get("function_call_keys") == 1:
-    ok("identity.governance owner=%s… lending_enabled=false access_key_total=3" % gov_owner[:8])
+# Post-lock: both key lists are empty (0 keys) and pending_owner is null.
+if owner_is_implicit and gov.get("lending_enabled") is False and gov.get("pending_owner") is None and gov.get("access_key_total") == 0 and gov.get("full_access_keys") == 0 and gov.get("function_call_keys") == 0:
+    ok("identity.governance owner=%s… lending_enabled=false pending_owner=null access_key_total=0" % gov_owner[:8])
 else:
-    bad("identity.governance owner/lending/keys mismatch: %r" % {k: gov.get(k) for k in ("owner", "lending_enabled", "access_key_total", "full_access_keys", "function_call_keys")})
+    bad("identity.governance owner/lending/pending/keys mismatch: %r" % {k: gov.get(k) for k in ("owner", "lending_enabled", "pending_owner", "access_key_total", "full_access_keys", "function_call_keys")})
 
 # 3. Recorded attestation: the live worker info call in identity.json
 try:
-    att = http_json("%s/attestations/by-call/%s" % (outlayer, info_call))
+    try:
+        att = http_json("%s/attestations/by-call/%s" % (outlayer, info_call))
+    except Exception:
+        # urllib hits IncompleteRead on this endpoint from some networks;
+        # fall back to curl (already a script prerequisite).
+        att = http_json_curl("%s/attestations/by-call/%s" % (outlayer, info_call))
     executed = (att.get("executed_wasm_sha256") or "").strip()
     registered = (att.get("wasm_hash") or "").strip()
     quote = att.get("tdx_quote") or ""
