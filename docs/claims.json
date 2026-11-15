@@ -7,7 +7,7 @@
   {
    "id": "contract-code-hash",
    "claim": "Mainnet code_hash 3cZsaySYgqZntFaRKEUffQUMGqRjkQ2DuSmFWXwiKGZH equals base58 sha256 of the committed deployed contract",
-   "where": "README.md:133",
+   "where": "README.md:113",
    "evidence_type": "script",
    "evidence": "judge/1-contract.sh",
    "check": {
@@ -22,7 +22,7 @@
   {
    "id": "contract-wasm-sha",
    "claim": "Deployed contract wasm is 519,382 bytes with sha256 26d3deeff8a4445515d6356097bd7634e8b26deaee7e7ea1ebe47849b807c08c",
-   "where": "README.md:134",
+   "where": "README.md:114",
    "evidence_type": "file",
    "evidence": "contracts/keys/release/v2.7/keyhole_keys.wasm",
    "check": {
@@ -37,7 +37,7 @@
   {
    "id": "contract-source-version",
    "claim": "NEP-330 mainnet source metadata reports version 2.7.0",
-   "where": "README.md:104",
+   "where": "README.md:84",
    "evidence_type": "mainnet view",
    "evidence": "contract_source_metadata()",
    "check": {
@@ -54,7 +54,7 @@
   {
    "id": "config-owner",
    "claim": "Contract config.owner is ee91dcebd2e4061271a149abcc8ef2c6be8b9696c928348b52cb3f5204645f67",
-   "where": "README.md:1083",
+   "where": "README.md:1112",
    "evidence_type": "mainnet view",
    "evidence": "keyhole-devmo.near config()",
    "check": {
@@ -71,7 +71,7 @@
   {
    "id": "config-minter",
    "claim": "Contract config.minter is 015a025906a59f9f40ca17daf2a3c61c5e63a37c081c75230870caa6a82ac443",
-   "where": "README.md:1083",
+   "where": "README.md:1112",
    "evidence_type": "mainnet view",
    "evidence": "keyhole-devmo.near config()",
    "check": {
@@ -88,7 +88,7 @@
   {
    "id": "config-treasury",
    "claim": "Contract config.treasury is devmo.near",
-   "where": "README.md:1083",
+   "where": "README.md:1112",
    "evidence_type": "mainnet view",
    "evidence": "keyhole-devmo.near config()",
    "check": {
@@ -105,7 +105,7 @@
   {
    "id": "config-royalty_bps",
    "claim": "Contract config.royalty_bps is 500",
-   "where": "README.md:1083",
+   "where": "README.md:1112",
    "evidence_type": "mainnet view",
    "evidence": "keyhole-devmo.near config()",
    "check": {
@@ -122,7 +122,7 @@
   {
    "id": "config-beats",
    "claim": "Heartbeat count config.beats was 2 at capture (2026-11-03) and only grows",
-   "where": "README.md:1083",
+   "where": "README.md:1112",
    "evidence_type": "mainnet view",
    "evidence": "keyhole-devmo.near config()",
    "check": {
@@ -155,7 +155,7 @@
   {
    "id": "metadata-symbol",
    "claim": "NEP-177 metadata is KEYHOLE / KEY",
-   "where": "README.md:1095",
+   "where": "README.md:1124",
    "evidence_type": "mainnet view",
    "evidence": "nft_metadata()",
    "check": {
@@ -172,7 +172,7 @@
   {
    "id": "metadata-name",
    "claim": "NEP-177 metadata name is KEYHOLE",
-   "where": "README.md:1095",
+   "where": "README.md:1124",
    "evidence_type": "mainnet view",
    "evidence": "nft_metadata()",
    "check": {
@@ -189,7 +189,7 @@
   {
    "id": "token-0-owner",
    "claim": "Token 0 is held by keyhole-devmo.near (table read 2026-11-03)",
-   "where": "README.md:298",
+   "where": "README.md:325",
    "evidence_type": "mainnet view",
    "evidence": "nft_token(0)",
    "check": {
@@ -208,7 +208,7 @@
   {
    "id": "token-0-tier",
    "claim": "Token 0 is tier 1",
-   "where": "README.md:298",
+   "where": "README.md:325",
    "evidence_type": "mainnet view",
    "evidence": "nft_tier(0)",
    "check": {
@@ -226,7 +226,7 @@
   {
    "id": "token-k857b6b68facc0f94-owner",
    "claim": "Token k857b6b68facc0f94 is held by a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da (table read 2026-11-03)",
-   "where": "README.md:306",
+   "where": "README.md:333",
    "evidence_type": "mainnet view",
    "evidence": "nft_token(k857b6b68facc0f94)",
    "check": {
@@ -245,7 +245,7 @@
   {
    "id": "token-k857b6b68facc0f94-tier",
    "claim": "Token k857b6b68facc0f94 is tier 1",
-   "where": "README.md:306",
+   "where": "README.md:333",
    "evidence_type": "mainnet view",
    "evidence": "nft_tier(k857b6b68facc0f94)",
    "check": {
@@ -263,7 +263,7 @@
   {
    "id": "token-k5f4750858f328940-owner",
    "claim": "Token k5f4750858f328940 is held by 3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447 (table read 2026-11-09)",
-   "where": "README.md:304",
+   "where": "README.md:331",
    "evidence_type": "mainnet view",
    "evidence": "nft_token(k5f4750858f328940)",
    "check": {
@@ -282,7 +282,7 @@
   {
    "id": "token-k5f4750858f328940-tier",
    "claim": "Token k5f4750858f328940 is tier 2",
-   "where": "README.md:304",
+   "where": "README.md:331",
    "evidence_type": "mainnet view",
    "evidence": "nft_tier(k5f4750858f328940)",
    "check": {
@@ -300,7 +300,7 @@
   {
    "id": "token-k0642e7964b2fb515-owner",
    "claim": "Token k0642e7964b2fb515 is held by 476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8 (table read 2026-11-03)",
-   "where": "README.md:299",
+   "where": "README.md:326",
    "evidence_type": "mainnet view",
    "evidence": "nft_token(k0642e7964b2fb515)",
    "check": {
@@ -319,7 +319,7 @@
   {
    "id": "token-k0642e7964b2fb515-tier",
    "claim": "Token k0642e7964b2fb515 is tier 1",
-   "where": "README.md:299",
+   "where": "README.md:326",
    "evidence_type": "mainnet view",
    "evidence": "nft_tier(k0642e7964b2fb515)",
    "check": {
@@ -337,7 +337,7 @@
   {
    "id": "token-k102a806df6867547-owner",
    "claim": "Token k102a806df6867547 is held by 0xf76e6b0920e9332ff4410f6dd53f01722abc71a3 (table read 2026-11-03)",
-   "where": "README.md:300",
+   "where": "README.md:327",
    "evidence_type": "mainnet view",
    "evidence": "nft_token(k102a806df6867547)",
    "check": {
@@ -356,7 +356,7 @@
   {
    "id": "token-k102a806df6867547-tier",
    "claim": "Token k102a806df6867547 is tier 1",
-   "where": "README.md:300",
+   "where": "README.md:327",
    "evidence_type": "mainnet view",
    "evidence": "nft_tier(k102a806df6867547)",
    "check": {
@@ -374,7 +374,7 @@
   {
    "id": "token-k102-media",
    "claim": "Token k102a806df6867547 (MetaMask mint) carries media on-chain",
-   "where": "README.md:300",
+   "where": "README.md:327",
    "evidence_type": "mainnet view",
    "evidence": "nft_token(k102a806df6867547)",
    "check": {
@@ -468,7 +468,7 @@
   {
    "id": "lock-keys-empty-contract",
    "claim": "keyhole-devmo.near holds no access keys (lock final, read at block 224576783)",
-   "where": "README.md:286",
+   "where": "README.md:313",
    "evidence_type": "mainnet view",
    "evidence": "view_access_key_list keyhole-devmo.near",
    "check": {
@@ -481,7 +481,7 @@
   {
    "id": "lock-keys-empty-owner",
    "claim": "owner ee91dc… holds no access keys (lock final, read at block 224576783)",
-   "where": "README.md:286",
+   "where": "README.md:313",
    "evidence_type": "mainnet view",
    "evidence": "view_access_key_list owner",
    "check": {
@@ -528,7 +528,7 @@
   {
    "id": "worker-deployed",
    "claim": "The live worker build is 230a4c3b6e5b5455c959f396889ae2fd7e1fc2919c180aef2203ce574eece4b9 (tee/worker/DEPLOYED_SHA256)",
-   "where": "README.md:136",
+   "where": "README.md:116",
    "evidence_type": "file",
    "evidence": "tee/worker/DEPLOYED_SHA256",
    "check": {
@@ -542,7 +542,7 @@
   {
    "id": "worker-fastfs",
    "claim": "The live worker wasm (1439876 bytes) is on FastFS and hashes to DEPLOYED_SHA256",
-   "where": "README.md:136",
+   "where": "README.md:116",
    "evidence_type": "OutLayer call",
    "evidence": "https://main.fastfs.io/keyhole-devmo.near/outlayer.near/230a4c3b6e5b5455c959f396889ae2fd7e1fc2919c180aef2203ce574eece4b9.wasm",
    "check": {
@@ -556,7 +556,7 @@
   {
    "id": "att-dc3668db-build",
    "claim": "Call dc3668db executed worker build d337e822",
-   "where": "README.md:333",
+   "where": "README.md:360",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d",
    "check": {
@@ -571,7 +571,7 @@
   {
    "id": "att-b5fbed71-build",
    "claim": "Call b5fbed71 executed worker build d337e822",
-   "where": "README.md:187",
+   "where": "README.md:212",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b5fbed71-d497-43fe-bbd4-6e28efc4dacf",
    "check": {
@@ -586,7 +586,7 @@
   {
    "id": "att-740191ec-build",
    "claim": "Call 740191ec executed worker build d337e822",
-   "where": "README.md:334",
+   "where": "README.md:361",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/740191ec-48a4-4bbb-87f9-906b27c8116e",
    "check": {
@@ -601,7 +601,7 @@
   {
    "id": "att-9f76716e-build",
    "claim": "Call 9f76716e executed worker build cc8d2fa8",
-   "where": "README.md:188",
+   "where": "README.md:213",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9f76716e-b3d6-4081-b50f-fdff21a60f82",
    "check": {
@@ -616,7 +616,7 @@
   {
    "id": "att-0847b924-build",
    "claim": "Call 0847b924 executed worker build cc8d2fa8",
-   "where": "README.md:178",
+   "where": "README.md:203",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/0847b924-df76-4cee-ab5a-a96c789d2983",
    "check": {
@@ -631,7 +631,7 @@
   {
    "id": "att-b6787f80-build",
    "claim": "Call b6787f80 executed worker build cc8d2fa8",
-   "where": "README.md:206",
+   "where": "README.md:231",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b6787f80-339e-4de3-8f6d-dc46898d6e6d",
    "check": {
@@ -646,7 +646,7 @@
   {
    "id": "att-246e4a7a-build",
    "claim": "Call 246e4a7a executed worker build a985fd87",
-   "where": "README.md:331",
+   "where": "README.md:358",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751",
    "check": {
@@ -661,7 +661,7 @@
   {
    "id": "att-5650a6b7-build",
    "claim": "Call 5650a6b7 executed worker build ebeb6a34",
-   "where": "README.md:343",
+   "where": "README.md:370",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/5650a6b7-b7de-410c-b206-e189171bad15",
    "check": {
@@ -676,7 +676,7 @@
   {
    "id": "att-ecb0d1d6-build",
    "claim": "Call ecb0d1d6 executed worker build 94c355ff",
-   "where": "README.md:346",
+   "where": "README.md:373",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/ecb0d1d6-90e3-4522-852a-578ca50fdeb6",
    "check": {
@@ -691,7 +691,7 @@
   {
    "id": "att-643a012d-build",
    "claim": "Call 643a012d executed worker build cff9fd3c",
-   "where": "README.md:349",
+   "where": "README.md:376",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/643a012d-0389-44d7-9c78-efb5d7835e80",
    "check": {
@@ -706,7 +706,7 @@
   {
    "id": "att-b0a6eadb-build",
    "claim": "Call b0a6eadb executed worker build a55ebb14",
-   "where": "README.md:352",
+   "where": "README.md:379",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b0a6eadb-cee9-400e-8eca-8b0f4df7bcec",
    "check": {
@@ -721,7 +721,7 @@
   {
    "id": "att-2896d0ad-build",
    "claim": "Call 2896d0ad executed worker build 09d481a5",
-   "where": "README.md:355",
+   "where": "README.md:382",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/2896d0ad-aa27-4e21-b4a1-0cf2d3755d56",
    "check": {
@@ -736,7 +736,7 @@
   {
    "id": "att-54207d9e-build",
    "claim": "Call 54207d9e executed worker build f7217ae2",
-   "where": "README.md:358",
+   "where": "README.md:385",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/54207d9e-b4f0-438b-9a74-cdba33de80d9",
    "check": {
@@ -751,7 +751,7 @@
   {
    "id": "att-7882f97a-build",
    "claim": "Call 7882f97a executed worker build 452df1fd",
-   "where": "README.md:361",
+   "where": "README.md:388",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/7882f97a-06e5-46d3-9e58-5fe6428fb187",
    "check": {
@@ -766,7 +766,7 @@
   {
    "id": "att-f4768da8-build",
    "claim": "Call f4768da8 executed worker build 6367401a",
-   "where": "README.md:364",
+   "where": "README.md:391",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/f4768da8-2e87-4622-8654-d1e67f6cd1f0",
    "check": {
@@ -781,7 +781,7 @@
   {
    "id": "att-0f0bf448-build",
    "claim": "Call 0f0bf448 executed worker build 67c5cd77",
-   "where": "README.md:367",
+   "where": "README.md:394",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/0f0bf448-1b66-4200-b6de-7cf095aead54",
    "check": {
@@ -796,7 +796,7 @@
   {
    "id": "att-763812bc-build",
    "claim": "Call 763812bc executed worker build 38bd67b9",
-   "where": "README.md:370",
+   "where": "README.md:397",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/763812bc-0012-4528-a45d-66a3ce17cae9",
    "check": {
@@ -811,7 +811,7 @@
   {
    "id": "att-9d19bceb-build",
    "claim": "Call 9d19bceb executed worker build b3fa1a39",
-   "where": "README.md:373",
+   "where": "README.md:400",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9d19bceb-986b-4745-9bf9-91f7dcb62b6e",
    "check": {
@@ -826,7 +826,7 @@
   {
    "id": "att-cefbc64e-build",
    "claim": "Call cefbc64e executed worker build f13efe92",
-   "where": "README.md:819",
+   "where": "README.md:849",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/cefbc64e-6c08-4bfe-a165-1667d9f5f25b",
    "check": {
@@ -841,7 +841,7 @@
   {
    "id": "att-09d58c09-build",
    "claim": "Call 09d58c09 executed worker build f13efe92",
-   "where": "README.md:223",
+   "where": "README.md:248",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/09d58c09-c1e9-48b6-bebb-485f5ae79539",
    "check": {
@@ -856,7 +856,7 @@
   {
    "id": "att-9c258ced-build",
    "claim": "Gateway call 9c258ced ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:986",
+   "where": "README.md:1016",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9c258ced-40c4-4738-8621-794e35f41f5d",
    "check": {
@@ -871,7 +871,7 @@
   {
    "id": "att-57d03a3b-build",
    "claim": "Gateway call 57d03a3b ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:987",
+   "where": "README.md:1017",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/57d03a3b-def4-46dc-a66f-6cfd36570572",
    "check": {
@@ -886,7 +886,7 @@
   {
    "id": "att-a28106f0-build",
    "claim": "Gateway call a28106f0 ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:988",
+   "where": "README.md:1018",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a28106f0-8eff-49e6-8998-57d99d2e9298",
    "check": {
@@ -901,7 +901,7 @@
   {
    "id": "att-1792da1a-build",
    "claim": "Gateway call 1792da1a ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:989",
+   "where": "README.md:1019",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/1792da1a-0a36-4df0-84b0-0d28e7a4828c",
    "check": {
@@ -916,7 +916,7 @@
   {
    "id": "att-6eccc374-build",
    "claim": "Gateway call 6eccc374 ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:989",
+   "where": "README.md:1019",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/6eccc374-ed17-4764-810b-f3f56a1ad6bd",
    "check": {
@@ -931,7 +931,7 @@
   {
    "id": "att-e977cb88-build",
    "claim": "Gateway call e977cb88 ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:990",
+   "where": "README.md:1020",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/e977cb88-0490-47f8-abfd-eb409eb572b4",
    "check": {
@@ -946,7 +946,7 @@
   {
    "id": "att-22cb472d-build",
    "claim": "Gateway call 22cb472d ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:991",
+   "where": "README.md:1021",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/22cb472d-a759-4284-a3fd-651b059dc576",
    "check": {
@@ -961,7 +961,7 @@
   {
    "id": "att-b4038809-build",
    "claim": "Gateway call b4038809 ran on build 3ea56ee6, project keyhole-probe",
-   "where": "README.md:992",
+   "where": "README.md:1022",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b4038809-2347-43fd-aa28-f829b677e7d1",
    "check": {
@@ -976,7 +976,7 @@
   {
    "id": "att-f198ce3a-build",
    "claim": "info via /api/keyhole call f198ce3a ran on build f13efe92",
-   "where": "README.md:993",
+   "where": "README.md:1023",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/f198ce3a-a3df-4c27-ac26-79ef50003fb1",
    "check": {
@@ -990,7 +990,7 @@
   {
    "id": "att-d3c285ae-build",
    "claim": "Live judge run call d3c285ae attested to f13efe926132",
-   "where": "README.md:235",
+   "where": "README.md:260",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/d3c285ae-54a2-442f-a9ee-e9d9af02e4c6",
    "check": {
@@ -1004,7 +1004,7 @@
   {
    "id": "att-b6d8ce4e-build",
    "claim": "Live judge run call b6d8ce4e attested to f13efe926132",
-   "where": "README.md:235",
+   "where": "README.md:260",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563",
    "check": {
@@ -1018,7 +1018,7 @@
   {
    "id": "att-9b37dfee-build",
    "claim": "Live judge run call 9b37dfee attested to f13efe926132",
-   "where": "README.md:235",
+   "where": "README.md:260",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9b37dfee-47bf-4482-a445-0623a49d3f11",
    "check": {
@@ -1032,7 +1032,7 @@
   {
    "id": "att-9e62569d-build",
    "claim": "Funded run call 9e62569d matched build f13efe92",
-   "where": "README.md:210",
+   "where": "README.md:235",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9e62569d-9444-4503-8bf2-4c1c266b8316",
    "check": {
@@ -1085,7 +1085,7 @@
   {
    "id": "att-4175df5d",
    "claim": "Attested call 4175df5d linked from README.md",
-   "where": "README.md:138",
+   "where": "README.md:118",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/4175df5d-335d-4a82-b37a-978ac52853b6",
    "check": {
@@ -1098,7 +1098,7 @@
   {
    "id": "att-0847b924",
    "claim": "Attested call 0847b924 linked from README.md",
-   "where": "README.md:178",
+   "where": "README.md:203",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/0847b924-df76-4cee-ab5a-a96c789d2983",
    "check": {
@@ -1111,7 +1111,7 @@
   {
    "id": "att-440c2378",
    "claim": "Attested call 440c2378 linked from README.md",
-   "where": "README.md:180",
+   "where": "README.md:205",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/440c2378-6c27-49fd-8b6b-d74054f331ae",
    "check": {
@@ -1124,7 +1124,7 @@
   {
    "id": "att-e805f050",
    "claim": "Attested call e805f050 linked from README.md",
-   "where": "README.md:180",
+   "where": "README.md:205",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/e805f050-d416-4a04-9b12-270adbe02068",
    "check": {
@@ -1137,7 +1137,7 @@
   {
    "id": "att-02a4e30d",
    "claim": "Attested call 02a4e30d linked from README.md",
-   "where": "README.md:181",
+   "where": "README.md:206",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/02a4e30d-8e75-4587-9507-56a247751fc5",
    "check": {
@@ -1150,7 +1150,7 @@
   {
    "id": "att-61c6f3ad",
    "claim": "Attested call 61c6f3ad linked from README.md",
-   "where": "README.md:182",
+   "where": "README.md:207",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/61c6f3ad-e1fc-495c-8435-27fd3382c3df",
    "check": {
@@ -1163,7 +1163,7 @@
   {
    "id": "att-c791779a",
    "claim": "Attested call c791779a linked from README.md",
-   "where": "README.md:182",
+   "where": "README.md:207",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/c791779a-7948-4614-abe0-5376916edeb0",
    "check": {
@@ -1176,7 +1176,7 @@
   {
    "id": "att-eeb03a55",
    "claim": "Attested call eeb03a55 linked from README.md",
-   "where": "README.md:182",
+   "where": "README.md:207",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/eeb03a55-6df0-4ef3-af5b-3e9df3331f4e",
    "check": {
@@ -1189,7 +1189,7 @@
   {
    "id": "att-b5fbed71",
    "claim": "Attested call b5fbed71 linked from README.md",
-   "where": "README.md:187",
+   "where": "README.md:212",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b5fbed71-d497-43fe-bbd4-6e28efc4dacf",
    "check": {
@@ -1202,7 +1202,7 @@
   {
    "id": "att-9f76716e",
    "claim": "Attested call 9f76716e linked from README.md",
-   "where": "README.md:188",
+   "where": "README.md:213",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9f76716e-b3d6-4081-b50f-fdff21a60f82",
    "check": {
@@ -1215,7 +1215,7 @@
   {
    "id": "att-b6787f80",
    "claim": "Attested call b6787f80 linked from README.md",
-   "where": "README.md:206",
+   "where": "README.md:231",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b6787f80-339e-4de3-8f6d-dc46898d6e6d",
    "check": {
@@ -1228,7 +1228,7 @@
   {
    "id": "att-9e62569d",
    "claim": "Attested call 9e62569d linked from README.md",
-   "where": "README.md:210",
+   "where": "README.md:235",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9e62569d-9444-4503-8bf2-4c1c266b8316",
    "check": {
@@ -1241,7 +1241,7 @@
   {
    "id": "att-0cd1c3bd",
    "claim": "Attested call 0cd1c3bd linked from README.md",
-   "where": "README.md:215",
+   "where": "README.md:240",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/0cd1c3bd-21be-44dc-bc60-e792a42344e6",
    "check": {
@@ -1254,7 +1254,7 @@
   {
    "id": "att-2a1aed5b",
    "claim": "Attested call 2a1aed5b linked from README.md",
-   "where": "README.md:216",
+   "where": "README.md:241",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/2a1aed5b-d4e2-45d2-8915-14a5e61a8b12",
    "check": {
@@ -1267,7 +1267,7 @@
   {
    "id": "att-2a52742a",
    "claim": "Attested call 2a52742a linked from README.md",
-   "where": "README.md:217",
+   "where": "README.md:242",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/2a52742a-2b4a-432d-b087-888ea52f03ce",
    "check": {
@@ -1280,7 +1280,7 @@
   {
    "id": "att-15f93f58",
    "claim": "Attested call 15f93f58 linked from README.md",
-   "where": "README.md:217",
+   "where": "README.md:242",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/15f93f58-2568-4064-9581-db04c8b2a1aa",
    "check": {
@@ -1293,7 +1293,7 @@
   {
    "id": "att-3e996273",
    "claim": "Attested call 3e996273 linked from README.md",
-   "where": "README.md:217",
+   "where": "README.md:242",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/3e996273-e4a0-4c26-aa54-6775fba29236",
    "check": {
@@ -1306,7 +1306,7 @@
   {
    "id": "att-8485f8d4",
    "claim": "Attested call 8485f8d4 linked from README.md",
-   "where": "README.md:217",
+   "where": "README.md:242",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/8485f8d4-c4e1-4ab5-ab9c-a19a0d9d21f7",
    "check": {
@@ -1319,7 +1319,7 @@
   {
    "id": "att-98b27188",
    "claim": "Attested call 98b27188 linked from README.md",
-   "where": "README.md:220",
+   "where": "README.md:245",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/98b27188-a28c-4720-8fec-1d1329e0f281",
    "check": {
@@ -1332,7 +1332,7 @@
   {
    "id": "att-075287b5",
    "claim": "Attested call 075287b5 linked from README.md",
-   "where": "README.md:220",
+   "where": "README.md:245",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/075287b5-a100-4fa5-8e96-94a36019c6bc",
    "check": {
@@ -1345,7 +1345,7 @@
   {
    "id": "att-38ae4d84",
    "claim": "Attested call 38ae4d84 linked from README.md",
-   "where": "README.md:221",
+   "where": "README.md:246",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/38ae4d84-9058-4e3b-a01d-e0f0a1f35bb4",
    "check": {
@@ -1358,7 +1358,7 @@
   {
    "id": "att-8e142cce",
    "claim": "Attested call 8e142cce linked from README.md",
-   "where": "README.md:221",
+   "where": "README.md:246",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/8e142cce-a608-4ed4-ae61-9eed8f7dec12",
    "check": {
@@ -1371,7 +1371,7 @@
   {
    "id": "att-e72dc176",
    "claim": "Attested call e72dc176 linked from README.md",
-   "where": "README.md:222",
+   "where": "README.md:247",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/e72dc176-e6fc-4d89-b348-911f5318b81b",
    "check": {
@@ -1384,7 +1384,7 @@
   {
    "id": "att-f36d9b54",
    "claim": "Attested call f36d9b54 linked from README.md",
-   "where": "README.md:222",
+   "where": "README.md:247",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/f36d9b54-417a-4b33-9598-c396ae852d4d",
    "check": {
@@ -1397,7 +1397,7 @@
   {
    "id": "att-09d58c09",
    "claim": "Attested call 09d58c09 linked from README.md",
-   "where": "README.md:223",
+   "where": "README.md:248",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/09d58c09-c1e9-48b6-bebb-485f5ae79539",
    "check": {
@@ -1410,7 +1410,7 @@
   {
    "id": "att-afc0f232",
    "claim": "Attested call afc0f232 linked from README.md",
-   "where": "README.md:224",
+   "where": "README.md:249",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/afc0f232-7d93-4a0e-8768-f62f245c537e",
    "check": {
@@ -1423,7 +1423,7 @@
   {
    "id": "att-a39fffd9",
    "claim": "Attested call a39fffd9 linked from README.md",
-   "where": "README.md:225",
+   "where": "README.md:250",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a39fffd9-201b-4af2-927f-94a90d54cbf5",
    "check": {
@@ -1436,7 +1436,7 @@
   {
    "id": "att-a02613a2",
    "claim": "Attested call a02613a2 linked from README.md",
-   "where": "README.md:228",
+   "where": "README.md:253",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a02613a2-d503-45e2-83b8-ef71927c2533",
    "check": {
@@ -1449,7 +1449,7 @@
   {
    "id": "att-85582544",
    "claim": "Attested call 85582544 linked from README.md",
-   "where": "README.md:229",
+   "where": "README.md:254",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/85582544-8e08-4c9f-b3f0-ecad128201ab",
    "check": {
@@ -1462,7 +1462,7 @@
   {
    "id": "att-ac289f04",
    "claim": "Attested call ac289f04 linked from README.md",
-   "where": "README.md:229",
+   "where": "README.md:254",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/ac289f04-0df8-4161-9123-e872ab3b75ab",
    "check": {
@@ -1475,7 +1475,7 @@
   {
    "id": "att-b9c8cb4f",
    "claim": "Attested call b9c8cb4f linked from README.md",
-   "where": "README.md:230",
+   "where": "README.md:255",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b9c8cb4f-e3aa-480f-bb47-70fc30a96d67",
    "check": {
@@ -1488,7 +1488,7 @@
   {
    "id": "att-942b4cff",
    "claim": "Attested call 942b4cff linked from README.md",
-   "where": "README.md:230",
+   "where": "README.md:255",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/942b4cff-23c9-4e4d-8ebc-79bfa01cd029",
    "check": {
@@ -1501,7 +1501,7 @@
   {
    "id": "att-7a703e8f",
    "claim": "Attested call 7a703e8f linked from README.md",
-   "where": "README.md:230",
+   "where": "README.md:255",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/7a703e8f-2678-4978-b6ce-4d291828141d",
    "check": {
@@ -1514,7 +1514,7 @@
   {
    "id": "att-e7ac0627",
    "claim": "Attested call e7ac0627 linked from README.md",
-   "where": "README.md:230",
+   "where": "README.md:255",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/e7ac0627-be6d-41e9-95d0-71dcc59aed43",
    "check": {
@@ -1527,7 +1527,7 @@
   {
    "id": "att-750defed",
    "claim": "Attested call 750defed linked from README.md",
-   "where": "README.md:230",
+   "where": "README.md:255",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/750defed-2267-45b1-8a8c-74b528aa30ee",
    "check": {
@@ -1540,7 +1540,7 @@
   {
    "id": "att-a516a457",
    "claim": "Attested call a516a457 linked from README.md",
-   "where": "README.md:231",
+   "where": "README.md:256",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a516a457-0be8-4805-acb1-4f3a9ad30ad3",
    "check": {
@@ -1553,7 +1553,7 @@
   {
    "id": "att-d892ac43",
    "claim": "Attested call d892ac43 linked from README.md",
-   "where": "README.md:232",
+   "where": "README.md:257",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/d892ac43-b786-4d5b-909a-764b6c92f6fd",
    "check": {
@@ -1566,7 +1566,7 @@
   {
    "id": "att-1a88f79f",
    "claim": "Attested call 1a88f79f linked from README.md",
-   "where": "README.md:232",
+   "where": "README.md:257",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/1a88f79f-49dd-45fb-bcae-96b746f38423",
    "check": {
@@ -1579,7 +1579,7 @@
   {
    "id": "att-c1312e2d",
    "claim": "Attested call c1312e2d linked from README.md",
-   "where": "README.md:233",
+   "where": "README.md:258",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/c1312e2d-8c20-4b3e-ad5b-22dd3102826d",
    "check": {
@@ -1592,7 +1592,7 @@
   {
    "id": "att-d8f5f0ee",
    "claim": "Attested call d8f5f0ee linked from README.md",
-   "where": "README.md:233",
+   "where": "README.md:258",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/d8f5f0ee-3c0b-44bc-afed-bc24ad190ed0",
    "check": {
@@ -1605,7 +1605,7 @@
   {
    "id": "att-16b09581",
    "claim": "Attested call 16b09581 linked from README.md",
-   "where": "README.md:233",
+   "where": "README.md:258",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/16b09581-9010-4600-b5c5-58af0216cdc8",
    "check": {
@@ -1618,7 +1618,7 @@
   {
    "id": "att-711795b9",
    "claim": "Attested call 711795b9 linked from README.md",
-   "where": "README.md:233",
+   "where": "README.md:258",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/711795b9-3e77-4a59-98ee-d798cb63ccc2",
    "check": {
@@ -1631,7 +1631,7 @@
   {
    "id": "att-d3c285ae",
    "claim": "Attested call d3c285ae linked from README.md",
-   "where": "README.md:235",
+   "where": "README.md:260",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/d3c285ae-54a2-442f-a9ee-e9d9af02e4c6",
    "check": {
@@ -1644,7 +1644,7 @@
   {
    "id": "att-b6d8ce4e",
    "claim": "Attested call b6d8ce4e linked from README.md",
-   "where": "README.md:235",
+   "where": "README.md:260",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b6d8ce4e-6d46-4b57-a126-ab4ff9e7a563",
    "check": {
@@ -1657,7 +1657,7 @@
   {
    "id": "att-9b37dfee",
    "claim": "Attested call 9b37dfee linked from README.md",
-   "where": "README.md:235",
+   "where": "README.md:260",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9b37dfee-47bf-4482-a445-0623a49d3f11",
    "check": {
@@ -1670,7 +1670,7 @@
   {
    "id": "att-246e4a7a",
    "claim": "Attested call 246e4a7a linked from README.md",
-   "where": "README.md:331",
+   "where": "README.md:358",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/246e4a7a-f138-4459-8548-350dd9960751",
    "check": {
@@ -1683,7 +1683,7 @@
   {
    "id": "att-dc3668db",
    "claim": "Attested call dc3668db linked from README.md",
-   "where": "README.md:333",
+   "where": "README.md:360",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/dc3668db-674f-4865-a2ce-272f70c41b0d",
    "check": {
@@ -1696,7 +1696,7 @@
   {
    "id": "att-740191ec",
    "claim": "Attested call 740191ec linked from README.md",
-   "where": "README.md:334",
+   "where": "README.md:361",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/740191ec-48a4-4bbb-87f9-906b27c8116e",
    "check": {
@@ -1709,7 +1709,7 @@
   {
    "id": "att-5650a6b7",
    "claim": "Attested call 5650a6b7 linked from README.md",
-   "where": "README.md:343",
+   "where": "README.md:370",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/5650a6b7-b7de-410c-b206-e189171bad15",
    "check": {
@@ -1722,7 +1722,7 @@
   {
    "id": "att-ecb0d1d6",
    "claim": "Attested call ecb0d1d6 linked from README.md",
-   "where": "README.md:346",
+   "where": "README.md:373",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/ecb0d1d6-90e3-4522-852a-578ca50fdeb6",
    "check": {
@@ -1735,7 +1735,7 @@
   {
    "id": "att-643a012d",
    "claim": "Attested call 643a012d linked from README.md",
-   "where": "README.md:349",
+   "where": "README.md:376",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/643a012d-0389-44d7-9c78-efb5d7835e80",
    "check": {
@@ -1748,7 +1748,7 @@
   {
    "id": "att-b0a6eadb",
    "claim": "Attested call b0a6eadb linked from README.md",
-   "where": "README.md:352",
+   "where": "README.md:379",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b0a6eadb-cee9-400e-8eca-8b0f4df7bcec",
    "check": {
@@ -1761,7 +1761,7 @@
   {
    "id": "att-2896d0ad",
    "claim": "Attested call 2896d0ad linked from README.md",
-   "where": "README.md:355",
+   "where": "README.md:382",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/2896d0ad-aa27-4e21-b4a1-0cf2d3755d56",
    "check": {
@@ -1774,7 +1774,7 @@
   {
    "id": "att-54207d9e",
    "claim": "Attested call 54207d9e linked from README.md",
-   "where": "README.md:358",
+   "where": "README.md:385",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/54207d9e-b4f0-438b-9a74-cdba33de80d9",
    "check": {
@@ -1787,7 +1787,7 @@
   {
    "id": "att-7882f97a",
    "claim": "Attested call 7882f97a linked from README.md",
-   "where": "README.md:361",
+   "where": "README.md:388",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/7882f97a-06e5-46d3-9e58-5fe6428fb187",
    "check": {
@@ -1800,7 +1800,7 @@
   {
    "id": "att-f4768da8",
    "claim": "Attested call f4768da8 linked from README.md",
-   "where": "README.md:364",
+   "where": "README.md:391",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/f4768da8-2e87-4622-8654-d1e67f6cd1f0",
    "check": {
@@ -1813,7 +1813,7 @@
   {
    "id": "att-0f0bf448",
    "claim": "Attested call 0f0bf448 linked from README.md",
-   "where": "README.md:367",
+   "where": "README.md:394",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/0f0bf448-1b66-4200-b6de-7cf095aead54",
    "check": {
@@ -1826,7 +1826,7 @@
   {
    "id": "att-763812bc",
    "claim": "Attested call 763812bc linked from README.md",
-   "where": "README.md:370",
+   "where": "README.md:397",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/763812bc-0012-4528-a45d-66a3ce17cae9",
    "check": {
@@ -1839,7 +1839,7 @@
   {
    "id": "att-9d19bceb",
    "claim": "Attested call 9d19bceb linked from README.md",
-   "where": "README.md:373",
+   "where": "README.md:400",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9d19bceb-986b-4745-9bf9-91f7dcb62b6e",
    "check": {
@@ -1852,7 +1852,7 @@
   {
    "id": "att-314e34ca",
    "claim": "Attested call 314e34ca linked from README.md",
-   "where": "README.md:628",
+   "where": "README.md:658",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/314e34ca-8868-445b-b62b-bf53621c8068",
    "check": {
@@ -1865,7 +1865,7 @@
   {
    "id": "att-d5077866",
    "claim": "Attested call d5077866 linked from README.md",
-   "where": "README.md:631",
+   "where": "README.md:661",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/d5077866-7353-4e4d-b5e3-4c932beb8845",
    "check": {
@@ -1878,7 +1878,7 @@
   {
    "id": "att-cefbc64e",
    "claim": "Attested call cefbc64e linked from README.md",
-   "where": "README.md:819",
+   "where": "README.md:849",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/cefbc64e-6c08-4bfe-a165-1667d9f5f25b",
    "check": {
@@ -1891,7 +1891,7 @@
   {
    "id": "att-c96f3729",
    "claim": "Attested call c96f3729 linked from README.md",
-   "where": "README.md:820",
+   "where": "README.md:850",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/c96f3729-c266-4fec-a0df-73770915ab7a",
    "check": {
@@ -1904,7 +1904,7 @@
   {
    "id": "att-a62c9d76",
    "claim": "Attested call a62c9d76 linked from README.md",
-   "where": "README.md:821",
+   "where": "README.md:851",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a62c9d76-81b2-47e8-865d-c2d1714d507e",
    "check": {
@@ -1917,7 +1917,7 @@
   {
    "id": "att-a1bf58e8",
    "claim": "Attested call a1bf58e8 linked from README.md",
-   "where": "README.md:822",
+   "where": "README.md:852",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a1bf58e8-d3ba-4a77-ae86-9e31fe5b8523",
    "check": {
@@ -1930,7 +1930,7 @@
   {
    "id": "att-44c12951",
    "claim": "Attested call 44c12951 linked from README.md",
-   "where": "README.md:823",
+   "where": "README.md:853",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/44c12951-5cda-48b1-beba-0632e70dc98d",
    "check": {
@@ -1943,7 +1943,7 @@
   {
    "id": "att-a523a6ea",
    "claim": "Attested call a523a6ea linked from README.md",
-   "where": "README.md:824",
+   "where": "README.md:854",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a523a6ea-56ca-466d-99c3-7f7d4dccd3ad",
    "check": {
@@ -1956,7 +1956,7 @@
   {
    "id": "att-9374b0ac",
    "claim": "Attested call 9374b0ac linked from README.md",
-   "where": "README.md:825",
+   "where": "README.md:855",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9374b0ac-dcdf-4416-b162-2ebc8c13483d",
    "check": {
@@ -1969,7 +1969,7 @@
   {
    "id": "att-f0cf9778",
    "claim": "Attested call f0cf9778 linked from README.md",
-   "where": "README.md:842",
+   "where": "README.md:872",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/f0cf9778-1874-4c0b-b1a5-091218f9fcc6",
    "check": {
@@ -1982,7 +1982,7 @@
   {
    "id": "att-6b992a3c",
    "claim": "Attested call 6b992a3c linked from README.md",
-   "where": "README.md:845",
+   "where": "README.md:875",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/6b992a3c-5909-4a75-a694-dd08918e33da",
    "check": {
@@ -1995,7 +1995,7 @@
   {
    "id": "att-3ef04098",
    "claim": "Attested call 3ef04098 linked from README.md",
-   "where": "README.md:848",
+   "where": "README.md:878",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/3ef04098-f287-4527-a8f2-52511beaa9e3",
    "check": {
@@ -2008,7 +2008,7 @@
   {
    "id": "att-91b0e9a9",
    "claim": "Attested call 91b0e9a9 linked from README.md",
-   "where": "README.md:863",
+   "where": "README.md:893",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/91b0e9a9-219b-46ec-a174-1f74e2f24b85",
    "check": {
@@ -2021,7 +2021,7 @@
   {
    "id": "att-c8db49d3",
    "claim": "Attested call c8db49d3 linked from README.md",
-   "where": "README.md:864",
+   "where": "README.md:894",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/c8db49d3-900a-49d7-b7ae-5012579a00ff",
    "check": {
@@ -2034,7 +2034,7 @@
   {
    "id": "att-2220caa1",
    "claim": "Attested call 2220caa1 linked from README.md",
-   "where": "README.md:865",
+   "where": "README.md:895",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/2220caa1-90ad-42a6-b281-cfd08cd1b354",
    "check": {
@@ -2047,7 +2047,7 @@
   {
    "id": "att-41ace198",
    "claim": "Attested call 41ace198 linked from README.md",
-   "where": "README.md:866",
+   "where": "README.md:896",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/41ace198-a27a-462b-a9a3-b4f93be75c2d",
    "check": {
@@ -2060,7 +2060,7 @@
   {
    "id": "att-4f1133c4",
    "claim": "Attested call 4f1133c4 linked from README.md",
-   "where": "README.md:867",
+   "where": "README.md:897",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/4f1133c4-7925-45a5-87cb-0dfeac3df183",
    "check": {
@@ -2073,7 +2073,7 @@
   {
    "id": "att-5dc50687",
    "claim": "Attested call 5dc50687 linked from README.md",
-   "where": "README.md:868",
+   "where": "README.md:898",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/5dc50687-1c19-4785-997b-29f8fdda3bcf",
    "check": {
@@ -2086,7 +2086,7 @@
   {
    "id": "att-ed2c7a62",
    "claim": "Attested call ed2c7a62 linked from README.md",
-   "where": "README.md:869",
+   "where": "README.md:899",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/ed2c7a62-411f-4f8f-b06d-b214898e0ec4",
    "check": {
@@ -2099,7 +2099,7 @@
   {
    "id": "att-116641a2",
    "claim": "Attested call 116641a2 linked from README.md",
-   "where": "README.md:870",
+   "where": "README.md:900",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/116641a2-0744-45a0-9698-4b23dab365fc",
    "check": {
@@ -2112,7 +2112,7 @@
   {
    "id": "att-1810bf33",
    "claim": "Attested call 1810bf33 linked from README.md",
-   "where": "README.md:871",
+   "where": "README.md:901",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/1810bf33-2a8c-42c9-931a-f0ececc3a7d0",
    "check": {
@@ -2125,7 +2125,7 @@
   {
    "id": "att-42f2c909",
    "claim": "Attested call 42f2c909 linked from README.md",
-   "where": "README.md:872",
+   "where": "README.md:902",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/42f2c909-27db-4562-9a24-a0399c0f9a1d",
    "check": {
@@ -2138,7 +2138,7 @@
   {
    "id": "att-962d4374",
    "claim": "Attested call 962d4374 linked from README.md",
-   "where": "README.md:874",
+   "where": "README.md:904",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/962d4374-b9ec-411a-9efa-973b36260431",
    "check": {
@@ -2151,7 +2151,7 @@
   {
    "id": "att-9c258ced",
    "claim": "Attested call 9c258ced linked from README.md",
-   "where": "README.md:986",
+   "where": "README.md:1016",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/9c258ced-40c4-4738-8621-794e35f41f5d",
    "check": {
@@ -2164,7 +2164,7 @@
   {
    "id": "att-57d03a3b",
    "claim": "Attested call 57d03a3b linked from README.md",
-   "where": "README.md:987",
+   "where": "README.md:1017",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/57d03a3b-def4-46dc-a66f-6cfd36570572",
    "check": {
@@ -2177,7 +2177,7 @@
   {
    "id": "att-a28106f0",
    "claim": "Attested call a28106f0 linked from README.md",
-   "where": "README.md:988",
+   "where": "README.md:1018",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/a28106f0-8eff-49e6-8998-57d99d2e9298",
    "check": {
@@ -2190,7 +2190,7 @@
   {
    "id": "att-1792da1a",
    "claim": "Attested call 1792da1a linked from README.md",
-   "where": "README.md:989",
+   "where": "README.md:1019",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/1792da1a-0a36-4df0-84b0-0d28e7a4828c",
    "check": {
@@ -2203,7 +2203,7 @@
   {
    "id": "att-6eccc374",
    "claim": "Attested call 6eccc374 linked from README.md",
-   "where": "README.md:989",
+   "where": "README.md:1019",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/6eccc374-ed17-4764-810b-f3f56a1ad6bd",
    "check": {
@@ -2216,7 +2216,7 @@
   {
    "id": "att-e977cb88",
    "claim": "Attested call e977cb88 linked from README.md",
-   "where": "README.md:990",
+   "where": "README.md:1020",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/e977cb88-0490-47f8-abfd-eb409eb572b4",
    "check": {
@@ -2229,7 +2229,7 @@
   {
    "id": "att-22cb472d",
    "claim": "Attested call 22cb472d linked from README.md",
-   "where": "README.md:991",
+   "where": "README.md:1021",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/22cb472d-a759-4284-a3fd-651b059dc576",
    "check": {
@@ -2242,7 +2242,7 @@
   {
    "id": "att-b4038809",
    "claim": "Attested call b4038809 linked from README.md",
-   "where": "README.md:992",
+   "where": "README.md:1022",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/b4038809-2347-43fd-aa28-f829b677e7d1",
    "check": {
@@ -2255,7 +2255,7 @@
   {
    "id": "att-f198ce3a",
    "claim": "Attested call f198ce3a linked from README.md",
-   "where": "README.md:993",
+   "where": "README.md:1023",
    "evidence_type": "OutLayer call",
    "evidence": "https://api.outlayer.ai/attestations/by-call/f198ce3a-a3df-4c27-ac26-79ef50003fb1",
    "check": {
@@ -2279,37 +2279,9 @@
    "verify": "node judge/verify-claims.mjs --only att-3d81f582"
   },
   {
-   "id": "tx-6rD2iMs1",
-   "claim": "Mainnet transaction 6rD2iMs1… linked from README.md (succeeded)",
-   "where": "README.md:59",
-   "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
-   "check": {
-    "type": "tx",
-    "hash": "6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
-    "expect": "success"
-   },
-   "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node judge/verify-claims.mjs --only tx-6rD2iMs1"
-  },
-  {
-   "id": "tx-EwKUkWju",
-   "claim": "Mainnet transaction EwKUkWju… linked from README.md (succeeded)",
-   "where": "README.md:59",
-   "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
-   "check": {
-    "type": "tx",
-    "hash": "EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
-    "expect": "success"
-   },
-   "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node judge/verify-claims.mjs --only tx-EwKUkWju"
-  },
-  {
    "id": "tx-H8qJNgox",
    "claim": "Mainnet transaction H8qJNgox proves the documented refusal",
-   "where": "README.md:106",
+   "where": "README.md:86",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/H8qJNgoxiizcJw63wKjtBZY4DQT8qbRx1XP9ejXSjkSV",
    "check": {
@@ -2322,9 +2294,37 @@
    "verify": "node judge/verify-claims.mjs --only tx-H8qJNgox"
   },
   {
+   "id": "tx-EwKUkWju",
+   "claim": "Mainnet transaction EwKUkWju… linked from README.md (succeeded)",
+   "where": "README.md:112",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
+   "check": {
+    "type": "tx",
+    "hash": "EwKUkWjuznyWJ1iPxuX1tU5Voe6tpfwxKRD1gB84FBaa",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-EwKUkWju"
+  },
+  {
+   "id": "tx-6rD2iMs1",
+   "claim": "Mainnet transaction 6rD2iMs1… linked from README.md (succeeded)",
+   "where": "README.md:113",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
+   "check": {
+    "type": "tx",
+    "hash": "6rD2iMs146L3H3ghKTGwhcXtAmNQCGU2P3C7nx1ewi2h",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-6rD2iMs1"
+  },
+  {
    "id": "tx-Bn1TxXLY",
    "claim": "Mainnet transaction Bn1TxXLY… linked from README.md (succeeded)",
-   "where": "README.md:137",
+   "where": "README.md:117",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Bn1TxXLYxTPvA8ECPHa3HS2PfhyjyjXyfy6FxQPu2iPf",
    "check": {
@@ -2338,7 +2338,7 @@
   {
    "id": "tx-5CYYbe6Z",
    "claim": "Mainnet transaction 5CYYbe6Z… linked from README.md (succeeded)",
-   "where": "README.md:157",
+   "where": "README.md:137",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/5CYYbe6Zx1BVW3qmS63gR6XDGKMx2QzfJ8Pcft8BM3v5",
    "check": {
@@ -2352,7 +2352,7 @@
   {
    "id": "tx-7FUAqcee",
    "claim": "Mainnet transaction 7FUAqcee… linked from README.md (succeeded)",
-   "where": "README.md:157",
+   "where": "README.md:137",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/7FUAqceeJYjDVEbzobnELBHjdedGw7YPz6grirRFatym",
    "check": {
@@ -2366,7 +2366,7 @@
   {
    "id": "tx-84zVBikU",
    "claim": "Mainnet transaction 84zVBikU… linked from README.md (succeeded)",
-   "where": "README.md:177",
+   "where": "README.md:202",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/84zVBikU5JrAAnyaXTHQWwQSuq15zgLmMFJZsVnJZsPn",
    "check": {
@@ -2380,7 +2380,7 @@
   {
    "id": "tx-Epaz3aMA",
    "claim": "Mainnet transaction Epaz3aMA… linked from README.md (succeeded)",
-   "where": "README.md:178",
+   "where": "README.md:203",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Epaz3aMAk1WuLGaMuHKCACvGU981uEr4zUqzyep1zfi6",
    "check": {
@@ -2394,7 +2394,7 @@
   {
    "id": "tx-DJxbuaJV",
    "claim": "Mainnet transaction DJxbuaJV… linked from README.md (succeeded)",
-   "where": "README.md:179",
+   "where": "README.md:204",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/DJxbuaJVAhwBrK9xne1t623XuL8dMSm8So3eEVtZpHgF",
    "check": {
@@ -2408,7 +2408,7 @@
   {
    "id": "tx-G35r5pmC",
    "claim": "Mainnet transaction G35r5pmC… linked from README.md (succeeded)",
-   "where": "README.md:180",
+   "where": "README.md:205",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD",
    "check": {
@@ -2422,7 +2422,7 @@
   {
    "id": "tx-Ff4nibRd",
    "claim": "Mainnet transaction Ff4nibRd… linked from README.md (succeeded)",
-   "where": "README.md:181",
+   "where": "README.md:206",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Ff4nibRd3XMdEgRXwGyDteLFXRdXwqEmY6FJqo2PsNvs",
    "check": {
@@ -2436,7 +2436,7 @@
   {
    "id": "tx-4kQnM9Fj",
    "claim": "Mainnet transaction 4kQnM9Fj… linked from README.md (succeeded)",
-   "where": "README.md:182",
+   "where": "README.md:207",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/4kQnM9FjEKvXXEtenePc7LfdTtyLNbFirx5X8ytnvm1h",
    "check": {
@@ -2450,7 +2450,7 @@
   {
    "id": "tx-BbTs3JZa",
    "claim": "Mainnet transaction BbTs3JZa… linked from README.md (succeeded)",
-   "where": "README.md:182",
+   "where": "README.md:207",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/BbTs3JZaxdrgwPu6SjZQwjpuXk7wAxizeVqzKrS2pxNp",
    "check": {
@@ -2464,7 +2464,7 @@
   {
    "id": "tx-8nVr98N2",
    "claim": "Mainnet transaction 8nVr98N2… linked from README.md (succeeded)",
-   "where": "README.md:183",
+   "where": "README.md:208",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/8nVr98N2vYeTAaNiMtGWvge9fiAfoDSSBQL1wnSaTCwH",
    "check": {
@@ -2478,7 +2478,7 @@
   {
    "id": "tx-2v6Nw9Ww",
    "claim": "Mainnet transaction 2v6Nw9Ww… linked from README.md (succeeded)",
-   "where": "README.md:183",
+   "where": "README.md:208",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/2v6Nw9WwkbGCoG6PCT2wBRh5bfikLNtoQ6PcHGnbnPQ9",
    "check": {
@@ -2492,7 +2492,7 @@
   {
    "id": "tx-5d1R83qr",
    "claim": "Mainnet transaction 5d1R83qr… linked from README.md (succeeded)",
-   "where": "README.md:183",
+   "where": "README.md:208",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/5d1R83qr2WZLM5tKRQWiuS9jweH9rbGFPKDF8DrMEDsi",
    "check": {
@@ -2506,7 +2506,7 @@
   {
    "id": "tx-EkRuCKRG",
    "claim": "Mainnet transaction EkRuCKRG… linked from README.md (succeeded)",
-   "where": "README.md:183",
+   "where": "README.md:208",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/EkRuCKRG4TCtrmJEomfDih7vDVw4xegTNP46G98fXa6A",
    "check": {
@@ -2520,7 +2520,7 @@
   {
    "id": "tx-8BQznSfb",
    "claim": "Mainnet transaction 8BQznSfb… linked from README.md (succeeded)",
-   "where": "README.md:184",
+   "where": "README.md:209",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/8BQznSfbQUecDqCcEFwQj4vzr5x1X4rzLSLpszktf8fh",
    "check": {
@@ -2534,7 +2534,7 @@
   {
    "id": "tx-J2pMXQhL",
    "claim": "Mainnet transaction J2pMXQhL… linked from README.md (succeeded)",
-   "where": "README.md:187",
+   "where": "README.md:212",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/J2pMXQhLK7dZJKME126oK3AaeEg2U8kvXDqA1jVE3UuG",
    "check": {
@@ -2548,7 +2548,7 @@
   {
    "id": "tx-6Qp2F32q",
    "claim": "Mainnet transaction 6Qp2F32q… linked from README.md (succeeded)",
-   "where": "README.md:187",
+   "where": "README.md:212",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/6Qp2F32qfBxAhJh5w1HPtmgvTiTba5k8nsfznNYfYckU",
    "check": {
@@ -2562,7 +2562,7 @@
   {
    "id": "tx-EURp4e8V",
    "claim": "Mainnet transaction EURp4e8V… linked from README.md (succeeded)",
-   "where": "README.md:188",
+   "where": "README.md:213",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/EURp4e8VTPVeSBjhyTUaCH3tZLp8it2Ev9ycUvLxcjUE",
    "check": {
@@ -2576,7 +2576,7 @@
   {
    "id": "tx-HEgxese5",
    "claim": "Mainnet transaction HEgxese5… linked from README.md (succeeded)",
-   "where": "README.md:196",
+   "where": "README.md:221",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/HEgxese5vwUeAz2ctbwpdNDjfyhLib7xWXpTJLhwhRD7",
    "check": {
@@ -2590,7 +2590,7 @@
   {
    "id": "tx-UYHismxe",
    "claim": "Mainnet transaction UYHismxe… linked from README.md (succeeded)",
-   "where": "README.md:197",
+   "where": "README.md:222",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/UYHismxe3a2Xb5YvbVHuGhsHWf7ERrx5oCrxREePBFR",
    "check": {
@@ -2604,7 +2604,7 @@
   {
    "id": "tx-142eipKr",
    "claim": "Mainnet transaction 142eipKr… linked from README.md (succeeded)",
-   "where": "README.md:198",
+   "where": "README.md:223",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/142eipKrruYWL69w31bzCbcSakGvum5XzwTasHxsAdAC",
    "check": {
@@ -2618,7 +2618,7 @@
   {
    "id": "tx-9kmr1tsb",
    "claim": "Mainnet transaction 9kmr1tsb proves the documented refusal",
-   "where": "README.md:199",
+   "where": "README.md:224",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/9kmr1tsbbXwdr3y8VcwmBGW5zE44MCcwsSANa7S8C4LY",
    "check": {
@@ -2633,7 +2633,7 @@
   {
    "id": "tx-HahKkkFj",
    "claim": "Mainnet transaction HahKkkFj… linked from README.md (succeeded)",
-   "where": "README.md:201",
+   "where": "README.md:226",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/HahKkkFjXQ5xCky8759qNnoEDm8DjizeveS9B6RHNYy1",
    "check": {
@@ -2647,7 +2647,7 @@
   {
    "id": "tx-GgnNQERT",
    "claim": "Mainnet transaction GgnNQERT… linked from README.md (succeeded)",
-   "where": "README.md:202",
+   "where": "README.md:227",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/GgnNQERTj8qKp5VRCdXaTPgb6CjNChamnPsed11AsM5k",
    "check": {
@@ -2661,7 +2661,7 @@
   {
    "id": "tx-68er4S4y",
    "claim": "Mainnet transaction 68er4S4y… linked from README.md (succeeded)",
-   "where": "README.md:203",
+   "where": "README.md:228",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/68er4S4ypnp7L7dCjMNPsWkQeYSnpCGHKMTSgyVAH9DM",
    "check": {
@@ -2675,7 +2675,7 @@
   {
    "id": "tx-Azn3WUud",
    "claim": "Mainnet transaction Azn3WUud… linked from README.md (succeeded)",
-   "where": "README.md:203",
+   "where": "README.md:228",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Azn3WUudmSn4ip9B9HNVXTGXriavZ4JK5f3Aqp7JPx2m",
    "check": {
@@ -2689,7 +2689,7 @@
   {
    "id": "tx-CM7Jvwdn",
    "claim": "Mainnet transaction CM7Jvwdn… linked from README.md (succeeded)",
-   "where": "README.md:204",
+   "where": "README.md:229",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/CM7JvwdnN2oQ4xakmcSoDPDREBbE7ZUCh5FnJargd5bp",
    "check": {
@@ -2703,7 +2703,7 @@
   {
    "id": "tx-FaYzSUYT",
    "claim": "Mainnet transaction FaYzSUYT… linked from README.md (succeeded)",
-   "where": "README.md:207",
+   "where": "README.md:232",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/FaYzSUYTzoG3udAE3d31sUwWFeskndkhrZ8iehk1NxJ4",
    "check": {
@@ -2717,7 +2717,7 @@
   {
    "id": "tx-7QFqM5Gi",
    "claim": "Mainnet transaction 7QFqM5Gi… linked from README.md (succeeded)",
-   "where": "README.md:208",
+   "where": "README.md:233",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/7QFqM5GiUgZuWJEpRUKvARn1LKyy91NVWFZmzNQscQDp",
    "check": {
@@ -2731,7 +2731,7 @@
   {
    "id": "tx-5Z7Tktfc",
    "claim": "Mainnet transaction 5Z7Tktfc… linked from README.md (succeeded)",
-   "where": "README.md:211",
+   "where": "README.md:236",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/5Z7TktfcgeFrzRnz8NSpFSbTw77R5779d3PRsrEBPbYA",
    "check": {
@@ -2745,7 +2745,7 @@
   {
    "id": "tx-2ShJpaoi",
    "claim": "Mainnet transaction 2ShJpaoi… linked from README.md (succeeded)",
-   "where": "README.md:212",
+   "where": "README.md:237",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/2ShJpaoicEm49L9rcsJjXoubuzoF3SvbQFZASUQBi5dq",
    "check": {
@@ -2759,7 +2759,7 @@
   {
    "id": "tx-DXH756vm",
    "claim": "Mainnet transaction DXH756vm… linked from README.md (succeeded)",
-   "where": "README.md:213",
+   "where": "README.md:238",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/DXH756vmgj8GTDz6fUwnfgaUuC7vCi1vu6VaX5heoDww",
    "check": {
@@ -2773,7 +2773,7 @@
   {
    "id": "tx-B1BH9eZy",
    "claim": "Mainnet transaction B1BH9eZy… linked from README.md (succeeded)",
-   "where": "README.md:214",
+   "where": "README.md:239",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/B1BH9eZycbXqgwod2dqbn6e5UWY8TKTw2ZawyYqLRDtG",
    "check": {
@@ -2787,7 +2787,7 @@
   {
    "id": "tx-89vSYY4t",
    "claim": "Mainnet transaction 89vSYY4t… linked from README.md (succeeded)",
-   "where": "README.md:217",
+   "where": "README.md:242",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/89vSYY4tbeNPuNuhHB8YmkkAWAcjW5VdniQm3ePHuPYz",
    "check": {
@@ -2801,7 +2801,7 @@
   {
    "id": "tx-144iK9uj",
    "claim": "Mainnet transaction 144iK9uj… linked from README.md (succeeded)",
-   "where": "README.md:222",
+   "where": "README.md:247",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/144iK9ujaowrUdXySfvGDDjobV2Q5YyJsNPK3KL2GYnc",
    "check": {
@@ -2815,7 +2815,7 @@
   {
    "id": "tx-biJNTxXc",
    "claim": "Mainnet transaction biJNTxXc… linked from README.md (succeeded)",
-   "where": "README.md:234",
+   "where": "README.md:259",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/biJNTxXc9zbQw6nTMJoPM2HeAE9snEf1mSdbsZ1CWEQ",
    "check": {
@@ -2827,9 +2827,205 @@
    "verify": "node judge/verify-claims.mjs --only tx-biJNTxXc"
   },
   {
+   "id": "tx-BSkutP8G",
+   "claim": "Mainnet transaction BSkutP8G… linked from README.md (succeeded)",
+   "where": "README.md:277",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/BSkutP8G6ZWtWahYisXai9k5V579otDKYRsYwWSkjXQx",
+   "check": {
+    "type": "tx",
+    "hash": "BSkutP8G6ZWtWahYisXai9k5V579otDKYRsYwWSkjXQx",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-BSkutP8G"
+  },
+  {
+   "id": "tx-FBw6qwpX",
+   "claim": "Mainnet transaction FBw6qwpX… linked from README.md (expected revert)",
+   "where": "README.md:278",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/FBw6qwpXks9NX18uJcFbJzahEeU6kJQYAnanN7WnsB38",
+   "check": {
+    "type": "tx",
+    "hash": "FBw6qwpXks9NX18uJcFbJzahEeU6kJQYAnanN7WnsB38",
+    "expect": "exists"
+   },
+   "expected": "transaction found on mainnet",
+   "verify": "node judge/verify-claims.mjs --only tx-FBw6qwpX"
+  },
+  {
+   "id": "tx-DJe2Q4CB",
+   "claim": "Mainnet transaction DJe2Q4CB… linked from README.md (succeeded)",
+   "where": "README.md:279",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/DJe2Q4CBu3CPgvTTXgg6sXSKwNSc2qvsw7qDfDMn9uNi",
+   "check": {
+    "type": "tx",
+    "hash": "DJe2Q4CBu3CPgvTTXgg6sXSKwNSc2qvsw7qDfDMn9uNi",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-DJe2Q4CB"
+  },
+  {
+   "id": "tx-4Nt7BWpN",
+   "claim": "Mainnet transaction 4Nt7BWpN… linked from README.md (succeeded)",
+   "where": "README.md:280",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/4Nt7BWpNeQVf2NyBNZypnUA3SaGrcVNDdvBvu54QpMoh",
+   "check": {
+    "type": "tx",
+    "hash": "4Nt7BWpNeQVf2NyBNZypnUA3SaGrcVNDdvBvu54QpMoh",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-4Nt7BWpN"
+  },
+  {
+   "id": "tx-5X1C2zvR",
+   "claim": "Mainnet transaction 5X1C2zvR… linked from README.md (succeeded)",
+   "where": "README.md:281",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c",
+   "check": {
+    "type": "tx",
+    "hash": "5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-5X1C2zvR"
+  },
+  {
+   "id": "tx-DvCJPssH",
+   "claim": "Mainnet transaction DvCJPssH… linked from README.md (succeeded)",
+   "where": "README.md:282",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/DvCJPssHQpQQsPyifzF3Lv2ggrKLmCZBHn4hMSG1uLVn",
+   "check": {
+    "type": "tx",
+    "hash": "DvCJPssHQpQQsPyifzF3Lv2ggrKLmCZBHn4hMSG1uLVn",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-DvCJPssH"
+  },
+  {
+   "id": "tx-3Tf1Zxuu",
+   "claim": "Mainnet transaction 3Tf1Zxuu… linked from README.md (succeeded)",
+   "where": "README.md:283",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/3Tf1ZxuuqLUFdPHBtE7AsyXDGYqFgWqMQzXBDYjinm97",
+   "check": {
+    "type": "tx",
+    "hash": "3Tf1ZxuuqLUFdPHBtE7AsyXDGYqFgWqMQzXBDYjinm97",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-3Tf1Zxuu"
+  },
+  {
+   "id": "tx-4dHXBPJd",
+   "claim": "Mainnet transaction 4dHXBPJd… linked from README.md (succeeded)",
+   "where": "README.md:284",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/4dHXBPJdWPTAg2pgUc5Rg5EWuFoJnHHTqvFoq4PzPgmo",
+   "check": {
+    "type": "tx",
+    "hash": "4dHXBPJdWPTAg2pgUc5Rg5EWuFoJnHHTqvFoq4PzPgmo",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-4dHXBPJd"
+  },
+  {
+   "id": "tx-9XZ53tkX",
+   "claim": "Mainnet transaction 9XZ53tkX… linked from README.md (succeeded)",
+   "where": "README.md:285",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/9XZ53tkXgfBzTsKKVGjRf8K18HLWxQpsB3qmNfwv9kNj",
+   "check": {
+    "type": "tx",
+    "hash": "9XZ53tkXgfBzTsKKVGjRf8K18HLWxQpsB3qmNfwv9kNj",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-9XZ53tkX"
+  },
+  {
+   "id": "tx-GkADkw4X",
+   "claim": "Mainnet transaction GkADkw4X… linked from README.md (succeeded)",
+   "where": "README.md:286",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/GkADkw4Xb15xrxrNtpcC1iDtUCKMCP21pAtpnqeA3iQL",
+   "check": {
+    "type": "tx",
+    "hash": "GkADkw4Xb15xrxrNtpcC1iDtUCKMCP21pAtpnqeA3iQL",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-GkADkw4X"
+  },
+  {
+   "id": "tx-CiPpm7SS",
+   "claim": "Mainnet transaction CiPpm7SS… linked from README.md (succeeded)",
+   "where": "README.md:287",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6",
+   "check": {
+    "type": "tx",
+    "hash": "CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-CiPpm7SS"
+  },
+  {
+   "id": "tx-EcRiURh7",
+   "claim": "Mainnet transaction EcRiURh7… linked from README.md (succeeded)",
+   "where": "README.md:288",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/EcRiURh74f9zMBNk55XWECys2m5i2F3z47tgWDjzmsyM",
+   "check": {
+    "type": "tx",
+    "hash": "EcRiURh74f9zMBNk55XWECys2m5i2F3z47tgWDjzmsyM",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-EcRiURh7"
+  },
+  {
+   "id": "tx-3PGScitc",
+   "claim": "Mainnet transaction 3PGScitc… linked from README.md (succeeded)",
+   "where": "README.md:289",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/3PGScitcdKrkUrNWnZJsLMu3C9sCRXqchSjbYzs4cqBb",
+   "check": {
+    "type": "tx",
+    "hash": "3PGScitcdKrkUrNWnZJsLMu3C9sCRXqchSjbYzs4cqBb",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-3PGScitc"
+  },
+  {
+   "id": "tx-9ANg3eDZ",
+   "claim": "Mainnet transaction 9ANg3eDZ… linked from README.md (succeeded)",
+   "where": "README.md:290",
+   "evidence_type": "mainnet tx",
+   "evidence": "https://nearblocks.io/txns/9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA",
+   "check": {
+    "type": "tx",
+    "hash": "9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA",
+    "expect": "success"
+   },
+   "expected": "transaction found on mainnet with no failed receipt",
+   "verify": "node judge/verify-claims.mjs --only tx-9ANg3eDZ"
+  },
+  {
    "id": "tx-HxGwWLxn",
    "claim": "Mainnet transaction HxGwWLxn… linked from README.md (succeeded)",
-   "where": "README.md:277",
+   "where": "README.md:304",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/HxGwWLxnJByDgyBAuXr3iuByFyqsWaVjgUdDvMmG1KRy",
    "check": {
@@ -2843,7 +3039,7 @@
   {
    "id": "tx-3xqBbMi9",
    "claim": "Mainnet transaction 3xqBbMi9… linked from README.md (succeeded)",
-   "where": "README.md:278",
+   "where": "README.md:305",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/3xqBbMi9pWarcNk72vymAn2suLr16QUfDnsKo4gso5te",
    "check": {
@@ -2857,7 +3053,7 @@
   {
    "id": "tx-GZCwvc4o",
    "claim": "Mainnet transaction GZCwvc4o… linked from README.md (succeeded)",
-   "where": "README.md:279",
+   "where": "README.md:306",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/GZCwvc4o4WSrk6JruDgNLYhSJeS3PQiy4RQwgVURDLZU",
    "check": {
@@ -2871,7 +3067,7 @@
   {
    "id": "tx-DVhsRMs8",
    "claim": "Mainnet transaction DVhsRMs8… linked from README.md (succeeded)",
-   "where": "README.md:280",
+   "where": "README.md:307",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/DVhsRMs83P6J35A8ozFNTHpCoTAf4DxpAhqA4AqVBPJg",
    "check": {
@@ -2885,7 +3081,7 @@
   {
    "id": "tx-ycvzWh7a",
    "claim": "Mainnet transaction ycvzWh7a… linked from README.md (succeeded)",
-   "where": "README.md:281",
+   "where": "README.md:308",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/ycvzWh7aV2MmCYDaKfWtdF5CpJqfUqGSCvoF8tPk34p",
    "check": {
@@ -2899,7 +3095,7 @@
   {
    "id": "tx-8xXyVD1F",
    "claim": "Mainnet transaction 8xXyVD1F… linked from README.md (succeeded)",
-   "where": "README.md:282",
+   "where": "README.md:309",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/8xXyVD1FJwkSnuiyZHbG8ED723ZgV7BwmgyTwGKuH2Qs",
    "check": {
@@ -2913,7 +3109,7 @@
   {
    "id": "tx-2tZ5deK6",
    "claim": "Mainnet transaction 2tZ5deK6… linked from README.md (succeeded)",
-   "where": "README.md:284",
+   "where": "README.md:311",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/2tZ5deK6tCBkRZcbRbwYmBiQ4ZLFHdgmZjUdqn3pZoiK",
    "check": {
@@ -2927,7 +3123,7 @@
   {
    "id": "tx-9Qhnu8H9",
    "claim": "Mainnet transaction 9Qhnu8H9… linked from README.md (succeeded)",
-   "where": "README.md:310",
+   "where": "README.md:337",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/9Qhnu8H9kKeK5gkzXYwgCFRaGFmX3nUPJDFvumtCkP7n",
    "check": {
@@ -2941,7 +3137,7 @@
   {
    "id": "tx-A6E9JMRn",
    "claim": "Mainnet transaction A6E9JMRn… linked from README.md (succeeded)",
-   "where": "README.md:325",
+   "where": "README.md:352",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/A6E9JMRn4di5nYVgRRj4QsmWcNouuCQkDLEN2XLM6Hwn",
    "check": {
@@ -2955,7 +3151,7 @@
   {
    "id": "tx-HZ3Srg1K",
    "claim": "Mainnet transaction HZ3Srg1K… linked from README.md (succeeded)",
-   "where": "README.md:326",
+   "where": "README.md:353",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/HZ3Srg1K2S2srBkBFTF6gGnTMdXYRdAjcgjooTwhv8eE",
    "check": {
@@ -2969,7 +3165,7 @@
   {
    "id": "tx-9pvby5e2",
    "claim": "Mainnet transaction 9pvby5e2… linked from README.md (succeeded)",
-   "where": "README.md:328",
+   "where": "README.md:355",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/9pvby5e2qFkHND3roKaaZvXtkD7wPu5rQjrqSBPSuExc",
    "check": {
@@ -2983,7 +3179,7 @@
   {
    "id": "tx-A1o8882h",
    "claim": "Mainnet transaction A1o8882h… linked from README.md (succeeded)",
-   "where": "README.md:329",
+   "where": "README.md:356",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/A1o8882hpjZmBr56hhDop236MrSFtEnMfNt9nEZwo4sG",
    "check": {
@@ -2997,7 +3193,7 @@
   {
    "id": "tx-Bc8YArR3",
    "claim": "Mainnet transaction Bc8YArR3… linked from README.md (expected revert)",
-   "where": "README.md:330",
+   "where": "README.md:357",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Bc8YArR3dwjaTY5fVPbqxCVEXf7xp62DkSBuWjuUmdUY",
    "check": {
@@ -3011,7 +3207,7 @@
   {
    "id": "tx-BWQxEoSg",
    "claim": "Mainnet transaction BWQxEoSg… linked from README.md (succeeded)",
-   "where": "README.md:332",
+   "where": "README.md:359",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/BWQxEoSg3b6XHdk4iooAneoBJM7EtP83HTrvYXpdBQi5",
    "check": {
@@ -3025,7 +3221,7 @@
   {
    "id": "tx-MG7pGVSN",
    "claim": "Mainnet transaction MG7pGVSN… linked from README.md (succeeded)",
-   "where": "README.md:340",
+   "where": "README.md:367",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/MG7pGVSNjFDz85yqrAA9stN4yyXECYfYLDmCgYE4gyq",
    "check": {
@@ -3039,7 +3235,7 @@
   {
    "id": "tx-ArXzjsWP",
    "claim": "Mainnet transaction ArXzjsWP… linked from README.md (succeeded)",
-   "where": "README.md:341",
+   "where": "README.md:368",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/ArXzjsWPs9ii119Q3zy3dViPERaKF26rE7Q1xnLmZrEW",
    "check": {
@@ -3053,7 +3249,7 @@
   {
    "id": "tx-HSCTERXC",
    "claim": "Mainnet transaction HSCTERXC… linked from README.md (expected revert)",
-   "where": "README.md:342",
+   "where": "README.md:369",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/HSCTERXCUv1uEfrcz44pxM5Ltcy4BKXTfZxxtYUTQsc7",
    "check": {
@@ -3067,7 +3263,7 @@
   {
    "id": "tx-EA7S1TeV",
    "claim": "Mainnet transaction EA7S1TeV… linked from README.md (succeeded)",
-   "where": "README.md:344",
+   "where": "README.md:371",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/EA7S1TeVnMF1v5FthV4ffQf9NYXfGJTtzo4ZRp25ZBjy",
    "check": {
@@ -3081,7 +3277,7 @@
   {
    "id": "tx-8r5RMGJo",
    "claim": "Mainnet transaction 8r5RMGJo… linked from README.md (expected revert)",
-   "where": "README.md:345",
+   "where": "README.md:372",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/8r5RMGJo7mZqk9r42T8S54hQfKbCLjqY2BNALiTVHH1x",
    "check": {
@@ -3095,7 +3291,7 @@
   {
    "id": "tx-AepKgT8M",
    "claim": "Mainnet transaction AepKgT8M… linked from README.md (succeeded)",
-   "where": "README.md:347",
+   "where": "README.md:374",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/AepKgT8M1XhMjWMHMzaJSo3YnBXzG58YYrLVyp8tUW3z",
    "check": {
@@ -3109,7 +3305,7 @@
   {
    "id": "tx-3PvLd4W1",
    "claim": "Mainnet transaction 3PvLd4W1… linked from README.md (expected revert)",
-   "where": "README.md:348",
+   "where": "README.md:375",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/3PvLd4W1yyjBkt2sfxZVkznuV4yZSndTRS5Cd8aYsmG2",
    "check": {
@@ -3123,7 +3319,7 @@
   {
    "id": "tx-GNqXiicF",
    "claim": "Mainnet transaction GNqXiicF… linked from README.md (succeeded)",
-   "where": "README.md:350",
+   "where": "README.md:377",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/GNqXiicFgXQpS5LsYiNRffK6Xhp5W7Yi8EZK2XqKvX8X",
    "check": {
@@ -3137,7 +3333,7 @@
   {
    "id": "tx-Fs4Kqj7Y",
    "claim": "Mainnet transaction Fs4Kqj7Y… linked from README.md (expected revert)",
-   "where": "README.md:351",
+   "where": "README.md:378",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Fs4Kqj7YLmsqozWakfCKH6tQ1oFm4xHW4fkXY6FNvD1i",
    "check": {
@@ -3151,7 +3347,7 @@
   {
    "id": "tx-F1XzcCcz",
    "claim": "Mainnet transaction F1XzcCcz… linked from README.md (succeeded)",
-   "where": "README.md:353",
+   "where": "README.md:380",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/F1XzcCczrnkGryZ4UuvmGQA1gFeW6U26KJEu9mne6ZQu",
    "check": {
@@ -3165,7 +3361,7 @@
   {
    "id": "tx-CFm3suTw",
    "claim": "Mainnet transaction CFm3suTw… linked from README.md (expected revert)",
-   "where": "README.md:354",
+   "where": "README.md:381",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/CFm3suTwXmvtcEKvjUaBekepaxGu2buu9mRUa9qMr85s",
    "check": {
@@ -3179,7 +3375,7 @@
   {
    "id": "tx-CcttLJdw",
    "claim": "Mainnet transaction CcttLJdw… linked from README.md (succeeded)",
-   "where": "README.md:356",
+   "where": "README.md:383",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/CcttLJdwCa8EaLhY42fh6SBZbcVphtycrNTc74jnvkyW",
    "check": {
@@ -3193,7 +3389,7 @@
   {
    "id": "tx-GaK1ham7",
    "claim": "Mainnet transaction GaK1ham7… linked from README.md (expected revert)",
-   "where": "README.md:357",
+   "where": "README.md:384",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/GaK1ham7MwpPYrRVJHCh3PuaNyfSgMF5U3WKdPWqTLiW",
    "check": {
@@ -3207,7 +3403,7 @@
   {
    "id": "tx-FXbXhGNi",
    "claim": "Mainnet transaction FXbXhGNi… linked from README.md (succeeded)",
-   "where": "README.md:359",
+   "where": "README.md:386",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/FXbXhGNirZCkiP2bx1aiBFQL3Q1EHFMpniJTY579oGWN",
    "check": {
@@ -3221,7 +3417,7 @@
   {
    "id": "tx-AUyw7Kjq",
    "claim": "Mainnet transaction AUyw7Kjq… linked from README.md (expected revert)",
-   "where": "README.md:360",
+   "where": "README.md:387",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/AUyw7KjqweNGSMD7ChYh7MJGMthQXTJhFqQzfEMZzZ3c",
    "check": {
@@ -3235,7 +3431,7 @@
   {
    "id": "tx-AJWVEN6F",
    "claim": "Mainnet transaction AJWVEN6F… linked from README.md (succeeded)",
-   "where": "README.md:362",
+   "where": "README.md:389",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/AJWVEN6FfQaE3ZE3V7KDHj1BtzCKTx3iMH3tx8CLYqKx",
    "check": {
@@ -3249,7 +3445,7 @@
   {
    "id": "tx-oGGRn6jW",
    "claim": "Mainnet transaction oGGRn6jW… linked from README.md (expected revert)",
-   "where": "README.md:363",
+   "where": "README.md:390",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/oGGRn6jWffHF8GpryWMhMsGETLYRhL8RWzTC1dbWQoF",
    "check": {
@@ -3263,7 +3459,7 @@
   {
    "id": "tx-86tCjm92",
    "claim": "Mainnet transaction 86tCjm92… linked from README.md (succeeded)",
-   "where": "README.md:365",
+   "where": "README.md:392",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/86tCjm92yBqKoHt2kz99es1NadZeKf91AfUTx2uaqfmr",
    "check": {
@@ -3277,7 +3473,7 @@
   {
    "id": "tx-4Wz1EUh1",
    "claim": "Mainnet transaction 4Wz1EUh1… linked from README.md (expected revert)",
-   "where": "README.md:366",
+   "where": "README.md:393",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/4Wz1EUh1SFPvnYGRyMKWXeDhFfE4ZD6y5hsH5WWgwwgk",
    "check": {
@@ -3291,7 +3487,7 @@
   {
    "id": "tx-9pk1mDC1",
    "claim": "Mainnet transaction 9pk1mDC1… linked from README.md (succeeded)",
-   "where": "README.md:368",
+   "where": "README.md:395",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/9pk1mDC1dxzTXE7H7mHLXVVckHMEmRA4VnfxfxAzdb2z",
    "check": {
@@ -3305,7 +3501,7 @@
   {
    "id": "tx-AvQNnkVt",
    "claim": "Mainnet transaction AvQNnkVt… linked from README.md (expected revert)",
-   "where": "README.md:369",
+   "where": "README.md:396",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/AvQNnkVtU8e8iudT35QXeHuTbwv7L49GL8kKRXPqwpuZ",
    "check": {
@@ -3319,7 +3515,7 @@
   {
    "id": "tx-B3x8cU6G",
    "claim": "Mainnet transaction B3x8cU6G… linked from README.md (succeeded)",
-   "where": "README.md:371",
+   "where": "README.md:398",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/B3x8cU6GH25cPDxNZ56mP4fACRuqXUbopobeJxR11kCU",
    "check": {
@@ -3333,7 +3529,7 @@
   {
    "id": "tx-72P1YcuV",
    "claim": "Mainnet transaction 72P1YcuV… linked from README.md (expected revert)",
-   "where": "README.md:372",
+   "where": "README.md:399",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/72P1YcuVUJD3pX9dTnkNzii2gx3jFEcvBrAKDKVo2XR8",
    "check": {
@@ -3347,7 +3543,7 @@
   {
    "id": "tx-22KDVU1s",
    "claim": "Mainnet transaction 22KDVU1s… linked from README.md (succeeded)",
-   "where": "README.md:374",
+   "where": "README.md:401",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/22KDVU1sNKQhjoYbN8h1JqyQbcNxHRNednT6sz4nogxS",
    "check": {
@@ -3361,7 +3557,7 @@
   {
    "id": "tx-BLEWXFX8",
    "claim": "Mainnet transaction BLEWXFX8… linked from README.md (succeeded)",
-   "where": "README.md:376",
+   "where": "README.md:403",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/BLEWXFX8qdX8iAkytAT8pjYpY382PjzGP38S3vUMZPQx",
    "check": {
@@ -3375,7 +3571,7 @@
   {
    "id": "tx-ARt9BRAd",
    "claim": "Mainnet transaction ARt9BRAd… linked from README.md (succeeded)",
-   "where": "README.md:376",
+   "where": "README.md:403",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/ARt9BRAdZDF3nipDD5swjTxL68Vt8uPEG9hQ4KvK8V7F",
    "check": {
@@ -3389,7 +3585,7 @@
   {
    "id": "tx-Mi9fYL9U",
    "claim": "Mainnet transaction Mi9fYL9U… linked from README.md (succeeded)",
-   "where": "README.md:863",
+   "where": "README.md:893",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/Mi9fYL9UdYQSRXEQzii1LS37vsBCJbP4bPtwNsHaqWU",
    "check": {
@@ -3403,7 +3599,7 @@
   {
    "id": "tx-4ueDpiq5",
    "claim": "Mainnet transaction 4ueDpiq5… linked from README.md (succeeded)",
-   "where": "README.md:864",
+   "where": "README.md:894",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/4ueDpiq5jm6VXMjr96X1f3UVGWeAKNA2fLsosxWuG43t",
    "check": {
@@ -3417,7 +3613,7 @@
   {
    "id": "tx-7TMAjPuW",
    "claim": "Mainnet transaction 7TMAjPuW… linked from README.md (succeeded)",
-   "where": "README.md:865",
+   "where": "README.md:895",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/7TMAjPuWT1auMme1VYqfjMLwJphgcMucj8g4ig4gvE1T",
    "check": {
@@ -3431,7 +3627,7 @@
   {
    "id": "tx-6tTmKphg",
    "claim": "Mainnet transaction 6tTmKphg… linked from README.md (succeeded)",
-   "where": "README.md:866",
+   "where": "README.md:896",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/6tTmKphgDz4FG3WxP8gwN4w8cRaJu2QCXcBzGBhu59ie",
    "check": {
@@ -3445,7 +3641,7 @@
   {
    "id": "tx-AtETZ9Fd",
    "claim": "Mainnet transaction AtETZ9Fd… linked from README.md (succeeded)",
-   "where": "README.md:867",
+   "where": "README.md:897",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/AtETZ9FdMMUtmWhY16pRCvGgu5efSvUsXWvMGHNyQNiH",
    "check": {
@@ -3459,7 +3655,7 @@
   {
    "id": "tx-7fRT8Uee",
    "claim": "Mainnet transaction 7fRT8Uee… linked from README.md (succeeded)",
-   "where": "README.md:868",
+   "where": "README.md:898",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/7fRT8UeeDwwfrEs2qpsYDuHrcufUmCHwcdDnZ7vF54xk",
    "check": {
@@ -3473,7 +3669,7 @@
   {
    "id": "tx-GXZtL6hg",
    "claim": "Mainnet transaction GXZtL6hg… linked from README.md (succeeded)",
-   "where": "README.md:869",
+   "where": "README.md:899",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/GXZtL6hgscWUAh7SpZLA5SBLyrVe4w9bCxz2Kmb4q1K5",
    "check": {
@@ -3487,7 +3683,7 @@
   {
    "id": "tx-B6GReQmb",
    "claim": "Mainnet transaction B6GReQmb… linked from README.md (succeeded)",
-   "where": "README.md:870",
+   "where": "README.md:900",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/B6GReQmb817bqkPrWKoniKRZziWHYK4PZvH1A1u54MqJ",
    "check": {
@@ -3501,7 +3697,7 @@
   {
    "id": "tx-5TNWPKKL",
    "claim": "Mainnet transaction 5TNWPKKL… linked from README.md (succeeded)",
-   "where": "README.md:871",
+   "where": "README.md:901",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/5TNWPKKL1XTGQRA5gJ2KsLugc7TFMv6cP17jiRJiW7Ue",
    "check": {
@@ -3515,7 +3711,7 @@
   {
    "id": "tx-9VNRDazN",
    "claim": "Mainnet transaction 9VNRDazN… linked from README.md (succeeded)",
-   "where": "README.md:872",
+   "where": "README.md:902",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/9VNRDazNv6dXJjkaybQ4bm1SiTrPvb11p3zycyTj8Hc2",
    "check": {
@@ -3529,7 +3725,7 @@
   {
    "id": "tx-y9je7NLY",
    "claim": "Mainnet transaction y9je7NLY… linked from README.md (succeeded)",
-   "where": "README.md:873",
+   "where": "README.md:903",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/y9je7NLYr7LnFLNjefkoa6XMSvFBJxmn7CV6SYa3aK5",
    "check": {
@@ -3543,7 +3739,7 @@
   {
    "id": "tx-3emr8M4R",
    "claim": "Mainnet transaction 3emr8M4R… linked from README.md (succeeded)",
-   "where": "README.md:874",
+   "where": "README.md:904",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/3emr8M4RZUapyGWynK5r3MhtAEA7R3SMzzdEEY4u8i9P",
    "check": {
@@ -3557,7 +3753,7 @@
   {
    "id": "tx-BRuwESG8",
    "claim": "Mainnet transaction BRuwESG8… linked from README.md (succeeded)",
-   "where": "README.md:1076",
+   "where": "README.md:1105",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/BRuwESG8Baosp3txJWRdSHW1jXr9w4RgVURqZ2q2ou5S",
    "check": {
@@ -3571,7 +3767,7 @@
   {
    "id": "tx-4XrNsFhg",
    "claim": "Mainnet transaction 4XrNsFhg… linked from README.md (succeeded)",
-   "where": "README.md:1077",
+   "where": "README.md:1106",
    "evidence_type": "mainnet tx",
    "evidence": "https://nearblocks.io/txns/4XrNsFhgRrapQii14PYYc215cVEzZ8wubs3fytM3YAPj",
    "check": {
@@ -3581,34 +3777,6 @@
    },
    "expected": "transaction found on mainnet with no failed receipt",
    "verify": "node judge/verify-claims.mjs --only tx-4XrNsFhg"
-  },
-  {
-   "id": "tx-5X1C2zvR",
-   "claim": "Mainnet transaction 5X1C2zvR… linked from TRACK_COVERAGE.md (succeeded)",
-   "where": "TRACK_COVERAGE.md:4",
-   "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c",
-   "check": {
-    "type": "tx",
-    "hash": "5X1C2zvR9pg1j237AcVhp43PbBaaz5d1y81k7XqUT18c",
-    "expect": "success"
-   },
-   "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node judge/verify-claims.mjs --only tx-5X1C2zvR"
-  },
-  {
-   "id": "tx-CiPpm7SS",
-   "claim": "Mainnet transaction CiPpm7SS… linked from TRACK_COVERAGE.md (succeeded)",
-   "where": "TRACK_COVERAGE.md:4",
-   "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6",
-   "check": {
-    "type": "tx",
-    "hash": "CiPpm7SSVcU5do25NtjfdhUgjpFet3XUd4RFwRFaUEA6",
-    "expect": "success"
-   },
-   "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node judge/verify-claims.mjs --only tx-CiPpm7SS"
   },
   {
    "id": "tx-9fAHo9ck",
@@ -3623,20 +3791,6 @@
    },
    "expected": "transaction found on mainnet with no failed receipt",
    "verify": "node judge/verify-claims.mjs --only tx-9fAHo9ck"
-  },
-  {
-   "id": "tx-9ANg3eDZ",
-   "claim": "Mainnet transaction 9ANg3eDZ… linked from SECURITY.md (succeeded)",
-   "where": "SECURITY.md:462",
-   "evidence_type": "mainnet tx",
-   "evidence": "https://nearblocks.io/txns/9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA",
-   "check": {
-    "type": "tx",
-    "hash": "9ANg3eDZFfWFxQPkeNhF1gsHAX1eQtVitGY7UjhHB3iA",
-    "expect": "success"
-   },
-   "expected": "transaction found on mainnet with no failed receipt",
-   "verify": "node judge/verify-claims.mjs --only tx-9ANg3eDZ"
   },
   {
    "id": "tx-7P9VFx4p",
@@ -3656,7 +3810,7 @@
   {
    "id": "acct-keyhole-devm",
    "claim": "Account keyhole-devmo.near exists on mainnet",
-   "where": "README.md:11",
+   "where": "README.md:17",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/keyhole-devmo.near",
    "check": {
@@ -3669,7 +3823,7 @@
   {
    "id": "acct-ab1d8098b373",
    "claim": "Account ab1d8098b373e08486a754526f7e18ff298e1a017140e875b10ac1f3801ed4c8 holds a key (implicit account, exists once funded)",
-   "where": "README.md:298",
+   "where": "README.md:325",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/ab1d8098b373e08486a754526f7e18ff298e1a017140e875b10ac1f3801ed4c8",
    "check": {
@@ -3682,7 +3836,7 @@
   {
    "id": "acct-476abdb54d0a",
    "claim": "Account 476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8 holds a key (implicit account, exists once funded)",
-   "where": "README.md:299",
+   "where": "README.md:326",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/476abdb54d0a55fba7cf45c624aa5a65665aaa92f50f4dd36f09abc1890ca8c8",
    "check": {
@@ -3695,7 +3849,7 @@
   {
    "id": "acct-0xf76e6b0920",
    "claim": "Account 0xf76e6b0920e9332ff4410f6dd53f01722abc71a3 holds a key (implicit account, exists once funded)",
-   "where": "README.md:300",
+   "where": "README.md:327",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/0xf76e6b0920e9332ff4410f6dd53f01722abc71a3",
    "check": {
@@ -3708,7 +3862,7 @@
   {
    "id": "acct-a838e946d800",
    "claim": "Account a838e946d80014f0c9a99911ad9802e7f88e80b87536fce86a46e1c03b3292f4 holds a key (implicit account, exists once funded)",
-   "where": "README.md:301",
+   "where": "README.md:328",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/a838e946d80014f0c9a99911ad9802e7f88e80b87536fce86a46e1c03b3292f4",
    "check": {
@@ -3721,7 +3875,7 @@
   {
    "id": "acct-4c7143d8da91",
    "claim": "Account 4c7143d8da91091c5fd5d7f75ed01d08a4fa91b29e0b3630d2e5c3e9510afd0e holds a key (implicit account, exists once funded)",
-   "where": "README.md:303",
+   "where": "README.md:330",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/4c7143d8da91091c5fd5d7f75ed01d08a4fa91b29e0b3630d2e5c3e9510afd0e",
    "check": {
@@ -3734,7 +3888,7 @@
   {
    "id": "acct-456dbde9d96a",
    "claim": "Account 456dbde9d96a87444db1f11335adfecd72eb395c59eb7cec0942ccb1623e2a0c holds a key (implicit account, exists once funded)",
-   "where": "README.md:304",
+   "where": "README.md:331",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/456dbde9d96a87444db1f11335adfecd72eb395c59eb7cec0942ccb1623e2a0c",
    "check": {
@@ -3747,7 +3901,7 @@
   {
    "id": "acct-13f1f84078a0",
    "claim": "Account 13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda holds a key (implicit account, exists once funded)",
-   "where": "README.md:305",
+   "where": "README.md:332",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/13f1f84078a03a545e722ede691afc49cff3bac67f6c5c95856c8bd172442fda",
    "check": {
@@ -3760,7 +3914,7 @@
   {
    "id": "acct-a7458a83e9c4",
    "claim": "Account a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da holds a key (implicit account, exists once funded)",
-   "where": "README.md:306",
+   "where": "README.md:333",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/a7458a83e9c4693286692efab949fc0f7d089b7f46352fb2a87a514ec2c391da",
    "check": {
@@ -3773,7 +3927,7 @@
   {
    "id": "acct-583a3a561dba",
    "claim": "Account 583a3a561dbabe9558c8ffa25b5fb3424200580ac14665428f96e6a0572d569b holds a key (implicit account, exists once funded)",
-   "where": "README.md:307",
+   "where": "README.md:334",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/583a3a561dbabe9558c8ffa25b5fb3424200580ac14665428f96e6a0572d569b",
    "check": {
@@ -3786,7 +3940,7 @@
   {
    "id": "acct-0c086e0918ab",
    "claim": "Account 0c086e0918ab2f8b23e943012b9995b7bdc0a8db6bde9b44069c8ad66dbd5f10 holds a key (implicit account, exists once funded)",
-   "where": "README.md:308",
+   "where": "README.md:335",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/0c086e0918ab2f8b23e943012b9995b7bdc0a8db6bde9b44069c8ad66dbd5f10",
    "check": {
@@ -3799,7 +3953,7 @@
   {
    "id": "acct-0705fdc1581a",
    "claim": "Account 0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228 holds a key (implicit account, exists once funded)",
-   "where": "README.md:309",
+   "where": "README.md:336",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/0705fdc1581a35351453bd4625f22d0c41b2b9edc3e7bed860586623c6778228",
    "check": {
@@ -3812,7 +3966,7 @@
   {
    "id": "acct-3bde8ce5eb4e",
    "claim": "Account 3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447 holds a key (implicit account, exists once funded)",
-   "where": "README.md:390",
+   "where": "README.md:416",
    "evidence_type": "mainnet view",
    "evidence": "https://nearblocks.io/address/3bde8ce5eb4e15403d49ba9512a98070db68958b39f378816f7862cee6168447",
    "check": {
@@ -3825,7 +3979,7 @@
   {
    "id": "src-max-royalty",
    "claim": "Royalty cap MAX_ROYALTY_BPS = 1000",
-   "where": "README.md:1095",
+   "where": "README.md:1124",
    "evidence_type": "file",
    "evidence": "contracts/keys/src/lib.rs",
    "check": {
@@ -3853,7 +4007,7 @@
   {
    "id": "src-cooldown",
    "claim": "10-minute withdraw cooldown after a transfer (TRANSFER_COOLDOWN_MS)",
-   "where": "README.md:928",
+   "where": "README.md:958",
    "evidence_type": "file",
    "evidence": "tee/worker/src/lib.rs",
    "check": {
@@ -3867,7 +4021,7 @@
   {
    "id": "src-ai-model",
    "claim": "/ask uses Qwen/Qwen3.6-35B-A3B-FP8",
-   "where": "README.md:696",
+   "where": "README.md:726",
    "evidence_type": "file",
    "evidence": "web/lib/ai.ts",
    "check": {
@@ -3895,7 +4049,7 @@
   {
    "id": "src-gw-ip",
    "claim": "Gateway allows 20 calls a minute per IP",
-   "where": "README.md:978",
+   "where": "README.md:1008",
    "evidence_type": "file",
    "evidence": "web/app/api/worker/route.ts",
    "check": {
@@ -3909,7 +4063,7 @@
   {
    "id": "src-gw-allow",
    "claim": "Gateway allowlist: reconcile_value_op, loan_certificate, pledge_inventory, info, provenance, record, status, quote, mint, account, balance, history, swap, exact_near_exit_v1, withdraw, withdraw_dry_run, lock, prove, limits, pnl, dashboard, level_up, session, session_revoke",
-   "where": "README.md:977",
+   "where": "README.md:1007",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
@@ -3979,7 +4133,7 @@
   {
    "id": "src-lighthouse",
    "claim": "Lighthouse evidence file exists with the per-page scores",
-   "where": "README.md:791",
+   "where": "README.md:821",
    "evidence_type": "file",
    "evidence": "docs/evidence/lighthouse.json",
    "check": {
@@ -3993,7 +4147,7 @@
   {
    "id": "src-audio-cc0",
    "claim": "Ambient loop released under CC0",
-   "where": "README.md:1395",
+   "where": "README.md:1424",
    "evidence_type": "file",
    "evidence": "web/public/audio/LICENSE.txt",
    "check": {
@@ -4007,7 +4161,7 @@
   {
    "id": "src-pledge-flag",
    "claim": "Pledge live flag defaults off (NEXT_PUBLIC_PLEDGE_LIVE only when =1)",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/lib/config.ts",
    "check": {
@@ -4021,7 +4175,7 @@
   {
    "id": "src-pledge-cta",
    "claim": "Pledge CTA disabled copy is Pledge launches after audit",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeClient.ts",
    "check": {
@@ -4035,7 +4189,7 @@
   {
    "id": "src-pledge-preview",
    "claim": "Pledge preview label is Preview — in review · not live",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeClient.ts",
    "check": {
@@ -4049,7 +4203,7 @@
   {
    "id": "src-pledge-open-loan",
    "claim": "Typed Pledge client builds open_loan (PR #184)",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeClient.ts",
    "check": {
@@ -4063,7 +4217,7 @@
   {
    "id": "src-pledge-fund-loan",
    "claim": "Typed Pledge client builds fund_loan (PR #184)",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeClient.ts",
    "check": {
@@ -4077,7 +4231,7 @@
   {
    "id": "src-pledge-repay-loan",
    "claim": "Typed Pledge client builds repay_loan (PR #184)",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeClient.ts",
    "check": {
@@ -4091,7 +4245,7 @@
   {
    "id": "src-pledge-route",
    "claim": "Pledge dashboard route exists at web/app/pledge",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/app/pledge/page.tsx",
    "check": {
@@ -4105,7 +4259,7 @@
   {
    "id": "src-pledge-nav",
    "claim": "App shell sidebar includes Pledge",
-   "where": "README.md:550",
+   "where": "README.md:578",
    "evidence_type": "file",
    "evidence": "web/components/app/AppShell.tsx",
    "check": {
@@ -4119,7 +4273,7 @@
   {
    "id": "src-pledge-e2e",
    "claim": "Pledge e2e spec covers preview CTA and density",
-   "where": "README.md:767",
+   "where": "README.md:797",
    "evidence_type": "file",
    "evidence": "web/e2e/pledge.spec.ts",
    "check": {
@@ -4184,7 +4338,7 @@
   {
    "id": "test-a_v26_state_with_a_listing_and_a_full_loan_cycle_is_identical_after_a_code_only_upgrade_to_v27",
    "claim": "Named test or symbol `a_v26_state_with_a_listing_and_a_full_loan_cycle_is_identical_after_a_code_only_upgrade_to_v27` exists in the source",
-   "where": "README.md:1100",
+   "where": "README.md:1129",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4247,7 +4401,7 @@
   {
    "id": "test-add_beat_key",
    "claim": "Named test or symbol `add_beat_key` exists in the source",
-   "where": "README.md:1016",
+   "where": "README.md:1046",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4289,7 +4443,7 @@
   {
    "id": "test-assert_withdraw_to",
    "claim": "Named test or symbol `assert_withdraw_to` exists in the source",
-   "where": "README.md:950",
+   "where": "README.md:980",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4310,7 +4464,7 @@
   {
    "id": "test-bc_short_delay_proves_timelock_cancel_apply_and_exact_principal_reclaim",
    "claim": "Named test or symbol `bc_short_delay_proves_timelock_cancel_apply_and_exact_principal_reclaim` exists in the source",
-   "where": "README.md:1100",
+   "where": "README.md:1129",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4331,7 +4485,7 @@
   {
    "id": "test-begin_value_op",
    "claim": "Named test or symbol `begin_value_op` exists in the source",
-   "where": "README.md:1098",
+   "where": "README.md:1127",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4373,7 +4527,7 @@
   {
    "id": "test-code_changed_within_24h",
    "claim": "Named test or symbol `code_changed_within_24h` exists in the source",
-   "where": "README.md:743",
+   "where": "README.md:773",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4394,7 +4548,7 @@
   {
    "id": "test-code_changed_within_7d",
    "claim": "Named test or symbol `code_changed_within_7d` exists in the source",
-   "where": "README.md:746",
+   "where": "README.md:776",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4562,7 +4716,7 @@
   {
    "id": "test-executed_wasm_sha256",
    "claim": "Named test or symbol `executed_wasm_sha256` exists in the source",
-   "where": "README.md:105",
+   "where": "README.md:85",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4583,7 +4737,7 @@
   {
    "id": "test-finish_value_op",
    "claim": "Named test or symbol `finish_value_op` exists in the source",
-   "where": "README.md:1098",
+   "where": "README.md:1127",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4604,7 +4758,7 @@
   {
    "id": "test-get_collateral_binding",
    "claim": "Named test or symbol `get_collateral_binding` exists in the source",
-   "where": "README.md:766",
+   "where": "README.md:796",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4646,7 +4800,7 @@
   {
    "id": "test-get_lender_offer",
    "claim": "Named test or symbol `get_lender_offer` exists in the source",
-   "where": "README.md:1336",
+   "where": "README.md:1365",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4688,7 +4842,7 @@
   {
    "id": "test-get_pledge_config",
    "claim": "Named test or symbol `get_pledge_config` exists in the source",
-   "where": "README.md:157",
+   "where": "README.md:137",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4919,7 +5073,7 @@
   {
    "id": "test-invalid_account_id",
    "claim": "Named test or symbol `invalid_account_id` exists in the source",
-   "where": "README.md:742",
+   "where": "README.md:772",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4940,7 +5094,7 @@
   {
    "id": "test-invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle",
    "claim": "Named test or symbol `invariant_a_payout_settles_only_if_its_signer_owns_the_key_at_auth_and_at_settle` exists in the source",
-   "where": "README.md:615",
+   "where": "README.md:643",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -4982,7 +5136,7 @@
   {
    "id": "test-invariant_cooldown_binds_only_the_latest_transferee",
    "claim": "Named test or symbol `invariant_cooldown_binds_only_the_latest_transferee` exists in the source",
-   "where": "README.md:654",
+   "where": "README.md:684",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5129,7 +5283,7 @@
   {
    "id": "test-key_not_owned",
    "claim": "Named test or symbol `key_not_owned` exists in the source",
-   "where": "README.md:943",
+   "where": "README.md:973",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5150,7 +5304,7 @@
   {
    "id": "test-limits_for_tier",
    "claim": "Named test or symbol `limits_for_tier` exists in the source",
-   "where": "README.md:727",
+   "where": "README.md:757",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5255,7 +5409,7 @@
   {
    "id": "test-nft_is_approved",
    "claim": "Named test or symbol `nft_is_approved` exists in the source",
-   "where": "README.md:1009",
+   "where": "README.md:1039",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5318,7 +5472,7 @@
   {
    "id": "test-nft_revoke_all",
    "claim": "Named test or symbol `nft_revoke_all` exists in the source",
-   "where": "README.md:1302",
+   "where": "README.md:1331",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5339,7 +5493,7 @@
   {
    "id": "test-nft_set_tier",
    "claim": "Named test or symbol `nft_set_tier` exists in the source",
-   "where": "README.md:177",
+   "where": "README.md:202",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5381,7 +5535,7 @@
   {
    "id": "test-nft_transfer_call",
    "claim": "Named test or symbol `nft_transfer_call` exists in the source",
-   "where": "README.md:202",
+   "where": "README.md:227",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5402,7 +5556,7 @@
   {
    "id": "test-no_prior_interactions",
    "claim": "Named test or symbol `no_prior_interactions` exists in the source",
-   "where": "README.md:745",
+   "where": "README.md:775",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5465,7 +5619,7 @@
   {
    "id": "test-op_beat_key",
    "claim": "Named test or symbol `op_beat_key` exists in the source",
-   "where": "README.md:728",
+   "where": "README.md:758",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5507,7 +5661,7 @@
   {
    "id": "test-over_cap_daily",
    "claim": "Named test or symbol `over_cap_daily` exists in the source",
-   "where": "README.md:948",
+   "where": "README.md:978",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5528,7 +5682,7 @@
   {
    "id": "test-over_cap_per_tx",
    "claim": "Named test or symbol `over_cap_per_tx` exists in the source",
-   "where": "README.md:228",
+   "where": "README.md:253",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5591,7 +5745,7 @@
   {
    "id": "test-parallel_timelock_apply_then_accept_then_zero_key_self_deploy",
    "claim": "Named test or symbol `parallel_timelock_apply_then_accept_then_zero_key_self_deploy` exists in the source",
-   "where": "README.md:1100",
+   "where": "README.md:1129",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5612,7 +5766,7 @@
   {
    "id": "test-parse_usd_micro",
    "claim": "Named test or symbol `parse_usd_micro` exists in the source",
-   "where": "README.md:347",
+   "where": "README.md:374",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5801,7 +5955,7 @@
   {
    "id": "test-reclaim_unclaimed_principal",
    "claim": "Named test or symbol `reclaim_unclaimed_principal` exists in the source",
-   "where": "README.md:1100",
+   "where": "README.md:1129",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5843,7 +5997,7 @@
   {
    "id": "test-reconcile_value_op",
    "claim": "Named test or symbol `reconcile_value_op` exists in the source",
-   "where": "README.md:977",
+   "where": "README.md:1007",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5885,7 +6039,7 @@
   {
    "id": "test-register_payout_account",
    "claim": "Named test or symbol `register_payout_account` exists in the source",
-   "where": "README.md:405",
+   "where": "README.md:431",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5948,7 +6102,7 @@
   {
    "id": "test-seller_lock_binds_only_the_owner_who_set_it",
    "claim": "Named test or symbol `seller_lock_binds_only_the_owner_who_set_it` exists in the source",
-   "where": "README.md:656",
+   "where": "README.md:686",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -5969,7 +6123,7 @@
   {
    "id": "test-set_lending_enabled",
    "claim": "Named test or symbol `set_lending_enabled` exists in the source",
-   "where": "README.md:766",
+   "where": "README.md:796",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6011,7 +6165,7 @@
   {
    "id": "test-settle_after_transfer_is_refused",
    "claim": "Named test or symbol `settle_after_transfer_is_refused` exists in the source",
-   "where": "README.md:652",
+   "where": "README.md:682",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6032,7 +6186,7 @@
   {
    "id": "test-settle_if_owner",
    "claim": "Named test or symbol `settle_if_owner` exists in the source",
-   "where": "README.md:945",
+   "where": "README.md:975",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6137,7 +6291,7 @@
   {
    "id": "test-transfer_moves_the_confidential_account_to_the_new_holder",
    "claim": "Named test or symbol `transfer_moves_the_confidential_account_to_the_new_holder` exists in the source",
-   "where": "README.md:615",
+   "where": "README.md:643",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6158,7 +6312,7 @@
   {
    "id": "test-transfer_then_old_signature_is_not_owner",
    "claim": "Named test or symbol `transfer_then_old_signature_is_not_owner` exists in the source",
-   "where": "README.md:651",
+   "where": "README.md:681",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6179,7 +6333,7 @@
   {
    "id": "test-transfer_while_withdraw_is_pending_does_not_send",
    "claim": "Named test or symbol `transfer_while_withdraw_is_pending_does_not_send` exists in the source",
-   "where": "README.md:615",
+   "where": "README.md:643",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6284,7 +6438,7 @@
   {
    "id": "test-withdraw_waits_after_a_transfer_only_for_the_new_owner",
    "claim": "Named test or symbol `withdraw_waits_after_a_transfer_only_for_the_new_owner` exists in the source",
-   "where": "README.md:654",
+   "where": "README.md:684",
    "evidence_type": "test file",
    "evidence": "tee/worker/src, contracts/keys/src, web",
    "check": {
@@ -6347,7 +6501,7 @@
   {
    "id": "e2e-verify: the default page checks the publ",
    "claim": "e2e test named 'verify: the default page checks the published guarded v2.6 info call' exists",
-   "where": "README.md:1145",
+   "where": "README.md:1174",
    "evidence_type": "test file",
    "evidence": "web/e2e/site.spec.ts",
    "check": {
@@ -6387,35 +6541,22 @@
    "verify": "grep -n \"settle: dry-run quote\" web/e2e/site.spec.ts"
   },
   {
-   "id": "path-web/screenshots/desktop-home.webp",
-   "claim": "Linked repo path web/screenshots/desktop-home.webp exists",
-   "where": "README.md:7",
+   "id": "path-web/screenshots/hero.png",
+   "claim": "Linked repo path web/screenshots/hero.png exists",
+   "where": "README.md:34",
    "evidence_type": "file",
-   "evidence": "web/screenshots/desktop-home.webp",
+   "evidence": "web/screenshots/hero.png",
    "check": {
     "type": "path",
-    "path": "web/screenshots/desktop-home.webp"
+    "path": "web/screenshots/hero.png"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/desktop-home.webp"
-  },
-  {
-   "id": "path-web/screenshots/desktop-gallery.webp",
-   "claim": "Linked repo path web/screenshots/desktop-gallery.webp exists",
-   "where": "README.md:54",
-   "evidence_type": "file",
-   "evidence": "web/screenshots/desktop-gallery.webp",
-   "check": {
-    "type": "path",
-    "path": "web/screenshots/desktop-gallery.webp"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/desktop-gallery.webp"
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/hero.png"
   },
   {
    "id": "path-identity.json",
    "claim": "Linked repo path identity.json exists",
-   "where": "README.md:68",
+   "where": "README.md:40",
    "evidence_type": "file",
    "evidence": "identity.json",
    "check": {
@@ -6428,7 +6569,7 @@
   {
    "id": "path-scripts/gen-identity.mjs",
    "claim": "Linked repo path scripts/gen-identity.mjs exists",
-   "where": "README.md:68",
+   "where": "README.md:40",
    "evidence_type": "file",
    "evidence": "scripts/gen-identity.mjs",
    "check": {
@@ -6441,7 +6582,7 @@
   {
    "id": "path-judge/receipt_proof.py",
    "claim": "Linked repo path judge/receipt_proof.py exists",
-   "where": "README.md:106",
+   "where": "README.md:86",
    "evidence_type": "file",
    "evidence": "judge/receipt_proof.py",
    "check": {
@@ -6454,7 +6595,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/r3/live-final.log",
    "claim": "Linked repo path docs/evidence/worker-provisioning/r3/live-final.log exists",
-   "where": "README.md:108",
+   "where": "README.md:88",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/r3/live-final.log",
    "check": {
@@ -6467,7 +6608,7 @@
   {
    "id": "path-docs/evidence/judge-zero-install/run.txt",
    "claim": "Linked repo path docs/evidence/judge-zero-install/run.txt exists",
-   "where": "README.md:108",
+   "where": "README.md:88",
    "evidence_type": "file",
    "evidence": "docs/evidence/judge-zero-install/run.txt",
    "check": {
@@ -6480,7 +6621,7 @@
   {
    "id": "path-docs/COSTS_AND_RISK.md",
    "claim": "Linked repo path docs/COSTS_AND_RISK.md exists",
-   "where": "README.md:112",
+   "where": "README.md:92",
    "evidence_type": "file",
    "evidence": "docs/COSTS_AND_RISK.md",
    "check": {
@@ -6493,7 +6634,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/R4.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/R4.md exists",
-   "where": "README.md:118",
+   "where": "README.md:98",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/R4.md",
    "check": {
@@ -6506,7 +6647,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/README.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/README.md exists",
-   "where": "README.md:118",
+   "where": "README.md:98",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/README.md",
    "check": {
@@ -6519,7 +6660,7 @@
   {
    "id": "path-tee/worker/src/collateral.rs",
    "claim": "Linked repo path tee/worker/src/collateral.rs exists",
-   "where": "README.md:118",
+   "where": "README.md:98",
    "evidence_type": "file",
    "evidence": "tee/worker/src/collateral.rs",
    "check": {
@@ -6532,7 +6673,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/candidate.json",
    "claim": "Linked repo path docs/evidence/worker-provisioning/candidate.json exists",
-   "where": "README.md:118",
+   "where": "README.md:98",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/candidate.json",
    "check": {
@@ -6545,7 +6686,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/RESEARCH.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/RESEARCH.md exists",
-   "where": "README.md:118",
+   "where": "README.md:98",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/RESEARCH.md",
    "check": {
@@ -6558,7 +6699,7 @@
   {
    "id": "path-judge/0-live.sh",
    "claim": "Linked repo path judge/0-live.sh exists",
-   "where": "README.md:130",
+   "where": "README.md:110",
    "evidence_type": "file",
    "evidence": "judge/0-live.sh",
    "check": {
@@ -6571,7 +6712,7 @@
   {
    "id": "path-contracts/keys/release/v2.7/keyhole_keys.wasm",
    "claim": "Linked repo path contracts/keys/release/v2.7/keyhole_keys.wasm exists",
-   "where": "README.md:134",
+   "where": "README.md:114",
    "evidence_type": "file",
    "evidence": "contracts/keys/release/v2.7/keyhole_keys.wasm",
    "check": {
@@ -6584,7 +6725,7 @@
   {
    "id": "path-tee/worker/DEPLOYED_SHA256",
    "claim": "Linked repo path tee/worker/DEPLOYED_SHA256 exists",
-   "where": "README.md:136",
+   "where": "README.md:116",
    "evidence_type": "file",
    "evidence": "tee/worker/DEPLOYED_SHA256",
    "check": {
@@ -6597,7 +6738,7 @@
   {
    "id": "path-contracts/keys/release/v2.7/identity.json",
    "claim": "Linked repo path contracts/keys/release/v2.7/identity.json exists",
-   "where": "README.md:140",
+   "where": "README.md:120",
    "evidence_type": "file",
    "evidence": "contracts/keys/release/v2.7/identity.json",
    "check": {
@@ -6610,7 +6751,7 @@
   {
    "id": "path-docs/worker/confinement-v2.md",
    "claim": "Linked repo path docs/worker/confinement-v2.md exists",
-   "where": "README.md:153",
+   "where": "README.md:133",
    "evidence_type": "file",
    "evidence": "docs/worker/confinement-v2.md",
    "check": {
@@ -6623,7 +6764,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/v2/r3/validation.json",
    "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/validation.json exists",
-   "where": "README.md:153",
+   "where": "README.md:133",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/v2/r3/validation.json",
    "check": {
@@ -6636,7 +6777,7 @@
   {
    "id": "path-tee/worker/src/collateral_evidence/tests.rs",
    "claim": "Linked repo path tee/worker/src/collateral_evidence/tests.rs exists",
-   "where": "README.md:153",
+   "where": "README.md:133",
    "evidence_type": "file",
    "evidence": "tee/worker/src/collateral_evidence/tests.rs",
    "check": {
@@ -6649,7 +6790,7 @@
   {
    "id": "path-docs/evidence/live-v2.7/promotion.public.json",
    "claim": "Linked repo path docs/evidence/live-v2.7/promotion.public.json exists",
-   "where": "README.md:155",
+   "where": "README.md:135",
    "evidence_type": "file",
    "evidence": "docs/evidence/live-v2.7/promotion.public.json",
    "check": {
@@ -6662,7 +6803,7 @@
   {
    "id": "path-docs/evidence/integration-stack/contract-size.md",
    "claim": "Linked repo path docs/evidence/integration-stack/contract-size.md exists",
-   "where": "README.md:159",
+   "where": "README.md:139",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/contract-size.md",
    "check": {
@@ -6675,7 +6816,7 @@
   {
    "id": "path-docs/evidence/live-v2.5/all-live-views.json",
    "claim": "Linked repo path docs/evidence/live-v2.5/all-live-views.json exists",
-   "where": "README.md:159",
+   "where": "README.md:139",
    "evidence_type": "file",
    "evidence": "docs/evidence/live-v2.5/all-live-views.json",
    "check": {
@@ -6686,9 +6827,126 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/live-v2.5/all-live-views.json"
   },
   {
+   "id": "path-contracts/keys",
+   "claim": "Linked repo path contracts/keys exists",
+   "where": "README.md:157",
+   "evidence_type": "file",
+   "evidence": "contracts/keys",
+   "check": {
+    "type": "path",
+    "path": "contracts/keys"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-contracts/keys"
+  },
+  {
+   "id": "path-tee/worker/src/tests.rs",
+   "claim": "Linked repo path tee/worker/src/tests.rs exists",
+   "where": "README.md:158",
+   "evidence_type": "file",
+   "evidence": "tee/worker/src/tests.rs",
+   "check": {
+    "type": "path",
+    "path": "tee/worker/src/tests.rs"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-tee/worker/src/tests.rs"
+  },
+  {
+   "id": "path-cli",
+   "claim": "Linked repo path cli exists",
+   "where": "README.md:159",
+   "evidence_type": "file",
+   "evidence": "cli",
+   "check": {
+    "type": "path",
+    "path": "cli"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-cli"
+  },
+  {
+   "id": "path-web/tests",
+   "claim": "Linked repo path web/tests exists",
+   "where": "README.md:160",
+   "evidence_type": "file",
+   "evidence": "web/tests",
+   "check": {
+    "type": "path",
+    "path": "web/tests"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/tests"
+  },
+  {
+   "id": "path-web/e2e",
+   "claim": "Linked repo path web/e2e exists",
+   "where": "README.md:161",
+   "evidence_type": "file",
+   "evidence": "web/e2e",
+   "check": {
+    "type": "path",
+    "path": "web/e2e"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/e2e"
+  },
+  {
+   "id": "path-docs/claims.json",
+   "claim": "Linked repo path docs/claims.json exists",
+   "where": "README.md:162",
+   "evidence_type": "file",
+   "evidence": "docs/claims.json",
+   "check": {
+    "type": "path",
+    "path": "docs/claims.json"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-docs/claims.json"
+  },
+  {
+   "id": "path-.github/workflows/ci.yml",
+   "claim": "Linked repo path .github/workflows/ci.yml exists",
+   "where": "README.md:163",
+   "evidence_type": "file",
+   "evidence": ".github/workflows/ci.yml",
+   "check": {
+    "type": "path",
+    "path": ".github/workflows/ci.yml"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-.github/workflows/ci.yml"
+  },
+  {
+   "id": "path-web/screenshots/overview.png",
+   "claim": "Linked repo path web/screenshots/overview.png exists",
+   "where": "README.md:180",
+   "evidence_type": "file",
+   "evidence": "web/screenshots/overview.png",
+   "check": {
+    "type": "path",
+    "path": "web/screenshots/overview.png"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/overview.png"
+  },
+  {
+   "id": "path-web/screenshots/keys.png",
+   "claim": "Linked repo path web/screenshots/keys.png exists",
+   "where": "README.md:182",
+   "evidence_type": "file",
+   "evidence": "web/screenshots/keys.png",
+   "check": {
+    "type": "path",
+    "path": "web/screenshots/keys.png"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/keys.png"
+  },
+  {
    "id": "path-docs/evidence/contract-v2-4/README.md",
    "claim": "Linked repo path docs/evidence/contract-v2-4/README.md exists",
-   "where": "README.md:177",
+   "where": "README.md:202",
    "evidence_type": "file",
    "evidence": "docs/evidence/contract-v2-4/README.md",
    "check": {
@@ -6701,7 +6959,7 @@
   {
    "id": "path-docs/evidence/publish-cc8d2fa8/README.md",
    "claim": "Linked repo path docs/evidence/publish-cc8d2fa8/README.md exists",
-   "where": "README.md:178",
+   "where": "README.md:203",
    "evidence_type": "file",
    "evidence": "docs/evidence/publish-cc8d2fa8/README.md",
    "check": {
@@ -6714,7 +6972,7 @@
   {
    "id": "path-docs/evidence/ownership-and-limits/README.md",
    "claim": "Linked repo path docs/evidence/ownership-and-limits/README.md exists",
-   "where": "README.md:180",
+   "where": "README.md:205",
    "evidence_type": "file",
    "evidence": "docs/evidence/ownership-and-limits/README.md",
    "check": {
@@ -6727,7 +6985,7 @@
   {
    "id": "path-docs/evidence/earned-tier-and-sale/README.md",
    "claim": "Linked repo path docs/evidence/earned-tier-and-sale/README.md exists",
-   "where": "README.md:181",
+   "where": "README.md:206",
    "evidence_type": "file",
    "evidence": "docs/evidence/earned-tier-and-sale/README.md",
    "check": {
@@ -6740,7 +6998,7 @@
   {
    "id": "path-docs/evidence/oneclick-sol/README.md",
    "claim": "Linked repo path docs/evidence/oneclick-sol/README.md exists",
-   "where": "README.md:184",
+   "where": "README.md:209",
    "evidence_type": "file",
    "evidence": "docs/evidence/oneclick-sol/README.md",
    "check": {
@@ -6753,7 +7011,7 @@
   {
    "id": "path-docs/evidence/signed-record/README.md",
    "claim": "Linked repo path docs/evidence/signed-record/README.md exists",
-   "where": "README.md:187",
+   "where": "README.md:212",
    "evidence_type": "file",
    "evidence": "docs/evidence/signed-record/README.md",
    "check": {
@@ -6766,7 +7024,7 @@
   {
    "id": "path-docs/evidence/contract-v2/README.md",
    "claim": "Linked repo path docs/evidence/contract-v2/README.md exists",
-   "where": "README.md:198",
+   "where": "README.md:223",
    "evidence_type": "file",
    "evidence": "docs/evidence/contract-v2/README.md",
    "check": {
@@ -6779,7 +7037,7 @@
   {
    "id": "path-docs/evidence/contract-v2-3/README.md",
    "claim": "Linked repo path docs/evidence/contract-v2-3/README.md exists",
-   "where": "README.md:204",
+   "where": "README.md:229",
    "evidence_type": "file",
    "evidence": "docs/evidence/contract-v2-3/README.md",
    "check": {
@@ -6792,7 +7050,7 @@
   {
    "id": "path-docs/evidence/publish-09d481a5/README.md",
    "claim": "Linked repo path docs/evidence/publish-09d481a5/README.md exists",
-   "where": "README.md:214",
+   "where": "README.md:239",
    "evidence_type": "file",
    "evidence": "docs/evidence/publish-09d481a5/README.md",
    "check": {
@@ -6805,7 +7063,7 @@
   {
    "id": "path-docs/evidence/transfer-a985fd87/README.md",
    "claim": "Linked repo path docs/evidence/transfer-a985fd87/README.md exists",
-   "where": "README.md:217",
+   "where": "README.md:242",
    "evidence_type": "file",
    "evidence": "docs/evidence/transfer-a985fd87/README.md",
    "check": {
@@ -6818,7 +7076,7 @@
   {
    "id": "path-docs/evidence/mid-payout/README.md",
    "claim": "Linked repo path docs/evidence/mid-payout/README.md exists",
-   "where": "README.md:222",
+   "where": "README.md:247",
    "evidence_type": "file",
    "evidence": "docs/evidence/mid-payout/README.md",
    "check": {
@@ -6831,7 +7089,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json exists",
-   "where": "README.md:223",
+   "where": "README.md:248",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/08_swap_0.005_usdc.json",
    "check": {
@@ -6844,7 +7102,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/28_withdraw_wnear.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/28_withdraw_wnear.json exists",
-   "where": "README.md:224",
+   "where": "README.md:249",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/28_withdraw_wnear.json",
    "check": {
@@ -6857,7 +7115,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/29_withdraw_usdc.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/29_withdraw_usdc.json exists",
-   "where": "README.md:225",
+   "where": "README.md:250",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/29_withdraw_usdc.json",
    "check": {
@@ -6870,7 +7128,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/17_replay_second_refused.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/17_replay_second_refused.json exists",
-   "where": "README.md:229",
+   "where": "README.md:254",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/17_replay_second_refused.json",
    "check": {
@@ -6883,7 +7141,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/18_wrong_recipient_refused.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/18_wrong_recipient_refused.json exists",
-   "where": "README.md:230",
+   "where": "README.md:255",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/18_wrong_recipient_refused.json",
    "check": {
@@ -6896,7 +7154,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/23_mint_again_refused.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/23_mint_again_refused.json exists",
-   "where": "README.md:231",
+   "where": "README.md:256",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/23_mint_again_refused.json",
    "check": {
@@ -6909,7 +7167,7 @@
   {
    "id": "path-docs/evidence/prompt-injection/README.md",
    "claim": "Linked repo path docs/evidence/prompt-injection/README.md exists",
-   "where": "README.md:233",
+   "where": "README.md:258",
    "evidence_type": "file",
    "evidence": "docs/evidence/prompt-injection/README.md",
    "check": {
@@ -6922,7 +7180,7 @@
   {
    "id": "path-docs/evidence/agent-api/demo_2026-11-03.json",
    "claim": "Linked repo path docs/evidence/agent-api/demo_2026-11-03.json exists",
-   "where": "README.md:234",
+   "where": "README.md:259",
    "evidence_type": "file",
    "evidence": "docs/evidence/agent-api/demo_2026-11-03.json",
    "check": {
@@ -6935,7 +7193,7 @@
   {
    "id": "path-docs/evidence/judge-live-run.txt",
    "claim": "Linked repo path docs/evidence/judge-live-run.txt exists",
-   "where": "README.md:235",
+   "where": "README.md:260",
    "evidence_type": "file",
    "evidence": "docs/evidence/judge-live-run.txt",
    "check": {
@@ -6948,7 +7206,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/SUMMARY.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/SUMMARY.json exists",
-   "where": "README.md:236",
+   "where": "README.md:261",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/SUMMARY.json",
    "check": {
@@ -6961,7 +7219,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/VERIFY.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/VERIFY.json exists",
-   "where": "README.md:236",
+   "where": "README.md:261",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/VERIFY.json",
    "check": {
@@ -6972,9 +7230,22 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/mainnet-e2e/VERIFY.json"
   },
   {
+   "id": "path-web/screenshots/pledge.png",
+   "claim": "Linked repo path web/screenshots/pledge.png exists",
+   "where": "README.md:294",
+   "evidence_type": "file",
+   "evidence": "web/screenshots/pledge.png",
+   "check": {
+    "type": "path",
+    "path": "web/screenshots/pledge.png"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/pledge.png"
+  },
+  {
    "id": "path-contracts/keys/release/v2.5/identity.json",
    "claim": "Linked repo path contracts/keys/release/v2.5/identity.json exists",
-   "where": "README.md:466",
+   "where": "README.md:492",
    "evidence_type": "file",
    "evidence": "contracts/keys/release/v2.5/identity.json",
    "check": {
@@ -6985,35 +7256,48 @@
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys/release/v2.5/identity.json"
   },
   {
-   "id": "path-web/screenshots/desktop-verify.webp",
-   "claim": "Linked repo path web/screenshots/desktop-verify.webp exists",
-   "where": "README.md:529",
+   "id": "path-web/screenshots/swap.png",
+   "claim": "Linked repo path web/screenshots/swap.png exists",
+   "where": "README.md:494",
    "evidence_type": "file",
-   "evidence": "web/screenshots/desktop-verify.webp",
+   "evidence": "web/screenshots/swap.png",
    "check": {
     "type": "path",
-    "path": "web/screenshots/desktop-verify.webp"
+    "path": "web/screenshots/swap.png"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/desktop-verify.webp"
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/swap.png"
   },
   {
-   "id": "path-web/screenshots/mobile-vault.webp",
-   "claim": "Linked repo path web/screenshots/mobile-vault.webp exists",
-   "where": "README.md:531",
+   "id": "path-web/screenshots/activity.png",
+   "claim": "Linked repo path web/screenshots/activity.png exists",
+   "where": "README.md:557",
    "evidence_type": "file",
-   "evidence": "web/screenshots/mobile-vault.webp",
+   "evidence": "web/screenshots/activity.png",
    "check": {
     "type": "path",
-    "path": "web/screenshots/mobile-vault.webp"
+    "path": "web/screenshots/activity.png"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/mobile-vault.webp"
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/activity.png"
+  },
+  {
+   "id": "path-web/screenshots/vault.png",
+   "claim": "Linked repo path web/screenshots/vault.png exists",
+   "where": "README.md:559",
+   "evidence_type": "file",
+   "evidence": "web/screenshots/vault.png",
+   "check": {
+    "type": "path",
+    "path": "web/screenshots/vault.png"
+   },
+   "expected": "path exists",
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/vault.png"
   },
   {
    "id": "path-docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json exists",
-   "where": "README.md:548",
+   "where": "README.md:576",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/15_overcap_swap_2usdc.json",
    "check": {
@@ -7026,7 +7310,7 @@
   {
    "id": "path-cli/src/mcp.ts",
    "claim": "Linked repo path cli/src/mcp.ts exists",
-   "where": "README.md:549",
+   "where": "README.md:577",
    "evidence_type": "file",
    "evidence": "cli/src/mcp.ts",
    "check": {
@@ -7039,7 +7323,7 @@
   {
    "id": "path-cli/test/pledge.test.ts",
    "claim": "Linked repo path cli/test/pledge.test.ts exists",
-   "where": "README.md:549",
+   "where": "README.md:577",
    "evidence_type": "file",
    "evidence": "cli/test/pledge.test.ts",
    "check": {
@@ -7052,7 +7336,7 @@
   {
    "id": "path-web/components/keylog/KeyTimeline.tsx",
    "claim": "Linked repo path web/components/keylog/KeyTimeline.tsx exists",
-   "where": "README.md:551",
+   "where": "README.md:579",
    "evidence_type": "file",
    "evidence": "web/components/keylog/KeyTimeline.tsx",
    "check": {
@@ -7065,7 +7349,7 @@
   {
    "id": "path-web/tests/keylog.test.ts",
    "claim": "Linked repo path web/tests/keylog.test.ts exists",
-   "where": "README.md:551",
+   "where": "README.md:579",
    "evidence_type": "file",
    "evidence": "web/tests/keylog.test.ts",
    "check": {
@@ -7078,7 +7362,7 @@
   {
    "id": "path-web/components/lien/LienPanel.tsx",
    "claim": "Linked repo path web/components/lien/LienPanel.tsx exists",
-   "where": "README.md:552",
+   "where": "README.md:580",
    "evidence_type": "file",
    "evidence": "web/components/lien/LienPanel.tsx",
    "check": {
@@ -7091,7 +7375,7 @@
   {
    "id": "path-web/components/lien/useLien.ts",
    "claim": "Linked repo path web/components/lien/useLien.ts exists",
-   "where": "README.md:552",
+   "where": "README.md:580",
    "evidence_type": "file",
    "evidence": "web/components/lien/useLien.ts",
    "check": {
@@ -7104,7 +7388,7 @@
   {
    "id": "path-web/tests/lien.test.ts",
    "claim": "Linked repo path web/tests/lien.test.ts exists",
-   "where": "README.md:552",
+   "where": "README.md:580",
    "evidence_type": "file",
    "evidence": "web/tests/lien.test.ts",
    "check": {
@@ -7117,7 +7401,7 @@
   {
    "id": "path-web/tests/lien-read.test.ts",
    "claim": "Linked repo path web/tests/lien-read.test.ts exists",
-   "where": "README.md:552",
+   "where": "README.md:580",
    "evidence_type": "file",
    "evidence": "web/tests/lien-read.test.ts",
    "check": {
@@ -7130,7 +7414,7 @@
   {
    "id": "path-web/app/holders/page.tsx",
    "claim": "Linked repo path web/app/holders/page.tsx exists",
-   "where": "README.md:553",
+   "where": "README.md:581",
    "evidence_type": "file",
    "evidence": "web/app/holders/page.tsx",
    "check": {
@@ -7143,7 +7427,7 @@
   {
    "id": "path-web/app/holders/view.tsx",
    "claim": "Linked repo path web/app/holders/view.tsx exists",
-   "where": "README.md:553",
+   "where": "README.md:581",
    "evidence_type": "file",
    "evidence": "web/app/holders/view.tsx",
    "check": {
@@ -7156,7 +7440,7 @@
   {
    "id": "path-web/tests/holder-check.test.ts",
    "claim": "Linked repo path web/tests/holder-check.test.ts exists",
-   "where": "README.md:553",
+   "where": "README.md:581",
    "evidence_type": "file",
    "evidence": "web/tests/holder-check.test.ts",
    "check": {
@@ -7169,7 +7453,7 @@
   {
    "id": "path-web/app/api/gate/route.ts",
    "claim": "Linked repo path web/app/api/gate/route.ts exists",
-   "where": "README.md:553",
+   "where": "README.md:581",
    "evidence_type": "file",
    "evidence": "web/app/api/gate/route.ts",
    "check": {
@@ -7182,7 +7466,7 @@
   {
    "id": "path-web/tests/holder-gate.test.ts",
    "claim": "Linked repo path web/tests/holder-gate.test.ts exists",
-   "where": "README.md:553",
+   "where": "README.md:581",
    "evidence_type": "file",
    "evidence": "web/tests/holder-gate.test.ts",
    "check": {
@@ -7195,7 +7479,7 @@
   {
    "id": "path-web/lib/withdrawDryRun.ts",
    "claim": "Linked repo path web/lib/withdrawDryRun.ts exists",
-   "where": "README.md:554",
+   "where": "README.md:582",
    "evidence_type": "file",
    "evidence": "web/lib/withdrawDryRun.ts",
    "check": {
@@ -7208,7 +7492,7 @@
   {
    "id": "path-web/lib/exitContinuation.ts",
    "claim": "Linked repo path web/lib/exitContinuation.ts exists",
-   "where": "README.md:554",
+   "where": "README.md:582",
    "evidence_type": "file",
    "evidence": "web/lib/exitContinuation.ts",
    "check": {
@@ -7221,7 +7505,7 @@
   {
    "id": "path-web/app/pledge/LivePledge.tsx",
    "claim": "Linked repo path web/app/pledge/LivePledge.tsx exists",
-   "where": "README.md:554",
+   "where": "README.md:582",
    "evidence_type": "file",
    "evidence": "web/app/pledge/LivePledge.tsx",
    "check": {
@@ -7234,7 +7518,7 @@
   {
    "id": "path-web/tests/withdraw-dry-run.test.ts",
    "claim": "Linked repo path web/tests/withdraw-dry-run.test.ts exists",
-   "where": "README.md:554",
+   "where": "README.md:582",
    "evidence_type": "file",
    "evidence": "web/tests/withdraw-dry-run.test.ts",
    "check": {
@@ -7247,7 +7531,7 @@
   {
    "id": "path-web/tests/exit-continuation.test.ts",
    "claim": "Linked repo path web/tests/exit-continuation.test.ts exists",
-   "where": "README.md:554",
+   "where": "README.md:582",
    "evidence_type": "file",
    "evidence": "web/tests/exit-continuation.test.ts",
    "check": {
@@ -7260,7 +7544,7 @@
   {
    "id": "path-cli/src/pledge.ts",
    "claim": "Linked repo path cli/src/pledge.ts exists",
-   "where": "README.md:555",
+   "where": "README.md:583",
    "evidence_type": "file",
    "evidence": "cli/src/pledge.ts",
    "check": {
@@ -7273,7 +7557,7 @@
   {
    "id": "path-cli/src/cli.ts",
    "claim": "Linked repo path cli/src/cli.ts exists",
-   "where": "README.md:555",
+   "where": "README.md:583",
    "evidence_type": "file",
    "evidence": "cli/src/cli.ts",
    "check": {
@@ -7286,7 +7570,7 @@
   {
    "id": "path-docs/trial/testnet.json",
    "claim": "Linked repo path docs/trial/testnet.json exists",
-   "where": "README.md:556",
+   "where": "README.md:584",
    "evidence_type": "file",
    "evidence": "docs/trial/testnet.json",
    "check": {
@@ -7299,7 +7583,7 @@
   {
    "id": "path-web/lib/trialPublic.ts",
    "claim": "Linked repo path web/lib/trialPublic.ts exists",
-   "where": "README.md:556",
+   "where": "README.md:584",
    "evidence_type": "file",
    "evidence": "web/lib/trialPublic.ts",
    "check": {
@@ -7312,7 +7596,7 @@
   {
    "id": "path-SECURITY.md",
    "claim": "Linked repo path SECURITY.md exists",
-   "where": "README.md:562",
+   "where": "README.md:590",
    "evidence_type": "file",
    "evidence": "SECURITY.md",
    "check": {
@@ -7325,7 +7609,7 @@
   {
    "id": "path-docs/evidence/attack-demo/2026-11-07.log",
    "claim": "Linked repo path docs/evidence/attack-demo/2026-11-07.log exists",
-   "where": "README.md:597",
+   "where": "README.md:625",
    "evidence_type": "file",
    "evidence": "docs/evidence/attack-demo/2026-11-07.log",
    "check": {
@@ -7338,7 +7622,7 @@
   {
    "id": "path-web/lib/pledgeClient.ts",
    "claim": "Linked repo path web/lib/pledgeClient.ts exists",
-   "where": "README.md:598",
+   "where": "README.md:626",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeClient.ts",
    "check": {
@@ -7351,7 +7635,7 @@
   {
    "id": "path-contracts/keys/src/lib.rs",
    "claim": "Linked repo path contracts/keys/src/lib.rs exists",
-   "where": "README.md:611",
+   "where": "README.md:639",
    "evidence_type": "file",
    "evidence": "contracts/keys/src/lib.rs",
    "check": {
@@ -7364,7 +7648,7 @@
   {
    "id": "path-tee/worker/src/main.rs",
    "claim": "Linked repo path tee/worker/src/main.rs exists",
-   "where": "README.md:611",
+   "where": "README.md:639",
    "evidence_type": "file",
    "evidence": "tee/worker/src/main.rs",
    "check": {
@@ -7377,7 +7661,7 @@
   {
    "id": "path-THREAT_MODEL.md",
    "claim": "Linked repo path THREAT_MODEL.md exists",
-   "where": "README.md:612",
+   "where": "README.md:640",
    "evidence_type": "file",
    "evidence": "THREAT_MODEL.md",
    "check": {
@@ -7390,7 +7674,7 @@
   {
    "id": "path-docs/TRANSFER_THREAT_MODEL.md",
    "claim": "Linked repo path docs/TRANSFER_THREAT_MODEL.md exists",
-   "where": "README.md:612",
+   "where": "README.md:640",
    "evidence_type": "file",
    "evidence": "docs/TRANSFER_THREAT_MODEL.md",
    "check": {
@@ -7403,7 +7687,7 @@
   {
    "id": "path-web/app/vault",
    "claim": "Linked repo path web/app/vault exists",
-   "where": "README.md:613",
+   "where": "README.md:641",
    "evidence_type": "file",
    "evidence": "web/app/vault",
    "check": {
@@ -7416,7 +7700,7 @@
   {
    "id": "path-web/app/holders",
    "claim": "Linked repo path web/app/holders exists",
-   "where": "README.md:613",
+   "where": "README.md:641",
    "evidence_type": "file",
    "evidence": "web/app/holders",
    "check": {
@@ -7429,7 +7713,7 @@
   {
    "id": "path-web/app/key/view.tsx",
    "claim": "Linked repo path web/app/key/view.tsx exists",
-   "where": "README.md:614",
+   "where": "README.md:642",
    "evidence_type": "file",
    "evidence": "web/app/key/view.tsx",
    "check": {
@@ -7440,22 +7724,22 @@
    "verify": "node judge/verify-claims.mjs --only path-web/app/key/view.tsx"
   },
   {
-   "id": "path-tee/worker/src/tests.rs",
-   "claim": "Linked repo path tee/worker/src/tests.rs exists",
-   "where": "README.md:615",
+   "id": "path-web/screenshots/mint.png",
+   "claim": "Linked repo path web/screenshots/mint.png exists",
+   "where": "README.md:653",
    "evidence_type": "file",
-   "evidence": "tee/worker/src/tests.rs",
+   "evidence": "web/screenshots/mint.png",
    "check": {
     "type": "path",
-    "path": "tee/worker/src/tests.rs"
+    "path": "web/screenshots/mint.png"
    },
    "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-tee/worker/src/tests.rs"
+   "verify": "node judge/verify-claims.mjs --only path-web/screenshots/mint.png"
   },
   {
    "id": "path-tee/worker/src/lib.rs",
    "claim": "Linked repo path tee/worker/src/lib.rs exists",
-   "where": "README.md:655",
+   "where": "README.md:685",
    "evidence_type": "file",
    "evidence": "tee/worker/src/lib.rs",
    "check": {
@@ -7468,7 +7752,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json exists",
-   "where": "README.md:684",
+   "where": "README.md:714",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/12_mcp_copy_confirmed.json",
    "check": {
@@ -7481,7 +7765,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/05_quote_advanced.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/05_quote_advanced.json exists",
-   "where": "README.md:685",
+   "where": "README.md:715",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/05_quote_advanced.json",
    "check": {
@@ -7494,7 +7778,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/24_history.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/24_history.json exists",
-   "where": "README.md:685",
+   "where": "README.md:715",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/24_history.json",
    "check": {
@@ -7507,7 +7791,7 @@
   {
    "id": "path-tee/worker/README.md",
    "claim": "Linked repo path tee/worker/README.md exists",
-   "where": "README.md:686",
+   "where": "README.md:716",
    "evidence_type": "file",
    "evidence": "tee/worker/README.md",
    "check": {
@@ -7520,7 +7804,7 @@
   {
    "id": "path-web/app/api/ai/route.ts",
    "claim": "Linked repo path web/app/api/ai/route.ts exists",
-   "where": "README.md:696",
+   "where": "README.md:726",
    "evidence_type": "file",
    "evidence": "web/app/api/ai/route.ts",
    "check": {
@@ -7533,7 +7817,7 @@
   {
    "id": "path-web/lib/ai.ts",
    "claim": "Linked repo path web/lib/ai.ts exists",
-   "where": "README.md:696",
+   "where": "README.md:726",
    "evidence_type": "file",
    "evidence": "web/lib/ai.ts",
    "check": {
@@ -7546,7 +7830,7 @@
   {
    "id": "path-web/app/ask/view.tsx",
    "claim": "Linked repo path web/app/ask/view.tsx exists",
-   "where": "README.md:697",
+   "where": "README.md:727",
    "evidence_type": "file",
    "evidence": "web/app/ask/view.tsx",
    "check": {
@@ -7559,7 +7843,7 @@
   {
    "id": "path-web/components/judge/CallVerifier.tsx",
    "claim": "Linked repo path web/components/judge/CallVerifier.tsx exists",
-   "where": "README.md:699",
+   "where": "README.md:729",
    "evidence_type": "file",
    "evidence": "web/components/judge/CallVerifier.tsx",
    "check": {
@@ -7572,7 +7856,7 @@
   {
    "id": "path-web/tests/ai.test.ts",
    "claim": "Linked repo path web/tests/ai.test.ts exists",
-   "where": "README.md:702",
+   "where": "README.md:732",
    "evidence_type": "file",
    "evidence": "web/tests/ai.test.ts",
    "check": {
@@ -7585,7 +7869,7 @@
   {
    "id": "path-web/lib/oneclick.ts",
    "claim": "Linked repo path web/lib/oneclick.ts exists",
-   "where": "README.md:712",
+   "where": "README.md:742",
    "evidence_type": "file",
    "evidence": "web/lib/oneclick.ts",
    "check": {
@@ -7598,7 +7882,7 @@
   {
    "id": "path-web/app/api/oneclick/route.ts",
    "claim": "Linked repo path web/app/api/oneclick/route.ts exists",
-   "where": "README.md:716",
+   "where": "README.md:746",
    "evidence_type": "file",
    "evidence": "web/app/api/oneclick/route.ts",
    "check": {
@@ -7611,7 +7895,7 @@
   {
    "id": "path-web/tests/oneclick.test.ts",
    "claim": "Linked repo path web/tests/oneclick.test.ts exists",
-   "where": "README.md:716",
+   "where": "README.md:746",
    "evidence_type": "file",
    "evidence": "web/tests/oneclick.test.ts",
    "check": {
@@ -7624,7 +7908,7 @@
   {
    "id": "path-web/tests/agentPolicy.test.ts",
    "claim": "Linked repo path web/tests/agentPolicy.test.ts exists",
-   "where": "README.md:729",
+   "where": "README.md:759",
    "evidence_type": "file",
    "evidence": "web/tests/agentPolicy.test.ts",
    "check": {
@@ -7637,7 +7921,7 @@
   {
    "id": "path-web/lib/counterparty.ts",
    "claim": "Linked repo path web/lib/counterparty.ts exists",
-   "where": "README.md:731",
+   "where": "README.md:761",
    "evidence_type": "file",
    "evidence": "web/lib/counterparty.ts",
    "check": {
@@ -7650,7 +7934,7 @@
   {
    "id": "path-web/app/api/check/route.ts",
    "claim": "Linked repo path web/app/api/check/route.ts exists",
-   "where": "README.md:731",
+   "where": "README.md:761",
    "evidence_type": "file",
    "evidence": "web/app/api/check/route.ts",
    "check": {
@@ -7663,7 +7947,7 @@
   {
    "id": "path-security/blocklist.json",
    "claim": "Linked repo path security/blocklist.json exists",
-   "where": "README.md:731",
+   "where": "README.md:761",
    "evidence_type": "file",
    "evidence": "security/blocklist.json",
    "check": {
@@ -7676,7 +7960,7 @@
   {
    "id": "path-cli/test/counterparty.test.ts",
    "claim": "Linked repo path cli/test/counterparty.test.ts exists",
-   "where": "README.md:731",
+   "where": "README.md:761",
    "evidence_type": "file",
    "evidence": "cli/test/counterparty.test.ts",
    "check": {
@@ -7689,7 +7973,7 @@
   {
    "id": "path-cli/test/guard.test.ts",
    "claim": "Linked repo path cli/test/guard.test.ts exists",
-   "where": "README.md:731",
+   "where": "README.md:761",
    "evidence_type": "file",
    "evidence": "cli/test/guard.test.ts",
    "check": {
@@ -7702,7 +7986,7 @@
   {
    "id": "path-web/tests/check.test.ts",
    "claim": "Linked repo path web/tests/check.test.ts exists",
-   "where": "README.md:731",
+   "where": "README.md:761",
    "evidence_type": "file",
    "evidence": "web/tests/check.test.ts",
    "check": {
@@ -7715,7 +7999,7 @@
   {
    "id": "path-scripts/attack-demo.mts",
    "claim": "Linked repo path scripts/attack-demo.mts exists",
-   "where": "README.md:732",
+   "where": "README.md:762",
    "evidence_type": "file",
    "evidence": "scripts/attack-demo.mts",
    "check": {
@@ -7728,7 +8012,7 @@
   {
    "id": "path-verify.sh",
    "claim": "Linked repo path verify.sh exists",
-   "where": "README.md:733",
+   "where": "README.md:763",
    "evidence_type": "file",
    "evidence": "verify.sh",
    "check": {
@@ -7741,7 +8025,7 @@
   {
    "id": "path-judge/README.md",
    "claim": "Linked repo path judge/README.md exists",
-   "where": "README.md:733",
+   "where": "README.md:763",
    "evidence_type": "file",
    "evidence": "judge/README.md",
    "check": {
@@ -7754,7 +8038,7 @@
   {
    "id": "path-cli/src/counterparty.ts",
    "claim": "Linked repo path cli/src/counterparty.ts exists",
-   "where": "README.md:737",
+   "where": "README.md:767",
    "evidence_type": "file",
    "evidence": "cli/src/counterparty.ts",
    "check": {
@@ -7767,7 +8051,7 @@
   {
    "id": "path-cli/src/report.ts",
    "claim": "Linked repo path cli/src/report.ts exists",
-   "where": "README.md:754",
+   "where": "README.md:784",
    "evidence_type": "file",
    "evidence": "cli/src/report.ts",
    "check": {
@@ -7780,7 +8064,7 @@
   {
    "id": "path-web/app/pledge",
    "claim": "Linked repo path web/app/pledge exists",
-   "where": "README.md:764",
+   "where": "README.md:794",
    "evidence_type": "file",
    "evidence": "web/app/pledge",
    "check": {
@@ -7793,7 +8077,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/v2/r3/README.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/README.md exists",
-   "where": "README.md:775",
+   "where": "README.md:805",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/v2/r3/README.md",
    "check": {
@@ -7806,7 +8090,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md exists",
-   "where": "README.md:775",
+   "where": "README.md:805",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/v2/CI_REPRODUCTION.md",
    "check": {
@@ -7819,7 +8103,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/R2.md",
    "claim": "Linked repo path docs/evidence/worker-provisioning/R2.md exists",
-   "where": "README.md:775",
+   "where": "README.md:805",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/R2.md",
    "check": {
@@ -7832,7 +8116,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/v2/r3/cli-tests.log",
    "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/cli-tests.log exists",
-   "where": "README.md:782",
+   "where": "README.md:812",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/v2/r3/cli-tests.log",
    "check": {
@@ -7845,7 +8129,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/v2/r3/web-tests.log",
    "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/web-tests.log exists",
-   "where": "README.md:783",
+   "where": "README.md:813",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/v2/r3/web-tests.log",
    "check": {
@@ -7858,7 +8142,7 @@
   {
    "id": "path-web/e2e/site.spec.ts",
    "claim": "Linked repo path web/e2e/site.spec.ts exists",
-   "where": "README.md:784",
+   "where": "README.md:814",
    "evidence_type": "file",
    "evidence": "web/e2e/site.spec.ts",
    "check": {
@@ -7869,22 +8153,9 @@
    "verify": "node judge/verify-claims.mjs --only path-web/e2e/site.spec.ts"
   },
   {
-   "id": "path-web/e2e",
-   "claim": "Linked repo path web/e2e exists",
-   "where": "README.md:784",
-   "evidence_type": "file",
-   "evidence": "web/e2e",
-   "check": {
-    "type": "path",
-    "path": "web/e2e"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-web/e2e"
-  },
-  {
    "id": "path-docs/evidence/worker-provisioning/v2/r3/web-e2e.log",
    "claim": "Linked repo path docs/evidence/worker-provisioning/v2/r3/web-e2e.log exists",
-   "where": "README.md:784",
+   "where": "README.md:814",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/v2/r3/web-e2e.log",
    "check": {
@@ -7897,7 +8168,7 @@
   {
    "id": "path-docs/evidence/lighthouse.json",
    "claim": "Linked repo path docs/evidence/lighthouse.json exists",
-   "where": "README.md:791",
+   "where": "README.md:821",
    "evidence_type": "file",
    "evidence": "docs/evidence/lighthouse.json",
    "check": {
@@ -7908,22 +8179,9 @@
    "verify": "node judge/verify-claims.mjs --only path-docs/evidence/lighthouse.json"
   },
   {
-   "id": "path-.github/workflows/ci.yml",
-   "claim": "Linked repo path .github/workflows/ci.yml exists",
-   "where": "README.md:799",
-   "evidence_type": "file",
-   "evidence": ".github/workflows/ci.yml",
-   "check": {
-    "type": "path",
-    "path": ".github/workflows/ci.yml"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-.github/workflows/ci.yml"
-  },
-  {
    "id": "path-docs/evidence/mainnet-e2e/01_info.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/01_info.json exists",
-   "where": "README.md:819",
+   "where": "README.md:849",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/01_info.json",
    "check": {
@@ -7936,7 +8194,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/02_status.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/02_status.json exists",
-   "where": "README.md:820",
+   "where": "README.md:850",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/02_status.json",
    "check": {
@@ -7949,7 +8207,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/03_quote_dry.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/03_quote_dry.json exists",
-   "where": "README.md:821",
+   "where": "README.md:851",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/03_quote_dry.json",
    "check": {
@@ -7962,7 +8220,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/04_quote_execute_deposit_address.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/04_quote_execute_deposit_address.json exists",
-   "where": "README.md:822",
+   "where": "README.md:852",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/04_quote_execute_deposit_address.json",
    "check": {
@@ -7975,7 +8233,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/06_account_crosschain_deposit_address_base.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/06_account_crosschain_deposit_address_base.json exists",
-   "where": "README.md:824",
+   "where": "README.md:854",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/06_account_crosschain_deposit_address_base.json",
    "check": {
@@ -7988,7 +8246,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/07_balance_before.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/07_balance_before.json exists",
-   "where": "README.md:825",
+   "where": "README.md:855",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/07_balance_before.json",
    "check": {
@@ -8001,7 +8259,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/09_mcp_tools_list.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/09_mcp_tools_list.json exists",
-   "where": "README.md:827",
+   "where": "README.md:857",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/09_mcp_tools_list.json",
    "check": {
@@ -8014,7 +8272,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/10_mcp_copy_preview.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/10_mcp_copy_preview.json exists",
-   "where": "README.md:828",
+   "where": "README.md:858",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/10_mcp_copy_preview.json",
    "check": {
@@ -8027,7 +8285,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/11_mcp_copy_bad_code.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/11_mcp_copy_bad_code.json exists",
-   "where": "README.md:829",
+   "where": "README.md:859",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/11_mcp_copy_bad_code.json",
    "check": {
@@ -8040,7 +8298,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/13_mcp_quote_buy.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/13_mcp_quote_buy.json exists",
-   "where": "README.md:831",
+   "where": "README.md:861",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/13_mcp_quote_buy.json",
    "check": {
@@ -8053,7 +8311,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/14_mcp_explain_pnl.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/14_mcp_explain_pnl.json exists",
-   "where": "README.md:832",
+   "where": "README.md:862",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/14_mcp_explain_pnl.json",
    "check": {
@@ -8066,7 +8324,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/16_replay_first.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/16_replay_first.json exists",
-   "where": "README.md:834",
+   "where": "README.md:864",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/16_replay_first.json",
    "check": {
@@ -8079,7 +8337,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/19_tampered_refused.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/19_tampered_refused.json exists",
-   "where": "README.md:837",
+   "where": "README.md:867",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/19_tampered_refused.json",
    "check": {
@@ -8092,7 +8350,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/20_op_mismatch_refused.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/20_op_mismatch_refused.json exists",
-   "where": "README.md:838",
+   "where": "README.md:868",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/20_op_mismatch_refused.json",
    "check": {
@@ -8105,7 +8363,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/21_stale_refused.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/21_stale_refused.json exists",
-   "where": "README.md:839",
+   "where": "README.md:869",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/21_stale_refused.json",
    "check": {
@@ -8118,7 +8376,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/22_no_auth_refused.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/22_no_auth_refused.json exists",
-   "where": "README.md:840",
+   "where": "README.md:870",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/22_no_auth_refused.json",
    "check": {
@@ -8131,7 +8389,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/25_balance_after_trades.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/25_balance_after_trades.json exists",
-   "where": "README.md:843",
+   "where": "README.md:873",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/25_balance_after_trades.json",
    "check": {
@@ -8144,7 +8402,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/26_balance_final.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/26_balance_final.json exists",
-   "where": "README.md:844",
+   "where": "README.md:874",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/26_balance_final.json",
    "check": {
@@ -8157,7 +8415,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/27_balance.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/27_balance.json exists",
-   "where": "README.md:845",
+   "where": "README.md:875",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/27_balance.json",
    "check": {
@@ -8170,7 +8428,7 @@
   {
    "id": "path-docs/evidence/mainnet-e2e/30_balance_final.json",
    "claim": "Linked repo path docs/evidence/mainnet-e2e/30_balance_final.json exists",
-   "where": "README.md:848",
+   "where": "README.md:878",
    "evidence_type": "file",
    "evidence": "docs/evidence/mainnet-e2e/30_balance_final.json",
    "check": {
@@ -8183,7 +8441,7 @@
   {
    "id": "path-web/lib/traits.ts",
    "claim": "Linked repo path web/lib/traits.ts exists",
-   "where": "README.md:926",
+   "where": "README.md:956",
    "evidence_type": "file",
    "evidence": "web/lib/traits.ts",
    "check": {
@@ -8196,7 +8454,7 @@
   {
    "id": "path-docs/evidence/publish-a55ebb14/README.md",
    "claim": "Linked repo path docs/evidence/publish-a55ebb14/README.md exists",
-   "where": "README.md:943",
+   "where": "README.md:973",
    "evidence_type": "file",
    "evidence": "docs/evidence/publish-a55ebb14/README.md",
    "check": {
@@ -8209,7 +8467,7 @@
   {
    "id": "path-web/lib/session.ts",
    "claim": "Linked repo path web/lib/session.ts exists",
-   "where": "README.md:965",
+   "where": "README.md:995",
    "evidence_type": "file",
    "evidence": "web/lib/session.ts",
    "check": {
@@ -8222,7 +8480,7 @@
   {
    "id": "path-tee/worker/src/chainsig.rs",
    "claim": "Linked repo path tee/worker/src/chainsig.rs exists",
-   "where": "README.md:973",
+   "where": "README.md:1003",
    "evidence_type": "file",
    "evidence": "tee/worker/src/chainsig.rs",
    "check": {
@@ -8235,7 +8493,7 @@
   {
    "id": "path-web/lib/gateway.ts",
    "claim": "Linked repo path web/lib/gateway.ts exists",
-   "where": "README.md:977",
+   "where": "README.md:1007",
    "evidence_type": "file",
    "evidence": "web/lib/gateway.ts",
    "check": {
@@ -8248,7 +8506,7 @@
   {
    "id": "path-web/app/api/worker/route.ts",
    "claim": "Linked repo path web/app/api/worker/route.ts exists",
-   "where": "README.md:978",
+   "where": "README.md:1008",
    "evidence_type": "file",
    "evidence": "web/app/api/worker/route.ts",
    "check": {
@@ -8261,7 +8519,7 @@
   {
    "id": "path-web/lib/nep413.ts",
    "claim": "Linked repo path web/lib/nep413.ts exists",
-   "where": "README.md:980",
+   "where": "README.md:1010",
    "evidence_type": "file",
    "evidence": "web/lib/nep413.ts",
    "check": {
@@ -8274,7 +8532,7 @@
   {
    "id": "path-web/tests/nep413.test.ts",
    "claim": "Linked repo path web/tests/nep413.test.ts exists",
-   "where": "README.md:980",
+   "where": "README.md:1010",
    "evidence_type": "file",
    "evidence": "web/tests/nep413.test.ts",
    "check": {
@@ -8287,7 +8545,7 @@
   {
    "id": "path-docs/evidence/site-gateway/quote.json",
    "claim": "Linked repo path docs/evidence/site-gateway/quote.json exists",
-   "where": "README.md:987",
+   "where": "README.md:1017",
    "evidence_type": "file",
    "evidence": "docs/evidence/site-gateway/quote.json",
    "check": {
@@ -8300,7 +8558,7 @@
   {
    "id": "path-docs/evidence/site-gateway/quote_overcap.json",
    "claim": "Linked repo path docs/evidence/site-gateway/quote_overcap.json exists",
-   "where": "README.md:988",
+   "where": "README.md:1018",
    "evidence_type": "file",
    "evidence": "docs/evidence/site-gateway/quote_overcap.json",
    "check": {
@@ -8313,7 +8571,7 @@
   {
    "id": "path-docs/evidence/site-gateway/replay.json",
    "claim": "Linked repo path docs/evidence/site-gateway/replay.json exists",
-   "where": "README.md:989",
+   "where": "README.md:1019",
    "evidence_type": "file",
    "evidence": "docs/evidence/site-gateway/replay.json",
    "check": {
@@ -8326,7 +8584,7 @@
   {
    "id": "path-docs/evidence/site-gateway/account.json",
    "claim": "Linked repo path docs/evidence/site-gateway/account.json exists",
-   "where": "README.md:990",
+   "where": "README.md:1020",
    "evidence_type": "file",
    "evidence": "docs/evidence/site-gateway/account.json",
    "check": {
@@ -8339,7 +8597,7 @@
   {
    "id": "path-docs/evidence/site-gateway/balance.json",
    "claim": "Linked repo path docs/evidence/site-gateway/balance.json exists",
-   "where": "README.md:991",
+   "where": "README.md:1021",
    "evidence_type": "file",
    "evidence": "docs/evidence/site-gateway/balance.json",
    "check": {
@@ -8352,7 +8610,7 @@
   {
    "id": "path-docs/evidence/site-gateway/history.json",
    "claim": "Linked repo path docs/evidence/site-gateway/history.json exists",
-   "where": "README.md:992",
+   "where": "README.md:1022",
    "evidence_type": "file",
    "evidence": "docs/evidence/site-gateway/history.json",
    "check": {
@@ -8365,7 +8623,7 @@
   {
    "id": "path-docs/evidence/contract-v2/nft_metadata.json",
    "claim": "Linked repo path docs/evidence/contract-v2/nft_metadata.json exists",
-   "where": "README.md:1008",
+   "where": "README.md:1038",
    "evidence_type": "file",
    "evidence": "docs/evidence/contract-v2/nft_metadata.json",
    "check": {
@@ -8378,7 +8636,7 @@
   {
    "id": "path-docs/evidence/contract-v2/nft_tokens.json",
    "claim": "Linked repo path docs/evidence/contract-v2/nft_tokens.json exists",
-   "where": "README.md:1010",
+   "where": "README.md:1040",
    "evidence_type": "file",
    "evidence": "docs/evidence/contract-v2/nft_tokens.json",
    "check": {
@@ -8391,7 +8649,7 @@
   {
    "id": "path-docs/evidence/contract-v2/contract_source_metadata.json",
    "claim": "Linked repo path docs/evidence/contract-v2/contract_source_metadata.json exists",
-   "where": "README.md:1013",
+   "where": "README.md:1043",
    "evidence_type": "file",
    "evidence": "docs/evidence/contract-v2/contract_source_metadata.json",
    "check": {
@@ -8404,7 +8662,7 @@
   {
    "id": "path-tee/worker/src/beatkey.rs",
    "claim": "Linked repo path tee/worker/src/beatkey.rs exists",
-   "where": "README.md:1016",
+   "where": "README.md:1046",
    "evidence_type": "file",
    "evidence": "tee/worker/src/beatkey.rs",
    "check": {
@@ -8417,7 +8675,7 @@
   {
    "id": "path-tee/worker",
    "claim": "Linked repo path tee/worker exists",
-   "where": "README.md:1020",
+   "where": "README.md:1050",
    "evidence_type": "file",
    "evidence": "tee/worker",
    "check": {
@@ -8430,7 +8688,7 @@
   {
    "id": "path-docs/evidence/prompt-injection/ai_poisoned_note.json",
    "claim": "Linked repo path docs/evidence/prompt-injection/ai_poisoned_note.json exists",
-   "where": "README.md:1021",
+   "where": "README.md:1051",
    "evidence_type": "file",
    "evidence": "docs/evidence/prompt-injection/ai_poisoned_note.json",
    "check": {
@@ -8443,7 +8701,7 @@
   {
    "id": "path-web/lib/nearConnect.ts",
    "claim": "Linked repo path web/lib/nearConnect.ts exists",
-   "where": "README.md:1022",
+   "where": "README.md:1052",
    "evidence_type": "file",
    "evidence": "web/lib/nearConnect.ts",
    "check": {
@@ -8456,7 +8714,7 @@
   {
    "id": "path-web/package.json",
    "claim": "Linked repo path web/package.json exists",
-   "where": "README.md:1022",
+   "where": "README.md:1052",
    "evidence_type": "file",
    "evidence": "web/package.json",
    "check": {
@@ -8469,7 +8727,7 @@
   {
    "id": "path-web/tests/near-connect.test.ts",
    "claim": "Linked repo path web/tests/near-connect.test.ts exists",
-   "where": "README.md:1022",
+   "where": "README.md:1052",
    "evidence_type": "file",
    "evidence": "web/tests/near-connect.test.ts",
    "check": {
@@ -8482,7 +8740,7 @@
   {
    "id": "path-web/lib/privy.ts",
    "claim": "Linked repo path web/lib/privy.ts exists",
-   "where": "README.md:1023",
+   "where": "README.md:1053",
    "evidence_type": "file",
    "evidence": "web/lib/privy.ts",
    "check": {
@@ -8495,7 +8753,7 @@
   {
    "id": "path-web/lib/privySigner.ts",
    "claim": "Linked repo path web/lib/privySigner.ts exists",
-   "where": "README.md:1023",
+   "where": "README.md:1053",
    "evidence_type": "file",
    "evidence": "web/lib/privySigner.ts",
    "check": {
@@ -8508,7 +8766,7 @@
   {
    "id": "path-docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log",
    "claim": "Linked repo path docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log exists",
-   "where": "README.md:1087",
+   "where": "README.md:1116",
    "evidence_type": "file",
    "evidence": "docs/evidence/worker-provisioning/r2/live-strict-rebuild-complete.log",
    "check": {
@@ -8521,7 +8779,7 @@
   {
    "id": "path-contracts/keys/release/SHA256SUMS",
    "claim": "Linked repo path contracts/keys/release/SHA256SUMS exists",
-   "where": "README.md:1087",
+   "where": "README.md:1116",
    "evidence_type": "file",
    "evidence": "contracts/keys/release/SHA256SUMS",
    "check": {
@@ -8534,7 +8792,7 @@
   {
    "id": "path-contracts/keys/src/v27.rs",
    "claim": "Linked repo path contracts/keys/src/v27.rs exists",
-   "where": "README.md:1100",
+   "where": "README.md:1129",
    "evidence_type": "file",
    "evidence": "contracts/keys/src/v27.rs",
    "check": {
@@ -8547,7 +8805,7 @@
   {
    "id": "path-contracts/keys/src/v27_tests.rs",
    "claim": "Linked repo path contracts/keys/src/v27_tests.rs exists",
-   "where": "README.md:1100",
+   "where": "README.md:1129",
    "evidence_type": "file",
    "evidence": "contracts/keys/src/v27_tests.rs",
    "check": {
@@ -8558,22 +8816,9 @@
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys/src/v27_tests.rs"
   },
   {
-   "id": "path-docs/claims.json",
-   "claim": "Linked repo path docs/claims.json exists",
-   "where": "README.md:1143",
-   "evidence_type": "file",
-   "evidence": "docs/claims.json",
-   "check": {
-    "type": "path",
-    "path": "docs/claims.json"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-docs/claims.json"
-  },
-  {
    "id": "path-web/tests/health-route.test.ts",
    "claim": "Linked repo path web/tests/health-route.test.ts exists",
-   "where": "README.md:1147",
+   "where": "README.md:1176",
    "evidence_type": "file",
    "evidence": "web/tests/health-route.test.ts",
    "check": {
@@ -8586,7 +8831,7 @@
   {
    "id": "path-cli/README.md",
    "claim": "Linked repo path cli/README.md exists",
-   "where": "README.md:1149",
+   "where": "README.md:1178",
    "evidence_type": "file",
    "evidence": "cli/README.md",
    "check": {
@@ -8599,7 +8844,7 @@
   {
    "id": "path-protocol/loan-certificate-v3-delivery.json",
    "claim": "Linked repo path protocol/loan-certificate-v3-delivery.json exists",
-   "where": "README.md:1210",
+   "where": "README.md:1239",
    "evidence_type": "file",
    "evidence": "protocol/loan-certificate-v3-delivery.json",
    "check": {
@@ -8612,7 +8857,7 @@
   {
    "id": "path-web/tests/pledge-money.test.ts",
    "claim": "Linked repo path web/tests/pledge-money.test.ts exists",
-   "where": "README.md:1212",
+   "where": "README.md:1241",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-money.test.ts",
    "check": {
@@ -8625,7 +8870,7 @@
   {
    "id": "path-docs/evidence/integration-stack/wallet-dependencies-r4.md",
    "claim": "Linked repo path docs/evidence/integration-stack/wallet-dependencies-r4.md exists",
-   "where": "README.md:1214",
+   "where": "README.md:1243",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/wallet-dependencies-r4.md",
    "check": {
@@ -8638,7 +8883,7 @@
   {
    "id": "path-docs/pledge/TEAM_RUNBOOK.md",
    "claim": "Linked repo path docs/pledge/TEAM_RUNBOOK.md exists",
-   "where": "README.md:1216",
+   "where": "README.md:1245",
    "evidence_type": "file",
    "evidence": "docs/pledge/TEAM_RUNBOOK.md",
    "check": {
@@ -8651,7 +8896,7 @@
   {
    "id": "path-docs/worker/LIVE_LOANS_EXEC.md",
    "claim": "Linked repo path docs/worker/LIVE_LOANS_EXEC.md exists",
-   "where": "README.md:1216",
+   "where": "README.md:1245",
    "evidence_type": "file",
    "evidence": "docs/worker/LIVE_LOANS_EXEC.md",
    "check": {
@@ -8664,7 +8909,7 @@
   {
    "id": "path-docs/evidence/integration-stack/artifact-repro-r2.json",
    "claim": "Linked repo path docs/evidence/integration-stack/artifact-repro-r2.json exists",
-   "where": "README.md:1222",
+   "where": "README.md:1251",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/artifact-repro-r2.json",
    "check": {
@@ -8677,7 +8922,7 @@
   {
    "id": "path-web/tests/integration196.test.ts",
    "claim": "Linked repo path web/tests/integration196.test.ts exists",
-   "where": "README.md:1222",
+   "where": "README.md:1251",
    "evidence_type": "file",
    "evidence": "web/tests/integration196.test.ts",
    "check": {
@@ -8690,7 +8935,7 @@
   {
    "id": "path-protocol/client-owner-epoch.json",
    "claim": "Linked repo path protocol/client-owner-epoch.json exists",
-   "where": "README.md:1222",
+   "where": "README.md:1251",
    "evidence_type": "file",
    "evidence": "protocol/client-owner-epoch.json",
    "check": {
@@ -8703,7 +8948,7 @@
   {
    "id": "path-web/tests/pledge-labels.test.ts",
    "claim": "Linked repo path web/tests/pledge-labels.test.ts exists",
-   "where": "README.md:1249",
+   "where": "README.md:1278",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-labels.test.ts",
    "check": {
@@ -8716,7 +8961,7 @@
   {
    "id": "path-docs/pledge/UI_SANDBOX_RUNBOOK.md",
    "claim": "Linked repo path docs/pledge/UI_SANDBOX_RUNBOOK.md exists",
-   "where": "README.md:1251",
+   "where": "README.md:1280",
    "evidence_type": "file",
    "evidence": "docs/pledge/UI_SANDBOX_RUNBOOK.md",
    "check": {
@@ -8729,7 +8974,7 @@
   {
    "id": "path-web/tests/pledge-review-safety.test.ts",
    "claim": "Linked repo path web/tests/pledge-review-safety.test.ts exists",
-   "where": "README.md:1255",
+   "where": "README.md:1284",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-review-safety.test.ts",
    "check": {
@@ -8742,7 +8987,7 @@
   {
    "id": "path-web/tests/pledge-lifecycle.test.ts",
    "claim": "Linked repo path web/tests/pledge-lifecycle.test.ts exists",
-   "where": "README.md:1255",
+   "where": "README.md:1284",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-lifecycle.test.ts",
    "check": {
@@ -8755,7 +9000,7 @@
   {
    "id": "path-web/tests/pledge-review-r3.test.ts",
    "claim": "Linked repo path web/tests/pledge-review-r3.test.ts exists",
-   "where": "README.md:1266",
+   "where": "README.md:1295",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-review-r3.test.ts",
    "check": {
@@ -8768,7 +9013,7 @@
   {
    "id": "path-web/e2e/pledge-review-r3.spec.ts",
    "claim": "Linked repo path web/e2e/pledge-review-r3.spec.ts exists",
-   "where": "README.md:1266",
+   "where": "README.md:1295",
    "evidence_type": "file",
    "evidence": "web/e2e/pledge-review-r3.spec.ts",
    "check": {
@@ -8781,7 +9026,7 @@
   {
    "id": "path-web/tests/pledge-review-r5.test.ts",
    "claim": "Linked repo path web/tests/pledge-review-r5.test.ts exists",
-   "where": "README.md:1274",
+   "where": "README.md:1303",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-review-r5.test.ts",
    "check": {
@@ -8794,7 +9039,7 @@
   {
    "id": "path-web/e2e/pledge-funded.spec.ts",
    "claim": "Linked repo path web/e2e/pledge-funded.spec.ts exists",
-   "where": "README.md:1274",
+   "where": "README.md:1303",
    "evidence_type": "file",
    "evidence": "web/e2e/pledge-funded.spec.ts",
    "check": {
@@ -8807,7 +9052,7 @@
   {
    "id": "path-web/tests/pledge-integration-merge.test.ts",
    "claim": "Linked repo path web/tests/pledge-integration-merge.test.ts exists",
-   "where": "README.md:1278",
+   "where": "README.md:1307",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-integration-merge.test.ts",
    "check": {
@@ -8820,7 +9065,7 @@
   {
    "id": "path-web/components/PayoutPanel.tsx",
    "claim": "Linked repo path web/components/PayoutPanel.tsx exists",
-   "where": "README.md:1280",
+   "where": "README.md:1309",
    "evidence_type": "file",
    "evidence": "web/components/PayoutPanel.tsx",
    "check": {
@@ -8833,7 +9078,7 @@
   {
    "id": "path-web/components/PayoutCredit.tsx",
    "claim": "Linked repo path web/components/PayoutCredit.tsx exists",
-   "where": "README.md:1280",
+   "where": "README.md:1309",
    "evidence_type": "file",
    "evidence": "web/components/PayoutCredit.tsx",
    "check": {
@@ -8846,7 +9091,7 @@
   {
    "id": "path-web/lib/pledgeMoney.ts",
    "claim": "Linked repo path web/lib/pledgeMoney.ts exists",
-   "where": "README.md:1280",
+   "where": "README.md:1309",
    "evidence_type": "file",
    "evidence": "web/lib/pledgeMoney.ts",
    "check": {
@@ -8859,7 +9104,7 @@
   {
    "id": "path-web/lib/payout.ts",
    "claim": "Linked repo path web/lib/payout.ts exists",
-   "where": "README.md:1280",
+   "where": "README.md:1309",
    "evidence_type": "file",
    "evidence": "web/lib/payout.ts",
    "check": {
@@ -8872,7 +9117,7 @@
   {
    "id": "path-web/tests/pledge-client.test.ts",
    "claim": "Linked repo path web/tests/pledge-client.test.ts exists",
-   "where": "README.md:1282",
+   "where": "README.md:1311",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-client.test.ts",
    "check": {
@@ -8885,7 +9130,7 @@
   {
    "id": "path-tee/worker/src/guarded_host.rs",
    "claim": "Linked repo path tee/worker/src/guarded_host.rs exists",
-   "where": "README.md:1286",
+   "where": "README.md:1315",
    "evidence_type": "file",
    "evidence": "tee/worker/src/guarded_host.rs",
    "check": {
@@ -8898,7 +9143,7 @@
   {
    "id": "path-judge/reproduction.test.mjs",
    "claim": "Linked repo path judge/reproduction.test.mjs exists",
-   "where": "README.md:1286",
+   "where": "README.md:1315",
    "evidence_type": "file",
    "evidence": "judge/reproduction.test.mjs",
    "check": {
@@ -8911,7 +9156,7 @@
   {
    "id": "path-web/tests/pledge-certificate-gateway.test.ts",
    "claim": "Linked repo path web/tests/pledge-certificate-gateway.test.ts exists",
-   "where": "README.md:1288",
+   "where": "README.md:1317",
    "evidence_type": "file",
    "evidence": "web/tests/pledge-certificate-gateway.test.ts",
    "check": {
@@ -8924,7 +9169,7 @@
   {
    "id": "path-contracts/keys-sandbox/tests/support/ui_harness.rs",
    "claim": "Linked repo path contracts/keys-sandbox/tests/support/ui_harness.rs exists",
-   "where": "README.md:1288",
+   "where": "README.md:1317",
    "evidence_type": "file",
    "evidence": "contracts/keys-sandbox/tests/support/ui_harness.rs",
    "check": {
@@ -8937,7 +9182,7 @@
   {
    "id": "path-web/tests/funded-final-observer.test.ts",
    "claim": "Linked repo path web/tests/funded-final-observer.test.ts exists",
-   "where": "README.md:1290",
+   "where": "README.md:1319",
    "evidence_type": "file",
    "evidence": "web/tests/funded-final-observer.test.ts",
    "check": {
@@ -8950,7 +9195,7 @@
   {
    "id": "path-web/e2e/support/final-receipt.ts",
    "claim": "Linked repo path web/e2e/support/final-receipt.ts exists",
-   "where": "README.md:1290",
+   "where": "README.md:1319",
    "evidence_type": "file",
    "evidence": "web/e2e/support/final-receipt.ts",
    "check": {
@@ -8963,7 +9208,7 @@
   {
    "id": "path-web/tests/locked-hashes.test.ts",
    "claim": "Linked repo path web/tests/locked-hashes.test.ts exists",
-   "where": "README.md:1292",
+   "where": "README.md:1321",
    "evidence_type": "file",
    "evidence": "web/tests/locked-hashes.test.ts",
    "check": {
@@ -8976,7 +9221,7 @@
   {
    "id": "path-docs/evidence/integration-stack/r5-lifecycle-notification.md",
    "claim": "Linked repo path docs/evidence/integration-stack/r5-lifecycle-notification.md exists",
-   "where": "README.md:1296",
+   "where": "README.md:1325",
    "evidence_type": "file",
    "evidence": "docs/evidence/integration-stack/r5-lifecycle-notification.md",
    "check": {
@@ -8989,7 +9234,7 @@
   {
    "id": "path-web/tests/wallet-patch-lifecycle.test.ts",
    "claim": "Linked repo path web/tests/wallet-patch-lifecycle.test.ts exists",
-   "where": "README.md:1296",
+   "where": "README.md:1325",
    "evidence_type": "file",
    "evidence": "web/tests/wallet-patch-lifecycle.test.ts",
    "check": {
@@ -9002,7 +9247,7 @@
   {
    "id": "path-CONTRIBUTIONS.md",
    "claim": "Linked repo path CONTRIBUTIONS.md exists",
-   "where": "README.md:1315",
+   "where": "README.md:1344",
    "evidence_type": "file",
    "evidence": "CONTRIBUTIONS.md",
    "check": {
@@ -9015,7 +9260,7 @@
   {
    "id": "path-PROOFS.md",
    "claim": "Linked repo path PROOFS.md exists",
-   "where": "README.md:1316",
+   "where": "README.md:1345",
    "evidence_type": "file",
    "evidence": "PROOFS.md",
    "check": {
@@ -9028,7 +9273,7 @@
   {
    "id": "path-TRACK_COVERAGE.md",
    "claim": "Linked repo path TRACK_COVERAGE.md exists",
-   "where": "README.md:1316",
+   "where": "README.md:1345",
    "evidence_type": "file",
    "evidence": "TRACK_COVERAGE.md",
    "check": {
@@ -9041,7 +9286,7 @@
   {
    "id": "path-contracts/keys/Cargo.toml",
    "claim": "Linked repo path contracts/keys/Cargo.toml exists",
-   "where": "README.md:1323",
+   "where": "README.md:1352",
    "evidence_type": "file",
    "evidence": "contracts/keys/Cargo.toml",
    "check": {
@@ -9054,7 +9299,7 @@
   {
    "id": "path-tee/worker/Cargo.toml",
    "claim": "Linked repo path tee/worker/Cargo.toml exists",
-   "where": "README.md:1324",
+   "where": "README.md:1353",
    "evidence_type": "file",
    "evidence": "tee/worker/Cargo.toml",
    "check": {
@@ -9067,7 +9312,7 @@
   {
    "id": "path-cli/package.json",
    "claim": "Linked repo path cli/package.json exists",
-   "where": "README.md:1325",
+   "where": "README.md:1354",
    "evidence_type": "file",
    "evidence": "cli/package.json",
    "check": {
@@ -9080,7 +9325,7 @@
   {
    "id": "path-tee/worker/verify-log.mjs",
    "claim": "Linked repo path tee/worker/verify-log.mjs exists",
-   "where": "README.md:1355",
+   "where": "README.md:1384",
    "evidence_type": "file",
    "evidence": "tee/worker/verify-log.mjs",
    "check": {
@@ -9093,7 +9338,7 @@
   {
    "id": "path-web/app/page.tsx",
    "claim": "Linked repo path web/app/page.tsx exists",
-   "where": "README.md:1380",
+   "where": "README.md:1409",
    "evidence_type": "file",
    "evidence": "web/app/page.tsx",
    "check": {
@@ -9106,7 +9351,7 @@
   {
    "id": "path-web/public/audio/LICENSE.txt",
    "claim": "Linked repo path web/public/audio/LICENSE.txt exists",
-   "where": "README.md:1395",
+   "where": "README.md:1424",
    "evidence_type": "file",
    "evidence": "web/public/audio/LICENSE.txt",
    "check": {
@@ -9119,7 +9364,7 @@
   {
    "id": "path-tee/worker/src/level.rs",
    "claim": "Linked repo path tee/worker/src/level.rs exists",
-   "where": "README.md:1397",
+   "where": "README.md:1426",
    "evidence_type": "file",
    "evidence": "tee/worker/src/level.rs",
    "check": {
@@ -9132,7 +9377,7 @@
   {
    "id": "path-LICENSE",
    "claim": "Linked repo path LICENSE exists",
-   "where": "README.md:1407",
+   "where": "README.md:1436",
    "evidence_type": "file",
    "evidence": "LICENSE",
    "check": {
@@ -9154,19 +9399,6 @@
    },
    "expected": "path exists",
    "verify": "node judge/verify-claims.mjs --only path-contracts/keys/src/pledge.rs"
-  },
-  {
-   "id": "path-contracts/keys",
-   "claim": "Linked repo path contracts/keys exists",
-   "where": "TRACK_COVERAGE.md:21",
-   "evidence_type": "file",
-   "evidence": "contracts/keys",
-   "check": {
-    "type": "path",
-    "path": "contracts/keys"
-   },
-   "expected": "path exists",
-   "verify": "node judge/verify-claims.mjs --only path-contracts/keys"
   },
   {
    "id": "path-docs/evidence/tests/README.md",
@@ -9444,7 +9676,7 @@
   {
    "id": "site-/",
    "claim": "Live page / serves",
-   "where": "README.md:1380",
+   "where": "README.md:1409",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/",
    "check": {
@@ -9472,7 +9704,7 @@
   {
    "id": "site-/verify",
    "claim": "Live page /verify serves",
-   "where": "README.md:1386",
+   "where": "README.md:1415",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/verify",
    "check": {
@@ -9486,7 +9718,7 @@
   {
    "id": "site-/settle",
    "claim": "Live page /settle serves",
-   "where": "README.md:1388",
+   "where": "README.md:1417",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/settle",
    "check": {
@@ -9500,7 +9732,7 @@
   {
    "id": "site-/gallery",
    "claim": "Live page /gallery serves",
-   "where": "README.md:1385",
+   "where": "README.md:1414",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/gallery",
    "check": {
@@ -9514,7 +9746,7 @@
   {
    "id": "site-/mint",
    "claim": "Live page /mint serves",
-   "where": "README.md:1384",
+   "where": "README.md:1413",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/mint",
    "check": {
@@ -9528,7 +9760,7 @@
   {
    "id": "site-/vault",
    "claim": "Live page /vault serves",
-   "where": "README.md:1382",
+   "where": "README.md:1411",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/vault",
    "check": {
@@ -9542,7 +9774,7 @@
   {
    "id": "site-/ask",
    "claim": "Live page /ask serves",
-   "where": "README.md:1392",
+   "where": "README.md:1421",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/ask",
    "check": {
@@ -9556,7 +9788,7 @@
   {
    "id": "site-/atlas",
    "claim": "Live page /atlas serves",
-   "where": "README.md:1381",
+   "where": "README.md:1410",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/atlas",
    "check": {
@@ -9570,7 +9802,7 @@
   {
    "id": "site-/identity",
    "claim": "Live page /identity serves",
-   "where": "README.md:1393",
+   "where": "README.md:1422",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/identity",
    "check": {
@@ -9584,7 +9816,7 @@
   {
    "id": "site-/pnl",
    "claim": "Live page /pnl serves",
-   "where": "README.md:1391",
+   "where": "README.md:1420",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz/pnl",
    "check": {
@@ -9612,7 +9844,7 @@
   {
    "id": "site-health",
    "claim": "GET /api/health is passive and does not assert the enclave online",
-   "where": "README.md:1147",
+   "where": "README.md:1176",
    "evidence_type": "file",
    "evidence": "web/lib/health.ts",
    "check": {
@@ -9729,7 +9961,7 @@
   {
    "id": "site-hash",
    "claim": "Home page names the live build 230a4c3b",
-   "where": "README.md:136",
+   "where": "README.md:116",
    "evidence_type": "live site",
    "evidence": "https://www.getkeyhole.xyz",
    "check": {

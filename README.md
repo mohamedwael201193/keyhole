@@ -159,7 +159,7 @@ Only explicitly labelled deployed functionality runs on **NEAR mainnet**; prepar
 | CLI tests | **81** | [`cli`](cli) |
 | Web tests (Vitest) | **2,311** | [`web/tests`](web/tests) |
 | Web e2e (Playwright) | **253** | [`web/e2e`](web/e2e) |
-| Automatic checks of every claim | **714 claims** (0 FAIL) | [`docs/claims.json`](docs/claims.json) |
+| Automatic checks of every claim | **731 claims** (0 FAIL) | [`docs/claims.json`](docs/claims.json) |
 | CI | **6 CI jobs** | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
 | Mainnet loans | **2** (one repaid, one defaulted) | [The two mainnet loans](#the-two-mainnet-loans) |
 | Lock transactions | **6 FINAL** | [The lock](#the-lock--6-transactions-all-final) |
@@ -566,7 +566,7 @@ flowchart LR
 
 Each step has a command or a link. The words after **See** are what you should get.
 
-1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `714 claims: 369 PASS, 0 FAIL, 0 ERROR, 345 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this version passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this version. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
+1. **Check the claims, offline.** Do (from this checkout): `node judge/verify-claims.mjs --offline`. See: `731 claims: 375 PASS, 0 FAIL, 0 ERROR, 356 SKIP` (current repair). The passing checks are file, path and symbol checks in this checkout. The skipped claims read mainnet, the live site, attestations or CI. The strict public-read run recorded on main before this version passed **610/610 claims, 0 FAIL, 0 ERROR, 0 SKIP**; it uses existing attestations and never starts paid compute. That online result does not validate this version. The offline run reads only files in the repo. Without `--offline` the script also reads mainnet, the live site, the attestation API and the CI runs. Requires Node 18+.
 2. **Open the verifier on the live build.** Do: open [www.getkeyhole.xyz/verify](https://www.getkeyhole.xyz/verify). See: the **Live evidence pack** table (contract code hash, operator keys, NFT supply, worker attestation, deploy/publish/handover txs) with PASS/FAIL, then the 37 TEE checks for current call `962d4374…`. No wallet.
 3. **Try to steal a key.** Do: open [www.getkeyhole.xyz/attack](https://www.getkeyhole.xyz/attack). See: each card re-fetches a real attested refusal (`bad_params`, `over_cap_per_tx`, `replay`, `bad_signature`, `not_owner`, `locked`) or the handover transfer tx; badges name the recorded wasm (e.g. previous build `6367401a`) and live-check vs evidence. No wallet and no value moved.
 4. **Open the verification path.** Do: open [www.getkeyhole.xyz/judge](https://www.getkeyhole.xyz/judge). See: seven numbered checks. Each has a button that runs in your browser and a box that says what the correct result is.
@@ -618,7 +618,7 @@ Honest labels for what a reviewer sees. Caveats that are not features live in [S
 | Mint, swap, withdraw, transfer, freeze, caps | **Real mainnet** (tiny amounts) | [Proof ledger](#proof-ledger--every-transaction-every-call) · evidence under `docs/evidence/` |
 | Attested refusals (bad recipient, over-cap, replay, tamper, not_owner, locked) | **Real mainnet attestations** (recorded on previous builds, e.g. wasm `6367401a` / `38bd67b9`; labelled on each card) | [/attack](https://www.getkeyhole.xyz/attack) re-fetches each call + evidence `error.code` |
 | Key handover transfer A→B | **Real mainnet tx** | tx [`G35r5pmC…`](https://nearblocks.io/txns/G35r5pmCTffvKMShjPcwTkds1z8SuCHdJr32qGGzYktD) · [/attack](https://www.getkeyhole.xyz/attack) |
-| Judge-claims machine (714 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 369 PASS, 0 FAIL, 0 ERROR, 345 SKIP (current repair). The strict public-read run recorded on main before this version passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this version. |
+| Judge-claims machine (731 claims) | **File checks reproduced offline** | `node judge/verify-claims.mjs --offline`: 375 PASS, 0 FAIL, 0 ERROR, 356 SKIP (current repair). The strict public-read run recorded on main before this version passed 610/610, 0 FAIL, 0 ERROR, 0 SKIP, using existing attestations and no paid compute. That online result does not validate this version. |
 | Google / email sign-in (Privy) | **Real product path** | [/start](https://www.getkeyhole.xyz/start) · Privy sees that login |
 | Demo vault replay on [/demo](https://www.getkeyhole.xyz/demo) | **Recorded replay** (read-only) | Labelled as demo; does not move funds |
 | Free trial on [/try](https://www.getkeyhole.xyz/try) | **Real testnet** for the key (mint, tier, transfer, refusal). Each guest receives 0.05 testnet NEAR (`GUEST_DEPOSIT_YOCTO`). The vault trade on that page is a **recorded mainnet** swap, labelled recorded on mainnet | [`docs/trial/testnet.json`](docs/trial/testnet.json) · [verify the recorded swap](https://www.getkeyhole.xyz/verify?call=09d58c09-c1e9-48b6-bebb-485f5ae79539) |
@@ -812,7 +812,7 @@ Current V2 source-candidate validation: [exact source/artifact/count record](doc
 | CLI tests | **81** pass | `cd cli && npm test`; [r3 log](docs/evidence/worker-provisioning/v2/r3/cli-tests.log) |
 | Web unit tests (Vitest) | **2,311** pass in 148 files | `cd web && npx vitest run`; [r3 log](docs/evidence/worker-provisioning/v2/r3/web-tests.log) |
 | Web e2e (Playwright) | **253** pass, 18 skipped, 2 failed | [`web/e2e/site.spec.ts`](web/e2e/site.spec.ts) and the rest of [`web/e2e`](web/e2e). reproduced at 1440 and 390 px; [r3 log](docs/evidence/worker-provisioning/v2/r3/web-e2e.log) |
-| Claims in `docs/claims.json` | **714**: offline 369 PASS, 0 FAIL, 0 ERROR, 345 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this version |
+| Claims in `docs/claims.json` | **731**: offline 375 PASS, 0 FAIL, 0 ERROR, 356 SKIP (current repair) | `node judge/verify-claims.mjs --offline`; the historical online result does not validate this version |
 | Attestation calls linked in this README | every one resolves | each call id was requested from `api.outlayer.ai/attestations/by-call/` (HTTP 200) |
 | Tokens for swap | feed-derived, not adoption | live `GET www.getkeyhole.xyz/api/tokens`. The count is the feed, not a customer count |
 | Keys minted | **13** on the contract | live RPC `nft_total_supply` |
