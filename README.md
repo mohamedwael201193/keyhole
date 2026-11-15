@@ -44,9 +44,9 @@ Use the immutable source commit recorded in [`identity.json`](identity.json). Th
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 47261c72975d1aa5373cadf9c9f6da9555757e6f
+git fetch --depth 1 origin 7a044abf34a5252d5cf3762b04912bd542f36618
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "47261c72975d1aa5373cadf9c9f6da9555757e6f"
+test "$(git rev-parse HEAD)" = "7a044abf34a5252d5cf3762b04912bd542f36618"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
@@ -60,9 +60,9 @@ No git? Download all three files from that same immutable source commit and run 
 <!-- keyhole-fence: safe -->
 <!-- JUDGE-RAW:START -->
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/47261c72975d1aa5373cadf9c9f6da9555757e6f/judge/0-live.sh -o keyhole-live.sh
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/47261c72975d1aa5373cadf9c9f6da9555757e6f/judge/receipt_proof.py -o receipt_proof.py
-curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/47261c72975d1aa5373cadf9c9f6da9555757e6f/identity.json -o identity.json
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/7a044abf34a5252d5cf3762b04912bd542f36618/judge/0-live.sh -o keyhole-live.sh
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/7a044abf34a5252d5cf3762b04912bd542f36618/judge/receipt_proof.py -o receipt_proof.py
+curl -fsSL https://raw.githubusercontent.com/mohamedwael201193/keyhole/7a044abf34a5252d5cf3762b04912bd542f36618/identity.json -o identity.json
 IDENTITY_JSON="$PWD/identity.json" bash keyhole-live.sh
 ```
 <!-- JUDGE-RAW:END -->
@@ -1142,9 +1142,9 @@ The live build is published as project `keyhole-devmo.near/keyhole`. Its `info` 
 ```bash
 git init keyhole && cd keyhole
 git remote add origin https://github.com/mohamedwael201193/keyhole.git
-git fetch --depth 1 origin 47261c72975d1aa5373cadf9c9f6da9555757e6f
+git fetch --depth 1 origin 7a044abf34a5252d5cf3762b04912bd542f36618
 git checkout --detach FETCH_HEAD
-test "$(git rev-parse HEAD)" = "47261c72975d1aa5373cadf9c9f6da9555757e6f"
+test "$(git rev-parse HEAD)" = "7a044abf34a5252d5cf3762b04912bd542f36618"
 ```
 <!-- JUDGE-CHECKOUT:END -->
 
